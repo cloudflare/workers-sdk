@@ -413,11 +413,11 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					About to delete remote KV namespace 'someBinding (env-bound-id)'.
+					About to delete remote KV namespace binding: "someBinding" (id: "env-bound-id").
 					This action is irreversible and will permanently delete all data in the KV namespace.
 
-					Deleting KV namespace env-bound-id.
-					Deleted KV namespace env-bound-id."
+					Deleting KV namespace binding: "someBinding" (id: "env-bound-id").
+					Deleted KV namespace binding: "someBinding" (id: "env-bound-id")."
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -475,8 +475,9 @@ describe("kv", () => {
 
 				expect(listRequests.count).toEqual(1);
 				expect(deleteRequests.count).toEqual(1);
-				expect(std.out).toContain("my-namespace (some-namespace-id)");
-				expect(std.out).toContain("Deleted KV namespace some-namespace-id");
+				expect(std.out).toContain(
+					'Deleted KV namespace name: "my-namespace" (id: "some-namespace-id")'
+				);
 			});
 
 			it("should error if namespace name is not found", async () => {
@@ -599,7 +600,7 @@ describe("kv", () => {
 					Rename a KV namespace
 
 					POSITIONALS
-					  old-name  The current name (title) of the namespace to rename  [string]
+					  old-name  The current name of the namespace to rename  [string]
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]

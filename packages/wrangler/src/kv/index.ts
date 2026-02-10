@@ -260,7 +260,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		}
 
 		logger.log(
-			`About to delete ${chalk.bold("remote")} KV namespace '${displayName}'.\n` +
+			`About to delete ${chalk.bold("remote")} KV namespace ${displayName}.\n` +
 				`This action is irreversible and will permanently delete all data in the KV namespace.\n`
 		);
 		if (!args.skipConfirmation) {
@@ -271,9 +271,9 @@ export const kvNamespaceDeleteCommand = createCommand({
 			}
 		}
 
-		logger.log(`Deleting KV namespace ${namespaceId}.`);
+		logger.log(`Deleting KV namespace ${displayName}.`);
 		await deleteKVNamespace(config, accountId, namespaceId);
-		logger.log(`Deleted KV namespace ${namespaceId}.`);
+		logger.log(`Deleted KV namespace ${displayName}.`);
 		metrics.sendMetricsEvent("delete kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -287,7 +287,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		// ➜  test-mf wrangler kv:namespace delete --namespace-id 2a7d3d8b23fc4159b5afa489d6cfd388
 		// Are you sure you want to delete namespace 2a7d3d8b23fc4159b5afa489d6cfd388? [y/n]
 		// y
-		// 🌀  Deleting namespace 2a7d3d8b23fc4159b5afa489d6cfd388
+		// 🌀  Deleting namespace name: "my kv store" (id: "2a7d3d8b23fc4159b5afa489d6cfd388")
 		// ✨  Success
 		// ⚠️  Make sure to remove this "kv-namespace" entry from your configuration file!
 		// ➜  test-mf
@@ -308,7 +308,7 @@ export const kvNamespaceRenameCommand = createCommand({
 	args: {
 		"old-name": {
 			type: "string",
-			describe: "The current name (title) of the namespace to rename",
+			describe: "The current name of the namespace to rename",
 		},
 		"namespace-id": {
 			type: "string",
@@ -1061,7 +1061,7 @@ export const kvBulkDeleteCommand = createCommand({
 
 		if (!args.force) {
 			const result = await confirm(
-				`Are you sure you want to delete all the keys read from "${filename}" from kv-namespace "${displayName}"?`
+				`Are you sure you want to delete all the keys read from "${filename}" from kv-namespace ${displayName}?`
 			);
 			if (!result) {
 				logger.log(`Not deleting keys read from "${filename}".`);

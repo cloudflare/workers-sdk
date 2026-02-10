@@ -434,7 +434,7 @@ export async function getKVNamespaceId(
 	isLocal: boolean
 ): Promise<KVNamespaceIdResult> {
 	if (namespaceId) {
-		return { namespaceId, displayName: namespaceId };
+		return { namespaceId, displayName: `id: "${namespaceId}"` };
 	}
 
 	// If namespace name is provided, look up the ID from the API
@@ -449,7 +449,10 @@ export async function getKVNamespaceId(
 					`Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".`
 			);
 		}
-		return { namespaceId: found.id, displayName: `${namespace} (${found.id})` };
+		return {
+			namespaceId: found.id,
+			displayName: `name: "${namespace}" (id: "${found.id}")`,
+		};
 	}
 
 	// begin pre-flight checks
@@ -488,7 +491,8 @@ export async function getKVNamespaceId(
 	// end pre-flight checks
 
 	// Helper to format displayName for binding-based lookups
-	const formatDisplayName = (nsId: string) => `${binding} (${nsId})`;
+	const formatDisplayName = (nsId: string) =>
+		`binding: "${binding}" (id: "${nsId}")`;
 
 	// we're in preview mode, `--preview true` or `--preview` was passed
 	if (preview && configNamespace.preview_id) {

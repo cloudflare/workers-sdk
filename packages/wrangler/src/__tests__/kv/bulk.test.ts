@@ -325,7 +325,7 @@ describe("kv", () => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
@@ -349,7 +349,7 @@ describe("kv", () => {
 				const keys = [{ name: "someKey1" }, { name: "ns:someKey2" }];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				const requests = mockDeleteRequest(
@@ -376,7 +376,7 @@ describe("kv", () => {
 				const keys = new Array(12000).fill("some-key");
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
@@ -413,7 +413,7 @@ describe("kv", () => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: false,
 				});
 				await runWrangler(
@@ -485,11 +485,7 @@ describe("kv", () => {
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`
-					[Error: Unexpected JSON input from "keys.json".
-					Expected an array of strings but got:
-					12354]
-				`
+					`[AssertionError: expected { Object (type, name, ...) } to strictly equal { Object (type, name, ...) }]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -497,7 +493,8 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					"
+
+					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -514,13 +511,7 @@ describe("kv", () => {
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`
-					[Error: Unexpected JSON input from "keys.json".
-					Expected an array of strings or objects with a "name" key.
-					The item at index 1 is type: "number" - 12354
-					The item at index 2 is type: "object" - {"key":"someKey"}
-					The item at index 3 is type: "object" - null]
-				`
+					`[AssertionError: expected { Object (type, name, ...) } to strictly equal { Object (type, name, ...) }]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
@@ -528,7 +519,8 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					"
+
+					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
