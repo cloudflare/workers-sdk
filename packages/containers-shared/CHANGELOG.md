@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#12433](https://github.com/cloudflare/workers-sdk/pull/12433) [`2acb277`](https://github.com/cloudflare/workers-sdk/commit/2acb27794b3c76432cf2227b6b6bf0fcdb1e1093) Thanks [@martinezjandrew](https://github.com/martinezjandrew)! - Updated registries delete subcommand to handle new API response that now returns a secrets store secret reference after deletion. Wrangler will now prompt the user if they want to delete the associated secret. If so, added new logic to retrieve a secret by its name. The subcommand will then delete the secret.
+
 ## 0.8.0
 
 ### Minor Changes
