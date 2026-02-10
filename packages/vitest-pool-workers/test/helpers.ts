@@ -5,9 +5,23 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
+import treeKill from "tree-kill";
 import { test as baseTest, inject, vi } from "vitest";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");
+
+// In case this process stops unexpectedly, kill all child processes
+const processes = new Set<childProcess.ChildProcess>();
+process.on("exit", () => {
+	for (const proc of processes) {
+		if (proc.pid) {
+			proc.stdout?.destroy();
+			proc.stderr?.destroy();
+			proc.stdin?.destroy();
+			treeKill(proc.pid, "SIGKILL");
+		}
+	}
+});
 
 export const minimalVitestConfig = `
 import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
@@ -122,11 +136,11 @@ export const test = baseTest.extend<{
 	// Fixture for a starting long-running `vitest dev` process
 	async vitestDev({ tmpPath }, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
-		const processes: childProcess.ChildProcess[] = [];
 
+		let proc: childProcess.ChildProcess | undefined;
 		try {
 			await use(({ flags = [], maxBuffer } = {}) => {
-				const proc = childProcess.exec(
+				proc = childProcess.exec(
 					`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
 					{
 						cwd: tmpPoolInstallationPath,
@@ -134,19 +148,23 @@ export const test = baseTest.extend<{
 						maxBuffer,
 					}
 				);
-				processes.push(proc);
+				processes.add(proc);
+				proc.on("exit", () => {
+					if (proc) {
+						processes.delete(proc);
+					}
+				});
 				return wrap(proc);
-			});
-			// In case this process stops unexpectedly, kill all child processes
-			process.on("exit", () => {
-				for (const proc of processes) {
-					proc.kill();
-				}
 			});
 		} finally {
 			// Kill all processes after the test
-			for (const proc of processes) {
-				proc.kill();
+			if (proc) {
+				if (proc.pid) {
+					proc.stdout?.destroy();
+					proc.stderr?.destroy();
+					proc.stdin?.destroy();
+					treeKill(proc.pid, "SIGKILL");
+				}
 			}
 		}
 	},
