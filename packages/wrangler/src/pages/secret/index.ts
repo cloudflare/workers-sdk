@@ -1,12 +1,15 @@
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	configFileName,
+	FatalError,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
-import { configFileName, readPagesConfig } from "../../config";
+import { readPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
-import { findWranglerConfig } from "../../config/config-helpers";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/misc-variables";
-import { FatalError } from "../../errors";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
@@ -15,9 +18,9 @@ import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
-import type { Config } from "../../config";
 import type { PagesProject } from "../download-config";
 import type { PagesConfigCache } from "../types";
+import type { Config } from "@cloudflare/workers-utils";
 
 function isPagesEnv(env: string): env is "production" | "preview" {
 	return ["production", "preview"].includes(env);
@@ -172,9 +175,17 @@ export const pagesSecretPutCommand = createCommand({
 			}
 		);
 
-		metrics.sendMetricsEvent("create pages encrypted variable", {
-			sendMetrics: config?.send_metrics,
-		});
+		metrics.sendMetricsEvent(
+			"create pages encrypted variable",
+			{
+				secretOperation: "single",
+				secretSource: isInteractive() ? "interactive" : "stdin",
+				hasEnvironment: Boolean(args.env),
+			},
+			{
+				sendMetrics: config?.send_metrics,
+			}
+		);
 
 		logger.log(`✨ Success! Uploaded secret ${args.key}`);
 	},
@@ -203,7 +214,7 @@ export const pagesSecretBulkCommand = createCommand({
 	},
 	positionalArgs: ["file"],
 	async handler(args) {
-		const { env, project, accountId } = await pagesProject(
+		const { env, project, accountId, config } = await pagesProject(
 			args.env,
 			args.projectName
 		);
@@ -211,11 +222,13 @@ export const pagesSecretBulkCommand = createCommand({
 		logger.log(
 			`🌀 Creating the secrets for the Pages project "${project.name}" (${env})`
 		);
-		const content = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file);
 
-		if (!content) {
+		if (!result) {
 			throw new FatalError(`🚨 No content found in file or piped input.`);
 		}
+
+		const { content, secretSource, secretFormat } = result;
 
 		const upsertBindings = Object.fromEntries(
 			Object.entries(content).map(([key, value]) => {
@@ -250,6 +263,18 @@ export const pagesSecretBulkCommand = createCommand({
 			logger.log("Finished processing secrets file:");
 			logger.log(
 				`✨ ${Object.keys(upsertBindings).length} secrets successfully uploaded`
+			);
+			metrics.sendMetricsEvent(
+				"create pages encrypted variable",
+				{
+					secretOperation: "bulk",
+					secretSource,
+					secretFormat,
+					hasEnvironment: Boolean(args.env),
+				},
+				{
+					sendMetrics: config?.send_metrics,
+				}
 			);
 		} catch (err) {
 			logger.log(`🚨 Secrets failed to upload`);

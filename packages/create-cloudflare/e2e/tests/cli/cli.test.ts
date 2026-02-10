@@ -1,6 +1,8 @@
+import { execSync } from "node:child_process";
 import fs, { readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
 import {
@@ -63,6 +65,10 @@ describe("Create Cloudflare CLI", () => {
 							input: [keys.enter],
 						},
 						{
+							matcher: /Do you want to add an AGENTS\.md file/,
+							input: ["n"],
+						},
+						{
 							matcher: /Do you want to use git for version control/,
 							input: [keys.right, keys.enter],
 						},
@@ -104,6 +110,10 @@ describe("Create Cloudflare CLI", () => {
 						{
 							matcher: /Which language do you want to use\?/,
 							input: [keys.down, keys.enter],
+						},
+						{
+							matcher: /Do you want to add an AGENTS\.md file/,
+							input: ["n"],
 						},
 						{
 							matcher: /Do you want to use git for version control/,
@@ -162,6 +172,10 @@ describe("Create Cloudflare CLI", () => {
 								input: [keys.enter],
 							},
 							{
+								matcher: /Do you want to add an AGENTS\.md file/,
+								input: ["n"],
+							},
+							{
 								matcher: /Do you want to use git for version control/,
 								input: ["n"],
 							},
@@ -193,6 +207,7 @@ describe("Create Cloudflare CLI", () => {
 						"--template=https://github.com/cloudflare/workers-graphql-server",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -225,6 +240,7 @@ describe("Create Cloudflare CLI", () => {
 						"--template=cloudflare/templates/multiplayer-globe-template",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -262,6 +278,7 @@ describe("Create Cloudflare CLI", () => {
 						"--type=hello-world-python",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -271,6 +288,50 @@ describe("Create Cloudflare CLI", () => {
 				expect(output).toContain(`category Hello World example`);
 				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang Python`);
+			},
+		);
+
+		test.skipIf(isWindows)(
+			"Filtering templates when --lang=python is specified",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--type=hello-world",
+						"--no-deploy",
+						"--git=false",
+						"--no-agents",
+					],
+					[],
+					logStream,
+				);
+
+				expect(project.path).toExist();
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type Worker only`);
+				expect(output).toContain(`lang Python`);
+			},
+		);
+
+		test.skipIf(isWindows)(
+			"Error when --lang=python is used with a category that has no Python templates",
+			async ({ logStream, project }) => {
+				const { errors } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--category=demo",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(errors).toContain(
+					`No templates available for language "python" in the "demo" category`,
+				);
 			},
 		);
 
@@ -287,7 +348,7 @@ describe("Create Cloudflare CLI", () => {
 			"Selecting template by description",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--no-deploy", "--git=false"],
+					[project.path, "--no-deploy", "--git=false", "--no-agents"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -322,7 +383,7 @@ describe("Create Cloudflare CLI", () => {
 			async ({ logStream, project }) => {
 				const testProjectPath = "/test-project-path";
 				const { output } = await runC3(
-					[testProjectPath, "--git=false", "--no-deploy"],
+					[testProjectPath, "--git=false", "--no-deploy", "--no-agents"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -429,13 +490,38 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
 			"--existing-script",
+			{ timeout: 120_000 },
 			async ({ logStream, project }) => {
+				// Ensure the worker to download exists
+				try {
+					if (
+						(
+							await fetch(
+								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/",
+							)
+						).status === 404
+					) {
+						throw new Error("Remote worker not found");
+					}
+				} catch {
+					// eslint-disable-next-line no-console
+					console.log(
+						"Redeploying the existing-script-test-do-not-delete worker",
+					);
+					const workerPath = resolve(
+						__dirname,
+						"fixtures/existing-script-test-do-not-delete",
+					);
+					execSync("pnpx wrangler@latest deploy", { cwd: workerPath });
+				}
+
 				const { output } = await runC3(
 					[
 						project.path,
 						"--existing-script=existing-script-test-do-not-delete",
 						"--git=false",
 						"--no-deploy",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -456,7 +542,7 @@ describe("Create Cloudflare CLI", () => {
 
 	describe("help text", () => {
 		test("--help", async ({ logStream }) => {
-			if (!isExperimental) {
+			if (isExperimental) {
 				const { output } = await runC3(
 					["--help", "--experimental"],
 					[],
@@ -464,7 +550,7 @@ describe("Create Cloudflare CLI", () => {
 				);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
-					  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+					  The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 					USAGE
 					  <USAGE>
 					OPTIONS
@@ -484,8 +570,10 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
+					    Allowed Values:
+					      analog, angular, astro, docusaurus, gatsby, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -493,6 +581,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -501,6 +591,8 @@ describe("Create Cloudflare CLI", () => {
 					    Deploy your application after it has been created
 					  --git, --no-git
 					    Initialize a local git repository for your application
+					  --agents, --no-agents
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>
@@ -536,7 +628,7 @@ describe("Create Cloudflare CLI", () => {
 				const { output } = await runC3(["--help"], [], logStream);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
-					  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+					  The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 					USAGE
 					  <USAGE>
 					OPTIONS
@@ -584,10 +676,10 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, solid, svelte, tanstack-start, vue, waku
+					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -595,6 +687,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -603,6 +697,8 @@ describe("Create Cloudflare CLI", () => {
 					    Deploy your application after it has been created
 					  --git, --no-git
 					    Initialize a local git repository for your application
+					  --agents, --no-agents
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>
@@ -653,6 +749,26 @@ describe("Create Cloudflare CLI", () => {
 				);
 			}),
 		);
+
+		test("error when using invalid --variant for React framework", async ({
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=workers",
+					"--variant=invalid-variant",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(errors).toContain(
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
+			);
+		});
 	});
 });
 

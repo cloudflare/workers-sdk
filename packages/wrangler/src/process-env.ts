@@ -1,4 +1,4 @@
-import { UserError } from "./errors";
+import { UserError } from "@cloudflare/workers-utils";
 
 export function isProcessEnvPopulated(
 	compatibility_date: string | undefined,

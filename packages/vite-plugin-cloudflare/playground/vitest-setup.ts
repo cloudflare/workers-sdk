@@ -1,9 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-chromium";
+import {
+	createBuilder,
+	createServer,
+	loadConfigFromFile,
+	mergeConfig,
+	preview,
+} from "vite";
 import { beforeAll, inject } from "vitest";
-import { getViteModuleToTest } from "./vite-module-to-test";
-import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
 	ConfigEnv,
@@ -21,6 +26,7 @@ import type { RunnerTestFile } from "vitest";
 
 export const workspaceRoot = path.resolve(__dirname, "../");
 
+// eslint-disable-next-line turbo/no-undeclared-env-vars
 export const isBuild = !!process.env.VITE_TEST_BUILD;
 export const isWindows = process.platform === "win32";
 
@@ -33,7 +39,7 @@ export const isLocalWithoutDockerRunning =
 /**
  * Vite Dev Server when testing serve
  */
-export let viteServer: ViteDevServer;
+export let viteServer: ViteDevServer | PreviewServer;
 /**
  * Root of the Vite fixture
  */
@@ -63,31 +69,34 @@ export const serverLogs: {
 export const browserLogs: string[] = [];
 export const browserErrors: Error[] = [];
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export let resolvedConfig: ResolvedConfig = undefined!;
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export let page: Page = undefined!;
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export let browser: Browser = undefined!;
 export let viteTestUrl: string = "";
-export let watcher: Rollup.RollupWatcher | undefined = undefined;
-
-const vite = await getViteModuleToTest();
+export const watcher: Rollup.RollupWatcher | undefined = undefined;
 
 export function setViteUrl(url: string): void {
 	viteTestUrl = url;
 }
 
 export function resetServerLogs() {
-	serverLogs.info = [];
-	serverLogs.warns = [];
-	serverLogs.errors = [];
+	serverLogs.info.splice(0, serverLogs.info.length);
+	serverLogs.warns.splice(0, serverLogs.warns.length);
+	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
 beforeAll(async (s) => {
-	let server: ViteDevServer | http.Server | PreviewServer | undefined;
+	let server: ViteDevServer | PreviewServer | undefined;
 
 	const suite = s as RunnerTestFile;
 
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	testPath = suite.filepath!;
+	// eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
 	testName = slash(testPath).match(/playground\/([\w-♫]+)\//)?.[1]!;
 	testDir = path.dirname(testPath);
 	if (testName) {
@@ -99,21 +108,30 @@ beforeAll(async (s) => {
 		throw new Error("wsEndpoint not found");
 	}
 
+	const logLabel = "bootup: " + testName;
+
+	console.time(logLabel);
+	console.timeLog(logLabel, "Starting browser connect to", wsEndpoint);
 	browser = await chromium.connect(wsEndpoint);
 	// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
 	page = await browser.newPage({ ignoreHTTPSErrors: true });
+	console.timeLog(logLabel, `Browser connected`);
 
 	const globalConsole = console;
 	const warn = globalConsole.warn;
 	globalConsole.warn = (msg: string, ...args: unknown[]) => {
-		if (msg.includes("Generated an empty chunk")) return;
+		if (msg.includes("Generated an empty chunk")) {
+			return;
+		}
 		warn.call(globalConsole, msg, ...args);
 	};
 
 	try {
 		page.on("console", (msg) => {
+			console.timeLog(logLabel, `BROWSER LOG [${msg.type()}]: ${msg.text()}`);
 			// ignore favicon requests in headed browser
 			if (
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
 				process.env.VITE_DEBUG_SERVE &&
 				msg.text().includes("Failed to load resource:") &&
 				msg.location().url.includes("favicon.ico")
@@ -123,6 +141,7 @@ beforeAll(async (s) => {
 			browserLogs.push(msg.text());
 		});
 		page.on("pageerror", (error) => {
+			console.timeLog(logLabel, `BROWSER ERROR: ${error.message}`);
 			browserErrors.push(error);
 		});
 
@@ -147,6 +166,7 @@ beforeAll(async (s) => {
 				path.resolve(path.dirname(testPath), "serve.js"),
 			].find((i) => fs.existsSync(i));
 
+			console.timeLog(logLabel, "Starting test server...");
 			if (testCustomServe) {
 				// test has custom server configuration.
 				const mod = await import(testCustomServe);
@@ -163,6 +183,8 @@ beforeAll(async (s) => {
 			} else {
 				server = await startDefaultServe();
 			}
+			console.timeLog(logLabel, "Started test server...");
+			console.timeEnd(logLabel);
 		}
 	} catch (e) {
 		// Closing the page since an error in the setup, for example a runtime error
@@ -179,10 +201,11 @@ beforeAll(async (s) => {
 
 		await page?.close();
 		await server?.close();
+		// @ts-expect-error TODO: fix
 		await watcher?.close();
 		await browser?.close();
 	};
-}, 15_000);
+}, 40_000);
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
@@ -198,7 +221,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 				`vite.config.${variantName}.${extension}`
 			);
 			if (fs.existsSync(configVariantPath)) {
-				const res = await vite.loadConfigFromFile(configEnv, configVariantPath);
+				const res = await loadConfigFromFile(configEnv, configVariantPath);
 				if (res) {
 					config = res.config;
 					break;
@@ -208,7 +231,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 	}
 	// config file from test root dir
 	if (!config) {
-		const res = await vite.loadConfigFromFile(configEnv, undefined, rootDir);
+		const res = await loadConfigFromFile(configEnv, undefined, rootDir);
 		if (res) {
 			config = res.config;
 		}
@@ -244,18 +267,20 @@ export async function loadConfig(configEnv: ConfigEnv) {
 			config?.logLevel
 		),
 	};
-	return vite.mergeConfig(options, config || {});
+	return mergeConfig(options, config || {});
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server | PreviewServer
+	ViteDevServer | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
 	if (!isBuild) {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.VITE_INLINE = "inline-serve";
 		const config = await loadConfig({ command: "serve", mode: "development" });
-		viteServer = await (await vite.createServer(config)).listen();
+		viteServer = await (await createServer(config)).listen();
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		viteTestUrl = viteServer.resolvedUrls!.local[0]!;
 		if (viteServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
@@ -263,6 +288,7 @@ export async function startDefaultServe(): Promise<
 		await page.goto(viteTestUrl);
 		return viteServer;
 	} else {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.VITE_INLINE = "inline-build";
 		// determine build watch
 		const resolvedPlugin: () => PluginOption = () => ({
@@ -271,7 +297,7 @@ export async function startDefaultServe(): Promise<
 				resolvedConfig = config;
 			},
 		});
-		const buildConfig = vite.mergeConfig(
+		const buildConfig = mergeConfig(
 			await loadConfig({
 				command: "build",
 				mode: "production",
@@ -280,21 +306,30 @@ export async function startDefaultServe(): Promise<
 				plugins: [resolvedPlugin()],
 			}
 		);
-		const builder = await vite.createBuilder(buildConfig);
+		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
+
+		// This environment variable is used to indicate to the preview server that it is being run during a build
+		// We need to delete it here as, during testing, preview also runs in the same process after the build completes
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		delete process.env.CLOUDFLARE_VITE_BUILD;
 
 		const previewConfig = await loadConfig({
 			command: "serve",
 			mode: "development",
 			isPreview: true,
 		});
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		const _nodeEnv = process.env.NODE_ENV;
 		// Make sure we are running from within the playground.
 		// Otherwise workerd will error with messages about not being allowed to escape the starting directory with `..`.
 		process.chdir(previewConfig.root);
-		const previewServer = await vite.preview(previewConfig);
+		const previewServer = await preview(previewConfig);
 		// prevent preview change NODE_ENV
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.NODE_ENV = _nodeEnv;
+		viteServer = previewServer;
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		viteTestUrl = previewServer!.resolvedUrls!.local[0]!;
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
@@ -308,7 +343,7 @@ export async function startDefaultServe(): Promise<
  * Send the rebuild complete message in build watch
  */
 export async function notifyRebuildComplete(
-	watcher: Rollup.RollupWatcher
+	rollupWatcher: Rollup.RollupWatcher
 ): Promise<Rollup.RollupWatcher> {
 	let resolveFn: undefined | (() => void);
 	const callback = (event: Rollup.RollupWatcherEvent): void => {
@@ -316,11 +351,11 @@ export async function notifyRebuildComplete(
 			resolveFn?.();
 		}
 	};
-	watcher.on("event", callback);
+	rollupWatcher.on("event", callback);
 	await new Promise<void>((resolve) => {
 		resolveFn = resolve;
 	});
-	return watcher.off("event", callback);
+	return rollupWatcher.off("event", callback);
 }
 
 // logLevel values taken from the vite source code: https://github.com/vitejs/vite/blob/302f8091b/packages/vite/src/node/logger.ts#L30-L35
@@ -359,7 +394,9 @@ export function createInMemoryLogger(
 		},
 		warnOnce(msg) {
 			if (thresholdLogLevel >= logLevels.warn) {
-				if (warnedMessages.has(msg)) return;
+				if (warnedMessages.has(msg)) {
+					return;
+				}
 				warns.push(msg);
 				logger.hasWarned = true;
 				warnedMessages.add(msg);

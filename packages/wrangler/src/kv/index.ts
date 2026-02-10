@@ -3,18 +3,26 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import {
-	readConfig,
-	sharedResourceCreationArgs,
-	updateConfigFile,
-} from "../config";
+	CommandLineArgsError,
+	parseJSON,
+	readFileSync,
+	readFileSyncToBuffer,
+	UserError,
+} from "@cloudflare/workers-utils";
+import chalk from "chalk";
+import { Cloudflare } from "cloudflare";
+import dedent from "ts-dedent";
+import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
@@ -39,9 +47,10 @@ import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvNamespace = createNamespace({
 	metadata: {
-		description: "🗂️  Manage Workers KV Namespaces",
+		description: "🗂️ Manage Workers KV Namespaces",
 		status: "stable",
 		owner: "Product: KV",
+		category: "Storage & databases",
 	},
 });
 
@@ -100,10 +109,30 @@ export const kvNamespaceCreateCommand = createCommand({
 		// TODO: generate a binding name stripping non alphanumeric chars
 		logger.log(`🌀 Creating namespace with title "${title}"`);
 
-		const { id: namespaceId } = await sdk.kv.namespaces.create({
-			account_id: accountId,
-			title,
-		});
+		let namespaceId: string;
+		try {
+			const result = await sdk.kv.namespaces.create({
+				account_id: accountId,
+				title,
+			});
+			namespaceId = result.id;
+		} catch (e) {
+			if (
+				e instanceof Cloudflare.APIError &&
+				e.errors.some((err) => err.code === 10014)
+			) {
+				throw new UserError(dedent`
+					A KV namespace with the title "${title}" already exists.
+
+					You can list existing namespaces with their IDs by running:
+					  wrangler kv namespace list
+
+					Or choose a different namespace name.
+				`);
+			}
+			throw e;
+		}
+
 		metrics.sendMetricsEvent("create kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -111,7 +140,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		logger.log("✨ Success!");
 		const previewString = args.preview ? "preview_" : "";
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({
 				binding: getValidBindingName(name ?? args.namespace, "KV"),
@@ -177,6 +206,12 @@ export const kvNamespaceDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
+		},
 	},
 
 	validateArgs(args) {
@@ -196,6 +231,17 @@ export const kvNamespaceDeleteCommand = createCommand({
 		}
 
 		const accountId = await requireAuth(config);
+		logger.log(
+			`About to delete ${chalk.bold("remote")} KV namespace '${args.binding ? args.binding + ` (${id})` : args.namespaceId}'.\n` +
+				`This action is irreversible and will permanently delete all data in the KV namespace.\n`
+		);
+		if (!args.skipConfirmation) {
+			const response = await confirm(`Ok to proceed?`);
+			if (!response) {
+				logger.log(`Not deleting.`);
+				return;
+			}
+		}
 
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(config, accountId, id);
@@ -305,6 +351,56 @@ export const kvNamespaceRenameCommand = createCommand({
 	},
 });
 
+/**
+ * Common args shared between `kv key put` and `kv bulk put` commands
+ */
+const putCommonArgs = {
+	binding: {
+		type: "string",
+		requiresArg: true,
+		describe: "The binding name to the namespace to write to",
+	},
+	"namespace-id": {
+		type: "string",
+		requiresArg: true,
+		describe: "The id of the namespace to write to",
+	},
+	preview: {
+		type: "boolean",
+		describe: "Interact with a preview namespace",
+	},
+	ttl: {
+		type: "number",
+		describe: "Time for which the entries should be visible",
+	},
+	expiration: {
+		type: "number",
+		describe: "Time since the UNIX epoch after which the entry expires",
+	},
+	metadata: {
+		type: "string",
+		describe: "Arbitrary JSON that is associated with a key",
+		coerce: (jsonStr: string): KeyValue["metadata"] => {
+			try {
+				return JSON.parse(jsonStr);
+			} catch {}
+		},
+	},
+	local: {
+		type: "boolean",
+		describe: "Interact with local storage",
+	},
+	remote: {
+		type: "boolean",
+		describe: "Interact with remote storage",
+		conflicts: "local",
+	},
+	"persist-to": {
+		type: "string",
+		describe: "Directory for local persistence",
+	},
+} as const;
+
 export const kvKeyPutCommand = createCommand({
 	metadata: {
 		description: "Write a single key/value pair to the given namespace",
@@ -325,55 +421,12 @@ export const kvKeyPutCommand = createCommand({
 			type: "string",
 			describe: "The value to write",
 		},
-		binding: {
-			type: "string",
-			requiresArg: true,
-			describe: "The binding name to the namespace to write to",
-		},
-		"namespace-id": {
-			type: "string",
-			requiresArg: true,
-			describe: "The id of the namespace to write to",
-		},
-		preview: {
-			type: "boolean",
-			describe: "Interact with a preview namespace",
-		},
-		ttl: {
-			type: "number",
-			describe: "Time for which the entries should be visible",
-		},
-		expiration: {
-			type: "number",
-			describe: "Time since the UNIX epoch after which the entry expires",
-		},
-		metadata: {
-			type: "string",
-			describe: "Arbitrary JSON that is associated with a key",
-			coerce: (jsonStr: string): KeyValue["metadata"] => {
-				try {
-					return JSON.parse(jsonStr);
-				} catch {}
-			},
-		},
 		path: {
 			type: "string",
 			requiresArg: true,
 			describe: "Read value from the file at a given path",
 		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
+		...putCommonArgs,
 	},
 	validateArgs(args) {
 		demandOneOfOption("binding", "namespace-id")(args);
@@ -528,6 +581,41 @@ export const kvKeyListCommand = createCommand({
 	},
 });
 
+/**
+ * Common args shared between `kv key get` and `kv bulk get` commands
+ */
+const getCommonArgs = {
+	binding: {
+		type: "string",
+		requiresArg: true,
+		describe: "The binding name to the namespace to get from",
+	},
+	"namespace-id": {
+		type: "string",
+		requiresArg: true,
+		describe: "The id of the namespace to get from",
+	},
+	preview: {
+		type: "boolean",
+		// In the case of getting key values we will default to non-preview mode
+		default: false,
+		describe: "Interact with a preview namespace",
+	},
+	local: {
+		type: "boolean",
+		describe: "Interact with local storage",
+	},
+	remote: {
+		type: "boolean",
+		describe: "Interact with remote storage",
+		conflicts: "local",
+	},
+	"persist-to": {
+		type: "string",
+		describe: "Directory for local persistence",
+	},
+} as const;
+
 export const kvKeyGetCommand = createCommand({
 	metadata: {
 		description: "Read a single value by key from the given namespace",
@@ -545,40 +633,12 @@ export const kvKeyGetCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		binding: {
-			type: "string",
-			requiresArg: true,
-			describe: "The binding name to the namespace to get from",
-		},
-		"namespace-id": {
-			type: "string",
-			requiresArg: true,
-			describe: "The id of the namespace to get from",
-		},
-		preview: {
-			type: "boolean",
-			// In the case of getting key values we will default to non-preview mode
-			default: false,
-			describe: "Interact with a preview namespace",
-		},
 		text: {
 			type: "boolean",
 			default: false,
 			describe: "Decode the returned value as a utf8 string",
 		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
+		...getCommonArgs,
 	},
 	validateArgs(args) {
 		demandOneOfOption("binding", "namespace-id")(args);
@@ -630,6 +690,39 @@ export const kvKeyGetCommand = createCommand({
 	},
 });
 
+/**
+ * Common args shared between `kv key delete` and `kv bulk delete` commands
+ */
+const deleteCommonArgs = {
+	binding: {
+		type: "string",
+		requiresArg: true,
+		describe: "The binding name to the namespace to delete from",
+	},
+	"namespace-id": {
+		type: "string",
+		requiresArg: true,
+		describe: "The id of the namespace to delete from",
+	},
+	preview: {
+		type: "boolean",
+		describe: "Interact with a preview namespace",
+	},
+	local: {
+		type: "boolean",
+		describe: "Interact with local storage",
+	},
+	remote: {
+		type: "boolean",
+		describe: "Interact with remote storage",
+		conflicts: "local",
+	},
+	"persist-to": {
+		type: "string",
+		describe: "Directory for local persistence",
+	},
+} as const;
+
 export const kvKeyDeleteCommand = createCommand({
 	metadata: {
 		description: "Remove a single key value pair from the given namespace",
@@ -646,33 +739,7 @@ export const kvKeyDeleteCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		binding: {
-			type: "string",
-			requiresArg: true,
-			describe: "The binding name to the namespace to delete from",
-		},
-		"namespace-id": {
-			type: "string",
-			requiresArg: true,
-			describe: "The id of the namespace to delete from",
-		},
-		preview: {
-			type: "boolean",
-			describe: "Interact with a preview namespace",
-		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
+		...deleteCommonArgs,
 	},
 
 	async handler({ key, ...args }) {
@@ -707,7 +774,7 @@ export const kvKeyDeleteCommand = createCommand({
 export const kvBulkGetCommand = createCommand({
 	metadata: {
 		description: "Gets multiple key-value pairs from a namespace",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: KV",
 	},
 	behaviour: {
@@ -721,33 +788,7 @@ export const kvBulkGetCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		binding: {
-			type: "string",
-			requiresArg: true,
-			describe: "The binding name to the namespace to get from",
-		},
-		"namespace-id": {
-			type: "string",
-			requiresArg: true,
-			describe: "The id of the namespace to get from",
-		},
-		preview: {
-			type: "boolean",
-			describe: "Interact with a preview namespace",
-		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
+		...getCommonArgs,
 	},
 
 	async handler({ filename, ...args }) {
@@ -842,50 +883,7 @@ export const kvBulkPutCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		binding: {
-			type: "string",
-			requiresArg: true,
-			describe: "The binding name to the namespace to write to",
-		},
-		"namespace-id": {
-			type: "string",
-			requiresArg: true,
-			describe: "The id of the namespace to write to",
-		},
-		preview: {
-			type: "boolean",
-			describe: "Interact with a preview namespace",
-		},
-		ttl: {
-			type: "number",
-			describe: "Time for which the entries should be visible",
-		},
-		expiration: {
-			type: "number",
-			describe: "Time since the UNIX epoch after which the entry expires",
-		},
-		metadata: {
-			type: "string",
-			describe: "Arbitrary JSON that is associated with a key",
-			coerce: (jsonStr: string): KeyValue["metadata"] => {
-				try {
-					return JSON.parse(jsonStr);
-				} catch {}
-			},
-		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
+		...putCommonArgs,
 	},
 
 	async handler({ filename, ...args }) {
@@ -1008,38 +1006,12 @@ export const kvBulkDeleteCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		binding: {
-			type: "string",
-			requiresArg: true,
-			describe: "The binding name to the namespace to delete from",
-		},
-		"namespace-id": {
-			type: "string",
-			requiresArg: true,
-			describe: "The id of the namespace to delete from",
-		},
-		preview: {
-			type: "boolean",
-			describe: "Interact with a preview namespace",
-		},
 		force: {
 			type: "boolean",
 			alias: "f",
 			describe: "Do not ask for confirmation before deleting",
 		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
+		...deleteCommonArgs,
 	},
 
 	async handler({ filename, ...args }) {

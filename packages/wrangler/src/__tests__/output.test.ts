@@ -1,8 +1,12 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FatalError } from "../errors";
+import { FatalError } from "@cloudflare/workers-utils";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses custom matchers (expect.extend) */
+import { afterEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { clearOutputFilePath, writeOutput } from "../output";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
@@ -10,6 +14,7 @@ import type { OutputEntry } from "../output";
 describe("writeOutput()", () => {
 	runInTempDir({ homedir: "home" });
 	afterEach(clearOutputFilePath);
+	mockConsoleMethods();
 
 	it("should do nothing with no env vars set", () => {
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");

@@ -1,23 +1,17 @@
-import events from "node:events";
 import path from "node:path";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
-import { describe, it } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
+import { FakeBus } from "../../helpers/fake-bus";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { seed } from "../../helpers/seed";
-import type { ConfigUpdateEvent } from "../../../api";
-
-async function waitForConfigUpdate(
-	controller: ConfigController
-): Promise<ConfigUpdateEvent> {
-	const [event] = await events.once(controller, "configUpdate");
-	return event;
-}
 
 describe("ConfigController", () => {
 	runInTempDir();
@@ -33,9 +27,11 @@ describe("ConfigController", () => {
 	// watch files in a directory that no longer exists.
 	// By doing it ourselves in `beforeEach()` and `afterEach()` we can ensure the controller
 	// is torn down before the temporary directory is removed.
+	let bus: FakeBus;
 	let controller: ConfigController;
 	beforeEach(() => {
-		controller = new ConfigController();
+		bus = new FakeBus();
+		controller = new ConfigController(bus);
 		logger.loggerLevel = "debug";
 	});
 	afterEach(async () => {
@@ -111,7 +107,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should emit configUpdate events with defaults applied", async () => {
-		const event = waitForConfigUpdate(controller);
+		const event = bus.waitFor("configUpdate");
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -143,7 +139,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async () => {
-		const event = waitForConfigUpdate(controller);
+		const event = bus.waitFor("configUpdate");
 		await seed({
 			"some/base_dir/nested/index.js": dedent/* javascript */ `
 				export default {
@@ -177,7 +173,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should shallow merge patched config", async () => {
-		const event1 = waitForConfigUpdate(controller);
+		const event1 = bus.waitFor("configUpdate");
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -207,7 +203,7 @@ describe("ConfigController", () => {
 			},
 		});
 
-		const event2 = waitForConfigUpdate(controller);
+		const event2 = bus.waitFor("configUpdate");
 		await controller.patch({
 			dev: {
 				remote: true,
@@ -236,7 +232,7 @@ describe("ConfigController", () => {
 			},
 		});
 
-		const event3 = waitForConfigUpdate(controller);
+		const event3 = bus.waitFor("configUpdate");
 		await controller.patch({
 			dev: {
 				origin: { hostname: "myexample.com" },
@@ -266,5 +262,52 @@ describe("ConfigController", () => {
 				},
 			},
 		});
+	});
+
+	it("should only log warnings once even with multiple config updates", async () => {
+		await seed({
+			"src/index.js": dedent/* javascript */ `
+				addEventListener('fetch', event => {
+					event.respondWith(new Response('hello world'))
+				})
+			`,
+			"wrangler.toml": dedent/* toml */ `
+				name = "my-worker"
+				main = "src/index.js"
+				compatibility_date = "2024-06-01"
+
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS"
+				dataset = "analytics_dataset"
+			`,
+		});
+
+		const event1 = bus.waitFor("configUpdate");
+		await controller.set({
+			config: "./wrangler.toml",
+		});
+		await event1;
+
+		const event2 = bus.waitFor("configUpdate");
+		await controller.patch({
+			dev: { liveReload: true },
+		});
+		await event2;
+
+		const event3 = bus.waitFor("configUpdate");
+		await controller.patch({
+			dev: { server: { port: 8787 } },
+		});
+		await event3;
+
+		const warningCount = std.warn
+			.split("\n")
+			.filter((line) =>
+				line.includes(
+					"Analytics Engine is not supported locally when using the service-worker format"
+				)
+			).length;
+
+		expect(warningCount).toBe(1);
 	});
 });

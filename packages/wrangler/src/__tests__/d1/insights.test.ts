@@ -1,5 +1,6 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { vi } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { getDurationDates } from "../../d1/insights";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -8,7 +9,6 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("getDurationDates()", () => {
 	beforeAll(() => {
@@ -21,28 +21,34 @@ describe("getDurationDates()", () => {
 		vi.useRealTimers();
 	});
 
-	it("should throw an error if duration is greater than 31 days (in days)", () => {
+	it("should throw an error if duration is greater than 31 days (in days)", ({
+		expect,
+	}) => {
 		expect(() => getDurationDates("32d")).toThrowError(
 			"Duration cannot be greater than 31 days"
 		);
 	});
-	it("should throw an error if duration is greater than 31 days (in minutes)", () => {
+	it("should throw an error if duration is greater than 31 days (in minutes)", ({
+		expect,
+	}) => {
 		expect(() => getDurationDates("44641m")).toThrowError(
 			"Duration cannot be greater than 44640 minutes (31 days)"
 		);
 	});
 
-	it("should throw an error if duration is greater than 31 days (in hours)", () => {
+	it("should throw an error if duration is greater than 31 days (in hours)", ({
+		expect,
+	}) => {
 		expect(() => getDurationDates("745h")).toThrowError(
 			"Duration cannot be greater than 744 hours (31 days)"
 		);
 	});
 
-	it("should throw an error if duration unit is invalid", () => {
+	it("should throw an error if duration unit is invalid", ({ expect }) => {
 		expect(() => getDurationDates("1y")).toThrowError("Invalid duration unit");
 	});
 
-	it("should return the correct start and end dates", () => {
+	it("should return the correct start and end dates", ({ expect }) => {
 		const [startDate, endDate] = getDurationDates("5d");
 
 		expect(+new Date(startDate)).toBe(+new Date(2023, 6, 27));
@@ -58,7 +64,7 @@ describe("insights", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should throw if a database name is not provided", async () => {
+	it("should throw if a database name is not provided", async ({ expect }) => {
 		await expect(() => runWrangler("d1 insights")).rejects.toThrow(
 			"Not enough non-option arguments: got 0, need at least 1"
 		);
@@ -70,7 +76,7 @@ describe("insights", () => {
   `);
 	});
 
-	it("should throw if database doesn't exist", async () => {
+	it("should throw if database doesn't exist", async ({ expect }) => {
 		setIsTTY(false);
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
@@ -107,7 +113,7 @@ describe("insights", () => {
 		);
 	});
 
-	it("should display the expected output", async () => {
+	it("should display the expected output", async ({ expect }) => {
 		setIsTTY(false);
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },

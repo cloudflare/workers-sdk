@@ -1,18 +1,18 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getWarningForWorkersConfigs } from "../workers-configs";
-import type { WorkerConfig } from "../plugin-config";
+import type { ResolvedWorkerConfig } from "../plugin-config";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
 describe("getWarningForWorkersConfigs", () => {
 	describe("no warning needed", () => {
-		test("entry worker only", () => {
+		test("entry worker only", ({ expect }) => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
 					type: "worker",
 					config: {
 						name: "entry-worker",
 						configPath: "./wrangler.json",
-					} as Partial<WorkerConfig> as WorkerConfig,
+					} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 					nonApplicable: getEmptyNotApplicableMap(),
 					raw: getEmptyRawConfig(),
 				},
@@ -21,14 +21,14 @@ describe("getWarningForWorkersConfigs", () => {
 			expect(warning).toBeUndefined();
 		});
 
-		test("multi workers", () => {
+		test("multi workers", ({ expect }) => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
 					type: "worker",
 					config: {
 						name: "entry-worker",
 						configPath: "./wrangler.json",
-					} as Partial<WorkerConfig> as WorkerConfig,
+					} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 					nonApplicable: getEmptyNotApplicableMap(),
 					raw: getEmptyRawConfig(),
 				},
@@ -38,7 +38,7 @@ describe("getWarningForWorkersConfigs", () => {
 						config: {
 							name: "worker-a",
 							configPath: "./a/wrangler.json",
-						} as Partial<WorkerConfig> as WorkerConfig,
+						} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 						nonApplicable: getEmptyNotApplicableMap(),
 						raw: getEmptyRawConfig(),
 					},
@@ -46,7 +46,7 @@ describe("getWarningForWorkersConfigs", () => {
 						type: "worker",
 						config: {
 							configPath: "./b/wrangler.json",
-						} as Partial<WorkerConfig> as WorkerConfig,
+						} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 						nonApplicable: getEmptyNotApplicableMap(),
 						raw: getEmptyRawConfig(),
 					},
@@ -56,14 +56,14 @@ describe("getWarningForWorkersConfigs", () => {
 		});
 	});
 
-	test("entry worker only", () => {
+	test("entry worker only", ({ expect }) => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
 				type: "worker",
 				config: {
 					name: "entry-worker",
 					configPath: "./wrangler.json",
-				} as Partial<WorkerConfig> as WorkerConfig,
+				} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 				nonApplicable: {
 					replacedByVite: new Set(["alias", "minify"]),
 					notRelevant: new Set([
@@ -89,14 +89,14 @@ describe("getWarningForWorkersConfigs", () => {
 		`);
 	});
 
-	test("multi workers", () => {
+	test("multi workers", ({ expect }) => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
 				type: "worker",
 				config: {
 					name: "entry-worker",
 					configPath: "./wrangler.json",
-				} as Partial<WorkerConfig> as WorkerConfig,
+				} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 				nonApplicable: {
 					replacedByVite: new Set(["alias"]),
 					notRelevant: new Set(["build"]),
@@ -109,7 +109,7 @@ describe("getWarningForWorkersConfigs", () => {
 					config: {
 						name: "worker-a",
 						configPath: "./a/wrangler.json",
-					} as Partial<WorkerConfig> as WorkerConfig,
+					} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 					nonApplicable: {
 						replacedByVite: new Set([]),
 						notRelevant: new Set(["find_additional_modules", "no_bundle"]),
@@ -120,7 +120,7 @@ describe("getWarningForWorkersConfigs", () => {
 					type: "worker",
 					config: {
 						configPath: "./b/wrangler.json",
-					} as Partial<WorkerConfig> as WorkerConfig,
+					} as Partial<ResolvedWorkerConfig> as ResolvedWorkerConfig,
 					nonApplicable: {
 						replacedByVite: new Set([]),
 						notRelevant: new Set(["site"]),

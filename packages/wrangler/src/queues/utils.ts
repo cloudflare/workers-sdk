@@ -1,4 +1,4 @@
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	INVALID_CONSUMER_SETTINGS_ERROR,
 	INVALID_QUEUE_SETTINGS_ERROR,

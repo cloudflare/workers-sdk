@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import {
@@ -216,7 +216,11 @@ export async function launchBrowser({
 		pipe: false,
 		onExit: async () => {
 			await fs.promises
-				.rm(tempUserData, { recursive: true, force: true })
+				.rm(tempUserData, {
+					recursive: true,
+					force: true,
+					maxRetries: 5, // In case of Windows file locks
+				})
 				.catch((e) => {
 					log.debug(
 						`Unable to remove Chrome user data directory: ${String(e)}`

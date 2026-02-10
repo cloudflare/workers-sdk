@@ -1,4 +1,4 @@
-import { ReadableStream, TransformStream } from "stream/web";
+import { ReadableStream, TransformStream } from "node:stream/web";
 
 export function prefixStream(
 	prefix: Uint8Array,

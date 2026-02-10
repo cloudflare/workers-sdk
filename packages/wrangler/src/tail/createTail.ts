@@ -1,18 +1,18 @@
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "@cloudflare/workers-utils";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { proxy } from "../utils/constants";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Outcome, TailFilterMessage } from "./filters";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Request } from "undici";
 
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
 
-const TRACE_VERSION = "trace-v1";
+export const TRACE_VERSION = "trace-v1";
 
 /**
  * When creating a Tail, the response from the API contains
@@ -186,7 +186,7 @@ export async function createTail(
 	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
-			"User-Agent": `wrangler-js/${packageVersion}`,
+			"User-Agent": `wrangler/${packageVersion}`,
 		},
 		...p,
 	});
@@ -264,7 +264,7 @@ export type TailEventMessage = {
 	 */
 	logs: {
 		message: unknown[];
-		level: string; // TODO: make this a union of possible values
+		level: "debug" | "info" | "log" | "warn" | "error";
 		timestamp: number;
 	}[];
 

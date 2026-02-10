@@ -1,8 +1,13 @@
 import { env, SELF } from "cloudflare:test";
 import { importSPKI, jwtVerify } from "jose"; // Check importing external module
-import { expect, it } from "vitest";
+import { it } from "vitest";
+import type { ExpectStatic } from "vitest";
 
-async function login(username: string, password: string): Promise<string> {
+async function login(
+	username: string,
+	password: string,
+	expect: ExpectStatic
+): Promise<string> {
 	const formData = new FormData();
 	formData.set("username", username);
 	formData.set("password", password);
@@ -16,9 +21,9 @@ async function login(username: string, password: string): Promise<string> {
 	return token;
 }
 
-it("logs in and generates token for user", async () => {
+it("logs in and generates token for user", async ({ expect }) => {
 	// Login and get token
-	const token = await login("admin", "lovelace");
+	const token = await login("admin", "lovelace", expect);
 
 	// Verify token is valid
 	const alg = "RS256";
@@ -36,9 +41,9 @@ it("logs in and generates token for user", async () => {
 	});
 });
 
-it("stores in user's database", async () => {
+it("stores in user's database", async ({ expect }) => {
 	// Login and get token
-	const token = await login("admin", "lovelace");
+	const token = await login("admin", "lovelace", expect);
 
 	// Read and write from the database
 	let response = await SELF.fetch("https://example.com/key", {

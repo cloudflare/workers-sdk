@@ -1,9 +1,18 @@
-import { createPlugin } from "./utils";
+import assert from "node:assert";
+import { assertHasNodeJsCompat } from "../nodejs-compat";
+import {
+	VIRTUAL_EXPORT_TYPES,
+	VIRTUAL_WORKER_ENTRY,
+	virtualPrefix,
+} from "../shared";
+import { createPlugin } from "../utils";
 
-const virtualPrefix = "virtual:cloudflare/";
-const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
-export const VIRTUAL_WORKER_ENTRY = `${virtualPrefix}worker-entry`;
+export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
+export const VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX = `${virtualPrefix}nodejs-global-inject/`;
+
+const virtualCloudflareResolveRE = /^virtual:cloudflare\//;
+const virtualCloudflareLoadRE = /^\0virtual:cloudflare\//;
 
 /**
  * Plugin to provide virtual modules
@@ -11,41 +20,120 @@ export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-en
 export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 	return {
 		applyToEnvironment(environment) {
-			return ctx.getWorkerConfig(environment.name) !== undefined;
+			return (
+				!ctx.isChildEnvironment(environment.name) &&
+				ctx.getWorkerConfig(environment.name) !== undefined
+			);
 		},
-		resolveId(source) {
-			if (source === VIRTUAL_WORKER_ENTRY) {
-				return `\0${VIRTUAL_WORKER_ENTRY}`;
-			}
-
-			if (source === VIRTUAL_USER_ENTRY) {
-				const workerConfig = ctx.getWorkerConfig(this.environment.name);
-
-				// TODO: replace with `assert` once we have migrated to tsdown
-				if (!workerConfig) {
+		resolveId: {
+			filter: { id: virtualCloudflareResolveRE },
+			async handler(source) {
+				// Fallback for when filter is not applied
+				// TODO: remove when we drop support for Vite 6
+				if (!virtualCloudflareResolveRE.test(source)) {
 					return;
 				}
 
-				return this.resolve(workerConfig.main);
-			}
-		},
-		load(id) {
-			if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
-				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+				if (source === VIRTUAL_USER_ENTRY) {
+					const workerConfig = ctx.getWorkerConfig(this.environment.name);
+					assert(workerConfig, "Expected `workerConfig` to be defined");
+					const main = await this.resolve(workerConfig.main);
 
-				return `
+					if (!main) {
+						throw new Error(
+							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+						);
+					}
+
+					return main;
+				}
+
+				return `\0${source}`;
+			},
+		},
+		load: {
+			filter: { id: virtualCloudflareLoadRE },
+			handler(id) {
+				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
+					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+
+					return `
 ${nodeJsCompat ? nodeJsCompat.injectGlobalCode() : ""}
+import { getExportTypes } from "${VIRTUAL_EXPORT_TYPES}";
 import * as mod from "${VIRTUAL_USER_ENTRY}";
 export * from "${VIRTUAL_USER_ENTRY}";
 export default mod.default ?? {};
 if (import.meta.hot) {
-	import.meta.hot.accept();
+	import.meta.hot.accept((module) => {
+		const exportTypes = getExportTypes(module);
+		import.meta.hot.send("vite-plugin-cloudflare:worker-export-types", exportTypes);
+	});
 }
-				`;
+					`;
+				}
+
+				if (id === `\0${VIRTUAL_EXPORT_TYPES}`) {
+					return `
+import {
+	WorkerEntrypoint,
+	DurableObject,
+	WorkflowEntrypoint,
+} from "cloudflare:workers";
+
+const baseClasses = new Map([
+	["WorkerEntrypoint", WorkerEntrypoint],
+	["DurableObject", DurableObject],
+	["WorkflowEntrypoint", WorkflowEntrypoint],
+]);
+
+export function getExportTypes(module) {
+	const exportTypes = {};
+
+	for (const [key, value] of Object.entries(module)) {
+		if (key === "default") {
+			continue;
+		}
+
+		let exportType;
+
+		if (typeof value === "function") {
+			for (const [type, baseClass] of baseClasses) {
+				if (baseClass.prototype.isPrototypeOf(value.prototype)) {
+					exportType = type;
+					break;
+				}
 			}
+
+			if (!exportType) {
+				exportType = "DurableObject";
+			}
+		} else if (typeof value === "object" && value !== null) {
+			exportType = "WorkerEntrypoint";
+		}
+
+		exportTypes[key] = exportType;
+	}
+
+	return exportTypes;
+}
+					`;
+				}
+
+				if (id.startsWith(`\0${VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX}`)) {
+					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+					assertHasNodeJsCompat(nodeJsCompat);
+
+					return nodeJsCompat.getGlobalVirtualModule(id.slice(1));
+				}
+			},
 		},
 	};
 });
+
+const virtualClientFallbackResolveRE =
+	/^virtual:cloudflare\/client-fallback-entry$/;
+const virtualClientFallbackLoadRE =
+	/^\0virtual:cloudflare\/client-fallback-entry$/;
 
 /**
  * Plugin to provide a virtual fallback entry file for the `client` environment.
@@ -58,15 +146,29 @@ export const virtualClientFallbackPlugin = createPlugin(
 			applyToEnvironment(environment) {
 				return environment.name === "client";
 			},
-			resolveId(source) {
-				if (source === VIRTUAL_CLIENT_FALLBACK_ENTRY) {
+			resolveId: {
+				filter: { id: virtualClientFallbackResolveRE },
+				handler(source) {
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!virtualClientFallbackResolveRE.test(source)) {
+						return;
+					}
+
 					return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
-				}
+				},
 			},
-			load(id) {
-				if (id === `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`) {
-					return ``;
-				}
+			load: {
+				filter: { id: virtualClientFallbackLoadRE },
+				handler(id) {
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!virtualClientFallbackLoadRE.test(id)) {
+						return;
+					}
+
+					return "";
+				},
 			},
 		};
 	}

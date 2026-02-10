@@ -1,6 +1,6 @@
-import assert from "assert";
-import { existsSync } from "fs";
-import path from "path";
+import assert from "node:assert";
+import { existsSync } from "node:fs";
+import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { fetch } from "undici";
 import { runCommand } from "./command";
@@ -51,28 +51,16 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand(
-		[
-			npm,
-			cmd,
-			...(saveFlag ? [saveFlag] : []),
-			...packages,
-			// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
-			// frameworks that haven't updated their peer dependency for Wrangler v4
-			// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-			...(npm === "npm" ? ["--legacy-peer-deps"] : []),
-		],
-		{
-			...config,
-			silent: true,
-		},
-	);
+	await runCommand([npm, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
+		...config,
+		silent: true,
+	});
 
 	if (npm === "npm") {
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
 		// We can't use `npm install --save-exact` because that always pins to an exact version, and we want to allow ranges too.
 		// So let's just fix that up now by rewriting the package.json.
-		const pkgJsonPath = path.join(process.cwd(), "package.json");
+		const pkgJsonPath = nodePath.join(process.cwd(), "package.json");
 		const pkgJson = readJSON(pkgJsonPath) as PackageJson;
 		const deps = config.dev ? pkgJson.devDependencies : pkgJson.dependencies;
 		assert(deps, "dependencies should be defined");
@@ -96,24 +84,18 @@ export const installPackages = async (
  */
 export const npmInstall = async (ctx: C3Context) => {
 	// Skip this step if packages have already been installed
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	const nodeModulesPath = nodePath.join(ctx.project.path, "node_modules");
 	if (existsSync(nodeModulesPath)) {
 		return;
 	}
 
 	const { npm } = detectPackageManager();
 
-	await runCommand(
-		// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
-		// frameworks that haven't updated their peer dependency for Wrangler v4
-		// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-		[npm, "install", ...(npm === "npm" ? ["--legacy-peer-deps"] : [])],
-		{
-			silent: true,
-			startText: "Installing dependencies",
-			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		},
-	);
+	await runCommand([npm, "install"], {
+		silent: true,
+		startText: "Installing dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
 };
 
 type NpmInfoResponse = {

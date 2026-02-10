@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import assert from "assert";
-import crypto from "crypto";
-import { ReadableStream, TransformStream } from "stream/web";
-import util from "util";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import { ReadableStream, TransformStream } from "node:stream/web";
+import util from "node:util";
 import { stringify } from "devalue";
 import { Headers } from "undici";
 import { DispatchFetch, Request, Response } from "../../../http";
@@ -12,6 +12,7 @@ import {
 	CoreHeaders,
 	createHTTPReducers,
 	createHTTPRevivers,
+	isDurableObjectStub,
 	isFetcherFetch,
 	isR2ObjectWriteHttpMetadata,
 	parseWithReadableStreams,
@@ -628,6 +629,10 @@ class ProxyStubHandler<T extends object>
 		);
 		if (
 			knownAsync ||
+			// Durable Object stub RPC calls should always be async to avoid blocking
+			// the Node.js event loop with `Atomics.wait()`. This allows Promise.race()
+			// and timeouts to work correctly when racing against DO method calls.
+			isDurableObjectStub(targetName) ||
 			// We assume every call with `ReadableStream`/`Blob` arguments is async.
 			// Note that you can't consume `ReadableStream`/`Blob` synchronously: if
 			// you tried a similar trick to `SynchronousFetcher`, blocking the main

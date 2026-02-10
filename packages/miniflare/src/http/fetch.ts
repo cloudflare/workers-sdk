@@ -1,5 +1,5 @@
-import assert from "assert";
-import http from "http";
+import assert from "node:assert";
+import http from "node:http";
 import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
 import { UndiciHeaders } from "undici/types/dispatcher";
@@ -233,6 +233,12 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			this.addHeaders(headers, path);
 
 			options.headers = headers;
+
+			// Sometimes, keep-alive connections can sometimes cause issues with sockets
+			// disconnecting unexpectedly. To mitigate this, try to avoid keep-alive race
+			// conditions by telling the runtime to close the connection immediately after
+			// the request is complete
+			options.reset = true;
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate

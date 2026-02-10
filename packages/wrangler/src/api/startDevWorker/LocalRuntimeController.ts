@@ -7,18 +7,14 @@ import {
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	convertCfWorkerInitBindingsToBindings,
-	unwrapHook,
-} from "./utils";
+import { getBinaryFileContents, unwrapHook } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -31,15 +27,6 @@ import type {
 import type { Binding, File, StartDevWorkerOptions } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
-async function getBinaryFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (file.contents instanceof Buffer) {
-			return file.contents;
-		}
-		return Buffer.from(file.contents);
-	}
-	return readFile(file.path);
-}
 async function getTextFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (typeof file.contents === "string") {
@@ -60,9 +47,7 @@ function getName(config: StartDevWorkerOptions) {
 export async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
-	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
-		event.config.bindings
-	);
+	const bindings: Record<string, Binding> = { ...event.config.bindings };
 
 	const crons = [];
 	const queueConsumers = [];
@@ -78,20 +63,30 @@ export async function convertToConfigBundle(
 		for (const module of event.bundle.modules ?? []) {
 			const identifier = MF.getIdentifier(module.name);
 			if (module.type === "text") {
-				bindings.vars ??= {};
-				bindings.vars[identifier] = await getTextFileContents({
-					contents: module.content,
-				});
+				bindings[identifier] = {
+					type: "plain_text",
+					value: await getTextFileContents({
+						contents: module.content,
+					}),
+				};
 			} else if (module.type === "buffer") {
-				bindings.data_blobs ??= {};
-				bindings.data_blobs[identifier] = await getBinaryFileContents({
-					contents: module.content,
-				});
+				bindings[identifier] = {
+					type: "data_blob",
+					source: {
+						contents: await getBinaryFileContents({
+							contents: module.content,
+						}),
+					},
+				};
 			} else if (module.type === "compiled-wasm") {
-				bindings.wasm_modules ??= {};
-				bindings.wasm_modules[identifier] = await getBinaryFileContents({
-					contents: module.content,
-				});
+				bindings[identifier] = {
+					type: "wasm_module",
+					source: {
+						contents: await getBinaryFileContents({
+							contents: module.content,
+						}),
+					},
+				};
 			}
 		}
 		event.bundle = { ...event.bundle, modules: [] };
@@ -123,10 +118,12 @@ export async function convertToConfigBundle(
 			? {
 					inspect: false,
 					inspectorPort: undefined,
+					inspectorHost: undefined,
 				}
 			: {
 					inspect: true,
 					inspectorPort: 0,
+					inspectorHost: event.config.dev.inspector?.hostname,
 				}),
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
@@ -137,26 +134,27 @@ export async function convertToConfigBundle(
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
-		services: bindings.services,
-		serviceBindings: fetchers,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
+		streamingTails: event.config.streamingTailConsumers,
 		containerDOClassNames: new Set(
 			event.config.containers?.map((c) => c.class_name)
 		),
 		containerBuildId: event.config.dev?.containerBuildId,
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
+		// Zone for CF-Worker header - extracted from routes/host configuration
+		zone: event.config.dev?.origin?.hostname,
 	};
 }
 
 export class LocalRuntimeController extends RuntimeController {
+	#log = MF.buildLog();
+	#currentBundleId = 0;
+
 	// ******************
 	//   Event Handlers
 	// ******************
-
-	#log = MF.buildLog();
-	#currentBundleId = 0;
 
 	// This is given as a shared secret to the Proxy and User workers
 	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
@@ -207,9 +205,7 @@ export class LocalRuntimeController extends RuntimeController {
 				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
 					await import("../remoteBindings");
 
-				const remoteBindings = pickRemoteBindings(
-					convertCfWorkerInitBindingsToBindings(configBundle.bindings) ?? {}
-				);
+				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 
 				const auth =
 					Object.keys(remoteBindings).length === 0
@@ -272,6 +268,8 @@ export class LocalRuntimeController extends RuntimeController {
 					onContainerImagePreparationEnd: () => {
 						this.containerBeingBuilt = undefined;
 					},
+					logger: logger,
+					isVite: false,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
@@ -303,6 +301,8 @@ export class LocalRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Reloading local server..."));
 
 				await this.#mf.setOptions(options);
+
+				logger.log(chalk.dim("⎔ Local server updated and ready"));
 			}
 			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
 			// calls to complete before resolving. To ensure we get the `url` and
@@ -438,13 +438,13 @@ export class LocalRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.emit("reloadStart", data);
+		this.bus.dispatch(data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.emit("reloadComplete", data);
+		this.bus.dispatch(data);
 	}
 	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
-		this.emit("devRegistryUpdate", data);
+		this.bus.dispatch(data);
 	}
 }
 

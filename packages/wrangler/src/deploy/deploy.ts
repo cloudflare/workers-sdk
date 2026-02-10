@@ -4,13 +4,24 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import {
+	APIError,
+	configFileName,
+	experimental_patchConfig,
+	formatCompatibilityDate,
+	formatConfigSnippet,
+	getDockerPath,
+	parseNonHyphenedUuid,
+	UserError,
+} from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { buildContainer, deployContainers } from "../cloudchamber/deploy";
-import { configFileName, formatConfigSnippet } from "../config";
+import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
+import { deployContainers } from "../containers/deploy";
+import { isAuthenticationError } from "../core/handle-errors";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -25,19 +36,16 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import { getDockerPath } from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
-import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
-import { APIError, ParseError, parseNonHyphenedUuid } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import {
 	ensureQueuesExistByConfig,
@@ -52,37 +60,37 @@ import {
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
+import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
-import { getRemoteConfigDiff } from "./config-diffs";
+import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
+import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
-import type {
-	CustomDomainRoute,
-	Route,
-	ZoneIdRoute,
-	ZoneNameRoute,
-} from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type {
-	CfModule,
-	CfPlacement,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
+import type {
+	CfModule,
+	CfWorkerInit,
+	ComplianceConfig,
+	Config,
+	CustomDomainRoute,
+	RawConfig,
+	Route,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {
@@ -397,40 +405,54 @@ export default async function deploy(props: Props): Promise<{
 			tags = script.tags ?? tags;
 
 			if (script.last_deployed_from === "dash") {
-				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
-				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
-					const remoteWorkerConfig = await downloadWorkerConfig(
-						name,
-						serviceMetaData.default_environment.environment,
-						entry.file,
-						accountId
-					);
+				const remoteWorkerConfig = await downloadWorkerConfig(
+					name,
+					serviceMetaData.default_environment.environment,
+					entry.file,
+					accountId
+				);
 
-					configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
-						...config,
-						// We also want to include all the routes used for deployment
-						routes: allDeploymentRoutes,
-					});
-				}
+				const configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
+					...config,
+					// We also want to include all the routes used for deployment
+					routes: allDeploymentRoutes,
+				});
 
-				if (configDiff) {
-					// If there are only additive changes (or no changes at all) there should be no problem,
-					// just using the local config (and override the remote one) should be totally fine
-					if (!configDiff.nonDestructive) {
-						logger.warn(
-							"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
-								`\n${configDiff.diff}\n\n` +
-								"Deploying the Worker will override the remote configuration with your local one."
-						);
-						if (!(await deployConfirm("Would you like to continue?"))) {
-							return { versionId, workerTag };
-						}
-					}
-				} else {
+				// If there are only additive changes (or no changes at all) there should be no problem,
+				// just using the local config (and override the remote one) should be totally fine
+				if (!configDiff.nonDestructive) {
 					logger.warn(
-						`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
+						"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
+							`\n${configDiff.diff}\n\n` +
+							"Deploying the Worker will override the remote configuration with your local one."
 					);
 					if (!(await deployConfirm("Would you like to continue?"))) {
+						if (
+							config.userConfigPath &&
+							/\.jsonc?$/.test(config.userConfigPath)
+						) {
+							if (
+								await confirm(
+									"Would you like to update the local config file with the remote values?",
+									{
+										defaultValue: true,
+										fallbackValue: true,
+									}
+								)
+							) {
+								const patchObj: RawConfig = getConfigPatch(
+									configDiff.diff,
+									props.env
+								);
+
+								experimental_patchConfig(
+									config.userConfigPath,
+									patchObj,
+									false
+								);
+							}
+						}
+
 						return { versionId, workerTag };
 					}
 				}
@@ -443,12 +465,24 @@ export default async function deploy(props: Props): Promise<{
 				}
 			}
 		} catch (e) {
-			// code: 10090, message: workers.api.error.service_not_found
-			// is thrown from the above fetchResult on the first deploy of a Worker
-			if ((e as { code?: number }).code !== 10090) {
-				throw e;
-			} else {
+			if (isWorkerNotFoundError(e)) {
 				workerExists = false;
+			} else {
+				throw e;
+			}
+		}
+	}
+
+	if (accountId && (isInteractive() || props.strict)) {
+		const remoteSecretsCheck = await checkRemoteSecretsOverride(
+			config,
+			props.env
+		);
+
+		if (remoteSecretsCheck?.override) {
+			logger.warn(remoteSecretsCheck.deployErrorMessage);
+			if (!(await deployConfirm("Would you like to continue?"))) {
+				return { versionId, workerTag };
 			}
 		}
 	}
@@ -754,11 +788,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 		}
 
-		// The upload API only accepts an empty string or no specified placement for the "off" mode.
-		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart"
-				? { mode: "smart", hint: config.placement.hint }
-				: undefined;
+		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main: CfModule = {
@@ -773,7 +803,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
-			containers: config.containers ?? undefined,
+			containers: config.containers,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -784,6 +814,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
+			streaming_tail_consumers: config.streaming_tail_consumers,
 			limits: config.limits,
 			assets:
 				props.assetsOptions && assetsJwt
@@ -878,6 +909,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			printBindings(
 				{ ...withoutStaticAssets, vars: maskedVars },
 				config.tail_consumers,
+				config.streaming_tail_consumers,
+				config.containers,
 				{ warnIfNoBindings: true }
 			);
 		} else {
@@ -892,6 +925,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
+
 			workerBundle = createWorkerUploadForm(worker);
 
 			await ensureQueuesExistByConfig(config);
@@ -1015,7 +1049,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				printBindings(
 					{ ...withoutStaticAssets, vars: maskedVars },
-					config.tail_consumers
+					config.tail_consumers,
+					config.streaming_tail_consumers,
+					config.containers
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1044,7 +1080,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (!bindingsPrinted) {
 					printBindings(
 						{ ...withoutStaticAssets, vars: maskedVars },
-						config.tail_consumers
+						config.tail_consumers,
+						config.streaming_tail_consumers,
+						config.containers
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(
@@ -1143,7 +1181,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			versionId,
 			accountId,
 			scriptName,
-			dryRun: props.dryRun ?? false,
 		});
 	}
 
@@ -1355,11 +1392,6 @@ async function publishRoutesFallback(
 	}
 
 	return deployedRoutes;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	// TODO: don't want to report these
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 export async function updateQueueConsumers(

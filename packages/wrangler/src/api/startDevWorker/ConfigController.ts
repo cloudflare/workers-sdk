@@ -1,6 +1,13 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import {
+	configFileName,
+	getDisableConfigWatching,
+	getDockerPath,
+	getLocalWorkerdCompatibilityDate,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
@@ -15,13 +22,8 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
-import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import {
-	getDisableConfigWatching,
-	getDockerPath,
-} from "../../environment-variables/misc-variables";
-import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -29,7 +31,6 @@ import {
 	requireApiToken,
 	requireAuth,
 } from "../../user";
-import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -47,23 +48,36 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { Config } from "../../config";
-import type { CfUnsafe } from "../../deployment-bundle/worker";
-import type { ControllerEventMap } from "./BaseController";
-import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
+import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
+import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
-
-type ConfigControllerEventMap = ControllerEventMap & {
-	configUpdate: [ConfigUpdateEvent];
-};
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
+
+async function resolveInspectorConfig(
+	config: Config,
+	input: StartDevWorkerInput
+): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
+	if (input.dev?.inspector === false) {
+		return false;
+	}
+	const hostname =
+		input.dev?.inspector?.hostname ?? config.dev.inspector_ip ?? "127.0.0.1";
+	const port =
+		input.dev?.inspector?.port ??
+		config.dev.inspector_port ??
+		(await getInspectorPort(hostname));
+	return {
+		hostname,
+		port,
+	};
+}
 
 async function resolveDevConfig(
 	config: Config,
@@ -138,15 +152,7 @@ async function resolveDevConfig(
 			httpsKeyPath: input.dev?.server?.httpsKeyPath,
 			httpsCertPath: input.dev?.server?.httpsCertPath,
 		},
-		inspector:
-			input.dev?.inspector === false
-				? false
-				: {
-						port:
-							input.dev?.inspector?.port ??
-							config.dev.inspector_port ??
-							(await getInspectorPort()),
-					},
+		inspector: await resolveInspectorConfig(config, input),
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
@@ -167,6 +173,7 @@ async function resolveDevConfig(
 				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
+		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -216,9 +223,12 @@ async function resolveBindings(
 				vars: maskedVars,
 			},
 			input.tailConsumers ?? config.tail_consumers,
+			input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			config.containers,
 			{
 				registry,
 				local: !input.dev?.remote,
+				remoteBindingsDisabled: input.dev?.remote === false,
 				name: config.name,
 			}
 		);
@@ -329,7 +339,11 @@ async function resolveConfig(
 		name:
 			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
 		config: config.configPath,
-		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
+		compatibilityDate: getDevCompatibilityDate(
+			entry.projectRoot,
+			config,
+			input.compatibilityDate
+		),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		pythonModules: {
@@ -382,6 +396,10 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 		tailConsumers: config.tail_consumers ?? [],
+		experimental: {
+			tailLogs: !!input.experimental?.tailLogs,
+		},
+		streamingTailConsumers: config.streaming_tail_consumers ?? [],
 	} satisfies StartDevWorkerOptions;
 
 	if (
@@ -389,7 +407,7 @@ async function resolveConfig(
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"
 	) {
-		logger.warn(
+		logger.once.warn(
 			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
@@ -398,11 +416,11 @@ async function resolveConfig(
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
-		logger.warn(
+		logger.once.warn(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
-						`${service.name} (${service.service}${
+						`${service.binding} (${service.service}${
 							service.environment ? `@${service.environment}` : ""
 						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
 				)
@@ -411,7 +429,7 @@ async function resolveConfig(
 	}
 
 	if (!resolved.dev?.origin?.secure && resolved.dev?.remote) {
-		logger.warn(
+		logger.once.warn(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
@@ -435,7 +453,9 @@ async function resolveConfig(
 		(queues?.length ||
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
-		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
+		logger.once.warn(
+			"Queues are not yet supported in wrangler dev remote mode."
+		);
 	}
 
 	if (resolved.dev.remote) {
@@ -446,35 +466,60 @@ async function resolveConfig(
 			resolved.containers &&
 			resolved.containers.length > 0
 		) {
-			logger.warn(
+			logger.once.warn(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
 		}
 
 		// TODO(do) support remote wrangler dev
-		const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
 			resolved.migrations
 		);
 		if (
 			resolved.dev.remote &&
-			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+			Array.from(classNameToUseSQLite.values()).some((v) => v)
 		) {
-			logger.warn("SQLite in Durable Objects is only supported in local mode.");
+			logger.once.warn(
+				"SQLite in Durable Objects is only supported in local mode."
+			);
 		}
 	}
 
-	// prompt user to update their types if we detect that it is out of date
-	const typesChanged = await checkTypesDiff(config, entry);
-	if (typesChanged) {
-		logger.log(
-			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
-		);
-	}
+	await checkTypesDiff(config, entry);
 
 	return { config: resolved, printCurrentBindings };
 }
 
-export class ConfigController extends Controller<ConfigControllerEventMap> {
+/**
+ * Returns the compatibility date to use in development.
+ *
+ * When no compatibility date is configured, uses the installed Workers runtime's latest supported date.
+ *
+ * @param config wrangler configuration
+ * @param compatibilityDate configured compatibility date
+ * @returns the compatibility date to use in development
+ */
+function getDevCompatibilityDate(
+	projectPath: string,
+	config: Config | undefined,
+	compatibilityDate = config?.compatibility_date
+): string {
+	const { date: workerdDate } = getLocalWorkerdCompatibilityDate({
+		projectPath,
+	});
+
+	if (config?.configPath && compatibilityDate === undefined) {
+		logger.warn(
+			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${workerdDate}.\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${workerdDate}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${workerdDate}\n\n` +
+				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
+		);
+	}
+	return compatibilityDate ?? workerdDate;
+}
+
+export class ConfigController extends Controller {
 	latestInput?: StartDevWorkerInput;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
@@ -565,6 +610,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 							: input.dev?.server?.secure
 								? "https"
 								: "http",
+					generateTypes: input.dev?.generateTypes,
 				},
 				{ useRedirectIfAvailable: true }
 			);
@@ -630,6 +676,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// *********************
 
 	emitConfigUpdateEvent(config: StartDevWorkerOptions) {
-		this.emit("configUpdate", { type: "configUpdate", config });
+		this.bus.dispatch({ type: "configUpdate", config });
 	}
 }

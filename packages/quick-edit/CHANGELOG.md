@@ -1,5 +1,29 @@
 # @cloudflare/quick-edit
 
+## 0.4.5
+
+### Patch Changes
+
+- [#12154](https://github.com/cloudflare/workers-sdk/pull/12154) [`e36c0c9`](https://github.com/cloudflare/workers-sdk/commit/e36c0c9f70041bea4abc4ee4e4e462e2dc11e9cc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use `X-Forwarded-Host` header for extension authority when behind a proxy
+
+  When Quick Edit is accessed through a proxy, the `X-Forwarded-Host` header is now used to determine the authority for loading builtin extensions. This ensures extensions load correctly when the Worker is behind a reverse proxy. The header value is only used if it matches `*.devprod.cloudflare.dev` for security.
+
+## 0.4.4
+
+### Patch Changes
+
+- [#11878](https://github.com/cloudflare/workers-sdk/pull/11878) [`e84e8fa`](https://github.com/cloudflare/workers-sdk/commit/e84e8fab79f17ffcc6a4c29c92c6924ceb351f94) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix relative path computation when the root folder name appears multiple times in a path
+
+  Previously, the logic assumed the root folder appeared exactly once in the path. When the root folder name appeared more than once, file modifications were not correctly detected.
+
+  For example, if the root folder is `my-worker`, a path like `/my-worker/my-worker/util.js` would incorrectly return `/` instead of `/my-worker/util.js`.
+
+## 0.4.3
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
 ## 0.4.2
 
 ### Patch Changes

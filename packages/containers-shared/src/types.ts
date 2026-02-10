@@ -2,16 +2,23 @@ import type {
 	ApplicationAffinityColocation,
 	InstanceType,
 	SchedulingPolicy,
+	UserSSHPublicKey,
+	WranglerSSHConfig,
 } from "./client";
 import type { ApplicationAffinityHardwareGeneration } from "./client/models/ApplicationAffinityHardwareGeneration";
 
-export interface Logger {
+export interface WranglerLogger {
 	debug: (...args: unknown[]) => void;
 	debugWithSanitization: (label: string, ...args: unknown[]) => void;
 	log: (...args: unknown[]) => void;
 	info: (...args: unknown[]) => void;
 	warn: (...args: unknown[]) => void;
 	error: (...args: unknown[]) => void;
+}
+export interface ViteLogger {
+	info: (msg: string) => void;
+	warn: (msg: string) => void;
+	error: (msg: string) => void;
 }
 
 export type BuildArgs = {
@@ -71,10 +78,13 @@ export type SharedContainerConfig = {
 	/** if undefined in config, defaults to "full_auto" */
 	rollout_kind: "full_auto" | "full_manual" | "none";
 	rollout_active_grace_period: number;
+	wrangler_ssh?: WranglerSSHConfig;
+	authorized_keys?: Array<UserSSHPublicKey>;
+	trusted_user_ca_keys?: Array<UserSSHPublicKey>;
 	constraints: {
 		regions?: string[];
 		cities?: string[];
-		tier: number | undefined;
+		tiers?: number[];
 	};
 	affinities?: {
 		colocation?: ApplicationAffinityColocation;

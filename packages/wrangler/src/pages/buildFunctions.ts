@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { FatalError } from "../errors";
+import { FatalError } from "@cloudflare/workers-utils";
 import { toUrlPath } from "../paths";
 import { FunctionsNoRoutesError } from "./errors";
 import { buildPluginFromFunctions } from "./functions/buildPlugin";

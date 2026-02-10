@@ -1,4 +1,4 @@
-import { relative } from "path";
+import { relative } from "node:path";
 import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
 import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
 import { quoteShellArgs } from "helpers/command";
@@ -65,11 +65,7 @@ export const printSummary = (ctx: C3Context) => {
 	const relativePath = relative(ctx.originalCWD, ctx.project.path);
 	const cdCommand = relativePath ? `cd ${relativePath}` : null;
 	const { npm } = detectPackageManager();
-	const devServerCommand = quoteShellArgs([
-		npm,
-		"run",
-		ctx.template.devScript ?? "start",
-	]);
+
 	const deployCommand = quoteShellArgs([
 		npm,
 		"run",
@@ -98,7 +94,6 @@ export const printSummary = (ctx: C3Context) => {
 	lines.push(
 		`💻 Continue Developing`,
 		...(cdCommand ? [`${gray("Change directories:")} ${blue(cdCommand)}`] : []),
-		`${gray("Start dev server:")} ${blue(devServerCommand)}`,
 		`${gray(ctx.deployment.url ? `Deploy again:` : "Deploy:")} ${blue(deployCommand)}`,
 		``,
 		`📖 Explore Documentation`,

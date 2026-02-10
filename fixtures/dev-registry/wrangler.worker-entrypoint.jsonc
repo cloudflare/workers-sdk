@@ -9,21 +9,16 @@
 			"service": "service-worker",
 		},
 		{
-			"binding": "MODULE_WORKER",
-			"service": "module-worker",
+			"binding": "EXPORTED_HANDLER",
+			"service": "exported-handler",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT",
-			"service": "worker-entrypoint",
+			"binding": "EXPORTED_HANDLER_WITH_ASSETS",
+			"service": "exported-handler",
 		},
 		{
 			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
 			"service": "worker-entrypoint-with-assets",
-		},
-		{
-			"binding": "NAMED_ENTRYPOINT",
-			"service": "module-worker",
-			"entrypoint": "NamedEntrypoint",
 		},
 		{
 			"binding": "NAMED_ENTRYPOINT_WITH_ASSETS",
@@ -33,7 +28,7 @@
 	],
 	"tail_consumers": [
 		{
-			"service": "module-worker-with-assets",
+			"service": "exported-handler-with-assets",
 		},
 	],
 }

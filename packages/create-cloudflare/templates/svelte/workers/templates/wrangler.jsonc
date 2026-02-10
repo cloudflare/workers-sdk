@@ -1,7 +1,7 @@
 {
-  "name": "<TBD>",
+  "name": "<WORKER_NAME>",
   "main": ".svelte-kit/cloudflare/_worker.js",
-  "compatibility_date": "<TBD>",
+  "compatibility_date": "<COMPATIBILITY_DATE>",
   "compatibility_flags": ["nodejs_als"],
   "assets": {
     "binding": "ASSETS",

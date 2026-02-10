@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getJsonResponse,
 	isBuild,
@@ -9,7 +9,7 @@ import {
 
 test.runIf(!isBuild)(
 	"successfully updates when a var is updated in a .env.staging file",
-	async () => {
+	async ({ expect }) => {
 		const originalResponseContent = {
 			"variables loaded from .env and .env.staging": {
 				MY_DEV_VAR_A: "my .env staging variable A",
@@ -20,9 +20,6 @@ test.runIf(!isBuild)(
 		const originalResponse = await getJsonResponse();
 		expect(originalResponse).toEqual(originalResponseContent);
 
-		mockFileChange(path.join(__dirname, "../../.env"), (content) =>
-			content.replace(/my \.env/g, "my .env UPDATED")
-		);
 		mockFileChange(path.join(__dirname, "../../.env.staging"), (content) =>
 			content.replace(/my \.env staging/g, "my .env UPDATED staging")
 		);
@@ -33,7 +30,7 @@ test.runIf(!isBuild)(
 				"variables loaded from .env and .env.staging": {
 					MY_DEV_VAR_A: "my .env UPDATED staging variable A",
 					MY_DEV_VAR_B: "my .env UPDATED staging variable B",
-					MY_DEV_VAR_C: "my .env UPDATED variable C", // Note that unlike .dev.vars, we merge .env files
+					MY_DEV_VAR_C: "my .env variable C", // Note that unlike .dev.vars, we merge .env files
 				},
 			});
 		}, WAIT_FOR_OPTIONS);

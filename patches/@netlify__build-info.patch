@@ -1,0 +1,33 @@
+diff --git a/lib/index.js b/lib/index.js
+index a0abbb675b6498b0babdea7c7fe3857f9fc18340..c7421ab9970fb14f2a670e3600324ff6ed0990c4 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -3,6 +3,5 @@ export * from './logger.js';
+ export * from './get-framework.js';
+ export * from './project.js';
+ export * from './settings/get-build-settings.js';
+-export * from './settings/get-toml-settings.js';
+ export { WorkspaceInfo } from './workspaces/detect-workspace.js';
+ //# sourceMappingURL=index.js.map
+\ No newline at end of file
+diff --git a/lib/settings/get-toml-settings.d.ts b/lib/settings/get-toml-settings.d.ts
+deleted file mode 100644
+index 36c5355a7abbab8d69428df4f6e382ef54708049..0000000000000000000000000000000000000000
+diff --git a/lib/settings/get-toml-settings.js b/lib/settings/get-toml-settings.js
+deleted file mode 100644
+index 8b4451dd3ecffce6480db3b80a44ba6933181918..0000000000000000000000000000000000000000
+diff --git a/lib/settings/get-toml-settings.js.map b/lib/settings/get-toml-settings.js.map
+deleted file mode 100644
+index cf2cc86882ac30426aef358943754e2f8712d3d0..0000000000000000000000000000000000000000
+diff --git a/package.json b/package.json
+index 62195c07c16e9405e9ec5d82baa44cd722595253..8f1e227d215cd445e9c0707089abfd7737752f66 100644
+--- a/package.json
++++ b/package.json
+@@ -45,7 +45,6 @@
+   "author": "Netlify Inc.",
+   "dependencies": {
+     "@bugsnag/js": "^8.0.0",
+-    "@iarna/toml": "^2.2.5",
+     "dot-prop": "^9.0.0",
+     "find-up": "^7.0.0",
+     "minimatch": "^9.0.0",

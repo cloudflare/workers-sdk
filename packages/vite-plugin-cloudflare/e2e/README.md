@@ -26,7 +26,7 @@ There is a `seed()` helper to setup a clean copy of a fixture outside of the mon
 The simplest test looks like:
 
 ```ts
-const projectPath = await seed("basic", "pnpm");
+const projectPath = await seed("basic", { pm: "pnpm" });
 
 test("can serve a Worker request", async ({ expect, seed, runLongLived }) => {
 	const proc = await runLongLived("npm", "dev", projectPath);

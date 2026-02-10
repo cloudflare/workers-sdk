@@ -1,11 +1,11 @@
-import { existsSync } from "fs";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
 	constructBuildCommand,
 	dockerBuild,
 	dockerImageInspect,
-	dockerLoginManagedRegistry,
-	isDir,
+	dockerLoginImageRegistry,
+	getCloudflareContainerRegistry,
 	resolveImageName,
 	runDockerCmd,
 	runDockerCmdWithOutput,
@@ -13,13 +13,15 @@ import {
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
-} from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
+	isDirectory,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
+import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
 import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -29,6 +31,7 @@ import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function buildYargs(yargs: CommonYargsArgv) {
 	return yargs
@@ -140,7 +143,12 @@ export async function buildAndMaybePush(
 				containerConfig,
 			});
 
-			await dockerLoginManagedRegistry(pathToDocker);
+			await dockerLoginImageRegistry(
+				pathToDocker,
+				// Won't be an external registry since this is building from a Dockerfile
+				// rather than specifying an image uri.
+				getCloudflareContainerRegistry()
+			);
 			try {
 				const [digests] = imageInfo.split(" ");
 
@@ -250,7 +258,7 @@ export async function buildCommand(
 	args: StrictYargsOptionsToInterface<typeof buildYargs>
 ) {
 	// TODO: merge args with Wrangler config if available
-	if (existsSync(args.PATH) && !isDir(args.PATH)) {
+	if (existsSync(args.PATH) && !isDirectory(args.PATH)) {
 		throw new UserError(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);
@@ -284,7 +292,10 @@ export async function pushCommand(
 	config: Config
 ) {
 	try {
-		await dockerLoginManagedRegistry(args.pathToDocker);
+		await dockerLoginImageRegistry(
+			args.pathToDocker,
+			getCloudflareContainerRegistry()
+		);
 
 		const accountId = await getAccountId(config);
 		const newTag = resolveImageName(accountId, args.TAG);
@@ -318,3 +329,80 @@ async function checkImagePlatform(
 		);
 	}
 }
+
+// --- New createCommand-based commands ---
+
+export const cloudchamberBuildCommand = createCommand({
+	metadata: {
+		description: "Build a container image",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	args: {
+		PATH: {
+			type: "string",
+			describe: "Path for the directory containing the Dockerfile to build",
+			demandOption: true,
+		},
+		tag: {
+			alias: "t",
+			type: "string",
+			demandOption: true,
+			describe: 'Name and optionally a tag (format: "name:tag")',
+		},
+		"path-to-docker": {
+			type: "string",
+			default: "docker",
+			describe: "Path to your docker binary if it's not on $PATH",
+			demandOption: false,
+		},
+		push: {
+			alias: "p",
+			type: "boolean",
+			describe: "Push the built image to Cloudflare's managed registry",
+			default: false,
+		},
+		platform: {
+			type: "string",
+			default: "linux/amd64",
+			describe:
+				"Platform to build for. Defaults to the architecture support by Workers (linux/amd64)",
+			demandOption: false,
+			hidden: true,
+			deprecated: true,
+		},
+	},
+	positionalArgs: ["PATH"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await buildCommand(args);
+	},
+});
+
+export const cloudchamberPushCommand = createCommand({
+	metadata: {
+		description: "Push a local image to the Cloudflare managed registry",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	args: {
+		TAG: {
+			type: "string",
+			demandOption: true,
+			describe: "The tag of the local image to push",
+		},
+		"path-to-docker": {
+			type: "string",
+			default: "docker",
+			describe: "Path to your docker binary if it's not on $PATH",
+			demandOption: false,
+		},
+	},
+	positionalArgs: ["TAG"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await pushCommand(args, config);
+	},
+});

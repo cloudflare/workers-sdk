@@ -1,8 +1,8 @@
-import crypto, { createHash } from "crypto";
-import { existsSync } from "fs";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import crypto, { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import {
 	Extension,
@@ -24,6 +24,7 @@ import {
 } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
 import type { DOContainerOptions } from "../do";
+import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -84,6 +85,7 @@ export interface PluginServicesOptions<
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
+	hyperdriveProxyController: HyperdriveProxyController;
 }
 
 export interface ServicesExtensions {
@@ -135,7 +137,6 @@ export async function loadExternalPlugins(
 		const pluginPath = require.resolve(packageName);
 		const moduleURL = pathToFileURL(pluginPath).href;
 
-		// eslint-disable-next-line es/no-dynamic-import
 		pluginModule = await import(moduleURL);
 	} catch (error) {
 		throw new MiniflareCoreError(

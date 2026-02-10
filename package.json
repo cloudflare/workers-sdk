@@ -11,16 +11,17 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
-		"check:format": "prettier . --check --ignore-unknown",
+		"check:format": "prettier . --check --ignore-unknown --cache",
 		"check:lint": "dotenv -- turbo check:lint",
+		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
-		"prettify": "prettier . --write --ignore-unknown",
+		"prettify": "prettier . --write --ignore-unknown --cache",
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",
@@ -31,8 +32,8 @@
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.5.0",
-		"@changesets/cli": "^2.28.0",
-		"@changesets/parse": "^0.4.0",
+		"@changesets/cli": "^2.29.7",
+		"@changesets/parse": "^0.4.1",
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
@@ -41,11 +42,10 @@
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
-		"jsonc-parser": "^3.2.0",
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"tree-kill": "^1.2.2",
-		"turbo": "^2.2.3",
+		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default"
@@ -79,13 +79,11 @@
 		},
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
-			"pg@8.11.3": "patches/pg@8.11.3.patch",
-			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch",
 			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
 			"postal-mime": "patches/postal-mime.patch",
-			"@changesets/assemble-release-plan": "patches/@changesets__assemble-release-plan.patch",
 			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
-			"comment-json": "patches/comment-json.patch"
+			"@netlify/build-info": "patches/@netlify__build-info.patch",
+			"buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
 		}
 	}
 }

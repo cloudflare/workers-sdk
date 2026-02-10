@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { join } from "path";
+import { join } from "node:path";
 // Check that we can actually import unenv polyfilled modules in user source.
-import "perf_hooks";
+import "node:perf_hooks";
 // Check that `cloudflare:worker` imports work when `nodejs_compat` is enabled
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 

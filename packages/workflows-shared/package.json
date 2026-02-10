@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workflows-shared",
-	"version": "0.3.8",
+	"version": "0.4.0",
 	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workflows.",
 	"keywords": [
@@ -25,9 +25,9 @@
 	],
 	"scripts": {
 		"build": "esbuild ./src/local-binding-worker.ts --format=esm --bundle --outfile=dist/local-binding-worker.mjs --sourcemap=external --external:cloudflare:*",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
-		"clean": "rimraf dist",
+		"clean": "node -r esbuild-register ../../tools/clean/clean.ts dist",
 		"deploy": "echo 'no deploy'",
 		"dev": "pnpm run bundle:local-binding --watch",
 		"test:ci": "vitest run",
@@ -41,12 +41,12 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
-		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"esbuild": "catalog:default",
-		"rimraf": "catalog:default",
+		"eslint": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
@@ -57,7 +57,6 @@
 		"extends": "../../package.json"
 	},
 	"workers-sdk": {
-		"prerelease": true,
-		"deploy": true
+		"prerelease": true
 	}
 }

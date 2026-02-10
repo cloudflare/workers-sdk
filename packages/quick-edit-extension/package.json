@@ -10,7 +10,7 @@
 	"publisher": "cloudflare",
 	"browser": "./dist/extension.js",
 	"scripts": {
-		"check:lint": "eslint src --max-warnings=0",
+		"check:lint": "eslint src --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"package-web": "node -r esbuild-register scripts/bundle.ts",
 		"vscode:prepublish": "pnpm run package-web",
@@ -42,10 +42,12 @@
 		"onFileSystem:cfs"
 	],
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "catalog:default",
 		"esbuild": "catalog:default",
-		"esbuild-register": "^3.5.0"
+		"esbuild-register": "^3.5.0",
+		"eslint": "catalog:default"
 	},
 	"engines": {
 		"vscode": "^1.76.0"

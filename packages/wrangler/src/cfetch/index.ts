@@ -1,10 +1,10 @@
 import { URLSearchParams } from "node:url";
-import { APIError } from "../parse";
+import { APIError } from "@cloudflare/workers-utils";
 import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal } from "./internal";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { FetchError } from "./errors";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ErrorData } from "cloudflare/resources/shared";
 import type { RequestInit } from "undici";
 

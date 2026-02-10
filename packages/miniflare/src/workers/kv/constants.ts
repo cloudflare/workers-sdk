@@ -1,13 +1,14 @@
 import { MatcherRegExps, testRegExps } from "miniflare:shared";
 
 export const KVLimits = {
-	MIN_CACHE_TTL: 60 /* 60s */,
+	MIN_CACHE_TTL_SECONDS: 30,
+	MIN_EXPIRATION_TTL_SECONDS: 60,
 	MAX_LIST_KEYS: 1000,
-	MAX_KEY_SIZE: 512 /* 512B */,
-	MAX_VALUE_SIZE: 25 * 1024 * 1024 /* 25MiB */,
-	MAX_VALUE_SIZE_TEST: 1024 /* 1KiB */,
-	MAX_METADATA_SIZE: 1024 /* 1KiB */,
-	MAX_BULK_SIZE: 25 * 1024 * 1024 /* 25MiB */,
+	MAX_KEY_SIZE_BYTES: 512,
+	MAX_VALUE_SIZE_BYTES: 25 * 1024 * 1024 /* 25MiB */,
+	MAX_VALUE_SIZE_TEST_BYTES: 1024 /* 1KiB */,
+	MAX_METADATA_SIZE_BYTES: 1024 /* 1KiB */,
+	MAX_BULK_SIZE_BYTES: 25 * 1024 * 1024 /* 25MiB */,
 } as const;
 
 export const KVParams = {

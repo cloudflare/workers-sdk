@@ -2,7 +2,17 @@ import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import assert from "node:assert";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in helper functions and beforeAll */
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getPlatformProxy } from "wrangler";
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
 import type { DispatchFetch, Response } from "miniflare";
@@ -17,6 +27,8 @@ const execOptions = {
 const remoteWorkerName = `preserve-e2e-get-platform-proxy-remote`;
 const remoteStagingWorkerName = `preserve-e2e-get-platform-proxy-remote-staging`;
 const remoteKvName = `tmp-e2e-kv${Date.now()}-test-remote-bindings-${randomUUID().split("-")[0]}`;
+
+const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 if (auth) {
 	describe("getPlatformProxy - remote bindings", { timeout: 50_000 }, () => {
@@ -96,6 +108,10 @@ if (auth) {
 				});
 			} catch {}
 		}, 35_000);
+
+		beforeEach(() => {
+			errorSpy.mockReset();
+		});
 
 		describe("normal usage", () => {
 			beforeAll(async () => {
@@ -223,17 +239,27 @@ if (auth) {
 					"utf8"
 				);
 
-				const { env, dispose } = await getPlatformProxy<{
-					MY_WORKER: Fetcher;
-				}>({
-					configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
-				});
+				await expect(
+					getPlatformProxy<{
+						MY_WORKER: Fetcher;
+					}>({
+						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
+					})
+				).rejects.toMatchInlineSnapshot(
+					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+				);
 
-				const response = await fetchFromWorker(env.MY_WORKER, "OK", 10_000);
-				// The worker does not return a response
-				expect(response).toBe(undefined);
+				expect(errorSpy).toHaveBeenCalledOnce();
+				expect(
+					`${errorSpy.mock.calls?.[0]?.[0]}`
+						// Windows gets a different marker for ✘, so let's normalize it here
+						// so that this test can be platform independent
+						.replaceAll("✘", "X")
+				).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.[0m
 
-				await dispose();
+					"
+				`);
 			});
 
 			test("usage with a wrangler config file with a valid account id", async () => {

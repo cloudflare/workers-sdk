@@ -1,5 +1,7 @@
-import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
-import type { CfUserLimits } from "../deployment-bundle/worker";
+import type {
+	CfUserLimits,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 
 export type Percentage = number;
 type UUID = string;

@@ -18,6 +18,7 @@ import {
 	WranglerLongLivedCommand,
 } from "./wrangler";
 import type { WranglerCommandOptions } from "./wrangler";
+import type { Awaitable } from "miniflare";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 export function importWrangler(): Promise<typeof import("../../src/cli")> {
@@ -34,8 +35,18 @@ export function importMiniflare(): Promise<typeof import("miniflare")> {
  * and then run various Wrangler commands.
  */
 export class WranglerE2ETestHelper {
+	constructor(
+		/** Provide an alternative to `onTestFinished` to handle tearing down resources. */
+		public readonly onTeardown: (
+			fn: () => Awaitable<void>,
+			timeoutMs?: number
+		) => void = onTestFinished
+	) {}
+
+	/** A temporary directory where files will be seeded and commands will be run. */
 	tmpPath = makeRoot();
 
+	/** Write files into the `tmpPath` directory. */
 	async seed(files: Record<string, string | Uint8Array>): Promise<void>;
 	async seed(sourceDir: string): Promise<void>;
 	async seed(
@@ -48,10 +59,12 @@ export class WranglerE2ETestHelper {
 		}
 	}
 
+	/** Remove files from the `tmpPath` directory. */
 	async removeFiles(files: string[]) {
 		await removeFiles(this.tmpPath, files);
 	}
 
+	/** Run a Wrangler command that will not immediately exit, such as `wrangler dev`. */
 	runLongLived(
 		wranglerCommand: string,
 		{
@@ -72,6 +85,7 @@ export class WranglerE2ETestHelper {
 		return wrangler;
 	}
 
+	/** Run a Wrangler command that will execute and exit, such as `wrangler whoami` */
 	async run(
 		wranglerCommand: string,
 		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
@@ -79,6 +93,7 @@ export class WranglerE2ETestHelper {
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
 
+	/** Create a KV namespace and clean it up during tear-down. */
 	async kv(isLocal: boolean) {
 		const name = generateResourceName("kv" + Date.now()).replaceAll("-", "_");
 		if (isLocal) {
@@ -90,12 +105,13 @@ export class WranglerE2ETestHelper {
 		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			await this.run(`wrangler kv namespace delete --namespace-id ${id}`);
 		});
 		return id;
 	}
 
+	/** Create a WfP dispatch namespace and clean it up during tear-down. */
 	async dispatchNamespace(isLocal: boolean) {
 		const name = generateResourceName("dispatch");
 		if (isLocal) {
@@ -104,24 +120,31 @@ export class WranglerE2ETestHelper {
 			);
 		}
 		await this.run(`wrangler dispatch-namespace create ${name}`);
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			await this.run(`wrangler dispatch-namespace delete ${name}`);
 		});
 		return name;
 	}
 
+	/**
+	 * Create an R2 bucket and then clean it up during tear-down.
+	 *
+	 * Be aware that it is not possible to delete an R2 bucket that still contains objects.
+	 * So the caller will be responsible for removing all objects at the end of the test.
+	 */
 	async r2(isLocal: boolean) {
 		const name = generateResourceName("r2");
 		if (isLocal) {
 			return name;
 		}
 		await this.run(`wrangler r2 bucket create ${name}`);
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			await this.run(`wrangler r2 bucket delete ${name}`);
 		});
 		return name;
 	}
 
+	/** Create a D1 database and clean it up during tear-down. */
 	async d1(isLocal: boolean) {
 		const name = generateResourceName("d1");
 		if (isLocal) {
@@ -133,13 +156,14 @@ export class WranglerE2ETestHelper {
 		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			await this.run(`wrangler d1 delete -y ${name}`);
 		}, 15_000);
 
 		return { id, name };
 	}
 
+	/** Create a Vectorize index and clean it up during tear-down. */
 	async vectorize(dimensions: number, metric: string, resourceName?: string) {
 		// vectorize does not have a local dev mode yet, so we don't yet support the isLocal flag here
 		const name = resourceName ?? generateResourceName("vectorize");
@@ -148,7 +172,7 @@ export class WranglerE2ETestHelper {
 				`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
 			);
 		}
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			if (!resourceName) {
 				await this.run(`wrangler vectorize delete ${name}`);
 			}
@@ -157,34 +181,44 @@ export class WranglerE2ETestHelper {
 		return name;
 	}
 
-	async hyperdrive(isLocal: boolean): Promise<{ id: string; name: string }> {
+	/** Create a Hyperdrive connection and clean it up during tear-down. */
+	async hyperdrive(
+		isLocal: boolean,
+		scheme: "postgresql" | "mysql" = "postgresql"
+	): Promise<{ id: string; name: string }> {
 		const name = generateResourceName("hyperdrive");
 
 		if (isLocal) {
 			return { id: crypto.randomUUID(), name };
 		}
 
+		const envVar =
+			scheme === "mysql"
+				? "HYPERDRIVE_MYSQL_DATABASE_URL"
+				: "HYPERDRIVE_DATABASE_URL";
+		const connectionString = process.env[envVar];
+
 		assert(
-			process.env.HYPERDRIVE_DATABASE_URL,
-			"HYPERDRIVE_DATABASE_URL must be set in order to create a Hyperdrive resource for this test"
+			connectionString,
+			`${envVar} must be set in order to create a Hyperdrive resource for this test`
 		);
 
 		const result = await this.run(
-			`wrangler hyperdrive create ${name} --connection-string="${process.env.HYPERDRIVE_DATABASE_URL}"`
+			`wrangler hyperdrive create ${name} --connection-string="${connectionString}"`
 		);
 		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
 		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
 		const match = jsonMatch ?? tomlMatch;
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
-
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			await this.run(`wrangler hyperdrive delete ${id}`);
 		});
 
 		return { id, name };
 	}
 
+	/** Create a mTLS certificate and clean it up during tear-down. */
 	async cert() {
 		// Generate root and leaf certificates
 		const { certificate: rootCert, privateKey: rootKey } =
@@ -203,7 +237,7 @@ export class WranglerE2ETestHelper {
 		const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
 		const certificateId = match?.groups?.certId;
 		assert(certificateId, `Cannot find ID in ${JSON.stringify(output)}`);
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			await this.run(`wrangler cert delete --name ${name}`);
 		});
 		return certificateId;
@@ -282,7 +316,7 @@ export class WranglerE2ETestHelper {
 
 		if (cleanOnTestFinished) {
 			try {
-				onTestFinished(cleanup, 15_000);
+				this.onTeardown(cleanup, 15_000);
 			} catch (e) {
 				throw new Error(
 					"Failed to register cleanup for worker.\nPerhaps you called this outside an `it` block?\nIf so, pass `cleanOnTestFinished: false` and then use the returned `cleanup` helper yourself",
@@ -295,6 +329,7 @@ export class WranglerE2ETestHelper {
 		}
 	}
 
+	/** Create a ZeroTrust tunnel and clean it up during tear-down. */
 	async tunnel(): Promise<string> {
 		const Cloudflare = (await import("cloudflare")).default;
 
@@ -322,7 +357,7 @@ export class WranglerE2ETestHelper {
 
 		const tunnelId = tunnel.id;
 
-		onTestFinished(async () => {
+		this.onTeardown(async () => {
 			try {
 				await client.zeroTrust.tunnels.cloudflared.delete(tunnelId, {
 					account_id: accountId,

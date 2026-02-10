@@ -1,7 +1,7 @@
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
-import type { Config } from "../config";
 import type { ConnectivityService, ConnectivityServiceRequest } from "./index";
+import type { Config } from "@cloudflare/workers-utils";
 
 export async function createService(
 	config: Config,

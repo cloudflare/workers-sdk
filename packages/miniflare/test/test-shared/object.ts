@@ -1,4 +1,4 @@
-import { ReadableStream } from "stream/web";
+import { ReadableStream } from "node:stream/web";
 import { DurableObjectStub } from "@cloudflare/workers-types/experimental";
 import { ReplaceWorkersTypes } from "miniflare";
 

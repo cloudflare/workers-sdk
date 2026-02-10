@@ -1,6 +1,6 @@
-import { spawnSync } from "child_process";
+import { spawnSync } from "node:child_process";
+import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 
 const cache: Record<string, string> = {};
@@ -49,9 +49,12 @@ export async function getAccessToken(
 	if (!(await domainUsesAccess(domain))) {
 		return undefined;
 	}
+	logger.debug("Fetching Access token for domain:", domain);
 	if (cache[domain]) {
+		logger.debug("Using cached Access token for domain:", cache[domain]);
 		return cache[domain];
 	}
+	logger.debug("Spawning cloudflared to get Access token for domain:");
 	const output = spawnSync("cloudflared", ["access", "login", domain]);
 	if (output.error) {
 		// The cloudflared binary is not installed
@@ -60,9 +63,11 @@ export async function getAccessToken(
 		);
 	}
 	const stringOutput = output.stdout.toString();
+	logger.debug("cloudflared output:", stringOutput);
 	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
 	if (matches && matches.length >= 2) {
 		cache[domain] = matches[1];
+		logger.debug("Caching Access token for domain:", matches[1]);
 		return matches[1];
 	}
 	throw new Error("Failed to authenticate with Cloudflare Access");

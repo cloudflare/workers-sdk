@@ -1,10 +1,13 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import dedent from "ts-dedent";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses .each */
+import { describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import type { ConfigModuleRuleType } from "../config";
+import type { ConfigModuleRuleType } from "@cloudflare/workers-utils";
 
 /*
  * This file contains inline comments with the word "javascript"
@@ -319,5 +322,70 @@ describe("traverse module graph", () => {
 		).rejects.toMatchInlineSnapshot(
 			`[Error: The file other.txt matched a module rule in your configuration ({"type":"Text","globs":["other.txt"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.]`
 		);
+	});
+});
+
+describe("Python modules", () => {
+	runInTempDir();
+	mockConsoleMethods();
+
+	it("should find python_modules with forward slashes (for cross-platform deploy)", async () => {
+		await mkdir("./python_modules/pkg/subpkg", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile("./python_modules/pkg/__init__.py", "");
+		await writeFile("./python_modules/pkg/subpkg/mod.py", "x = 1");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[]
+		);
+
+		const pythonModules = modules.filter((m) =>
+			m.name.startsWith("python_modules/")
+		);
+		expect(pythonModules.map((m) => m.name)).toEqual(
+			expect.arrayContaining([
+				"python_modules/pkg/__init__.py",
+				"python_modules/pkg/subpkg/mod.py",
+			])
+		);
+		// This assertion catches Windows path.join() regression
+		pythonModules.forEach((m) => {
+			expect(m.name).not.toContain("\\");
+		});
+	});
+
+	it("should exclude files matching pythonModulesExcludes patterns", async () => {
+		await mkdir("./python_modules", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile("./python_modules/module.py", "x = 1");
+		await writeFile("./python_modules/module.pyc", "compiled");
+		await writeFile("./python_modules/test_module.py", "def test(): pass");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[],
+			false,
+			["**/*.pyc", "**/test_*.py"]
+		);
+
+		const moduleNames = modules.map((m) => m.name);
+		expect(moduleNames).toContain("python_modules/module.py");
+		expect(moduleNames).not.toContain("python_modules/module.pyc");
+		expect(moduleNames).not.toContain("python_modules/test_module.py");
 	});
 });

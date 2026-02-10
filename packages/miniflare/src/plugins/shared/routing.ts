@@ -1,4 +1,4 @@
-import { domainToUnicode, URL } from "url";
+import { domainToUnicode, URL } from "node:url";
 import { MiniflareError } from "../../shared";
 import { WorkerRoute } from "../../workers";
 

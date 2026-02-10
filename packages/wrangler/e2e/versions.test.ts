@@ -1,5 +1,5 @@
-import { readFile } from "fs/promises";
-import path from "path";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import dedent from "ts-dedent";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -65,14 +65,15 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			versionId1 = matchVersionId(upload.stdout);
 
 			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: (TIMINGS)
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			To deploy this version to production traffic use the command wrangler versions deploy
-			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
-			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: (TIMINGS)
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Worker Version ID: 00000000-0000-0000-0000-000000000000
+				Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
+				To deploy this version to production traffic use the command wrangler versions deploy
+				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
+			`);
 		});
 
 		it("should list 1 version", async () => {
@@ -180,14 +181,15 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			versionId2 = matchVersionId(upload.stdout);
 
 			expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: (TIMINGS)
-			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			To deploy this version to production traffic use the command wrangler versions deploy
-			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
-			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: (TIMINGS)
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Worker Version ID: 00000000-0000-0000-0000-000000000000
+				Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
+				To deploy this version to production traffic use the command wrangler versions deploy
+				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
+			`);
 
 			const versionsList = await helper.run(`wrangler versions list`);
 

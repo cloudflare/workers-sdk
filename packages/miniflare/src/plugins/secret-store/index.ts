@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
 import { z } from "zod";

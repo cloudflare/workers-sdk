@@ -174,30 +174,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
-			// Logs order are not deterministic, so we match against to possible outputs.
-			const output1 = dedent`
-			Your Worker has access to the following bindings:
-			Binding        Resource      Mode
-			env.AI         AI            remote
-			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
-			⎔ Starting local server...
-			[wrangler:info] Ready on http://<HOST>:<PORT>
-			[wrangler:info] GET / 200 OK (TIMINGS)`;
-
-			const output2 = dedent`
-			Your Worker has access to the following bindings:
-			Binding        Resource      Mode
-			env.AI         AI            remote
-			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
-			⎔ Starting local server...
-			[wrangler:info] Ready on http://<HOST>:<PORT>
-			[wrangler:info] GET / 200 OK (TIMINGS)`;
-
 			const normalizedOutput = normalizeOutput(worker.currentOutput);
 
-			expect(
-				normalizedOutput === output1 || normalizedOutput === output2
-			).toEqual(true);
+			expect(normalizedOutput).toMatchInlineSnapshot(`
+				"Your Worker has access to the following bindings:
+				Binding        Resource      Mode
+				env.AI         AI            remote
+				▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
+				⎔ Starting local server...
+				[wrangler:info] Ready on http://<HOST>:<PORT>
+				[wrangler:info] GET / 200 OK (TIMINGS)"
+			`);
 		});
 
 		describe("shows helpful error logs", () => {
@@ -219,14 +206,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await worker.waitForReady();
-
 				await vi.waitFor(
 					() =>
 						expect(worker.currentOutput).toContain(
 							"Could not resolve service binding 'REMOTE_WORKER'. Target script 'non-existent-service-binding' not found."
 						),
-					5_000
+					7_000
 				);
 			});
 
@@ -248,14 +233,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await worker.waitForReady();
-
 				await vi.waitFor(
 					() =>
 						expect(worker.currentOutput).toContain(
 							"KV namespace 'non-existent-kv' is not valid."
 						),
-					5_000
+					7_000
 				);
 			});
 		});

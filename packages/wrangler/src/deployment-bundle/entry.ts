@@ -1,10 +1,13 @@
 import path from "node:path";
+import {
+	configFileName,
+	formatCompatibilityDate,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { configFileName, formatConfigSnippet } from "../config";
-import { UserError } from "../errors";
 import { sniffUserAgent } from "../package-manager";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
-import guessWorkerFormat from "./guess-worker-format";
+import { guessWorkerFormat } from "./guess-worker-format";
 import {
 	resolveEntryWithAssets,
 	resolveEntryWithEntryPoint,
@@ -12,9 +15,12 @@ import {
 	resolveEntryWithScript,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
-import type { Config, RawConfig } from "../config";
-import type { DurableObjectBindings } from "../config/environment";
-import type { CfScriptFormat } from "./worker";
+import type {
+	CfScriptFormat,
+	Config,
+	DurableObjectBindings,
+	RawConfig,
+} from "@cloudflare/workers-utils";
 
 /**
  * An entry point for the Worker.
@@ -119,7 +125,8 @@ export async function getEntry(
 		paths.absolutePath,
 		paths.relativePath,
 		config.build,
-		config.configPath
+		config.configPath,
+		command
 	);
 
 	const projectRoot = paths.projectRoot ?? process.cwd();

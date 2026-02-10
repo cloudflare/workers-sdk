@@ -126,4 +126,10 @@ describe("nodejs compat", () => {
 			DEV_VAR_FROM_DOT_ENV: "dev-var-from-dot-env",
 		});
 	});
+
+	test("Postgres", async ({ expect }) => {
+		const { ip, port } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/query`);
+		expect(response.status).toBe(200);
+	});
 });

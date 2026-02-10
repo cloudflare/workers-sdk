@@ -1,12 +1,18 @@
+import {
+	APIError,
+	configFileName,
+	FatalError,
+	formatConfigSnippet,
+	getCIMatchTag,
+} from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
-import { configFileName, formatConfigSnippet } from "./config";
-import { getCIMatchTag } from "./environment-variables/misc-variables";
-import { FatalError } from "./errors";
 import { logger } from "./logger";
-import { APIError } from "./parse";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
-import type { ServiceMetadataRes } from "./init";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
+import type {
+	ComplianceConfig,
+	ServiceMetadataRes,
+} from "@cloudflare/workers-utils";
 
 export async function verifyWorkerMatchesCITag(
 	complianceConfig: ComplianceConfig,
@@ -47,8 +53,7 @@ export async function verifyWorkerMatchesCITag(
 		logger.debug(`API returned with tag: ${tag} for worker: ${workerName}`);
 	} catch (e) {
 		logger.debug(e);
-		// code: 10090, message: workers.api.error.service_not_found
-		if ((e as { code?: number }).code === 10090) {
+		if (isWorkerNotFoundError(e)) {
 			throw new FatalError(
 				`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`
 			);

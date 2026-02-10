@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
@@ -38,10 +39,9 @@ export const workflowsTriggerCommand = createCommand({
 			try {
 				JSON.parse(args.params);
 			} catch (e) {
-				logger.error(
+				throw new UserError(
 					`Error while parsing instance parameters: "${args.params}" with ${e}' `
 				);
-				return;
 			}
 		}
 

@@ -1,7 +1,7 @@
-import { expect, test, vi } from "vitest";
-import { getTextResponse } from "../../../__test-utils__";
+import { test, vi } from "vitest";
+import { getTextResponse, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
-test("crypto.X509Certificate is implemented", async () => {
+test("crypto.X509Certificate is implemented", async ({ expect }) => {
 	await vi.waitFor(async () => {
 		expect(await getTextResponse()).toMatchInlineSnapshot(`
 	""OK!": -----BEGIN CERTIFICATE-----
@@ -21,5 +21,5 @@ test("crypto.X509Certificate is implemented", async () => {
 	-----END CERTIFICATE-----
 	"
 	`);
-	});
+	}, WAIT_FOR_OPTIONS);
 });

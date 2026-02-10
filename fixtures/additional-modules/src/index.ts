@@ -1,5 +1,6 @@
 import common from "./common.cjs";
 import dep from "./dep";
+import sql from "./example.sql";
 import text from "./text.txt";
 
 export default <ExportedHandler>{
@@ -10,6 +11,9 @@ export default <ExportedHandler>{
 		}
 		if (url.pathname === "/text") {
 			return new Response(text);
+		}
+		if (url.pathname === "/sql") {
+			return new Response(sql);
 		}
 		if (url.pathname === "/common") {
 			return new Response(common);

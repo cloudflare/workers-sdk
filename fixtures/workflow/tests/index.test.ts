@@ -194,7 +194,7 @@ describe("Workflows", () => {
 		}) => {
 			const name = randomUUID();
 			await fetchJson(
-				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=false&errorMessage=generic_error_message"`
+				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=false&errorMessage=generic_error_message`
 			);
 
 			await vi.waitFor(

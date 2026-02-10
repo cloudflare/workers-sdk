@@ -48,6 +48,25 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		`);
 	});
 
+	it("batch create objects", async () => {
+		await helper.seed({
+			"file1.txt": fileContents,
+			"file2.txt": fileContents,
+			"list.json": JSON.stringify([
+				{ key: "file1", file: "file1.txt" },
+				{ key: "file2", file: "file2.txt" },
+			]),
+		});
+		const output = await helper.run(
+			`wrangler r2 bulk put ${bucketName} --filename list.json --remote`
+		);
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+			"Resource location: remote
+			Starting bulk upload of 2 objects to bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000 using a concurrency of 20
+			Uploaded 100% (2 out of 2)"
+		`);
+	});
+
 	it("download object", async () => {
 		const output = await helper.run(
 			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
@@ -65,6 +84,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 	});
 
 	it("delete object", async () => {
+		await helper.run(`wrangler r2 object delete ${bucketName}/file1 --remote`);
+		await helper.run(`wrangler r2 object delete ${bucketName}/file2 --remote`);
 		const output = await helper.run(
 			`wrangler r2 object delete ${bucketName}/testr2 --remote`
 		);
@@ -84,10 +105,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 
 	it("delete bucket", async () => {
 		const output = await helper.run(`wrangler r2 bucket delete ${bucketName}`);
-		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
+		expect(normalize(output.stdout)).toMatchInlineSnapshot(
+			`
 			"Deleting bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000.
 			Deleted bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000."
-		`);
+		`
+		);
 	});
 
 	it("check bucket deleted", async () => {

@@ -15,5 +15,5 @@ export function isLocal(
 }
 
 export function printResourceLocation(location: "remote" | "local") {
-	logger.log(chalk.hex("#BD5B08").bold("Resource location:"), location);
+	logger.log(chalk.hex("#BD5B08").bold("Resource location:"), location, "\n");
 }

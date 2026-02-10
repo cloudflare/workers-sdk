@@ -1,12 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import chalk from "chalk";
-import * as esbuild from "esbuild";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
-} from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
+	UserError,
+} from "@cloudflare/workers-utils";
+import chalk from "chalk";
+import * as esbuild from "esbuild";
 import { getFlag } from "../experimental-flags";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -21,15 +21,16 @@ import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { getNodeJSCompatPlugins } from "./esbuild-plugins/nodejs-plugins";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
-import type { Config } from "../config";
-import type {
-	DurableObjectBindings,
-	WorkflowBinding,
-} from "../config/environment";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
-import type { CfModule, CfModuleType } from "./worker";
+import type {
+	CfModule,
+	CfModuleType,
+	Config,
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "@cloudflare/workers-utils";
 import type { NodeJSCompatMode } from "miniflare";
 
 // Taken from https://stackoverflow.com/a/3561711
@@ -42,8 +43,9 @@ const escapeRegex = (str: string) => {
 };
 
 export const COMMON_ESBUILD_OPTIONS = {
-	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
-	target: "es2022",
+	// v8 supports es2024 features as of 11.9
+	// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
+	target: "es2024",
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 

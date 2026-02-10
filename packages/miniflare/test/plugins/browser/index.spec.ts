@@ -1,5 +1,6 @@
-import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { useDispose } from "../../test-shared";
 import type { WebSocket } from "undici";
 
 async function sendMessage(ws: WebSocket, message: any) {
@@ -45,7 +46,7 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 		return;
 	}
 	// local dev browser rendering relies on a ping message to check browser process status
-	const timeoutId = setInterval(() => ws.send("ping"), 1000);
+	const timeoutId = setInterval(() => ws.send("ping"), 500);
 	await new Promise((resolve) => ws.addEventListener("close", resolve));
 	// clear the interval, no longer need to ping
 	if (timeoutId) clearInterval(timeoutId);
@@ -62,23 +63,34 @@ export default {
 };
 `;
 
-// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-test.serial("it creates a browser session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_SCRIPT(),
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+// We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
+// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser.
+describe.sequential("browser rendering", { timeout: 20_000 }, () => {
+	// The CLI spinner outputs to stdout, so we mute it during tests
+	beforeEach(() => {
+		vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+	});
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-	const res = await mf.dispatchFetch("https://localhost/session");
-	t.assert((await res.text()).includes("sessionId"));
-});
+	test("it creates a browser session", { retry: 3 }, async ({ expect }) => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_SCRIPT(),
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
 
-const BROWSER_WORKER_CLOSE_SCRIPT = `
+		const res = await mf.dispatchFetch("https://localhost/session");
+		const text = await res.text();
+		expect(text.includes("sessionId")).toBe(true);
+	});
+
+	const BROWSER_WORKER_CLOSE_SCRIPT = `
 ${sendMessage.toString()}
 ${waitForClosedConnection.toString()}
 
@@ -99,22 +111,22 @@ export default {
 };
 `;
 
-test.serial("it closes a browser session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_CLOSE_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	test("it closes a browser session", { retry: 3 }, async ({ expect }) => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_CLOSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
 
-	const res = await mf.dispatchFetch("https://localhost/close");
-	t.is(await res.text(), "Browser closed");
-});
+		const res = await mf.dispatchFetch("https://localhost/close");
+		expect(await res.text()).toBe("Browser closed");
+	});
 
-const BROWSER_WORKER_REUSE_SCRIPT = `
+	const BROWSER_WORKER_REUSE_SCRIPT = `
 ${sendMessage.toString()}
 ${waitForClosedConnection.toString()}
 
@@ -142,22 +154,22 @@ export default {
 };
 `;
 
-test.serial("it reuses a browser session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_REUSE_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	test("it reuses a browser session", { retry: 3 }, async ({ expect }) => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_REUSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
 
-	const res = await mf.dispatchFetch("https://localhost");
-	t.is(await res.text(), "Browser session reused");
-});
+		const res = await mf.dispatchFetch("https://localhost");
+		expect(await res.text()).toBe("Browser session reused");
+	});
 
-const BROWSER_WORKER_ALREADY_USED_SCRIPT = `
+	const BROWSER_WORKER_ALREADY_USED_SCRIPT = `
 export default {
 	async fetch(request, env) {
 		const acquireResponse = await env.MYBROWSER.fetch("https://localhost/v1/acquire");
@@ -183,26 +195,25 @@ export default {
 };
 `;
 
-const isWindows = process.platform === "win32";
-(isWindows ? test.skip : test.serial)(
-	"fails if browser session already in use",
-	async (t) => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: BROWSER_WORKER_ALREADY_USED_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		t.teardown(() => mf.dispose());
+	test.skipIf(process.platform === "win32")(
+		"fails if browser session already in use",
+		async ({ expect }) => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: BROWSER_WORKER_ALREADY_USED_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const res = await mf.dispatchFetch("https://localhost");
-		t.is(await res.text(), "Failed to connect to browser session");
-	}
-);
+			const res = await mf.dispatchFetch("https://localhost");
+			expect(await res.text()).toBe("Failed to connect to browser session");
+		}
+	);
 
-const GET_SESSIONS_SCRIPT = `
+	const GET_SESSIONS_SCRIPT = `
 ${sendMessage.toString()}
 ${waitForClosedConnection.toString()}
 
@@ -231,32 +242,36 @@ export default {
 };
 `;
 
-test.serial("gets sessions while acquiring and closing session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: GET_SESSIONS_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	test(
+		"gets sessions while acquiring and closing session",
+		{ retry: 3 },
+		async ({ expect }) => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: GET_SESSIONS_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-	const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
-		.dispatchFetch("https://localhost")
-		.then((res) => res.json())) as any;
-	t.is(emptySessions.length, 0);
-	t.is(acquiredSessions.length, 1);
-	t.true(
-		typeof acquiredSessions[0].sessionId === "string" &&
-			typeof acquiredSessions[0].startTime === "number" &&
-			!acquiredSessions[0].connectionId &&
-			!acquiredSessions[0].connectionId
+			const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
+				.dispatchFetch("https://localhost")
+				.then((res) => res.json())) as any;
+			expect(emptySessions.length).toBe(0);
+			expect(acquiredSessions.length).toBe(1);
+			expect(
+				typeof acquiredSessions[0].sessionId === "string" &&
+					typeof acquiredSessions[0].startTime === "number" &&
+					!acquiredSessions[0].connectionId &&
+					!acquiredSessions[0].connectionId
+			).toBe(true);
+			expect(afterClosedSessions.length).toBe(0);
+		}
 	);
-	t.is(afterClosedSessions.length, 0);
-});
 
-const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
+	const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
 ${waitForClosedConnection.toString()}
 
 export default {
@@ -279,30 +294,32 @@ export default {
 };
 `;
 
-test.serial(
-	"gets sessions while connecting and disconnecting session",
-	async (t) => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		t.teardown(() => mf.dispose());
+	test(
+		"gets sessions while connecting and disconnecting session",
+		{ retry: 3 },
+		async ({ expect }) => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const { connectedSession, disconnectedSession } = (await mf
-			.dispatchFetch("https://localhost")
-			.then((res) => res.json())) as any;
-		t.is(connectedSession.sessionId, disconnectedSession.sessionId);
-		t.true(
-			typeof connectedSession.connectionId === "string" &&
-				typeof connectedSession.connectionStartTime === "number"
-		);
-		t.true(
-			!disconnectedSession.connectionId &&
-				!disconnectedSession.connectionStartTime
-		);
-	}
-);
+			const { connectedSession, disconnectedSession } = (await mf
+				.dispatchFetch("https://localhost")
+				.then((res) => res.json())) as any;
+			expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
+			expect(
+				typeof connectedSession.connectionId === "string" &&
+					typeof connectedSession.connectionStartTime === "number"
+			).toBe(true);
+			expect(
+				!disconnectedSession.connectionId &&
+					!disconnectedSession.connectionStartTime
+			).toBe(true);
+		}
+	);
+});

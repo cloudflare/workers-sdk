@@ -1,7 +1,7 @@
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared/src/knobs";
-import { isDockerfile } from "@cloudflare/containers-shared/src/utils";
-import type { WorkerConfig } from "./plugin-config";
+import { isDockerfile } from "@cloudflare/workers-utils";
+import type { ResolvedWorkerConfig } from "./plugin-config";
 
 /**
  * Returns the path to the Docker executable as defined by the
@@ -21,7 +21,7 @@ export function getDockerPath(): string {
  * containers are not enabled or not configured.
  */
 export function getContainerOptions(options: {
-	containersConfig: WorkerConfig["containers"];
+	containersConfig: ResolvedWorkerConfig["containers"];
 	containerBuildId: string;
 	configPath?: string;
 }) {
@@ -56,3 +56,8 @@ export function getContainerOptions(options: {
 		}
 	});
 }
+
+export type ContainerTagToOptionsMap = Map<
+	string,
+	NonNullable<ReturnType<typeof getContainerOptions>>[number]
+>;

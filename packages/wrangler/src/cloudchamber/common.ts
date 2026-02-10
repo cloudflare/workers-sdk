@@ -6,20 +6,20 @@ import {
 	DeploymentMutationError,
 	OpenAPI,
 } from "@cloudflare/containers-shared";
+import {
+	getCloudflareApiBaseUrl,
+	parseByteSize,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
-import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
-import { parseByteSize } from "./../parse";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName } from "./locations";
-import type { Config } from "../config";
-import type { CloudchamberConfig } from "../config/environment";
 import type { containersScope } from "../containers";
 import type {
 	CommonYargsOptions,
@@ -33,6 +33,7 @@ import type {
 	Label,
 	NetworkParameters,
 } from "@cloudflare/containers-shared";
+import type { CloudchamberConfig, Config } from "@cloudflare/workers-utils";
 
 export const cloudchamberScope = "cloudchamber:write" as const;
 
@@ -105,11 +106,12 @@ export function handleFailure<
 	scope: typeof cloudchamberScope | typeof containersScope
 ): (args: CommonYargsOptions & CommandArgumentsObject) => Promise<void> {
 	return async (args) => {
-		if (!isNonInteractiveOrCI()) {
+		const isJson = "json" in args ? args.json === true : false;
+		if (!isNonInteractiveOrCI() && !isJson) {
 			await printWranglerBanner();
 			const commandStatus = command.includes("cloudchamber")
 				? "alpha"
-				: "open-beta";
+				: "open beta";
 			logger.warn(constructStatusMessage(command, commandStatus));
 		}
 		const config = readConfig(args);

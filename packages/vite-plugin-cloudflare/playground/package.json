@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"playwright:install": "pnpm playwright install chromium",
 		"pretest:ci": "pnpm playwright:install",
 		"test:ci": "pnpm test:ci:serve && pnpm test:ci:build",
@@ -17,10 +17,8 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"playwright-chromium": "catalog:default",
-		"rolldown-vite": "^7.1.16",
+		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
-		"typescript": "catalog:default",
-		"vite-6": "npm:vite@^6.3.6",
-		"vite-7": "npm:vite@^7.1.9"
+		"typescript": "catalog:default"
 	}
 }

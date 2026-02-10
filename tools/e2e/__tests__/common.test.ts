@@ -1,5 +1,5 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	deleteDatabase,
 	deleteKVNamespace,
@@ -38,15 +38,12 @@ afterEach(() => {
 });
 
 describe("listTmpE2EProjects()", () => {
-	it("makes paged REST requests and returns a filtered list of projects", async ({
-		expect,
-	}) => {
+	it("makes paged REST requests and returns a filtered list of projects", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
 				query: {
-					per_page: 100,
 					page: 1,
 				},
 			})
@@ -80,7 +77,6 @@ describe("listTmpE2EProjects()", () => {
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
 				query: {
-					per_page: 100,
 					page: 2,
 				},
 			})
@@ -127,16 +123,13 @@ describe("deleteProject()", () => {
 });
 
 describe("listTmpKVNamespaces()", () => {
-	it("makes a REST request and returns a filtered list of kv namespaces", async ({
-		expect,
-	}) => {
+	it("makes a REST request and returns a filtered list of kv namespaces", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 1,
 				},
 			})
@@ -171,7 +164,6 @@ describe("listTmpKVNamespaces()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 2,
 				},
 			})
@@ -210,16 +202,13 @@ describe("deleteKVNamespace()", () => {
 });
 
 describe("listTmpDatabases()", () => {
-	it("makes a REST request and returns a filtered list of d1 databases", async ({
-		expect,
-	}) => {
+	it("makes a REST request and returns a filtered list of d1 databases", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/d1/database`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 1,
 				},
 			})
@@ -258,7 +247,6 @@ describe("listTmpDatabases()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/d1/database`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 2,
 				},
 			})
@@ -305,14 +293,12 @@ describe("deleteDatabase()", () => {
 });
 
 describe("listTmpE2EWorkers()", () => {
-	it("makes a REST request and returns a filtered list of workers", async ({
-		expect,
-	}) => {
+	it("makes a REST request and returns a filtered list of workers", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/workers/scripts`,
-				query: { per_page: 100, page: 1 },
+				query: { page: 1 },
 				method: "GET",
 			})
 			.reply(

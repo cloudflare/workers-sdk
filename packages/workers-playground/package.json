@@ -1,13 +1,13 @@
 {
 	"name": "@cloudflare/workers-playground",
-	"version": "0.2.5",
+	"version": "0.2.6",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"build": "tsc && vite build",
 		"build:testing": "tsc && vite build -m development",
 		"check": "pnpm exec tsx ./generate-default-hashes.ts check",
-		"check:lint": "eslint src --max-warnings=0",
+		"check:lint": "eslint src --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler pages deploy --project-name workers-playground ./dist",
 		"dev": "vite",
@@ -43,14 +43,14 @@
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.2.0",
 		"@types/uuid": "^9.0.2",
-		"@typescript-eslint/eslint-plugin": "catalog:default",
-		"@typescript-eslint/parser": "catalog:default",
 		"@vitejs/plugin-react": "^4.3.3",
-		"eslint": "^8.57.1",
+		"eslint": "catalog:default",
+		"react-use-websocket": "^4.13.0",
 		"tsx": "^3.12.8",
 		"undici": "catalog:default",
 		"vite": "catalog:default",

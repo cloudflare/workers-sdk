@@ -2,11 +2,20 @@ export const CoreHeaders = {
 	CUSTOM_FETCH_SERVICE: "MF-Custom-Fetch-Service",
 	CUSTOM_NODE_SERVICE: "MF-Custom-Node-Service",
 	ORIGINAL_URL: "MF-Original-URL",
+	/**
+	 * Stores the original hostname when using the `upstream` option.
+	 * When requests are proxied to an upstream, the `Host` header is rewritten
+	 * to match the upstream. This header preserves the original hostname
+	 * so Workers can access it if needed.
+	 */
+	ORIGINAL_HOSTNAME: "MF-Original-Hostname",
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 	CF_BLOB: "MF-CF-Blob",
+	/** Used by the Vite plugin to pass through the original `sec-fetch-mode` header */
+	SEC_FETCH_MODE: "MF-Sec-Fetch-Mode",
 
 	// API Proxy
 	OP_SECRET: "MF-Op-Secret",
@@ -35,6 +44,9 @@ export const CoreBindings = {
 	TRIGGER_HANDLERS: "TRIGGER_HANDLERS",
 	LOG_REQUESTS: "LOG_REQUESTS",
 	STRIP_DISABLE_PRETTY_ERROR: "STRIP_DISABLE_PRETTY_ERROR",
+	SERVICE_LOCAL_EXPLORER: "MINIFLARE_LOCAL_EXPLORER",
+	EXPLORER_DISK: "MINIFLARE_EXPLORER_DISK",
+	JSON_LOCAL_EXPLORER_BINDING_MAP: "LOCAL_EXPLORER_BINDING_MAP",
 } as const;
 
 export const ProxyOps = {
@@ -94,4 +106,12 @@ export function isR2ObjectWriteHttpMetadata(targetName: string, key: string) {
  */
 export function isImagesInput(targetName: string, key: string) {
 	return targetName === "ImagesBindingImpl" && key === "input";
+}
+
+// Durable Object stub RPC calls should always be async to avoid blocking the
+// Node.js event loop. The internal names are "DurableObject" and "WorkerRpc".
+// https://github.com/cloudflare/workerd/blob/62b9ceee/src/workerd/api/actor.h#L86
+// https://github.com/cloudflare/workerd/blob/62b9ceee/src/workerd/api/worker-rpc.h#L30
+export function isDurableObjectStub(targetName: string) {
+	return targetName === "DurableObject" || targetName === "WorkerRpc";
 }

@@ -1,6 +1,5 @@
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
-import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { getPipeline } from "../client";
 import { validateCorsOrigins, validateInRange } from "../validate";
@@ -10,7 +9,7 @@ export const pipelinesUpdateCommand = createCommand({
 	metadata: {
 		description: "Update a pipeline configuration (legacy pipelines only)",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	positionalArgs: ["pipeline"],
 	args: {

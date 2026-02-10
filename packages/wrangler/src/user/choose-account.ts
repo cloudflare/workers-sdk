@@ -1,27 +1,22 @@
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult } from "../cfetch";
-import { configFileName } from "../config";
-import { UserError } from "../errors";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-
-export type ChooseAccountItem = {
-	id: string;
-	name: string;
-};
+import type { Account } from "./shared";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
  * Infer a list of available accounts for the current user.
  */
 export async function getAccountChoices(
 	complianceConfig: ComplianceConfig
-): Promise<ChooseAccountItem[]> {
+): Promise<Account[]> {
 	const accountIdFromEnv = getCloudflareAccountIdFromEnv();
 	if (accountIdFromEnv) {
 		return [{ id: accountIdFromEnv, name: "" }];
 	} else {
 		try {
 			const response = await fetchPagedListResult<{
-				account: ChooseAccountItem;
+				account: Account;
 			}>(complianceConfig, `/memberships`);
 			const accounts = response.map((r) => r.account);
 			if (accounts.length === 0) {

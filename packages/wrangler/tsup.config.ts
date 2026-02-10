@@ -73,6 +73,7 @@ function embedWorkersPlugin({
 
 export default defineConfig((options) => [
 	{
+		treeshake: true,
 		keepNames: true,
 		entry: ["src/cli.ts"],
 		platform: "node",

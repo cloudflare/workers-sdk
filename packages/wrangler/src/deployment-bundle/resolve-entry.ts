@@ -1,6 +1,6 @@
-import path from "path";
+import path from "node:path";
 import { getBasePath } from "../paths";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function resolveEntryWithScript(script: string): {
 	absolutePath: string;

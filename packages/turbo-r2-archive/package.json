@@ -12,7 +12,7 @@
 	],
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=./dist",
-		"check:lint": "eslint .  --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"type:check": "tsc"
@@ -23,7 +23,9 @@
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"eslint": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

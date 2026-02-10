@@ -14,7 +14,7 @@ export async function serve() {
 			const server = app.listen(port, () => {
 				resolve({
 					async close() {
-						await new Promise((resolve) => server.close(resolve));
+						await new Promise((res) => server.close(res));
 						await vite.close();
 					},
 				});

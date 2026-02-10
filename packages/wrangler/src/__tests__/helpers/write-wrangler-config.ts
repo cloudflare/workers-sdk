@@ -1,9 +1,13 @@
 import * as fs from "node:fs";
 import { dirname, relative } from "node:path";
-import { formatConfigSnippet, parseRawConfigFile } from "../../config";
-import { PATH_TO_DEPLOY_CONFIG } from "../../config/config-helpers";
-import type { RawConfig } from "../../config";
-import type { RedirectedRawConfig } from "../../config/config";
+import {
+	formatConfigSnippet,
+	parseJSONC,
+	parseTOML,
+	PATH_TO_DEPLOY_CONFIG,
+	readFileSync,
+} from "@cloudflare/workers-utils";
+import type { RawConfig, RedirectedRawConfig } from "@cloudflare/workers-utils";
 
 /** Write a mock wrangler config file to disk. */
 export function writeWranglerConfig(
@@ -62,5 +66,13 @@ export function writeDeployRedirectConfig(configPath: string) {
 }
 
 export function readWranglerConfig(path = "./wrangler.toml"): RawConfig {
-	return parseRawConfigFile(path);
+	if (path.endsWith(".toml")) {
+		return parseTOML(readFileSync(path), path) as RawConfig;
+	}
+
+	if (path.endsWith(".json") || path.endsWith(".jsonc")) {
+		return parseJSONC(readFileSync(path), path) as RawConfig;
+	}
+
+	return {};
 }

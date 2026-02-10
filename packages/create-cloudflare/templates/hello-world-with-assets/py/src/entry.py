@@ -8,5 +8,5 @@ class Default(WorkerEntrypoint):
         if url.path == '/message':
             return Response('Hello, World!')
         if url.path == '/random':
-            return Response(uuid4())
+            return Response(str(uuid4()))
         return Response('Not Found', status=404)

@@ -1,21 +1,31 @@
+import {
+	getD1ExtraLocationChoices,
+	UserError,
+} from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
-import { sharedResourceCreationArgs, updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
-import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
-import { LOCATION_CHOICES } from "./constants";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import {
+	D1_DOCS_URL,
+	JURISDICTION_CHOICES,
+	LOCATION_CHOICES,
+} from "./constants";
 import type { DatabaseCreationResult } from "./types";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string,
-	location?: string
+	location?: string,
+	jurisdiction?: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
@@ -29,12 +39,27 @@ export async function createD1Database(
 				body: JSON.stringify({
 					name,
 					...(location && { primary_location_hint: location }),
+					...(jurisdiction && { jurisdiction }),
 				}),
 			}
 		);
 	} catch (e) {
-		if ((e as { code: number }).code === 7502) {
+		const errorCode = (e as { code: number }).code;
+
+		if (errorCode === 7502) {
 			throw new UserError("A database with that name already exists");
+		}
+
+		if (errorCode === 7406) {
+			throw new UserError(
+				dedent`
+					You have reached the maximum number of D1 databases for your account.
+					Please consider deleting unused databases, or visit the D1 documentation to learn more: ${D1_DOCS_URL}
+
+					To list your existing databases, run: wrangler d1 list
+					To delete a database, run: wrangler d1 delete <database-name>
+				`
+			);
 		}
 
 		throw e;
@@ -43,7 +68,9 @@ export async function createD1Database(
 
 export const d1CreateCommand = createCommand({
 	metadata: {
-		description: "Create D1 database",
+		description:
+			"Creates a new D1 database, and provides the binding and UUID that you will put in your config file",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -51,7 +78,7 @@ export const d1CreateCommand = createCommand({
 		name: {
 			type: "string",
 			demandOption: true,
-			description: "The name of the new DB",
+			description: "The name of the new D1 database",
 		},
 		location: {
 			type: "string",
@@ -70,13 +97,28 @@ export const d1CreateCommand = createCommand({
 
 					`,
 		},
+		jurisdiction: {
+			type: "string",
+			choices: [...JURISDICTION_CHOICES],
+			description: dedent`
+				The location to restrict the D1 database to run and store data within to comply with local regulations. Note that if jurisdictions are set, the location hint is ignored. Options:
+					eu: The European Union
+					fedramp: FedRAMP-compliant data centers
+			`,
+		},
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["name"],
-	async handler({ name, location, env, ...args }, { config }) {
+	async handler({ name, location, jurisdiction, env, ...args }, { config }) {
 		const accountId = await requireAuth(config);
 
-		const db = await createD1Database(config, accountId, name, location);
+		const db = await createD1Database(
+			config,
+			accountId,
+			name,
+			location,
+			jurisdiction
+		);
 
 		logger.log(
 			`✅ Successfully created DB '${db.name}'${
@@ -89,7 +131,7 @@ export const d1CreateCommand = createCommand({
 		);
 		logger.log("Created your new D1 database.\n");
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"d1_databases",
 			(bindingName) => ({
 				binding: getValidBindingName(bindingName ?? db.name, "DB"),

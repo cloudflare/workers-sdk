@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
@@ -17,7 +17,7 @@ const t = recast.types.namedTypes;
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	const variant = await getVariant();
+	const variant = await getVariant(ctx);
 	ctx.args.lang = variant.lang;
 
 	await runFrameworkGenerator(ctx, [
@@ -114,7 +114,7 @@ function updateTsconfigJson() {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`tsconfig.json\``)}`);
 }
 
-async function getVariant() {
+async function getVariant(ctx: C3Context) {
 	const variantsOptions = [
 		{
 			value: "react-ts",
@@ -137,6 +137,20 @@ async function getVariant() {
 			label: "JavaScript + SWC",
 		},
 	];
+
+	// If variant is provided via CLI args, use it directly
+	if (ctx.args.variant) {
+		const selected = variantsOptions.find(
+			(variant) => variant.value === ctx.args.variant,
+		);
+		if (!selected) {
+			throw new Error(
+				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`,
+			);
+		}
+		return selected;
+	}
+
 	const value = await inputPrompt({
 		type: "select",
 		question: "Select a variant:",

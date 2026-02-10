@@ -14,10 +14,13 @@
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@octokit/webhooks-types": "^7.6.1",
+		"@types/semver": "^7.5.1",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
+		"eslint": "catalog:default",
 		"find-up": "^6.3.0",
 		"glob": "^11.0.3",
+		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"

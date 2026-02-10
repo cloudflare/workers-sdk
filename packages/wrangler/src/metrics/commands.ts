@@ -1,10 +1,10 @@
+import { getWranglerSendMetricsFromEnv } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	createAlias,
 	createCommand,
 	createNamespace,
 } from "../core/create-command";
-import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { readMetricsConfig, updateMetricsPermission } from "./metrics-config";
 
@@ -26,6 +26,9 @@ export const telemetryDisableCommand = createCommand({
 		description: "Disable Wrangler telemetry collection",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+	},
+	behaviour: {
+		sendMetrics: false,
 	},
 	async handler() {
 		updateMetricsPermission(false);

@@ -10,12 +10,14 @@
 	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "tsc",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:types": "tsc"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@types/node": "catalog:default",
 		"@verdaccio/types": "^10.8.0",
+		"eslint": "catalog:default",
 		"get-port": "^7.0.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",

@@ -1,4 +1,4 @@
-import { UserError } from "./errors";
+import { UserError } from "@cloudflare/workers-utils";
 
 export function isNavigatorDefined(
 	compatibility_date: string | undefined,

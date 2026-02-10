@@ -1,7 +1,13 @@
-import { defaultWranglerConfig } from "../config/config";
-import { validatePagesConfig } from "../config/validation-pages";
-import type { Config } from "../config";
+import {
+	defaultWranglerConfig,
+	validatePagesConfig,
+} from "@cloudflare/workers-utils";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- complex validation logic */
+import { describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
+import type { Config } from "@cloudflare/workers-utils";
 
+// TODO: Move these tests to the workers-utils package
 describe("validatePagesConfig()", () => {
 	describe("`main` field validation", () => {
 		it("should error if configuration contains both `pages_build_output_dir` and `main` config fields", () => {
@@ -177,11 +183,13 @@ describe("validatePagesConfig()", () => {
 						ip: "127.0.0.0",
 						port: 1234,
 						inspector_port: 5678,
+						inspector_ip: undefined,
 						local_protocol: "https",
 						upstream_protocol: "https",
 						host: "test-host",
 						enable_containers: false,
 						container_engine: undefined,
+						generate_types: false,
 					},
 				},
 			};

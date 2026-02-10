@@ -1,9 +1,10 @@
 name: "Install Dependencies"
 description: "Install dependencies, fetching from cache when possible"
 inputs:
+  # We run all jobs on Node.js 22 by default, as this is the most stable and supported version right now.
   node-version:
     description: the version of Node.js to install
-    default: 20.19.1
+    default: 22
   turbo-api:
     description: the api URL for connecting to the turbo remote cache
   turbo-team:
@@ -27,6 +28,12 @@ runs:
         cache: "pnpm"
         registry-url: "https://registry.npmjs.org"
 
+    # Enable node compile cache (effective for Node 22+)
+    # See https://nodejs.org/docs/v24.11.1/api/module.html#module-compile-cache
+    - name: Enable Node Compile Cache
+      shell: bash
+      run: echo "NODE_COMPILE_CACHE=$HOME/.node_compile_cache" >> $GITHUB_ENV
+
     - name: "Configure turbo repo cache environment variables"
       if: inputs.turbo-api
       shell: bash
@@ -41,9 +48,3 @@ runs:
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
-
-    - name: Install uv for Python
-      uses: astral-sh/setup-uv@v6
-      with:
-        version: "0.9.3"
-        enable-cache: false

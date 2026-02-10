@@ -161,8 +161,8 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 				obj[key] = value;
 			}
 			const maxValueSize = this.beingTested
-				? KVLimits.MAX_VALUE_SIZE_TEST
-				: KVLimits.MAX_BULK_SIZE;
+				? KVLimits.MAX_VALUE_SIZE_TEST_BYTES
+				: KVLimits.MAX_BULK_SIZE_BYTES;
 			if (totalBytes > maxValueSize) {
 				throw new HttpError(
 					413,
@@ -233,8 +233,8 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		});
 
 		const maxValueSize = this.beingTested
-			? KVLimits.MAX_VALUE_SIZE_TEST
-			: KVLimits.MAX_VALUE_SIZE;
+			? KVLimits.MAX_VALUE_SIZE_TEST_BYTES
+			: KVLimits.MAX_VALUE_SIZE_BYTES;
 		let maxLengthStream: MaxLengthStream | undefined;
 		if (valueLengthHint !== undefined && valueLengthHint > maxValueSize) {
 			// If we know the size of the value (i.e. from `Content-Length`) use that

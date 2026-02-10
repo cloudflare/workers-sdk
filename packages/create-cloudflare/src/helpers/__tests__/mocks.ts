@@ -1,8 +1,9 @@
-import { readdirSync } from "fs";
+import { readdirSync } from "node:fs";
 import { spinner } from "@cloudflare/cli/interactive";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
 import { expect, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
-import type { Dirent } from "fs";
+import type { Dirent } from "node:fs";
 
 export const mockPackageManager = (name: string, version = "1.0.0") => {
 	if (!vi.isMockFunction(whichPMRuns)) {

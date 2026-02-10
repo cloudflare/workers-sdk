@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { describe, it } from "vitest";
 import { extractAccountTag, hasMorePages } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -11,7 +12,9 @@ hasMorePages is a function that returns a boolean based on the result_info objec
 */
 
 describe("hasMorePages", () => {
-	it("should handle result_info not having enough results to paginate", () => {
+	it("should handle result_info not having enough results to paginate", ({
+		expect,
+	}) => {
 		expect(
 			hasMorePages({
 				page: 1,
@@ -21,7 +24,9 @@ describe("hasMorePages", () => {
 			})
 		).toBe(false);
 	});
-	it("should return true if the current page is less than the total number of pages", () => {
+	it("should return true if the current page is less than the total number of pages", ({
+		expect,
+	}) => {
 		expect(
 			hasMorePages({
 				page: 1,
@@ -31,7 +36,9 @@ describe("hasMorePages", () => {
 			})
 		).toBe(true);
 	});
-	it("should return false if we are on the last page of results", () => {
+	it("should return false if we are on the last page of results", ({
+		expect,
+	}) => {
 		expect(
 			hasMorePages({
 				page: 10,
@@ -49,7 +56,9 @@ describe("throwFetchError", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should include api errors, messages and documentation_url in error", async () => {
+	it("should include api errors, messages and documentation_url in error", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.get("*/user", () => {
 				return HttpResponse.json(
@@ -101,7 +110,7 @@ describe("throwFetchError", () => {
 		});
 	});
 
-	it("nested", async () => {
+	it("nested", async ({ expect }) => {
 		msw.use(
 			http.get("*/user", () => {
 				return HttpResponse.json(
@@ -181,7 +190,7 @@ describe("throwFetchError", () => {
 		`);
 	});
 
-	it("should include api errors without messages", async () => {
+	it("should include api errors without messages", async ({ expect }) => {
 		msw.use(
 			http.get("*/user", () => {
 				return HttpResponse.json({
@@ -214,12 +223,12 @@ describe("throwFetchError", () => {
 });
 
 describe("extractAccountTag", () => {
-	it("should return undefined when resource does not have it", () => {
+	it("should return undefined when resource does not have it", ({ expect }) => {
 		expect(extractAccountTag("/accounts")).toBeUndefined();
 		expect(extractAccountTag("/accounts/")).toBeUndefined();
 		expect(extractAccountTag("/accounts//more")).toBeUndefined();
 	});
-	it("should return tag when resource has it", () => {
+	it("should return tag when resource has it", ({ expect }) => {
 		expect(extractAccountTag("/accounts/foo")).toBe("foo");
 		expect(extractAccountTag("/accounts/bar/")).toBe("bar");
 		expect(extractAccountTag("/accounts/baz/more")).toBe("baz");

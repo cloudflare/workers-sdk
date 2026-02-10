@@ -1,5 +1,8 @@
+import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
+import { WebSocket } from "ws";
+import { version as packageVersion } from "../../../package.json";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -10,14 +13,15 @@ import {
 	handlePreviewSessionCreationError,
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
-import { MissingConfigError } from "../../errors";
 import { logger } from "../../logger";
+import { TRACE_VERSION } from "../../tail/createTail";
+import { realishPrintLogs } from "../../tail/printing";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { notImplemented } from "./NotImplementedError";
 import { convertBindingsToCfWorkerInitBindings, unwrapHook } from "./utils";
 import type {
+	CfAccount,
 	CfPreviewSession,
 	CfPreviewToken,
 } from "../../dev/create-worker-preview";
@@ -28,7 +32,8 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { Trigger } from "./types";
+import type { Bundle, StartDevWorkerOptions, Trigger } from "./types";
+import type { Route } from "@cloudflare/workers-utils";
 
 type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
 
@@ -40,8 +45,16 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#session?: CfPreviewSession;
 
+	#activeTail?: WebSocket;
+
+	#latestConfig?: StartDevWorkerOptions;
+	#latestBundle?: Bundle;
+	#latestRoutes?: Route[];
+
 	async #previewSession(
-		props: Parameters<typeof getWorkerAccountAndContext>[0]
+		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
+			tail_logs: boolean;
+		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
 			const { workerAccount, workerContext } =
@@ -51,7 +64,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				props.complianceConfig,
 				workerAccount,
 				workerContext,
-				this.#abortController.signal
+				this.#abortController.signal,
+				props.tail_logs
 			);
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -59,6 +73,14 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 
 			handlePreviewSessionCreationError(err, props.accountId);
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to create a preview token",
+				cause: castErrorCause(err),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
 		}
 	}
 
@@ -68,6 +90,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
+				tail_logs: boolean;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
@@ -91,6 +114,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
+			this.#activeTail?.terminate();
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
 					complianceConfig: props.complianceConfig,
@@ -147,6 +171,21 @@ export class RemoteRuntimeController extends RuntimeController {
 				props.minimal_mode
 			);
 
+			if (props.tail_logs && workerPreviewToken.tailUrl) {
+				this.#activeTail = new WebSocket(
+					workerPreviewToken.tailUrl,
+					TRACE_VERSION,
+					{
+						headers: {
+							"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
+							"User-Agent": `wrangler/${packageVersion}`,
+						},
+						signal: this.#abortController.signal,
+					}
+				);
+
+				this.#activeTail.on("message", realishPrintLogs);
+			}
 			return workerPreviewToken;
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -161,30 +200,149 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#session = await this.#previewSession(props);
 				return this.#previewToken(props);
 			}
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to obtain a preview token",
+				cause: castErrorCause(err),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
 		}
+	}
+
+	#getPreviewSession(
+		config: StartDevWorkerOptions,
+		auth: CfAccount,
+		routes: Route[] | undefined
+	) {
+		return this.#previewSession({
+			complianceConfig: { compliance_region: config.complianceRegion },
+			accountId: auth.accountId,
+			apiToken: auth.apiToken,
+			env: config.env,
+			useServiceEnvironments: config.legacy?.useServiceEnvironments,
+			host: config.dev.origin?.hostname,
+			routes,
+			sendMetrics: config.sendMetrics,
+			configPath: config.config,
+			tail_logs: !!config.experimental?.tailLogs,
+		});
+	}
+
+	#extractRoutes(config: StartDevWorkerOptions): Route[] | undefined {
+		return config.triggers
+			?.filter(
+				(trigger): trigger is Extract<Trigger, { type: "route" }> =>
+					trigger.type === "route"
+			)
+			.map((trigger) => {
+				const { type: _, ...route } = trigger;
+				if (
+					"custom_domain" in route ||
+					"zone_id" in route ||
+					"zone_name" in route
+				) {
+					return route;
+				} else {
+					return route.pattern;
+				}
+			});
+	}
+
+	async #updatePreviewToken(
+		config: StartDevWorkerOptions,
+		bundle: Bundle,
+		auth: CfAccount,
+		routes: Route[] | undefined,
+		bundleId: number
+	) {
+		const { bindings } = await convertBindingsToCfWorkerInitBindings(
+			config.bindings
+		);
+
+		// If we received a new `bundleComplete` event before we were able to
+		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+		if (bundleId !== this.#currentBundleId) {
+			return;
+		}
+
+		const token = await this.#previewToken({
+			bundle,
+			modules: bundle.modules,
+			accountId: auth.accountId,
+			complianceConfig: { compliance_region: config.complianceRegion },
+			name: config.name,
+			useServiceEnvironments: config.legacy?.useServiceEnvironments,
+			env: config.env,
+			isWorkersSite: config.legacy?.site !== undefined,
+			assets: config.assets,
+			legacyAssetPaths: config.legacy?.site?.bucket
+				? {
+						baseDirectory: config.legacy?.site?.bucket,
+						assetDirectory: "",
+						excludePatterns: config.legacy?.site?.exclude ?? [],
+						includePatterns: config.legacy?.site?.include ?? [],
+					}
+				: undefined,
+			format: bundle.entry.format,
+			// TODO: Remove this passthrough
+			bindings: bindings,
+			compatibilityDate: config.compatibilityDate,
+			compatibilityFlags: config.compatibilityFlags,
+			routes,
+			host: config.dev.origin?.hostname,
+			sendMetrics: config.sendMetrics,
+			configPath: config.config,
+			bundleId,
+			minimal_mode: config.dev.remote === "minimal",
+			tail_logs: !!config.experimental?.tailLogs,
+		});
+		// If we received a new `bundleComplete` event before we were able to
+		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+		// If `token` is undefined, we've surfaced a relevant error to the user above, so ignore this bundle
+		if (bundleId !== this.#currentBundleId || !token) {
+			return;
+		}
+
+		const accessToken = await getAccessToken(token.host);
+
+		this.emitReloadCompleteEvent({
+			type: "reloadComplete",
+			bundle,
+			config,
+			proxyData: {
+				userWorkerUrl: {
+					protocol: "https:",
+					hostname: token.host,
+					port: "443",
+				},
+				...(!config.experimental?.tailLogs && token.inspectorUrl
+					? {
+							userWorkerInspectorUrl: {
+								protocol: token.inspectorUrl.protocol,
+								hostname: token.inspectorUrl.hostname,
+								port: token.inspectorUrl.port.toString(),
+								pathname: token.inspectorUrl.pathname,
+							},
+						}
+					: {}),
+				headers: {
+					"cf-workers-preview-token": token.value,
+					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
+					"cf-connecting-ip": "",
+				},
+				liveReload: config.dev.liveReload,
+				proxyLogsToController: true,
+			},
+		});
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
 		logger.log(chalk.dim("⎔ Starting remote preview..."));
 
 		try {
-			const routes = config.triggers
-				?.filter(
-					(trigger): trigger is Extract<Trigger, { type: "route" }> =>
-						trigger.type === "route"
-				)
-				.map((trigger) => {
-					const { type: _, ...route } = trigger;
-					if (
-						"custom_domain" in route ||
-						"zone_id" in route ||
-						"zone_name" in route
-					) {
-						return route;
-					} else {
-						return route.pattern;
-					}
-				});
+			const routes = this.#extractRoutes(config);
 
 			if (!config.dev?.auth) {
 				throw new MissingConfigError("config.dev.auth");
@@ -192,109 +350,76 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			const auth = await unwrapHook(config.dev.auth);
 
+			// Store for token refresh
+			this.#latestConfig = config;
+			this.#latestBundle = bundle;
+			this.#latestRoutes = routes;
+
 			if (this.#session) {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
 			}
 
-			this.#session ??= await this.#previewSession({
-				complianceConfig: { compliance_region: config.complianceRegion },
-				accountId: auth.accountId,
-				apiToken: auth.apiToken,
-				env: config.env, // deprecated service environments -- just pass it through for now
-				useServiceEnvironments: config.legacy?.useServiceEnvironments, // wrangler environment -- just pass it through for now
-				host: config.dev.origin?.hostname,
-				routes,
-				sendMetrics: config.sendMetrics,
-				configPath: config.config,
-			});
-
-			const { bindings } = await convertBindingsToCfWorkerInitBindings(
-				config.bindings
-			);
-
-			// If we received a new `bundleComplete` event before we were able to
-			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
-			if (id !== this.#currentBundleId) {
-				return;
-			}
-
-			const token = await this.#previewToken({
-				bundle,
-				modules: bundle.modules,
-				accountId: auth.accountId,
-				complianceConfig: { compliance_region: config.complianceRegion },
-				name: config.name,
-				useServiceEnvironments: config.legacy?.useServiceEnvironments,
-				env: config.env,
-				isWorkersSite: config.legacy?.site !== undefined,
-				assets: config.assets,
-				legacyAssetPaths: config.legacy?.site?.bucket
-					? {
-							baseDirectory: config.legacy?.site?.bucket,
-							assetDirectory: "",
-							excludePatterns: config.legacy?.site?.exclude ?? [],
-							includePatterns: config.legacy?.site?.include ?? [],
-						}
-					: undefined,
-				format: bundle.entry.format,
-				// TODO: Remove this passthrough
-				bindings: bindings,
-				compatibilityDate: config.compatibilityDate,
-				compatibilityFlags: config.compatibilityFlags,
-				routes,
-				host: config.dev.origin?.hostname,
-				sendMetrics: config.sendMetrics,
-				configPath: config.config,
-				bundleId: id,
-				minimal_mode: config.dev.remote === "minimal",
-			});
-
-			// If we received a new `bundleComplete` event before we were able to
-			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
-			// If `token` is undefined, we've surfaced a relevant error to the user above, so ignore this bundle
-			if (id !== this.#currentBundleId || !token) {
-				return;
-			}
-
-			const accessToken = await getAccessToken(token.host);
-
-			this.emitReloadCompleteEvent({
-				type: "reloadComplete",
-				bundle,
-				config,
-				proxyData: {
-					userWorkerUrl: {
-						protocol: "https:",
-						hostname: token.host,
-						port: "443",
-					},
-					userWorkerInspectorUrl: {
-						protocol: token.inspectorUrl.protocol,
-						hostname: token.inspectorUrl.hostname,
-						port: token.inspectorUrl.port.toString(),
-						pathname: token.inspectorUrl.pathname,
-					},
-					headers: {
-						"cf-workers-preview-token": token.value,
-						...(accessToken
-							? { Cookie: `CF_Authorization=${accessToken}` }
-							: {}),
-						// Make sure we don't pass on CF-Connecting-IP to the remote edgeworker instance
-						// Without this line, remote previews will fail with `DNS points to prohibited IP`
-						"cf-connecting-ip": "",
-					},
-					liveReload: config.dev.liveReload,
-					proxyLogsToController: true,
-				},
-			});
+			this.#session ??= await this.#getPreviewSession(config, auth, routes);
+			await this.#updatePreviewToken(config, bundle, auth, routes, id);
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
-				return; // ignore
+				return;
 			}
 
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error reloading remote server",
+				cause: castErrorCause(error),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
+		}
+	}
+
+	async #refreshPreviewToken() {
+		if (!this.#latestConfig || !this.#latestBundle) {
+			logger.warn(
+				"Cannot refresh preview token: missing config or bundle data"
+			);
+			return;
+		}
+
+		this.emitReloadStartEvent({
+			type: "reloadStart",
+			config: this.#latestConfig,
+			bundle: this.#latestBundle,
+		});
+
+		if (!this.#latestConfig.dev?.auth) {
+			// This shouldn't happen as it's checked earlier, but we guard against it anyway
+			throw new MissingConfigError("config.dev.auth");
+		}
+
+		const auth = await unwrapHook(this.#latestConfig.dev.auth);
+
+		try {
+			this.#session = await this.#getPreviewSession(
+				this.#latestConfig,
+				auth,
+				this.#latestRoutes
+			);
+
+			await this.#updatePreviewToken(
+				this.#latestConfig,
+				this.#latestBundle,
+				auth,
+				this.#latestRoutes,
+				this.#currentBundleId
+			);
+			logger.log(chalk.green("✔ Preview token refreshed successfully"));
+		} catch (error) {
+			if (error instanceof Error && error.name == "AbortError") {
+				return;
+			}
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Error refreshing preview token",
 				cause: castErrorCause(error),
 				source: "RemoteRuntimeController",
 				data: undefined,
@@ -328,7 +453,8 @@ export class RemoteRuntimeController extends RuntimeController {
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
-		notImplemented(this.onPreviewTokenExpired.name, this.constructor.name);
+		logger.log(chalk.dim("⎔ Preview token expired, refreshing..."));
+		void this.#mutex.runWith(() => this.#refreshPreviewToken());
 	}
 
 	override async teardown() {
@@ -339,6 +465,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
+		this.#activeTail?.terminate();
 		logger.debug("RemoteRuntimeController teardown complete");
 	}
 
@@ -347,9 +474,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.emit("reloadStart", data);
+		this.bus.dispatch(data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.emit("reloadComplete", data);
+		this.bus.dispatch(data);
 	}
 }

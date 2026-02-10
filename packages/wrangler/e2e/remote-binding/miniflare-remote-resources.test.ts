@@ -1,6 +1,7 @@
+import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -8,64 +9,117 @@ import {
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
-import type { RawConfig } from "../../src/config";
-import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
+import type { StartDevWorkerInput } from "../../src/api";
+import type { StartRemoteProxySessionOptions } from "../../src/cli";
+import type { RawConfig } from "@cloudflare/workers-utils";
+import type {
+	Awaitable,
+	MiniflareOptions,
+	Miniflare as MiniflareType,
+	RemoteProxyConnectionString,
+	WorkerOptions,
+} from "miniflare";
 import type { ExpectStatic } from "vitest";
 
 const { startRemoteProxySession } = await importWrangler();
 const { Miniflare } = await importMiniflare();
 
-type TestCase<T = void> = {
+/**
+ * Defines the configuration and expectations for a remote binding test case.
+ */
+interface TestCase {
+	/** The name to display in test results */
 	name: string;
+	/** Whether to skip the test */
+	skip?: boolean;
+	/**
+	 * The path to the Worker script that exercises the remote binding.
+	 *
+	 * This path is relative to the `workers` directory alongside this test file.
+	 */
 	scriptPath: string;
-	remoteProxySessionConfig:
-		| Parameters<typeof startRemoteProxySession>
-		| ((setup: T) => Parameters<typeof startRemoteProxySession>);
-	miniflareConfig: (
-		connection: RemoteProxyConnectionString,
-		setup: T
-	) => Partial<WorkerOptions>;
-	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
-	matches: ExpectStatic[];
-	// Flag for resources that can work without remote bindings opt-in
+	/**
+	 * Whether the resource can work without remote bindings opt-in
+	 *
+	 * When this is true this test case is also run without remote bindings configured.
+	 */
 	worksWithoutRemoteBindings?: boolean;
-};
-const testCases: TestCase<string>[] = [
+	/**
+	 * We do a fetch against the Worker defined by `scriptPath` and then check the response matches all these expectations.
+	 */
+	expectFetchToMatch: ExpectStatic[];
+	/**
+	 * Setup the test case by creating any necessary resources and returning the configuration
+	 * for both the remote proxy session and Miniflare.
+	 *
+	 * @param helper - the e2e test helper that can be used to create resources, etc.
+	 * @returns the test configuration for this test case
+	 */
+	setup: (helper: WranglerE2ETestHelper) => Awaitable<TestConfig>;
+}
+
+/**
+ * The configuration for creating a remote proxy sessions and for creating a Miniflare instance for this test case.
+ */
+interface TestConfig {
+	/**
+	 * These bindings and options objects will be merged with all the other test cases to create a single remote proxy session for all tests.
+	 */
+	remoteProxySessionConfig: {
+		bindings: StartDevWorkerInput["bindings"];
+		options?: StartRemoteProxySessionOptions;
+	};
+	/**
+	 * The Miniflare config (mostly bindings) for this test case. This will be merged with all other test cases to create a single Miniflare instance for all tests.
+	 * @param connection The URL to the remote proxy session
+	 */
+	miniflareConfig(
+		connection: RemoteProxyConnectionString | undefined
+	): Partial<WorkerOptions>;
+}
+
+const testCases: TestCase[] = [
 	{
 		name: "AI",
 		scriptPath: "ai.js",
-		remoteProxySessionConfig: [
-			{
-				AI: {
-					type: "ai",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					AI: {
+						type: "ai",
+					},
 				},
 			},
-		],
-		miniflareConfig: (connection) => ({
-			ai: {
-				binding: "AI",
-				remoteProxyConnectionString: connection,
-			},
+			miniflareConfig: (connection) => ({
+				ai: {
+					binding: "AI",
+					remoteProxyConnectionString: connection,
+				},
+			}),
 		}),
-		matches: [expect.stringMatching(/This is a response from Workers AI/)],
+		expectFetchToMatch: [
+			expect.stringMatching(/This is a response from Workers AI/),
+		],
 	},
 	{
 		name: "Browser",
 		scriptPath: "browser.js",
-		remoteProxySessionConfig: [
-			{
-				BROWSER: {
-					type: "browser",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					BROWSER: {
+						type: "browser",
+					},
 				},
 			},
-		],
-		miniflareConfig: (connection) => ({
-			browserRendering: {
-				binding: "BROWSER",
-				remoteProxyConnectionString: connection,
-			},
+			miniflareConfig: (connection) => ({
+				browserRendering: {
+					binding: "BROWSER",
+					remoteProxyConnectionString: connection,
+				},
+			}),
 		}),
-		matches: [expect.stringMatching(/sessionId/)],
+		expectFetchToMatch: [expect.stringMatching(/sessionId/)],
 		worksWithoutRemoteBindings: true,
 	},
 	{
@@ -96,35 +150,37 @@ const testCases: TestCase<string>[] = [
 				workerName: targetWorkerName,
 			});
 
-			return targetWorkerName;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						SERVICE: {
+							type: "service",
+							service: targetWorkerName,
+						},
+						SERVICE_WITH_ENTRYPOINT: {
+							type: "service",
+							entrypoint: "CustomEntrypoint",
+							service: targetWorkerName,
+						},
+					},
+				},
+
+				miniflareConfig: (connection) => ({
+					serviceBindings: {
+						SERVICE: {
+							name: targetWorkerName,
+							remoteProxyConnectionString: connection,
+						},
+						SERVICE_WITH_ENTRYPOINT: {
+							name: targetWorkerName,
+							entrypoint: "CustomEntrypoint",
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (target) => [
-			{
-				SERVICE: {
-					type: "service",
-					service: target,
-				},
-				SERVICE_WITH_ENTRYPOINT: {
-					type: "service",
-					entrypoint: "CustomEntrypoint",
-					service: target,
-				},
-			},
-		],
-		miniflareConfig: (connection, target) => ({
-			serviceBindings: {
-				SERVICE: {
-					name: target,
-					remoteProxyConnectionString: connection,
-				},
-				SERVICE_WITH_ENTRYPOINT: {
-					name: target,
-					entrypoint: "CustomEntrypoint",
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [
+		expectFetchToMatch: [
 			expect.stringMatching(
 				JSON.stringify({
 					default: "Hello from target worker",
@@ -142,25 +198,26 @@ const testCases: TestCase<string>[] = [
 			await helper.run(
 				`wrangler kv key put --remote --namespace-id=${ns} test-remote-bindings-key existing-value`
 			);
-			return ns;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						KV_BINDING: {
+							type: "kv_namespace",
+							id: ns,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					kvNamespaces: {
+						KV_BINDING: {
+							id: ns,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (ns) => [
-			{
-				KV_BINDING: {
-					type: "kv_namespace",
-					id: ns,
-				},
-			},
-		],
-		miniflareConfig: (connection, ns) => ({
-			kvNamespaces: {
-				KV_BINDING: {
-					id: ns,
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [
+		expectFetchToMatch: [
 			expect.stringMatching("The pre-existing value is: existing-value"),
 		],
 	},
@@ -173,30 +230,31 @@ const testCases: TestCase<string>[] = [
 			await helper.run(
 				`wrangler r2 object put --remote ${name}/test-remote-bindings-key --file test.txt`
 			);
-			onTestFinished(async () => {
+			helper.onTeardown(async () => {
 				await helper.run(
 					`wrangler r2 object delete --remote ${name}/test-remote-bindings-key`
 				);
 			});
-			return name;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						R2_BINDING: {
+							type: "r2_bucket",
+							bucket_name: name,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					r2Buckets: {
+						R2_BINDING: {
+							id: name,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (name) => [
-			{
-				R2_BINDING: {
-					type: "r2_bucket",
-					bucket_name: name,
-				},
-			},
-		],
-		miniflareConfig: (connection, name) => ({
-			r2Buckets: {
-				R2_BINDING: {
-					id: name,
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [
+		expectFetchToMatch: [
 			expect.stringMatching("The pre-existing value is: existing-value"),
 		],
 	},
@@ -214,25 +272,26 @@ const testCases: TestCase<string>[] = [
 			await helper.run(
 				`wrangler d1 execute --remote ${name} --file schema.sql`
 			);
-			return id;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						DB: {
+							type: "d1",
+							database_id: id,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					d1Databases: {
+						DB: {
+							id: id,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (id) => [
-			{
-				DB: {
-					type: "d1",
-					database_id: id,
-				},
-			},
-		],
-		miniflareConfig: (connection, id) => ({
-			d1Databases: {
-				DB: {
-					id: id,
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [expect.stringMatching("existing-value")],
+		expectFetchToMatch: [expect.stringMatching("existing-value")],
 	},
 	{
 		name: "Vectorize",
@@ -243,25 +302,26 @@ const testCases: TestCase<string>[] = [
 				"euclidean",
 				"well-known-vectorize"
 			);
-			return name;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						VECTORIZE_BINDING: {
+							type: "vectorize",
+							index_name: name,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					vectorize: {
+						VECTORIZE_BINDING: {
+							index_name: name,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (name) => [
-			{
-				VECTORIZE_BINDING: {
-					type: "vectorize",
-					index_name: name,
-				},
-			},
-		],
-		miniflareConfig: (connection, name) => ({
-			vectorize: {
-				VECTORIZE_BINDING: {
-					index_name: name,
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [
+		expectFetchToMatch: [
 			expect.stringContaining(
 				`[{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","namespace":null,"metadata":{"text":"Peter Piper picked a peck of pickled peppers"},"values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}]`
 			),
@@ -270,38 +330,42 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "Images",
 		scriptPath: "images.js",
-		remoteProxySessionConfig: [
-			{
-				IMAGES: {
-					type: "images",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					IMAGES: {
+						type: "images",
+					},
 				},
 			},
-		],
-		miniflareConfig: (connection) => ({
-			images: {
-				binding: "IMAGES",
-				remoteProxyConnectionString: connection,
-			},
+			miniflareConfig: (connection) => ({
+				images: {
+					binding: "IMAGES",
+					remoteProxyConnectionString: connection,
+				},
+			}),
 		}),
-		matches: [expect.stringContaining(`image/avif`)],
+		expectFetchToMatch: [expect.stringContaining(`image/avif`)],
 	},
 	{
 		name: "Media",
 		scriptPath: "media.js",
-		remoteProxySessionConfig: [
-			{
-				MEDIA: {
-					type: "media",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					MEDIA: {
+						type: "media",
+					},
 				},
 			},
-		],
-		miniflareConfig: (connection) => ({
-			media: {
-				binding: "MEDIA",
-				remoteProxyConnectionString: connection,
-			},
+			miniflareConfig: (connection) => ({
+				media: {
+					binding: "MEDIA",
+					remoteProxyConnectionString: connection,
+				},
+			}),
 		}),
-		matches: [expect.stringContaining(`image/jpeg`)],
+		expectFetchToMatch: [expect.stringContaining(`image/jpeg`)],
 	},
 	{
 		name: "Dispatch Namespace",
@@ -324,30 +388,30 @@ const testCases: TestCase<string>[] = [
 				`,
 			});
 			// Deploy a customer's worker to the dispatch namespace
-			// This doesn't need to be cleaned up, since it will be removed when the dispatch names is cleaned up.
+			// This doesn't need to be cleaned up, since it will be removed when the dispatch namespace is cleaned up.
 			await helper.run(
 				`wrangler deploy customer-worker.js --name ${customerWorkerName} --compatibility-date 2025-01-01 --dispatch-namespace ${namespace}`
 			);
-
-			return namespace;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						DISPATCH: {
+							type: "dispatch_namespace",
+							namespace: namespace,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					dispatchNamespaces: {
+						DISPATCH: {
+							namespace: namespace,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (namespace) => [
-			{
-				DISPATCH: {
-					type: "dispatch_namespace",
-					namespace: namespace,
-				},
-			},
-		],
-		miniflareConfig: (connection, namespace) => ({
-			dispatchNamespaces: {
-				DISPATCH: {
-					namespace: namespace,
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [
+		expectFetchToMatch: [
 			expect.stringMatching(
 				JSON.stringify({
 					worker: "Hello from customer worker",
@@ -359,43 +423,47 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "Pipelines",
 		scriptPath: "pipelines.js",
-		remoteProxySessionConfig: [
-			{
-				PIPELINE: {
-					type: "pipeline",
-					pipeline: "preserve-e2e-pipelines",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					PIPELINE: {
+						type: "pipeline",
+						pipeline: "preserve-e2e-pipelines",
+					},
 				},
 			},
-		],
-		miniflareConfig: (connection) => ({
-			pipelines: {
-				PIPELINE: {
-					pipeline: "preserve-e2e-pipelines",
-					remoteProxyConnectionString: connection,
+			miniflareConfig: (connection) => ({
+				pipelines: {
+					PIPELINE: {
+						pipeline: "preserve-e2e-pipelines",
+						remoteProxyConnectionString: connection,
+					},
 				},
-			},
+			}),
 		}),
-		matches: [expect.stringContaining(`Data sent to env.PIPELINE`)],
+		expectFetchToMatch: [expect.stringContaining(`Data sent to env.PIPELINE`)],
 		worksWithoutRemoteBindings: true,
 	},
 	{
 		name: "Email",
 		scriptPath: "email.js",
-		remoteProxySessionConfig: [
-			{
-				EMAIL: {
-					type: "send_email",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					EMAIL: {
+						type: "send_email",
+					},
 				},
 			},
-		],
-		miniflareConfig: (connection) => ({
-			email: {
-				send_email: [
-					{ name: "EMAIL", remoteProxyConnectionString: connection },
-				],
-			},
+			miniflareConfig: (connection) => ({
+				email: {
+					send_email: [
+						{ name: "EMAIL", remoteProxyConnectionString: connection },
+					],
+				},
+			}),
 		}),
-		matches: [
+		expectFetchToMatch: [
 			// This error message comes from the production binding, and so indicates that the binding has been called
 			// successfully, which is all we care about. Full E2E testing of email sending would be _incredibly_ flaky
 			expect.stringContaining(
@@ -403,10 +471,11 @@ const testCases: TestCase<string>[] = [
 			),
 		],
 	},
-	/* 	{
-		// Enable post announcement
+	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
+		// TODO: Enable post VPC announcement
+		skip: true,
 		setup: async (helper) => {
 			const serviceName = generateResourceName();
 
@@ -427,157 +496,268 @@ const testCases: TestCase<string>[] = [
 				"Failed to extract service ID from VPC service creation output"
 			);
 
-			onTestFinished(async () => {
+			helper.onTeardown(async () => {
 				await helper.run(`wrangler vpc service delete ${serviceId}`);
 			});
 
-			return serviceId;
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						VPC_SERVICE: {
+							type: "vpc_service",
+							service_id: serviceId,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					vpcServices: {
+						VPC_SERVICE: {
+							service_id: serviceId,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
 		},
-		remoteProxySessionConfig: (serviceId) => [
-			{
-				VPC_SERVICE: {
-					type: "vpc_service",
-					service_id: serviceId,
-				},
-			},
-		],
-		miniflareConfig: (connection, serviceId) => ({
-			vpcServices: {
-				VPC_SERVICE: {
-					service_id: serviceId,
-					remoteProxyConnectionString: connection,
-				},
-			},
-		}),
-		matches: [
+		expectFetchToMatch: [
 			// Since we're using a real tunnel but no actual network connectivity, Iris will report back an error
 			// but this is considered an effective test for wrangler and vpc service bindings
 			expect.stringMatching(/CONNECT failed: 503 Service Unavailable/),
 		],
-	}, */
+	},
 ];
 
-const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
-	name: "mTLS",
-	scriptPath: "mtls.js",
-	setup: async (helper) => {
-		const certificateId = await helper.cert();
+if (!CLOUDFLARE_ACCOUNT_ID) {
+	describe.skip(
+		"Skipping remote bindings E2E tests because CLOUDFLARE_ACCOUNT_ID is not set"
+	);
+} else {
+	describe("Remote bindings (remote proxy session enabled)", () => {
+		let helper: WranglerE2ETestHelper;
+		let mf: MiniflareType;
+		const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
+		const activeTestCases = testCases.filter((testCase) => !testCase.skip);
 
-		const workerName = generateResourceName();
-		const wranglerConfig: RawConfig = {
-			name: workerName,
-			main: "worker.js",
-			mtls_certificates: [
+		beforeAll(async () => {
+			helper = new WranglerE2ETestHelper(onTeardown);
+			await helper.seed(path.resolve(__dirname, "./workers"));
+			const testConfigs: TestConfig[] = [];
+			for (const testCase of activeTestCases) {
+				testConfigs.push(await testCase.setup(helper));
+			}
+			const remoteProxySession = await startRemoteProxySession(
+				Object.assign(
+					{},
+					...testConfigs.map(
+						(config) => config.remoteProxySessionConfig.bindings
+					)
+				),
+				Object.assign(
+					{},
+					...testConfigs.map(
+						(config) => config.remoteProxySessionConfig.options
+					)
+				)
+			);
+
+			const testCaseModules = activeTestCases.map((testCase) => ({
+				type: "ESModule" as const,
+				path: path.resolve(helper.tmpPath, testCase.scriptPath),
+			}));
+
+			const miniflareConfig: MiniflareOptions = Object.assign(
 				{
-					certificate_id: certificateId,
-					binding: "MTLS",
-				},
+					compatibilityDate: "2025-09-06",
+					modules: [
+						{
+							type: "ESModule",
+							path: path.resolve(helper.tmpPath, "index.js"),
+						},
+						...testCaseModules,
+					],
+					modulesRoot: helper.tmpPath,
+				} satisfies MiniflareOptions,
+				...testConfigs.map((config) =>
+					config.miniflareConfig(remoteProxySession.remoteProxyConnectionString)
+				)
+			);
+			mf = new Miniflare(miniflareConfig);
+		}, activeTestCases.length * 15_000);
+
+		for (const testCase of activeTestCases) {
+			it("should work for " + testCase.name, async () => {
+				const resp = await mf.dispatchFetch("http://example.com/", {
+					headers: { "x-test-module": testCase.scriptPath },
+				});
+				const respText = await resp.text();
+				testCase.expectFetchToMatch.forEach((match) => {
+					expect(respText).toEqual(match);
+				});
+			});
+		}
+	});
+
+	// Separate describe block for mTLS since it needs a custom remote-binding proxy worker deployment
+	describe("Remote bindings (mtls)", () => {
+		const mtlsTestCase: TestCase = {
+			name: "mTLS",
+			scriptPath: "mtls.js",
+			setup: async (helper) => {
+				const certificateId = await helper.cert();
+				// We need to override the standard Wrangler remote proxy worker with one that has the mTLS configured.
+				const workerName = generateResourceName();
+				const wranglerConfig: RawConfig = {
+					name: workerName,
+					main: "worker.js",
+					mtls_certificates: [
+						{
+							certificate_id: certificateId,
+							binding: "MTLS",
+						},
+					],
+				};
+				await helper.seed({
+					"worker.js": dedent/* javascript */ `
+						export default {
+							fetch(request) { return new Response("Hello"); }
+						}
+					`,
+					"pre-deployment-wrangler.json": JSON.stringify(
+						wranglerConfig,
+						null,
+						2
+					),
+				});
+				// Deploy the custom remote proxy worker for this tests
+				await helper.worker({
+					workerName,
+					configPath: "pre-deployment-wrangler.json",
+				});
+				return {
+					remoteProxySessionConfig: {
+						bindings: {
+							MTLS: {
+								type: "mtls_certificate",
+								certificate_id: certificateId,
+							},
+						},
+						// This is the big difference that means we cannot use the standard remote proxy worker
+						// This worker needs to have mTLS certificates configured.
+						options: {
+							workerName,
+						},
+					},
+					miniflareConfig: (connection) => ({
+						mtlsCertificates: {
+							MTLS: {
+								certificate_id: certificateId,
+								remoteProxyConnectionString: connection,
+							},
+						},
+					}),
+				};
+			},
+			expectFetchToMatch: [
+				// Note: in this test we are making sure that TLS negotiation does work by checking that we get an SSL certificate error
+				expect.stringMatching(/The SSL certificate error/),
+				expect.not.stringMatching(/No required SSL certificate was sent/),
 			],
 		};
 
-		await helper.seed({
-			"worker.js": dedent/* javascript */ `
-					export default {
-						fetch(request) { return new Response("Hello"); }
-					}
-				`,
-			"pre-deployment-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+		it("should work for mTLS bindings", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed(path.resolve(__dirname, "./workers"));
+			const testConfig = await mtlsTestCase.setup(helper);
+			const remoteProxySession = await startRemoteProxySession(
+				testConfig.remoteProxySessionConfig.bindings,
+				testConfig.remoteProxySessionConfig.options
+			);
+			const miniflareConfig: MiniflareOptions = Object.assign(
+				{
+					compatibilityDate: "2025-09-06",
+					modules: [
+						{
+							type: "ESModule",
+							path: path.resolve(helper.tmpPath, mtlsTestCase.scriptPath),
+						},
+					],
+					modulesRoot: helper.tmpPath,
+				} satisfies MiniflareOptions,
+				testConfig.miniflareConfig(
+					remoteProxySession.remoteProxyConnectionString
+				)
+			);
+			const mf = new Miniflare(miniflareConfig);
+			const resp = await mf.dispatchFetch("http://example.com/");
+			const respText = await resp.text();
+			mtlsTestCase.expectFetchToMatch.forEach((match) => {
+				expect(respText).toEqual(match);
+			});
 		});
+	});
+}
 
-		await helper.worker({
-			workerName,
-			configPath: "pre-deployment-wrangler.json",
-		});
-
-		return { certificateId, workerName };
-	},
-	remoteProxySessionConfig: ({ certificateId, workerName }) => [
-		{
-			MTLS: {
-				type: "mtls_certificate",
-				certificate_id: certificateId,
-			},
-		},
-		{
-			workerName,
-		},
-	],
-	miniflareConfig: (connection, { certificateId }) => ({
-		mtlsCertificates: {
-			MTLS: {
-				certificate_id: certificateId,
-				remoteProxyConnectionString: connection,
-			},
-		},
-	}),
-	matches: [
-		// Note: in this test we are making sure that TLS negotiation does work by checking that we get an SSL certificate error
-		expect.stringMatching(/The SSL certificate error/),
-		expect.not.stringMatching(/No required SSL certificate was sent/),
-	],
-};
-
-describe.skipIf(!CLOUDFLARE_ACCOUNT_ID).each([...testCases, mtlsTest])(
-	"Remote bindings test for $name",
-	(testCase) => {
-		let helper: WranglerE2ETestHelper;
-		beforeEach(() => {
-			helper = new WranglerE2ETestHelper();
-		});
-		it("enabled", async () => {
-			await runTestCase(testCase as TestCase<unknown>, helper);
-		});
-		// Ensure the test case _relies_ on remote bindings, and fails in regular local dev
-		it.skipIf(testCase.worksWithoutRemoteBindings)(
-			"fails when disabled",
-			// Turn off retries because this test is expected to fail
-			{ retry: 0, fails: true },
-			async () => {
-				await runTestCase(testCase as TestCase<unknown>, helper, {
-					disableRemoteBindings: true,
-				});
-			}
-		);
-	}
-);
-
-async function runTestCase<T>(
-	testCase: TestCase<T>,
-	helper: WranglerE2ETestHelper,
-	{ disableRemoteBindings } = { disableRemoteBindings: false }
-) {
-	await helper.seed(path.resolve(__dirname, "./workers"));
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	const setupResult = (await testCase.setup?.(helper))!;
-
-	const remoteProxySessionConfig =
-		typeof testCase.remoteProxySessionConfig === "function"
-			? testCase.remoteProxySessionConfig(setupResult)
-			: testCase.remoteProxySessionConfig;
-
-	const remoteProxySession = await startRemoteProxySession(
-		...remoteProxySessionConfig
+describe("Remote bindings (remote proxy session disabled)", () => {
+	let helper: WranglerE2ETestHelper;
+	let mf: MiniflareType;
+	const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
+	const activeTestCases = testCases.filter(
+		(testCase) => !testCase.skip && testCase.worksWithoutRemoteBindings
 	);
 
-	const miniflareConfig = disableRemoteBindings
-		? // @ts-expect-error Deliberately passing in undefined here to turn off remote bindings
-			testCase.miniflareConfig(undefined)
-		: testCase.miniflareConfig(
-				remoteProxySession.remoteProxyConnectionString,
-				setupResult
-			);
+	beforeAll(async () => {
+		helper = new WranglerE2ETestHelper(onTeardown);
+		await helper.seed(path.resolve(__dirname, "./workers"));
+		const testConfigs: TestConfig[] = [];
+		for (const testCase of activeTestCases) {
+			testConfigs.push(await testCase.setup(helper));
+		}
 
-	const mf = new Miniflare({
-		compatibilityDate: "2025-09-06",
-		// @ts-expect-error TS doesn't like the spreading of miniflareConfig
-		modules: true,
-		scriptPath: path.resolve(helper.tmpPath, testCase.scriptPath),
-		modulesRoot: helper.tmpPath,
-		...miniflareConfig,
-	});
-	const resp = await mf.dispatchFetch("http://example.com");
-	const respText = await resp.text();
-	testCase.matches.forEach((match) => {
-		expect(respText).toEqual(match);
-	});
+		const testCaseModules = activeTestCases.map((testCase) => ({
+			type: "ESModule" as const,
+			path: path.resolve(helper.tmpPath, testCase.scriptPath),
+		}));
+
+		const miniflareConfig: MiniflareOptions = Object.assign(
+			{
+				compatibilityDate: "2025-09-06",
+				modules: [
+					{
+						type: "ESModule",
+						path: path.resolve(helper.tmpPath, "index.js"),
+					},
+					...testCaseModules,
+				],
+				modulesRoot: helper.tmpPath,
+			} satisfies MiniflareOptions,
+			...testConfigs.map((config) => config.miniflareConfig(undefined))
+		);
+		mf = new Miniflare(miniflareConfig);
+	}, activeTestCases.length * 15_000);
+
+	for (const testCase of activeTestCases) {
+		it("should work for " + testCase.name, async () => {
+			const resp = await mf.dispatchFetch("http://example.com/", {
+				headers: { "x-test-module": testCase.scriptPath },
+			});
+			const respText = await resp.text();
+			testCase.expectFetchToMatch.forEach((match) => {
+				expect(respText).toEqual(match);
+			});
+		});
+	}
+});
+
+function useTeardown(options: { timeout?: number } = {}) {
+	const tearDownCallbacks: Array<() => Awaitable<void>> = [];
+	function onTeardown(fn: () => Awaitable<void>) {
+		tearDownCallbacks.push(fn);
+	}
+	afterAll(async () => {
+		for (const fn of tearDownCallbacks.reverse()) {
+			await fn();
+		}
+		tearDownCallbacks.length = 0;
+	}, options.timeout);
+	return onTeardown;
 }

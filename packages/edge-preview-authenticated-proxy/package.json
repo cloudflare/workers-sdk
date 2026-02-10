@@ -1,9 +1,9 @@
 {
 	"name": "@cloudflare/edge-preview-authenticated-proxy",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"private": true,
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
@@ -15,8 +15,9 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
+		"eslint": "catalog:default",
 		"promjs": "^0.4.2",
-		"toucan-js": "^3.3.1",
+		"toucan-js": "4.0.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

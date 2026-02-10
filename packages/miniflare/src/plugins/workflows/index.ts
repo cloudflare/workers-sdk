@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { z } from "zod";

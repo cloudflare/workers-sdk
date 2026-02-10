@@ -1,14 +1,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	FatalError,
+	getC3CommandFromEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { execa } from "execa";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
-import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getC3CommandFromEnv,
-} from "./environment-variables/misc-variables";
-import { UserError } from "./errors";
 import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";
@@ -16,15 +17,18 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
-import type { Observability, TailConsumer } from "./config/environment";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { PackageManager } from "./package-manager";
-import type { ReadableStream } from "stream/web";
+import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
+import type { ExecaError } from "execa";
+import type { ReadableStream } from "node:stream/web";
 
 export const init = createCommand({
 	metadata: {
 		description: "📥 Initialize a basic Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	args: {
 		name: {
@@ -61,8 +65,9 @@ export const init = createCommand({
 
 		const name = args.fromDash ?? args.name;
 
+		const c3CommandParts = shellquote.parse(getC3CommandFromEnv());
 		const c3Arguments = [
-			...shellquote.parse(getC3CommandFromEnv()),
+			...c3CommandParts,
 			...(name ? [name] : []),
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),
@@ -82,7 +87,7 @@ export const init = createCommand({
 					`/accounts/${accountId}/workers/services/${args.fromDash}`
 				);
 			} catch (err) {
-				if ((err as { code?: number }).code === 10090) {
+				if (isWorkerNotFoundError(err)) {
 					throw new UserError(
 						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
 						{
@@ -130,53 +135,31 @@ export const init = createCommand({
 
 			// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
 			const metricsConfig = readMetricsConfig();
-			await execa(packageManager.type, c3Arguments, {
-				stdio: "inherit",
-				...(metricsConfig.permission?.enabled === false && {
-					env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
-				}),
-			});
+			try {
+				const childProcess = execa(packageManager.type, c3Arguments, {
+					// Note: we need to pipe stdout and stderr otherwise execa won't include
+					//       those in the command's result/error, but we want it to so that we
+					//       can include those in the error Sentry receives
+					stdio: ["inherit", "pipe", "pipe"],
+					...(metricsConfig.permission?.enabled === false && {
+						env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
+					}),
+				});
+				childProcess.stdout?.pipe(process.stdout);
+				childProcess.stderr?.pipe(process.stderr);
+				await childProcess;
+			} catch (e: unknown) {
+				const execaError = e as ExecaError;
+				throw new Error(execaError.shortMessage, {
+					// We include the execaError as the cause, in this way this
+					// will be reflected in Sentry allowing us to better monitor
+					// C3 errors
+					cause: execaError,
+				});
+			}
 		}
 	},
 });
-
-export type ServiceMetadataRes = {
-	id: string;
-	default_environment: {
-		environment: string;
-		created_on: string;
-		modified_on: string;
-		script: {
-			id: string;
-			tag: string;
-			etag: string;
-			handlers: string[];
-			modified_on: string;
-			created_on: string;
-			migration_tag: string;
-			usage_model: "bundled" | "unbound";
-			limits: {
-				cpu_ms: number;
-			};
-			compatibility_date: string;
-			compatibility_flags: string[];
-			last_deployed_from?: "wrangler" | "dash" | "api";
-			placement_mode?: "smart";
-			tail_consumers?: TailConsumer[];
-			observability?: Observability;
-		};
-	};
-	created_on: string;
-	modified_on: string;
-	usage_model: "bundled" | "unbound";
-	environments: [
-		{
-			environment: string;
-			created_on: string;
-			modified_on: string;
-		},
-	];
-};
 
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
@@ -201,6 +184,12 @@ export async function downloadWorker(accountId: string, workerName: string) {
 		entrypoint,
 		accountId
 	);
+
+	if (config.assets) {
+		throw new FatalError(
+			"`wrangler init --from-dash` is not yet supported for Workers with Assets"
+		);
+	}
 
 	return {
 		modules,

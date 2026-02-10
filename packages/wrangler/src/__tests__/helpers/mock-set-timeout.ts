@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 import type { MockInstance } from "vitest";
 
 let setTimeoutSpy: MockInstance;

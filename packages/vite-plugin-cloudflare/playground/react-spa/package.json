@@ -4,22 +4,22 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:server-headers": "vite dev -c ./vite.config.server-headers.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react": "^19.2.1",
+		"react-dom": "^19.2.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@types/react": "^19.0.0",
-		"@types/react-dom": "^19.0.0",
-		"@vitejs/plugin-react": "^4.3.4",
+		"@types/react": "19.1.0",
+		"@types/react-dom": "19.1.0",
+		"@vitejs/plugin-react": "^4.7.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"

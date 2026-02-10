@@ -66,8 +66,8 @@ declare module "cloudflare:test" {
 	 * Respects `isolatedStorage` if enabled, i.e. objects created in a different
 	 * test won't be returned.
 	 */
-	export function listDurableObjectIds(
-		namespace: DurableObjectNamespace
+	export function listDurableObjectIds<T>(
+		namespace: DurableObjectNamespace<T>
 	): Promise<DurableObjectId[]>;
 
 	/**
@@ -165,6 +165,9 @@ declare module "cloudflare:test" {
 	 *   // 3. ASSERTION
 	 *   await instance.waitForStatus("complete");
 	 *
+	 * 	 const output = await instance.getOutput();
+	 *   expect(output).toEqual({ success: true });
+	 *
 	 *   // 4. DISPOSE is implicit and automatic here.
 	 * });
 	 */
@@ -210,6 +213,49 @@ declare module "cloudflare:test" {
 		 * @param status - The target `InstanceStatus` to wait for.
 		 */
 		waitForStatus(status: InstanceStatus["status"]): Promise<void>;
+
+		/**
+		 * Retrieves the output value returned by the Workflow instance upon successful completion.
+		 *
+		 * This method should only be called after the Workflow instance has completed successfully.
+		 * It's recommended to use `waitForStatus("complete")` before calling this method.
+		 *
+		 * @example
+		 * ```ts
+		 * it('my workflow test', async () => {
+		 *   await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123");
+		 *   await env.MY_WORKFLOW.create({ id: "123" });
+		 *
+		 *   await instance.waitForStatus("complete");
+		 *
+		 *   const output = await instance.getOutput();
+		 *   expect(output).toEqual({ success: true });
+		 * });
+		 * ```
+		 */
+		getOutput(): Promise<unknown>;
+
+		/**
+		 * Retrieves the error information from a failed Workflow instance.
+		 *
+		 * This method should only be called after the Workflow instance has failed.
+		 * It's recommended to use `waitForStatus("errored")` before calling this method.
+		 *
+		 * @example
+		 * ```ts
+		 * it('my workflow test', async () => {
+		 * 	 await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123");
+		 *   await env.MY_WORKFLOW.create({ id: "123" });
+		 *
+		 *   await instance.waitForStatus("errored");
+		 *
+		 *   const error = await instance.getError();
+		 *   expect(error.name).toBe("Error");
+		 *   expect(error.message).toContain("some error");
+		 * });
+		 * ```
+		 */
+		getError(): Promise<{ name: string; message: string }>;
 
 		/**
 		 * Disposes the Workflow instance introspector.
@@ -433,6 +479,9 @@ declare module "cloudflare:test" {
 	 *   const instances = introspector.get();
 	 *   for(const instance of instances) {
 	 *     await instance.waitForStatus("complete");
+	 *
+	 *     const output = await instance.getOutput();
+	 *     expect(output).toEqual({ success: true });
 	 *   }
 	 *
 	 * // 4. DISPOSE is implicit and automatic here.
@@ -592,8 +641,8 @@ declare module "cloudflare:test" {
 			/** Body to intercept on. */
 			body?: string | RegExp | ((body: string) => boolean);
 			/** Headers to intercept on. */
-			headers?: // eslint-disable-next-line unused-imports/no-unused-vars
-			| Record<string, string | RegExp | ((body: string) => boolean)>
+			headers?:
+				| Record<string, string | RegExp | ((body: string) => boolean)>
 				| ((headers: Record<string, string>) => boolean);
 			/** Query params to intercept on */
 			query?: Record<string, unknown>;
@@ -654,7 +703,7 @@ declare module "cloudflare:test" {
 	/** A mocked Agent class that implements the Agent API. It allows one to intercept HTTP requests made through undici and return mocked responses instead. */
 	abstract class MockAgent {
 		/** Creates and retrieves mock Dispatcher instances which can then be used to intercept HTTP requests. If the number of connections on the mock agent is set to 1, a MockClient instance is returned. Otherwise a MockPool instance is returned. */
-		// eslint-disable-next-line no-shadow
+
 		get(origin: string | RegExp | ((origin: string) => boolean)): Interceptable;
 
 		/** Disables mocking in MockAgent. */
@@ -664,7 +713,6 @@ declare module "cloudflare:test" {
 
 		/** Define host matchers so only matching requests that aren't intercepted by the mock dispatchers will be attempted. */
 		enableNetConnect(
-			// eslint-disable-next-line no-shadow
 			host?: string | RegExp | ((host: string) => boolean)
 		): void;
 		/** Causes all requests to throw when requests are not matched in a MockAgent intercept. */

@@ -1,4 +1,4 @@
-name: E2E
+name: C3 E2E
 on:
   merge_group:
   pull_request:
@@ -6,73 +6,31 @@ on:
 permissions:
   contents: read
 
-env:
-  # TODO: switch back to 20.x onces node@20.x includes a fix for https://github.com/nodejs/node/issues/57869
-  NODE_VERSION: 22
-
 jobs:
-  deploy-test-workers:
-    name: Deploy Test Workers
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            everything_but_markdown:
-              - '!**/*.md'
-
-      - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        uses: ./.github/actions/install-dependencies
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Deploy test workers
-        if: github.event.pull_request.head.repo.owner.login == 'cloudflare' && steps.changes.outputs.everything_but_markdown == 'true'
-        shell: bash
-        run: node -r esbuild-register tools/test-workers/deploy-all.ts
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-
   e2e:
-    needs: deploy-test-workers
     # Runs the non-frameworks C3 E2E tests on all supported operating systems and package managers.
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}-${{ matrix.filter }}
       cancel-in-progress: true
-    name: ${{ format('C3 ({0}, {1}{2})', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '') }}
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - {3}', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
     strategy:
       fail-fast: false
       matrix:
-        experimental: [true, false]
-        os:
-          [
-            { name: windows-latest, description: Windows },
-            { name: ubuntu-latest, description: Linux },
-          ]
+        experimental: [false]
+        filter: ["cli", "workers", "frameworks"]
+        os: [{ name: ubuntu-latest, description: Linux }]
         pm:
-          [
-            { name: npm, version: "0.0.0" },
-            { name: yarn, version: "1.0.0" },
-            { name: pnpm, version: "9.12.0" },
-          ]
-        exclude:
+          - { name: pnpm, version: "9.12.0" }
+          - { name: npm, version: "0.0.0" }
+          # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
+          # - { name: yarn, version: "1.0.0" }
+        include:
           - os: { name: windows-latest, description: Windows }
-            pm: { name: npm, version: "0.0.0" }
-          - os: { name: windows-latest, description: Windows }
-            pm: { name: yarn, version: "1.0.0" }
+            pm: { name: pnpm, version: "9.12.0" }
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "9.12.0" }
+            experimental: true
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
@@ -91,11 +49,14 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: ${{ env.NODE_VERSION }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Install Python uv
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-python-uv
 
       - name: Bump package versions
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -121,21 +82,22 @@ jobs:
           E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
+          E2E_TEST_FILTER: ${{ matrix.filter }}
           CI_OS: ${{ runner.os }}
           GITHUB_TOKEN: ${{ github.token }} # Needed for begit to clone the repo in the e2e tests for solid-start
 
       - name: Upload Logs
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
+        if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('e2e-logs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
-          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
+          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/${{ matrix.filter }}
           include-hidden-files: true
 
       - name: Upload Turbo Summary
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
+        if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('turbo-runs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
           path: .turbo/runs
           include-hidden-files: true

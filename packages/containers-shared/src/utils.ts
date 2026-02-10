@@ -1,11 +1,9 @@
-import { execFileSync, spawn } from "child_process";
-import { randomUUID } from "crypto";
-import { existsSync, statSync } from "fs";
-import path from "path";
-import { UserError } from "./error";
+import { execFileSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { UserError } from "@cloudflare/workers-utils";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
-import type { StdioOptions } from "child_process";
+import type { StdioOptions } from "node:child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -97,56 +95,6 @@ export const verifyDockerInstalled = async (
 				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
 		);
 	}
-};
-
-export function isDir(inputPath: string) {
-	const stats = statSync(inputPath);
-	return stats.isDirectory();
-}
-
-/** returns true if it is a dockerfile, false if it is a registry link, throws if neither */
-export const isDockerfile = (
-	image: string,
-	configPath: string | undefined
-): boolean => {
-	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
-	const maybeDockerfile = path.resolve(baseDir, image);
-	if (existsSync(maybeDockerfile)) {
-		if (isDir(maybeDockerfile)) {
-			throw new UserError(
-				`${image} is a directory, you should specify a path to the Dockerfile`
-			);
-		}
-		return true;
-	}
-
-	const errorPrefix = `The image "${image}" does not appear to be a valid path to a Dockerfile, or a valid image registry path:\n`;
-	// not found, not a dockerfile, let's try parsing the image ref as an URL?
-	try {
-		new URL(`https://${image}`);
-	} catch (e) {
-		if (e instanceof Error) {
-			throw new UserError(errorPrefix + e.message);
-		}
-		throw e;
-	}
-	const imageParts = image.split("/");
-
-	if (!imageParts[imageParts.length - 1]?.includes(":")) {
-		throw new UserError(
-			errorPrefix +
-				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
-		);
-	}
-
-	// validate URL
-	if (image.includes("://")) {
-		throw new UserError(
-			errorPrefix +
-				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
-		);
-	}
-	return false;
 };
 
 /**

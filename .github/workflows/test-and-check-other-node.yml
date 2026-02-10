@@ -1,0 +1,92 @@
+name: CI (Other Node Versions)
+description: Run primary tests on other supported Node.js versions
+
+on:
+  merge_group:
+  pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  test-other-node-versions:
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.node_version }}-test-other-node-versions
+      cancel-in-progress: true
+    name: ${{ format('Tests ({0})', matrix.description) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # expected_to_fail: if true, tests may fail on this Node version.
+        # These versions are skipped on normal PRs but run on Version Packages PRs
+        # (changeset-release/main) or when the 'test all node versions' label is added.
+        include:
+          - { node_version: 20, description: "Node 20" }
+          - { node_version: 24, description: "Node 24", expected_to_fail: true }
+          - { node_version: 25, description: "Node 25", expected_to_fail: true }
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
+      - name: Check if should run tests
+        id: should_run
+        run: |
+          if [[ "${{ steps.changes.outputs.everything_but_markdown }}" == "true" ]] && \
+             [[ "${{ matrix.expected_to_fail }}" != "true" || \
+                "${{ github.event.pull_request.head.ref }}" == "changeset-release/main" || \
+                "${{ contains(github.event.pull_request.labels.*.name, 'test all node versions') }}" == "true" ]]; then
+            echo "result=true" >> $GITHUB_OUTPUT
+          else
+            echo "result=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Dependencies
+        if: steps.should_run.outputs.result == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          node-version: ${{ matrix.node_version }}
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Run tests (packages)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
+        if: steps.should_run.outputs.result == 'true'
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run e2e tests (unenv-preset)
+        if: steps.should_run.outputs.result == 'true'
+        run: pnpm test:e2e --filter wrangler -- unenv-preset
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (vite-plugin)
+        if: steps.should_run.outputs.result == 'true'
+        run: pnpm test:ci --filter @cloudflare/vite-plugin
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          CI_OS: ${{ matrix.description }}

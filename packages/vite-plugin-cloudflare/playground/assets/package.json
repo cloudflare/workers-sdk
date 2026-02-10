@@ -6,7 +6,7 @@
 		"build": "vite build",
 		"build:no-client-entry": "vite build -c vite.config.no-client-entry.ts",
 		"build:public-dir-only": "vite build -c vite.config.public-dir-only.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:no-client-entry": "vite dev -c vite.config.no-client-entry.ts",
 		"dev:public-dir-only": "vite dev -c vite.config.public-dir-only.ts",

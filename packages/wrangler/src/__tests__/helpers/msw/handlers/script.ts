@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
-import type { WorkerMetadata } from "../../../../deployment-bundle/create-worker-upload-form";
+import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 const bindings: Record<string, WorkerMetadata["bindings"]> = {
 	"durable-object": [

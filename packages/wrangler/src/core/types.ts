@@ -1,29 +1,63 @@
 import type { fetchResult } from "../cfetch";
-import type { Config } from "../config";
-import type { OnlyCamelCase } from "../config/config";
-import type { FatalError, UserError } from "../errors";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
+import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type {
-	Alias,
 	ArgumentsCamelCase,
+	InferredOptionType,
 	InferredOptionTypes,
 	Options,
 	PositionalOptions,
 } from "yargs";
+
+// Vendored from yargs
+/** Convert literal string types like 'foo-bar' to 'FooBar' */
+type PascalCase<S extends string> = string extends S
+	? string
+	: S extends `${infer T}-${infer U}`
+		? `${Capitalize<T>}${PascalCase<U>}`
+		: Capitalize<S>;
+
+// Vendored from yargs
+/** Convert literal string types like 'foo-bar' to 'fooBar' */
+type CamelCase<S extends string> = string extends S
+	? string
+	: S extends `${infer T}-${infer U}`
+		? `${T}${PascalCase<U>}`
+		: S;
+
+// Vendored from yargs
+type CamelCaseKey<K extends PropertyKey> = K extends string
+	? Exclude<CamelCase<K>, "">
+	: K;
+
+// Vendored from yargs
+type Alias<O extends Options | PositionalOptions> = O extends { alias: infer T }
+	? T extends Exclude<string, T>
+		? { [key in T]: InferredOptionType<O> }
+		: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+			{}
+	: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+		{};
 
 type StringKeyOf<T> = Extract<keyof T, string>;
 export type DeepFlatten<T> = T extends object
 	? { [K in keyof T]: DeepFlatten<T[K]> }
 	: T;
 
+export type MetadataCategory =
+	| "Account"
+	| "Compute & AI"
+	| "Storage & databases"
+	| "Networking & security";
+
 export type Command = `wrangler${string}`;
 export type Metadata = {
 	description: string;
-	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
+	status: "experimental" | "alpha" | "private beta" | "open beta" | "stable";
 	statusMessage?: string;
 	deprecated?: boolean;
 	deprecatedMessage?: string;
@@ -36,11 +70,22 @@ export type Metadata = {
 		description: string;
 	}[];
 	hideGlobalFlags?: string[];
+	/**
+	 * Optional category for grouping commands in the help output.
+	 * Commands with the same category will be grouped together under a shared heading.
+	 * Commands without a category will appear under the default "COMMANDS" group.
+	 */
+	category?: MetadataCategory;
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
 	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
+
+export type OnlyCamelCase<T = Record<string, never>> = {
+	[key in keyof T as CamelCaseKey<key>]: T[key];
+};
+
 export type HandlerArgs<Args extends NamedArgDefinitions> = DeepFlatten<
 	OnlyCamelCase<
 		RemoveIndex<
@@ -108,6 +153,12 @@ export type CommandDefinition<
 		printBanner?: boolean | ((args: HandlerArgs<NamedArgDefs>) => boolean);
 
 		/**
+		 * Opt-in to printing a metrics banner for this command.
+		 * @default false
+		 */
+		printMetricsBanner?: boolean;
+
+		/**
 		 * By default, wrangler will print warnings about the Wrangler configuration file.
 		 * Set this value to `false` to skip printing these warnings.
 		 */
@@ -137,7 +188,7 @@ export type CommandDefinition<
 		 * If true, print a message about whether the command is operating on a local or remote resource
 		 */
 		printResourceLocation?:
-			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
+			| ((args: HandlerArgs<NamedArgDefs>) => boolean)
 			| boolean;
 
 		/**
@@ -145,6 +196,12 @@ export type CommandDefinition<
 		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
 		 */
 		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
+
+		/**
+		 * Opt out of sending metrics for this command
+		 * @default true
+		 */
+		sendMetrics?: boolean;
 	};
 
 	/**
@@ -187,10 +244,25 @@ export type AliasDefinition = {
 	metadata?: Partial<Metadata>;
 };
 
+export type InternalCommandDefinition = {
+	type: "command";
+	command: Command;
+} & CommandDefinition;
+
+export type InternalNamespaceDefinition = {
+	type: "namespace";
+	command: Command;
+} & NamespaceDefinition;
+
+export type InternalAliasDefinition = {
+	type: "alias";
+	command: Command;
+} & AliasDefinition;
+
 export type InternalDefinition =
-	| ({ type: "command"; command: Command } & CommandDefinition)
-	| ({ type: "namespace"; command: Command } & NamespaceDefinition)
-	| ({ type: "alias"; command: Command } & AliasDefinition);
+	| InternalCommandDefinition
+	| InternalNamespaceDefinition
+	| InternalAliasDefinition;
 export type DefinitionTreeNode = {
 	definition?: InternalDefinition;
 	subtree: DefinitionTree;

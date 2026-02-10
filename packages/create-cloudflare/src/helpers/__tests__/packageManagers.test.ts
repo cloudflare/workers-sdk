@@ -1,8 +1,9 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import {
 	detectPackageManager,
 	detectPmMismatch,
 } from "helpers/packageManagers";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { mockPackageManager } from "./mocks";

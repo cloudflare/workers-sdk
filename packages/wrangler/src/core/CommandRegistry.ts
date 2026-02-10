@@ -13,11 +13,29 @@ import type {
 	DefinitionTreeNode,
 	InternalDefinition,
 	Metadata,
+	MetadataCategory,
 	NamedArgDefinitions,
 	NamespaceDefinition,
 } from "./types";
 
 const BETA_CMD_COLOR = "#BD5B08";
+
+/**
+ * Map of category names to the top-level command segments that belong to them.
+ * Used for grouping commands in the help output.
+ */
+type CategoryMap = Map<MetadataCategory, Array<string>>;
+
+/**
+ * The default order for categories in the help output.
+ * Categories not in this list will appear after these in alphabetical order.
+ */
+const COMMAND_CATEGORY_ORDER = [
+	"Account",
+	"Compute & AI",
+	"Storage & databases",
+	"Networking & security",
+] satisfies Array<MetadataCategory>;
 
 /**
  * Class responsible for registering and managing commands within a command registry.
@@ -44,6 +62,18 @@ export class CommandRegistry {
 	#tree: DefinitionTree;
 
 	/**
+	 * Map of category names to command segments.
+	 * Used for grouping commands in the help output.
+	 */
+	#categories: CategoryMap;
+
+	/**
+	 * Set of legacy command names registered outside the `CommandRegistry` class.
+	 * Used to track commands like `containers`, `pubsub`, etc.
+	 */
+	#legacyCommands: Set<string>;
+
+	/**
 	 * Initializes the command registry with the given command registration function.
 	 */
 	constructor(registerCommand: RegisterCommand) {
@@ -51,6 +81,8 @@ export class CommandRegistry {
 		this.#registeredNamespaces = new Set<string>();
 		this.#registerCommand = registerCommand;
 		this.#tree = this.#DefinitionTreeRoot.subtree;
+		this.#categories = new Map();
+		this.#legacyCommands = new Set<string>();
 	}
 
 	/**
@@ -110,6 +142,76 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * Get a set of all top-level command names.
+	 *
+	 * Includes both registry-defined commands & legacy commands.
+	 */
+	get topLevelCommands(): Set<string> {
+		const commands = new Set(this.#tree.keys());
+		for (const legacyCmd of this.#legacyCommands) {
+			commands.add(legacyCmd);
+		}
+		return commands;
+	}
+
+	/**
+	 * Returns the map of categories to command segments, ordered according to
+	 * the category order. Commands within each category are sorted alphabetically.
+	 * Used for grouping commands in the help output.
+	 */
+	get orderedCategories(): CategoryMap {
+		const orderedCategories: CategoryMap = new Map();
+		for (const category of COMMAND_CATEGORY_ORDER) {
+			if (!this.#categories.has(category)) {
+				continue;
+			}
+
+			const commands = this.#categories.get(category) ?? [];
+			orderedCategories.set(category, [...commands].sort());
+		}
+
+		const remainingCategories = Array.from(this.#categories.keys())
+			.filter(
+				(cat) => !COMMAND_CATEGORY_ORDER.includes(cat as MetadataCategory)
+			)
+			.sort();
+		for (const category of remainingCategories) {
+			const commands = this.#categories.get(category) ?? [];
+			orderedCategories.set(category, [...commands].sort());
+		}
+
+		return orderedCategories;
+	}
+
+	/**
+	 * Registers a legacy command that doesn't use the `CommandRegistry` class.
+	 * This is used for hidden commands like `cloudchamber` that use the old yargs pattern.
+	 */
+	registerLegacyCommand(command: string): void {
+		this.#legacyCommands.add(command);
+	}
+
+	/**
+	 * Registers a category for a legacy command that doesn't use the CommandRegistry.
+	 * This is used for commands like `containers`, etc, that use the old yargs pattern.
+	 */
+	registerLegacyCommandCategory(
+		command: string,
+		category: MetadataCategory
+	): void {
+		// Track as a legacy command for `topLevelCommands` getter
+		this.#legacyCommands.add(command);
+
+		const existing = this.#categories.get(category) ?? [];
+		if (existing.includes(command)) {
+			return;
+		}
+
+		existing.push(command);
+		this.#categories.set(category, existing);
+	}
+
+	/**
 	 * Defines a single command and its corresponding definition.
 	 */
 	#defineOne({
@@ -128,8 +230,37 @@ export class CommandRegistry {
 
 		if (isCommandDefinition(definition)) {
 			this.#upsertDefinition({ type: "command", command, ...definition });
+			this.#trackCategory(command, definition.metadata?.category);
 		} else if (isNamespaceDefinition(definition)) {
 			this.#upsertDefinition({ type: "namespace", command, ...definition });
+			this.#trackCategory(command, definition.metadata?.category);
+		}
+	}
+
+	/**
+	 * Adds a top-level command (e.g., "wrangler r2") to the `#categories` map for help output grouping.
+	 * Subcommands (e.g., "wrangler r2 bucket") are ignored since the parent already represents them.
+	 */
+	#trackCategory(
+		command: Command,
+		category: MetadataCategory | undefined
+	): void {
+		const segments = command.split(" ").slice(1);
+
+		// Only track categories for top-level commands (e.g., "wrangler r2", not "wrangler r2 bucket")
+		if (segments.length !== 1) {
+			return;
+		}
+
+		if (!category) {
+			return;
+		}
+
+		const segment = segments[0];
+		const existing = this.#categories.get(category) ?? [];
+		if (!existing.includes(segment)) {
+			existing.push(segment);
+			this.#categories.set(category, existing);
 		}
 	}
 
@@ -255,7 +386,6 @@ export class CommandRegistry {
 		const stringifyChain = (...extra: InternalDefinition[]) =>
 			[...chain, ...extra].map(({ command }) => `"${command}"`).join(" => ");
 
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			if (chain.includes(def)) {
 				throw new CommandRegistrationError(

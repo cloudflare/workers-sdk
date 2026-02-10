@@ -13,6 +13,7 @@ export const d1InfoCommand = createCommand({
 	metadata: {
 		description:
 			"Get information about a D1 database, including the current database size and state",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},

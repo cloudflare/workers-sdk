@@ -1,4 +1,5 @@
 import { fetch } from "undici";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { beforeAll, describe, expect, it } from "vitest";
 
 const REMOTE = "https://playground-testing.devprod.cloudflare.dev";
@@ -97,7 +98,7 @@ describe("Preview Worker", () => {
 			'"/hello?world"'
 		);
 		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+			`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 		);
 	});
 	it("shouldn't be redirected with no token", async () => {
@@ -338,7 +339,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
 		it("should allow workers.cloudflare.com", async () => {
@@ -360,7 +361,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
 		it("should allow workers-playground.pages.dev", async () => {
@@ -383,7 +384,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
 		it("should reject unknown referer", async () => {
@@ -450,6 +451,19 @@ describe("Upload Worker", () => {
 			body: TEST_WORKER,
 		});
 		expect(w.status).toMatchInlineSnapshot("200");
+	});
+	it("should upload valid worker and return tail url", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: TEST_WORKER,
+		});
+		expect(await w.json()).toMatchObject({
+			tail: expect.stringContaining("tail.developers.workers.dev"),
+		});
 	});
 	it("should provide error message on invalid worker", async () => {
 		const w = await fetch(`${REMOTE}/api/worker`, {

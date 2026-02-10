@@ -1,12 +1,12 @@
+import { setTimeout } from "node:timers/promises";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import dns2 from "dns2";
 import { request } from "undici";
-import { sleep } from "./sleep";
 import type { DnsAnswer, DnsResponse } from "dns2";
 
-const TIMEOUT = 1000 * 60 * 5;
-const POLL_INTERVAL = 1000;
+const TIMEOUT_MS = 1_000 * 60 * 5;
+const POLL_INTERVAL_MS = 1_000;
 
 /*
   A helper to wait until the newly deployed domain is available.
@@ -25,8 +25,8 @@ export const poll = async (url: string): Promise<boolean> => {
 	s.start("Waiting for DNS to propagate. This might take a few minutes.");
 
 	// Start out by sleeping for 10 seconds since it's unlikely DNS changes will
-	// have propogated before then
-	await sleep(10 * 1000);
+	// have propagated before then
+	await setTimeout(10_000);
 
 	await pollDns(domain, start, s);
 	if (await pollHttp(url, start, s)) {
@@ -46,7 +46,7 @@ const pollDns = async (
 	start: number,
 	s: ReturnType<typeof spinner>,
 ) => {
-	while (Date.now() - start < TIMEOUT) {
+	while (Date.now() - start < TIMEOUT_MS) {
 		s.update(
 			`Waiting for DNS to propagate. This might take a few minutes. (${secondsSince(start)}s)`,
 		);
@@ -54,7 +54,7 @@ const pollDns = async (
 			s.stop(`${brandColor("DNS propagation")} ${dim("complete")}.`);
 			return;
 		}
-		await sleep(POLL_INTERVAL);
+		await setTimeout(POLL_INTERVAL_MS);
 	}
 };
 
@@ -64,7 +64,7 @@ const pollHttp = async (
 	s: ReturnType<typeof spinner>,
 ) => {
 	s.start("Waiting for deployment to become available");
-	while (Date.now() - start < TIMEOUT) {
+	while (Date.now() - start < TIMEOUT_MS) {
 		s.update(
 			`Waiting for deployment to become available (${secondsSince(start)}s)`,
 		);
@@ -85,7 +85,7 @@ const pollHttp = async (
 				throw e;
 			}
 		}
-		await sleep(POLL_INTERVAL);
+		await setTimeout(POLL_INTERVAL_MS);
 	}
 };
 

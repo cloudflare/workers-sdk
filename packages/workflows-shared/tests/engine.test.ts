@@ -4,7 +4,7 @@ import {
 	runInDurableObject,
 } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
 import type {
 	DatabaseInstance,
@@ -81,7 +81,9 @@ async function runWorkflowDefer(
 }
 
 describe("Engine", () => {
-	it("should not retry after NonRetryableError is thrown", async () => {
+	it("should not retry after NonRetryableError is thrown", async ({
+		expect,
+	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
 			async (event, step) => {
@@ -101,7 +103,9 @@ describe("Engine", () => {
 		).toHaveLength(1);
 	});
 
-	it("should not error out if step fails but is try-catched", async () => {
+	it("should not error out if step fails but is try-catched", async ({
+		expect,
+	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
 			async (event, step) => {
@@ -188,21 +192,26 @@ describe("Engine", () => {
 			// supposed to error out
 		}
 
-		await engineStub.receiveEvent({
+		// Get a new stub since we've just aborted the durable object
+		const newStub = env.ENGINE.get(env.ENGINE.idFromName("MOCK-INSTANCE-ID"));
+
+		await newStub.receiveEvent({
 			type: "event-type-1",
 			timestamp: new Date(),
 			payload: {},
 		});
 
 		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
+			const logs = (await newStub.readLogs()) as EngineLogs;
 			return logs.logs.filter(
 				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
 			);
 		}, 500);
 	});
 
-	it("should restore state from storage when accountId is undefined", async () => {
+	it("should restore state from storage when accountId is undefined", async ({
+		expect,
+	}) => {
 		const instanceId = "RESTORE-TEST-INSTANCE";
 		const accountId = 12345;
 		const workflow: DatabaseWorkflow = {
@@ -252,7 +261,7 @@ describe("Engine", () => {
 		const restartedStub = env.ENGINE.get(engineId);
 
 		const status = await runInDurableObject(restartedStub, (engine) => {
-			return engine.getStatus(accountId, instanceId);
+			return engine.getStatus();
 		});
 
 		expect(status).toBe(InstanceStatus.Running);

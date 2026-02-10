@@ -1,11 +1,10 @@
+import { APIError, readFileSync, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { prompt } from "../dialogs";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { APIError, readFileSync } from "../parse";
 import { requireAuth } from "../user";
-import { deleteR2Sippy, getR2Sippy, putR2Sippy } from "./helpers";
-import type { SippyPutParams } from "./helpers";
+import { deleteR2Sippy, getR2Sippy, putR2Sippy } from "./helpers/sippy";
+import type { SippyPutParams } from "./helpers/sippy";
 
 const NO_SUCH_OBJECT_KEY = 10007;
 const SIPPY_PROVIDER_CHOICES = ["AWS", "GCS"];

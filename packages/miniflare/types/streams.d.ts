@@ -21,8 +21,8 @@ declare module "stream/web" {
 }
 
 declare module "stream/consumers" {
-	import { Blob } from "buffer";
-	import { Readable } from "stream";
+	import { Blob } from "node:buffer";
+	import { Readable } from "node:stream";
 
 	// `@types/node`'s types for `stream/consumers` omit `AsyncIterable<any>`,
 	// meaning passing `ReadableStream`s from `stream/web` fails

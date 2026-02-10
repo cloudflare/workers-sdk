@@ -9,25 +9,21 @@ permissions:
 
 jobs:
   e2e-wrangler-test:
-    name: ${{ format('Wrangler ({0})', matrix.description) }}
+    name: ${{ format('Wrangler E2E ({0})', matrix.description) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-wrangler
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-wrangler
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            description: v20, macOS
-            node: 20.19.1
-          - os: windows-2022
-            description: v20, Windows
-            node: 20.19.1
-            # we need to use an amd image to run the containers tests, since we build for linux/amd64
-          - os: ubuntu-24.04
-            description: v20, Linux
-            node: 20.19.1
+          - os: macos-latest
+            description: macOS
+          - os: windows-latest
+            description: Windows
+          - os: ubuntu-latest
+            description: Linux
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -47,7 +43,6 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: ${{ matrix.node }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -66,6 +61,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
+          HYPERDRIVE_MYSQL_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_MYSQL_DATABASE_URL}}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -84,28 +80,25 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs
 
-  e2e-vite-test:
-    name: ${{ format('Vite ({0})', matrix.description) }}
+  e2e-vite-plugin-test:
+    name: ${{ format('Vite Plugin E2E ({0})', matrix.description) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-vite
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            description: v20, macOS
-            node: 20.19.1
-          - os: windows-2022
-            description: v20, Windows
-            node: 20.19.1
-            # we need to use an amd image to run the containers tests, since we build for linux/amd64
-          - os: ubuntu-24.04
-            description: v20, Linux
-            node: 20.19.1
+          - os: macos-latest
+            description: macOS
+          - os: windows-latest
+            description: Windows
+          - os: ubuntu-latest
+            description: Linux
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -124,7 +117,6 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: ${{ matrix.node }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -136,10 +128,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run Vite E2E tests
+      - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
+        timeout-minutes: 20
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The remote-binding tests need to connect to Cloudflare
@@ -152,5 +144,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs

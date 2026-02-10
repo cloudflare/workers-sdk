@@ -3,7 +3,7 @@ import { createCommand, createNamespace } from "./core/create-command";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type Namespace = {
 	namespace_id: string;
@@ -123,9 +123,10 @@ async function renameWorkerNamespace(
 
 export const dispatchNamespaceNamespace = createNamespace({
 	metadata: {
-		description: "🏗️  Manage dispatch namespaces",
+		description: "🏗️ Manage dispatch namespaces",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		category: "Compute & AI",
 	},
 });
 

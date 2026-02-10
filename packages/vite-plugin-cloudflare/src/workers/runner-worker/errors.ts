@@ -6,6 +6,7 @@
  * Converts an error to an object that can be be serialized and revived by Miniflare.
  * Copied from `packages/wrangler/templates/middleware/middleware-miniflare3-json-error.ts`
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function reduceError(e: any): any {
 	return {
 		name: e?.name,

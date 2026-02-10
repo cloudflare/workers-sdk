@@ -1,16 +1,19 @@
 {
 	"name": "@cloudflare/devprod-status-bot",
-	"version": "1.2.1",
+	"version": "1.4.1",
 	"private": true,
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@octokit/types": "^13.8.0",
 		"@octokit/webhooks-types": "^7.6.1",
+		"eslint": "catalog:default",
+		"ts-dedent": "^2.2.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

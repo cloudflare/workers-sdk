@@ -1,6 +1,6 @@
-import { Blob } from "buffer";
-import { arrayBuffer } from "stream/consumers";
-import { ReadableStream } from "stream/web";
+import { Blob } from "node:buffer";
+import { arrayBuffer } from "node:stream/consumers";
+import { ReadableStream } from "node:stream/web";
 import { Headers } from "undici";
 import { Request, RequestInit, Response } from "../../../http";
 import { PlatformImpl } from "../../../workers";

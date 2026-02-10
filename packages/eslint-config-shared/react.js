@@ -1,21 +1,24 @@
-// Use this ESLint config as @cloudflare/eslint-config-shared/react for React projects
-/** @type {import("eslint").Linter.Config} */
-module.exports = {
-	extends: ["plugin:turbo/recommended", "./base.js"],
-	plugins: ["eslint-plugin-react", "eslint-plugin-react-hooks"],
-	overrides: [
-		{
-			files: ["**/*.ts", "**/*.tsx"],
-			extends: [
-				"plugin:react/recommended",
-				"plugin:react/jsx-runtime",
-				"plugin:react-hooks/recommended",
-			],
+import base from "./index.js";
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+import { defineConfig } from "eslint/config";
+
+// Use this ESLint config as @cloudflare/eslint-config-shared for Node projects
+export default defineConfig([
+	base,
+	reactHooks.configs.flat.recommended,
+	react.configs.flat.recommended,
+	react.configs.flat["jsx-runtime"],
+	{
+		settings: {
+			react: {
+				version: "detect",
+			},
 		},
-	],
-	settings: {
-		react: {
-			version: "detect",
+		files: ["**/*.ts", "**/*.tsx"],
+		rules: {
+			// This doesn't apply to the versions of React we depend on
+			"react-hooks/preserve-manual-memoization": "off",
 		},
 	},
-};
+]);

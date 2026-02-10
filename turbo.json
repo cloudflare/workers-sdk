@@ -5,17 +5,18 @@
 	},
 	"globalEnv": ["CI_OS", "NODE_VERSION"],
 	"globalPassThroughEnv": [
-		"NODE_EXTRA_CA_CERTS",
 		"CI",
-		"VSCODE_INSPECTOR_OPTIONS",
-		"WRANGLER_LOG_PATH",
-		"TEST_REPORT_PATH",
 		"CLOUDFLARE_CONTAINER_REGISTRY",
 		"DOCKER_HOST",
-		"WRANGLER_DOCKER_HOST",
-		"WRANGLER_LOG",
+		"LOCAL_TESTS_WITHOUT_DOCKER",
+		"NODE_EXTRA_CA_CERTS",
+		"PWD",
+		"TEST_REPORT_PATH",
+		"VSCODE_INSPECTOR_OPTIONS",
 		"WRANGLER_API_ENVIRONMENT",
-		"LOCAL_TESTS_WITHOUT_DOCKER"
+		"WRANGLER_DOCKER_HOST",
+		"WRANGLER_LOG_PATH",
+		"WRANGLER_LOG"
 	],
 	"tasks": {
 		"dev": {
@@ -33,9 +34,7 @@
 			"persistent": true,
 			"cache": false
 		},
-		"check:lint": {
-			"dependsOn": ["^check:lint"]
-		},
+		"check:lint": {},
 		"check:type": {
 			"dependsOn": ["build"]
 		},

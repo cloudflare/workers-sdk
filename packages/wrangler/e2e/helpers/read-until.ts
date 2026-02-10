@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import stripAnsi from "strip-ansi";
+import { stripVTControlCharacters } from "node:util";
 import type { ReadableStream } from "node:stream/web";
 
 const TIMEOUT = Symbol.for("TIMEOUT");
@@ -12,9 +12,8 @@ export async function readUntil(
 	const timeoutPromise = setTimeout(timeout, TIMEOUT);
 	const reader = lines.getReader();
 	const readArray: string[] = [];
-	const read = () => stripAnsi(readArray.join("\n"));
+	const read = () => stripVTControlCharacters(readArray.join("\n"));
 	try {
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			const result = await Promise.race([reader.read(), timeoutPromise]);
 			if (result === TIMEOUT) {

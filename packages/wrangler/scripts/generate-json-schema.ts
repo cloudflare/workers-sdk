@@ -1,11 +1,11 @@
-import { writeFileSync } from "fs";
-import { join } from "path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createGenerator } from "ts-json-schema-generator";
 import type { Config, Schema } from "ts-json-schema-generator";
 
 const config: Config = {
-	path: join(__dirname, "../src/config/config.ts"),
-	tsconfig: join(__dirname, "../tsconfig.json"),
+	path: join(__dirname, "../../workers-utils/src/config/config.ts"),
+	tsconfig: join(__dirname, "../../workers-utils/tsconfig.json"),
 	type: "RawConfig",
 	skipTypeCheck: true,
 };

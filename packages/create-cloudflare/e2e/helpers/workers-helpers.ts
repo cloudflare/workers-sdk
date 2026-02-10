@@ -1,14 +1,15 @@
+import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
-import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
 import { expect } from "vitest";
 import { isExperimental, runDeployTests } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
 import type { WorkerTestConfig } from "../tests/workers/test-config";
-import type { Writable } from "stream";
+import type { Writable } from "node:stream";
 
 const { name: pm } = detectPackageManager();
 
@@ -25,6 +26,7 @@ export async function runC3ForWorkerTest(
 		`${isExperimental}`,
 		"--no-open",
 		"--no-git",
+		"--no-agents",
 		"--deploy",
 		`${runDeployTests}`,
 		...(argv ?? []),
@@ -56,7 +58,7 @@ export async function verifyDeployment(
 	},
 ) {
 	await retry({ times: 5 }, async () => {
-		await sleep(1000);
+		await setTimeout(1_000);
 		const res = await fetch(deploymentUrl + verifyDeploy.route);
 		const body = await res.text();
 		if (!body.includes(verifyDeploy.expectedText)) {
@@ -103,7 +105,7 @@ export async function verifyLocalDev(
 	try {
 		// Wait for the dev-server to be ready
 		await retry(
-			{ times: 20, sleepMs: 5000 },
+			{ times: 20, sleepMs: 5_000 },
 			async () => await fetch(`http://127.0.0.1:${port}${verifyDeploy.route}`),
 		);
 
@@ -115,7 +117,7 @@ export async function verifyLocalDev(
 		await kill(proc);
 		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 		// end up camped and cause future runs to fail
-		await sleep(1000);
+		await setTimeout(1_000);
 	}
 }
 

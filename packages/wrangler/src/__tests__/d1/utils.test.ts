@@ -1,5 +1,6 @@
+import { type Config } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { type Config } from "../../config";
+import { describe, it } from "vitest";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
@@ -9,14 +10,14 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 
 describe("getDatabaseInfoFromConfig", () => {
-	it("should handle no database", () => {
+	it("should handle no database", ({ expect }) => {
 		const config = {
 			d1_databases: [],
 		} as unknown as Config;
 		expect(getDatabaseInfoFromConfig(config, "db")).toBeNull();
 	});
 
-	it("should handle no matching database", () => {
+	it("should handle no matching database", ({ expect }) => {
 		const config = {
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
@@ -25,7 +26,7 @@ describe("getDatabaseInfoFromConfig", () => {
 		expect(getDatabaseInfoFromConfig(config, "db2")).toBeNull();
 	});
 
-	it("should handle matching database", () => {
+	it("should handle matching database", ({ expect }) => {
 		const config = {
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
@@ -35,14 +36,16 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "xxxx",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
-			name: "db",
 			migrationsTableName: "d1_migrations",
+			name: "db",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
 	});
 
-	it("should handle matching a database with a custom migrations folder", () => {
+	it("should handle matching a database with a custom migrations folder", ({
+		expect,
+	}) => {
 		const config = {
 			d1_databases: [
 				{
@@ -57,14 +60,16 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "xxxx",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
-			name: "db",
 			migrationsTableName: "d1_migrations",
+			name: "db",
 			migrationsFolderPath: "./custom_migrations",
 			internal_env: undefined,
 		});
 	});
 
-	it("should handle matching a database with custom migrations table", () => {
+	it("should handle matching a database with custom migrations table", ({
+		expect,
+	}) => {
 		const config = {
 			d1_databases: [
 				{
@@ -79,14 +84,16 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "xxxx",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE",
-			name: "db",
 			migrationsTableName: "custom_migrations",
+			name: "db",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
 	});
 
-	it("should handle matching a database when there are multiple databases", () => {
+	it("should handle matching a database when there are multiple databases", ({
+		expect,
+	}) => {
 		const config = {
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
@@ -97,8 +104,8 @@ describe("getDatabaseInfoFromConfig", () => {
 			uuid: "yyyy",
 			previewDatabaseUuid: undefined,
 			binding: "DATABASE2",
-			name: "db2",
 			migrationsTableName: "d1_migrations",
+			name: "db2",
 			migrationsFolderPath: "./migrations",
 			internal_env: undefined,
 		});
@@ -109,7 +116,7 @@ describe("getDatabaseByNameOrBinding", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 
-	it("should handle no database", async () => {
+	it("should handle no database", async ({ expect }) => {
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
@@ -142,7 +149,7 @@ describe("getDatabaseByNameOrBinding", () => {
 		).rejects.toThrowError("Couldn't find DB with name 'db'");
 	});
 
-	it("should handle a matching database", async () => {
+	it("should handle a matching database", async ({ expect }) => {
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);

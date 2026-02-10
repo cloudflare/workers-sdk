@@ -1,20 +1,26 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
+import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
+import {
+	extractBindingsOfType,
+	isUnsafeBindingType,
+} from "../../api/startDevWorker/utils";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
 import { logger } from "../../logger";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
-import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
-import type { ServiceFetch } from "../../api";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
+import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { AssetsOptions } from "../../assets";
-import type { Config } from "../../config";
-import type { ContainerEngine } from "../../config/environment";
+import type { LoggerLevel } from "../../logger";
+import type { LegacyAssetPaths } from "../../sites";
+import type { EsbuildBundle } from "../use-esbuild";
 import type {
+	Binding,
 	CfD1Database,
 	CfDispatchNamespace,
 	CfHyperdrive,
@@ -23,15 +29,13 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
-	CfUnsafeBinding,
-	CfWorkerInit,
 	CfWorkflow,
-} from "../../deployment-bundle/worker";
-import type { LoggerLevel } from "../../logger";
-import type { LegacyAssetPaths } from "../../sites";
-import type { EsbuildBundle } from "../use-esbuild";
+	Config,
+	ContainerEngine,
+} from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
+	Json,
 	MiniflareOptions,
 	RemoteProxyConnectionString,
 	SourceOptions,
@@ -63,7 +67,7 @@ export interface ConfigBundle {
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	complianceRegion: Config["compliance_region"] | undefined;
-	bindings: CfWorkerInit["bindings"];
+	bindings: StartDevWorkerInput["bindings"];
 	migrations: Config["migrations"] | undefined;
 	devRegistry: string | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
@@ -72,6 +76,7 @@ export interface ConfigBundle {
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number | undefined;
+	inspectorHost: string | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
@@ -82,14 +87,15 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
-	services: Config["services"] | undefined;
 	tails: Config["tail_consumers"] | undefined;
-	serviceBindings: Record<string, ServiceFetch>;
+	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
 	containerDOClassNames: Set<string> | undefined;
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
+	// Zone to use for the CF-Worker header in outbound fetches
+	zone: string | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -357,8 +363,7 @@ function dispatchNamespaceEntry(
 	}
 	return [binding, { namespace, remoteProxyConnectionString }];
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
+function ratelimitEntry<T extends { name: string }>(ratelimit: T): [string, T] {
 	return [ratelimit.name, ratelimit];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
@@ -397,6 +402,7 @@ type WorkerOptionsBindings = Pick<
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
+	| "streamingTails"
 	| "browserRendering"
 	| "vectorize"
 	| "vpcServices"
@@ -407,6 +413,7 @@ type WorkerOptionsBindings = Pick<
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
 	| "media"
+	| "versionMetadata"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -415,9 +422,8 @@ type MiniflareBindingsConfig = Pick<
 	| "migrations"
 	| "queueConsumers"
 	| "name"
-	| "services"
-	| "serviceBindings"
 	| "tails"
+	| "streamingTails"
 	| "complianceRegion"
 	| "containerDOClassNames"
 	| "containerBuildId"
@@ -436,11 +442,92 @@ export function buildMiniflareBindingOptions(
 } {
 	const bindings = config.bindings;
 
+	const textBlobs = extractBindingsOfType("text_blob", bindings);
+	const dataBlobs = extractBindingsOfType("data_blob", bindings);
+	const wasmModules = extractBindingsOfType("wasm_module", bindings);
+	const plainTextBindings = extractBindingsOfType("plain_text", bindings);
+	const secretTextBindings = extractBindingsOfType("secret_text", bindings);
+	const jsonBindings = extractBindingsOfType("json", bindings);
+	const kvNamespaces = extractBindingsOfType("kv_namespace", bindings);
+	const r2Buckets = extractBindingsOfType("r2_bucket", bindings);
+	const d1Databases = extractBindingsOfType("d1", bindings);
+	const queues = extractBindingsOfType("queue", bindings);
+	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const hyperdrives = extractBindingsOfType("hyperdrive", bindings);
+	const workflows = extractBindingsOfType("workflow", bindings);
+	const durableObjects = extractBindingsOfType(
+		"durable_object_namespace",
+		bindings
+	);
+	const services = extractBindingsOfType("service", bindings);
+	const analyticsEngineDatasets = extractBindingsOfType(
+		"analytics_engine",
+		bindings
+	);
+	const dispatchNamespaces = extractBindingsOfType(
+		"dispatch_namespace",
+		bindings
+	);
+	const mtlsCertificates = extractBindingsOfType("mtls_certificate", bindings);
+	const vectorizeBindings = extractBindingsOfType("vectorize", bindings);
+	const vpcServices = extractBindingsOfType("vpc_service", bindings);
+	const secretsStoreSecrets = extractBindingsOfType(
+		"secrets_store_secret",
+		bindings
+	);
+	const helloWorldBindings = extractBindingsOfType(
+		"unsafe_hello_world",
+		bindings
+	);
+	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
+	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
+	// Extract both regular and unsafe ratelimit bindings
+	// Unsafe bindings have type "unsafe_ratelimit" (prefixed with "unsafe_")
+	const ratelimits = [
+		...extractBindingsOfType("ratelimit", bindings),
+		...extractBindingsOfType("unsafe_ratelimit", bindings),
+	];
+	const aiBindings = extractBindingsOfType("ai", bindings);
+	const imagesBindings = extractBindingsOfType("images", bindings);
+	const mediaBindings = extractBindingsOfType("media", bindings);
+	const browserBindings = extractBindingsOfType("browser", bindings);
+	const versionMetadataBindings = extractBindingsOfType(
+		"version_metadata",
+		bindings
+	);
+	const fetchers = extractBindingsOfType("fetcher", bindings);
+
 	// Setup blob and module bindings
 	// TODO: check all these blob bindings just work, they're relative to cwd
-	const textBlobBindings = { ...bindings.text_blobs };
-	const dataBlobBindings = { ...bindings.data_blobs };
-	const wasmBindings = { ...bindings.wasm_modules };
+	const textBlobBindings: Record<string, string> = {};
+	for (const blob of textBlobs) {
+		if ("path" in blob.source && blob.source.path) {
+			textBlobBindings[blob.binding] = blob.source.path;
+		} else if ("contents" in blob.source) {
+			textBlobBindings[blob.binding] = blob.source.contents;
+		}
+	}
+
+	const dataBlobBindings: Record<string, string | Uint8Array<ArrayBuffer>> = {};
+	for (const blob of dataBlobs) {
+		if ("path" in blob.source && blob.source.path) {
+			dataBlobBindings[blob.binding] = blob.source.path;
+		} else if ("contents" in blob.source) {
+			dataBlobBindings[blob.binding] = blob.source
+				.contents as Uint8Array<ArrayBuffer>;
+		}
+	}
+
+	const wasmBindings: Record<string, string | Uint8Array<ArrayBuffer>> = {};
+	for (const wasm of wasmModules) {
+		if ("path" in wasm.source && wasm.source.path) {
+			wasmBindings[wasm.binding] = wasm.source.path;
+		} else if ("contents" in wasm.source) {
+			wasmBindings[wasm.binding] = wasm.source
+				.contents as Uint8Array<ArrayBuffer>;
+		}
+	}
+
 	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
 		const scriptPath = config.bundle.path;
@@ -457,11 +544,10 @@ export function buildMiniflareBindingOptions(
 	}
 
 	// Setup service bindings to external services
-	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
-		...config.serviceBindings,
-	};
+	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> =
+		Object.fromEntries(fetchers.map((f) => [f.binding, f.fetcher]));
 
-	for (const service of config.services ?? []) {
+	for (const service of services) {
 		if (remoteProxyConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
@@ -484,56 +570,56 @@ export function buildMiniflareBindingOptions(
 		tails.push({ name: tail.service });
 	}
 
-	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+	const streamingTails: NonNullable<WorkerOptions["streamingTails"]> = [];
+	for (const streamingTail of config.streamingTails ?? []) {
+		streamingTails.push({ name: streamingTail.service });
+	}
 
-	const durableObjects = bindings.durable_objects?.bindings ?? [];
+	const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
+		config.migrations
+	);
 
 	const externalWorkers: WorkerOptions[] = [];
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 
-	if (bindings.ai) {
-		warnOrError("ai", bindings.ai.remote, "always-remote");
+	for (const ai of aiBindings) {
+		warnOrError("ai", ai.remote, "always-remote");
 	}
 
-	if (bindings.media) {
-		warnOrError("media", bindings.media.remote, "always-remote");
+	for (const media of mediaBindings) {
+		warnOrError("media", media.remote, "always-remote");
 	}
 
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
-	/**
-	 * If unsafe service bindings are specified and "mocked" in local development
-	 * via an external plugin, merge them into regular service bindings
-	 */
-	if (bindings.unsafe?.bindings && bindings.unsafe.bindings.length > 0) {
-		const unsafeBindingsWithLocalDev = bindings.unsafe.bindings.filter((b) =>
-			isUnsafeServiceBindingWithDevCfg(b)
-		);
-		for (const unsafeBinding of unsafeBindingsWithLocalDev) {
-			const {
-				name,
-				type,
-				dev: {
-					plugin,
-					options: /* additional options just for dev */ devOptions,
-				},
-				// additional options that are included in the production binding
-				...options
-			} = unsafeBinding;
-
-			logger.debug(
-				`Binding ${name} is a local binding to plugin ${plugin.name} provided by package ${plugin.package}`
-			);
-			unsafeBindings.push({
-				name,
-				type,
+	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
+		(b) => isUnsafeServiceBindingWithDevCfg(b[1])
+	);
+	for (const [name, unsafeBinding] of unsafeBindingsWithLocalDev) {
+		assert(isUnsafeServiceBindingWithDevCfg(unsafeBinding));
+		const {
+			type,
+			dev: {
 				plugin,
-				options: {
-					...options,
-					...devOptions,
-				},
-			});
-		}
+				options: /* additional options just for dev */ devOptions,
+			},
+			// additional options that are included in the production binding
+			...options
+		} = unsafeBinding;
+
+		logger.debug(
+			`Binding ${name} is a local binding to plugin ${plugin.name} provided by package ${plugin.package}`
+		);
+
+		unsafeBindings.push({
+			name,
+			type: type.slice("unsafe_".length),
+			plugin,
+			options: {
+				...options,
+				...devOptions,
+			},
+		});
 	}
 
 	/**
@@ -567,120 +653,121 @@ export function buildMiniflareBindingOptions(
 		}
 	}
 
+	// Build vars from plain_text, secret_text, and json bindings
+	const vars: Record<string, Json> = {};
+	for (const binding of plainTextBindings) {
+		vars[binding.binding] = binding.value;
+	}
+	for (const binding of secretTextBindings) {
+		vars[binding.binding] = binding.value;
+	}
+	for (const binding of jsonBindings) {
+		vars[binding.binding] = binding.value as Json;
+	}
+
 	const bindingOptions: WorkerOptionsBindings = {
-		bindings: {
-			...bindings.vars,
-			// emulate version_metadata binding via a JSON var
-			...(bindings.version_metadata
-				? { [bindings.version_metadata.binding]: { id: randomUUID(), tag: "" } }
-				: undefined),
-		},
+		bindings: vars,
+		versionMetadata: versionMetadataBindings[0]?.binding,
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
 		unsafeBindings,
 
-		ai: bindings.ai
-			? {
-					binding: bindings.ai.binding,
-					remoteProxyConnectionString,
-				}
-			: undefined,
+		ai:
+			aiBindings.length > 0
+				? {
+						binding: aiBindings[0].binding,
+						remoteProxyConnectionString,
+					}
+				: undefined,
 
 		kvNamespaces: Object.fromEntries(
-			bindings.kv_namespaces?.map((kv) =>
+			kvNamespaces.map((kv) =>
 				kvNamespaceEntry(kv, remoteProxyConnectionString)
-			) ?? []
+			)
 		),
 
 		r2Buckets: Object.fromEntries(
-			bindings.r2_buckets?.map((r2) =>
-				r2BucketEntry(r2, remoteProxyConnectionString)
-			) ?? []
+			r2Buckets.map((r2) => r2BucketEntry(r2, remoteProxyConnectionString))
 		),
 		d1Databases: Object.fromEntries(
-			bindings.d1_databases?.map((d1) =>
-				d1DatabaseEntry(d1, remoteProxyConnectionString)
-			) ?? []
+			d1Databases.map((d1) => d1DatabaseEntry(d1, remoteProxyConnectionString))
 		),
 		queueProducers: Object.fromEntries(
-			bindings.queues?.map((queue) =>
+			queues.map((queue) =>
 				queueProducerEntry(queue, remoteProxyConnectionString)
-			) ?? []
+			)
 		),
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
 		pipelines: Object.fromEntries(
-			bindings.pipelines?.map((pipeline) =>
+			pipelines.map((pipeline) =>
 				pipelineEntry(pipeline, remoteProxyConnectionString)
-			) ?? []
+			)
 		),
-		hyperdrives: Object.fromEntries(
-			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
-		),
+		hyperdrives: Object.fromEntries(hyperdrives.map(hyperdriveEntry)),
 		analyticsEngineDatasets: Object.fromEntries(
-			bindings.analytics_engine_datasets?.map((binding) => [
+			analyticsEngineDatasets.map((binding) => [
 				binding.binding,
 				{ dataset: binding.dataset ?? "dataset" },
-			]) ?? []
+			])
 		),
 		workflows: Object.fromEntries(
-			bindings.workflows?.map((workflow) =>
+			workflows.map((workflow) =>
 				workflowEntry(workflow, remoteProxyConnectionString)
-			) ?? []
+			)
 		),
 		secretsStoreSecrets: Object.fromEntries(
-			bindings.secrets_store_secrets?.map((binding) => [
-				binding.binding,
-				binding,
-			]) ?? []
+			secretsStoreSecrets.map((binding) => [binding.binding, binding])
 		),
 		helloWorld: Object.fromEntries(
-			bindings.unsafe_hello_world?.map((binding) => [
-				binding.binding,
-				binding,
-			]) ?? []
+			helloWorldBindings.map((binding) => [binding.binding, binding])
 		),
 		workerLoaders: Object.fromEntries(
-			bindings.worker_loaders?.map(({ binding }) => [binding, {}]) ?? []
+			workerLoaders.map(({ binding }) => [binding, {}])
 		),
 		email: {
-			send_email: bindings.send_email?.map((b) => ({
-				...b,
-				remoteProxyConnectionString:
-					b.remote && remoteProxyConnectionString
-						? remoteProxyConnectionString
-						: undefined,
-			})),
+			send_email: sendEmailBindings.map(({ type: _type, ...b }) => {
+				return {
+					...b,
+					remoteProxyConnectionString:
+						b.remote && remoteProxyConnectionString
+							? remoteProxyConnectionString
+							: undefined,
+				};
+			}),
 		},
-		images: bindings.images
-			? {
-					binding: bindings.images.binding,
-					remoteProxyConnectionString:
-						bindings.images.remote && remoteProxyConnectionString
-							? remoteProxyConnectionString
-							: undefined,
-				}
-			: undefined,
-		media: bindings.media
-			? {
-					binding: bindings.media.binding,
-					remoteProxyConnectionString,
-				}
-			: undefined,
-		browserRendering: bindings.browser?.binding
-			? {
-					binding: bindings.browser.binding,
-					remoteProxyConnectionString:
-						remoteProxyConnectionString && bindings.browser?.remote
-							? remoteProxyConnectionString
-							: undefined,
-				}
-			: undefined,
+		images:
+			imagesBindings.length > 0
+				? {
+						binding: imagesBindings[0].binding,
+						remoteProxyConnectionString:
+							imagesBindings[0].remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					}
+				: undefined,
+		media:
+			mediaBindings.length > 0
+				? {
+						binding: mediaBindings[0].binding,
+						remoteProxyConnectionString,
+					}
+				: undefined,
+		browserRendering:
+			browserBindings.length > 0
+				? {
+						binding: browserBindings[0].binding,
+						remoteProxyConnectionString:
+							remoteProxyConnectionString && browserBindings[0].remote
+								? remoteProxyConnectionString
+								: undefined,
+					}
+				: undefined,
 
 		vectorize: Object.fromEntries(
-			bindings.vectorize?.map((vectorize) => {
+			vectorizeBindings.map((vectorize) => {
 				warnOrError("vectorize", vectorize.remote, "remote");
 				return [
 					vectorize.binding,
@@ -692,11 +779,11 @@ export function buildMiniflareBindingOptions(
 								: undefined,
 					},
 				];
-			}) ?? []
+			})
 		),
 		vpcServices: Object.fromEntries(
-			bindings.vpc_services?.map((vpc) => {
-				warnOrError("vpc_services", vpc.remote, "always-remote");
+			vpcServices.map((vpc) => {
+				warnOrError("vpc_service", vpc.remote, "always-remote");
 				return [
 					vpc.binding,
 					{
@@ -707,19 +794,19 @@ export function buildMiniflareBindingOptions(
 								: undefined,
 					},
 				];
-			}) ?? []
+			})
 		),
 
 		dispatchNamespaces: Object.fromEntries(
-			bindings.dispatch_namespaces?.map((dispatchNamespace) => {
-				warnOrError("dispatch_namespaces", dispatchNamespace.remote, "remote");
+			dispatchNamespaces.map((dispatchNamespace) => {
+				warnOrError("dispatch_namespace", dispatchNamespace.remote, "remote");
 				return dispatchNamespaceEntry(
 					dispatchNamespace,
 					dispatchNamespace.remote && remoteProxyConnectionString
 						? remoteProxyConnectionString
 						: undefined
 				);
-			}) ?? []
+			})
 		),
 		durableObjects: Object.fromEntries(
 			durableObjects.map(
@@ -745,19 +832,11 @@ export function buildMiniflareBindingOptions(
 		),
 		additionalUnboundDurableObjects,
 
-		ratelimits: Object.fromEntries([
-			...(bindings.unsafe?.bindings
-				?.filter((b) => b.type == "ratelimit")
-				.map(ratelimitEntry) ?? []),
-			...(bindings.ratelimits?.map((r) => [
-				r.name,
-				{ namespace_id: r.namespace_id, simple: r.simple },
-			]) ?? []),
-		]),
+		ratelimits: Object.fromEntries(ratelimits.map(ratelimitEntry)),
 
 		mtlsCertificates: Object.fromEntries(
-			bindings.mtls_certificates?.map((mtlsCertificate) => {
-				warnOrError("mtls_certificates", mtlsCertificate.remote, "remote");
+			mtlsCertificates.map((mtlsCertificate) => {
+				warnOrError("mtls_certificate", mtlsCertificate.remote, "remote");
 				return [
 					mtlsCertificate.binding,
 					{
@@ -768,11 +847,12 @@ export function buildMiniflareBindingOptions(
 						certificate_id: mtlsCertificate.certificate_id,
 					},
 				];
-			}) ?? []
+			})
 		),
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
+		streamingTails,
 	};
 
 	return {
@@ -817,8 +897,6 @@ export function buildSitesOptions({
 	}
 }
 
-let didWarnMiniflareCronSupport = false;
-
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
 export async function buildMiniflareOptions(
@@ -828,15 +906,6 @@ export async function buildMiniflareOptions(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
 	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
-	if (config.crons?.length && !config.testScheduled) {
-		if (!didWarnMiniflareCronSupport) {
-			didWarnMiniflareCronSupport = true;
-			logger.warn(
-				"Miniflare does not currently trigger scheduled Workers automatically.\nRefer to https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers for more details "
-			);
-		}
-	}
-
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
@@ -855,6 +924,7 @@ export async function buildMiniflareOptions(
 		host: config.initialIp,
 		port: config.initialPort,
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
+		inspectorHost: config.inspect ? config.inspectorHost : undefined,
 		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
@@ -862,6 +932,7 @@ export async function buildMiniflareOptions(
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
+		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.
@@ -891,6 +962,7 @@ export async function buildMiniflareOptions(
 					proxy: true,
 				})),
 				containerEngine: config.containerEngine,
+				zone: config.zone,
 			},
 			...externalWorkers,
 		],
@@ -923,26 +995,18 @@ export function getImageNameFromDOClassName(options: {
 }
 
 /**
- * hasUnsafeBindings is a typeguard that checks whether the user has specified unsafe
- * bindings in their Worker options
- */
-export function hasUnsafeBindings(
-	bindings: CfWorkerInit["bindings"]
-): bindings is CfWorkerInit["bindings"] & {
-	unsafe: { bindings: CfUnsafeBinding[] };
-} {
-	const { unsafe } = bindings;
-	return !!unsafe && !!unsafe.bindings && unsafe.bindings.length > 0;
-}
-
-/**
  * isUnsafeServiceBindingWithDevCfg is a typeguard that checks whether the user has specified unsafe
  * service bindings with a local development configuration in their Worker options
  */
 export function isUnsafeServiceBindingWithDevCfg(
-	b: CfUnsafeBinding
-): b is Required<CfUnsafeBinding> {
-	return b.dev !== undefined;
+	b: Binding
+): b is Required<
+	Exclude<
+		Extract<Binding, { type: `unsafe_${string}` }>,
+		{ type: "unsafe_hello_world" }
+	>
+> {
+	return isUnsafeBindingType(b.type) && "dev" in b;
 }
 
 /**

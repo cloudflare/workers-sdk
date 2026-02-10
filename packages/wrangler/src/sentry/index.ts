@@ -1,9 +1,9 @@
+import { getWranglerSendErrorReportsFromEnv } from "@cloudflare/workers-utils";
 import * as Sentry from "@sentry/node";
 import { rejectedSyncPromise } from "@sentry/utils";
 import { fetch } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { confirm } from "../dialogs";
-import { getWranglerSendErrorReportsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import type { BaseTransportOptions, TransportRequest } from "@sentry/types";
 import type { RequestInit } from "undici";
@@ -135,6 +135,14 @@ export function setupSentry() {
 	}
 }
 
+/**
+ * Adds a breadcrumb to any message that may be posted to Sentry.
+ *
+ * This provides more context to any error that is captured.
+ *
+ * @param message The breadcrumb message to add. This must have been sanitized of any sensitive information.
+ * @param level The severity level of the breadcrumb. Defaults to "log".
+ */
 export function addBreadcrumb(
 	message: string,
 	level: Sentry.SeverityLevel = "log"

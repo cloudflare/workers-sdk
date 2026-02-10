@@ -2,9 +2,9 @@ import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { createPatternMatcher } from "@cloudflare/workers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import xxhash from "xxhash-wasm";
-import { UserError } from "./errors";
 import {
 	BATCH_KEY_MAX,
 	createKVNamespace,
@@ -17,9 +17,8 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import type { Config } from "./config";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { KeyValue } from "./kv/helpers";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */

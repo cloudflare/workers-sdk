@@ -22,11 +22,11 @@ jobs:
   check:
     timeout-minutes: 30
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
       cancel-in-progress: true
 
     name: "Checks"
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -55,13 +55,6 @@ jobs:
           CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
-          path: .turbo/runs
-
       # Check for old Node.js version warnings and errors
       - name: Use Node.js v16
         uses: actions/setup-node@v4
@@ -80,9 +73,9 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 45
+    timeout-minutes: 60
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
       cancel-in-progress: true
 
     name: ${{ format('Tests ({0})', matrix.description) }}
@@ -92,30 +85,10 @@ jobs:
         include:
           - os: macos-latest
             description: macOS
-            node_version: 20.19.1
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
-          # needs to run on the amd runners to allow containers test to work in CI
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             description: Linux
-            node_version: 20.19.1
-            # ./tools _only_ runs here because they're only intended to run in CI
-            # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./fixtures/browser-rendering"'
           - os: windows-latest
             description: Windows
-            node_version: 20.19.1
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          # needs to run on the amd runners to allow containers test to work in CI
-          - os: ubuntu-24.04
-            description: v22, Linux
-            node_version: 22
-            # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/browser-rendering"'
-          # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
-          # - os: ubuntu-24.04
-          #   label: v24, Linux
-          #   node_version: 24
-          #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -124,7 +97,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@v3
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -139,7 +113,6 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-          node-version: ${{ matrix.node_version }}
 
       - name: Bump package versions
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -147,31 +120,41 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run tests (Wrangler only)
-        # We are running Wrangler separately to be able to get early feedback on changes.
-        # There is no point in running the fixtures if Wrangler is broken.
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --filter=wrangler
+      - name: Run tests (tools only)
+        # tools _only_ needs to be tested on Linux because they're only intended to run in CI
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.os == 'ubuntu-latest'
+        run: pnpm run test:ci --log-order=stream --filter="@cloudflare/tools"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/tools/index.html
           CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
 
-      - name: Run tests (not Wrangler)
+      - name: Run tests (packages)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream --filter=!wrangler
+        # We skip @cloudflare/vitest-pool-workers tests in CI on Windows because they're very flaky. We still run the vitest-pool-workers-examples fixture, which is a comprehensive set of example tests and gives us a lot of confidence.
+        # The @cloudflare/vitest-pool-workers tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (fixtures)
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
 
       - name: Upload turbo logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs

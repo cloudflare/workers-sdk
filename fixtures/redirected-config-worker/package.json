@@ -9,9 +9,10 @@
 		"build": "node -r esbuild-register tools/build.ts",
 		"check:type": "tsc",
 		"dev": "pnpm run build && wrangler dev",
-		"test:ci": "pnpm run build && vitest run"
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

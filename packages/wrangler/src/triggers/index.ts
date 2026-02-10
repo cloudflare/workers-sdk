@@ -11,11 +11,13 @@ export const triggersNamespace = createNamespace({
 		description: "🎯 Updates the triggers of your current deployment",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
+		category: "Compute & AI",
 	},
 });
 export const triggersDeployCommand = createCommand({
 	metadata: {
-		description: "Updates the triggers of your current deployment",
+		description:
+			"Apply changes to triggers (Routes or domains and Cron Triggers) when using `wrangler versions upload`",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
 	},
@@ -54,13 +56,9 @@ export const triggersDeployCommand = createCommand({
 	},
 	async handler(args, { config }) {
 		const assetsOptions = getAssetsOptions({ assets: undefined }, config);
-		metrics.sendMetricsEvent(
-			"deploy worker triggers",
-			{},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		metrics.sendMetricsEvent("deploy worker triggers", {
+			sendMetrics: config.send_metrics,
+		});
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
 

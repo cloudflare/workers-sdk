@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { expect } from "vitest";
 import { createFetchResult, msw } from "./msw";
 import type { KVNamespaceInfo, NamespaceKeyInfo } from "../../kv/helpers";
 

@@ -1,4 +1,4 @@
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 import { vi } from "vitest";
 
 vi.mock("log-update");

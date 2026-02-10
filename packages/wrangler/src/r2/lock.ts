@@ -1,18 +1,17 @@
+import { ParseError, readFileSync, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { ParseError, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	getBucketLockRules,
-	isValidDate,
 	putBucketLockRules,
 	tableFromBucketLockRulesResponse,
-} from "./helpers";
-import type { BucketLockRule } from "./helpers";
+} from "./helpers/bucket";
+import { isValidDate } from "./helpers/misc";
+import type { BucketLockRule } from "./helpers/bucket";
 
 export const r2BucketLockNamespace = createNamespace({
 	metadata: {

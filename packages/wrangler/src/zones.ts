@@ -1,9 +1,7 @@
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchListResult } from "./cfetch";
-import { configFileName } from "./config";
-import { UserError } from "./errors";
 import { retryOnAPIFailure } from "./utils/retry";
-import type { Route } from "./config/environment";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
 
 /**
  * An object holding information about a zone for publishing.

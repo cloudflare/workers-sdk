@@ -1,7 +1,7 @@
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import util from "node:util";
-import { afterEach, beforeEach, expect, it, Mock, vi } from "vitest";
+import { afterEach, beforeEach, it, Mock, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 
 let output = "";
@@ -22,7 +22,7 @@ afterEach(() => {
 	output = "";
 });
 
-it("logs startup errors", async () => {
+it("logs startup errors", async ({ expect }) => {
 	let caughtError: unknown;
 	try {
 		const worker = await unstable_dev(

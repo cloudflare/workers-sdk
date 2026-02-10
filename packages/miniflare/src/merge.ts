@@ -37,7 +37,6 @@ type WorkerOptionsRecord<K extends WorkerOptionsArrayRecordKeys> = Extract<
 function convertWorkerOptionsArrayToObject<
 	K extends WorkerOptionsArrayRecordKeys,
 >(key: K, array: Extract<WorkerOptions[K], unknown[]>): WorkerOptionsRecord<K> {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const _: string[] = array; // Static assert that `array` is a `string[]`
 	if (key === "queueConsumers") {
 		// Unfortunately, we can't just `return Object.fromEntries(...)` here, as

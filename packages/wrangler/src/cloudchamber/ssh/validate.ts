@@ -4,8 +4,8 @@
 // we do not allow the optional "options"
 // So the syntax is space-separated: keytype, base64-encoded key, comment
 
-import { exit } from "process";
-import { UserError } from "../../errors";
+import { exit } from "node:process";
+import { UserError } from "@cloudflare/workers-utils";
 import { logger } from "../../logger";
 
 export function validateSSHKey(line: string) {

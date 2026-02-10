@@ -1,5 +1,162 @@
 # @cloudflare/unenv-preset
 
+## 2.12.1
+
+### Patch Changes
+
+- [#12377](https://github.com/cloudflare/workers-sdk/pull/12377) [`312b5eb`](https://github.com/cloudflare/workers-sdk/commit/312b5ebd3866d8280f61bbe2af3bb1002f6cf461) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:process` v2 when it is available
+
+  Note that we only enable this if all of the following conditions are met:
+
+  - compatibility_date >= 2025-09-15 or process v2 enabled by flag (enable_nodejs_process_v2)
+  - `fetch_iterable_type_support` and `fetch_iterable_type_support_override_adjustment` are active (explicitly specified or implied by date or other flags).
+
+  Note that EventEmitters (`on`, `off`, `addListener`, `removeListener`, ...) used to be available on the imported process module while they should not have been. They are now only available on the global process:
+
+  ```ts
+  import p from "node:process";
+
+  // Working before this PR, not working after this PR
+  p.on("exit", exitHandler);
+
+  // Use the global process instead (works before and after the PR)
+  process.on("exit", exitHandler);
+  ```
+
+## 2.12.0
+
+### Minor Changes
+
+- [#12007](https://github.com/cloudflare/workers-sdk/pull/12007) [`5f060c9`](https://github.com/cloudflare/workers-sdk/commit/5f060c9c27b9f5d2a00df374ed92f5055f24ea3c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:repl` module when the `enable_nodejs_repl_module` and `experimental` compatibility flags are enabled.
+
+## 2.11.0
+
+### Minor Changes
+
+- [#12024](https://github.com/cloudflare/workers-sdk/pull/12024) [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf) Thanks [@vicb](https://github.com/vicb)! - Remove the experimental flag from `node:_stream_wrap`, `node:dgram`, `node:inspector`, and `node:sqlite`
+
+  Those modules are no more experimental since workerd 1.20260115.0
+
+## 2.10.0
+
+### Minor Changes
+
+- [#11701](https://github.com/cloudflare/workers-sdk/pull/11701) [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:dgram` module when the `enable_nodejs_dgram_module` compatibility flag is enabled. This feature is currently experimental and requires both the `enable_nodejs_dgram_module` and `experimental` compatibility flags to be set.
+
+- [#11799](https://github.com/cloudflare/workers-sdk/pull/11799) [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:_stream_wrap` module when the `enable_nodejs_stream_wrap_module` compatibility flag is enabled. This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_stream_wrap_module` compatibility flags to be set.
+
+## 2.9.0
+
+### Minor Changes
+
+- [#11841](https://github.com/cloudflare/workers-sdk/pull/11841) [`beb96af`](https://github.com/cloudflare/workers-sdk/commit/beb96af470aefaae73237309244cf7369b329ff0) Thanks [@vicb](https://github.com/vicb)! - Add support for native `node:sqlite` module when the `enable_nodejs_sqlite_module` compatibility flag is enabled. This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_sqlite_module` compatibility flags to be set.
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - Export the list of built-in node modules that are available without the `node:` prefix.
+  Modules that are only available with the `node:` prefix are not included (i.e. `node:sqlite`).
+  Note that new modules will be added with the `node:` prefix only and not be added to the list.
+
+### Patch Changes
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - fix handling of Node builtin modules
+
+  The list of builtin modules should not depend on the version of Node.
+  Switch to using the lists published by `@cloudflare/unenv-preset`.
+
+  This fixes an issue with trying to import i.e. `node:sqlite` with Node < 22.5.0
+  which does not implement this module.
+
+## 2.8.0
+
+### Minor Changes
+
+- [#11733](https://github.com/cloudflare/workers-sdk/pull/11733) [`62fd118`](https://github.com/cloudflare/workers-sdk/commit/62fd11870972ea67b638452bd29fc2ead648f52f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:inspector` module when the `enable_nodejs_inspector_module` compatibility flag is enabled. This feature is currently experimental and requires both the `enable_nodejs_inspector_module` and `experimental` compatibility flags to be set.
+
+  To enable the native inspector module, add the following to your `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+  }
+  ```
+
+  Then you can import and use the inspector module in your Worker:
+
+  ```javascript
+  import inspector from "node:inspector";
+
+  // Access inspector APIs (note: workerd's implementation is a non-functional stub)
+  inspector.url(); // returns undefined
+  inspector.close(); // no-op
+  ```
+
+- [#11744](https://github.com/cloudflare/workers-sdk/pull/11744) [`a7e9f80`](https://github.com/cloudflare/workers-sdk/commit/a7e9f8016de23b1ad8a1cdea8c2029e8808aa7d0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:inspector/promises` module when the `enable_nodejs_inspector_module` compatibility flag is enabled. This extends the existing `node:inspector` support to include the promises-based API.
+
+  To enable the native inspector/promises module, add the following to your `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+  }
+  ```
+
+  Then you can import and use the inspector/promises module in your Worker:
+
+  ```javascript
+  import inspector from "node:inspector/promises";
+
+  // Access inspector APIs (note: workerd's implementation is a non-functional stub)
+  inspector.url(); // returns undefined
+  inspector.close(); // no-op
+  ```
+
+## 2.7.13
+
+### Patch Changes
+
+- [#10606](https://github.com/cloudflare/workers-sdk/pull/10606) [`819e287`](https://github.com/cloudflare/workers-sdk/commit/819e287c1a471c3681112fe333e5692f3c386571) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use workerd `node:console` when it is available
+
+  It is enabled when the `enable_nodejs_console_module` compatibility flag is set.
+  This flag defaults to true when `nodejs_compat` is turned on and the date is >= 2025-09-21.
+
+- [#10621](https://github.com/cloudflare/workers-sdk/pull/10621) [`0aa959a`](https://github.com/cloudflare/workers-sdk/commit/0aa959ac6fa294a18af10c1905e9494715556d45) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use native node:vm module when available
+
+  It is enabled starting on 2025-10-01 or when the `enable_nodejs_vm_module` compatibility flag is set.
+
+## 2.7.12
+
+### Patch Changes
+
+- [#11397](https://github.com/cloudflare/workers-sdk/pull/11397) [`b154de2`](https://github.com/cloudflare/workers-sdk/commit/b154de2ffa93bf8eb448ae83a50e8bf3f8250398) Thanks [@vicb](https://github.com/vicb)! - Use more workerd native modules
+
+  Node modules `punycode`, `trace_events`, `cluster`, `wasi`, and `domains` will be used when enabled
+  via a compatibility flag or by default when the compatibility date is greater or equal to 2025-12-04.
+
+## 2.7.11
+
+### Patch Changes
+
+- [#11353](https://github.com/cloudflare/workers-sdk/pull/11353) [`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:domain` module when available
+
+  It is enabled when the `enable_nodejs_domain_module` compatibility flag is set.
+
+- [#11025](https://github.com/cloudflare/workers-sdk/pull/11025) [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:wasi` module when available
+
+  It is enabled when the `enable_nodejs_wasi_module` compatibility flag is set.
+
+## 2.7.10
+
+### Patch Changes
+
+- [#11024](https://github.com/cloudflare/workers-sdk/pull/11024) [`cdcecfc`](https://github.com/cloudflare/workers-sdk/commit/cdcecfc3a9c8135c50d4f17ff73991f179036f6b) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:trace_events` module when available
+
+  It is enabled when the `enable_nodejs_trace_events_module` compatibility flag is set.
+
+## 2.7.9
+
+### Patch Changes
+
+- [#11080](https://github.com/cloudflare/workers-sdk/pull/11080) [`90a2566`](https://github.com/cloudflare/workers-sdk/commit/90a2566982637ceb362e3cdbd7c433b5b4de9b28) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.24
+
 ## 2.7.8
 
 ### Patch Changes

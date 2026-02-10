@@ -3,8 +3,8 @@
 // ^ WebStorm incorrectly thinks some variables might not have been initialised
 //   before use without this. TypeScript is better at catching these errors. :)
 
-import assert from "assert";
-import util from "util";
+import assert from "node:assert";
+import util from "node:util";
 import {
 	$ as $colors,
 	blue,

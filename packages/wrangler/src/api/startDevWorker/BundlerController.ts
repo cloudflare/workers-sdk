@@ -1,6 +1,6 @@
-import assert from "assert";
-import { readFileSync, realpathSync, writeFileSync } from "fs";
-import path from "path";
+import assert from "node:assert";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { watch } from "chokidar";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
@@ -18,24 +18,15 @@ import { getWranglerTmpDir } from "../../paths";
 import { debounce } from "../../utils/debounce";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import { extractBindingsOfType } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { EphemeralDirectory } from "../../paths";
-import type { ControllerEventMap } from "./BaseController";
-import type {
-	BundleCompleteEvent,
-	BundleStartEvent,
-	ConfigUpdateEvent,
-} from "./events";
+import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-type BundlerControllerEventMap = ControllerEventMap & {
-	bundleStart: [BundleStartEvent];
-	bundleComplete: [BundleCompleteEvent];
-};
-export class BundlerController extends Controller<BundlerControllerEventMap> {
+export class BundlerController extends Controller {
 	#currentBundle?: EsbuildBundle;
 
 	#customBuildWatcher?: ReturnType<typeof watch>;
@@ -62,7 +53,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 					cwd: config.build?.custom?.workingDirectory,
 					command: config.build?.custom?.command,
 				},
-				config.config
+				config.config,
+				"dev"
 			);
 			if (buildAborter.signal.aborted) {
 				return;
@@ -99,9 +91,14 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				rules: config.build.moduleRules,
 			});
 
-			const bindings = (
-				await convertBindingsToCfWorkerInitBindings(config.bindings)
-			).bindings;
+			const doBindings = extractBindingsOfType(
+				"durable_object_namespace",
+				config.bindings
+			);
+			const workflowBindings = extractBindingsOfType(
+				"workflow",
+				config.bindings
+			);
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
 						entry,
@@ -113,8 +110,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						workflowBindings: bindings?.workflows ?? [],
-						doBindings: bindings?.durable_objects?.bindings ?? [],
+						doBindings,
+						workflowBindings,
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
 						tsconfig: config.build.tsconfig,
@@ -240,9 +237,15 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			exports: config.build.exports,
 			name: config.name,
 		};
-		const { bindings } = await convertBindingsToCfWorkerInitBindings(
-			config.bindings
-		);
+
+		const durableObjects = {
+			bindings: extractBindingsOfType(
+				"durable_object_namespace",
+				config.bindings
+			),
+		};
+		const workflows = extractBindingsOfType("workflow", config.bindings);
+
 		this.#bundlerCleanup = runBuild(
 			{
 				entry,
@@ -262,8 +265,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				alias: config.build.alias,
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
-				durableObjects: bindings?.durable_objects ?? { bindings: [] },
-				workflows: bindings?.workflows ?? [],
+				durableObjects,
+				workflows,
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
@@ -390,12 +393,12 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {
-		this.emit("bundleStart", { type: "bundleStart", config });
+		this.bus.dispatch({ type: "bundleStart", config });
 	}
 	emitBundleCompleteEvent(
 		config: StartDevWorkerOptions,
 		bundle: EsbuildBundle
 	) {
-		this.emit("bundleComplete", { type: "bundleComplete", config, bundle });
+		this.bus.dispatch({ type: "bundleComplete", config, bundle });
 	}
 }

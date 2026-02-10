@@ -10,9 +10,6 @@ permissions:
   contents: read
   # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
 
-env:
-  NODE_VERSION: 24
-
 jobs:
   release:
     if: ${{ github.repository_owner == 'cloudflare' }}
@@ -24,16 +21,20 @@ jobs:
         with:
           # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
-          fetch-depth: 0
+          # Pull in more history to cover the changeset commits
+          fetch-depth: 500
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 24
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Check npm version
+        run: node -r esbuild-register tools/deployments/check-npm-version.ts
 
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
@@ -60,6 +61,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
+      # Switch to Node 22 for non-npm package deployments because quick-edit
+      # builds native modules (tree-sitter) that are not compatible with
+      # Node 24's C++20 requirement for V8 headers.
+      - name: Switch to Node 22 for non-npm package deployments
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Deploy non-NPM Packages
         id: deploy
         run: |
@@ -80,6 +89,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/alert-on-error.ts
         env:
           PUBLISH_STATUS: ${{ steps.changesets.outcome }}
+          HAS_CHANGESETS: ${{ steps.changesets.outputs.hasChangesets }}
           DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TOKEN: ${{ secrets.STATUS_BOT_SECRET }}

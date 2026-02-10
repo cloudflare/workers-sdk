@@ -1,19 +1,25 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+import { ParseError, UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
-import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
-import { ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { Controller, RuntimeController } from "./BaseController";
+import type {
+	Controller,
+	ControllerBus,
+	ControllerEvent,
+	RuntimeController,
+} from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerInput, Worker } from "./types";
 
-export class DevEnv extends EventEmitter {
+type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
+
+export class DevEnv extends EventEmitter implements ControllerBus {
 	config: ConfigController;
 	bundler: BundlerController;
 	runtimes: RuntimeController[];
@@ -37,70 +43,125 @@ export class DevEnv extends EventEmitter {
 	}
 
 	constructor({
-		config = new ConfigController(),
-		bundler = new BundlerController(),
-		runtimes = [
-			new LocalRuntimeController(),
-			new RemoteRuntimeController(),
-		] as RuntimeController[],
-		proxy = new ProxyController(),
+		configFactory = (devEnv) => new ConfigController(devEnv),
+		bundlerFactory = (devEnv) => new BundlerController(devEnv),
+		runtimeFactories = [
+			(devEnv) => new LocalRuntimeController(devEnv),
+			(devEnv) => new RemoteRuntimeController(devEnv),
+		],
+		proxyFactory = (devEnv) => new ProxyController(devEnv),
+	}: {
+		configFactory?: ControllerFactory<ConfigController>;
+		bundlerFactory?: ControllerFactory<BundlerController>;
+		runtimeFactories?: ControllerFactory<RuntimeController>[];
+		proxyFactory?: ControllerFactory<ProxyController>;
 	} = {}) {
 		super();
 
-		this.config = config;
-		this.bundler = bundler;
-		this.runtimes = runtimes;
-		this.proxy = proxy;
-
-		const controllers: Controller[] = [config, bundler, ...runtimes, proxy];
-		controllers.forEach((controller) => {
-			controller.on("error", (event: ErrorEvent) => this.emitErrorEvent(event));
-		});
+		this.config = configFactory(this);
+		this.bundler = bundlerFactory(this);
+		this.runtimes = runtimeFactories.map((factory) => factory(this));
+		this.proxy = proxyFactory(this);
 
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 		});
-
-		config.on("configUpdate", (event) => {
-			bundler.onConfigUpdate(event);
-			proxy.onConfigUpdate(event);
-		});
-
-		bundler.on("bundleStart", (event) => {
-			proxy.onBundleStart(event);
-			runtimes.forEach((runtime) => {
-				runtime.onBundleStart(event);
-			});
-		});
-		bundler.on("bundleComplete", (event) => {
-			runtimes.forEach((runtime) => {
-				runtime.onBundleComplete(event);
-			});
-		});
-
-		runtimes.forEach((runtime) => {
-			runtime.on("reloadStart", (event) => {
-				proxy.onReloadStart(event);
-			});
-			runtime.on("reloadComplete", (event) => {
-				proxy.onReloadComplete(event);
-			});
-			runtime.on("devRegistryUpdate", (event) => {
-				config.onDevRegistryUpdate(event);
-			});
-		});
-
-		proxy.on("previewTokenExpired", (event) => {
-			runtimes.forEach((runtime) => {
-				runtime.onPreviewTokenExpired(event);
-			});
-		});
 	}
 
-	// *********************
-	//   Event Dispatchers
-	// *********************
+	/**
+	 * Central message bus dispatch method.
+	 * All events from controllers flow through here, making the event routing explicit and traceable.
+	 *
+	 * Event flow:
+	 * - ConfigController emits configUpdate → BundlerController, ProxyController
+	 * - BundlerController emits bundleStart → ProxyController, RuntimeControllers
+	 * - BundlerController emits bundleComplete → RuntimeControllers
+	 * - RuntimeController emits reloadStart → ProxyController
+	 * - RuntimeController emits reloadComplete → ProxyController
+	 * - RuntimeController emits devRegistryUpdate → ConfigController
+	 * - ProxyController emits previewTokenExpired → RuntimeControllers
+	 * - Any controller emits error → DevEnv error handler
+	 */
+	dispatch(event: ControllerEvent): void {
+		switch (event.type) {
+			case "error":
+				this.handleErrorEvent(event);
+				break;
+
+			case "configUpdate":
+				this.bundler.onConfigUpdate(event);
+				this.proxy.onConfigUpdate(event);
+				break;
+
+			case "bundleStart":
+				this.proxy.onBundleStart(event);
+				this.runtimes.forEach((runtime) => {
+					runtime.onBundleStart(event);
+				});
+				break;
+
+			case "bundleComplete":
+				this.runtimes.forEach((runtime) => {
+					runtime.onBundleComplete(event);
+				});
+				break;
+
+			case "reloadStart":
+				this.proxy.onReloadStart(event);
+				break;
+
+			case "reloadComplete":
+				this.proxy.onReloadComplete(event);
+				break;
+
+			case "devRegistryUpdate":
+				this.config.onDevRegistryUpdate(event);
+				break;
+
+			case "previewTokenExpired":
+				this.runtimes.forEach((runtime) => {
+					runtime.onPreviewTokenExpired(event);
+				});
+				break;
+
+			default: {
+				const _exhaustive: never = event;
+				logger.warn(
+					`Unknown event type: ${(_exhaustive as ControllerEvent).type}`
+				);
+			}
+		}
+	}
+
+	private handleErrorEvent(event: ErrorEvent): void {
+		if (
+			event.cause instanceof MiniflareCoreError &&
+			event.cause.isUserError()
+		) {
+			this.emit("error", new UserError(event.cause.message));
+		} else if (
+			event.source === "ProxyController" &&
+			(event.reason.startsWith("Failed to send message to") ||
+				event.reason.startsWith("Could not connect to InspectorProxyWorker"))
+		) {
+			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			logger.debug("=> Error contextual data:", event.data);
+		}
+		// Parse errors are recoverable by changing your Wrangler configuration file and saving
+		// All other errors from the ConfigController are non-recoverable
+		else if (
+			event.source === "ConfigController" &&
+			event.cause instanceof ParseError
+		) {
+			logger.error(event.cause);
+		}
+		// if other knowable + recoverable errors occur, handle them here
+		else {
+			// otherwise, re-emit the unknowable errors to the top-level
+			this.emit("error", event);
+		}
+	}
 
 	async teardown() {
 		await runWithLogLevel(this.config.latestInput?.dev?.logLevel, async () => {
@@ -113,41 +174,10 @@ export class DevEnv extends EventEmitter {
 				this.proxy.teardown(),
 			]);
 
-			this.config.removeAllListeners();
-			this.bundler.removeAllListeners();
-			this.runtimes.forEach((runtime) => runtime.removeAllListeners());
-			this.proxy.removeAllListeners();
-
 			this.emit("teardown");
 
 			logger.debug("DevEnv teardown complete");
 		});
-	}
-
-	emitErrorEvent(ev: ErrorEvent) {
-		if (ev.cause instanceof MiniflareCoreError && ev.cause.isUserError()) {
-			this.emit("error", new UserError(ev.cause.message));
-		} else if (
-			ev.source === "ProxyController" &&
-			(ev.reason.startsWith("Failed to send message to") ||
-				ev.reason.startsWith("Could not connect to InspectorProxyWorker"))
-		) {
-			logger.debug(`Error in ${ev.source}: ${ev.reason}\n`, ev.cause);
-			logger.debug("=> Error contextual data:", ev.data);
-		}
-		// Parse errors are recoverable by changing your Wrangler configuration file and saving
-		// All other errors from the ConfigController are non-recoverable
-		else if (
-			ev.source === "ConfigController" &&
-			ev.cause instanceof ParseError
-		) {
-			logger.error(ev.cause);
-		}
-		// if other knowable + recoverable errors occur, handle them here
-		else {
-			// otherwise, re-emit the unknowable errors to the top-level
-			this.emit("error", ev);
-		}
 	}
 }
 

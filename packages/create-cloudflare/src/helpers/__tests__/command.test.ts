@@ -1,10 +1,10 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { spawn } from "cross-spawn";
 import { readMetricsConfig } from "helpers/metrics-config";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { quoteShellArgs, runCommand } from "../command";
-import type { ChildProcess } from "child_process";
+import type { ChildProcess } from "node:child_process";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;
@@ -52,7 +52,7 @@ describe("Command Helpers", () => {
 		vi.mocked(existsSync).mockImplementation(() => false);
 	});
 
-	test("runCommand", async () => {
+	test("runCommand", async ({ expect }) => {
 		await runCommand(["ls", "-l"]);
 		expect(spawn).toHaveBeenCalledWith("ls", ["-l"], {
 			stdio: "inherit",
@@ -62,7 +62,9 @@ describe("Command Helpers", () => {
 	});
 
 	describe("respect telemetry permissions when running wrangler", () => {
-		test("runCommand has WRANGLER_SEND_METRICS=false if its a wrangler command and c3 telemetry is disabled", async () => {
+		test("runCommand has WRANGLER_SEND_METRICS=false if its a wrangler command and c3 telemetry is disabled", async ({
+			expect,
+		}) => {
 			vi.mocked(readMetricsConfig).mockReturnValue({
 				c3permission: {
 					enabled: false,
@@ -80,7 +82,9 @@ describe("Command Helpers", () => {
 			);
 		});
 
-		test("runCommand doesn't have WRANGLER_SEND_METRICS=false if its a wrangler command and c3 telemetry is enabled", async () => {
+		test("runCommand doesn't have WRANGLER_SEND_METRICS=false if its a wrangler command and c3 telemetry is enabled", async ({
+			expect,
+		}) => {
 			vi.mocked(readMetricsConfig).mockReturnValue({
 				c3permission: {
 					enabled: true,
@@ -98,7 +102,9 @@ describe("Command Helpers", () => {
 			);
 		});
 
-		test("runCommand doesn't have WRANGLER_SEND_METRICS=false if not a wrangler command", async () => {
+		test("runCommand doesn't have WRANGLER_SEND_METRICS=false if not a wrangler command", async ({
+			expect,
+		}) => {
 			vi.mocked(readMetricsConfig).mockReturnValue({
 				c3permission: {
 					enabled: false,
@@ -118,7 +124,7 @@ describe("Command Helpers", () => {
 	});
 
 	describe("quoteShellArgs", () => {
-		test.runIf(process.platform !== "win32")("mac", async () => {
+		test.runIf(process.platform !== "win32")("mac", async ({ expect }) => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
@@ -126,7 +132,7 @@ describe("Command Helpers", () => {
 			);
 		});
 
-		test.runIf(process.platform === "win32")("windows", async () => {
+		test.runIf(process.platform === "win32")("windows", async ({ expect }) => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(

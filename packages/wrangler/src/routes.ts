@@ -1,11 +1,13 @@
+import {
+	configFileName,
+	getComplianceRegionSubdomain,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "./cfetch";
-import { configFileName } from "./config";
 import { confirm, prompt } from "./dialogs";
-import { getComplianceRegionSubdomain } from "./environment-variables/misc-variables";
-import { UserError } from "./errors";
 import { logger } from "./logger";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
  * Gets the <user-subdomain>.(fed.)workers.dev URL for the given account.

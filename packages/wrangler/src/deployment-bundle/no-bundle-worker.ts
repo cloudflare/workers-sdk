@@ -3,8 +3,8 @@ import {
 	findAdditionalModules,
 	writeAdditionalModules,
 } from "./find-additional-modules";
-import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
+import type { Rule } from "@cloudflare/workers-utils";
 
 export async function noBundleWorker(
 	entry: Entry,

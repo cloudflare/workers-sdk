@@ -1,19 +1,32 @@
 {
 	"name": "@cloudflare/eslint-config-shared",
-	"version": "1.1.0",
+	"version": "1.2.1",
 	"private": true,
 	"description": "ESLint config for workers-sdk",
-	"main": "index.js",
+	"type": "module",
+	"exports": {
+		".": "./index.js",
+		"./react": "./react.js",
+		"./rules/no-vitest-import-expect": "./rules/no-vitest-import-expect.mjs"
+	},
+	"scripts": {
+		"deploy": "echo 'no deploy'",
+		"test": "node rules/__tests__/no-unsafe-command-execution.test.mjs",
+		"test:ci": "node rules/__tests__/no-unsafe-command-execution.test.mjs"
+	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@eslint/js": "^9.39.1",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
-		"eslint": "^8.57.1",
+		"eslint": "catalog:default",
 		"eslint-config-turbo": "^2.4.4",
-		"eslint-plugin-import": "2.26.x",
-		"eslint-plugin-no-only-tests": "^3.1.0",
-		"eslint-plugin-react": "^7.33.2",
-		"eslint-plugin-react-hooks": "^4.6.0",
-		"eslint-plugin-unused-imports": "^4.1.4"
+		"eslint-plugin-import": "^2.32.0",
+		"eslint-plugin-no-only-tests": "^3.3.0",
+		"eslint-plugin-react": "^7.37.5",
+		"eslint-plugin-react-hooks": "^7.0.1",
+		"eslint-plugin-unused-imports": "^4.1.4",
+		"typescript-eslint": "^8.46.3"
 	},
 	"peerDependencies": {
 		"@typescript-eslint/eslint-plugin": "catalog:default"

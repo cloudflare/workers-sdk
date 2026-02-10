@@ -10,7 +10,7 @@ export class MyDurableObject extends DurableObject {
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
 		console.log("constructor");
-		this.ctx.blockConcurrencyWhile(async () => {
+		void this.ctx.blockConcurrencyWhile(async () => {
 			console.log("blockConcurrencyWhile");
 			this.#isInitialized = true;
 		});

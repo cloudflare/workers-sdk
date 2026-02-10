@@ -3,6 +3,7 @@ import viteLogo from "/vite.svg";
 import { setupCounter } from "./counter";
 import typescriptLogo from "./typescript.svg";
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
     <a href="https://vite.dev" target="_blank">
@@ -21,4 +22,5 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </div>
 `;
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);

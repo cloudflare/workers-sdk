@@ -144,5 +144,6 @@ export const mTlsCertificateNamespace = createNamespace({
 		description: "🪪 Manage certificates used for mTLS connections",
 		owner: "Product: SSL",
 		status: "stable",
+		category: "Networking & security",
 	},
 });

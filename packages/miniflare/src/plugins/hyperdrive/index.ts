@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
+import { Worker_Binding } from "../../runtime";
 import { Plugin, ProxyNodeBinding } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
@@ -115,15 +115,68 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 			})
 		);
 	},
-	async getServices({ options }) {
-		return Object.entries(options.hyperdrives ?? {}).map<Service>(
-			([name, url]) => ({
+	async getServices({ options, hyperdriveProxyController }) {
+		const services = [];
+		for (const [name, url] of Object.entries(options.hyperdrives ?? {})) {
+			const scheme = url.protocol.replace(":", "");
+
+			const proxyPort = await hyperdriveProxyController.createProxyServer({
+				name,
+				targetHost: url.hostname,
+				targetPort: getPort(url),
+				scheme,
+				sslmode: parseSslMode(url, scheme),
+			});
+			services.push({
 				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 				external: {
-					address: `${url.hostname}:${getPort(url)}`,
+					address: `127.0.0.1:${proxyPort}`,
 					tcp: {},
 				},
-			})
-		);
+			});
+		}
+		return services;
 	},
 };
+
+// Postgres sslmode docs: https://www.postgresql.org/docs/current/libpq-ssl.html
+// MySQL ssl-mode docs: https://dev.mysql.com/doc/refman/8.4/en/using-encrypted-connections.html
+function parseSslMode(url: URL, scheme: string): string {
+	// Normalize keys/values to lowercase
+	const params = Object.fromEntries(
+		Array.from(url.searchParams.entries()).map(([k, v]) => [
+			k.toLowerCase(),
+			v.toLowerCase(),
+		])
+	);
+
+	if (scheme === "postgres" || scheme === "postgresql") {
+		return params["sslmode"] || "disable"; // disable is default
+	} else if (scheme === "mysql") {
+		// Parse different variations for mysql sslmode
+		const sslmode = params["ssl-mode"] || params["ssl"] || params["sslmode"];
+
+		// Normalize to postgres values
+		switch (sslmode) {
+			case "required":
+			case "true":
+			case "1":
+				return "require";
+			case "preferred":
+				return "prefer";
+			case "disabled":
+			case "false":
+			case "0":
+				return "disable";
+		}
+	}
+
+	// default to disable
+	return "disable";
+}
+
+export type {
+	HyperdriveProxyController,
+	HyperdriveProxyConfig,
+	POSTGRES_SSL_REQUEST_PACKET,
+} from "./hyperdrive-proxy";

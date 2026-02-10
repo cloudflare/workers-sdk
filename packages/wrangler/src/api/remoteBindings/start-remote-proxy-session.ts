@@ -1,10 +1,12 @@
-import path from "path";
+import path from "node:path";
 import getPort from "get-port";
+import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
+import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
-import type { Config } from "../../config";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
+import type { Config } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 export type StartRemoteProxySessionOptions = {
@@ -43,7 +45,11 @@ export async function startRemoteProxySession(
 				port: await getPort(),
 			},
 			inspector: false,
-			logLevel: "error",
+			logLevel:
+				// If the logger has a logLevel of "debug" it means that the user is likely trying to debug some issue,
+				// so we should respect that here as well for the remote proxy session. In any other case, to avoid noisy
+				// logs, we just simply fall back to "error"
+				logger.loggerLevel === "debug" ? "debug" : "error",
 		},
 		bindings: rawBindings,
 	}).catch((startWorkerError) => {
@@ -59,6 +65,26 @@ export async function startRemoteProxySession(
 			`Failed to start the remote proxy session, see the error details below:\n\n${errorMessage}`
 		);
 	});
+
+	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
+
+	worker.raw.addListener("error", (e) =>
+		maybeErrorPromise.resolve({ error: e })
+	);
+
+	const maybeError = await Promise.race([
+		maybeErrorPromise,
+		worker.raw.proxy.localServerReady.promise,
+	]);
+
+	if (maybeError && maybeError.error) {
+		throw new Error(
+			"Failed to start the remote proxy session. There is likely additional logging output above.",
+			{
+				cause: maybeError.error,
+			}
+		);
+	}
 
 	const remoteProxyConnectionString =
 		(await worker.url) as RemoteProxyConnectionString;
@@ -83,6 +109,7 @@ export async function startRemoteProxySession(
 		dispose: worker.dispose,
 	};
 }
+
 export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
 	remoteProxyConnectionString: RemoteProxyConnectionString;

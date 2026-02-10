@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import {
+	getGlobalWranglerConfigPath,
+	getWranglerSendMetricsFromEnv,
+} from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 
 /**
@@ -17,6 +19,10 @@ import { logger } from "../logger";
 export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
 
 export interface MetricsConfigOptions {
+	/**
+	 * The argv passed to the `main()` function.
+	 */
+	argv?: string[];
 	/**
 	 * Defines whether to send metrics to Cloudflare:
 	 * If defined, then use this value for whether the dispatch is enabled.

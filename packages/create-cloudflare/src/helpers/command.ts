@@ -56,11 +56,12 @@ export const runCommand = async (
 			// Don't send metrics data on any wrangler commands if telemetry is disabled in C3
 			// If telemetry is disabled separately for wrangler, wrangler will handle that
 			if (args[0] === "wrangler") {
+				opts.env ??= {};
 				const metrics = readMetricsConfig();
 				if (metrics.c3permission?.enabled === false) {
-					opts.env ??= {};
 					opts.env["WRANGLER_SEND_METRICS"] = "false";
 				}
+				opts.env["WRANGLER_HIDE_BANNER"] = "true";
 			}
 			const abortController = new AbortController();
 			const cmd = spawn(executable, [...args], {

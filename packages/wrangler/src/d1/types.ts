@@ -1,7 +1,7 @@
 export type Database = {
 	uuid: string;
 	previewDatabaseUuid?: string;
-	name: string;
+	name?: string;
 	binding: string;
 	internal_env?: string;
 	migrationsTableName: string;

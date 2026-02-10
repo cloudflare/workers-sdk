@@ -1,7 +1,6 @@
 import { fetchResult } from "../cfetch";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Message } from "../parse";
 import type { Finetune, Model } from "./types";
+import type { ComplianceConfig, Message } from "@cloudflare/workers-utils";
 
 export function getErrorMessage(error: Message): string {
 	return `${error.text || error.toString()}${

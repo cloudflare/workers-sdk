@@ -1,11 +1,11 @@
-import { TransformStream } from "stream/web";
+import { TransformStream } from "node:stream/web";
 import { Response } from "miniflare";
 import type {
 	HTMLRewriter as BaseHTMLRewriter,
 	DocumentHandlers,
 	ElementHandlers,
 } from "html-rewriter-wasm";
-import type { ReadableStream } from "stream/web";
+import type { ReadableStream } from "node:stream/web";
 
 // Vendored from Miniflare v2: https://github.com/cloudflare/miniflare/blob/master/packages/html-rewriter/src/rewriter.ts
 

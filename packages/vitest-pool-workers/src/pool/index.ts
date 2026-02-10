@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
+import getPort, { portNumbers } from "get-port";
 import {
 	compileModuleRules,
 	getNodeCompat,
@@ -29,6 +30,7 @@ import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
+import { guessWorkerExports } from "./guess-exports";
 import {
 	getProjectPath,
 	getRelativeProjectPath,
@@ -237,16 +239,23 @@ function getDurableObjectDesignators(
 	const durableObjects = options.miniflare?.durableObjects ?? {};
 	for (const [key, designator] of Object.entries(durableObjects)) {
 		if (typeof designator === "string") {
-			result.set(key, { className: USER_OBJECT_MODULE_NAME + designator });
+			result.set(key, { className: designator });
 		} else if (typeof designator.unsafeUniqueKey !== "symbol") {
-			let className = designator.className;
-			if (designator.scriptName === undefined) {
-				className = USER_OBJECT_MODULE_NAME + className; // Same-worker binding
-			}
 			result.set(key, {
-				className,
+				className: designator.className,
 				scriptName: designator.scriptName,
 				unsafeUniqueKey: designator.unsafeUniqueKey,
+			});
+		}
+	}
+
+	for (const unboundDurableObject of options.miniflare
+		?.additionalUnboundDurableObjects ?? []) {
+		if (typeof unboundDurableObject.unsafeUniqueKey !== "symbol") {
+			result.set(unboundDurableObject.className, {
+				className: unboundDurableObject.className,
+				scriptName: unboundDurableObject.scriptName,
+				unsafeUniqueKey: unboundDurableObject.unsafeUniqueKey,
 			});
 		}
 	}
@@ -265,66 +274,31 @@ const DEFINES_MODULE_PATH = path.join(
 );
 
 /**
- * Prefix all service binding named entrypoints, so they don't clash with other
- * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
- * names of non-default entrypoints defined in this worker.
+ * Gets a set of Durable Object class names for the SELF Worker.
+ *
+ * This is calculated from the Durable Object bindings that point to SELF as well as the
+ * unbound Durable Objects that only have migrations defined.
  */
-function fixupServiceBindingsToSelf(
-	worker: SourcelessWorkerOptions
-): Set<string> {
-	const result = new Set<string>();
-	if (worker.serviceBindings === undefined) {
-		return result;
-	}
-	for (const value of Object.values(worker.serviceBindings)) {
-		// Assume user cannot guess name of current worker, so can only bind to self
-		// if `name` is `kCurrentWorker`
-		if (
-			typeof value === "object" &&
-			"name" in value &&
-			value.name === kCurrentWorker &&
-			value.entrypoint !== undefined &&
-			value.entrypoint !== "default"
-		) {
-			result.add(value.entrypoint);
-			value.entrypoint = USER_OBJECT_MODULE_NAME + value.entrypoint;
-		}
-	}
-	return result;
-}
-
-/**
- * Prefix all Durable Object class names, so they don't clash with other
- * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
- * names of Durable Object classes defined in this worker.
- */
-function fixupDurableObjectBindingsToSelf(
-	worker: SourcelessWorkerOptions
-): Set<string> {
+function getDurableObjectClasses(worker: SourcelessWorkerOptions): Set<string> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
 	const result = new Set<string>();
-	if (worker.durableObjects === undefined) {
-		return result;
-	}
-	for (const key of Object.keys(worker.durableObjects)) {
-		const designator = worker.durableObjects[key];
-		// `designator` hasn't been validated at this point
-		if (typeof designator === "string") {
-			// Either this is a simple `string` designator to the current worker...
-			result.add(designator);
-			worker.durableObjects[key] = USER_OBJECT_MODULE_NAME + designator;
-		} else if (isDurableObjectDesignatorToSelf(designator)) {
-			// ...or it's an object designator to the current worker
-			result.add(designator.className);
-			// Shallow clone to avoid mutating config
-			worker.durableObjects[key] = {
-				...designator,
-				className: USER_OBJECT_MODULE_NAME + designator.className,
-			};
+
+	// Get all the Durable Object class names from bindings to the SELF Worker.
+	for (const designator of Object.values(worker.durableObjects ?? {})) {
+		if (isDurableObjectDesignatorToSelf(designator)) {
+			result.add(
+				typeof designator === "string" ? designator : designator.className
+			);
 		}
 	}
+
+	// And all the Durable Object class names that may not have bindings but have migrations.
+	for (const designator of worker.additionalUnboundDurableObjects ?? []) {
+		result.add(designator.className);
+	}
+
 	return result;
 }
 
@@ -355,7 +329,10 @@ function updateWorkflowsScriptNames(
 	}
 }
 
-function fixupWorkflowBindingsToSelf(
+/**
+ * Gets a set of class names for Workflows defined in the SELF Worker.
+ */
+function getWorkflowClasses(
 	worker: SourcelessWorkerOptions,
 	relativeWranglerConfigPath: string | undefined
 ): Set<string> {
@@ -385,10 +362,7 @@ function fixupWorkflowBindingsToSelf(
 		if (isWorkflowDesignatorToSelf(designator, workerName)) {
 			result.add(designator.className);
 			// Shallow clone to avoid mutating config
-			worker.workflows[key] = {
-				...designator,
-				className: USER_OBJECT_MODULE_NAME + designator.className,
-			};
+			worker.workflows[key] = { ...designator };
 		}
 	}
 	return result;
@@ -404,9 +378,9 @@ const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
-function buildProjectWorkerOptions(
+async function buildProjectWorkerOptions(
 	project: Omit<Project, "testFiles">
-): ProjectWorkers {
+): Promise<ProjectWorkers> {
 	const relativeWranglerConfigPath = maybeApply(
 		(v) => path.relative("", v),
 		project.options.wrangler?.configPath
@@ -496,41 +470,81 @@ function buildProjectWorkerOptions(
 
 	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};
-	// Sort for deterministic output to minimise `Miniflare` restarts
-	const serviceBindingEntrypointNames = Array.from(
-		fixupServiceBindingsToSelf(runnerWorker)
-	).sort();
-	const durableObjectClassNames = Array.from(
-		fixupDurableObjectBindingsToSelf(runnerWorker)
-	).sort();
-	const workflowClassNames = Array.from(
-		fixupWorkflowBindingsToSelf(runnerWorker, relativeWranglerConfigPath)
-	).sort();
+	const durableObjectClassNames = getDurableObjectClasses(runnerWorker);
+
+	const workflowClassNames = getWorkflowClasses(
+		runnerWorker,
+		relativeWranglerConfigPath
+	);
+
+	const selfWorkerExports: string[] = [];
+	if (
+		flagAssertions.isEnabled(
+			"enable_ctx_exports",
+			"disable_ctx_exports",
+			"2025-11-17"
+		)
+	) {
+		try {
+			const resolvedMain = maybeGetResolvedMainPath(project);
+			const guessedExports = await guessWorkerExports(
+				resolvedMain,
+				project.options.additionalExports
+			);
+			for (const [exportName, exportType] of guessedExports) {
+				switch (exportType) {
+					case "DurableObject":
+						durableObjectClassNames.add(exportName);
+						break;
+					case "WorkflowEntrypoint":
+						workflowClassNames.add(exportName);
+						break;
+					case "WorkerEntrypoint":
+					case null:
+						selfWorkerExports.push(exportName);
+				}
+			}
+		} catch (e) {
+			const message = `Failed to statically analyze the exports of the main Worker entry-point "${project.options.main}"\nMore details: ${e}`;
+			for (const line of message.split("\n")) {
+				log.warn(line);
+			}
+		}
+	}
+
+	const workerEntrypointExports = selfWorkerExports.filter(
+		(name) =>
+			name !== "default" &&
+			name !== "__esModule" &&
+			!durableObjectClassNames.has(name) &&
+			!workflowClassNames.has(name)
+	);
 
 	const wrappers = [
 		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "cloudflare:test-internal";',
 	];
 
-	for (const entrypointName of serviceBindingEntrypointNames) {
+	for (const entrypointName of workerEntrypointExports.sort()) {
 		const quotedEntrypointName = JSON.stringify(entrypointName);
-		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${entrypointName} = createWorkerEntrypointWrapper(${quotedEntrypointName});`;
+		const wrapper = `export const ${entrypointName} = createWorkerEntrypointWrapper(${quotedEntrypointName});`;
 		wrappers.push(wrapper);
 	}
-	for (const className of durableObjectClassNames) {
+	for (const className of Array.from(durableObjectClassNames).sort()) {
 		const quotedClassName = JSON.stringify(className);
-		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
+		const wrapper = `export const ${className} = createDurableObjectWrapper(${quotedClassName});`;
 		wrappers.push(wrapper);
 	}
 
-	for (const className of workflowClassNames) {
+	for (const className of Array.from(workflowClassNames).sort()) {
 		const quotedClassName = JSON.stringify(className);
-		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createWorkflowEntrypointWrapper(${quotedClassName});`;
+		const wrapper = `export const ${className} = createWorkflowEntrypointWrapper(${quotedClassName});`;
 		wrappers.push(wrapper);
 	}
 
-	// Make sure we define the `RunnerObject` Durable Object
+	// Make sure we define the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` Durable Object,
+	// which is the singleton host for running tests.
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
-		className: "RunnerObject",
+		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
 		// Make the runner object ephemeral, so it doesn't write any `.sqlite` files
 		// that would disrupt stacked storage because we prevent eviction
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
@@ -640,6 +654,12 @@ const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
+const DEFAULT_INSPECTOR_PORT = 9229;
+
+function getFirstAvailablePort(start: number): Promise<number> {
+	return getPort({ port: portNumbers(start, 65535) });
+}
+
 type ModuleFallbackService = NonNullable<
 	MiniflareOptions["unsafeModuleFallbackService"]
 >;
@@ -662,20 +682,38 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
  * project. The first `runnerWorker` returned may be duplicated in the instance
  * if `singleWorker` is disabled so tests can execute in-parallel and isolation.
  */
-function buildProjectMiniflareOptions(
+async function buildProjectMiniflareOptions(
 	ctx: Vitest,
 	project: Project
-): MiniflareOptions {
+): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] =
-		buildProjectWorkerOptions(project);
+		await buildProjectWorkerOptions(project);
 
 	assert(runnerWorker.name !== undefined);
 	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
 
-	const inspectorPort = ctx.config.inspector.enabled
-		? ctx.config.inspector.port ?? 9229
-		: undefined;
+	let inspectorPort: number | undefined;
+	if (ctx.config.inspector.enabled) {
+		const userSpecifiedPort = ctx.config.inspector.port;
+		if (userSpecifiedPort !== undefined) {
+			const availablePort = await getFirstAvailablePort(userSpecifiedPort);
+			if (availablePort !== userSpecifiedPort) {
+				throw new Error(
+					`Inspector port ${userSpecifiedPort} is not available. ` +
+						`Either free up the port or remove the inspector port configuration to use an automatically assigned port.`
+				);
+			}
+			inspectorPort = userSpecifiedPort;
+		} else {
+			inspectorPort = await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT);
+			if (inspectorPort !== DEFAULT_INSPECTOR_PORT) {
+				log.warn(
+					`Default inspector port ${DEFAULT_INSPECTOR_PORT} not available, using ${inspectorPort} instead.`
+				);
+			}
+		}
+	}
 
 	if (inspectorPort !== undefined && !project.options.singleWorker) {
 		log.warn(`Tests run in singleWorker mode when the inspector is open.`);
@@ -733,7 +771,7 @@ async function getProjectMiniflare(
 	ctx: Vitest,
 	project: Project
 ): Promise<SingleOrPerTestFileMiniflare> {
-	const mfOptions = buildProjectMiniflareOptions(ctx, project);
+	const mfOptions = await buildProjectMiniflareOptions(ctx, project);
 	const changed = !util.isDeepStrictEqual(project.previousMfOptions, mfOptions);
 	project.previousMfOptions = mfOptions;
 
@@ -776,7 +814,9 @@ async function getProjectMiniflare(
 	return project.mf;
 }
 
-function maybeGetResolvedMainPath(project: Project): string | undefined {
+function maybeGetResolvedMainPath(
+	project: Omit<Project, "testFiles">
+): string | undefined {
 	const projectPath = getProjectPath(project.project);
 	const main = project.options.main;
 	if (main === undefined) {
@@ -896,7 +936,9 @@ async function runTests(
 			const maybeRule = compiledRules.find((rule) =>
 				testRegExps(rule.include, specifier)
 			);
-			if (maybeRule !== undefined) {
+
+			// Skip if specifier already has query params (e.g. `?raw`), letting Vite handle it.
+			if (maybeRule !== undefined && !specifier.includes("?")) {
 				const externalize = specifier + `?mf_vitest_force=${maybeRule.type}`;
 				return { externalize };
 			}
@@ -955,7 +997,6 @@ interface PackageJson {
 	peerDependencies?: Record<string, string | undefined>;
 }
 function getPackageJson(dirPath: string): PackageJson | undefined {
-	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const pkgJsonPath = path.join(dirPath, "package.json");
 		try {

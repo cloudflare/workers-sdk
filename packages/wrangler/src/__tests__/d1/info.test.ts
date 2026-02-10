@@ -1,4 +1,6 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -6,7 +8,6 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("info", () => {
 	mockAccountId({ accountId: null });
@@ -31,7 +32,7 @@ describe("info", () => {
 			],
 		});
 	});
-	it("should display version when alpha", async () => {
+	it("should display version when alpha", async ({ expect }) => {
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(
@@ -67,7 +68,7 @@ describe("info", () => {
 	`);
 	});
 
-	it("should not display version when not alpha", async () => {
+	it("should not display version when not alpha", async ({ expect }) => {
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(
@@ -125,7 +126,9 @@ describe("info", () => {
 	`);
 	});
 
-	it("should pretty print by default, incl. the wrangler banner", async () => {
+	it("should pretty print by default, incl. the wrangler banner", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(

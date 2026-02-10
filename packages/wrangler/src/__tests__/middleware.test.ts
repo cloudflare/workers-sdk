@@ -1,8 +1,10 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
 import * as fs from "node:fs";
-import path from "path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import dedent from "ts-dedent";
-import { vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { unstable_dev } from "../api";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

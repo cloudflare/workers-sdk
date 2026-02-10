@@ -1,11 +1,35 @@
-import * as path from "node:path";
+import * as nodePath from "node:path";
+import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
+	CoreHeaders,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import semverGte from "semver/functions/gte";
+import { version as viteVersion } from "vite";
+import * as vite from "vite";
+import type { PluginContext } from "./context";
 import type * as http from "node:http";
-import type * as vite from "vite";
+
+export const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
+/**
+ * Creates an internal plugin to be used inside the main `vite-plugin-cloudflare` plugin.
+ * The provided `name` will be prefixed with `vite-plugin-cloudflare:`.
+ */
+export function createPlugin(
+	name: string,
+	pluginFactory: (ctx: PluginContext) => Omit<vite.Plugin, "name">
+): (ctx: PluginContext) => vite.Plugin {
+	return (ctx) => {
+		return {
+			name: `vite-plugin-cloudflare:${name}`,
+			sharedDuringBuild: true,
+			...pluginFactory(ctx),
+		};
+	};
+}
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -15,7 +39,7 @@ export function getOutputDirectory(
 
 	return (
 		userConfig.environments?.[environmentName]?.build?.outDir ??
-		path.join(rootOutputDirectory, environmentName)
+		nodePath.join(rootOutputDirectory, environmentName)
 	);
 }
 
@@ -35,6 +59,7 @@ export function withTrailingSlash(path: string): string {
 }
 
 export function createRequestHandler(
+	ctx: PluginContext,
 	handler: (
 		request: MiniflareRequest,
 		req: vite.Connect.IncomingMessage
@@ -56,7 +81,7 @@ export function createRequestHandler(
 			}
 			request = createRequest(req, res);
 
-			let response = await handler(toMiniflareRequest(request), req);
+			let response = await handler(toMiniflareRequest(ctx, request), req);
 
 			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
 			if (req.httpVersionMajor === 2) {
@@ -77,7 +102,14 @@ export function createRequestHandler(
 	};
 }
 
-function toMiniflareRequest(request: Request): MiniflareRequest {
+export function satisfiesViteVersion(minVersion: string): boolean {
+	return semverGte(viteVersion, minVersion);
+}
+
+function toMiniflareRequest(
+	ctx: PluginContext,
+	request: Request
+): MiniflareRequest {
 	const host = request.headers.get("Host");
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
@@ -88,10 +120,15 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		request.headers.set("X-Forwarded-Host", host);
 	}
 
+	// Add the proxy shared secret to the request headers
+	// so the proxy worker can trust it and add host headers back
+	// wrangler dev already does this, we need to match the behavior here
+	request.headers.set(CoreHeaders.PROXY_SHARED_SECRET, ctx.proxySharedSecret);
+
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
 	if (secFetchMode) {
-		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
+		request.headers.set(CoreHeaders.SEC_FETCH_MODE, secFetchMode);
 	}
 	return new MiniflareRequest(request.url, {
 		method: request.method,
@@ -101,3 +138,5 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		signal: request.signal,
 	});
 }
+
+export const isRolldown = "rolldownVersion" in vite;

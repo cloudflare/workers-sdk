@@ -151,11 +151,12 @@ export class ProxyWorker implements DurableObject {
 
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
-				.then((res) => {
+				.then(async (res) => {
 					res = new Response(res.body, res);
 					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
 					if (isHtmlResponse(res)) {
+						await checkForPreviewTokenError(res, this.env, proxyData);
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
 					}
 
@@ -242,6 +243,28 @@ function sendMessageToProxyController(
 	});
 }
 
+async function checkForPreviewTokenError(
+	response: Response,
+	env: Env,
+	proxyData: ProxyData
+) {
+	if (response.status !== 400) {
+		return;
+	}
+
+	// At this point HTMLRewriter tries to parse the compressed stream,
+	// so we clone and read the text instead.
+	const clone = response.clone();
+	const text = await clone.text();
+	// Naive string match should be good enough when combined with status code check
+	if (text.includes("Invalid Workers Preview configuration")) {
+		void sendMessageToProxyController(env, {
+			type: "previewTokenExpired",
+			proxyData,
+		});
+	}
+}
+
 function insertLiveReloadScript(
 	request: Request,
 	response: Response,
@@ -250,26 +273,8 @@ function insertLiveReloadScript(
 ) {
 	const htmlRewriter = new HTMLRewriter();
 
-	// if preview-token-expired response, errorDetails will contain "Invalid Workers Preview configuration"
-	let errorDetails = "";
-	htmlRewriter.on("#cf-error-details", {
-		text(element) {
-			errorDetails += element.text;
-		},
-	});
-
 	htmlRewriter.onDocument({
 		end(end) {
-			if (
-				response.status === 400 &&
-				errorDetails.includes("Invalid Workers Preview configuration")
-			) {
-				void sendMessageToProxyController(env, {
-					type: "previewTokenExpired",
-					proxyData,
-				});
-			}
-
 			// if liveReload enabled, append a script tag
 			// TODO: compare to existing nodejs implementation
 			if (proxyData.liveReload) {

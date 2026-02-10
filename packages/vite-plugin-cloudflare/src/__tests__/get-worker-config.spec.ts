@@ -1,10 +1,13 @@
 import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "vitest";
-import { getWorkerConfig } from "../workers-configs";
+import { describe, test } from "vitest";
+import {
+	readWorkerConfigFromFile,
+	resolveWorkerType,
+} from "../workers-configs";
 
-describe("getWorkerConfig", () => {
-	test("should return a simple raw config", () => {
-		const { raw } = getWorkerConfig(
+describe("readWorkerConfigFromFile", () => {
+	test("should return a simple raw config", ({ expect }) => {
+		const { raw } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -31,8 +34,10 @@ describe("getWorkerConfig", () => {
 		expect(raw.tsconfig).toBeUndefined();
 	});
 
-	test("should return a simple config without non-applicable fields", () => {
-		const { config } = getWorkerConfig(
+	test("should return a simple config without non-applicable fields", ({
+		expect,
+	}) => {
+		const { config } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -41,8 +46,10 @@ describe("getWorkerConfig", () => {
 		expect("preserve_file_names" in config).toBeFalsy();
 	});
 
-	test("should not return any non-applicable config when there isn't any", () => {
-		const { nonApplicable } = getWorkerConfig(
+	test("should not return any non-applicable config when there isn't any", ({
+		expect,
+	}) => {
+		const { nonApplicable } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -52,8 +59,8 @@ describe("getWorkerConfig", () => {
 		});
 	});
 
-	test("should read a simple wrangler.toml file", () => {
-		const { config, nonApplicable } = getWorkerConfig(
+	test("should read a simple wrangler config file", ({ expect }) => {
+		const { config, nonApplicable } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -81,8 +88,8 @@ describe("getWorkerConfig", () => {
 		});
 	});
 
-	test("should collect non applicable configs", () => {
-		const { config, raw, nonApplicable } = getWorkerConfig(
+	test("should collect non applicable configs", ({ expect }) => {
+		const { config, raw, nonApplicable } = readWorkerConfigFromFile(
 			fileURLToPath(
 				new URL(
 					"fixtures/wrangler-with-fields-to-ignore.jsonc",
@@ -153,22 +160,23 @@ describe("getWorkerConfig", () => {
 			])
 		);
 	});
+});
 
-	describe("invalid main config", () => {
-		test("should throw if the provided main config doesn't point to an existing file", () => {
-			expect(() =>
-				getWorkerConfig(
-					fileURLToPath(
-						new URL(
-							"fixtures/non-existing-main-wrangler.jsonc",
-							import.meta.url
-						)
-					),
-					undefined
-				)
-			).toThrowError(
-				/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
-			);
-		});
+describe("resolveWorkerType", () => {
+	test("should throw if the provided main config doesn't point to an existing file", ({
+		expect,
+	}) => {
+		const configPath = fileURLToPath(
+			new URL("fixtures/non-existing-main-wrangler.jsonc", import.meta.url)
+		);
+		const { config, raw, nonApplicable } = readWorkerConfigFromFile(
+			configPath,
+			undefined
+		);
+		expect(() =>
+			resolveWorkerType(config, raw, nonApplicable, { configPath })
+		).toThrowError(
+			/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
+		);
 	});
 });

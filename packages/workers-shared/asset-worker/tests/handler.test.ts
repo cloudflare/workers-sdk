@@ -1,4 +1,5 @@
-import { vi } from "vitest";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
+import { describe, expect, it, vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
 import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";

@@ -1,4 +1,4 @@
-import { File } from "buffer";
+import { File } from "node:buffer";
 import { Request } from "undici";
 import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
 import type { Sharp } from "sharp";
@@ -29,7 +29,6 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 export async function imagesLocalFetcher(request: Request): Promise<Response> {
 	let sharp;
 	try {
-		// eslint-disable-next-line es/no-dynamic-import
 		const { default: importedSharp } = await import("sharp");
 		sharp = importedSharp;
 	} catch {

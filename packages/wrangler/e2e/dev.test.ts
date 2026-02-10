@@ -11,8 +11,29 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import {
+	MYSQL_INITIAL_HANDSHAKE_PACKET,
+	setupMysqlServer,
+} from "./helpers/mysql-echo-handler";
+import {
+	createPostgresEchoHandler,
+	POSTGRES_SSL_REQUEST_PACKET,
+} from "./helpers/postgres-echo-handler";
 import { retry } from "./helpers/retry";
 import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
+
+const HYPERDRIVE_DATABASES = [
+	{
+		scheme: "postgresql",
+		defaultPort: 5432,
+		envVar: "HYPERDRIVE_DATABASE_URL",
+	},
+	{
+		scheme: "mysql",
+		defaultPort: 3306,
+		envVar: "HYPERDRIVE_MYSQL_DATABASE_URL",
+	},
+] as const;
 
 /**
  * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
@@ -25,8 +46,10 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 const workerName = generateResourceName();
 
 describe.each([
-	{ cmd: "wrangler dev --port=0" },
-	...(CLOUDFLARE_ACCOUNT_ID ? [{ cmd: "wrangler dev --remote" }] : []),
+	{ cmd: "wrangler dev --port=0 --inspector-port=0" },
+	...(CLOUDFLARE_ACCOUNT_ID
+		? [{ cmd: "wrangler dev --remote --port=0 --inspector-port=0" }]
+		: []),
 ])("basic js dev: $cmd", ({ cmd }) => {
 	it(`can modify Worker during ${cmd}`, async () => {
 		const helper = new WranglerE2ETestHelper();
@@ -75,6 +98,50 @@ describe.each([
 		expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
 
 		await expect(fetchText(url)).resolves.toMatchSnapshot();
+	});
+
+	it("works with basic service worker", async () => {
+		const helper = new WranglerE2ETestHelper();
+		const isLocal = cmd.includes("--remote") ? false : true;
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				# TODO: This is a workaround for an EWC bug where remote dev workers only log properly if they have bindings.
+				#       Remove the below line when MR:7727 is merged
+				version_metadata = { binding = "METADATA" }
+			`,
+			"src/index.ts": dedent`
+				addEventListener("fetch", (event) => {
+					const { pathname } = new URL(event.request.url);
+					if (pathname === "/") {
+						event.respondWith(new Response("service worker"));
+					} else if (pathname === "/error") {
+						throw new Error("monkey");
+					} else {
+						event.respondWith(new Response(null, { status: 404 }));
+					}
+				});
+			`,
+		});
+		const worker = helper.runLongLived(cmd);
+		const { url } = await worker.waitForReady();
+		let res = await fetch(url);
+		expect(await res.text()).toBe("service worker");
+
+		res = await fetch(new URL("/error", url), {
+			headers: { Accept: "text/plain" },
+		});
+		const text = await res.text();
+		if (isLocal) {
+			expect(text).toContain("Error: monkey");
+			expect(text).toContain("src/index.ts:6:9");
+		}
+		await worker.readUntil(/monkey/, 30_000);
+		if (isLocal) {
+			await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
+		}
 	});
 
 	it(`hotkeys can be disabled with ${cmd}`, async () => {
@@ -181,6 +248,89 @@ describe.each([
 			).resolves.toMatchSnapshot();
 
 			await worker.readUntil(/Event triggered/);
+		});
+	});
+
+	describe(`scheduled worker warning with ${cmd}`, () => {
+		it("shows warning with correct port when cron trigger is configured", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+
+								[triggers]
+								crons = ["* * * * *"]
+						`,
+				"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									},
+									scheduled(event) {
+										console.log("Scheduled event triggered");
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			const { url } = await worker.waitForReady();
+			const { hostname, port } = new URL(url);
+
+			// The warning should contain the actual port, not "undefined"
+			expect(worker.currentOutput).toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
+			expect(worker.currentOutput).toContain(
+				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+			);
+			expect(worker.currentOutput).not.toContain("undefined");
+		});
+
+		it("does not show warning when --test-scheduled is enabled", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+
+								[triggers]
+								crons = ["* * * * *"]
+						`,
+				"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									},
+									scheduled(event) {
+										console.log("Scheduled event triggered");
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(`${cmd} --test-scheduled`);
+
+			await worker.waitForReady();
+
+			// The warning should NOT appear when testScheduled is enabled
+			expect(worker.currentOutput).not.toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
 		});
 	});
 
@@ -586,178 +736,30 @@ describe.each([{ cmd: "wrangler dev" }])(
 	}
 );
 
-describe("hyperdrive dev tests", () => {
-	let server: nodeNet.Server;
+describe.each(HYPERDRIVE_DATABASES)(
+	"hyperdrive dev tests ($scheme)",
+	({ scheme, defaultPort, envVar }) => {
+		let server: nodeNet.Server;
 
-	beforeEach(async () => {
-		server = nodeNet.createServer().listen();
-	});
-
-	it("matches expected configuration parameters", async () => {
-		const helper = new WranglerE2ETestHelper();
-		let port = 5432;
-		if (server.address() && typeof server.address() !== "string") {
-			port = (server.address() as nodeNet.AddressInfo).port;
-		}
-		await helper.seed({
-			"wrangler.toml": dedent`
-					name = "${workerName}"
-					main = "src/index.ts"
-					compatibility_date = "2023-10-25"
-
-					[[hyperdrive]]
-					binding = "HYPERDRIVE"
-					id = "hyperdrive_id"
-					localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db"
-			`,
-			"src/index.ts": dedent`
-					export default {
-						async fetch(request, env) {
-							if (request.url.includes("connect")) {
-								const conn = env.HYPERDRIVE.connect();
-								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
-							}
-							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
-						}
-					}`,
-			"package.json": dedent`
-					{
-						"name": "worker",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
-		});
-		const worker = helper.runLongLived("wrangler dev");
-		const { url } = await worker.waitForReady();
-
-		const text = await fetchText(url);
-
-		assert(text);
-		const hyperdrive = new URL(text);
-		expect(hyperdrive.pathname).toBe("/some_db");
-		expect(hyperdrive.username).toBe("user");
-		expect(hyperdrive.password).toBe("!pass");
-		expect(hyperdrive.host).not.toBe("localhost");
-	});
-
-	it("connects to a socket", async () => {
-		const helper = new WranglerE2ETestHelper();
-		let port = 5432;
-		if (server.address() && typeof server.address() !== "string") {
-			port = (server.address() as nodeNet.AddressInfo).port;
-		}
-		await helper.seed({
-			"wrangler.toml": dedent`
-					name = "${workerName}"
-					main = "src/index.ts"
-					compatibility_date = "2023-10-25"
-
-					[[hyperdrive]]
-					binding = "HYPERDRIVE"
-					id = "hyperdrive_id"
-					localConnectionString = "postgresql://user:pass@127.0.0.1:${port}/some_db"
-			`,
-			"src/index.ts": dedent`
-					export default {
-						async fetch(request, env) {
-							if (request.url.includes("connect")) {
-								const conn = env.HYPERDRIVE.connect();
-								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
-							}
-							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
-						}
-					}`,
-			"package.json": dedent`
-					{
-						"name": "worker",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
-		});
-		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
-					server.close();
-					resolve({});
-				});
-			});
+		beforeEach(async () => {
+			if (scheme === "mysql") {
+				server = nodeNet.createServer().listen();
+				setupMysqlServer(server);
+			} else {
+				server = nodeNet
+					.createServer((socket) => {
+						socket.on("data", createPostgresEchoHandler(socket));
+					})
+					.listen();
+			}
 		});
 
-		const worker = helper.runLongLived("wrangler dev");
-
-		const { url } = await worker.waitForReady();
-
-		await fetch(`${url}/connect`);
-
-		await socketMsgPromise;
-	});
-
-	it("uses HYPERDRIVE_LOCAL_CONNECTION_STRING for the localConnectionString variable in the binding", async () => {
-		const helper = new WranglerE2ETestHelper();
-		let port = 5432;
-		if (server.address() && typeof server.address() !== "string") {
-			port = (server.address() as nodeNet.AddressInfo).port;
-		}
-		await helper.seed({
-			"wrangler.toml": dedent`
-					name = "${workerName}"
-					main = "src/index.ts"
-					compatibility_date = "2023-10-25"
-
-					[[hyperdrive]]
-					binding = "HYPERDRIVE"
-					id = "hyperdrive_id"
-			`,
-			"src/index.ts": dedent`
-					export default {
-						async fetch(request, env) {
-							if (request.url.includes("connect")) {
-								const conn = env.HYPERDRIVE.connect();
-								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
-							}
-							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
-						}
-					}`,
-			"package.json": dedent`
-					{
-						"name": "worker",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
-		});
-
-		const worker = helper.runLongLived("wrangler dev", {
-			env: {
-				...process.env,
-				CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: `postgresql://user:pass@127.0.0.1:${port}/some_db`,
-			},
-		});
-
-		const { url } = await worker.waitForReady();
-		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
-					server.close();
-					resolve({});
-				});
-			});
-		});
-		await fetch(`${url}/connect`);
-
-		await socketMsgPromise;
-	});
-
-	it.skipIf(!CLOUDFLARE_ACCOUNT_ID || !process.env.HYPERDRIVE_DATABASE_URL)(
-		"does not require local connection string when running `wrangler dev --remote`",
-		async () => {
+		it("matches expected configuration parameters", async () => {
 			const helper = new WranglerE2ETestHelper();
-			const { id } = await helper.hyperdrive(false);
-
+			let port: number = defaultPort;
+			if (server.address() && typeof server.address() !== "string") {
+				port = (server.address() as nodeNet.AddressInfo).port;
+			}
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -766,13 +768,127 @@ describe("hyperdrive dev tests", () => {
 
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
-					id = "${id}"
+					id = "hyperdrive_id"
+					localConnectionString = "${scheme}://user:%21pass@127.0.0.1:${port}/some_db"
 			`,
 				"src/index.ts": dedent`
 					export default {
 						async fetch(request, env) {
 							if (request.url.includes("connect")) {
 								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = helper.runLongLived("wrangler dev");
+			const { url } = await worker.waitForReady();
+
+			const text = await fetchText(url);
+
+			assert(text);
+			const hyperdrive = new URL(text);
+			expect(hyperdrive.pathname).toBe("/some_db");
+			expect(hyperdrive.username).toBe("user");
+			expect(hyperdrive.password).toBe("!pass");
+			expect(hyperdrive.host).not.toBe("localhost");
+		});
+
+		it("connects to a socket", async () => {
+			const helper = new WranglerE2ETestHelper();
+			let port: number = defaultPort;
+			if (server.address() && typeof server.address() !== "string") {
+				port = (server.address() as nodeNet.AddressInfo).port;
+			}
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+					localConnectionString = "${scheme}://user:pass@127.0.0.1:${port}/some_db"
+			`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const socketMsgPromise = new Promise((resolve, _) => {
+				server.on("connection", (socket) => {
+					// For MySQL, send initial handshake first
+					if (scheme === "mysql") {
+						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
+					}
+					socket.on("data", (chunk) => {
+						if (
+							scheme === "postgresql" &&
+							chunk.equals(POSTGRES_SSL_REQUEST_PACKET)
+						) {
+							socket.write("N");
+							return;
+						}
+						expect(new TextDecoder().decode(chunk)).toBe("test string");
+						server.close();
+						resolve({});
+					});
+				});
+			});
+
+			const worker = helper.runLongLived("wrangler dev");
+
+			const { url } = await worker.waitForReady();
+
+			await fetch(`${url}/connect`);
+
+			await socketMsgPromise;
+		});
+
+		it("uses HYPERDRIVE_LOCAL_CONNECTION_STRING for the localConnectionString variable in the binding", async () => {
+			const helper = new WranglerE2ETestHelper();
+			let port: number = defaultPort;
+			if (server.address() && typeof server.address() !== "string") {
+				port = (server.address() as nodeNet.AddressInfo).port;
+			}
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+			`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
 							}
 							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
 						}
@@ -786,19 +902,91 @@ describe("hyperdrive dev tests", () => {
 					`,
 			});
 
-			const worker = helper.runLongLived("wrangler dev --remote");
+			const worker = helper.runLongLived("wrangler dev", {
+				env: {
+					...process.env,
+					CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: `${scheme}://user:pass@127.0.0.1:${port}/some_db`,
+				},
+			});
 
 			const { url } = await worker.waitForReady();
+			const socketMsgPromise = new Promise((resolve, reject) => {
+				server.on("connection", (socket) => {
+					// For MySQL, send initial handshake first
+					if (scheme === "mysql") {
+						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
+					}
+					socket.on("data", (chunk) => {
+						if (
+							scheme === "postgresql" &&
+							POSTGRES_SSL_REQUEST_PACKET.equals(chunk)
+						) {
+							socket.write("N");
+							return;
+						}
+						expect(new TextDecoder().decode(chunk)).toBe("test string");
+						server.close();
+						resolve({});
+					});
+					socket.on("error", (err) => {
+						console.error("Socket error:", err);
+						reject(err);
+					});
+				});
+			});
 			await fetch(`${url}/connect`);
-		}
-	);
 
-	afterEach(() => {
-		if (server.listening) {
-			server.close();
-		}
-	});
-});
+			await socketMsgPromise;
+		});
+
+		it.skipIf(!CLOUDFLARE_ACCOUNT_ID || !process.env[envVar])(
+			"does not require local connection string when running `wrangler dev --remote`",
+			async () => {
+				const helper = new WranglerE2ETestHelper();
+				const { id } = await helper.hyperdrive(false, scheme);
+
+				await helper.seed({
+					"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "${id}"
+			`,
+					"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+					"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+				});
+
+				const worker = helper.runLongLived("wrangler dev --remote");
+
+				const { url } = await worker.waitForReady();
+				await fetch(`${url}/connect`);
+			}
+		);
+
+		afterEach(() => {
+			if (server.listening) {
+				server.close();
+			}
+		});
+	}
+);
 
 describe("queue dev tests", () => {
 	it("matches expected configuration parameters", async () => {

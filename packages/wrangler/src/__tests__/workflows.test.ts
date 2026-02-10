@@ -1,20 +1,23 @@
-import { http, HttpResponse } from "msw";
-import { endEventLoop } from "./helpers/end-event-loop";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs } from "./helpers/mock-dialogs";
-import { msw } from "./helpers/msw";
 import {
 	mockCreateDate,
 	mockEndDate,
 	mockModifiedDate,
 	mockQueuedDate,
 	mockStartDate,
-} from "./helpers/normalize";
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
+import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
+import { afterEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { endEventLoop } from "./helpers/end-event-loop";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs } from "./helpers/mock-dialogs";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Instance, Workflow } from "../workflows/types";
 
 describe("wrangler workflows", () => {
@@ -43,12 +46,34 @@ describe("wrangler workflows", () => {
 		);
 	};
 
-	const mockPatchRequest = async (expectedInstance: string) => {
+	const mockChangeStatusRequest = async (expectedInstance: string) => {
 		msw.use(
 			http.patch(
 				`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/status`,
 				async ({ params }) => {
 					expect(params.instanceId).toEqual(expectedInstance);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					});
+				},
+				{ once: true }
+			)
+		);
+	};
+
+	const mockSendEventRequest = async (
+		expectedInstance: string,
+		event: string
+	) => {
+		msw.use(
+			http.post(
+				`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId/events/:event`,
+				async ({ params }) => {
+					expect(params.instanceId).toEqual(expectedInstance);
+					expect(params.event).toEqual(event);
 					return HttpResponse.json({
 						success: true,
 						errors: [],
@@ -144,18 +169,19 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows instances`);
 			await endEventLoop();
 
-			expect(std.out).toMatchInlineSnapshot(
-				`
+			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler workflows instances
 
 				Manage Workflow instances
 
 				COMMANDS
-				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume)
-				  wrangler workflows instances describe <name> [id]   Describe a workflow instance - see its logs, retries and errors
-				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance
-				  wrangler workflows instances pause <name> <id>      Pause a workflow instance
-				  wrangler workflows instances resume <name> <id>     Resume a workflow instance
+				  wrangler workflows instances list <name>             Instance related commands (list, describe, terminate, pause, resume)
+				  wrangler workflows instances describe <name> [id]    Describe a workflow instance - see its logs, retries and errors
+				  wrangler workflows instances send-event <name> <id>  Send an event to a workflow instance
+				  wrangler workflows instances terminate <name> <id>   Terminate a workflow instance
+				  wrangler workflows instances restart <name> <id>     Restart a workflow instance
+				  wrangler workflows instances pause <name> <id>       Pause a workflow instance
+				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -164,8 +190,7 @@ describe("wrangler workflows", () => {
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
 				  -v, --version   Show version number  [boolean]"
-			`
-			);
+			`);
 		});
 	});
 
@@ -478,6 +503,45 @@ describe("wrangler workflows", () => {
 		});
 	});
 
+	describe("instances send-event", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: mockCreateDate.toISOString(),
+				modified_on: mockModifiedDate.toISOString(),
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+		];
+
+		it("should send an event without payload to the bar instance given a name", async () => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			await mockSendEventRequest("bar", "my-event");
+
+			await runWrangler(
+				"workflows instances send-event some-workflow bar --type my-event"
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"📤 The event with type \\"my-event\\" was sent to the instance \\"bar\\" from some-workflow"`
+			);
+		});
+
+		it("should send an event with payload to the bar instance given a name", async () => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			await mockSendEventRequest("bar", "my-event");
+
+			await runWrangler(
+				`workflows instances send-event some-workflow bar --type my-event --payload '{"key": "value"}'`
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"📤 The event with type \\"my-event\\" and payload \\"{\\"key\\": \\"value\\"}\\" was sent to the instance \\"bar\\" from some-workflow"`
+			);
+		});
+	});
+
 	describe("instances pause", () => {
 		const mockInstances: Instance[] = [
 			{
@@ -501,7 +565,7 @@ describe("wrangler workflows", () => {
 		it("should get and pause the bar instance given a name", async () => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockPatchRequest("bar");
+			await mockChangeStatusRequest("bar");
 
 			await runWrangler(`workflows instances pause some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
@@ -533,7 +597,7 @@ describe("wrangler workflows", () => {
 		it("should get and resume the bar instance given a name", async () => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockPatchRequest("bar");
+			await mockChangeStatusRequest("bar");
 
 			await runWrangler(`workflows instances resume some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
@@ -565,11 +629,43 @@ describe("wrangler workflows", () => {
 		it("should get and terminate the bar instance given a name", async () => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockPatchRequest("bar");
+			await mockChangeStatusRequest("bar");
 
 			await runWrangler(`workflows instances terminate some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
 				`"🥷 The instance \\"bar\\" from some-workflow was terminated successfully"`
+			);
+		});
+	});
+
+	describe("instances restart", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: mockCreateDate.toISOString(),
+				modified_on: mockModifiedDate.toISOString(),
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+			{
+				id: "bar",
+				created_on: mockCreateDate.toISOString(),
+				modified_on: mockModifiedDate.toISOString(),
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+		];
+
+		it("should get and restart the bar instance given a name", async () => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			await mockChangeStatusRequest("bar");
+
+			await runWrangler(`workflows instances restart some-workflow bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 The instance \\"bar\\" from some-workflow was restarted successfully"`
 			);
 		});
 	});

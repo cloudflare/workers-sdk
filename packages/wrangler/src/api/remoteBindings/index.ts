@@ -1,10 +1,9 @@
 import assert from "node:assert";
+import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
-import { getCloudflareComplianceRegion } from "../../environment-variables/misc-variables";
 import { requireApiToken, requireAuth } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
-import type { Config } from "../../config";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type {
 	AsyncHook,
@@ -12,6 +11,7 @@ import type {
 	StartDevWorkerInput,
 } from "../startDevWorker/types";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
+import type { Config } from "@cloudflare/workers-utils";
 
 export * from "./start-remote-proxy-session";
 
@@ -49,6 +49,8 @@ type WorkerConfigObject = {
 	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
+	/** Id of the account owning the worker */
+	account_id?: Config["account_id"];
 };
 
 /**
@@ -110,7 +112,14 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteProxySession = await startRemoteProxySession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
-			auth: getAuthHook(auth, config),
+			auth: getAuthHook(
+				auth,
+				workerConfigObject.account_id
+					? {
+							account_id: workerConfigObject.account_id,
+						}
+					: config
+			),
 		});
 	} else {
 		// The auth values haven't changed so we can reuse the pre-existing session
@@ -127,7 +136,14 @@ export async function maybeStartOrUpdateRemoteProxySession(
 					remoteProxySession = await startRemoteProxySession(remoteBindings, {
 						workerName: workerConfigObject.name,
 						complianceRegion: workerConfigObject.complianceRegion,
-						auth: getAuthHook(auth, config),
+						auth: getAuthHook(
+							auth,
+							workerConfigObject.account_id
+								? {
+										account_id: workerConfigObject.account_id,
+									}
+								: config
+						),
 					});
 				}
 			} else {
@@ -160,7 +176,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
  */
 function getAuthHook(
 	auth: CfAccount | undefined,
-	config: Config | undefined
+	config: Pick<Config, "account_id"> | undefined
 ): AsyncHook<CfAccount, [Pick<Config, "account_id">]> | undefined {
 	if (auth) {
 		return auth;

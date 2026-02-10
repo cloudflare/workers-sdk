@@ -2,22 +2,27 @@ import { execSync, spawn } from "node:child_process";
 import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path, { dirname, join, normalize, resolve } from "node:path";
+import { setTimeout } from "node:timers/promises";
+import {
+	configFileName,
+	FatalError,
+	formatCompatibilityDate,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { configFileName, readConfig } from "../config";
+import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { startDev } from "../dev/start-dev";
-import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
@@ -30,14 +35,14 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
-import type { Config } from "../config";
-import type {
-	DurableObjectBindings,
-	EnvironmentNonInheritable,
-} from "../config/environment";
-import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
+import type {
+	CfModule,
+	Config,
+	DurableObjectBindings,
+	EnvironmentNonInheritable,
+} from "@cloudflare/workers-utils";
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
@@ -872,7 +877,6 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
-				DEPLOY_REMOTE_DIFF_CHECK: false,
 				AUTOCREATE_RESOURCES: false,
 			},
 			() =>
@@ -916,6 +920,7 @@ export const pagesDevCommand = createCommand({
 					ip,
 					port,
 					inspectorPort,
+					inspectorIp: undefined,
 					localProtocol,
 					httpsKeyPath: args.httpsKeyPath,
 					httpsCertPath: args.httpsCertPath,
@@ -947,6 +952,8 @@ export const pagesDevCommand = createCommand({
 					siteInclude: undefined,
 					siteExclude: undefined,
 					enableContainers: false,
+					experimentalTailLogs: true,
+					types: false,
 				})
 		);
 
@@ -968,10 +975,6 @@ export const pagesDevCommand = createCommand({
 
 function isWindows() {
 	return process.platform === "win32";
-}
-
-async function sleep(ms: number) {
-	await new Promise((promiseResolve) => setTimeout(promiseResolve, ms));
 }
 
 function getPids(pid: number) {
@@ -1097,7 +1100,7 @@ async function spawnProxyProcess({
 			`Sleeping ${SECONDS_TO_WAIT_FOR_PROXY} seconds to allow proxy process to start before attempting to automatically determine port...`
 		);
 		logger.log("To skip, specify the proxy port with --proxy.");
-		await sleep(SECONDS_TO_WAIT_FOR_PROXY * 1000);
+		await setTimeout(SECONDS_TO_WAIT_FOR_PROXY * 1000);
 
 		port = getPids(proxy.pid)
 			.map(getPort)

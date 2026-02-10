@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -11,7 +12,7 @@ describe("pipe test", () => {
 		.mockImplementation(() => true);
 	runInTempDir();
 
-	it("should display banner", async () => {
+	it("should display banner", async ({ expect }) => {
 		writeFileSync("wormhole.txt", "passageway");
 		await runWrangler(
 			`r2 object put bucket-object-test/wormhole.txt --file ./wormhole.txt `
@@ -24,6 +25,7 @@ describe("pipe test", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Resource location: local
+
 			Use --remote if you want to access the remote instance.
 
 			Creating object \\"wormhole.txt\\" in bucket \\"bucket-object-test\\".
@@ -32,6 +34,7 @@ describe("pipe test", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Resource location: local
+
 			Use --remote if you want to access the remote instance.
 
 			Downloading \\"wormhole.txt\\" from \\"bucket-object-test\\".
@@ -39,7 +42,7 @@ describe("pipe test", () => {
 		`);
 	});
 
-	it("should not display banner in pipe mode", async () => {
+	it("should not display banner in pipe mode", async ({ expect }) => {
 		writeFileSync("wormhole.txt", "passageway");
 		await runWrangler(
 			`r2 object put bucket-object-test/wormhole.txt --file ./wormhole.txt `

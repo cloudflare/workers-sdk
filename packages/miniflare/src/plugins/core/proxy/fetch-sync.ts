@@ -1,6 +1,10 @@
-import assert from "assert";
-import { ReadableStream } from "stream/web";
-import { MessageChannel, receiveMessageOnPort, Worker } from "worker_threads";
+import assert from "node:assert";
+import { ReadableStream } from "node:stream/web";
+import {
+	MessageChannel,
+	receiveMessageOnPort,
+	Worker,
+} from "node:worker_threads";
 import { Headers } from "../../../http";
 import { CoreHeaders } from "../../../workers";
 import { JsonErrorSchema, reviveError } from "../errors";

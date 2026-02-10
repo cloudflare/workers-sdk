@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/quick-edit",
-	"version": "0.4.2",
+	"version": "0.4.5",
 	"private": true,
 	"description": "VSCode for Web hosted for use in Cloudflare's Quick Editor",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
@@ -10,7 +10,7 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint --max-warnings=0",
+		"check:lint": "eslint --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"custom:build": "./build.sh",
 		"deploy": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler deploy",
@@ -21,11 +21,13 @@
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
+		"eslint": "catalog:default",
 		"tsx": "^3.12.8",
 		"wrangler": "workspace:*"
 	},

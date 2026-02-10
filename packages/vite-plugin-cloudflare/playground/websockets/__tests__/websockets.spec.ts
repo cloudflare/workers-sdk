@@ -1,7 +1,8 @@
-import { expect, test, vi } from "vitest";
-import { page, viteTestUrl } from "../../__test-utils__";
+import { test, vi } from "vitest";
+import { page, viteTestUrl, WAIT_FOR_OPTIONS } from "../../__test-utils__";
+import type { ExpectStatic } from "vitest";
 
-async function openWebSocket() {
+async function openWebSocket(expect: ExpectStatic) {
 	await page.goto(viteTestUrl);
 	const openButton = page.getByRole("button", { name: "Open WebSocket" });
 	const statusTextBefore = await page.textContent("h2");
@@ -10,14 +11,14 @@ async function openWebSocket() {
 	await vi.waitFor(async () => {
 		const statusTextAfter = await page.textContent("h2");
 		expect(statusTextAfter).toBe("WebSocket open");
-	});
+	}, WAIT_FOR_OPTIONS);
 }
 
-test("opens WebSocket connection", openWebSocket);
+test("opens WebSocket connection", ({ expect }) => openWebSocket(expect));
 
-test("closes WebSocket connection", async () => {
+test("closes WebSocket connection", async ({ expect }) => {
 	await page.goto(viteTestUrl);
-	await openWebSocket();
+	await openWebSocket(expect);
 	const closeButton = page.getByRole("button", { name: "Close WebSocket" });
 	const statusTextBefore = await page.textContent("h2");
 	expect(statusTextBefore).toBe("WebSocket open");
@@ -25,12 +26,12 @@ test("closes WebSocket connection", async () => {
 	await vi.waitFor(async () => {
 		const statusTextAfter = await page.textContent("h2");
 		expect(statusTextAfter).toBe("WebSocket closed");
-	});
+	}, WAIT_FOR_OPTIONS);
 });
 
-test("sends and receives WebSocket string messages", async () => {
+test("sends and receives WebSocket string messages", async ({ expect }) => {
 	await page.goto(viteTestUrl);
-	await openWebSocket();
+	await openWebSocket(expect);
 	const sendButton = page.getByRole("button", { name: "Send string" });
 	const messageTextBefore = await page.textContent("p");
 	expect(messageTextBefore).toBe("");
@@ -40,12 +41,14 @@ test("sends and receives WebSocket string messages", async () => {
 		expect(messageTextAfter).toBe(
 			`Durable Object received client message: 'Client event' of type 'string'.`
 		);
-	});
+	}, WAIT_FOR_OPTIONS);
 });
 
-test("sends and receives WebSocket ArrayBuffer messages", async () => {
+test("sends and receives WebSocket ArrayBuffer messages", async ({
+	expect,
+}) => {
 	await page.goto(viteTestUrl);
-	await openWebSocket();
+	await openWebSocket(expect);
 	const sendButton = page.getByRole("button", { name: "Send ArrayBuffer" });
 	const messageTextBefore = await page.textContent("p");
 	expect(messageTextBefore).toBe("");
@@ -55,5 +58,5 @@ test("sends and receives WebSocket ArrayBuffer messages", async () => {
 		expect(messageTextAfter).toBe(
 			`Durable Object received client message: '[object ArrayBuffer]' of type 'object'.`
 		);
-	});
+	}, WAIT_FOR_OPTIONS);
 });

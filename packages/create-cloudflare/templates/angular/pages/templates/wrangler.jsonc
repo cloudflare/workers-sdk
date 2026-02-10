@@ -1,5 +1,5 @@
 {
-	"name": "<TBD>",
-	"compatibility_date": "<TBD>",
+	"name": "<WORKER_NAME>",
+	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"pages_build_output_dir": "./dist/cloudflare"
   }

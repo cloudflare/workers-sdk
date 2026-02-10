@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { getBasePath } from "../paths";
 import { dedent } from "../utils/dedent";
 import type { Entry } from "./entry";
-import type { CfScriptFormat } from "./worker";
+import type { CfScriptFormat } from "@cloudflare/workers-utils";
 
 /**
  * A facade that acts as a "middleware loader".

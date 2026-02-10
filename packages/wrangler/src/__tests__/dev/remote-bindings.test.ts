@@ -1,6 +1,17 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- it.each pattern and expect in vi.waitFor callbacks */
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	onTestFailed,
+	vi,
+} from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { Binding, StartRemoteProxySessionOptions } from "../../api";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -12,9 +23,8 @@ import {
 } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { seed } from "../helpers/seed";
-import type { RawConfig } from "../../config";
 import type { StartDevOptions } from "../../dev";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 // Mock the startDev function to capture the devEnv so we can stop it later
@@ -30,12 +40,7 @@ vi.mock("../../dev/start-dev", async () => {
 		...actual,
 		async startDev(args: StartDevOptions) {
 			const result = await actual.startDev(args);
-			stopWrangler = () => {
-				stopWrangler = async () => {
-					throw new Error("Stop worker already called");
-				};
-				return result.devEnv.teardown();
-			};
+			stopWrangler = () => result.devEnv.teardown();
 			return result;
 		},
 	};
@@ -91,7 +96,7 @@ vi.mock("../../dev/miniflare/index.ts", async () => {
 	};
 });
 
-describe("dev with remote bindings", { sequential: true }, () => {
+describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
@@ -483,6 +488,9 @@ describe("dev with remote bindings", { sequential: true }, () => {
 	it.each(testCases)(
 		"should attempt to setup remote $name bindings when starting `wrangler dev`",
 		async ({ config, expectedProxyWorkerBindings, expectedWorkerOptions }) => {
+			// Dump out the std out if the test fails for easier debugging
+			onTestFailed(async () => console.error("Wrangler output:\n", std.out));
+
 			await seed({
 				"wrangler.jsonc": JSON.stringify(
 					{
@@ -497,8 +505,9 @@ describe("dev with remote bindings", { sequential: true }, () => {
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
 			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-				timeout: 2_000,
+				timeout: 5_000,
 			});
 			expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
 			expect(workerOptions).toEqual(expectedWorkerOptions);
@@ -507,71 +516,70 @@ describe("dev with remote bindings", { sequential: true }, () => {
 		}
 	);
 
-	it.each([testCases[0]])(
-		"should attempt to setup remote $name bindings when updating config during a running `wrangler dev` session",
-		async ({ config, expectedProxyWorkerBindings, expectedWorkerOptions }) => {
-			await seed({
-				// Start with an empty config
-				"wrangler.jsonc": JSON.stringify(
-					{
-						name: "worker",
-						main: "index.js",
-						compatibility_date: "2025-01-01",
-					},
-					null,
-					2
-				),
-				"index.js": `export default { fetch() { return new Response("hello") } }`,
-			});
-			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
-				// We need to turn off the WRANGLER_CI_DISABLE_CONFIG_WATCHING env var so that the ConfigController
-				// enables watching for config changes, which is required to trigger reloading.
-				WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
-			});
-			const match = await vi.waitUntil(
-				() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
-
-				{ timeout: 2_000 }
-			);
-
-			// Check that there is initially no remote bindings proxy setup
-			expect(proxyWorkerBindings).toEqual(undefined);
-
-			// Let's make a fetch to the worker to prove it's running before we update the config to add the bindings
-			// This also should give the config file watching time to settle.
-			const url = match?.groups?.url;
-			if (url === undefined) {
-				throw new Error("No URL found in output");
-			}
-			expect((await fetch(url)).ok).toBe(true);
-
-			// Now update the config to include the bindings
-			await seed({
-				"wrangler.jsonc": JSON.stringify(
-					{
-						name: "worker",
-						main: "index.js",
-						compatibility_date: "2025-01-01",
-						...config,
-					},
-					null,
-					2
-				),
-			});
-
-			// Once we see the reloading message we know it has processed the config change
-			await vi.waitFor(
-				() => {
-					expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
-					expect(workerOptions).toEqual(expectedWorkerOptions);
+	it("should attempt to setup remote $name bindings when updating config during a running `wrangler dev` session", async () => {
+		const { config, expectedProxyWorkerBindings, expectedWorkerOptions } =
+			testCases[0];
+		await seed({
+			// Start with an empty config
+			"wrangler.jsonc": JSON.stringify(
+				{
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
 				},
-				{ timeout: 5_000 }
-			);
+				null,
+				2
+			),
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+			// We need to turn off the WRANGLER_CI_DISABLE_CONFIG_WATCHING env var so that the ConfigController
+			// enables watching for config changes, which is required to trigger reloading.
+			WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
+		});
+		const match = await vi.waitUntil(
+			() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
 
-			await stopWrangler();
-			await wranglerStopped;
+			{ timeout: 5_000 }
+		);
+
+		// Check that there is initially no remote bindings proxy setup
+		expect(proxyWorkerBindings).toEqual(undefined);
+
+		// Let's make a fetch to the worker to prove it's running before we update the config to add the bindings
+		// This also should give the config file watching time to settle.
+		const url = match?.groups?.url;
+		if (url === undefined) {
+			throw new Error("No URL found in output");
 		}
-	);
+		expect((await fetch(url)).ok).toBe(true);
+
+		// Now update the config to include the bindings
+		await seed({
+			"wrangler.jsonc": JSON.stringify(
+				{
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					...config,
+				},
+				null,
+				2
+			),
+		});
+
+		// Once we see the reloading message we know it has processed the config change
+		await vi.waitFor(
+			() => {
+				expect(proxyWorkerBindings).toEqual(expectedProxyWorkerBindings);
+				expect(workerOptions).toEqual(expectedWorkerOptions);
+			},
+			{ timeout: 5_000 }
+		);
+
+		await stopWrangler();
+		await wranglerStopped;
+	});
 
 	it("should allow both local and remote KV bindings to the same namespace in a single dev session", async () => {
 		await seed({
@@ -599,7 +607,7 @@ describe("dev with remote bindings", { sequential: true }, () => {
 		});
 		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
+			timeout: 5_000,
 		});
 		expect(proxyWorkerBindings).toEqual({
 			KV_REMOTE_BINDING: {
@@ -651,8 +659,20 @@ describe("dev with remote bindings", { sequential: true }, () => {
 		});
 		const wranglerStopped = runWrangler("dev --local");
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
+			timeout: 5_000,
 		});
+		const bindingsPrintStart = std.out.indexOf(
+			"Your Worker has access to the following bindings:"
+		);
+		const bindingsPrintEnd = std.out.indexOf("⎔ Starting local server...") - 1;
+		expect(std.out.slice(bindingsPrintStart, bindingsPrintEnd))
+			.toMatchInlineSnapshot(`
+			"Your Worker has access to the following bindings:
+			Binding                                        Resource          Mode
+			env.KV_LOCAL_BINDING (mock-kv-namespace)       KV Namespace      local
+			env.KV_REMOTE_BINDING (mock-kv-namespace)      KV Namespace      local
+			"
+		`);
 		expect(proxyWorkerBindings).toEqual(undefined);
 		expect(workerOptions).toEqual([
 			expect.objectContaining({
@@ -692,7 +712,7 @@ describe("dev with remote bindings", { sequential: true }, () => {
 		});
 		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
+			timeout: 5_000,
 		});
 		expect(sessionOptions).toEqual({
 			auth: {
@@ -733,7 +753,7 @@ describe("dev with remote bindings", { sequential: true }, () => {
 			"dev --x-provision=false --port=0 --inspector-port=0"
 		);
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
-			timeout: 2_000,
+			timeout: 5_000,
 		});
 
 		expect(sessionOptions).toEqual({

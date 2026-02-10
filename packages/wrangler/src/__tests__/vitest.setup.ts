@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { resolve } from "path";
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
@@ -35,11 +34,11 @@ vi.mock("ansi-escapes", () => {
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 vi.mock("get-port", async (importOriginal) => {
-	const { default: getPort } =
-		await importOriginal<typeof import("get-port")>();
+	const getPort = await importOriginal<typeof import("get-port")>();
 	return {
 		__esModule: true,
-		default: vi.fn(getPort),
+		default: vi.fn(getPort.default),
+		portNumbers: getPort.portNumbers,
 	};
 });
 
@@ -57,6 +56,19 @@ vi.mock("child_process", async (importOriginal) => {
 	};
 });
 
+vi.mock("os", async (importOriginal) => {
+	const os = await importOriginal<typeof import("os")>();
+	function homedir() {
+		// Let's just grab the HOME env var and then we can override that in tests
+		return (process.env as Record<string, string>).HOME;
+	}
+	return {
+		...os,
+		default: { ...os, homedir },
+		homedir,
+	};
+});
+
 vi.mock("log-update", () => {
 	const fn = function (..._: string[]) {};
 	fn["clear"] = () => {};
@@ -69,22 +81,47 @@ vi.mock("undici", async (importOriginal) => {
 	return {
 		...(await importOriginal<typeof import("undici")>()),
 		/**
-		 * So... Why do we have this hacky mock?
-		 * First, the requirements that necessitated it (if you're looking at this code in horror at some point in the future and these no longer apply, feel free to adjust this implementation!)
-		 * - Wrangler supports Node v16. Once Wrangler only supports Node v18 we can use globalThis.fetch directly and remove this hack
-		 * - MSW makes it difficult to use custom interceptors, and _really_ wants you to use globalThis.fetch. In particular, it doesn't support intercepting undici.fetch
-		 * Because Wrangler supports Node v16, we have to use undici's fetch directly rather than using globalThis.fetch. We'd also like to intercept requests with MSW
-		 * Therefore, we mock undici in tests to replace the imported fetch with globalThis.fetch (which MSW will replace with a mocked version—hence the getter, so that we always get the up to date mocked version)
-		 * We're able to delegate to globalThis.fetch in our tests because we run our test in Node v18
+		 * Why do we have this hacky mock?
+		 *
+		 * MSW intercepts requests made via globalThis.fetch but not undici.fetch.
+		 * Since Wrangler imports fetch, FormData, Headers, Request, and Response from undici,
+		 * we need to replace them with their global equivalents so MSW can intercept and
+		 * properly handle requests (including parsing FormData bodies).
+		 *
+		 * We use getters so that we always get the up-to-date mocked versions that MSW provides.
 		 */
 		get fetch() {
-			// Here be dragons (see above)
 			return globalThis.fetch;
+		},
+		get FormData() {
+			return globalThis.FormData;
+		},
+		get Headers() {
+			return globalThis.Headers;
+		},
+		get Request() {
+			return globalThis.Request;
+		},
+		get Response() {
+			return globalThis.Response;
 		},
 	};
 });
 
-vi.mock("../package-manager");
+vi.mock("../package-manager", async (importOriginal) => {
+	const original = await importOriginal<typeof import("../package-manager")>();
+	const mocked = Object.fromEntries(
+		Object.entries(original).map(([key, value]) => {
+			if (typeof value === "function") {
+				// We want to mock all the functions in the module
+				return [key, vi.fn()];
+			}
+			// Non-function values (such as the constants for the package managers) should not be mocked
+			return [key, value];
+		})
+	);
+	return mocked;
+});
 
 vi.mock("../update-check");
 
@@ -115,17 +152,21 @@ afterAll(() => msw.close());
 vi.mock("../open-in-browser");
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-vi.mock("../user/generate-auth-url", () => {
+vi.mock("../user/generate-auth-url", async (importOriginal) => {
+	const OAUTH_CALLBACK_URL = (
+		await importOriginal<typeof import("../user/generate-auth-url")>()
+	).OAUTH_CALLBACK_URL;
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		OAUTH_CALLBACK_URL,
 		generateAuthUrl: vi
 			.fn()
-			.mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
+			.mockImplementation(({ authUrl, clientId, scopes }) => {
 				return (
 					authUrl +
 					`?response_type=code&` +
 					`client_id=${encodeURIComponent(clientId)}&` +
-					`redirect_uri=${encodeURIComponent(callbackUrl)}&` +
+					`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
 					// we add offline_access manually for every request
 					`scope=${encodeURIComponent(
 						[...scopes, "offline_access"].join(" ")
@@ -146,19 +187,6 @@ vi.mock("../is-ci", async (importOriginal) => {
 vi.mock("../user/generate-random-state", () => {
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-	};
-});
-
-vi.mock("xdg-app-paths", () => {
-	return {
-		__esModule: true,
-		default: vi.fn().mockImplementation(() => {
-			return {
-				config() {
-					return resolve("test-xdg-config");
-				},
-			};
-		}),
 	};
 });
 

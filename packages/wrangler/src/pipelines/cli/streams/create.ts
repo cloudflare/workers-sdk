@@ -1,9 +1,8 @@
 import { readFileSync } from "node:fs";
+import { parseJSON, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
-import { UserError } from "../../../errors";
 import { logger } from "../../../logger";
-import { parseJSON } from "../../../parse";
 import { requireAuth } from "../../../user";
 import { createStream } from "../../client";
 import { validateEntityName } from "../../validate";
@@ -14,7 +13,7 @@ export const pipelinesStreamsCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new stream",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	positionalArgs: ["stream"],
 	args: {

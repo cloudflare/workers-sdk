@@ -1,7 +1,7 @@
-import { existsSync } from "fs";
-import { cp, mkdtemp, rename } from "fs/promises";
-import { tmpdir } from "os";
-import { basename, dirname, join, resolve } from "path";
+import { existsSync } from "node:fs";
+import { cp, mkdtemp, rename } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import { shapes, updateStatus, warn } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -32,6 +32,7 @@ import workflowsTemplate from "templates/hello-world-workflows/c3";
 import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
+import nextExperimentalTemplate from "templates/next/experimental_c3";
 import nuxtTemplate from "templates/nuxt/c3";
 import openapiTemplate from "templates/openapi/c3";
 import preExistingTemplate from "templates/pre-existing/c3";
@@ -39,12 +40,17 @@ import queuesTemplate from "templates/queues/c3";
 import qwikTemplate from "templates/qwik/c3";
 import reactRouterTemplate from "templates/react-router/c3";
 import reactTemplate from "templates/react/c3";
+import redwoodTemplate from "templates/redwood/c3";
 import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
 import tanStackStartTemplate from "templates/tanstack-start/c3";
+import vikeTemplate from "templates/vike/c3";
+import vikeExperimentalTemplate from "templates/vike/experimental-c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
+import wakuExperimentalTemplate from "templates/waku/experimental-c3";
+import { getAgentsMd } from "./agents-md";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -180,6 +186,53 @@ const defaultSelectVariant = async (ctx: C3Context) => {
 	return ctx.args.lang;
 };
 
+/**
+ * Helper function to check if a template supports a specific language
+ */
+const templateSupportsLanguage = (
+	config: TemplateConfig,
+	lang: string,
+): boolean => {
+	const { copyFiles } = config;
+	// If the template has no copyFiles or uses a single path, it doesn't support variants.
+	// In that case we assume that this template doesn't support the language specified.
+	// Note that this isn't perfect, if a template supports only Python for example then we
+	// may miss it, but we have no way of deducing the supported language based on the path
+	// alone.
+	if (!copyFiles || isVariantInfo(copyFiles)) {
+		return false;
+	}
+	// If the template has variants, check if the specified language is supported
+	if (copyFiles.variants && !copyFiles.variants[lang]) {
+		return false;
+	}
+	return true;
+};
+
+const filterTemplatesByLanguage = <
+	T extends TemplateConfig | MultiPlatformTemplateConfig,
+>(
+	templates: Record<string, T>,
+	lang: string | undefined,
+): Record<string, T> => {
+	// If no language is specified, return all templates
+	if (!lang) {
+		return templates;
+	}
+
+	return Object.fromEntries(
+		Object.entries(templates).filter(([, config]) => {
+			if ("platformVariants" in config) {
+				return (
+					templateSupportsLanguage(config.platformVariants.pages, lang) ||
+					templateSupportsLanguage(config.platformVariants.workers, lang)
+				);
+			}
+			return templateSupportsLanguage(config, lang);
+		}),
+	) as Record<string, T>;
+};
+
 export type TemplateMap = Record<
 	string,
 	TemplateConfig | MultiPlatformTemplateConfig
@@ -188,7 +241,23 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			// None right now
+			analog: analogTemplate,
+			angular: angularTemplate,
+			astro: astroTemplate,
+			docusaurus: docusaurusTemplate,
+			gatsby: gatsbyTemplate,
+			next: nextExperimentalTemplate,
+			nuxt: nuxtTemplate,
+			qwik: qwikTemplate,
+			react: reactTemplate,
+			"react-router": reactRouterTemplate,
+			redwood: redwoodTemplate,
+			solid: solidTemplate,
+			svelte: svelteTemplate,
+			"tanstack-start": tanStackStartTemplate,
+			vike: vikeExperimentalTemplate,
+			vue: vueTemplate,
+			waku: wakuExperimentalTemplate,
 		};
 	} else {
 		return {
@@ -203,9 +272,11 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			qwik: qwikTemplate,
 			react: reactTemplate,
 			"react-router": reactRouterTemplate,
+			redwood: redwoodTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
+			vike: vikeTemplate,
 			vue: vueTemplate,
 			waku: wakuTemplate,
 		};
@@ -332,11 +403,20 @@ export const createContext = async (
 
 	const experimental = args.experimental;
 
-	const frameworkMap = getFrameworkMap({ experimental });
-	const helloWorldTemplateMap = getHelloWorldTemplateMap({
-		experimental,
-	});
-	const otherTemplateMap = getOtherTemplateMap({ experimental });
+	const frameworkMap = filterTemplatesByLanguage(
+		getFrameworkMap({ experimental }),
+		args.lang,
+	);
+	const helloWorldTemplateMap = filterTemplatesByLanguage(
+		getHelloWorldTemplateMap({
+			experimental,
+		}),
+		args.lang,
+	);
+	const otherTemplateMap = filterTemplatesByLanguage(
+		getOtherTemplateMap({ experimental }),
+		args.lang,
+	);
 
 	let linesPrinted = 0;
 
@@ -558,6 +638,13 @@ export const createContext = async (
 			},
 		);
 
+		// If no templates are available for the specified language, throw an error
+		if (args.lang && templateOptions.length === 0) {
+			throw new Error(
+				`No templates available for language "${args.lang}" in the "${category}" category.`,
+			);
+		}
+
 		const type = await processArgument(args, "type", {
 			type: "select",
 			question: "Which template would you like to use?",
@@ -691,6 +778,21 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
 }
 
+/**
+ * Writes AGENTS.md to the project directory if one doesn't already exist.
+ * This file provides AI coding agents with retrieval-led guidance for Cloudflare APIs.
+ * Remote templates may include their own AGENTS.md with custom guidance, which we preserve.
+ *
+ * @param projectPath - The path to the project directory
+ */
+export function writeAgentsMd(projectPath: string): void {
+	const agentsMdPath = join(projectPath, "AGENTS.md");
+	if (existsSync(agentsMdPath)) {
+		return;
+	}
+	writeFile(agentsMdPath, getAgentsMd());
+}
+
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	const templateUrl = await processArgument(args, "template", {
 		type: "text",
@@ -701,19 +803,9 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 		defaultValue: C3_DEFAULTS.template,
 	});
 
-	let src = templateUrl;
-
-	// GitHub URL with subdirectory is not supported by degit and has to be transformed.
-	// This only addresses input template URLs on the main branch as a branch name
-	// might includes slashes that span multiple segments in the URL and cannot be
-	// reliably differentiated from the subdirectory path.
-	if (src.startsWith("https://github.com/") && src.includes("/tree/main/")) {
-		src = src
-			.replace("https://github.com/", "github:")
-			.replace("/tree/main/", "/");
-	}
-
-	const path = await downloadRemoteTemplate(src, args.templateMode);
+	const path = await downloadRemoteTemplate(templateUrl, {
+		mode: args.templateMode,
+	});
 	const config = inferTemplateConfig(path);
 
 	validateTemplate(path, config);
@@ -794,59 +886,111 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
 };
 
 /**
- * Downloads an external template from a git repo using `degit`.
+ * Downloads an external template from a git repo.
  *
- * @param src The url of the git repository to download the template from.
- *            For convenience, `owner/repo` is also accepted.
- * @returns A path to a temporary directory containing the downloaded template
+ * @param src Any source supported by degit, e.g. a GitHub repo URL
+ *            If the URL contains a subdirectory, it must be specified using the format
+ *            supported by degit, i.e. `github:<owner>/<repo>/sub/directory[#<branch>]`
+ * @param options Options for downloading the template:
+ * 					- mode: The mode to use for downloading the template. Defaults to 'git'.
+ * 					- intoFolder: The folder to download the template into. Defaults to a temporary directory.
+ * @returns The path to the directory containing the downloaded template
  */
-export const downloadRemoteTemplate = async (
+export async function downloadRemoteTemplate(
 	src: string,
-	mode?: "git" | "tar",
-) => {
-	// degit runs `git clone` internally which may prompt for credentials if required
-	// Avoid using a `spinner()` during this operation -- use updateStatus instead.
+	options: {
+		mode?: "git" | "tar";
+		intoFolder?: string;
+	} = {},
+) {
+	const ghRegex =
+		/^https:\/\/github\.com\/(?<user>[\w-]+)\/(?<repo>[\w.-]+)(?:\/(?<path>.*))?$/;
 
+	let errorMessage = `Failed to clone remote template: ${src}`;
 	try {
+		// degit runs `git clone` internally which may prompt for credentials if required
+		// Avoid using a `spinner()` during this operation -- use updateStatus instead.
 		updateStatus(`Cloning template from: ${blue(src)}`);
+
+		// Add support for `https://github.com/<owner>/<repo>/tree/main/[<sub/directory>]` format
+		// Subdirectories are only supported for the 'main' branch in this format
+		if (src.startsWith("https://github.com/")) {
+			const match = src.match(ghRegex);
+			if (match?.groups) {
+				const { user, repo, path } = match.groups;
+
+				const pathSegments = (path ?? "").split("/").filter((s) => s !== "");
+
+				let branch = "";
+
+				if (pathSegments[0] === "tree" && pathSegments.length >= 2) {
+					// The URL contains a branch.
+					// Subdirectories are only supported for the 'main' branch.
+					branch = pathSegments[1];
+
+					if (branch !== "main") {
+						errorMessage +=
+							"\nUse the format \"github:<owner>/<repo>/sub/directory[#<branch>]\" to clone a specific branch other than 'main'";
+						throw new Error("Unsupported format");
+					}
+
+					pathSegments.splice(0, 2); // Remove 'tree' and branch name
+				}
+
+				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}${branch ? `#${branch}` : ""}`;
+			}
+		}
 
 		const emitter = degit(src, {
 			cache: false,
 			verbose: false,
 			force: true,
-			mode,
+			mode: options.mode,
 		});
 
-		const tmpDir = await mkdtemp(join(tmpdir(), "c3-template"));
+		const tmpDir =
+			options.intoFolder ?? (await mkdtemp(join(tmpdir(), "c3-template")));
 		await emitter.clone(tmpDir);
 
 		return tmpDir;
 	} catch {
 		updateStatus(`${brandColor("template")} ${dim("failed")}`);
-		throw new Error(`Failed to clone remote template: ${src}`);
+		throw new Error(errorMessage);
 	}
-};
+}
 
 function updatePythonPackageName(path: string, projectName: string) {
-	const pyprojectTomlPath = resolve(path, "pyproject.toml");
-	if (!existsSync(pyprojectTomlPath)) {
+	const pyProjectFile = resolve(path, "pyproject.toml");
+	if (!existsSync(pyProjectFile)) {
 		// Not a python template
 		return;
 	}
 	const s = spinner();
 	s.start("Updating name in `pyproject.toml`");
-	let pyprojectTomlContents = readFile(pyprojectTomlPath);
-	pyprojectTomlContents = pyprojectTomlContents.replace(
-		'"TBD"',
-		`"${projectName}"`,
-	);
-	writeFile(pyprojectTomlPath, pyprojectTomlContents);
+	let pyProject = readFile(pyProjectFile);
+	pyProject = pyProject
+		.replace('"TBD"', `"${projectName}"`)
+		.replace('"<PROJECT_NAME>"', `"${projectName}"`);
+	writeFile(pyProjectFile, pyProject);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
 
-export const updatePackageName = async (ctx: C3Context) => {
-	// Update package.json with project name
-	const placeholderNames = ["<TBD>", "TBD", ""];
+/**
+ * Updates `package.json` and `pyproject.toml` with project name.
+ *
+ * This function replaces any of the following placeholder names in the `package.json`
+ * file with the actual project name:
+ * - `<PACKAGE_NAME>`
+ * - `<TBD>`
+ * - `TBD`
+ * - `""`
+ *
+ * It also replaces `<PROJECT_NAME>` in `pyproject.toml` if it exists.
+ *
+ * @param ctx The project configuration
+ */
+export const updatePackageName = (ctx: C3Context): void => {
+	const placeholderNames = ["<PACKAGE_NAME>", "<TBD>", "TBD", ""];
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
 	const pkgJson = readJSON(pkgJsonPath) as PackageJson;
 
@@ -856,11 +1000,10 @@ export const updatePackageName = async (ctx: C3Context) => {
 
 	const s = spinner();
 	s.start("Updating name in `package.json`");
-
 	pkgJson.name = ctx.project.name;
-
 	writeJSON(pkgJsonPath, pkgJson);
 	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+
 	updatePythonPackageName(ctx.project.path, ctx.project.name);
 };
 

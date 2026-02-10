@@ -42,7 +42,6 @@ describe("wrangler docs", () => {
 
 			📚 Open Wrangler's command documentation in your browser
 
-
 			POSITIONALS
 			  search  Enter search terms (e.g. the wrangler command) you want to know more about  [array] [default: []]
 

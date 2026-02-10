@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { mkdirSync } from "fs";
-import { dirname } from "path";
-import { chdir } from "process";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { chdir } from "node:process";
 import {
 	cancel,
 	checkMacOSVersion,
@@ -12,8 +12,8 @@ import {
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
-import { cliDefinition, parseArgs } from "helpers/args";
-import { isUpdateAvailable } from "helpers/cli";
+import { cliDefinition, parseArgs, processArgument } from "helpers/args";
+import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import {
 	detectPackageManager,
@@ -33,6 +33,7 @@ import {
 	createContext,
 	updatePackageName,
 	updatePackageScripts,
+	writeAgentsMd,
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
@@ -144,36 +145,63 @@ const create = async (ctx: C3Context) => {
 		await template.generate(ctx);
 	}
 
-	await copyTemplateFiles(ctx);
-	await updatePackageName(ctx);
+	if (!ctx.args.experimental) {
+		await copyTemplateFiles(ctx);
+	}
+	updatePackageName(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
 	await rectifyPmMismatch(ctx);
 
+	// Offer AGENTS.md for Workers templates that don't use a framework
+	// Framework templates may need framework-specific agent guidance
+	if (ctx.template.platform === "workers" && !ctx.template.frameworkCli) {
+		await offerAgentsMd(ctx);
+	}
+
 	endSection(`Application created`);
 };
 
 const configure = async (ctx: C3Context) => {
-	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+	startSection(
+		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
+		"Step 2 of 3",
+	);
 
+	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
+	// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
 	await installWrangler();
 
-	// Note: This _must_ be called before the configure phase since
-	//       pre-existing workers assume its presence in their configure phase
-	await updateWranglerConfig(ctx);
+	if (ctx.args.experimental) {
+		const { npx } = detectPackageManager();
 
-	const { template } = ctx;
-	if (template.configure) {
-		await template.configure({ ...ctx });
+		await runCommand([
+			npx,
+			"wrangler",
+			"setup",
+			"--yes",
+			"--no-completion-message",
+			"--no-install-wrangler",
+		]);
+	} else {
+		// Note: This _must_ be called before the configure phase since
+		//       pre-existing workers assume its presence in their configure phase
+		await updateWranglerConfig(ctx);
+
+		const { template } = ctx;
+		if (template.configure) {
+			await template.configure({ ...ctx });
+		}
+
+		addWranglerToGitIgnore(ctx);
+
+		await updatePackageScripts(ctx);
+
+		await addTypes(ctx);
 	}
 
-	addWranglerToGitIgnore(ctx);
-
-	await updatePackageScripts(ctx);
-
-	await addTypes(ctx);
-
+	// Autoconfig doesn't mess with version control, so C3 runs this after autoconfig
 	await offerGit(ctx);
 	await gitCommit(ctx);
 
@@ -194,6 +222,22 @@ const deploy = async (ctx: C3Context) => {
 const printBanner = (args: Partial<C3Args>) => {
 	printWelcomeMessage(version, reporter.isEnabled, args);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
+};
+
+const offerAgentsMd = async (ctx: C3Context) => {
+	ctx.args.agents ??= await processArgument(ctx.args, "agents", {
+		type: "confirm",
+		question:
+			"Do you want to add an AGENTS.md file to help AI coding tools understand Cloudflare APIs?",
+		label: "agents",
+		defaultValue: C3_DEFAULTS.agents,
+	});
+
+	if (!ctx.args.agents) {
+		return;
+	}
+
+	writeAgentsMd(ctx.project.path);
 };
 
 main(process.argv)

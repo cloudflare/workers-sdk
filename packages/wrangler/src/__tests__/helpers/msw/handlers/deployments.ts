@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { expect } from "vitest";
 import { createFetchResult } from "../index";
 
 const latestDeployment = (scriptTag: string) => ({

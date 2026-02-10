@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vite build --app",
 		"build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:nodejs-compat": "vite dev -c ./vite.config.nodejs-compat.ts",
 		"preview": "vite preview",
@@ -21,7 +21,7 @@
 		"@remix-run/cloudflare": "2.12.0",
 		"@types/react": "^18.3.11",
 		"discord-api-types": "0.37.98",
-		"react": "18.3.1",
+		"react": "^19.2.1",
 		"slash-create": "6.2.1",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",

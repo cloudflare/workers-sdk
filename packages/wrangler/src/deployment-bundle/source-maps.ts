@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { BundleResult, SourceMapMetadata } from "./bundle";
-import type { CfModule, CfWorkerSourceMap } from "./worker";
+import type { CfModule, CfWorkerSourceMap } from "@cloudflare/workers-utils";
 import type { RawSourceMap } from "source-map";
 
 /**

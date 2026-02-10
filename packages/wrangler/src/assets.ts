@@ -15,25 +15,23 @@ import {
 	maybeGetFile,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
+import { APIError, FatalError, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
-import { FatalError, UserError } from "./errors";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
-import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import type { StartDevWorkerOptions } from "./api";
-import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 

@@ -460,6 +460,68 @@ describe("multiworker", () => {
 		});
 	});
 
+	describe("Streaming tail consumers", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2025-04-28"
+						compatibility_flags = ["streaming_tail_worker"]
+
+						[[tail_consumers]]
+						service = "${workerName2}"
+
+						[[streaming_tail_consumers]]
+						service = "${workerName2}"
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							console.log("log something")
+							return new Response("hello from a")
+						},
+					};
+					`,
+			});
+
+			b = await makeRoot();
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+						name = "${workerName2}"
+						main = "src/index.ts"
+						compatibility_date = "2025-04-28"
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async tail(event) {
+							console.log("received tail event", event)
+						},
+						async tailStream(event) {
+							console.log("received tail stream event", event)
+						},
+					};
+				`,
+			});
+		});
+
+		it("logs tail event sent to b", async () => {
+			const worker = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await worker.waitForReady(5_000);
+
+			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
+
+			await vi.waitFor(
+				async () =>
+					expect(worker.currentOutput).includes("received tail stream event"),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+	});
+
 	describe("pages", () => {
 		beforeEach(async () => {
 			await baseSeed(a, {
@@ -542,6 +604,75 @@ describe("multiworker", () => {
 			await pages.readUntil(
 				/You cannot use a Pages project as a service binding target/
 			);
+		});
+	});
+
+	describe("scheduled worker warnings", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+
+						[triggers]
+						crons = ["* * * * *"]
+
+						[[services]]
+						binding = "BEE"
+						service = '${workerName2}'
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							return env.BEE.fetch(req);
+						},
+						scheduled(event) {
+							console.log("Worker A scheduled event");
+						}
+					};
+					`,
+			});
+
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+						name = "${workerName2}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+
+						[triggers]
+						crons = ["0 * * * *"]
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							return new Response("hello world");
+						},
+						scheduled(event) {
+							console.log("Worker B scheduled event");
+						}
+					};
+				`,
+			});
+		});
+
+		it("shows warning with correct port when multiple workers have cron triggers", async () => {
+			const worker = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+
+			const { url } = await worker.waitForReady(5_000);
+			const { hostname, port } = new URL(url);
+
+			// The warning should contain the actual port, not "undefined"
+			expect(worker.currentOutput).toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
+			expect(worker.currentOutput).toContain(
+				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+			);
+			expect(worker.currentOutput).not.toContain("undefined");
 		});
 	});
 });

@@ -4,6 +4,16 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
+import {
+	configFileName,
+	formatCompatibilityDate,
+	formatConfigSnippet,
+	getCIGeneratePreviewAlias,
+	getCIOverrideName,
+	getWorkersCIBranchName,
+	ParseError,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import {
 	getAssetsOptions,
@@ -11,7 +21,6 @@ import {
 	validateAssetsArgsAndConfig,
 } from "../assets";
 import { fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -29,16 +38,10 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import {
-	getCIGeneratePreviewAlias,
-	getCIOverrideName,
-	getWorkersCIBranchName,
-} from "../environment-variables/misc-variables";
-import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
-import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
@@ -46,7 +49,6 @@ import { getMetricsUsageHeaders } from "../metrics";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
-import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
@@ -56,19 +58,19 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
+import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {
@@ -270,7 +272,6 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
@@ -460,9 +461,7 @@ export default async function versionsUpload(props: Props): Promise<{
 				}
 			}
 		} catch (e) {
-			// code: 10090, message: workers.api.error.service_not_found
-			// is thrown from the above fetchResult on the first deploy of a Worker
-			if ((e as { code?: number }).code !== 10090) {
+			if (!isWorkerNotFoundError(e)) {
 				throw e;
 			}
 		}
@@ -682,11 +681,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 		});
 
-		// The upload API only accepts an empty string or no specified placement for the "off" mode.
-		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart"
-				? { mode: "smart", hint: config.placement.hint }
-				: undefined;
+		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main = {
@@ -701,6 +696,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
+			containers: config.containers,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -731,6 +727,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			observability: undefined,
 		};
 
+		if (config.containers && config.containers.length > 0) {
+			logger.warn(
+				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+			);
+		}
+
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
@@ -751,7 +753,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker);
-			printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
+			printBindings(
+				{ ...bindings, vars: maskedVars },
+				config.tail_consumers,
+				config.streaming_tail_consumers
+			);
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
@@ -786,14 +792,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
-				printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
+				printBindings(
+					{ ...bindings, vars: maskedVars },
+					config.tail_consumers,
+					config.streaming_tail_consumers
+				);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
 						{ ...bindings, vars: maskedVars },
-						config.tail_consumers
+						config.tail_consumers,
+						config.streaming_tail_consumers
 					);
 				}
 

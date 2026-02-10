@@ -2,6 +2,8 @@ import html from "./index.html?raw";
 import importedImage from "./imported-image.svg";
 import importedText from "./imported-text.txt?url";
 import inlineImage from "./inline-image.svg?inline";
+// Import CSS to ensure this doesn't cause errors
+import "./index.css";
 
 interface Env {
 	ASSETS: Fetcher;

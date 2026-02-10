@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -9,7 +10,6 @@ import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertCfWorkerInitBindingsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import { getRegistryPath } from "../environment-variables/misc-variables";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
@@ -19,10 +19,10 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
-import type { Config } from "../config";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
+import type { Config } from "@cloudflare/workers-utils";
 import type { watch } from "chokidar";
 
 /**
@@ -78,9 +78,12 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		if (Array.isArray(args.config)) {
-			const runtime = new MultiworkerRuntimeController(args.config.length);
-
-			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
+			const numWorkers = args.config.length;
+			const primaryDevEnv = new DevEnv({
+				runtimeFactories: [
+					(d) => new MultiworkerRuntimeController(d, numWorkers),
+				],
+			});
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
@@ -94,18 +97,14 @@ export async function startDev(args: StartDevOptions) {
 			devEnv.push(
 				...(await Promise.all(
 					(args.config as string[]).slice(1).map((c) => {
-						return setupDevEnv(
-							new DevEnv({
-								runtimes: [runtime],
-								proxy: new NoOpProxyController(),
-							}),
-							c,
-							authHook,
-							{
-								disableDevRegistry: args.disableDevRegistry,
-								multiworkerPrimary: false,
-							}
-						);
+						const auxDevEnv = new DevEnv({
+							runtimeFactories: [() => primaryDevEnv.runtimes[0]],
+							proxyFactory: (d) => new NoOpProxyController(d),
+						});
+						return setupDevEnv(auxDevEnv, c, authHook, {
+							disableDevRegistry: args.disableDevRegistry,
+							multiworkerPrimary: false,
+						});
 					})
 				))
 			);
@@ -145,6 +144,15 @@ export async function startDev(args: StartDevOptions) {
 					})
 				);
 			}
+
+			// Print scheduled worker warning with the actual public URL
+			const allDevEnvs = [primaryDevEnv, ...secondary];
+			const hasCrons = allDevEnvs.some(
+				(env) =>
+					env.config.latestConfig?.triggers?.some((t) => t.type === "cron") ??
+					false
+			);
+			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
 		});
 
 		return {
@@ -247,8 +255,12 @@ async function setupDevEnv(
 			},
 			dev: {
 				auth,
-				remote:
-					args.remote || (args.forceLocal || args.local ? false : undefined),
+				remote: args.enablePagesAssetsServiceBinding
+					? // When running `wrangler pages dev` we want `remote` to be `undefined` since that's the
+						// only supported mode for pages (note: we can't set it to `false` as that would break
+						// the AI binding)
+						undefined
+					: args.remote || (args.forceLocal || args.local ? false : undefined),
 				server: {
 					hostname: args.ip,
 					port: args.port,
@@ -260,6 +272,7 @@ async function setupDevEnv(
 					httpsKeyPath: args.httpsKeyPath,
 				},
 				inspector: {
+					hostname: args.inspectorIp,
 					port: args.inspectorPort,
 				},
 				origin: {
@@ -279,6 +292,7 @@ async function setupDevEnv(
 				dockerPath: args.dockerPath,
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
+				generateTypes: args.types,
 			},
 			legacy: {
 				site: (configParam) => {
@@ -297,6 +311,9 @@ async function setupDevEnv(
 				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
+			experimental: {
+				tailLogs: !!args.experimentalTailLogs,
+			},
 		} satisfies StartDevWorkerInput,
 		true
 	);
@@ -338,5 +355,35 @@ function getResolvedSiteAssetPaths(
 		args.site,
 		args.siteInclude,
 		args.siteExclude
+	);
+}
+
+/**
+ * Logs a warning about scheduled workers not being automatically triggered
+ * during local development. This should be called after the server is ready
+ * and the actual URL is known.
+ */
+function maybePrintScheduledWorkerWarning(
+	hasCrons: boolean,
+	testScheduled: boolean,
+	url: URL
+): void {
+	if (!hasCrons || testScheduled) {
+		return;
+	}
+
+	const host =
+		url.hostname === "0.0.0.0" || url.hostname === "::"
+			? "localhost"
+			: url.hostname.includes(":")
+				? `[${url.hostname}]`
+				: url.hostname;
+	const port = url.port;
+
+	logger.once.warn(
+		`Scheduled Workers are not automatically triggered during local development.\n` +
+			`To manually trigger a scheduled event, run:\n` +
+			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
+			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
 }

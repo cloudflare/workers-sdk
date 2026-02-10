@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { setTimeout } from "timers/promises";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
 import { Browser, chromium } from "playwright-chromium";
 import { afterAll, beforeAll, describe, it } from "vitest";

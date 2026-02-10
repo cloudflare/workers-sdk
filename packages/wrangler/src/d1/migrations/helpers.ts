@@ -1,15 +1,14 @@
 import fs from "node:fs";
-import path from "path";
-import { configFileName } from "../../config";
+import path from "node:path";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { confirm } from "../../dialogs";
-import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
-import type { Config } from "../../config";
 import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export async function getMigrationsPath({
 	projectPath,

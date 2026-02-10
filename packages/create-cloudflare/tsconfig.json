@@ -13,8 +13,8 @@
 	],
 	"compilerOptions": {
 		"target": "ESNext",
-		"module": "CommonJS",
-		"moduleResolution": "node",
+		"module": "preserve",
+		"moduleResolution": "bundler",
 		"allowJs": true,
 		"strict": true,
 		"esModuleInterop": true,

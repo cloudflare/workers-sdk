@@ -1,24 +1,29 @@
+import {
+	bucketFormatMessage,
+	isValidR2BucketName,
+	UserError,
+} from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { sharedResourceCreationArgs, updateConfigFile } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {
-	bucketFormatMessage,
 	createR2Bucket,
 	deleteR2Bucket,
 	getR2Bucket,
 	getR2BucketMetrics,
-	isValidR2BucketName,
 	listR2Buckets,
-	tablefromR2BucketsListResponse,
+	tableFromR2BucketsListResponse,
 	updateR2BucketStorageClass,
-} from "./helpers";
+} from "./helpers/bucket";
 
 export const r2BucketNamespace = createNamespace({
 	metadata: {
@@ -97,7 +102,7 @@ export const r2BucketCreateCommand = createCommand({
 				location ? ` location hint ${location} and` : ``
 			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"r2_buckets",
 			(bindingName) => ({
 				bucket_name: args.name,
@@ -192,7 +197,7 @@ export const r2BucketListCommand = createCommand({
 		logger.log(`Listing buckets...`);
 
 		const buckets = await listR2Buckets(config, accountId, args.jurisdiction);
-		const tableOutput = tablefromR2BucketsListResponse(buckets);
+		const tableOutput = tableFromR2BucketsListResponse(buckets);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 	},
 });

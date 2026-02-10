@@ -1,12 +1,14 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import * as TOML from "@iarna/toml";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
+import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
-import { vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";
@@ -17,9 +19,8 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { RawConfig } from "../config";
-import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { RawConfig, UserLimits } from "@cloudflare/workers-utils";
 import type { Mock } from "vitest";
 
 describe("init", () => {
@@ -68,18 +69,14 @@ describe("init", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0\`...",
+				🌀 Running \`mockpm create cloudflare\`...",
 				  "warn": "",
 				}
 			`);
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare@^2.5.0"],
-				{
-					stdio: "inherit",
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 
 		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
@@ -87,9 +84,57 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@^2.5.0", "--wrangler-defaults"],
-				{ stdio: "inherit" }
+				["create", "cloudflare", "--wrangler-defaults"],
+				{
+					stdio: ["inherit", "pipe", "pipe"],
+				}
 			);
+		});
+
+		describe("with yarn package manager", () => {
+			beforeEach(() => {
+				mockPackageManager = {
+					type: "yarn",
+					npx: "yarn",
+					dlx: ["yarn", "dlx"],
+				};
+				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
+
+				// Update the mock to handle "yarn" for these tests
+				(execa as Mock).mockImplementation((command: string) => {
+					if (command === "yarn" || command === "mockpm") {
+						return Promise.resolve();
+					}
+					return Promise.reject(new Error(`Unexpected command: ${command}`));
+				});
+			});
+
+			test("uses C3 command without version specifier for yarn", async () => {
+				await runWrangler("init");
+
+				// No version specifier needed since C3 has auto-update behavior
+				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
+					stdio: ["inherit", "pipe", "pipe"],
+				});
+			});
+
+			test("uses C3 command without version specifier when using --from-dash with yarn", async () => {
+				await runWrangler("init --from-dash my-worker");
+
+				expect(execa).toHaveBeenCalledWith(
+					"yarn",
+					[
+						"create",
+						"cloudflare",
+						"my-worker",
+						"--existing-script",
+						"my-worker",
+					],
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+					}
+				);
+			});
 		});
 
 		describe("with custom C3 command", () => {
@@ -127,7 +172,7 @@ describe("init", () => {
 					"mockpm",
 					["run", "create-cloudflare"],
 					{
-						stdio: "inherit",
+						stdio: ["inherit", "pipe", "pipe"],
 					}
 				);
 			});
@@ -138,7 +183,9 @@ describe("init", () => {
 				expect(execa).toHaveBeenCalledWith(
 					"mockpm",
 					["run", "create-cloudflare", "--wrangler-defaults"],
-					{ stdio: "inherit" }
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+					}
 				);
 			});
 		});
@@ -152,16 +199,12 @@ describe("init", () => {
 			});
 			await runWrangler("init");
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare@^2.5.0"],
-				{
-					env: {
-						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
-					},
-					stdio: "inherit",
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				env: {
+					CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+				},
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 	});
 
@@ -170,6 +213,7 @@ describe("init", () => {
 			main = "src/index.js",
 			id = "isolinear-optical-chip",
 			usage_model = "bundled",
+			tags = [],
 			compatibility_date = "1987-09-27",
 			content = dedent/*javascript*/ `
 							export default {
@@ -201,6 +245,12 @@ describe("init", () => {
 					class_name: "Durability",
 					script_name: "another-durable-object-worker",
 					environment: "production",
+				},
+				{
+					type: "durable_object_namespace",
+					name: "DURABLE_TEST_SAME_WORKER",
+					class_name: "DurabilitySameWorker",
+					script_name: "isolinear-optical-chip",
 				},
 				{
 					type: "kv_namespace",
@@ -326,6 +376,7 @@ describe("init", () => {
 		}: {
 			main?: string;
 			id?: string;
+			tags?: string[];
 			usage_model?: string;
 			compatibility_date?: string | null;
 			content?: string | FormData;
@@ -348,6 +399,7 @@ describe("init", () => {
 						script: {
 							id,
 							tag: "test-tag",
+							tags,
 							etag: "some-etag",
 							handlers: [],
 							modified_on: "1987-09-27",
@@ -401,7 +453,7 @@ describe("init", () => {
 			name: "isolinear-optical-chip",
 			migrations: [
 				{
-					new_classes: ["Durability"],
+					new_classes: ["DurabilitySameWorker"],
 					tag: "some-migration-tag",
 				},
 			],
@@ -413,13 +465,17 @@ describe("init", () => {
 						script_name: "another-durable-object-worker",
 						environment: "production",
 					},
+					{
+						class_name: "DurabilitySameWorker",
+						name: "DURABLE_TEST_SAME_WORKER",
+						script_name: "isolinear-optical-chip",
+					},
 				],
 			},
 			d1_databases: [
 				{
 					binding: "DB",
 					database_id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
-					database_name: "mydb",
 				},
 			],
 			kv_namespaces: [
@@ -705,6 +761,7 @@ describe("init", () => {
 				),
 				http.get(
 					`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
+					// @ts-expect-error Something's up with the MSW types
 					async () => {
 						if (typeof worker.content === "string") {
 							return HttpResponse.text(worker.content, {
@@ -783,7 +840,7 @@ describe("init", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
+				🌀 Running \`mockpm create cloudflare existing-memory-crystal --existing-script existing-memory-crystal\`...",
 				  "warn": "",
 				}
 			`);
@@ -793,12 +850,14 @@ describe("init", () => {
 				"mockpm",
 				[
 					"create",
-					"cloudflare@^2.5.0",
+					"cloudflare",
 					"existing-memory-crystal",
 					"--existing-script",
 					"existing-memory-crystal",
 				],
-				{ stdio: "inherit" }
+				{
+					stdio: ["inherit", "pipe", "pipe"],
+				}
 			);
 		});
 		it("should download routes + custom domains + workers dev", async () => {
@@ -918,7 +977,7 @@ describe("init", () => {
 					    {
 					      \\"tag\\": \\"some-migration-tag\\",
 					      \\"new_classes\\": [
-					        \\"Durability\\"
+					        \\"DurabilitySameWorker\\"
 					      ]
 					    }
 					  ],
@@ -946,6 +1005,11 @@ describe("init", () => {
 					        \\"class_name\\": \\"Durability\\",
 					        \\"script_name\\": \\"another-durable-object-worker\\",
 					        \\"environment\\": \\"production\\"
+					      },
+					      {
+					        \\"name\\": \\"DURABLE_TEST_SAME_WORKER\\",
+					        \\"class_name\\": \\"DurabilitySameWorker\\",
+					        \\"script_name\\": \\"isolinear-optical-chip\\"
 					      }
 					    ]
 					  },
@@ -998,8 +1062,7 @@ describe("init", () => {
 					  \\"d1_databases\\": [
 					    {
 					      \\"binding\\": \\"DB\\",
-					      \\"database_id\\": \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\",
-					      \\"database_name\\": \\"mydb\\"
+					      \\"database_id\\": \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\"
 					    }
 					  ],
 					  \\"data_blobs\\": {

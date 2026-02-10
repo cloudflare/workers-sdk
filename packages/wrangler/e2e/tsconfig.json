@@ -6,5 +6,5 @@
 		"jsx": "preserve" // not used, but required for import of types (which transitively import jsx)
 	},
 	"include": ["vitest.config.mts", "**/*.ts", "../src/*.d.ts", "**/*.js"],
-	"exclude": []
+	"exclude": ["**/fixtures"]
 }

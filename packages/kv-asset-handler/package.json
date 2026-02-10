@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/kv-asset-handler",
-	"version": "0.4.0",
+	"version": "0.4.2",
 	"description": "Routes requests to KV assets",
 	"keywords": [
 		"kv",
@@ -20,34 +20,32 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [
 		"src",
-		"dist",
-		"!src/test",
-		"!dist/test"
+		"dist"
 	],
 	"scripts": {
-		"build": "tsc -d",
-		"check:lint": "eslint . --max-warnings=0",
+		"build": "tsup",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"prepack": "npm run build",
 		"pretest": "npm run build",
-		"test": "ava dist/test/*.js --verbose",
-		"test:ci": "npm run build && ava dist/test/*.js --verbose"
-	},
-	"dependencies": {
-		"mime": "^3.0.0"
+		"test": "vitest",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^4.1.0",
+		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
-		"@types/service-worker-mock": "^2.0.1",
-		"ava": "^6.0.1",
-		"service-worker-mock": "^2.0.5"
+		"eslint": "catalog:default",
+		"mime": "^3.0.0",
+		"tsup": "8.3.0",
+		"vitest": "~2.1.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"

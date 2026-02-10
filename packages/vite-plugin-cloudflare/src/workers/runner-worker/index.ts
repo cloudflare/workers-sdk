@@ -4,13 +4,24 @@ import {
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
 import {
+	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
+	IS_PARENT_ENVIRONMENT_HEADER,
 	WORKER_ENTRY_PATH_HEADER,
 } from "../../shared";
 import { stripInternalEnv } from "./env";
 import { maybeCaptureError } from "./errors";
-import { getWorkerEntryExport } from "./module-runner";
+import {
+	DURABLE_OBJECT_KEYS,
+	IGNORED_KEYS,
+	WORKER_ENTRYPOINT_KEYS,
+	WORKFLOW_ENTRYPOINT_KEYS,
+} from "./keys";
+import {
+	getWorkerEntryExport,
+	getWorkerEntryExportTypes,
+} from "./module-runner";
 import type { WrapperEnv } from "./env";
 
 export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
@@ -44,31 +55,6 @@ interface WorkflowEntrypointConstructor<T = Cloudflare.Env> {
 		...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
 	): WorkflowEntrypoint<T>;
 }
-
-/** Keys that should be ignored during RPC property access */
-const IGNORED_KEYS = ["self", "tailStream"] as const;
-
-/** Available methods for `WorkerEntrypoint` class */
-const WORKER_ENTRYPOINT_KEYS = [
-	"fetch",
-	"queue",
-	"tail",
-	"test",
-	"trace",
-	"scheduled",
-] as const;
-
-/** Available methods for `DurableObject` class */
-const DURABLE_OBJECT_KEYS = [
-	"alarm",
-	"fetch",
-	"webSocketClose",
-	"webSocketError",
-	"webSocketMessage",
-] as const;
-
-/** Available methods for `WorkflowEntrypoint` classes */
-const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
 /** The path to the Worker entry file. We store it in the module scope so that it is easily accessible in error messages etc.. */
 let workerEntryPath = "";
@@ -228,33 +214,46 @@ export function createWorkerEntrypointWrapper(
 
 					// Initialize the module runner
 					if (url.pathname === INIT_PATH) {
-						const workerEntryPathHeader = request.headers.get(
-							WORKER_ENTRY_PATH_HEADER
+						const isParentEnvironmentHeader = request.headers.get(
+							IS_PARENT_ENVIRONMENT_HEADER
 						);
 
-						if (!workerEntryPathHeader) {
-							throw new Error(
-								`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+						// Only set Worker variables when initializing the parent environment
+						if (isParentEnvironmentHeader === "true") {
+							const workerEntryPathHeader = request.headers.get(
+								WORKER_ENTRY_PATH_HEADER
 							);
+
+							if (!workerEntryPathHeader) {
+								throw new Error(
+									`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+								);
+							}
+
+							const isEntryWorkerHeader = request.headers.get(
+								IS_ENTRY_WORKER_HEADER
+							);
+
+							if (!isEntryWorkerHeader) {
+								throw new Error(
+									`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
+								);
+							}
+
+							workerEntryPath = decodeURIComponent(workerEntryPathHeader);
+							isEntryWorker = isEntryWorkerHeader === "true";
 						}
 
-						const isEntryWorkerHeader = request.headers.get(
-							IS_ENTRY_WORKER_HEADER
-						);
-
-						if (!isEntryWorkerHeader) {
-							throw new Error(
-								`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
-							);
-						}
-
-						// Set the Worker entry path
-						workerEntryPath = decodeURIComponent(workerEntryPathHeader);
-						isEntryWorker = isEntryWorkerHeader === "true";
 						const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
 						// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
 						return stub.fetch(request);
+					}
+
+					if (url.pathname === GET_EXPORT_TYPES_PATH) {
+						const workerEntryExportTypes = await getWorkerEntryExportTypes();
+
+						return Response.json(workerEntryExportTypes);
 					}
 				}
 
@@ -442,6 +441,7 @@ export function createDurableObjectWrapper(
 				);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			return (maybeFn as (...args: unknown[]) => any).apply(instance, args);
 		};
 	}
@@ -483,6 +483,7 @@ export function createWorkflowEntrypointWrapper(
 				);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			return (maybeFn as (...args: unknown[]) => any).apply(instance, args);
 		};
 	}

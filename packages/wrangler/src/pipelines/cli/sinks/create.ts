@@ -1,7 +1,11 @@
+import {
+	bucketFormatMessage,
+	CommandLineArgsError,
+	isValidR2BucketName,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { createCommand } from "../../../core/create-command";
-import { CommandLineArgsError, UserError } from "../../../errors";
 import { logger } from "../../../logger";
-import { bucketFormatMessage, isValidR2BucketName } from "../../../r2/helpers";
 import { requireAuth } from "../../../user";
 import { createSink } from "../../client";
 import { applyDefaultsToSink, SINK_DEFAULTS } from "../../defaults";
@@ -23,7 +27,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new sink",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	positionalArgs: ["sink"],
 	args: {

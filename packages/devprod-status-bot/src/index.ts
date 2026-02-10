@@ -1,4 +1,6 @@
+import dedent from "ts-dedent";
 import type {
+	CheckRunCompletedEvent,
 	IssueCommentEvent,
 	IssuesEvent,
 	Schema,
@@ -26,46 +28,123 @@ async function getBotMessage(ai: Ai, prompt: string) {
 	return message.response;
 }
 
+async function isWranglerTeamMember(
+	apiToken: string,
+	username: string
+): Promise<boolean> {
+	try {
+		const response = await fetch(
+			`https://api.github.com/orgs/cloudflare/teams/wrangler/memberships/${username}`,
+			{
+				headers: {
+					"User-Agent": "Cloudflare ANT Status bot",
+					Authorization: `Bearer ${apiToken}`,
+					Accept: "application/vnd.github+json",
+				},
+			}
+		);
+
+		return response.status === 200;
+	} catch (error) {
+		// If there's an error checking membership, default to false
+		console.error("Error checking team membership:", error);
+		return false;
+	}
+}
+
 async function checkForSecurityIssue(
 	ai: Ai,
+	apiToken: string,
 	message: Schema
-): Promise<IssuesEvent | IssueCommentEvent | null> {
-	if (!isIssueEvent(message)) {
+): Promise<null | {
+	type: "issue" | "pr";
+	issueEvent: IssuesEvent | IssueCommentEvent;
+	reasoning: string;
+}> {
+	const result = isIssueOrPREvent(message);
+	if (!result) {
 		return null;
 	}
-	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
 
-Issue Title: ${message.issue.title}
+	if (await isWranglerTeamMember(apiToken, result.event.issue.user.login)) {
+		return null;
+	}
 
-Issue Body: ${message.issue.body || ""}
+	// Ignore dependabot updates
+	if (result.event.issue.user.login === "dependabot[bot]") {
+		return null;
+	}
 
-Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
+	// Ignore our own bot's PRs (e.g. Version Packages)
+	if (result.event.issue.user.login === "workers-devprod") {
+		return null;
+	}
 
-Look for keywords and patterns that suggest this is a security report, such as:
-- Vulnerability, exploit, security flaw, CVE
-- Authentication bypass, privilege escalation
-- XSS, SQL injection, CSRF, RCE
-- Unauthorized access, data exposure
-- Security disclosure, responsible disclosure
+	const systemRole = dedent`
+		## System Role:
+		You are an expert Security Triage Analyst and a software developer with deep knowledge of Common Weakness Enumeration (CWE) and security best practices. Your task is to analyze a GitHub Issue and determine the likelihood that it is reporting a genuine security vulnerability or exploit (not just a functional bug).
+	`;
+	const prompt = dedent`
+		## Task
+		Analyze the provided GitHub Issue details (Title, Body, Comments, Labels) and classify it into one of two categories: "SECURITY VULNERABILITY" or "GENERAL BUG/FEATURE".
 
-Respond with only "YES" if this appears to be a security-related issue, or "NO" if it appears to be a regular bug report or feature request.`;
+		## Analysis Guidelines
+		Focus your analysis on identifying language, context, and details indicative of a security report. Key indicators include, but are not limited to:
+		- Impact: Does the issue describe a potential compromise of Confidentiality, Integrity, or Availability (CIA)? (e.g., unauthorized access, data loss, denial of service).
+		- Vulnerability Types: Mentions of common exploit classes (e.g., XSS, SQL Injection, Buffer Overflow, RCE, CSRF, insecure deserialization, broken access control, hardcoded secrets).
+		- Proof of Concept (PoC): Contains exploit steps, malicious input, stack traces, specific functions used to bypass security controls, or references to attack vectors.
+		- Terminology: Use of words like "exploit," "attack," "unauthorized," "bypass," "inject," "tainted," "secret," "leak," "data breach," or "DoS/DDoS."
+		- User/Privilege Context: Descriptions of an action an unprivileged user can take to affect privileged resources or other users.
 
-	const chat = {
-		messages: [
-			{
-				role: "system",
-				content:
-					"You are a security analyst assistant that helps identify potential security vulnerability reports in GitHub issues. Respond only with YES or NO.",
-			},
-			{
-				role: "user",
-				content: prompt,
-			},
-		] as RoleScopedChatInput[],
-	};
+		## GitHub Issue Details:
+		Issue Title: ${result.event.issue.title}
+		Issue Body: ${result.event.issue.body || ""}
+		Changed Comment: ${"comment" in result.event ? result.event.comment.body : "N/A"}
 
-	const aiMessage = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
-	return aiMessage.response?.trim().toUpperCase() === "YES" ? message : null;
+		Look for keywords and patterns that suggest this is a security report, such as:
+		- Vulnerability, exploit, security flaw, CVE
+		- Authentication bypass, privilege escalation
+		- XSS, SQL injection, CSRF, RCE
+		- Unauthorized access, data exposure
+		- Security disclosure, responsible disclosure
+
+		## Output Format
+		Provide your response in the following structured Markdown format:
+
+		\`\`\`
+		## Triage Summary
+		Classification: [SECURITY VULNERABILITY or GENERAL BUG/FEATURE]
+		Confidence Level: [Low, Medium, or High]
+
+		## Rationale
+		[Explain in 2-3 concise sentences *why* you chose the classification. Highlight the specific keywords, behavior, or described impact that led to your decision.]
+
+		## Key Security Indicators Found
+		* [List specific keywords, code snippets, or user actions from the issue that suggest a vulnerability.]
+		* [Example: Describes using a special character in a username to execute a script (XSS).]
+		* [Example: Mentions an unauthenticated API endpoint that returns sensitive user data.]
+		\`\`\`
+	`;
+
+	const { response } = await ai.run(
+		"@cf/mistralai/mistral-small-3.1-24b-instruct",
+		{
+			messages: [
+				{ role: "system", content: systemRole },
+				{ role: "user", content: prompt },
+			],
+		}
+	);
+
+	if (!response?.includes("SECURITY VULNERABILITY")) {
+		return null;
+	} else {
+		return {
+			type: result.type,
+			issueEvent: result.event,
+			reasoning: response,
+		};
+	}
 }
 
 type ProjectGQLResponse = {
@@ -77,11 +156,11 @@ type ProjectGQLResponse = {
 		};
 	};
 };
-async function getProjectId(pat: string) {
+async function getProjectId(apiToken: string) {
 	const data = await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -100,11 +179,11 @@ type PRGQLResponse = {
 		};
 	};
 };
-async function getPRId(pat: string, repo: string, number: string) {
+async function getPRId(apiToken: string, repo: string, number: string) {
 	const data = await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -121,13 +200,13 @@ async function getPRId(pat: string, repo: string, number: string) {
 	return data.data.repository.pullRequest.id;
 }
 
-async function addPRToProject(pat: string, repo: string, number: string) {
-	const projectId = await getProjectId(pat);
-	const prId = await getPRId(pat, repo, number);
+async function addPRToProject(apiToken: string, repo: string, number: string) {
+	const projectId = await getProjectId(apiToken);
+	const prId = await getPRId(apiToken, repo, number);
 	return await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -178,24 +257,114 @@ async function sendMessage(
 	console.log(await response.json());
 }
 
-function isIssueEvent(
+function isIssueOrPREvent(
 	message: WebhookEvent
-): message is IssuesEvent | IssueCommentEvent {
+): { type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent } | null {
 	if (
 		"issue" in message &&
 		(message.action === "opened" ||
 			message.action === "reopened" ||
 			message.action === "edited")
 	) {
-		return true;
+		const isPR = "pull_request" in message.issue;
+		return {
+			type: isPR ? "pr" : "issue",
+			event: message as IssuesEvent | IssueCommentEvent,
+		};
 	}
-	return false;
+	return null;
+}
+
+// Repository advisory event type (not yet in @octokit/webhooks-types)
+interface RepositoryAdvisoryEvent {
+	action: "reported" | "published";
+	repository_advisory: {
+		ghsa_id: string;
+		html_url: string;
+		summary: string;
+		description: string;
+	};
+}
+
+function isRepositoryAdvisoryEvent(
+	message: WebhookEvent
+): RepositoryAdvisoryEvent | null {
+	if (
+		"repository_advisory" in message &&
+		"action" in message &&
+		message.action === "reported"
+	) {
+		return message as RepositoryAdvisoryEvent;
+	}
+	return null;
+}
+
+function isCheckRunCompleted(
+	message: WebhookEvent
+): message is CheckRunCompletedEvent {
+	return (
+		"action" in message &&
+		message.action === "completed" &&
+		"check_run" in message
+	);
+}
+
+/**
+ * Returns information about a failed Version Packages PR check run, or null if the event is not relevant.
+ */
+function isVersionPackagesPRCheckRun(message: WebhookEvent): {
+	checkRun: CheckRunCompletedEvent["check_run"];
+	prNumber: number;
+	owner: string;
+	repo: string;
+} | null {
+	if (!isCheckRunCompleted(message)) {
+		return null;
+	}
+
+	const checkRun = message.check_run;
+
+	// Only process failures and timeouts (not cancelled)
+	if (
+		checkRun.conclusion !== "failure" &&
+		checkRun.conclusion !== "timed_out"
+	) {
+		return null;
+	}
+
+	// Check if this is from the changeset-release/main branch
+	if (checkRun.check_suite.head_branch !== "changeset-release/main") {
+		return null;
+	}
+
+	// Get the PR number from pull_requests array
+	const pr = checkRun.pull_requests[0];
+	if (!pr) {
+		return null;
+	}
+
+	return {
+		checkRun,
+		prNumber: pr.number,
+		owner: message.repository.owner.login,
+		repo: message.repository.name,
+	};
 }
 
 async function sendSecurityAlert(
 	webhookUrl: string,
-	issue: IssuesEvent | IssueCommentEvent
+	{
+		type,
+		issueEvent,
+		reasoning,
+	}: {
+		type: "issue" | "pr";
+		issueEvent: IssuesEvent | IssueCommentEvent;
+		reasoning: string;
+	}
 ) {
+	const itemType = type === "pr" ? "PR" : "Issue";
+
 	return sendMessage(
 		webhookUrl,
 		{
@@ -204,9 +373,9 @@ async function sendSecurityAlert(
 					cardId: "unique-card-id",
 					card: {
 						header: {
-							title: "🚨 Potential Security Issue Detected",
-							subtitle: `Issue #${issue.issue.number} in ${issue.repository.full_name}`,
-							imageUrl: issue.sender.avatar_url,
+							title: `🚨 Potential Security ${itemType} Detected`,
+							subtitle: `${itemType} #${issueEvent.issue.number} in ${issueEvent.repository.full_name}`,
+							imageUrl: issueEvent.issue.user.avatar_url,
 							imageType: "CIRCLE",
 							imageAltText: "Reporter Avatar",
 						},
@@ -216,17 +385,17 @@ async function sendSecurityAlert(
 								widgets: [
 									{
 										textParagraph: {
-											text: `<b>Title:</b> ${issue.issue.title}\n\n<b>Reporter:</b> ${issue.sender.login}`,
+											text: `<b>Title:</b> ${issueEvent.issue.title}\n\n<b>Reporter:</b> ${issueEvent.issue.user.login}`,
 										},
 									},
 									{
 										buttonList: {
 											buttons: [
 												{
-													text: "View Issue",
+													text: `View ${itemType}`,
 													onClick: {
 														openLink: {
-															url: issue.issue.html_url,
+															url: issueEvent.issue.html_url,
 														},
 													},
 												},
@@ -241,7 +410,7 @@ async function sendSecurityAlert(
 								widgets: [
 									{
 										textParagraph: {
-											text: issue.issue.body || "No description provided",
+											text: reasoning,
 										},
 									},
 								],
@@ -251,7 +420,146 @@ async function sendSecurityAlert(
 				},
 			],
 		},
-		"-security-alert-" + issue.issue.number
+		"-security-alert-" + issueEvent.issue.number
+	);
+}
+
+async function sendRepositoryAdvisoryAlert(
+	webhookUrl: string,
+	advisoryEvent: RepositoryAdvisoryEvent
+) {
+	const advisory = advisoryEvent.repository_advisory;
+
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "unique-card-id",
+					card: {
+						header: {
+							title: `🔐 Repository Security Advisory Reported`,
+							subtitle: advisory.summary,
+						},
+						sections: [
+							{
+								collapsible: true,
+								widgets: [
+									{
+										textParagraph: {
+											text: advisory.description,
+										},
+									},
+								],
+							},
+							{
+								collapsible: false,
+								widgets: [
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Advisory",
+													onClick: {
+														openLink: {
+															url: advisory.html_url,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"-repository-advisory-" + advisory.ghsa_id
+	);
+}
+
+/**
+ * Formats a duration given start and end timestamps as a string in "Mins Secs" format.
+ */
+function formatDuration(startedAt: string, completedAt: string): string {
+	const start = new Date(startedAt).getTime();
+	const end = new Date(completedAt).getTime();
+	const durationMs = end - start;
+	const minutes = Math.floor(durationMs / 60000);
+	const seconds = Math.floor((durationMs % 60000) / 1000);
+	return `${minutes}m ${seconds}s`;
+}
+
+async function sendVersionPackagesCIFailureAlert(
+	webhookUrl: string,
+	{
+		checkRun,
+		prNumber,
+		owner,
+		repo,
+	}: {
+		checkRun: CheckRunCompletedEvent["check_run"];
+		prNumber: number;
+		owner: string;
+		repo: string;
+	}
+) {
+	const conclusionEmoji = checkRun.conclusion === "timed_out" ? "⏱️" : "❌";
+	const conclusionText =
+		checkRun.conclusion === "timed_out" ? "Timed out" : "Failed";
+
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: `vp-ci-failure-${checkRun.id}`,
+					card: {
+						header: {
+							title: `${conclusionEmoji} CI Check ${conclusionText} on Version Packages PR`,
+							subtitle: `PR #${prNumber} in ${owner}/${repo}`,
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Check:</b> ${checkRun.name}\n<b>Conclusion:</b> ${conclusionText}\n<b>Duration:</b> ${formatDuration(checkRun.started_at, checkRun.completed_at)}`,
+										},
+									},
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Check Run",
+													onClick: {
+														openLink: {
+															url: checkRun.html_url,
+														},
+													},
+												},
+												{
+													text: "View PR",
+													onClick: {
+														openLink: {
+															url: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		`-vp-ci-failure-pr-${prNumber}`
 	);
 }
 
@@ -413,12 +721,34 @@ export default {
 				crypto.randomUUID()
 			);
 		}
+
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 
-			const maybeSecurityIssue = await checkForSecurityIssue(env.AI, body);
+			const maybeSecurityIssue = await checkForSecurityIssue(
+				env.AI,
+				env.GITHUB_PAT,
+				body
+			);
+			// Flags suspicious issues/PRs for review
 			if (maybeSecurityIssue) {
 				await sendSecurityAlert(env.ALERTS_WEBHOOK, maybeSecurityIssue);
+			}
+			// Notifies when a repository advisory is reported to workers-sdk
+			const maybeRepositoryAdvisory = isRepositoryAdvisoryEvent(body);
+			if (maybeRepositoryAdvisory) {
+				await sendRepositoryAdvisoryAlert(
+					env.ALERTS_WEBHOOK,
+					maybeRepositoryAdvisory
+				);
+			}
+			// Notifies when any CI check fails on the Version Packages PR
+			const maybeVersionPackagesFailure = isVersionPackagesPRCheckRun(body);
+			if (maybeVersionPackagesFailure) {
+				await sendVersionPackagesCIFailureAlert(
+					env.ALERTS_WEBHOOK,
+					maybeVersionPackagesFailure
+				);
 			}
 		}
 

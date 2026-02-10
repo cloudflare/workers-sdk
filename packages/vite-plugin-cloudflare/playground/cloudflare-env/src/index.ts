@@ -3,7 +3,7 @@ interface Env {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(_, env) {
 		return new Response(env.MY_VAR);
 	},
 } satisfies ExportedHandler<Env>;

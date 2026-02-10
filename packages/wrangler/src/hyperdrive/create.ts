@@ -1,6 +1,6 @@
-import { updateConfigFile } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { createConfig } from "./client";
 import { capitalizeScheme } from "./shared";
@@ -29,11 +29,6 @@ export const hyperdriveCreateCommand = createCommand({
 			type: "string",
 			description: "The binding name of this resource in your Worker",
 		},
-		"use-remote": {
-			type: "boolean",
-			description:
-				"Use a remote binding when adding the newly created resource to your config",
-		},
 		"update-config": {
 			type: "boolean",
 			description:
@@ -56,7 +51,7 @@ export const hyperdriveCreateCommand = createCommand({
 			`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`
 		);
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"hyperdrive",
 			(name) => ({
 				binding: getValidBindingName(name ?? "HYPERDRIVE", "HYPERDRIVE"),
@@ -64,7 +59,10 @@ export const hyperdriveCreateCommand = createCommand({
 			}),
 			config.configPath,
 			args.env,
-			args
+			{
+				...args,
+				useRemote: false, // Hyperdrive does not support remote bindings in local dev
+			}
 		);
 	},
 });

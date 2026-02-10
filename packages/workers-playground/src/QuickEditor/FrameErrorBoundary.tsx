@@ -28,7 +28,6 @@ class FrameErrorBoundary extends React.Component<
 	}
 
 	render() {
-		// eslint-disable-next-line react/prop-types
 		const { fallback, children } = this.props;
 		const { hasError } = this.state;
 		return hasError ? <FrameError>{fallback}</FrameError> : children;

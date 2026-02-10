@@ -1,4 +1,8 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
+import { beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockPrompt } from "../helpers/mock-dialogs";
@@ -6,7 +10,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockGetQueueByNameRequest } from "./mock-utils";
 import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
 

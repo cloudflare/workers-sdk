@@ -2,6 +2,7 @@
  * Note! Much of this is copied and modified from cloudchamber/apply.ts
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
+import assert from "node:assert";
 import {
 	endSection,
 	log,
@@ -19,19 +20,29 @@ import {
 	resolveImageName,
 	RolloutsService,
 } from "@cloudflare/containers-shared";
-import { promiseSpinner } from "../cloudchamber/common";
+import {
+	FatalError,
+	formatConfigSnippet,
+	getDockerPath,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
-import { formatConfigSnippet } from "../config";
-import { FatalError, UserError } from "../errors";
+import { buildContainer } from "../containers/build";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
+import { fetchVersion } from "../versions/api";
+import { containersScope } from ".";
 import type { ImageRef } from "../cloudchamber/build";
-import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
+import type { ApiVersion } from "../versions/types";
 import type {
 	Application,
 	ApplicationID,
@@ -42,7 +53,129 @@ import type {
 	Observability as ObservabilityConfiguration,
 	RolloutStepRequest,
 } from "@cloudflare/containers-shared";
+import type {
+	ComplianceConfig,
+	Config,
+	ContainerApp,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 
+type DeployContainersArgs = {
+	versionId: string;
+	accountId: string;
+	scriptName: string;
+};
+
+export async function deployContainers(
+	config: Config,
+	normalisedContainerConfig: ContainerNormalizedConfig[],
+	{ versionId, accountId, scriptName }: DeployContainersArgs
+) {
+	await fillOpenAPIConfiguration(config, containersScope);
+
+	const pathToDocker = getDockerPath();
+	const boundDOs = new Set(
+		config.durable_objects.bindings.map((b) => b.class_name)
+	);
+
+	let imageRef: ImageRef;
+	let maybeVersionInfo: ApiVersion | undefined;
+	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
+
+	for (const container of normalisedContainerConfig) {
+		if ("dockerfile" in container) {
+			imageRef = await buildContainer(
+				container,
+				versionId,
+				false, // dry runs will have already exited by this point
+				pathToDocker
+			);
+		} else {
+			imageRef = { newTag: container.image_uri };
+		}
+
+		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
+		if (boundDOs.has(container.class_name)) {
+			maybeVersionInfo ??= await fetchVersion(
+				config,
+				accountId,
+				scriptName,
+				versionId
+			);
+			type DurableObjectBinding = Extract<
+				WorkerMetadataBinding,
+				{ type: "durable_object_namespace" }
+			>;
+			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
+				(binding): binding is DurableObjectBinding =>
+					binding.type === "durable_object_namespace" &&
+					binding.class_name === container.class_name &&
+					// DO cannot be defined in a different script to the container
+					(binding.script_name === undefined ||
+						binding.script_name === scriptName) &&
+					binding.namespace_id !== undefined
+			);
+			if (!targetDurableObject) {
+				throw new UserError(
+					"Could not deploy container application as durable object was not found in list of bindings"
+				);
+			}
+			assert(
+				targetDurableObject && targetDurableObject.namespace_id !== undefined
+			);
+
+			await apply(
+				{
+					imageRef,
+					durable_object_namespace_id: targetDurableObject.namespace_id,
+				},
+				container,
+				config
+			);
+		} else {
+			// The DO is unbound, so we need to list all DO namespaces to find the right one
+			// TODO: use the list API with filters when it exists
+			maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
+			const targetDurableObject = maybeAllDurableObjects.find(
+				(durableObject) =>
+					durableObject.class === container.class_name &&
+					durableObject.script === scriptName
+			);
+
+			assert(targetDurableObject, "Durable Object not returned from list API");
+			await apply(
+				{
+					imageRef,
+					durable_object_namespace_id: targetDurableObject.id,
+				},
+				container,
+				config
+			);
+		}
+	}
+}
+
+type DurableObjectNamespace = {
+	id: string;
+	class: string;
+	name: string;
+	script: string;
+	useSqlite: boolean;
+};
+async function listDurableObjects(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): Promise<DurableObjectNamespace[]> {
+	return await fetchResult<DurableObjectNamespace[]>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/durable_objects/namespaces`,
+		{},
+		new URLSearchParams({ per_page: "1000" })
+	);
+}
+/**
+ * Source overwrites target
+ */
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
 		return source as T;
@@ -83,20 +216,6 @@ function createApplicationToModifyApplication(
 		scheduling_policy: req.scheduling_policy,
 		rollout_active_grace_period: req.rollout_active_grace_period,
 	};
-}
-
-function cleanupObservability(
-	observability: ObservabilityConfiguration | undefined
-) {
-	if (observability === undefined) {
-		return;
-	}
-
-	// `logging` field is deprecated, so if the server returns both `logging` and `logs`
-	// fields, drop the `logging` one.
-	if (observability.logging !== undefined && observability.logs !== undefined) {
-		delete observability.logging;
-	}
 }
 
 /**
@@ -180,6 +299,9 @@ function containerConfigToCreateRequest(
 				containerApp.observability.logs_enabled,
 				prevApp?.configuration.observability
 			),
+			wrangler_ssh: containerApp.wrangler_ssh,
+			authorized_keys: containerApp.authorized_keys,
+			trusted_user_ca_keys: containerApp.trusted_user_ca_keys,
 		},
 		// deprecated in favour of max_instances
 		instances: 0,
@@ -213,9 +335,6 @@ export async function apply(
 		ApplicationsService.listApplications(),
 		{ message: "Loading applications" }
 	);
-	existingApplications.forEach((app) =>
-		cleanupObservability(app.configuration.observability)
-	);
 	// TODO: this is not correct right now as there can be multiple applications
 	// with the same name.
 	/** Previous deployment of this app, if this exists  */
@@ -236,12 +355,16 @@ export async function apply(
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
-	const appConfig = containerConfigToCreateRequest(
-		accountId,
-		containerConfig,
-		imageRef,
-		args.durable_object_namespace_id,
-		prevApp
+	const appConfig = mergeIfUnsafe(
+		config,
+		containerConfigToCreateRequest(
+			accountId,
+			containerConfig,
+			imageRef,
+			args.durable_object_namespace_id,
+			prevApp
+		),
+		containerConfig.name
 	);
 
 	if (prevApp !== undefined && prevApp !== null) {
@@ -254,8 +377,7 @@ export async function apply(
 			prevApp.durable_objects.namespace_id !== args.durable_object_namespace_id
 		) {
 			throw new UserError(
-				`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
-					you should delete the container application and deploy again`,
+				`There is already an application with the name ${containerConfig.name} deployed that is associated with a different durable object namespace (${prevApp.durable_objects.namespace_id}). Either change the container name or delete the existing application first.`,
 				{
 					telemetryMessage:
 						"trying to redeploy container to different durable object",
@@ -270,7 +392,12 @@ export async function apply(
 			)
 		);
 
-		const modifyReq = createApplicationToModifyApplication(appConfig);
+		// this will have removed the unsafe fields, so we need to add them back in after
+		const modifyReq = mergeIfUnsafe(
+			config,
+			createApplicationToModifyApplication(appConfig),
+			appConfig.name
+		);
 		/** only used for diffing */
 		const nowContainer = mergeDeep(
 			normalisedPrevApp,
@@ -338,6 +465,7 @@ export async function apply(
 			.forEach((el) => log(`  ${el}`));
 		newline();
 		// add to the actions array to create the app later
+
 		await doAction({
 			action: "create",
 			application: appConfig,
@@ -347,20 +475,43 @@ export async function apply(
 	endSection("Applied changes");
 }
 
-function formatError(err: ApiError): string {
+/**
+ * If there is an unsafe container config that matches this container by class_name,
+ * merge the unsafe config into the Create/Modify request.
+ */
+function mergeIfUnsafe<
+	T extends CreateApplicationRequest | ModifyApplicationRequestBody,
+>(fullConfig: Config, containerConfig: T, name: string) {
+	const unsafeContainerConfig = fullConfig.containers?.find((original) => {
+		return original.name === name && original.unsafe !== undefined;
+	});
+
+	if (unsafeContainerConfig) {
+		return mergeDeep<T>(
+			containerConfig,
+			unsafeContainerConfig.unsafe as Partial<T>
+		);
+	} else {
+		return containerConfig;
+	}
+}
+
+export function formatError(err: ApiError): string {
 	try {
 		const maybeError = JSON.parse(err.body.error);
-		if (
-			maybeError.error !== undefined &&
-			maybeError.details !== undefined &&
-			typeof maybeError.details === "object"
-		) {
-			let message = "";
-			message += `${maybeError.error}\n`;
-			for (const key in maybeError.details) {
-				message += `${brandColor(key)} ${maybeError.details[key]}\n`;
+
+		if (maybeError.error !== undefined) {
+			const message = [];
+			message.push(`${maybeError.error}`);
+			if (
+				maybeError.details !== undefined &&
+				typeof maybeError.details === "object"
+			) {
+				for (const key in maybeError.details) {
+					message.push(`${brandColor(key)} ${maybeError.details[key]}`);
+				}
 			}
-			return message;
+			return message.join("\n");
 		}
 	} catch {}
 	// if we can't make it pretty, just dump out the error body

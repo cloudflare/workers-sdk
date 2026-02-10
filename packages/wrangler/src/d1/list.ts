@@ -2,12 +2,13 @@ import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database } from "./types";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export const d1ListCommand = createCommand({
 	metadata: {
-		description: "List D1 databases",
+		description: "List all D1 databases in your account",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -44,19 +45,20 @@ export const listDatabases = async (
 	accountId: string,
 	limitCalls: boolean = false,
 	pageSize: number = 10
-): Promise<Array<Database>> => {
+): Promise<Array<Omit<Database, "name"> & { name: string }>> => {
 	let page = 1;
 	const results = [];
 	while (results.length % pageSize === 0) {
-		const json: Array<Database> = await fetchResult(
-			complianceConfig,
-			`/accounts/${accountId}/d1/database`,
-			{},
-			new URLSearchParams({
-				per_page: pageSize.toString(),
-				page: page.toString(),
-			})
-		);
+		const json: Array<Omit<Database, "name"> & { name: string }> =
+			await fetchResult(
+				complianceConfig,
+				`/accounts/${accountId}/d1/database`,
+				{},
+				new URLSearchParams({
+					per_page: pageSize.toString(),
+					page: page.toString(),
+				})
+			);
 		page++;
 		results.push(...json);
 		if (limitCalls && page > 3) {

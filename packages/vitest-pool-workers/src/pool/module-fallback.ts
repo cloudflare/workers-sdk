@@ -93,7 +93,7 @@ function isDirectory(filePath: string): boolean {
 
 function getParentPaths(filePath: string): string[] {
 	const parentPaths: string[] = [];
-	// eslint-disable-next-line no-constant-condition
+
 	while (true) {
 		const parentPath = posixPath.dirname(filePath);
 		if (parentPath === filePath) {
@@ -202,14 +202,16 @@ function withImportMetaUrl(contents: string, url: string | URL): string {
 	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
 }
 
-const jsExtensions = [".js", ".mjs", ".cjs"];
+// Extensions `workerd` won't resolve automatically, but Node.js will.
+// Note: `.json` is especially important for CommonJS `require()` chains.
+const moduleExtensions = [".js", ".mjs", ".cjs", ".json"];
 function maybeGetTargetFilePath(target: string): string | undefined {
 	// Can't use `fs.existsSync()` here as `target` could be a directory
 	// (e.g. `node:fs` and `node:fs/promises`)
 	if (isFile(target)) {
 		return target;
 	}
-	for (const extension of jsExtensions) {
+	for (const extension of moduleExtensions) {
 		const targetWithExtension = target + extension;
 		if (fs.existsSync(targetWithExtension)) {
 			return targetWithExtension;
@@ -466,6 +468,16 @@ async function load(
 	const isEsm =
 		filePath.endsWith(".mjs") ||
 		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
+
+	// JSON modules: CommonJS `require("./data.json")` is common in many widely
+	// used packages (e.g. mime-types). If we return raw JSON as a `commonJsModule`,
+	// `workerd` will try to parse it as JavaScript and fail with
+	// `SyntaxError: Unexpected token ':'`.
+	if (filePath.endsWith(".json")) {
+		const json = fs.readFileSync(filePath, "utf8");
+		debuglog(logBase, "json:", filePath);
+		return buildModuleResponse(target, { json });
+	}
 
 	let contents = fs.readFileSync(filePath, "utf8");
 	const targetUrl = pathToFileURL(target);

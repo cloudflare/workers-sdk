@@ -1,7 +1,10 @@
-import { sharedResourceCreationArgs, updateConfigFile } from "../config";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
 import { logger } from "../logger";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
@@ -115,7 +118,7 @@ export const vectorizeCreateCommand = createCommand({
 			`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
 		);
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"vectorize",
 			(name) => ({
 				binding: getValidBindingName(name ?? bindingName, bindingName),

@@ -1,6 +1,6 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
-import path from "path";
 import open from "open";
 import {
 	isAllowedSourceMapPath,

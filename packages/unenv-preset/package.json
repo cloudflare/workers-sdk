@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "2.7.8",
+	"version": "2.12.1",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
 		"cloudflare",
@@ -39,7 +39,7 @@
 	],
 	"scripts": {
 		"build": "unbuild",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc --noEmit"
 	},
 	"devDependencies": {
@@ -48,8 +48,8 @@
 		"unbuild": "^3.2.0"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.21",
-		"workerd": "^1.20250927.0"
+		"unenv": "2.0.0-rc.24",
+		"workerd": "^1.20260115.0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {

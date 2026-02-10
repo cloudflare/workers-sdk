@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import { getUserServiceName } from "../core";

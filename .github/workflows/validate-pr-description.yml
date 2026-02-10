@@ -26,12 +26,12 @@ jobs:
       cancel-in-progress: true
     timeout-minutes: 30
     name: Check
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - uses: dorny/paths-filter@v3
         id: changes
@@ -39,11 +39,6 @@ jobs:
           filters: |
             everything_but_markdown:
               - '!**/*.md'
-
-      - uses: Ana06/get-changed-files@v1.2
-        id: files
-        with:
-          format: "json"
 
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -53,6 +48,13 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: List changed files
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        id: files
+        uses: Ana06/get-changed-files@v2.3.0
+        with:
+          format: "json"
 
       - run: node -r esbuild-register tools/deployments/validate-pr-description.ts
         if: steps.changes.outputs.everything_but_markdown == 'true'

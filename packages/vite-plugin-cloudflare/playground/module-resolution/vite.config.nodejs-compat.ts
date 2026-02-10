@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
-// @ts-ignore
+// @ts-expect-error Missing types
 import testDepPlugin from "@playground/module-resolution-excludes/plugin";
 import { defineConfig } from "vite";
 

@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -10,7 +10,7 @@ describe("hello-world", () => {
 	const std = mockConsoleMethods();
 
 	describe("local", () => {
-		it("should support get and set local storage", async () => {
+		it("should support get and set local storage", async ({ expect }) => {
 			await runWrangler("hello-world get");
 			expect(std.out).toMatchInlineSnapshot(`
 				"

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { isDarkMode, variables } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import {

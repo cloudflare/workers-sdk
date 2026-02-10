@@ -14,12 +14,17 @@ import {
 	DeploymentsService,
 	PlacementsService,
 } from "@cloudflare/containers-shared";
+import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
+import { capitalize } from "../utils/strings";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
-import { capitalize, statusToColored } from "./cli/util";
-import { promiseSpinner } from "./common";
-import type { Config } from "../config";
+import { statusToColored } from "./cli/util";
+import {
+	cloudchamberScope,
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -30,6 +35,7 @@ import type {
 	PlacementEvent,
 	PlacementWithEvents,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function listDeploymentsYargs(args: CommonYargsArgv) {
 	return args
@@ -186,3 +192,58 @@ const listCommandHandle = async (
 		stop();
 	}
 };
+
+export const cloudchamberListCommand = createCommand({
+	metadata: {
+		description: "List and view status of deployments",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		deploymentIdPrefix: {
+			describe:
+				"Optional deploymentId to filter deployments. This means that 'list' will only showcase deployments that contain this ID prefix",
+			type: "string",
+		},
+		location: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "Filter deployments by location",
+		},
+		image: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "Filter deployments by image",
+		},
+		state: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "Filter deployments by deployment state",
+		},
+		ipv4: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "Filter deployments by ipv4 address",
+		},
+		label: {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Filter deployments by labels",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		},
+	},
+	positionalArgs: ["deploymentIdPrefix"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await listCommand(args, config);
+	},
+});

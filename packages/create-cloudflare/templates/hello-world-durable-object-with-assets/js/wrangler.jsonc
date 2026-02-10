@@ -1,7 +1,7 @@
 {
-  "name": "<TBD>",
+  "name": "<WORKER_NAME>",
   "main": "src/index.js",
-  "compatibility_date": "<TBD>",
+  "compatibility_date": "<COMPATIBILITY_DATE>",
   "assets": {
     // The path to the directory containing the `index.html` file to be served at `/`
     "directory": "./public"

@@ -5,6 +5,7 @@ export const aiNamespace = createNamespace({
 		description: "🤖 Manage AI models",
 		status: "stable",
 		owner: "Product: AI",
+		category: "Compute & AI",
 	},
 });
 

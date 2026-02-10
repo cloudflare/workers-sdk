@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { describe, it, test } from "vitest";
 import {
 	compareRoutes,
 	generateConfigFromFileTree,
@@ -10,7 +11,7 @@ import type { UrlPath } from "../../paths";
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
-		test("routes / last", () => {
+		test("routes / last", ({ expect }) => {
 			expect(
 				compareRoutes(routeConfig("/"), routeConfig("/foo"))
 			).toBeGreaterThanOrEqual(1);
@@ -22,7 +23,9 @@ describe("filepath-routing", () => {
 			).toBeGreaterThanOrEqual(1);
 		});
 
-		test("routes with fewer segments come after those with more segments", () => {
+		test("routes with fewer segments come after those with more segments", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo"), routeConfig("/foo/bar"))
 			).toBeGreaterThanOrEqual(1);
@@ -31,36 +34,48 @@ describe("filepath-routing", () => {
 			).toBeGreaterThanOrEqual(1);
 		});
 
-		test("routes with wildcard segments come after those without", () => {
+		test("routes with wildcard segments come after those without", ({
+			expect,
+		}) => {
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/foo"))).toBe(1);
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/:foo"))).toBe(
 				1
 			);
 		});
 
-		test("routes with dynamic segments come after those without", () => {
+		test("routes with dynamic segments come after those without", ({
+			expect,
+		}) => {
 			expect(compareRoutes(routeConfig("/:foo"), routeConfig("/foo"))).toBe(1);
 		});
 
-		test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", () => {
+		test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo/:id/bar"), routeConfig("/foo/bar/:id"))
 			).toBe(1);
 		});
 
-		test("routes with no HTTP method come after those specifying a method", () => {
+		test("routes with no HTTP method come after those specifying a method", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo"), routeConfig("/foo", "GET"))
 			).toBe(1);
 		});
 
-		test("two equal routes are sorted according to their original position in the list", () => {
+		test("two equal routes are sorted according to their original position in the list", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo", "GET"), routeConfig("/foo", "GET"))
 			).toBe(0);
 		});
 
-		test("it returns -1 if the first argument should appear first in the list", () => {
+		test("it returns -1 if the first argument should appear first in the list", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo", "GET"), routeConfig("/foo"))
 			).toBe(-1);
@@ -70,7 +85,9 @@ describe("filepath-routing", () => {
 	describe("generateConfigFromFileTree", () => {
 		runInTempDir();
 
-		it("should generate a route entry for each file in the tree", async () => {
+		it("should generate a route entry for each file in the tree", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"foo.ts",
 				`
@@ -226,7 +243,9 @@ describe("filepath-routing", () => {
       `);
 		});
 
-		it("should display an error if a simple route param name is invalid", async () => {
+		it("should display an error if a simple route param name is invalid", async ({
+			expect,
+		}) => {
 			mkdirSync("foo");
 			writeFileSync(
 				"foo/[hyphen-not-allowed].ts",
@@ -242,7 +261,9 @@ describe("filepath-routing", () => {
 			);
 		});
 
-		it("should display an error if a catch-all route param name is invalid", async () => {
+		it("should display an error if a catch-all route param name is invalid", async ({
+			expect,
+		}) => {
 			mkdirSync("foo");
 			writeFileSync(
 				"foo/[[hyphen-not-allowed]].ts",

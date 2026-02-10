@@ -26,13 +26,13 @@ jobs:
   e2e-test:
     if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || contains(github.event.*.labels.*.name, 'playground-worker'))
     name: "Deploy Playground Preview Worker (testing)"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies

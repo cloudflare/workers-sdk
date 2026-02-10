@@ -1,5 +1,7 @@
 import { defineConfig } from "tsdown";
-import type { Options } from "tsdown";
+import type { UserConfig } from "tsdown";
+
+const ignoreWatch = ["dist", "playground", "e2e"];
 
 export default defineConfig([
 	{
@@ -17,6 +19,7 @@ export default defineConfig([
 				},
 			},
 		},
+		ignoreWatch,
 	},
 	worker("asset-worker"),
 	worker("router-worker"),
@@ -27,7 +30,7 @@ export default defineConfig([
 /**
  * Helper function to create the config for bundling a Worker
  */
-function worker(name: string, options: Options = {}): Options {
+function worker(name: string, options: UserConfig = {}): UserConfig {
 	return {
 		entry: { [name]: `src/workers/${name}/index.ts` },
 		outDir: "dist/workers",
@@ -40,7 +43,7 @@ function worker(name: string, options: Options = {}): Options {
 		dts: false,
 		external: ["cloudflare:workers"],
 		tsconfig: "tsconfig.worker.json",
-		ignoreWatch: "dist",
+		ignoreWatch,
 		...options,
 	};
 }

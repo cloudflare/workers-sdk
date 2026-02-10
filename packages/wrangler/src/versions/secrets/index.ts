@@ -1,3 +1,4 @@
+import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
 import { performApiFetch } from "../../cfetch/internal";
 import { createNamespace } from "../../core/create-command";
@@ -5,21 +6,18 @@ import {
 	createWorkerUploadForm,
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
-import { FatalError, UserError } from "../../errors";
 import { getMetricsUsageHeaders } from "../../metrics";
-import type { Config } from "../../config";
-import type { Observability } from "../../config/environment";
-import type {
-	WorkerMetadata as CfWorkerMetadata,
-	WorkerMetadataBinding,
-} from "../../deployment-bundle/create-worker-upload-form";
 import type {
 	CfModule,
 	CfTailConsumer,
 	CfUserLimits,
 	CfWorkerInit,
+	WorkerMetadata as CfWorkerMetadata,
 	CfWorkerSourceMap,
-} from "../../deployment-bundle/worker";
+	Config,
+	Observability,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 import type { SpecIterableIterator } from "undici";
 
 export const versionsSecretNamespace = createNamespace({
@@ -169,6 +167,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		} as CfWorkerInit["bindings"], // handled in rawBindings
 		rawBindings: bindings,
 		modules,
+		containers: config.containers,
 		sourceMaps: sourceMaps,
 		migrations: undefined,
 		compatibility_date: versionInfo.resources.script_runtime.compatibility_date,

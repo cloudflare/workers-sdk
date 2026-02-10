@@ -1,9 +1,8 @@
 import path from "node:path";
+import { parseJSON, readFileSync, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
@@ -11,8 +10,8 @@ import {
 	getCORSPolicy,
 	putCORSPolicy,
 	tableFromCORSPolicyResponse,
-} from "./helpers";
-import type { CORSRule } from "./helpers";
+} from "./helpers/bucket";
+import type { CORSRule } from "./helpers/bucket";
 
 export const r2BucketCORSNamespace = createNamespace({
 	metadata: {

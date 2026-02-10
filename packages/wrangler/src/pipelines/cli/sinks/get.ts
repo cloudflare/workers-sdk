@@ -10,7 +10,7 @@ export const pipelinesSinksGetCommand = createCommand({
 	metadata: {
 		description: "Get details about a specific sink",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

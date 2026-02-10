@@ -1,16 +1,16 @@
-import assert from "assert";
-import crypto from "crypto";
-import { Abortable } from "events";
-import fs from "fs";
-import { mkdir, writeFile } from "fs/promises";
-import http from "http";
-import net from "net";
-import os from "os";
-import path from "path";
-import { Duplex, Transform, Writable } from "stream";
-import { ReadableStream } from "stream/web";
-import util from "util";
-import zlib from "zlib";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import { Abortable } from "node:events";
+import fs from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import http from "node:http";
+import net from "node:net";
+import os from "node:os";
+import path from "node:path";
+import { Duplex, Transform, Writable } from "node:stream";
+import { ReadableStream } from "node:stream/web";
+import util from "node:util";
+import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
@@ -83,6 +83,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
 	Config,
@@ -948,6 +949,9 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
+	#hyperdriveProxyController: HyperdriveProxyController =
+		new HyperdriveProxyController();
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -999,6 +1003,7 @@ export class Miniflare {
 
 			this.#maybeInspectorProxyController = new InspectorProxyController(
 				this.#sharedOpts.core.inspectorPort,
+				this.#sharedOpts.core.inspectorHost,
 				this.#log,
 				workerNamesToProxy
 			);
@@ -1582,7 +1587,10 @@ export class Miniflare {
 			});
 		}
 
-		// Bindings for `ProxyServer` Durable Object
+		/**
+		 * Bindings for `ProxyServer` Durable Object for the magic proxy and local explorer.
+		 * Contains all workerd-native bindings.
+		 */
 		const proxyBindings: Worker_Binding[] = [];
 
 		const allWorkerBindings = new Map<string, Worker_Binding[]>();
@@ -1720,6 +1728,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const workerOptions = this.#getWorkerOptsForPlugin(key, workerOpts);
@@ -2037,6 +2046,7 @@ export class Miniflare {
 			} else {
 				await this.#maybeInspectorProxyController.updateConnection(
 					this.#sharedOpts.core.inspectorPort,
+					this.#sharedOpts.core.inspectorHost ?? "127.0.0.1",
 					maybePort,
 					this.#workerNamesToProxy()
 				);
@@ -2688,6 +2698,9 @@ export class Miniflare {
 			await this.#maybeInspectorProxyController?.dispose();
 			// Unregister workers from dev registry and stop the file watcher
 			await this.#devRegistry.dispose();
+
+			// shutdown hyperdrive proxies if any exist
+			await this.#hyperdriveProxyController.dispose();
 
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete

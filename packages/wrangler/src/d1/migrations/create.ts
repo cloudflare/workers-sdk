@@ -1,8 +1,8 @@
 import fs from "node:fs";
-import path from "path";
-import { configFileName } from "../../config";
+import path from "node:path";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
+import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
@@ -11,6 +11,15 @@ import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
 export const d1MigrationsCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new migration",
+		epilogue: dedent`
+			This will generate a new versioned file inside the 'migrations' folder. Name
+			your migration file as a description of your change. This will make it easier
+			for you to find your migration in the 'migrations' folder. An example filename
+			looks like:
+
+				0000_create_user_table.sql
+
+			The filename will include a version number and the migration name you specify.`,
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -31,15 +40,19 @@ export const d1MigrationsCreateCommand = createCommand({
 	},
 	positionalArgs: ["database", "message"],
 	async handler({ database, message }, { config }) {
-		const databaseInfo = getDatabaseInfoFromConfig(config, database);
+		if (!config.configPath) {
+			throw new UserError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
+		}
+
+		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
+			requireDatabaseId: false,
+		});
 		if (!databaseInfo) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
-		}
-
-		if (!config.configPath) {
-			return;
 		}
 
 		const migrationsPath = await getMigrationsPath({

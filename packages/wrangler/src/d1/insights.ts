@@ -56,7 +56,8 @@ export function getDurationDates(durationString: string) {
 
 export const d1InsightsCommand = createCommand({
 	metadata: {
-		description: "Get information about the queries run on a D1 database.",
+		description: "Get information about the queries run on a D1 database",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "experimental",
 		owner: "Product: D1",
 	},
@@ -69,7 +70,7 @@ export const d1InsightsCommand = createCommand({
 			demandOption: true,
 			description: "The name of the DB",
 		},
-		timePeriod: {
+		"time-period": {
 			type: "string",
 			description: "Fetch data from now to the provided time period",
 			default: "1d",

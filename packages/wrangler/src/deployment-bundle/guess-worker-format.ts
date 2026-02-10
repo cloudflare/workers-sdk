@@ -3,7 +3,7 @@ import * as esbuild from "esbuild";
 import { logger } from "../logger";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
-import type { CfScriptFormat } from "./worker";
+import type { CfScriptFormat } from "@cloudflare/workers-utils";
 
 /**
  * A function to "guess" the type of worker.
@@ -13,19 +13,13 @@ import type { CfScriptFormat } from "./worker";
  * Else, it's a "service-worker" worker. This seems hacky, but works remarkably
  * well in practice.
  */
-export default async function guessWorkerFormat(
+export async function guessWorkerFormat(
 	entryFile: string,
 	entryWorkingDirectory: string,
 	tsconfig?: string | undefined
 ): Promise<{ format: CfScriptFormat; exports: string[] }> {
 	const parsedEntryPath = path.parse(entryFile);
 	if (parsedEntryPath.ext == ".py") {
-		logger.warn(
-			`The entrypoint ${path.relative(
-				process.cwd(),
-				entryFile
-			)} defines a Python worker, support for Python workers is currently experimental.`
-		);
 		return { format: "modules", exports: [] };
 	}
 

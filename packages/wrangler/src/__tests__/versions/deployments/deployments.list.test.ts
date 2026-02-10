@@ -1,3 +1,5 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
@@ -5,7 +7,6 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { msw, mswGetVersion, mswListNewDeployments } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 
 describe("deployments list", () => {
 	mockAccountId();
@@ -19,7 +20,7 @@ describe("deployments list", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler("deployments list");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -31,7 +32,7 @@ describe("deployments list", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints deployments to stdout", async () => {
+		test("prints deployments to stdout", async ({ expect }) => {
 			const result = runWrangler("deployments list --name test-name");
 
 			await expect(result).resolves.toBeUndefined();
@@ -98,7 +99,7 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints deployments to stdout as --json", async () => {
+		test("prints deployments to stdout as --json", async ({ expect }) => {
 			const result = runWrangler("deployments list --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
@@ -194,7 +195,7 @@ describe("deployments list", () => {
 	describe("with wrangler.toml", () => {
 		beforeEach(() => writeWranglerConfig());
 
-		test("prints deployments to stdout", async () => {
+		test("prints deployments to stdout", async ({ expect }) => {
 			const result = runWrangler("deployments list");
 
 			await expect(result).resolves.toBeUndefined();
@@ -261,7 +262,7 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints deployments to stdout as --json", async () => {
+		test("prints deployments to stdout as --json", async ({ expect }) => {
 			const result = runWrangler("deployments list --json");
 
 			await expect(result).resolves.toBeUndefined();

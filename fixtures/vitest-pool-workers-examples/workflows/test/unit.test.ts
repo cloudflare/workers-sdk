@@ -1,5 +1,5 @@
 import { env, introspectWorkflowInstance } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
 const INSTANCE_ID = "12345678910";
 const STATUS_COMPLETE = "complete";
@@ -7,7 +7,7 @@ const STATUS_ERROR = "errored";
 const STEP_NAME = "AI content scan";
 
 // This example implicitly disposes the Workflow instance
-it("should mock a non-violation score and complete", async () => {
+it("should mock a non-violation score and complete", async ({ expect }) => {
 	const mockResult = { violationScore: 0 };
 
 	// CONFIG with `await using` to ensure Workflow instances cleanup:
@@ -34,11 +34,16 @@ it("should mock a non-violation score and complete", async () => {
 
 	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
 
+	const output = await instance.getOutput();
+	expect(output).toEqual({ status: "auto_approved" });
+
 	// DISPOSE: ensured by `await using`
 });
 
 // This example explicitly disposes the Workflow instance
-it("should mock the violation score calculation to fail 2 times and then complete", async () => {
+it("should mock the violation score calculation to fail 2 times and then complete", async ({
+	expect,
+}) => {
 	const mockResult = { violationScore: 0 };
 
 	// CONFIG:
@@ -70,6 +75,9 @@ it("should mock the violation score calculation to fail 2 times and then complet
 		await expect(
 			instance.waitForStatus(STATUS_COMPLETE)
 		).resolves.not.toThrow();
+
+		const output = await instance.getOutput();
+		expect(output).toEqual({ status: "auto_approved" });
 	} finally {
 		// DISPOSE:
 		// Workflow introspector should be disposed the end of each test, if no `await using` dyntax is used
@@ -78,7 +86,7 @@ it("should mock the violation score calculation to fail 2 times and then complet
 	}
 });
 
-it("should mock a violation score and complete", async () => {
+it("should mock a violation score and complete", async ({ expect }) => {
 	const mockResult = { violationScore: 99 };
 
 	await using instance = await introspectWorkflowInstance(
@@ -102,9 +110,12 @@ it("should mock a violation score and complete", async () => {
 	).toEqual({ status: "auto_rejected" });
 
 	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
+
+	const output = await instance.getOutput();
+	expect(output).toEqual({ status: "auto_rejected" });
 });
 
-it("should be reviewed, accepted and complete", async () => {
+it("should be reviewed, accepted and complete", async ({ expect }) => {
 	const mockResult = { violationScore: 50 };
 
 	await using instance = await introspectWorkflowInstance(
@@ -132,9 +143,12 @@ it("should be reviewed, accepted and complete", async () => {
 	).toEqual({ status: "moderated", decision: "approve" });
 
 	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
+
+	const output = await instance.getOutput();
+	expect(output).toEqual({ decision: "approve", status: "moderated" });
 });
 
-it("should force human review to timeout and error", async () => {
+it("should force human review to timeout and error", async ({ expect }) => {
 	const mockResult = { violationScore: 50 };
 
 	await using instance = await introspectWorkflowInstance(
@@ -156,4 +170,8 @@ it("should force human review to timeout and error", async () => {
 	);
 
 	await expect(instance.waitForStatus(STATUS_ERROR)).resolves.not.toThrow();
+
+	const error = await instance.getError();
+	expect(error.name).toEqual("Error");
+	expect(error.message).toContain("Execution timed out");
 });

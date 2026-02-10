@@ -1,17 +1,17 @@
 {
 	"name": "@cloudflare/playground-preview-worker",
-	"version": "0.1.6",
+	"version": "0.2.0",
 	"private": true,
 	"scripts": {
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
 		"build-middleware:common": "pnpm dlx esbuild ../wrangler/templates/middleware/common.ts --outfile=src/middleware/common.module.template",
 		"build-middleware:loader": "pnpm dlx esbuild ../wrangler/templates/middleware/loader-modules.ts --outfile=src/middleware/loader.module.template",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
 		"deploy:testing": "wrangler deploy -e testing",
 		"start": "wrangler dev",
-		"test:e2e": "vitest run"
+		"test:e2e": "vitest run --test-timeout 30000"
 	},
 	"dependencies": {
 		"hono": "^4.7.0",
@@ -22,9 +22,10 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
+		"eslint": "catalog:default",
 		"itty-router": "^4.0.13",
 		"promjs": "^0.4.2",
-		"toucan-js": "^3.3.1",
+		"toucan-js": "4.0.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
 	},

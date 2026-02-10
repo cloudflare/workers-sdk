@@ -103,6 +103,17 @@ class WorkflowInstanceIntrospectorHandle
 		await this.#workflow.unsafeWaitForStatus(this.#instanceId, status);
 	}
 
+	async getOutput(): Promise<unknown> {
+		return await this.#workflow.unsafeGetOutputOrError(this.#instanceId, true);
+	}
+
+	async getError(): Promise<{ name: string; message: string }> {
+		return (await this.#workflow.unsafeGetOutputOrError(
+			this.#instanceId,
+			false
+		)) as { name: string; message: string };
+	}
+
 	async dispose(): Promise<void> {
 		await this.#workflow.unsafeAbort(this.#instanceId, "Instance dispose");
 	}

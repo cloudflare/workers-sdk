@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import type { WorkersResolvedConfig } from "./plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type * as vite from "vite";
 
 interface DisallowedEnvironmentOptions {
@@ -10,16 +13,15 @@ interface DisallowedEnvironmentOptions {
  * Throws an error if Worker environments include configuration options that are incompatible with the plugin.
  */
 export function validateWorkerEnvironmentOptions(
-	resolvedPluginConfig: WorkersResolvedConfig,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
-	const workerEnvironmentNames = Object.keys(resolvedPluginConfig.workers);
 	const disallowedEnvironmentOptionsMap = new Map<
 		string,
 		DisallowedEnvironmentOptions
 	>();
 
-	for (const environmentName of workerEnvironmentNames) {
+	for (const environmentName of resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 		const environmentOptions = resolvedViteConfig.environments[environmentName];
 		assert(
 			environmentOptions,

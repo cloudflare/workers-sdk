@@ -1,11 +1,11 @@
-import assert from "node:assert";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
-import { ApiError } from "@cloudflare/containers-shared";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
+import {
+	CommandLineArgsError,
+	experimental_readRawConfig,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import Cloudflare from "cloudflare";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
@@ -22,14 +22,51 @@ import {
 	certUploadMtlsCommand,
 	certUploadNamespace,
 } from "./cert/cert";
-import { renderError } from "./cfetch";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
-import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, readConfig } from "./config";
+import {
+	cloudchamberApplyCommand,
+	cloudchamberBuildCommand,
+	cloudchamberCreateCommand,
+	cloudchamberCurlCommand,
+	cloudchamberDeleteCommand,
+	cloudchamberImagesDeleteCommand,
+	cloudchamberImagesListCommand,
+	cloudchamberImagesNamespace,
+	cloudchamberListCommand,
+	cloudchamberModifyCommand,
+	cloudchamberNamespace,
+	cloudchamberPushCommand,
+	cloudchamberRegistriesConfigureCommand,
+	cloudchamberRegistriesCredentialsCommand,
+	cloudchamberRegistriesListCommand,
+	cloudchamberRegistriesNamespace,
+	cloudchamberRegistriesRemoveCommand,
+	cloudchamberSshCreateCommand,
+	cloudchamberSshListCommand,
+	cloudchamberSshNamespace,
+} from "./cloudchamber";
+import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
-import { containers } from "./containers";
+import {
+	containersBuildCommand,
+	containersDeleteCommand,
+	containersImagesDeleteCommand,
+	containersImagesListCommand,
+	containersImagesNamespace,
+	containersInfoCommand,
+	containersListCommand,
+	containersNamespace,
+	containersPushCommand,
+	containersRegistriesConfigureCommand,
+	containersRegistriesDeleteCommand,
+	containersRegistriesListCommand,
+	containersRegistriesNamespace,
+	containersSshCommand,
+} from "./containers";
 import { demandSingleValue } from "./core";
+import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
+import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -48,11 +85,6 @@ import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
 import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
 import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
-import { isAuthenticationError } from "./deploy/deploy";
-import {
-	isBuildFailure,
-	isBuildFailureFromCause,
-} from "./deployment-bundle/build-failures";
 import { dev } from "./dev";
 import {
 	dispatchNamespaceCreateCommand,
@@ -63,13 +95,6 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
-import { getEnvironmentVariableFactory } from "./environment-variables/factory";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "./environment-variables/misc-variables";
-import {
-	CommandLineArgsError,
-	JsonFriendlyFatalError,
-	UserError,
-} from "./errors";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -99,8 +124,8 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./kv";
-import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
-import { getMetricsDispatcher } from "./metrics";
+import { logger, LOGGER_LEVELS } from "./logger";
+import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
 import {
 	metricsAlias,
 	telemetryDisableCommand,
@@ -108,6 +133,7 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
+import { sanitizeError } from "./metrics/sanitization";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -130,7 +156,10 @@ import {
 	pagesPublishCommand,
 } from "./pages/deploy";
 import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
+import {
+	pagesDeploymentDeleteCommand,
+	pagesDeploymentListCommand,
+} from "./pages/deployments";
 import { pagesDevCommand } from "./pages/dev";
 import { pagesDownloadConfigCommand } from "./pages/download-config";
 import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
@@ -148,7 +177,6 @@ import {
 } from "./pages/secret";
 import { pagesProjectUploadCommand } from "./pages/upload";
 import { pagesProjectValidateCommand } from "./pages/validate";
-import { APIError, ParseError } from "./parse";
 import { pipelinesNamespace } from "./pipelines";
 import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
@@ -166,7 +194,6 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -209,6 +236,9 @@ import {
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
 	r2BucketCatalogNamespace,
+	r2BucketCatalogSnapshotExpirationDisableCommand,
+	r2BucketCatalogSnapshotExpirationEnableCommand,
+	r2BucketCatalogSnapshotExpirationNamespace,
 } from "./r2/catalog";
 import {
 	r2BucketCORSDeleteCommand,
@@ -232,6 +262,12 @@ import {
 	r2BucketLifecycleSetCommand,
 } from "./r2/lifecycle";
 import {
+	r2BucketLocalUploadsDisableCommand,
+	r2BucketLocalUploadsEnableCommand,
+	r2BucketLocalUploadsGetConfigCommand,
+	r2BucketLocalUploadsNamespace,
+} from "./r2/local-uploads";
+import {
 	r2BucketLockAddCommand,
 	r2BucketLockListCommand,
 	r2BucketLockNamespace,
@@ -246,6 +282,8 @@ import {
 	r2BucketNotificationNamespace,
 } from "./r2/notification";
 import {
+	r2BulkNamespace,
+	r2BulkPutCommand,
 	r2ObjectDeleteCommand,
 	r2ObjectGetCommand,
 	r2ObjectNamespace,
@@ -287,21 +325,20 @@ import {
 	secretsStoreStoreDeleteCommand,
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
-import {
-	addBreadcrumb,
-	captureGlobalException,
-	closeSentry,
-	setupSentry,
-} from "./sentry";
+import { closeSentry, setupSentry } from "./sentry";
+import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
-import { getAuthFromEnv } from "./user";
-import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
-import { whoami } from "./user/whoami";
-import { betaCmdColor, proxy } from "./utils/constants";
+import {
+	authNamespace,
+	authTokenCommand,
+	loginCommand,
+	logoutCommand,
+	whoamiCommand,
+} from "./user/commands";
+import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
-import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -344,13 +381,15 @@ import { workflowsDescribeCommand } from "./workflows/commands/describe";
 import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
 import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
+import { workflowsInstancesRestartCommand } from "./workflows/commands/instances/restart";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
+import { workflowsInstancesSendEventCommand } from "./workflows/commands/instances/send-event";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
@@ -487,7 +526,6 @@ export function createCLIParser(argv: string[]) {
 		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
-	wrangler.help("help", "Show help").alias("h", "help");
 
 	// Default help command that supports the subcommands
 	const subHelp: SubHelp = {
@@ -498,6 +536,105 @@ export function createCLIParser(argv: string[]) {
 			);
 		},
 	};
+
+	const registerCommand = createRegisterYargsCommand(wrangler, subHelp, argv);
+	const registry = new CommandRegistry(registerCommand);
+
+	// Helper to show help with command categories
+	const showHelpWithCategories = async (): Promise<void> => {
+		if (registry.orderedCategories.size === 0) {
+			wrangler.showHelp("log");
+			return;
+		}
+
+		const helpOutput = await wrangler.getHelp();
+		const lines = helpOutput.split("\n");
+		const commandsHeaderIndex = lines.findIndex((line) =>
+			line.includes("COMMANDS")
+		);
+		const globalFlagsIndex = lines.findIndex((line) =>
+			line.includes("GLOBAL FLAGS")
+		);
+
+		// Fallback to standard help if we can't parse
+		if (commandsHeaderIndex === -1 || globalFlagsIndex === -1) {
+			logger.log(helpOutput);
+			return;
+		}
+
+		// Extract command lines (between `COMMANDS` header and `GLOBAL FLAGS`)
+		const beforeCommands = lines.slice(0, commandsHeaderIndex + 1);
+		const commandLines = lines.slice(commandsHeaderIndex + 1, globalFlagsIndex);
+		const afterCommands = lines.slice(globalFlagsIndex);
+
+		// Separate regular commands from categorized commands
+		const regularCommandLines = new Array<string>();
+		const categoryCommandLines = new Map<string, Array<string>>();
+		for (const line of commandLines) {
+			// Extract command name from line (e.g., "  wrangler r2  " -> "r2")
+			const match = line.match(/^\s*wrangler\s+(\S+)/);
+			if (match) {
+				const cmdName = match[1];
+				const [foundCategory] = Array.from(
+					registry.orderedCategories.entries()
+				).find(([_, commands]) => commands.includes(cmdName)) ?? [null];
+
+				if (foundCategory) {
+					const existing = categoryCommandLines.get(foundCategory) ?? [];
+					existing.push(line);
+					categoryCommandLines.set(foundCategory, existing);
+				} else {
+					regularCommandLines.push(line);
+				}
+			} else {
+				// Empty lines or other content - keep with regular commands
+				regularCommandLines.push(line);
+			}
+		}
+
+		// Remove trailing empty lines from regular commands section
+		const lastNonEmptyIndex = regularCommandLines.findLastIndex(
+			(line) => line.trim() !== ""
+		);
+		const trimmedRegularCommandLines = regularCommandLines.slice(
+			0,
+			lastNonEmptyIndex + 1
+		);
+
+		const outputLines = [
+			...beforeCommands,
+			...trimmedRegularCommandLines,
+		] satisfies Array<string>;
+		for (const category of registry.orderedCategories.keys()) {
+			const cmdLines = categoryCommandLines.get(category);
+			if (!cmdLines || cmdLines.length <= 0) {
+				continue;
+			}
+
+			outputLines.push(""); // Empty line before category
+			outputLines.push(chalk.bold(category.toUpperCase()));
+
+			// Sort command lines alphabetically by command name
+			const sortedCmdLines = Array.from(cmdLines).sort((a, b) => {
+				const matchA = a.match(/^\s*wrangler\s+(\S+)/);
+				const matchB = b.match(/^\s*wrangler\s+(\S+)/);
+				const cmdA = matchA ? matchA[1] : "";
+				const cmdB = matchB ? matchB[1] : "";
+				return cmdA.localeCompare(cmdB);
+			});
+			outputLines.push(...sortedCmdLines);
+		}
+
+		// Ensure empty line before `GLOBAL FLAGS` if we added categories
+		if (categoryCommandLines.size > 0) {
+			outputLines.push("");
+		}
+
+		outputLines.push(...afterCommands);
+
+		logger.log(outputLines.join("\n"));
+	};
+
 	wrangler.command(
 		["*"],
 		false,
@@ -516,14 +653,11 @@ export function createCLIParser(argv: string[]) {
 						logger.log(wranglerVersion);
 					}
 				} else {
-					wrangler.showHelp("log");
+					await showHelpWithCategories();
 				}
 			}
 		}
 	);
-
-	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
-	const registry = new CommandRegistry(registerCommand);
 
 	/*
 	 * You will note that we use the form for all commands where we use the builder function
@@ -552,6 +686,15 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("docs");
 
+	// completions
+	registry.define([
+		{
+			command: "wrangler complete",
+			definition: completionsCommand,
+		},
+	]);
+	registry.registerNamespace("complete");
+
 	/******************** CMD GROUP ***********************/
 
 	registry.define([
@@ -577,6 +720,14 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("deploy");
+
+	registry.define([
+		{
+			command: "wrangler setup",
+			definition: setupCommand,
+		},
+	]);
+	registry.registerNamespace("setup");
 
 	registry.define([
 		{ command: "wrangler deployments", definition: deploymentsNamespace },
@@ -878,6 +1029,18 @@ export function createCLIParser(argv: string[]) {
 			definition: r2BucketCatalogCompactionDisableCommand,
 		},
 		{
+			command: "wrangler r2 bucket catalog snapshot-expiration",
+			definition: r2BucketCatalogSnapshotExpirationNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration enable",
+			definition: r2BucketCatalogSnapshotExpirationEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration disable",
+			definition: r2BucketCatalogSnapshotExpirationDisableCommand,
+		},
+		{
 			command: "wrangler r2 bucket notification",
 			definition: r2BucketNotificationNamespace,
 		},
@@ -936,6 +1099,22 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket dev-url disable",
 			definition: r2BucketDevUrlDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads",
+			definition: r2BucketLocalUploadsNamespace,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads get",
+			definition: r2BucketLocalUploadsGetConfigCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads enable",
+			definition: r2BucketLocalUploadsEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads disable",
+			definition: r2BucketLocalUploadsDisableCommand,
 		},
 		{
 			command: "wrangler r2 bucket lifecycle",
@@ -1001,16 +1180,23 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler r2 sql query",
 			definition: r2SqlQueryCommand,
 		},
+		{
+			command: "wrangler r2 bulk",
+			definition: r2BulkNamespace,
+		},
+		{
+			command: "wrangler r2 bulk put",
+			definition: r2BulkPutCommand,
+		},
 	]);
 	registry.registerNamespace("r2");
 
 	// D1 commands are registered using the CommandRegistry
 	registry.define([
 		{ command: "wrangler d1", definition: d1Namespace },
-		{ command: "wrangler d1 list", definition: d1ListCommand },
-		{ command: "wrangler d1 info", definition: d1InfoCommand },
-		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 info", definition: d1InfoCommand },
+		{ command: "wrangler d1 list", definition: d1ListCommand },
 		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
 		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
 		{ command: "wrangler d1 export", definition: d1ExportCommand },
@@ -1025,17 +1211,18 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler d1 migrations", definition: d1MigrationsNamespace },
 		{
-			command: "wrangler d1 migrations list",
-			definition: d1MigrationsListCommand,
-		},
-		{
 			command: "wrangler d1 migrations create",
 			definition: d1MigrationsCreateCommand,
+		},
+		{
+			command: "wrangler d1 migrations list",
+			definition: d1MigrationsListCommand,
 		},
 		{
 			command: "wrangler d1 migrations apply",
 			definition: d1MigrationsApplyCommand,
 		},
+		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 	]);
 	registry.registerNamespace("d1");
 
@@ -1183,6 +1370,10 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler pages deployment tail",
 			definition: pagesDeploymentTailCommand,
 		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
+		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
 		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
@@ -1229,23 +1420,133 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("mtls-certificate");
 
 	// cloudchamber
-	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
-		return cloudchamber(cloudchamberArgs.command(subHelp), subHelp);
-	});
+	registry.define([
+		{ command: "wrangler cloudchamber", definition: cloudchamberNamespace },
+		{
+			command: "wrangler cloudchamber list",
+			definition: cloudchamberListCommand,
+		},
+		{
+			command: "wrangler cloudchamber create",
+			definition: cloudchamberCreateCommand,
+		},
+		{
+			command: "wrangler cloudchamber delete",
+			definition: cloudchamberDeleteCommand,
+		},
+		{
+			command: "wrangler cloudchamber modify",
+			definition: cloudchamberModifyCommand,
+		},
+		{
+			command: "wrangler cloudchamber apply",
+			definition: cloudchamberApplyCommand,
+		},
+		{
+			command: "wrangler cloudchamber curl",
+			definition: cloudchamberCurlCommand,
+		},
+		{
+			command: "wrangler cloudchamber build",
+			definition: cloudchamberBuildCommand,
+		},
+		{
+			command: "wrangler cloudchamber push",
+			definition: cloudchamberPushCommand,
+		},
+		{
+			command: "wrangler cloudchamber ssh",
+			definition: cloudchamberSshNamespace,
+		},
+		{
+			command: "wrangler cloudchamber ssh list",
+			definition: cloudchamberSshListCommand,
+		},
+		{
+			command: "wrangler cloudchamber ssh create",
+			definition: cloudchamberSshCreateCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries",
+			definition: cloudchamberRegistriesNamespace,
+		},
+		{
+			command: "wrangler cloudchamber registries configure",
+			definition: cloudchamberRegistriesConfigureCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries credentials",
+			definition: cloudchamberRegistriesCredentialsCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries remove",
+			definition: cloudchamberRegistriesRemoveCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries list",
+			definition: cloudchamberRegistriesListCommand,
+		},
+		{
+			command: "wrangler cloudchamber images",
+			definition: cloudchamberImagesNamespace,
+		},
+		{
+			command: "wrangler cloudchamber images list",
+			definition: cloudchamberImagesListCommand,
+		},
+		{
+			command: "wrangler cloudchamber images delete",
+			definition: cloudchamberImagesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("cloudchamber");
 
 	// containers
-	wrangler.command("containers", false, (containersArgs) => {
-		return containers(containersArgs.command(subHelp), subHelp);
-	});
-
-	// [PRIVATE BETA] pubsub
-	wrangler.command(
-		"pubsub",
-		`📮 Manage Pub/Sub brokers ${chalk.hex(betaCmdColor)("[private beta]")}`,
-		(pubsubYargs) => {
-			return pubSubCommands(pubsubYargs, subHelp);
-		}
-	);
+	registry.define([
+		{ command: "wrangler containers", definition: containersNamespace },
+		{ command: "wrangler containers list", definition: containersListCommand },
+		{ command: "wrangler containers info", definition: containersInfoCommand },
+		{
+			command: "wrangler containers delete",
+			definition: containersDeleteCommand,
+		},
+		{ command: "wrangler containers ssh", definition: containersSshCommand },
+		{
+			command: "wrangler containers build",
+			definition: containersBuildCommand,
+		},
+		{ command: "wrangler containers push", definition: containersPushCommand },
+		{
+			command: "wrangler containers registries",
+			definition: containersRegistriesNamespace,
+		},
+		{
+			command: "wrangler containers registries configure",
+			definition: containersRegistriesConfigureCommand,
+		},
+		{
+			command: "wrangler containers registries list",
+			definition: containersRegistriesListCommand,
+		},
+		{
+			command: "wrangler containers registries delete",
+			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers images",
+			definition: containersImagesNamespace,
+		},
+		{
+			command: "wrangler containers images list",
+			definition: containersImagesListCommand,
+		},
+		{
+			command: "wrangler containers images delete",
+			definition: containersImagesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("containers");
+	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 
 	registry.define([
 		{
@@ -1373,8 +1674,16 @@ export function createCLIParser(argv: string[]) {
 			definition: workflowsInstancesDescribeCommand,
 		},
 		{
+			command: "wrangler workflows instances send-event",
+			definition: workflowsInstancesSendEventCommand,
+		},
+		{
 			command: "wrangler workflows instances terminate",
 			definition: workflowsInstancesTerminateCommand,
+		},
+		{
+			command: "wrangler workflows instances restart",
+			definition: workflowsInstancesRestartCommand,
 		},
 		{
 			command: "wrangler workflows instances terminate-all",
@@ -1530,6 +1839,18 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([
 		{
+			command: "wrangler auth",
+			definition: authNamespace,
+		},
+		{
+			command: "wrangler auth token",
+			definition: authTokenCommand,
+		},
+	]);
+	registry.registerNamespace("auth");
+
+	registry.define([
+		{
 			command: "wrangler telemetry",
 			definition: telemetryNamespace,
 		},
@@ -1577,9 +1898,11 @@ export function createCLIParser(argv: string[]) {
 
 	registry.registerAll();
 
+	wrangler.help("help", "Show help").alias("h", "help");
+
 	wrangler.exitProcess(false);
 
-	return { wrangler, registry, globalFlags };
+	return { wrangler, registry, globalFlags, showHelpWithCategories };
 }
 
 export async function main(argv: string[]): Promise<void> {
@@ -1587,33 +1910,45 @@ export async function main(argv: string[]): Promise<void> {
 
 	checkMacOSVersion({ shouldThrow: false });
 
+	// Check if this is a root-level help request (--help or -h with no subcommand)
+	// In this case, we use our custom help formatter to show command categories
+	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
+	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
+	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
+
+	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
+
+	if (isRootHelpRequest) {
+		await showHelpWithCategories();
+		return;
+	}
+
+	// Check for unknown command with a `--help` flag
+	const [subCommand] = nonFlagArgs;
+	if (hasHelpFlag && subCommand) {
+		const knownCommands = registry.topLevelCommands;
+		if (!knownCommands.has(subCommand)) {
+			logger.info("");
+			logger.error(`Unknown argument: ${subCommand}`);
+			await showHelpWithCategories();
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
+		}
+	}
+
 	const startTime = Date.now();
-	const { wrangler } = createCLIParser(argv);
-	let command: string | undefined;
-	let metricsArgs: Record<string, unknown> | undefined;
+	let configArgs: ReadConfigCommandArgs = {};
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-	// Register Yargs middleware to record command as Sentry breadcrumb
-	let recordedCommand = false;
-	const wranglerWithMiddleware = wrangler.middleware((args) => {
+
+	// Register middleware to set logger level and capture fallback telemetry info
+	wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
-			// Also set the CLI package log level to match
-			setLogLevel(args.logLevel as LoggerLevel);
 		}
-		const envLogLevel = getEnvironmentVariableFactory({
-			variableName: "WRANGLER_LOG",
-		})()?.toLowerCase();
-		if (envLogLevel) {
-			setLogLevel(envLogLevel as LoggerLevel);
-		}
-		// Middleware called for each sub-command, but only want to record once
-		if (recordedCommand) {
-			return;
-		}
-		recordedCommand = true;
-		// `args._` doesn't include any positional arguments (e.g. script name,
-		// key to fetch) or flags
+		// Also set the CLI package log level to match
+		setLogLevel(logger.loggerLevel);
+
+		configArgs = args;
 
 		try {
 			const { rawConfig, configPath } = experimental_readRawConfig(args);
@@ -1621,205 +1956,36 @@ export async function main(argv: string[]): Promise<void> {
 				sendMetrics: rawConfig.send_metrics,
 				hasAssets: !!rawConfig.assets?.directory,
 				configPath,
+				argv,
 			});
 		} catch (e) {
-			// If we can't parse the config, we can't send metrics
-			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
+			// If we can't parse the config, we can still send metrics with defaults
+			logger.debug("Failed to parse config for metrics. Using defaults.", e);
+			dispatcher = getMetricsDispatcher({ argv });
 		}
-
-		command = `wrangler ${args._.join(" ")}`;
-		metricsArgs = args;
-		addBreadcrumb(command);
-		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
-		// e.g. if a required arg is missing, yargs will error out before we send any events :/
-		dispatcher?.sendCommandEvent(
-			"wrangler command started",
-			{
-				command,
-				args,
-			},
-			argv
-		);
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
 	try {
-		await wranglerWithMiddleware.parse();
-
-		const durationMs = Date.now() - startTime;
-
-		dispatcher?.sendCommandEvent(
-			"wrangler command completed",
-			{
-				command,
-				args: metricsArgs,
-				durationMs,
-				durationSeconds: durationMs / 1000,
-				durationMinutes: durationMs / 1000 / 60,
-			},
-			argv
-		);
+		await wrangler.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
-		let mayReport = true;
-		let errorType: string | undefined;
-		let loggableException = e;
 
-		logger.log(""); // Just adds a bit of space
-		if (e instanceof CommandLineArgsError) {
-			logger.error(e.message);
-			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
-			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
-			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
-			const { wrangler: helpWrangler } = createCLIParser([...argv, "--help"]);
-			await helpWrangler.parse();
-		} else if (
-			isAuthenticationError(e) ||
-			// Is this a Containers/Cloudchamber-based auth error?
-			// This is different because it uses a custom OpenAPI-based generated client
-			(e instanceof UserError &&
-				e.cause instanceof ApiError &&
-				e.cause.status === 403)
-		) {
-			mayReport = false;
-			errorType = "AuthenticationError";
-			if (e.cause instanceof ApiError) {
-				logger.error(e.cause);
-			} else {
-				assert(isAuthenticationError(e));
-				logger.error(e);
-			}
-			const envAuth = getAuthFromEnv();
-			if (envAuth !== undefined && "apiToken" in envAuth) {
-				const message =
-					"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.\n" +
-					"Please ensure it has the correct permissions for this operation.\n";
-				logger.log(chalk.yellow(message));
-			}
-			const accountTag = (e as APIError)?.accountTag;
-			let complianceConfig: ComplianceConfig;
-			try {
-				complianceConfig = await readConfig(wrangler.arguments, {
-					hideWarnings: true,
-				});
-			} catch {
-				complianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
-			}
-			await whoami(complianceConfig, accountTag);
-		} else if (e instanceof ParseError) {
-			e.notes.push({
-				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
-			});
-			logger.error(e);
-		} else if (e instanceof JsonFriendlyFatalError) {
-			logger.log(e.message);
-		} else if (
-			e instanceof Error &&
-			e.message.includes("Raw mode is not supported on")
-		) {
-			// the current terminal doesn't support raw mode, which Ink needs to render
-			// Ink doesn't throw a typed error or subclass or anything, so we just check the message content.
-			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
-			mayReport = false;
-
-			const currentPlatform = process.platform;
-
-			const thisTerminalIsUnsupported =
-				"This terminal doesn't support raw mode.";
-			const soWranglerWontWork =
-				"Wrangler uses raw mode to read user input and write output to the terminal, and won't function correctly without it.";
-			const tryRunningItIn =
-				"Try running your previous command in a terminal that supports raw mode";
-			const oneOfThese =
-				currentPlatform === "win32"
-					? ", such as Command Prompt or Powershell."
-					: currentPlatform === "darwin"
-						? ", such as Terminal.app or iTerm."
-						: "."; // linux user detected, hand holding disengaged.
-
-			logger.error(
-				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
-			);
-		} else if (isBuildFailure(e)) {
-			mayReport = false;
-			errorType = "BuildFailure";
-
-			logBuildFailure(e.errors, e.warnings);
-		} else if (isBuildFailureFromCause(e)) {
-			mayReport = false;
-			errorType = "BuildFailure";
-			logBuildFailure(e.cause.errors, e.cause.warnings);
-		} else if (e instanceof Cloudflare.APIError) {
-			const error = new APIError({
-				text: `A request to the Cloudflare API failed.`,
-				notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
-			});
-			error.notes.push({
-				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
-			});
-			logger.error(error);
+		if (e instanceof CommandHandledError) {
+			// This error occurred during Command handler execution,
+			// and has already sent metrics and reported to the user.
+			// So we can just re-throw the original error.
+			throw e.originalError;
 		} else {
-			if (
-				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error
-				e &&
-				typeof e === "object" &&
-				"type" in e &&
-				e.type === "error" &&
-				"cause" in e &&
-				e.cause instanceof Error
-			) {
-				loggableException = e.cause;
+			// The error occurred before Command handler ran
+			// (e.g., yargs validation errors like unknown commands or invalid arguments).
+			// So we need to handle telemetry and error reporting here.
+			if (dispatcher) {
+				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
-
-			logger.error(
-				loggableException instanceof Error
-					? loggableException.message
-					: loggableException
-			);
-			if (loggableException instanceof Error) {
-				logger.debug(loggableException.stack);
-			}
-
-			if (
-				!(loggableException instanceof UserError) &&
-				!(loggableException instanceof ContainersUserError)
-			) {
-				await logPossibleBugMessage();
-			}
+			await handleError(e, configArgs, argv);
+			throw e;
 		}
-
-		if (
-			// Only report the error if we didn't just handle it
-			mayReport &&
-			// ...and it's not a user error
-			!(loggableException instanceof UserError) &&
-			!(loggableException instanceof ContainersUserError) &&
-			// ...and it's not an un-reportable API error
-			!(loggableException instanceof APIError && !loggableException.reportable)
-		) {
-			await captureGlobalException(loggableException);
-		}
-		const durationMs = Date.now() - startTime;
-
-		dispatcher?.sendCommandEvent(
-			"wrangler command errored",
-			{
-				command,
-				args: metricsArgs,
-				durationMs,
-				durationSeconds: durationMs / 1000,
-				durationMinutes: durationMs / 1000 / 60,
-				errorType:
-					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
-				errorMessage:
-					e instanceof UserError || e instanceof ContainersUserError
-						? e.telemetryMessage
-						: undefined,
-			},
-			argv
-		);
-
-		throw e;
 	} finally {
 		try {
 			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
@@ -1835,12 +2001,12 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
-			const controller = new AbortController();
 
+			// Wait for any pending telemetry requests to complete (with timeout)
 			await Promise.race([
-				Promise.allSettled(dispatcher?.requests ?? []),
-				setTimeout(1000, undefined, controller), // Ensure we don't hang indefinitely
-			]).then(() => controller.abort()); // Ensure the Wrangler process doesn't hang waiting for setTimeout(1000) to complete
+				allMetricsDispatchesCompleted(),
+				setTimeout(1000, undefined, { ref: false }),
+			]);
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a
@@ -1851,4 +2017,38 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
+}
+
+/**
+ * Dispatches generic metrics events to indicate that a wrangler command errored
+ * when we don't know the CommandDefinition and cannot be sure what is safe to send.
+ */
+function dispatchGenericCommandErrorEvent(
+	dispatcher: ReturnType<typeof getMetricsDispatcher>,
+	startTime: number,
+	error: unknown
+) {
+	const durationMs = Date.now() - startTime;
+
+	// We cannot safely derive sanitized command or args from `args._` since it may contain
+	// sensitive user-supplied positional arguments. So we send empty values.
+	const sanitizedCommand = "";
+	const sanitizedArgs = {};
+
+	// Send "started" event since handler never got to send it.
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
+	dispatcher.sendCommandEvent("wrangler command started", {
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
+	});
+
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
+	dispatcher.sendCommandEvent("wrangler command errored", {
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
+		durationMs,
+		...sanitizeError(error),
+	});
 }

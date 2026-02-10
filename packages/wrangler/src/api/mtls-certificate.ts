@@ -1,7 +1,6 @@
+import { readFileSync, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
-import { UserError } from "../errors";
-import { readFileSync } from "../parse";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
  * the representation of an mTLS certificate in the account certificate store

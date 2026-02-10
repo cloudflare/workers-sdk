@@ -1,24 +1,22 @@
 import assert from "node:assert";
 import events from "node:events";
+import {
+	configFileName,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
+import { convertCfWorkerInitBindingsToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
-import { UserError } from "./errors";
 import { logger } from "./logger";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import type { Trigger } from "./api";
-import type { Config, Environment } from "./config";
-import type {
-	EnvironmentNonInheritable,
-	Route,
-	Rule,
-} from "./config/environment";
-import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
+import type { StartDevWorkerInput, Trigger } from "./api";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	CfD1Database,
 	CfKvNamespace,
@@ -27,8 +25,14 @@ import type {
 	CfR2Bucket,
 	CfService,
 	CfWorkerInit,
-} from "./deployment-bundle/worker";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
+	Config,
+	Environment,
+	EnvironmentNonInheritable,
+	INHERIT_SYMBOL,
+	Route,
+	Rule,
+} from "@cloudflare/workers-utils";
+import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
 
 export const dev = createCommand({
@@ -37,14 +41,15 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
+		printMetricsBanner: true,
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -104,6 +109,10 @@ export const dev = createCommand({
 		"inspector-port": {
 			describe: "Port for devtools to connect to",
 			type: "number",
+		},
+		"inspector-ip": {
+			describe: "IP address for devtools to connect to",
+			type: "string",
 		},
 		routes: {
 			describe: "Routes to upload",
@@ -212,10 +221,8 @@ export const dev = createCommand({
 		},
 		local: {
 			alias: "l",
-			describe: "Run on my machine",
+			describe: "Run locally with remote bindings disabled",
 			type: "boolean",
-			deprecated: true,
-			hidden: true,
 		},
 		minify: {
 			describe: "Minify the script",
@@ -254,6 +261,18 @@ export const dev = createCommand({
 		"show-interactive-dev-session": {
 			describe:
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
+			type: "boolean",
+		},
+		"experimental-tail-logs": {
+			type: "boolean",
+			alias: ["x-tail-logs"],
+			describe:
+				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
+			default: true,
+			hidden: true,
+		},
+		types: {
+			describe: "Generate types from your Worker configuration",
 			type: "boolean",
 		},
 	},
@@ -437,131 +456,19 @@ export function getInferredHost(
 }
 
 /**
- * Gets the bindings for the Cloudflare Worker.
- *
- * @param configParam The loaded configuration.
- * @param env The environment to use, if any.
- * @param envFiles An array of paths, relative to the project directory, of .env files to load.
- * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
- * @param local Whether the dev server should run locally.
- * @param args Additional arguments for the dev server.
- * @param remoteBindingsEnabled Whether remote bindings are enabled, defaults to the value of the `REMOTE_BINDINGS` flag.
- * @returns The bindings for the Cloudflare Worker.
+ * Apply Hyperdrive connection string environment variables to config.
+ * Checks for CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_* env vars
+ * and applies them to the config's hyperdrive bindings.
  */
-export function getBindings(
-	configParam: Config,
-	env: string | undefined,
-	envFiles: string[] | undefined,
-	local: boolean,
-	args: AdditionalDevProps
-): CfWorkerInit["bindings"] {
-	/**
-	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
-	 * args to the `pages dev` command. These args will always take precedence
-	 * over the configuration file, and therefore should override corresponding
-	 * config in `wrangler.toml`.
-	 */
-	// merge KV bindings
-	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, remote }) => {
-			// In remote `dev`, we make folks use a separate kv namespace called
-			// `preview_id` instead of `id` so that they don't
-			// break production data. So here we check that a `preview_id`
-			// has actually been configured.
-			// This whole block of code will be obsoleted in the future
-			// when we have copy-on-write for previews on edge workers.
-			if (!preview_id && !local) {
-				// TODO: This error has to be a _lot_ better, ideally just asking
-				// to create a preview namespace for the user automatically
-				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`,
-					{
-						telemetryMessage:
-							"no preview kv namespace configured in remote dev",
-					}
-				); // Ugh, I really don't like this message very much
-			}
-			return {
-				binding,
-				id: preview_id ?? id,
-				remote: remote,
-			} satisfies CfKvNamespace;
-		}
-	);
-	const kvArgs = args.kv || [];
-	const mergedKVBindings = mergeWithOverride(kvConfig, kvArgs, "binding");
-
-	// merge DO bindings
-	const doConfig = (configParam.durable_objects || { bindings: [] }).bindings;
-	const doArgs = args.durableObjects || [];
-	const mergedDOBindings = mergeWithOverride(doConfig, doArgs, "name");
-
-	// merge D1 bindings
-	const d1Config = (configParam.d1_databases ?? []).map((d1Db) => {
-		const database_id = d1Db.preview_database_id
-			? d1Db.preview_database_id
-			: d1Db.database_id;
-
-		if (local) {
-			return {
-				...d1Db,
-				remote: d1Db.remote,
-				database_id,
-			} satisfies CfD1Database;
-		}
-		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
-		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
-			logger.log(
-				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
-			);
-		}
-		return { ...d1Db, database_id };
-	});
-	const d1Args = args.d1Databases || [];
-	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
-
-	// merge R2 bindings
-	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
-		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
-				// same idea as kv namespace preview id,
-				// same copy-on-write TODO
-				if (!preview_bucket_name && !local) {
-					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`,
-						{
-							telemetryMessage: "no preview r2 bucket configured in remote dev",
-						}
-					);
-				}
-				return {
-					binding,
-					bucket_name: preview_bucket_name ?? bucket_name,
-					jurisdiction,
-					remote: remote,
-				} satisfies CfR2Bucket;
-			}
-		) || [];
-	const r2Args = args.r2 || [];
-	const mergedR2Bindings = mergeWithOverride(r2Config, r2Args, "binding");
-
-	// merge service bindings
-	const servicesConfig = configParam.services || [];
-	const servicesArgs = args.services || [];
-	const mergedServiceBindings = mergeWithOverride(
-		servicesConfig,
-		servicesArgs,
-		"binding"
-	).map(
-		(service) =>
-			({
-				...service,
-				remote: "remote" in service && !!service.remote,
-			}) satisfies CfService
-	);
-
-	// Hyperdrive bindings
-	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
+function applyHyperdriveEnvVars(
+	config: Config,
+	local: boolean
+): {
+	binding: string;
+	id: string;
+	localConnectionString?: string;
+}[] {
+	return config.hyperdrive.map((hyperdrive) => {
 		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 
@@ -601,6 +508,100 @@ export function getBindings(
 
 		return hyperdrive;
 	});
+}
+
+/**
+ * Gets the bindings for the Cloudflare Worker.
+ *
+ * @param configParam The loaded configuration.
+ * @param env The environment to use, if any.
+ * @param envFiles An array of paths, relative to the project directory, of .env files to load.
+ * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
+ * @param local Whether the dev server should run locally.
+ * @param args Additional arguments for the dev server.
+ * @returns The bindings for the Cloudflare Worker.
+ */
+export function getBindings(
+	configParam: Config,
+	env: string | undefined,
+	envFiles: string[] | undefined,
+	local: boolean,
+	args: AdditionalDevProps
+): CfWorkerInit["bindings"] {
+	/**
+	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
+	 * args to the `pages dev` command. These args will always take precedence
+	 * over the configuration file, and therefore should override corresponding
+	 * config in `wrangler.toml`.
+	 */
+	// merge KV bindings
+	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
+		({ binding, preview_id, id, remote }) => {
+			return {
+				binding,
+				id: preview_id ?? id,
+				remote: remote,
+			} satisfies CfKvNamespace;
+		}
+	);
+	const kvArgs = args.kv || [];
+	const mergedKVBindings = mergeWithOverride(kvConfig, kvArgs, "binding");
+
+	// merge DO bindings
+	const doConfig = (configParam.durable_objects || { bindings: [] }).bindings;
+	const doArgs = args.durableObjects || [];
+	const mergedDOBindings = mergeWithOverride(doConfig, doArgs, "name");
+
+	// merge D1 bindings
+	const d1Config = (configParam.d1_databases ?? []).map((d1Db) => {
+		const database_id = d1Db.preview_database_id
+			? d1Db.preview_database_id
+			: d1Db.database_id;
+
+		if (local) {
+			return {
+				...d1Db,
+				remote: d1Db.remote,
+				database_id,
+			} satisfies CfD1Database;
+		}
+		return { ...d1Db, database_id };
+	});
+	const d1Args = args.d1Databases || [];
+	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
+
+	// merge R2 bindings
+	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
+		configParam.r2_buckets?.map(
+			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
+				return {
+					binding,
+					bucket_name: preview_bucket_name ?? bucket_name,
+					jurisdiction,
+					remote: remote,
+				} satisfies CfR2Bucket;
+			}
+		) || [];
+	const r2Args = args.r2 || [];
+	const mergedR2Bindings = mergeWithOverride(r2Config, r2Args, "binding");
+
+	// merge service bindings
+	const servicesConfig = configParam.services || [];
+	const servicesArgs = args.services || [];
+	const mergedServiceBindings = mergeWithOverride(
+		servicesConfig,
+		servicesArgs,
+		"binding"
+	).map(
+		(service) =>
+			({
+				...service,
+				remote: "remote" in service && !!service.remote,
+			}) satisfies CfService
+	);
+
+	// Hyperdrive bindings
+	const hyperdriveBindings = applyHyperdriveEnvVars(configParam, local);
 
 	// Queues bindings
 	const queuesBindings = [
@@ -673,8 +674,30 @@ export function getBindings(
 	return bindings;
 }
 
+/**
+ * Resolve all bindings that should be accessible in a Worker during a dev session.
+ *
+ * @param configParam The loaded configuration.
+ * @param env The environment to use, if any.
+ * @param envFiles An array of paths, relative to the project directory, of .env files to load.
+ * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
+ * @param local Whether the dev server should run locally.
+ * @param args Additional arguments for the dev server.
+ * @returns The bindings for the Cloudflare Worker.
+ */
+export function getFlatBindings(
+	configParam: Config,
+	env: string | undefined,
+	envFiles: string[] | undefined,
+	local: boolean,
+	args: AdditionalDevProps
+): StartDevWorkerInput["bindings"] {
+	const bindings = getBindings(configParam, env, envFiles, local, args);
+	return convertCfWorkerInitBindingsToBindings(bindings);
+}
+
 export function getAssetChangeMessage(
-	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	eventName: EventName,
 	assetPath: string
 ): string {
 	let message = `${assetPath} changed`;

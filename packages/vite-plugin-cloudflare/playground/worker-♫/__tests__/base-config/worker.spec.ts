@@ -1,11 +1,13 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getTextResponse,
 	viteTestUrl,
 	WAIT_FOR_OPTIONS,
 } from "../../../__test-utils__";
 
-test("basic base config functionality and url restoration handling", async () => {
+test("basic base config functionality and url restoration handling", async ({
+	expect,
+}) => {
 	// We don't need to specify the `/custom-mount` path when calling getTextResponse because its part of the viteTestUrl already
 	expect(viteTestUrl).toContain("/custom-mount");
 
@@ -23,7 +25,9 @@ test("basic base config functionality and url restoration handling", async () =>
 	);
 });
 
-test("`X-Forwarded-Host` header but on custom mount path", async () => {
+test("`X-Forwarded-Host` header but on custom mount path", async ({
+	expect,
+}) => {
 	const testUrl = new URL(viteTestUrl);
 	await vi.waitFor(
 		async () =>

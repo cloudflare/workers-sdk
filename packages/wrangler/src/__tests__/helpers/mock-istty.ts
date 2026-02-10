@@ -1,3 +1,5 @@
+import { afterEach, beforeEach } from "vitest";
+
 const ORIGINAL_STDOUT = process.stdout;
 const ORIGINAL_STDIN = process.stdin;
 

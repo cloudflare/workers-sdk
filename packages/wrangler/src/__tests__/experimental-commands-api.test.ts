@@ -1,8 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
 
 describe("experimental_getWranglerCommands", () => {
-	test("returns global flags", () => {
+	test("returns global flags", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().globalFlags;
 
 		expect(commandTree).toMatchInlineSnapshot(`
@@ -54,14 +54,14 @@ describe("experimental_getWranglerCommands", () => {
 			}
 		`);
 	});
-	test("returns command tree structure", () => {
+	test("returns command tree structure", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		expect(commandTree).toBeDefined();
 		expect(commandTree.subtree).toBeInstanceOf(Map);
 	});
 
-	test("includes expected commands with metadata", () => {
+	test("includes expected commands with metadata", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		expect(commandTree.subtree.has("docs")).toBe(true);
@@ -75,7 +75,7 @@ describe("experimental_getWranglerCommands", () => {
 		expect(docsCommand?.definition?.metadata?.status).toBeDefined();
 	});
 
-	test("includes nested commands", () => {
+	test("includes nested commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const d1Command = commandTree.subtree.get("d1");
@@ -85,7 +85,7 @@ describe("experimental_getWranglerCommands", () => {
 		expect(d1Command?.subtree.has("delete")).toBe(true);
 	});
 
-	test("includes command arguments and metadata", () => {
+	test("includes command arguments and metadata", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const initCommand = commandTree.subtree.get("init");
@@ -98,7 +98,7 @@ describe("experimental_getWranglerCommands", () => {
 		}
 	});
 
-	test("includes namespace commands", () => {
+	test("includes namespace commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const kvCommand = commandTree.subtree.get("kv");
@@ -108,7 +108,7 @@ describe("experimental_getWranglerCommands", () => {
 		expect(kvCommand?.subtree.has("key")).toBe(true);
 	});
 
-	test("preserves command metadata properties", () => {
+	test("preserves command metadata properties", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const deployCommand = commandTree.subtree.get("deploy");
@@ -121,8 +121,8 @@ describe("experimental_getWranglerCommands", () => {
 			expect([
 				"experimental",
 				"alpha",
-				"private-beta",
-				"open-beta",
+				"private beta",
+				"open beta",
 				"stable",
 			]).toContain(metadata.status);
 		}

@@ -1,29 +1,37 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import {
+	getDockerPath,
+	getLocalWorkerdCompatibilityDate,
+	getRegistryPath,
+} from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
-import { getBindings } from "../../../dev";
-import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
+import { getFlatBindings } from "../../../dev";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
-import {
-	getDockerPath,
-	getRegistryPath,
-} from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
+import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
+// TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
+// This is a temporary fix to ensure that the types are included in the build output
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "../../../../../workers-utils/src";
 import type { AssetsOptions } from "../../../assets";
-import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
@@ -35,6 +43,18 @@ import type {
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
+export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
+
+/**
+ * @deprecated use `getLocalWorkerdCompatibilityDate` from "@cloudflare/workers-utils" instead.
+ *
+ * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
+ */
+export function unstable_getDevCompatibilityDate() {
+	return getLocalWorkerdCompatibilityDate().date;
+}
+
+export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,
@@ -81,6 +101,10 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
+	/**
+	 * Whether remote bindings should be enabled or not (defaults to `true`)
+	 */
+	remoteBindings?: boolean;
 };
 
 /**
@@ -134,7 +158,7 @@ export async function getPlatformProxy<
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (config.configPath) {
+	if (config.configPath && options.remoteBindings !== false) {
 		remoteProxySession = (
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
@@ -186,7 +210,7 @@ async function getMiniflareOptionsFromConfig(args: {
 }): Promise<MiniflareOptions> {
 	const { config, options, remoteProxyConnectionString } = args;
 
-	const bindings = getBindings(
+	const bindings = getFlatBindings(
 		config,
 		options.environment,
 		options.envFiles,
@@ -216,7 +240,10 @@ async function getMiniflareOptionsFromConfig(args: {
 				`);
 
 		// Remove workflows from bindings to prevent Miniflare from complaining
-		bindings.workflows = [];
+		const workflowBindings = extractBindingsOfType("workflow", bindings);
+		for (const workflow of workflowBindings) {
+			delete bindings?.[workflow.binding];
+		}
 	}
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
@@ -225,10 +252,9 @@ async function getMiniflareOptionsFromConfig(args: {
 			complianceRegion: config.compliance_region,
 			bindings,
 			queueConsumers: undefined,
-			services: bindings.services,
-			serviceBindings: {},
 			migrations: config.migrations,
 			tails: [],
+			streamingTails: [],
 			containerDOClassNames: new Set(
 				config.containers?.map((c) => c.class_name)
 			),
@@ -378,7 +404,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
-	const bindings = getBindings(config, env, options?.envFiles, true, {});
+	const bindings = getFlatBindings(config, env, options?.envFiles, true, {});
 
 	const enableContainers =
 		options?.overrides?.enableContainers !== undefined
@@ -391,10 +417,9 @@ export function unstable_getMiniflareWorkerOptions(
 			complianceRegion: config.compliance_region,
 			bindings,
 			queueConsumers: config.queues.consumers,
-			services: [],
-			serviceBindings: {},
 			migrations: config.migrations,
 			tails: config.tail_consumers,
+			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
@@ -408,9 +433,10 @@ export function unstable_getMiniflareWorkerOptions(
 	// `durableObjects` to use more traditional Miniflare config expecting the
 	// user to define workers with the required names in the `workers` array.
 	// These will run the same `workerd` processes as tests.
-	if (bindings.services !== undefined) {
+	const serviceBindings = extractBindingsOfType("service", bindings);
+	if (serviceBindings.length > 0) {
 		bindingOptions.serviceBindings = Object.fromEntries(
-			bindings.services.map((binding) => {
+			serviceBindings.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
 				if (options?.remoteProxyConnectionString && binding.remote) {
@@ -427,15 +453,21 @@ export function unstable_getMiniflareWorkerOptions(
 			})
 		);
 	}
-	if (bindings.durable_objects !== undefined) {
+	const durableObjectBindings = extractBindingsOfType(
+		"durable_object_namespace",
+		bindings
+	);
+	if (durableObjectBindings.length > 0) {
 		type DurableObjectDefinition = NonNullable<
 			typeof bindingOptions.durableObjects
 		>[string];
 
-		const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
+			config.migrations
+		);
 
 		bindingOptions.durableObjects = Object.fromEntries(
-			bindings.durable_objects.bindings.map((binding) => {
+			durableObjectBindings.map((binding) => {
 				const useSQLite = classNameToUseSQLite.get(binding.class_name);
 				return [
 					binding.name,

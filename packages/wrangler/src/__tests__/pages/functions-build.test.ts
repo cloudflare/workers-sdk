@@ -6,6 +6,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import dedent from "ts-dedent";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -22,12 +23,14 @@ describe("pages functions build", () => {
 		await endEventLoop();
 	});
 
-	it("should throw an error if no worker script and no Functions directory was found", async () => {
+	it("should throw an error if no worker script and no Functions directory was found", async ({
+		expect,
+	}) => {
 		await expect(runWrangler("pages functions build")).rejects.toThrowError();
 		expect(std.err).toContain("Could not find anything to build.");
 	});
 
-	it("should build functions", async () => {
+	it("should build functions", async ({ expect }) => {
 		/* ---------------------------- */
 		/*       Set up Functions       */
 		/* ---------------------------- */
@@ -56,7 +59,9 @@ describe("pages functions build", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should include any external modules imported by functions in the output bundle", async () => {
+	it("should include any external modules imported by functions in the output bundle", async ({
+		expect,
+	}) => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -135,7 +140,7 @@ describe("pages functions build", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should output a directory with --outdir", async () => {
+	it("should output a directory with --outdir", async ({ expect }) => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -183,7 +188,7 @@ describe("pages functions build", () => {
 	`);
 	});
 
-	it("should output a metafile when --metafile is set", async () => {
+	it("should output a metafile when --metafile is set", async ({ expect }) => {
 		// Setup a basic pages function
 		mkdirSync("functions");
 		writeFileSync(
@@ -206,7 +211,7 @@ describe("pages functions build", () => {
 		expect(meta.outputs).toBeDefined();
 	});
 
-	it("should build _worker.js", async () => {
+	it("should build _worker.js", async ({ expect }) => {
 		/* ---------------------------- */
 		/*       Set up js files        */
 		/* ---------------------------- */
@@ -288,7 +293,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should include all external modules imported by _worker.js in the output bundle, when bundling _worker.js", async () => {
+	it("should include all external modules imported by _worker.js in the output bundle, when bundling _worker.js", async ({
+		expect,
+	}) => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -364,7 +371,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should build _worker.js over /functions, if both are present", async () => {
+	it("should build _worker.js over /functions, if both are present", async ({
+		expect,
+	}) => {
 		/* ---------------------------- */
 		/*       Set up _worker.js      */
 		/* ---------------------------- */
@@ -443,7 +452,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should leave Node.js imports when the `nodejs_compat` compatibility flag is set", async () => {
+	it("should leave Node.js imports when the `nodejs_compat` compatibility flag is set", async ({
+		expect,
+	}) => {
 		mkdirSync("functions");
 		writeFileSync(
 			"functions/hello.js",
@@ -474,7 +485,9 @@ export default {
 		);
 	});
 
-	it("should warn at Node.js imports when the `nodejs_compat` compatibility flag is not set", async () => {
+	it("should warn at Node.js imports when the `nodejs_compat` compatibility flag is not set", async ({
+		expect,
+	}) => {
 		mkdirSync("functions");
 		writeFileSync(
 			"functions/hello.js",
@@ -503,7 +516,7 @@ export default {
 		`);
 	});
 
-	it("should compile a _worker.js/ directory", async () => {
+	it("should compile a _worker.js/ directory", async ({ expect }) => {
 		mkdirSync("public");
 		mkdirSync("public/_worker.js");
 		writeFileSync(
@@ -613,7 +626,9 @@ describe("functions build w/ config", () => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 	});
 
-	it("should include all config in the _worker.bundle metadata", async () => {
+	it("should include all config in the _worker.bundle metadata", async ({
+		expect,
+	}) => {
 		// Write an example wrangler.toml file with a _lot_ of config
 		writeFileSync(
 			"wrangler.toml",
@@ -791,7 +806,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should ignore config with a non-pages config file", async () => {
+	it("should ignore config with a non-pages config file", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
@@ -964,7 +981,9 @@ export default {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
-	it("should ignore config with a non-pages config file w/ invalid environment", async () => {
+	it("should ignore config with a non-pages config file w/ invalid environment", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
@@ -1137,7 +1156,7 @@ export default {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
-	it("should ignore unparseable config file", async () => {
+	it("should ignore unparseable config file", async ({ expect }) => {
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
@@ -1231,11 +1250,11 @@ export default {
 
 		// This logs a parsing error, but continues anyway
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected character, expected only whitespace or comments till end of line[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: each key-value declaration must be followed by an end-of-line[0m
 
-			    <cwd>/wrangler.toml:5:23:
-			[37m      5 │ limits = { cpu_ms = 50 [32m[37m}\\"
-			        ╵                        [32m^[0m
+			    <cwd>/wrangler.toml:5:24:
+			[37m      5 │ limits = { cpu_ms = 50 }[32m[37m\\"
+			        ╵                         [32m^[0m
 
 			"
 		`);

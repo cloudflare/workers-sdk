@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import childProcess, { execSync } from "node:child_process";
 import fs, { writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -136,6 +135,7 @@ async function getPackagesToPublish(names: string[]) {
 				`{ package(name: "${name}") { path, allDependencies { items { name, path } } } }`
 			);
 			const results = JSON.parse(
+				// eslint-disable-next-line workers-sdk/no-unsafe-command-execution
 				execSync("pnpm exec turbo query " + turboQueryPath, {
 					encoding: "utf8",
 					stdio: "pipe",

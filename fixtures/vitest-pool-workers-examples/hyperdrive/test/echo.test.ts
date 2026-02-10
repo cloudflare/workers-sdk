@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
-it("responds with request body", async () => {
+it("responds with request body", async ({ expect }) => {
 	const response = await SELF.fetch("https://example.com/", {
 		method: "POST",
 		body: "body",

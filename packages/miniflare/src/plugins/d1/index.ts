@@ -1,5 +1,5 @@
-import assert from "assert";
-import fs from "fs/promises";
+import assert from "node:assert";
+import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
 import {

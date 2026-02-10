@@ -1,11 +1,10 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { blue } from "@cloudflare/cli/colors";
+import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
-import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -21,17 +20,12 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = ["nitropack"];
-	await installPackages(packages, {
-		dev: true,
-		startText: "Installing nitro module `nitropack`",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	});
-
 	usesTypescript(ctx);
 	const filePath = `app.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
-	const compatDate = await getWorkerdCompatibilityDate();
+	const { date: compatDate } = getLocalWorkerdCompatibilityDate({
+		projectPath: ctx.project.path,
+	});
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 

@@ -1,3 +1,4 @@
+import { assert, beforeEach, expect, vi } from "vitest";
 import type { mockConsoleMethods } from "./mock-console";
 
 /**

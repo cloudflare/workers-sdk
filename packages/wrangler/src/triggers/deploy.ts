@@ -1,3 +1,7 @@
+import {
+	getSubdomainMixedStateCheckDisabled,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
@@ -9,8 +13,6 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
-import { getSubdomainMixedStateCheckDisabled } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -18,9 +20,8 @@ import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
-import type { Route } from "../config/environment";
 import type { RouteObject } from "../deploy/deploy";
+import type { Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;

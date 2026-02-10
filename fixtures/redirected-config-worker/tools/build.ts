@@ -7,7 +7,9 @@ const config = {
 	name: "redirected-config-worker",
 	compatibility_date: "2024-12-01",
 	main: "index.js",
-	vars: { generated: true },
+	definedEnvironments: ["prod", "staging"],
+	targetEnvironment: process.env.CLOUDFLARE_ENV,
+	vars: { generated: process.env.CLOUDFLARE_ENV ?? "none" },
 };
 writeFileSync("build/wrangler.json", JSON.stringify(config, undefined, 2));
 copyFileSync("src/index.js", "build/index.js");

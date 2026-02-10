@@ -1,16 +1,18 @@
 import { cancel, endSection, startSection } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
+import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { logDeployment, pickDeployment } from "./cli/deployments";
+import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
 import { wrap } from "./helpers/wrap";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function deleteCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs.positional("deploymentId", {
@@ -68,3 +70,28 @@ async function handleDeleteCommand(
 	}
 	endSection("Your container has been deleted");
 }
+
+export const cloudchamberDeleteCommand = createCommand({
+	metadata: {
+		description:
+			"Delete an existing deployment that is running in the Cloudflare edge",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		deploymentId: {
+			type: "string",
+			demandOption: false,
+			describe: "Deployment you want to delete",
+		},
+	},
+	positionalArgs: ["deploymentId"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await deleteCommand(args, config);
+	},
+});

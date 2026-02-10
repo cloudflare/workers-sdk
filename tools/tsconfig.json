@@ -1,10 +1,10 @@
 {
 	"root": true,
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
-	"include": ["**/*.ts", "**/*.js"],
+	"include": ["**/*.ts", "**/*.js", "**/*.mts"],
 	"exclude": ["node_modules"],
 	"compilerOptions": {
-		"module": "CommonJS",
+		"module": "preserve",
 		"allowJs": true,
 		"outDir": "dist",
 		"types": ["node"],

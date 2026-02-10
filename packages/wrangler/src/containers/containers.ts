@@ -9,12 +9,14 @@ import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
-import { UserError } from "../errors";
+import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import type { Config } from "../config";
+import { containersScope } from "./index";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -23,6 +25,7 @@ import type {
 	Application,
 	ListApplications,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function deleteYargs(args: CommonYargsArgv) {
 	return args.positional("ID", {
@@ -104,7 +107,7 @@ export async function infoCommand(
 		);
 	}
 	if (isNonInteractiveOrCI()) {
-		const application = ApplicationsService.getApplication(infoArgs.ID);
+		const application = await ApplicationsService.getApplication(infoArgs.ID);
 		logger.json(application);
 		return;
 	}
@@ -247,3 +250,62 @@ async function listContainersAndChoose(
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	return applications.find((a) => a.id === application)!;
 }
+
+export const containersListCommand = createCommand({
+	metadata: {
+		description: "List containers",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await listCommand(args, config);
+	},
+});
+
+export const containersInfoCommand = createCommand({
+	metadata: {
+		description: "Get information about a specific container",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		ID: {
+			describe: "ID of the container to view",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["ID"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await infoCommand(args, config);
+	},
+});
+
+export const containersDeleteCommand = createCommand({
+	metadata: {
+		description: "Delete a container",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	args: {
+		ID: {
+			describe: "ID of the container to delete",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["ID"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await deleteCommand(args, config);
+	},
+});

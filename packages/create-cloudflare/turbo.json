@@ -16,12 +16,13 @@
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {
+			"passThroughEnv": ["GITHUB_TOKEN"],
 			"env": [
 				"NODE_DEBUG",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
-				"GITHUB_TOKEN",
 				"E2E_EXPERIMENTAL",
+				"E2E_TEST_FILTER",
 				"E2E_TEST_PM",
 				"E2E_TEST_PM_VERSION",
 				"E2E_WORKER_TEMPLATE_TO_TEST",

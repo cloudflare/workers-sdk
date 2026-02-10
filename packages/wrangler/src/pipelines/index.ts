@@ -1,12 +1,14 @@
 import { setTimeout } from "node:timers/promises";
 import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+	APIError,
+	FatalError,
+	getCloudflareApiEnvironmentFromEnv,
+} from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
-import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { generateR2ServiceToken, getR2Bucket } from "./client";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export const BYTES_PER_MB = 1000 * 1000;
 
@@ -119,7 +121,8 @@ export const pipelinesNamespace = createNamespace({
 	metadata: {
 		description: "🚰 Manage Cloudflare Pipelines",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
+		category: "Storage & databases",
 	},
 });
 

@@ -1,4 +1,5 @@
-import { FatalError } from "../../errors";
+import { FatalError } from "@cloudflare/workers-utils";
+import { describe, it } from "vitest";
 import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,
@@ -14,7 +15,9 @@ import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation
 
 describe("routes-validation", () => {
 	describe("isRoutesJSONSpec", () => {
-		it("should return true if the given routes are in a valid RoutesJSONSpec format", () => {
+		it("should return true if the given routes are in a valid RoutesJSONSpec format", ({
+			expect,
+		}) => {
 			const routes = {
 				version: ROUTES_SPEC_VERSION,
 				description: "Test routes Object",
@@ -31,7 +34,7 @@ describe("routes-validation", () => {
 			expect(isRoutesJSONSpec(routesWithoutDescription)).toBeTruthy();
 		});
 
-		it("should return false otherwise", () => {
+		it("should return false otherwise", ({ expect }) => {
 			const routesWithMissingVersion = {
 				include: [],
 				exclude: [],
@@ -92,7 +95,7 @@ describe("routes-validation", () => {
 			return `/${Array(charCount).fill("a").join("")}`;
 		};
 
-		it("should return if the given routes are valid", () => {
+		it("should return if the given routes are valid", ({ expect }) => {
 			const routes: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				description: "Test routes Object",
@@ -111,7 +114,9 @@ describe("routes-validation", () => {
 			).not.toThrow();
 		});
 
-		it("should throw a fatal error if the routes are not a valid RoutesJSONSpec object", () => {
+		it("should throw a fatal error if the routes are not a valid RoutesJSONSpec object", ({
+			expect,
+		}) => {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore: sanity check
 			const routesWithoutVersion: RoutesJSONSpec = {
@@ -152,7 +157,9 @@ describe("routes-validation", () => {
 			);
 		});
 
-		it("should throw a fatal error if there are no include routing rules", () => {
+		it("should throw a fatal error if there are no include routing rules", ({
+			expect,
+		}) => {
 			const routesWithoutIncludeRules: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				description: "Test routes Object",
@@ -173,7 +180,9 @@ describe("routes-validation", () => {
 			);
 		});
 
-		it("should throw a fatal error if there are more than MAX_FUNCTIONS_ROUTES_RULES include and exclude routing rules combined", () => {
+		it("should throw a fatal error if there are more than MAX_FUNCTIONS_ROUTES_RULES include and exclude routing rules combined", ({
+			expect,
+		}) => {
 			const routesWithMaxIncludeRules: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				description: "Test routes Object",
@@ -234,7 +243,9 @@ describe("routes-validation", () => {
 			);
 		});
 
-		it("should throw a fatal error if any include or exclude routing rule is more than MAX_FUNCTIONS_ROUTES_RULE_LENGTH chars long", () => {
+		it("should throw a fatal error if any include or exclude routing rule is more than MAX_FUNCTIONS_ROUTES_RULE_LENGTH chars long", ({
+			expect,
+		}) => {
 			const routesWithMaxCharLengthIncludeRules: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				description: "Test routes Object",
@@ -291,7 +302,9 @@ describe("routes-validation", () => {
 			);
 		});
 
-		it("should throw a fatal error if any include or exclude routing rule does not start with a `/`", () => {
+		it("should throw a fatal error if any include or exclude routing rule does not start with a `/`", ({
+			expect,
+		}) => {
 			const routesWithInvalidIncludeRules: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				description: "Test routes Object",
@@ -348,7 +361,9 @@ describe("routes-validation", () => {
 			);
 		});
 
-		it("should throw a fatal error if there are overlapping include rules or overlapping exclude rules", () => {
+		it("should throw a fatal error if there are overlapping include rules or overlapping exclude rules", ({
+			expect,
+		}) => {
 			const routesWithOverlappingIncludeRules: RoutesJSONSpec = {
 				version: ROUTES_SPEC_VERSION,
 				include: [

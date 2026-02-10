@@ -1,3 +1,7 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses test.each patterns */
+import { beforeEach, describe, expect, it, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
@@ -27,7 +31,6 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions deploy", () => {
 	mockAccountId();
@@ -703,9 +706,10 @@ describe("versions deploy", () => {
 				├ Syncing non-versioned settings
 				│
 				│ Synced non-versioned settings:
-				│            logpush:  true
-				│      observability:  <skipped>
-				│     tail_consumers:  <skipped>
+				│                      logpush:  true
+				│                observability:  <skipped>
+				│               tail_consumers:  <skipped>
+				│     streaming_tail_consumers:  <skipped>
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
@@ -761,9 +765,10 @@ describe("versions deploy", () => {
 				├ Syncing non-versioned settings
 				│
 				│ Synced non-versioned settings:
-				│            logpush:  <skipped>
-				│      observability:  enabled:  false
-				│     tail_consumers:  <skipped>
+				│                      logpush:  <skipped>
+				│                observability:  enabled:  false
+				│               tail_consumers:  <skipped>
+				│     streaming_tail_consumers:  <skipped>
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
@@ -826,12 +831,82 @@ describe("versions deploy", () => {
 				├ Syncing non-versioned settings
 				│
 				│ Synced non-versioned settings:
-				│            logpush:  false
-				│      observability:  enabled:             true
-				│                      head_sampling_rate:  0.5
-				│     tail_consumers:  worker-1
-				│                      worker-2 (preview)
-				│                      worker-3 (staging)
+				│                      logpush:  false
+				│                observability:  enabled:             true
+				│                                head_sampling_rate:  0.5
+				│               tail_consumers:  worker-1
+				│                                worker-2 (preview)
+				│                                worker-3 (staging)
+				│     streaming_tail_consumers:  <skipped>
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("with logpush, streaming_tail_consumers, and observability in wrangler.toml", async () => {
+			writeWranglerConfig({
+				logpush: false,
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
+				streaming_tail_consumers: [
+					{ service: "streaming-worker-1" },
+					{ service: "streaming-worker-2" },
+					{ service: "streaming-worker-3" },
+				],
+			});
+
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Fetching deployable versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
+				│
+				├ Syncing non-versioned settings
+				│
+				│ Synced non-versioned settings:
+				│                      logpush:  false
+				│                observability:  enabled:             true
+				│                                head_sampling_rate:  0.5
+				│               tail_consumers:  <skipped>
+				│     streaming_tail_consumers:  streaming-worker-1
+				│                                streaming-worker-2
+				│                                streaming-worker-3
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);

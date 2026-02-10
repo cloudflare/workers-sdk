@@ -1,22 +1,20 @@
+import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
+import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
-import { configFileName } from "../config";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { Config } from "../config";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export const d1ExportCommand = createCommand({
 	metadata: {
@@ -25,11 +23,14 @@ export const d1ExportCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
+	behaviour: {
+		printResourceLocation: true,
+	},
 	args: {
 		name: {
 			type: "string",
 			demandOption: true,
-			description: "The name of the DB",
+			description: "The name of the D1 database to export",
 		},
 		local: {
 			type: "boolean",
@@ -38,8 +39,17 @@ export const d1ExportCommand = createCommand({
 		},
 		remote: {
 			type: "boolean",
-			description: "Export from your live D1",
+			description: "Export from a remote D1 database",
 			conflicts: "local",
+		},
+		output: {
+			type: "string",
+			description: "Path to the SQL file for your export",
+			demandOption: true,
+		},
+		table: {
+			type: "string",
+			description: "Specify which tables to include in export",
 		},
 		"no-schema": {
 			type: "boolean",
@@ -64,15 +74,6 @@ export const d1ExportCommand = createCommand({
 			hidden: true,
 			default: true,
 		},
-		table: {
-			type: "string",
-			description: "Specify which tables to include in export",
-		},
-		output: {
-			type: "string",
-			description: "Which .sql file to output to",
-			demandOption: true,
-		},
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
@@ -80,6 +81,13 @@ export const d1ExportCommand = createCommand({
 
 		if (!schema && !data) {
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
+		}
+
+		const stats = statSync(output, { throwIfNoEntry: false });
+		if (stats?.isDirectory()) {
+			throw new UserError(
+				`Please specify a file path for --output, not a directory.`
+			);
 		}
 
 		// Allow multiple --table x --table y flags or none
@@ -105,7 +113,9 @@ async function exportLocal(
 	noSchema: boolean,
 	noData: boolean
 ) {
-	const localDB = getDatabaseInfoFromConfig(config, name);
+	const localDB = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`

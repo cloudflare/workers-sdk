@@ -1,0 +1,96 @@
+name: Vite plugin playgrounds
+
+on:
+  merge_group:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  # We run `playwright install` manually instead
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+jobs:
+  test:
+    timeout-minutes: 30
+    name: ${{ format('Vite Plugin Playground ({0}, {1})', matrix.os, matrix.vite) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        vite: ["vite-7"]
+        include:
+          - os: ubuntu-latest
+            vite: "vite-6"
+          - os: ubuntu-latest
+            vite: vite-8-beta
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+      - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+      - name: Install playwright
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: |
+          pnpm --filter @vite-plugin-cloudflare/playground playwright:install
+      - name: Build plugin with initial Vite version
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: |
+          pnpm turbo build --filter @cloudflare/vite-plugin
+      - name: Downgrade to Vite 6
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
+        run: |
+          pnpm update -r --no-save vite@6.4.1
+      - name: Upgrade to Vite 8 beta
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-8-beta'
+        run: |
+          pnpm update -r --no-save vite@beta
+      - name: Run dev playground tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        # We use `--only` to prevent TurboRepo from rebuilding dependencies
+        # This ensures the Vite plugin is not rebuilt using a different Vite version
+        run: |
+          pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          NODE_DEBUG: "@cloudflare:vite-plugin"
+          CI_OS: ${{ matrix.os }}
+      - name: Run build/preview playground tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        # We use `--only` to prevent TurboRepo from rebuilding dependencies
+        # This ensures the Vite plugin is not rebuilt using a different Vite version
+        run: |
+          pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          NODE_DEBUG: "@cloudflare:vite-plugin"
+          CI_OS: ${{ matrix.os }}
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.vite }}
+          path: .turbo/runs

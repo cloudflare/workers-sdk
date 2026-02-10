@@ -1,4 +1,4 @@
-function sleep(ms: number) {
+function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -32,13 +32,13 @@ async function streamResponse(writable: WritableStream) {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(request) {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/") {
 			const { readable, writable } = new TransformStream();
 
-			streamResponse(writable);
+			void streamResponse(writable);
 
 			return new Response(readable, {
 				headers: { "Content-Type": "text/html; charset=UTF-8" },

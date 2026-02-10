@@ -16,7 +16,7 @@ async function waitForMutation(env: Env, mutationId: string) {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
-		const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+		const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
 			prompt: "When I say PING, you say PONG. PING",
 		});
 
@@ -81,6 +81,7 @@ export default {
 			const stream = await (
 				await fetch("https://thispersondoesnotexist.com/")
 			).body;
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			const transform = await env.IMAGES.input(stream!)
 				.transform({ blur: 250 })
 				.output({ format: "image/avif" });
@@ -89,7 +90,9 @@ export default {
 		}
 
 		return new Response(
-			JSON.stringify((response as { response: string }).response.toUpperCase())
+			JSON.stringify(
+				(aiResponse as { response: string }).response.toUpperCase()
+			)
 		);
 	},
 } satisfies ExportedHandler<Env>;

@@ -1,7 +1,10 @@
-import path from "path";
+import path from "node:path";
 import dotenv from "dotenv";
 import dotenvExpand from "dotenv-expand";
 import { logger } from "../logger";
+import { caseInsensitiveEnv } from "./case-insensitive-env";
+
+const isWindows = process.platform === "win32";
 
 /**
  * Generates the default array of `envFiles` for .env file loading.
@@ -40,7 +43,7 @@ export function loadDotEnv(
 	{ includeProcessEnv, silent }: { includeProcessEnv: boolean; silent: boolean }
 ): dotenv.DotenvParseOutput {
 	// The `parsedEnv` object will be mutated to contain the merged values.
-	const parsedEnv = {};
+	const parsedEnv = isWindows ? caseInsensitiveEnv() : {};
 	for (const envPath of envPaths) {
 		// The `parsed` object only contains the values from the loaded .env file.
 		const { error, parsed } = dotenv.config({
@@ -64,7 +67,7 @@ export function loadDotEnv(
 
 	// The `expandedEnv` object will be mutated to include the expanded values from `parsedEnv`
 	// but only if the key is not already defined in `expandedEnv`.
-	const expandedEnv = {};
+	const expandedEnv = isWindows ? caseInsensitiveEnv() : {};
 	if (includeProcessEnv) {
 		Object.assign(expandedEnv, process.env);
 		if (!silent) {

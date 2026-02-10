@@ -30,10 +30,10 @@ export function validateKey(key: string): void {
 
 export function validateKeyLength(key: string): void {
 	const keyLength = Buffer.byteLength(key);
-	if (keyLength > KVLimits.MAX_KEY_SIZE) {
+	if (keyLength > KVLimits.MAX_KEY_SIZE_BYTES) {
 		throw new HttpError(
 			414,
-			`UTF-8 encoded length of ${keyLength} exceeds key length limit of ${KVLimits.MAX_KEY_SIZE}.`
+			`UTF-8 encoded length of ${keyLength} exceeds key length limit of ${KVLimits.MAX_KEY_SIZE_BYTES}.`
 		);
 	}
 }
@@ -48,11 +48,11 @@ export function validateGetOptions(
 	const cacheTtl = options?.cacheTtl;
 	if (
 		cacheTtl !== undefined &&
-		(isNaN(cacheTtl) || cacheTtl < KVLimits.MIN_CACHE_TTL)
+		(isNaN(cacheTtl) || cacheTtl < KVLimits.MIN_CACHE_TTL_SECONDS)
 	) {
 		throw new HttpError(
 			400,
-			`Invalid ${KVParams.CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${KVLimits.MIN_CACHE_TTL}.`
+			`Invalid ${KVParams.CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${KVLimits.MIN_CACHE_TTL_SECONDS}.`
 		);
 	}
 }
@@ -80,10 +80,10 @@ export function validatePutOptions(
 				`Invalid ${KVParams.EXPIRATION_TTL} of ${rawExpirationTtl}. Please specify integer greater than 0.`
 			);
 		}
-		if (expirationTtl < KVLimits.MIN_CACHE_TTL) {
+		if (expirationTtl < KVLimits.MIN_EXPIRATION_TTL_SECONDS) {
 			throw new HttpError(
 				400,
-				`Invalid ${KVParams.EXPIRATION_TTL} of ${rawExpirationTtl}. Expiration TTL must be at least ${KVLimits.MIN_CACHE_TTL}.`
+				`Invalid ${KVParams.EXPIRATION_TTL} of ${rawExpirationTtl}. Expiration TTL must be at least ${KVLimits.MIN_EXPIRATION_TTL_SECONDS}.`
 			);
 		}
 		expiration = now + expirationTtl;
@@ -95,10 +95,10 @@ export function validatePutOptions(
 				`Invalid ${KVParams.EXPIRATION} of ${rawExpiration}. Please specify integer greater than the current number of seconds since the UNIX epoch.`
 			);
 		}
-		if (expiration < now + KVLimits.MIN_CACHE_TTL) {
+		if (expiration < now + KVLimits.MIN_EXPIRATION_TTL_SECONDS) {
 			throw new HttpError(
 				400,
-				`Invalid ${KVParams.EXPIRATION} of ${rawExpiration}. Expiration times must be at least ${KVLimits.MIN_CACHE_TTL} seconds in the future.`
+				`Invalid ${KVParams.EXPIRATION} of ${rawExpiration}. Expiration times must be at least ${KVLimits.MIN_EXPIRATION_TTL_SECONDS} seconds in the future.`
 			);
 		}
 	}
@@ -107,10 +107,10 @@ export function validatePutOptions(
 	let metadata: unknown | undefined;
 	if (rawMetadata !== null) {
 		const metadataLength = Buffer.byteLength(rawMetadata);
-		if (metadataLength > KVLimits.MAX_METADATA_SIZE) {
+		if (metadataLength > KVLimits.MAX_METADATA_SIZE_BYTES) {
 			throw new HttpError(
 				413,
-				`Metadata length of ${metadataLength} exceeds limit of ${KVLimits.MAX_METADATA_SIZE}.`
+				`Metadata length of ${metadataLength} exceeds limit of ${KVLimits.MAX_METADATA_SIZE_BYTES}.`
 			);
 		}
 		metadata = JSON.parse(rawMetadata);

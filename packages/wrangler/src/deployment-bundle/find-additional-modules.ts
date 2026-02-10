@@ -1,19 +1,18 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getWranglerHiddenDirPath } from "../paths";
 import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
-import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
-import type { CfModule } from "./worker";
+import type { CfModule, Rule } from "@cloudflare/workers-utils";
 
 async function* getFiles(
 	configPath: string | undefined,
@@ -50,6 +49,16 @@ function isValidPythonPackageName(name: string): boolean {
 	return regex.test(name);
 }
 
+/**
+ * Checks if a given module name is a Python vendor module.
+ * @param moduleName The module name to check
+ */
+function isPythonVendorModule(moduleName: string): boolean {
+	// separator should be forward slash, as we always use forward slash for module names
+	// see `getFiles()` for more details
+	return moduleName.startsWith("python_modules/");
+}
+
 function removePythonVendorModules(
 	isPythonEntrypoint: boolean,
 	modules: CfModule[]
@@ -57,13 +66,11 @@ function removePythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
-	return modules.filter((m) => !m.name.startsWith("python_modules" + path.sep));
+	return modules.filter((m) => !isPythonVendorModule(m.name));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
-	const vendorModules = modules.filter((m) =>
-		m.name.startsWith("python_modules" + path.sep)
-	);
+	const vendorModules = modules.filter((m) => isPythonVendorModule(m.name));
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
 }
 
@@ -172,11 +179,10 @@ export async function findAdditionalModules(
 				{ type: "Data", globs: ["**/*"], fallthrough: true },
 			];
 			const vendoredModules = (
-				await matchFiles(
-					pythonModulesFiles,
-					pythonModulesDir,
-					parseRules(vendoredRules)
-				)
+				await matchFiles(pythonModulesFiles, pythonModulesDir, {
+					rules: vendoredRules,
+					removedRules: [],
+				})
 			)
 				.filter((m) => {
 					// Check if the file matches any exclusion pattern
@@ -189,7 +195,10 @@ export async function findAdditionalModules(
 					return true; // Include this file
 				})
 				.map((m) => {
-					const prefixedPath = path.join("python_modules", m.name);
+					// Always use forward slashes for module names, regardless of platform.
+					// path.join() uses backslashes on Windows, but module names must use
+					// forward slashes for proper directory structure when deployed.
+					const prefixedPath = `python_modules/${m.name}`;
 					return {
 						...m,
 						name: prefixedPath,

@@ -531,7 +531,7 @@ parameter in module format Workers.
 
 #### Durable Objects
 
-- `durableObjects?: Record<string, string | { className: string, scriptName?: string }>`
+- `durableObjects?: Record<string, string | { className: string, scriptName?: string, useSQLite?: boolean }>`
 
   Record mapping binding name to Durable Object class designators to inject as
   `DurableObjectNamespace` bindings into this Worker.
@@ -542,6 +542,7 @@ parameter in module format Workers.
     should be the name of a `class` exported by this Worker.
   - Otherwise, `className` should be the name of a `class` exported by the
     Worker with a `name` of `scriptName`.
+  - To use the Durable Object SQLite API you must pass `useSQLite: true`.
 
 #### KV
 
@@ -740,6 +741,24 @@ Options shared between all Workers/"nanoservices".
   `request.url`s will be rewritten to start with this string. This is especially
   useful when testing Workers that act as a proxy, and not as origins
   themselves.
+
+  When `upstream` is set, the `Host` header is rewritten to match the upstream
+  server. To preserve the original hostname, Miniflare adds an
+  `MF-Original-Hostname` header containing the original `Host` value:
+
+  ```js
+  export default {
+  	async fetch(request) {
+  		// When upstream is set, Host header contains the upstream hostname
+  		const upstreamHost = request.headers.get("Host");
+  		// Original hostname is preserved in MF-Original-Hostname
+  		const originalHost = request.headers.get("MF-Original-Hostname");
+  		return new Response(
+  			`Original: ${originalHost}, Upstream: ${upstreamHost}`
+  		);
+  	},
+  };
+  ```
 
 - `cf?: boolean | string | Record<string, any>`
 

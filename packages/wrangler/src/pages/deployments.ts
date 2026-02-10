@@ -1,9 +1,13 @@
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
+} from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
+import { confirm } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -105,5 +109,79 @@ export const pagesDeploymentListCommand = createCommand({
 			logger.table(data);
 		}
 		metrics.sendMetricsEvent("list pages deployments");
+	},
+});
+
+export const pagesDeploymentDeleteCommand = createCommand({
+	metadata: {
+		description: "Delete a deployment in your Cloudflare Pages project",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
+		"deployment-id": {
+			type: "string",
+			description: "The ID of the deployment to delete",
+			demandOption: true,
+		},
+		"project-name": {
+			type: "string",
+			description: "The name of the project the deployment belongs to",
+		},
+		force: {
+			type: "boolean",
+			alias: "f",
+			description: "Skip confirmation",
+			default: false,
+		},
+	},
+	positionalArgs: ["deployment-id"],
+	async handler({ deploymentId, projectName, force }) {
+		const config = getConfigCache<PagesConfigCache>(
+			PAGES_CONFIG_CACHE_FILENAME
+		);
+		const accountId = await requireAuth(config);
+
+		projectName ??= config.project_name;
+
+		const isInteractive = !isNonInteractiveOrCI();
+		if (!projectName && isInteractive) {
+			projectName = await promptSelectProject({ accountId });
+		}
+
+		if (!projectName) {
+			throw new FatalError("Must specify a project name.", 1);
+		}
+
+		const confirmed =
+			force ||
+			(await confirm(
+				`Are you sure you want to delete deployment "${deploymentId}" in project "${projectName}"? This action cannot be undone.`,
+				{ fallbackValue: false }
+			));
+
+		if (!confirmed) {
+			return;
+		}
+
+		logger.log(`Deleting deployment ${deploymentId}...`);
+
+		await fetchResult(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
+			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}`,
+			{ method: "DELETE" }
+		);
+
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: accountId,
+			project_name: projectName,
+		});
+
+		logger.log(`Successfully deleted deployment ${deploymentId}`);
+		metrics.sendMetricsEvent("delete pages deployment");
 	},
 });

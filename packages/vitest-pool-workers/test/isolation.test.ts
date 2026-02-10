@@ -12,16 +12,15 @@ export class DeterministicSequencer extends BaseSequencer {
 }
 `;
 
-test("isolated storage with multiple workers", async ({
-	expect,
-	seed,
-	vitestRun,
-}) => {
-	// Check unique global scopes, storage isolated, and unique auxiliaries:
-	// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-true-singleworker-false-default
-	await seed({
-		"sequencer.ts": deterministicSequencer,
-		"auxiliary.mjs": dedent`
+test(
+	"isolated storage with multiple workers",
+	{ timeout: 30_000 },
+	async ({ expect, seed, vitestRun }) => {
+		// Check unique global scopes, storage isolated, and unique auxiliaries:
+		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-true-singleworker-false-default
+		await seed({
+			"sequencer.ts": deterministicSequencer,
+			"auxiliary.mjs": dedent`
 			let count = 0;
 			export default {
 				fetch() {
@@ -29,7 +28,7 @@ test("isolated storage with multiple workers", async ({
 				}
 			}
 		`,
-		"vitest.config.mts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 
@@ -58,7 +57,7 @@ test("isolated storage with multiple workers", async ({
 				}
 			});
 		`,
-		"a.test.ts": dedent`
+			"a.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something", async () => {
@@ -72,7 +71,7 @@ test("isolated storage with multiple workers", async ({
 				expect(await response.text()).toBe("1");
 			});
 		`,
-		"b.test.ts": dedent`
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something else", async () => {
@@ -86,39 +85,39 @@ test("isolated storage with multiple workers", async ({
 				expect(await response.text()).toBe("1");
 			});
 		`,
-	});
-	let result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
+		});
+		let result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
 
-	// Check prohibits concurrent tests
-	await seed({
-		"b.test.ts": dedent`
+		// Check prohibits concurrent tests
+		await seed({
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it.concurrent("does something else", () => {});
 		`,
-	});
-	result = await vitestRun();
-	expect(await result.exitCode).toBe(1);
-	const expected = dedent`
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		const expected = dedent`
 		Error: Concurrent tests are unsupported with isolated storage. Please either:
 		- Remove \`.concurrent\` from the "does something else" test
 		- Remove \`.concurrent\` from all \`describe()\` blocks containing the "does something else" test
 		- Remove \`isolatedStorage: true\` from your project's Vitest config
 	`;
-	expect(result.stderr).toMatch(expected);
-});
+		expect(result.stderr).toMatch(expected);
+	}
+);
 
-test("isolated storage with single worker", async ({
-	expect,
-	seed,
-	vitestRun,
-}) => {
-	// Check shared global scope, storage isolated, and shared auxiliaries:
-	// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-true-singleworker-true
-	await seed({
-		"sequencer.ts": deterministicSequencer,
-		"auxiliary.mjs": dedent`
+test(
+	"isolated storage with single worker",
+	{ timeout: 30_000 },
+	async ({ expect, seed, vitestRun }) => {
+		// Check shared global scope, storage isolated, and shared auxiliaries:
+		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-true-singleworker-true
+		await seed({
+			"sequencer.ts": deterministicSequencer,
+			"auxiliary.mjs": dedent`
 			let count = 0;
 			export default {
 				fetch() {
@@ -126,7 +125,7 @@ test("isolated storage with single worker", async ({
 				}
 			}
 		`,
-		"vitest.config.mts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 
@@ -155,7 +154,7 @@ test("isolated storage with single worker", async ({
 				}
 			});
 		`,
-		"a.test.ts": dedent`
+			"a.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something", async () => {
@@ -169,7 +168,7 @@ test("isolated storage with single worker", async ({
 				expect(await response.text()).toBe("1");
 			});
 		`,
-		"b.test.ts": dedent`
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something else", async () => {
@@ -181,39 +180,39 @@ test("isolated storage with single worker", async ({
 				expect(await response.text()).toBe("2");
 			});
 		`,
-	});
-	let result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
+		});
+		let result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
 
-	// Check prohibits concurrent tests
-	await seed({
-		"b.test.ts": dedent`
+		// Check prohibits concurrent tests
+		await seed({
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it.concurrent("does something else", () => {});
 		`,
-	});
-	result = await vitestRun();
-	expect(await result.exitCode).toBe(1);
-	const expected = dedent`
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(1);
+		const expected = dedent`
 		Error: Concurrent tests are unsupported with isolated storage. Please either:
 		- Remove \`.concurrent\` from the "does something else" test
 		- Remove \`.concurrent\` from all \`describe()\` blocks containing the "does something else" test
 		- Remove \`isolatedStorage: true\` from your project's Vitest config
 	`;
-	expect(result.stderr).toMatch(expected);
-});
+		expect(result.stderr).toMatch(expected);
+	}
+);
 
-test("shared storage with multiple workers", async ({
-	expect,
-	seed,
-	vitestRun,
-}) => {
-	// Check unique global scopes, storage shared, and shared auxiliaries:
-	// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-false-singleworker-false
-	await seed({
-		"sequencer.ts": deterministicSequencer,
-		"auxiliary.mjs": dedent`
+test(
+	"shared storage with multiple workers",
+	{ timeout: 30_000 },
+	async ({ expect, seed, vitestRun }) => {
+		// Check unique global scopes, storage shared, and shared auxiliaries:
+		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-false-singleworker-false
+		await seed({
+			"sequencer.ts": deterministicSequencer,
+			"auxiliary.mjs": dedent`
 			export class SyncObject {
 				#resolves = [];
 				fetch(request) {
@@ -235,7 +234,7 @@ test("shared storage with multiple workers", async ({
 				}
 			}
 		`,
-		"vitest.config.mts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 
@@ -265,7 +264,7 @@ test("shared storage with multiple workers", async ({
 				}
 			});
 		`,
-		"a.test.ts": dedent`
+			"a.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something", async () => {
@@ -278,7 +277,7 @@ test("shared storage with multiple workers", async ({
 				expect(await env.NAMESPACE.get("b")).toBe("2");
 			});
 		`,
-		"b.test.ts": dedent`
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something else", async () => {
@@ -291,26 +290,27 @@ test("shared storage with multiple workers", async ({
 				expect(await env.NAMESPACE.get("a")).toBe("1");
 			});
 		`,
-	});
-	let result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
+		});
+		let result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
 
-	// Check allows concurrent tests
-	await seed({
-		"a.test.ts": dedent`
+		// Check allows concurrent tests
+		await seed({
+			"a.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it.concurrent("does something", () => {});
 		`,
-		"b.test.ts": dedent`
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it.concurrent("does something else", () => {});
 		`,
-	});
-	result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
-});
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+	}
+);
 
 test(
 	"shared storage with single worker",

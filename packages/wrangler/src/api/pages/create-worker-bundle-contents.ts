@@ -4,9 +4,9 @@ import { Response } from "undici";
 import { getBindings } from "../../deployment-bundle/bindings";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
-import type { Config } from "../../config";
+import { parseConfigPlacement } from "../../utils/placement";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { CfPlacement } from "../../deployment-bundle/worker";
+import type { CfPlacement, Config } from "@cloudflare/workers-utils";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 
@@ -45,11 +45,13 @@ function createWorkerBundleFormData(
 		type: workerBundle.bundleType || "esm",
 	};
 
-	// The upload API only accepts an empty string or no specified placement for the "off" mode.
-	const placement: CfPlacement | undefined =
-		config?.placement?.mode === "smart"
-			? { mode: "smart", hint: config.placement.hint }
-			: undefined;
+	let placement: CfPlacement | undefined;
+
+	if (config !== undefined) {
+		placement = parseConfigPlacement(config);
+	} else {
+		placement = undefined;
+	}
 
 	return createWorkerUploadForm({
 		name: mainModule.name,
@@ -70,6 +72,7 @@ function createWorkerBundleFormData(
 		tail_consumers: undefined,
 		limits: config?.limits,
 		assets: undefined,
+		containers: undefined, // containers are not supported in Pages
 		observability: undefined,
 	});
 }

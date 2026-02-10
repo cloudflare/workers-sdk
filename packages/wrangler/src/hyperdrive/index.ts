@@ -1,5 +1,5 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
-import { UserError } from "../errors";
 import type {
 	CachingOptions,
 	Mtls,
@@ -16,6 +16,7 @@ export const hyperdriveNamespace = createNamespace({
 		description: "🚀 Manage Hyperdrive databases",
 		status: "stable",
 		owner: "Product: Hyperdrive",
+		category: "Storage & databases",
 	},
 });
 

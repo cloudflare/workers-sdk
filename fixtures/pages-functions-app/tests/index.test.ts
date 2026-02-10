@@ -332,7 +332,7 @@ describe("Pages Functions", () => {
 			});
 		});
 
-		it("allows middleware to be overriden and not merged", async ({
+		it("allows middleware to be overridden and not merged", async ({
 			expect,
 		}) => {
 			const response = await fetch(

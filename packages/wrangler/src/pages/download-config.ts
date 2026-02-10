@@ -1,22 +1,24 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import TOML from "@iarna/toml";
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
+	formatCompatibilityDate,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { supportedCompatibilityDate } from "miniflare";
+import TOML from "smol-toml";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import type { RawEnvironment } from "../config";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
+import type { RawEnvironment } from "@cloudflare/workers-utils";
 
 // TODO: fix the Project definition
 type DeploymentConfig = Project["deployment_configs"]["production"];
@@ -194,7 +196,7 @@ async function toEnvironment(
 	return configObj;
 }
 async function writeWranglerToml(toml: RawEnvironment) {
-	let tomlString = TOML.stringify(toml as TOML.JsonMap);
+	let tomlString = TOML.stringify(toml);
 
 	// Remove indentation from the start of lines, as this isn't common across TOML examples, and causes user confusion
 	tomlString = tomlString

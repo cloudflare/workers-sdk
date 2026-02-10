@@ -1,0 +1,38 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "worker-w-resources",
+	"main": "src/index.ts",
+	"compatibility_date": "2023-05-04",
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+		},
+		{
+			"binding": "KV_WITH_ID",
+			"id": "some-kv-id",
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+		},
+		{
+			"binding": "BACKUP_DB",
+			"database_id": "some-db-id",
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DO",
+				"class_name": "MyDurableObject",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MyDurableObject"],
+			"tag": "v1",
+		},
+	],
+}

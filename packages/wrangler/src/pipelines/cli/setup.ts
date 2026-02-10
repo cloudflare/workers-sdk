@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
+import {
+	bucketFormatMessage,
+	isValidR2BucketName,
+	parseJSON,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt, select } from "../../dialogs";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import { parseJSON } from "../../parse";
-import { bucketFormatMessage, isValidR2BucketName } from "../../r2/helpers";
 import { requireAuth } from "../../user";
 import {
 	createPipeline,
@@ -21,7 +24,6 @@ import {
 	displayUsageExamples,
 	formatSchemaFieldsForTable,
 } from "./streams/utils";
-import type { Config } from "../../config";
 import type {
 	CreatePipelineRequest,
 	CreateSinkRequest,
@@ -32,6 +34,7 @@ import type {
 	SinkFormat,
 	Stream,
 } from "../types";
+import type { Config } from "@cloudflare/workers-utils";
 
 interface SetupConfig {
 	pipelineName: string;
@@ -46,7 +49,7 @@ export const pipelinesSetupCommand = createCommand({
 	metadata: {
 		description: "Interactive setup for a complete pipeline",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	args: {
 		name: {

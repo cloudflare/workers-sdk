@@ -1,4 +1,6 @@
-import { it } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses .each */
+import { expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { isLocal } from "../utils/is-local";
 
 const testCases: [

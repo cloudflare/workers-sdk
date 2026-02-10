@@ -23,19 +23,25 @@ import {
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { formatConfigSnippet } from "../config";
+import {
+	FatalError,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { configRolloutStepsToAPI } from "../containers/deploy";
-import { FatalError, UserError } from "../errors";
+import { createCommand } from "../core/create-command";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
-import { promiseSpinner } from "./common";
+import {
+	cloudchamberScope,
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "./common";
 import { cleanForInstanceType } from "./instance-type/instance-type";
-import type { Config } from "../config";
-import type { ContainerApp, Observability } from "../config/environment";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -53,7 +59,11 @@ import type {
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
-import type { JsonMap } from "@iarna/toml";
+import type {
+	Config,
+	ContainerApp,
+	Observability,
+} from "@cloudflare/workers-utils";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
@@ -126,20 +136,6 @@ function applicationToCreateApplication(
 		durable_objects: application.durable_objects,
 	};
 	return app;
-}
-
-function cleanupObservability(
-	observability: ObservabilityConfiguration | undefined
-) {
-	if (observability === undefined) {
-		return;
-	}
-
-	// `logging` field is deprecated, so if the server returns both `logging` and `logs`
-	// fields, drop the `logging` one.
-	if (observability.logging !== undefined && observability.logs !== undefined) {
-		delete observability.logging;
-	}
 }
 
 function observabilityToConfiguration(
@@ -332,7 +328,7 @@ export async function apply(
 			name: config.name ?? "my-containers-application",
 			instance_type: "lite",
 		};
-		const endConfig: JsonMap =
+		const endConfig: Record<string, unknown> =
 			args.env !== undefined
 				? {
 						env: { [args.env]: { containers: [configuration] } },
@@ -347,9 +343,6 @@ export async function apply(
 	const applications = await promiseSpinner(
 		ApplicationsService.listApplications(),
 		{ message: "Loading applications" }
-	);
-	applications.forEach((app) =>
-		cleanupObservability(app.configuration.observability)
 	);
 	const applicationByNames: Record<ApplicationName, Application> = {};
 	// TODO: this is not correct right now as there can be multiple applications
@@ -679,3 +672,28 @@ export async function applyCommand(
 		config
 	);
 }
+
+export const cloudchamberApplyCommand = createCommand({
+	metadata: {
+		description: "Apply the changes in the container applications to deploy",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: true,
+		deprecated: true,
+		deprecatedMessage:
+			"`wrangler cloudchamber apply` is deprecated and will be removed in the next major version.\n" +
+			"Please use `wrangler deploy` instead.",
+	},
+	args: {
+		"skip-defaults": {
+			requiresArg: true,
+			type: "boolean",
+			demandOption: false,
+			describe: "Skips recommended defaults added by apply",
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await applyCommand(args, config);
+	},
+});

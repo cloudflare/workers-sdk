@@ -1,6 +1,4 @@
 import { fetchResult } from "../cfetch";
-import type { Observability, TailConsumer } from "../config/environment";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -8,6 +6,12 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
+import type {
+	ComplianceConfig,
+	Observability,
+	StreamingTailConsumer,
+	TailConsumer,
+} from "@cloudflare/workers-utils";
 
 export async function fetchVersion(
 	complianceConfig: ComplianceConfig,
@@ -157,6 +161,7 @@ export type NonVersionedScriptSettings = {
 	logpush: boolean;
 	tags: string[] | null;
 	tail_consumers: TailConsumer[];
+	streaming_tail_consumers: StreamingTailConsumer[];
 	observability: Observability;
 };
 

@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import {
 	getJsonResponse,
 	getTextResponse,
@@ -6,38 +6,49 @@ import {
 	viteTestUrl,
 } from "../../__test-utils__";
 
-test("supports Data modules with a '.bin' extension", async () => {
+test("supports Data modules with a '.bin' extension", async ({ expect }) => {
 	const result = await getJsonResponse("/bin");
 	expect(result).toEqual({ byteLength: 342936 });
 });
 
-test("supports Text modules with a '.html' extension", async () => {
+test("supports Text modules with a '.html' extension", async ({ expect }) => {
 	await page.goto(`${viteTestUrl}/html`);
 	const content = await page.textContent("h1");
 	expect(content).toBe("Hello world");
 });
 
-test("supports Text modules with a '.txt' extension", async () => {
+test("supports Text modules with a '.txt' extension", async ({ expect }) => {
 	const result = await getTextResponse("/text");
 	expect(result).toBe("Example text content.\n");
 });
 
-test("supports modules with `__`s in the filename", async () => {
+test("supports Text modules with a '.sql' extension", async ({ expect }) => {
+	const result = await getTextResponse("/sql");
+	expect(result).toBe("SELECT * FROM users;\n");
+});
+
+test("supports modules with `__`s in the filename", async ({ expect }) => {
 	const result = await getTextResponse("/text2");
 	expect(result).toBe("Example text content 2");
 });
 
-test("supports CompiledWasm modules with a '.wasm' extension", async () => {
+test("supports CompiledWasm modules with a '.wasm' extension", async ({
+	expect,
+}) => {
 	const result = await getJsonResponse("/wasm");
 	expect(result).toEqual({ result: 7 });
 });
 
-test("supports CompiledWasm modules with a '.wasm?module' extension", async () => {
+test("supports CompiledWasm modules with a '.wasm?module' extension", async ({
+	expect,
+}) => {
 	const result = await getJsonResponse("/wasm-with-module-param");
 	expect(result).toEqual({ result: 11 });
 });
 
-test("supports CompiledWasm modules with a '.wasm?init' extension", async () => {
+test("supports CompiledWasm modules with a '.wasm?init' extension", async ({
+	expect,
+}) => {
 	const result = await getJsonResponse("/wasm-with-init-param");
 	expect(result).toEqual({ result: 15 });
 });

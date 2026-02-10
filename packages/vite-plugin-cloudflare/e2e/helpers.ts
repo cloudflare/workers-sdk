@@ -3,6 +3,7 @@ import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
@@ -14,6 +15,7 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
+import wranglerPackage from "../../wrangler/package.json";
 import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");
@@ -40,8 +42,15 @@ const strictPeerDeps = {
 /** Seed a test project from a fixture. */
 export function seed(
 	fixture: string,
-	pm: "pnpm" | "yarn" | "npm",
-	replacements: Record<string, string> = {}
+	{
+		pm,
+		replacements = {},
+		useStrictPeerDeps = true,
+	}: {
+		pm: "pnpm" | "yarn" | "npm";
+		replacements?: Record<string, string>;
+		useStrictPeerDeps?: boolean;
+	}
 ) {
 	const root = inject("root");
 	const projectPath = path.resolve(root, fixture, pm);
@@ -52,13 +61,17 @@ export function seed(
 			errorOnExist: true,
 		});
 		debuglog("Fixture copied to " + projectPath);
-		await updateVitePluginVersion(projectPath);
+		await updateVitePluginAndWranglerVersion(projectPath);
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
-		runCommand(`${pm} install ${strictPeerDeps[pm]}`, projectPath, {
-			attempts: 2,
-		});
+		runCommand(
+			`${pm} install ${useStrictPeerDeps ? strictPeerDeps[pm] : ""}`,
+			projectPath,
+			{
+				attempts: 2,
+			}
+		);
 		debuglog("Installed node modules");
 	}, 200_000);
 
@@ -86,7 +99,7 @@ export async function runLongLived(
 	customEnv: Record<string, string | undefined> = {}
 ) {
 	debuglog(`starting \`${command}\` for ${projectPath}`);
-	const process = childProcess.exec(`${pm} run ${command}`, {
+	const proc = childProcess.exec(`${pm} run ${command}`, {
 		cwd: projectPath,
 		env: {
 			...testEnv,
@@ -94,29 +107,42 @@ export async function runLongLived(
 		},
 	});
 
+	// Create a promise that resolves when the process actually exits
+	const closePromise = events.once(proc, "close");
+
 	onTestFinished(async () => {
 		debuglog(`Closing down process`);
-		const result = await new Promise<number | undefined>((resolve) => {
-			const pid = process?.pid;
-			if (!pid) {
-				resolve(undefined);
-			} else {
-				debuglog(`Killing process, id:${pid}`);
-				kill(pid, "SIGKILL", (error) => {
-					if (error) {
-						debuglog("Error killing process", error);
-					}
-					resolve(pid);
-				});
-			}
-		});
-		if (result) {
-			debuglog("Killed process", result);
-		} else {
+		const pid = proc.pid;
+		if (!pid) {
 			debuglog("Process had no pid");
+			return;
 		}
+
+		debuglog(`Killing process tree, pid:${pid}`);
+
+		// Send kill signal to process tree
+		await new Promise<void>((resolve) => {
+			kill(pid, "SIGKILL", (error) => {
+				if (error) {
+					debuglog("Error sending kill signal:", error);
+				} else {
+					debuglog(`Kill signal sent for pid:${pid}`);
+				}
+				resolve();
+			});
+		});
+
+		// Wait for the process to actually exit, not just the kill signal to be sent
+		debuglog(`Waiting for process ${pid} to fully exit...`);
+		await closePromise;
+		debuglog(`Process ${pid} has exited`);
+
+		// Small delay to ensure OS resources (ports, file handles) are fully released
+		await setTimeout(100);
+		debuglog(`Cleanup complete for pid:${pid}`);
 	});
-	return wrap(process);
+
+	return wrap(proc);
 }
 
 export interface Process {
@@ -169,7 +195,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	return wrappedProc;
 }
 
-async function updateVitePluginVersion(projectPath: string) {
+async function updateVitePluginAndWranglerVersion(projectPath: string) {
 	const pkg = JSON.parse(
 		await fs.readFile(path.resolve(projectPath, "package.json"), "utf8")
 	);
@@ -177,6 +203,10 @@ async function updateVitePluginVersion(projectPath: string) {
 	for (const field of fields) {
 		if (pkg[field]?.["@cloudflare/vite-plugin"]) {
 			pkg[field]["@cloudflare/vite-plugin"] = vitePluginPackage.version;
+		}
+		// Some fixtures require the current version of wrangler to be installed
+		if (pkg[field]?.["wrangler"] === "*") {
+			pkg[field]["wrangler"] = wranglerPackage.version;
 		}
 	}
 	await fs.writeFile(

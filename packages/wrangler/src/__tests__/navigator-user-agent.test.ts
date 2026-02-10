@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { vi } from "vitest";
+import { afterEach, describe, it, test, vi } from "vitest";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -25,47 +25,47 @@ async function seedFs(files: Record<string, string>): Promise<void> {
 }
 
 describe("isNavigatorDefined", () => {
-	test("default", () => {
+	test("default", ({ expect }) => {
 		expect(isNavigatorDefined(undefined)).toBe(false);
 	});
 
-	test("modern date", () => {
+	test("modern date", ({ expect }) => {
 		expect(isNavigatorDefined("2024-01-01")).toBe(true);
 	});
 
-	test("old date", () => {
+	test("old date", ({ expect }) => {
 		expect(isNavigatorDefined("2000-01-01")).toBe(false);
 	});
 
-	test("switch date", () => {
+	test("switch date", ({ expect }) => {
 		expect(isNavigatorDefined("2022-03-21")).toBe(true);
 	});
 
-	test("before date", () => {
+	test("before date", ({ expect }) => {
 		expect(isNavigatorDefined("2022-03-20")).toBe(false);
 	});
 
-	test("old date, but with flag", () => {
+	test("old date, but with flag", ({ expect }) => {
 		expect(isNavigatorDefined("2000-01-01", ["global_navigator"])).toBe(true);
 	});
 
-	test("old date, with disable flag", () => {
+	test("old date, with disable flag", ({ expect }) => {
 		expect(isNavigatorDefined("2000-01-01", ["no_global_navigator"])).toBe(
 			false
 		);
 	});
 
-	test("new date, but with disable flag", () => {
+	test("new date, but with disable flag", ({ expect }) => {
 		expect(isNavigatorDefined("2024-01-01", ["no_global_navigator"])).toBe(
 			false
 		);
 	});
 
-	test("new date, with enable flag", () => {
+	test("new date, with enable flag", ({ expect }) => {
 		expect(isNavigatorDefined("2024-01-01", ["global_navigator"])).toBe(true);
 	});
 
-	test("errors with disable and enable flags specified", () => {
+	test("errors with disable and enable flags specified", ({ expect }) => {
 		try {
 			isNavigatorDefined("2024-01-01", [
 				"no_global_navigator",
@@ -102,7 +102,9 @@ describe("defineNavigatorUserAgent is respected", () => {
 		vi.unstubAllEnvs();
 	});
 
-	it("preserves `navigator` when `defineNavigatorUserAgent` is `false`", async () => {
+	it("preserves `navigator` when `defineNavigatorUserAgent` is `false`", async ({
+		expect,
+	}) => {
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
 			function randomBytes(length) {
@@ -154,7 +156,9 @@ describe("defineNavigatorUserAgent is respected", () => {
 		expect(fileContents).toContain("navigator.userAgent");
 	});
 
-	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true`", async () => {
+	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true`", async ({
+		expect,
+	}) => {
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
 			function randomBytes(length) {
@@ -198,7 +202,9 @@ describe("defineNavigatorUserAgent is respected", () => {
 		expect(fileContents).not.toContain("navigator.userAgent");
 	});
 
-	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true` and `process.env.NODE_ENV` is `undefined`", async () => {
+	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true` and `process.env.NODE_ENV` is `undefined`", async ({
+		expect,
+	}) => {
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
 			function randomBytes(length) {

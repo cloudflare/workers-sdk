@@ -4,8 +4,9 @@ import { resolve } from "node:path";
 import {
 	getOutputFileDirectoryFromEnv,
 	getOutputFilePathFromEnv,
-} from "./environment-variables/misc-variables";
+} from "@cloudflare/workers-utils";
 import { ensureDirectoryExistsSync } from "./utils/filesystem";
+import type { AutoConfigSummary } from "./autoconfig/types";
 
 /**
  * Write an entry to the output file.
@@ -72,7 +73,8 @@ export type OutputEntry =
 	| OutputEntryVersionUpload
 	| OutputEntryVersionDeployment
 	| OutputEntryPagesDeploymentDetailed
-	| OutputEntryCommandFailed;
+	| OutputEntryCommandFailed
+	| OutputEntryAutoConfig;
 
 interface OutputEntrySession extends OutputEntryBase<"wrangler-session"> {
 	version: 1;
@@ -98,6 +100,14 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+}
+
+interface OutputEntryAutoConfig extends OutputEntryBase<"autoconfig"> {
+	version: 1;
+	/** The command that triggered autoconfig */
+	command: "setup" | "deploy";
+	/** The summary of the autoconfig process */
+	summary: AutoConfigSummary;
 }
 
 interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {

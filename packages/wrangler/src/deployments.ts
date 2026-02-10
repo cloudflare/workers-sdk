@@ -1,22 +1,27 @@
-import { URLSearchParams } from "url";
-import TOML from "@iarna/toml";
+import { URLSearchParams } from "node:url";
+import {
+	configFileName,
+	mapWorkerMetadataBindings,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import TOML from "smol-toml";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
-import { configFileName, readConfig } from "./config";
+import { readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
-import { UserError } from "./errors";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import { mapWorkerMetadataBindings } from "./utils/map-worker-metadata-bindings";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { Config } from "./config";
-import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
-import type { ServiceMetadataRes } from "./init";
 import type { CommonYargsOptions } from "./yargs-types";
+import type {
+	ComplianceConfig,
+	Config,
+	ServiceMetadataRes,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 import type { ArgumentsCamelCase } from "yargs";
 
 type DeploymentDetails = {
@@ -331,13 +336,7 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify(
-				(await mapWorkerMetadataBindings(
-					bindings,
-					accountId,
-					complianceConfig
-				)) as TOML.JsonMap
-			)
+		? TOML.stringify(mapWorkerMetadataBindings(bindings))
 		: `None`
 }
 `;

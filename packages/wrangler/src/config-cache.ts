@@ -1,5 +1,5 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import * as path from "path";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import * as path from "node:path";
 import { findUpSync } from "find-up";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";

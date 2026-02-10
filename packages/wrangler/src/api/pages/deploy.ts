@@ -3,13 +3,15 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
+} from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/misc-variables";
-import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { buildFunctions } from "../../pages/buildFunctions";
@@ -26,13 +28,15 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
-import { upload } from "../../pages/upload";
-import { getPagesTmpDir } from "../../pages/utils";
+import { maxFileCountAllowedFromClaims, upload } from "../../pages/upload";
+import { getPagesTmpDir, truncateUtf8Bytes } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
-import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Deployment, Project } from "@cloudflare/types";
+import type { Config } from "@cloudflare/workers-utils";
+
+const MAX_COMMIT_MESSAGE_BYTES = 384;
 
 interface PagesDeployOptions {
 	/**
@@ -245,7 +249,15 @@ export async function deploy({
 		}
 	}
 
-	const fileMap = await validate({ directory });
+	// Fetch JWT to get file count limit for validation
+	const { jwt } = await fetchResult<{ jwt: string }>(
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
+		`/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+	);
+
+	const fileCountLimit = maxFileCountAllowedFromClaims(jwt);
+
+	const fileMap = await validate({ directory, fileCountLimit });
 
 	const manifest = await upload({
 		fileMap,
@@ -263,7 +275,10 @@ export async function deploy({
 	}
 
 	if (commitMessage) {
-		formData.append("commit_message", commitMessage);
+		formData.append(
+			"commit_message",
+			truncateUtf8Bytes(commitMessage, MAX_COMMIT_MESSAGE_BYTES)
+		);
 	}
 
 	if (commitHash) {

@@ -1,5 +1,5 @@
 import readline from "node:readline";
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 import isInteractive from "../is-interactive";
 import type { Key } from "node:readline";
 

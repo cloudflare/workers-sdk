@@ -1,8 +1,8 @@
-import assert from "assert";
+import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
@@ -34,13 +34,9 @@ export const deploymentsStatusCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsStatusHandler(args, { config }) {
-		metrics.sendMetricsEvent(
-			"view latest versioned deployment",
-			{},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		metrics.sendMetricsEvent("view latest versioned deployment", {
+			sendMetrics: config.send_metrics,
+		});
 
 		const accountId = await requireAuth(config);
 		const workerName = args.name ?? config.name;

@@ -1,0 +1,13 @@
+{
+	"name": "@cloudflare/vite-plugin-e2e-unresolved-main",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "*",
+		"vite": "^7.0.0",
+		"wrangler": "*"
+	}
+}

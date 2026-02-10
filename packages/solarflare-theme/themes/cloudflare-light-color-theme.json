@@ -48,11 +48,10 @@
 		{
 			"name": "Variables",
 			"scope": [
+				"variable",
 				"string constant.other.placeholder",
-				"variable.other",
 				"variable.other.object",
 				"variable.other.readwrite",
-				"variable.other.object",
 				"variable.other.property"
 			],
 			"settings": {

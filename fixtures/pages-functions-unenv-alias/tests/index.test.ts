@@ -1,12 +1,11 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, it, onTestFinished } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages functions with unenv aliased packages", () => {
 	it("should run dev server when requiring an unenv aliased package", async ({
 		expect,
-		onTestFinished,
 	}) => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),

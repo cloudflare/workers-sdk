@@ -1,15 +1,14 @@
 import * as cli from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
-import type { Config } from "../../config";
 import type { VersionId } from "../types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
@@ -42,6 +41,7 @@ export const versionsRollbackCommand = createCommand({
 		description: "🔙 Rollback a deployment for a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	handler: async function handleRollback(args, { config }) {
 		const accountId = await requireAuth(config);

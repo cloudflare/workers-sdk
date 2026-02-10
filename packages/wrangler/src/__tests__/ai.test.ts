@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -12,7 +13,7 @@ describe("ai help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help when no argument is passed", async () => {
+	it("should show help when no argument is passed", async ({ expect }) => {
 		await runWrangler("ai");
 		await endEventLoop();
 
@@ -35,7 +36,9 @@ describe("ai help", () => {
 		`);
 	});
 
-	it("should show help when an invalid argument is passed", async () => {
+	it("should show help when an invalid argument is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("ai asdf")).rejects.toThrow(
 			"Unknown argument: asdf"
 		);
@@ -82,7 +85,7 @@ describe("ai commands", () => {
 		clearDialogs();
 	});
 
-	it("should handle finetune list", async () => {
+	it("should handle finetune list", async ({ expect }) => {
 		mockAIListFinetuneRequest();
 		await runWrangler("ai finetune list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -107,7 +110,7 @@ describe("ai commands", () => {
 		`);
 	});
 
-	it("should handle model list", async () => {
+	it("should handle model list", async ({ expect }) => {
 		mockAISearchRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -124,7 +127,7 @@ describe("ai commands", () => {
 		`);
 	});
 
-	it("should truncate model description", async () => {
+	it("should truncate model description", async ({ expect }) => {
 		const original = process.stdout.columns;
 		// Arbitrary fixed value for testing
 		process.stdout.columns = 186;
@@ -146,7 +149,7 @@ describe("ai commands", () => {
 		process.stdout.columns = original;
 	});
 
-	it("should paginate results", async () => {
+	it("should paginate results", async ({ expect }) => {
 		const original = process.stdout.columns;
 		// Arbitrary fixed value for testing
 		process.stdout.columns = 186;

@@ -1,4 +1,5 @@
 import prompts from "prompts";
+import { expect } from "vitest";
 import type { Mock } from "vitest";
 
 /**

@@ -155,7 +155,9 @@ async function generateAssetsFetch(
 	let redirects: ParsedRedirects | undefined;
 	if (existsSync(redirectsFile)) {
 		const contents = readFileSync(redirectsFile, "utf-8");
-		redirects = parseRedirects(contents);
+		redirects = parseRedirects(contents, {
+			htmlHandling: undefined, // Pages dev server doesn't expose html_handling configuration in this context.
+		});
 	}
 
 	let headers: ParsedHeaders | undefined;
@@ -185,7 +187,9 @@ async function generateAssetsFetch(
 				case redirectsFile: {
 					log.log("_redirects modified. Re-evaluating...");
 					const contents = readFileSync(redirectsFile).toString();
-					redirects = parseRedirects(contents);
+					redirects = parseRedirects(contents, {
+						htmlHandling: undefined, // Pages dev server doesn't expose html_handling configuration in this context.
+					});
 					break;
 				}
 			}

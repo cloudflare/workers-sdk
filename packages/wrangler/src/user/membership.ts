@@ -1,5 +1,5 @@
 import { fetchPagedListResult } from "../cfetch";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
  * Body for the list memberships endpoint.

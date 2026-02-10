@@ -44,7 +44,7 @@ export type ArgumentsDefinition = {
 
 export const cliDefinition: ArgumentsDefinition = {
 	intro: `
-    The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+    The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
   `,
 	positionals: [
 		{
@@ -113,8 +113,8 @@ export const cliDefinition: ArgumentsDefinition = {
 
       You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
-      npm create cloudflare -- --framework next -- --ts
-      pnpm create cloudflare --framework next -- --ts
+      npm create cloudflare -- --framework svelte -- --types=ts
+      pnpm create cloudflare --framework svelte -- --types=ts
       `,
 			values: (args) =>
 				getNamesAndDescriptions(
@@ -142,6 +142,12 @@ export const cliDefinition: ArgumentsDefinition = {
 			requiresArg: true,
 		},
 		{
+			name: "variant",
+			type: "string",
+			description: `The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).`,
+			requiresArg: true,
+		},
+		{
 			name: "lang",
 			type: "string",
 			description: `The programming language of the template`,
@@ -162,6 +168,12 @@ export const cliDefinition: ArgumentsDefinition = {
 			name: "git",
 			type: "boolean",
 			description: "Initialize a local git repository for your application",
+		},
+		{
+			name: "agents",
+			type: "boolean",
+			description:
+				"Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform",
 		},
 		{
 			name: "open",
