@@ -80,7 +80,11 @@ export {
 
 export * from "./environment-variables/misc-variables";
 
-export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+export {
+	findProjectRoot,
+	getGlobalWranglerConfigPath,
+	getLocalWranglerConfigPath,
+} from "./global-wrangler-config-path";
 
 export {
 	getLocalWorkerdCompatibilityDate,

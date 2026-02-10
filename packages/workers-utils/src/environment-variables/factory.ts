@@ -21,6 +21,8 @@ type VariableNames =
 	| "CLOUDFLARE_COMPLIANCE_REGION"
 	/** API token for R2 SQL service. */
 	| "WRANGLER_R2_SQL_AUTH_TOKEN"
+	/** Custom directory for global Wrangler configuration and authentication. Overrides the default ~/.wrangler/ location. */
+	| "WRANGLER_HOME"
 
 	// ## Development & Local Testing
 
