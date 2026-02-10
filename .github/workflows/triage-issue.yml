@@ -10,10 +10,6 @@ on:
         required: true
         type: number
 
-permissions:
-  contents: read
-  issues: read
-
 # Cancel in-progress runs for the same issue
 concurrency:
   group: triage-${{ github.event.issue.number || inputs.issue-number }}
@@ -75,8 +71,8 @@ jobs:
             --print-logs \
             "Analyze GitHub issue ${REPO}#${ISSUE} using the skill at .github/skills/issue-review.md.
 
-          The issue data has been pre-fetched to data/${ISSUE}/context.json.
-          Read it with the read tool and follow the triage process.
+          The issue data has been pre-fetched to data/${ISSUE}/context.json — read it instead of running gh commands.
+          Skip Step 1 of the skill. Continue from Step 2.
 
           Create:
           - data/${ISSUE}/report.md (full report)
@@ -85,8 +81,8 @@ jobs:
 
       - name: Upload report to dashboard
         env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF1_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF1_ACCESS_CLIENT_SECRET }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           DASHBOARD_URL: ${{ secrets.REPORTS_DASHBOARD_URL }}
         run: |
           ISSUE=${{ steps.issue.outputs.number }}
