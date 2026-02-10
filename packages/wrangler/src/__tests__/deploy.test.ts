@@ -27,6 +27,7 @@ import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
+import { WORKFLOW_NOT_FOUND_CODE } from "../deploy/check-workflow-conflicts";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { NpmPackageManager } from "../package-manager";
@@ -14662,20 +14663,16 @@ export default{
 
 		beforeEach(() => {
 			msw.use(
-				http.get("*/accounts/:accountId/workflows", () => {
-					return HttpResponse.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: [],
-						result_info: {
-							page: 1,
-							per_page: 100,
-							total_pages: 1,
-							count: 0,
-							total_count: 0,
+				http.get("*/accounts/:accountId/workflows/:workflowName", () => {
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 10200, message: "Workflow not found" }],
+							messages: [],
+							result: null,
 						},
-					});
+						{ status: 404 }
+					);
 				})
 			);
 		});
@@ -14799,35 +14796,44 @@ export default{
 		});
 
 		describe("workflow conflict detection", () => {
-			function mockListWorkflows(
-				workflows: Array<{
-					id: string;
-					name: string;
-					script_name: string;
-					class_name: string;
-					created_on: string;
-					modified_on: string;
-				}>
+			function mockGetWorkflow(
+				workflowsByName: Record<
+					string,
+					{
+						id: string;
+						name: string;
+						script_name: string;
+						class_name: string;
+						created_on: string;
+						modified_on: string;
+					} | null
+				>
 			) {
 				msw.use(
 					http.get(
-						"*/accounts/:accountId/workflows",
-						() => {
+						"*/accounts/:accountId/workflows/:workflowName",
+						({ params }) => {
+							const workflow = workflowsByName[params.workflowName as string];
+							if (workflow === null || workflow === undefined) {
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{ code: WORKFLOW_NOT_FOUND_CODE, message: "Not found" },
+										],
+										messages: [],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							}
 							return HttpResponse.json({
 								success: true,
 								errors: [],
 								messages: [],
-								result: workflows,
-								result_info: {
-									page: 1,
-									per_page: 100,
-									total_pages: 1,
-									count: workflows.length,
-									total_count: workflows.length,
-								},
+								result: workflow,
 							});
-						},
-						{ once: true }
+						}
 					)
 				);
 			}
@@ -14852,8 +14858,8 @@ export default{
 				`
 				);
 
-				mockListWorkflows([
-					{
+				mockGetWorkflow({
+					"my-workflow": {
 						id: "existing-workflow-id",
 						name: "my-workflow",
 						script_name: "other-worker",
@@ -14861,7 +14867,7 @@ export default{
 						created_on: "2024-01-01T00:00:00Z",
 						modified_on: "2024-01-01T00:00:00Z",
 					},
-				]);
+				});
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
@@ -14905,8 +14911,8 @@ export default{
 				`
 				);
 
-				mockListWorkflows([
-					{
+				mockGetWorkflow({
+					"my-workflow": {
 						id: "existing-workflow-id",
 						name: "my-workflow",
 						script_name: "other-worker",
@@ -14914,7 +14920,7 @@ export default{
 						created_on: "2024-01-01T00:00:00Z",
 						modified_on: "2024-01-01T00:00:00Z",
 					},
-				]);
+				});
 
 				mockConfirm({
 					text: "Do you want to continue?",
@@ -14949,8 +14955,8 @@ export default{
 				`
 				);
 
-				mockListWorkflows([
-					{
+				mockGetWorkflow({
+					"my-workflow": {
 						id: "existing-workflow-id",
 						name: "my-workflow",
 						script_name: "test-name",
@@ -14958,7 +14964,7 @@ export default{
 						created_on: "2024-01-01T00:00:00Z",
 						modified_on: "2024-01-01T00:00:00Z",
 					},
-				]);
+				});
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
@@ -14992,7 +14998,9 @@ export default{
 				`
 				);
 
-				mockListWorkflows([]);
+				mockGetWorkflow({
+					"my-workflow": null,
+				});
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
@@ -15032,8 +15040,8 @@ export default{
 				`
 				);
 
-				mockListWorkflows([
-					{
+				mockGetWorkflow({
+					"workflow-one": {
 						id: "existing-workflow-1",
 						name: "workflow-one",
 						script_name: "other-worker-a",
@@ -15041,7 +15049,7 @@ export default{
 						created_on: "2024-01-01T00:00:00Z",
 						modified_on: "2024-01-01T00:00:00Z",
 					},
-					{
+					"workflow-two": {
 						id: "existing-workflow-2",
 						name: "workflow-two",
 						script_name: "other-worker-b",
@@ -15049,7 +15057,7 @@ export default{
 						created_on: "2024-01-01T00:00:00Z",
 						modified_on: "2024-01-01T00:00:00Z",
 					},
-				]);
+				});
 
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
@@ -15128,8 +15136,8 @@ export default{
 				`
 				);
 
-				mockListWorkflows([
-					{
+				mockGetWorkflow({
+					"my-workflow": {
 						id: "existing-workflow-id",
 						name: "my-workflow",
 						script_name: "other-worker",
@@ -15137,7 +15145,7 @@ export default{
 						created_on: "2024-01-01T00:00:00Z",
 						modified_on: "2024-01-01T00:00:00Z",
 					},
-				]);
+				});
 
 				await runWrangler("deploy --strict");
 
