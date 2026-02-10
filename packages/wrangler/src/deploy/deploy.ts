@@ -73,6 +73,7 @@ import {
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
+import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
@@ -482,6 +483,24 @@ export default async function deploy(props: Props): Promise<{
 		if (remoteSecretsCheck?.override) {
 			logger.warn(remoteSecretsCheck.deployErrorMessage);
 			if (!(await deployConfirm("Would you like to continue?"))) {
+				return { versionId, workerTag };
+			}
+		}
+	}
+
+	if (accountId && config.workflows?.length) {
+		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
+
+		if (workflowCheck.hasConflicts) {
+			logger.warn(workflowCheck.message);
+
+			const shouldContinue = await confirm("Do you want to continue?", {
+				defaultValue: true,
+				fallbackValue: true,
+			});
+
+			if (!shouldContinue) {
+				cancel("Aborting deploy...");
 				return { versionId, workerTag };
 			}
 		}
