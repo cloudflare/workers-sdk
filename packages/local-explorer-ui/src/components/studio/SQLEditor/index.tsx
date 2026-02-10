@@ -83,8 +83,8 @@ export const StudioSQLEditor = forwardRef<
 					run: startCompletion,
 				},
 				{
-					key: "Ctrl-Alt-f",
-					mac: "Alt-f",
+					key: "Ctrl-Shift-f",
+					mac: "Shift-Cmd-f",
 					preventDefault: true,
 					run: (view) => {
 						const { state } = view;

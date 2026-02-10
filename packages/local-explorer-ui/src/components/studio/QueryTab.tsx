@@ -258,7 +258,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 						onClick={handleFormat}
 						variant="ghost"
 					>
-						Format ⌥ F
+						Format ⇧⌘F
 					</Button>
 
 					<div className="flex overflow-hidden">
