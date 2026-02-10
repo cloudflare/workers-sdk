@@ -768,10 +768,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.experimentalAutoCreate,
 					props.config
 				);
+				// When provisioning is enabled, queues are created as part of provisioning
+				// so we don't need to check ensureQueuesExistByConfig
+			} else {
+				// When provisioning is disabled, check that queues exist
+				await ensureQueuesExistByConfig(config);
 			}
 			workerBundle = createWorkerUploadForm(worker);
-
-			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 
 			// Upload the version.

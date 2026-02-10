@@ -1307,7 +1307,314 @@ describe("resource provisioning", () => {
 			"Provisioning resources is not supported with a service environment"
 		);
 	});
+
+	describe("queue provisioning", () => {
+		beforeEach(() => {
+			writeWranglerConfig({
+				main: "index.js",
+				queues: {
+					producers: [{ binding: "MY_QUEUE", queue: "test-queue" }],
+				},
+			});
+		});
+
+		it("should inherit queue bindings if they exist in deployed worker", async () => {
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "queue",
+							name: "MY_QUEUE",
+							queue_name: "test-queue",
+						},
+					],
+				},
+			});
+			// When inheriting, the binding keeps its original type and queue_name
+			// (inherited bindings are NOT converted to type: "inherit" for queues)
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MY_QUEUE",
+						type: "queue",
+						queue_name: "test-queue",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should provision queue if it does not exist (auto-create)", async () => {
+			mockGetSettings();
+			mockListQueues([]);
+			const createMock = mockCreateQueue();
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MY_QUEUE",
+						type: "queue",
+						queue_name: "test-queue",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create");
+
+			expect(createMock.calls.length).toBe(1);
+			expect(createMock.calls[0].queue_name).toBe("test-queue");
+			expect(std.out).toContain("MY_QUEUE provisioned");
+		});
+
+		it("should connect to existing queue by name", async () => {
+			mockGetSettings();
+			mockListQueues([
+				{
+					queue_id: "existing-queue-id",
+					queue_name: "test-queue",
+					created_on: new Date().toISOString(),
+					modified_on: new Date().toISOString(),
+					producers: [],
+					producers_total_count: 0,
+					consumers: [],
+					consumers_total_count: 0,
+				},
+			]);
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MY_QUEUE",
+						type: "queue",
+						queue_name: "test-queue",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			// Should not create a new queue, just use existing one
+			expect(std.out).not.toContain("Creating new Queue");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should de-duplicate queues used by both producers and consumers", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				queues: {
+					producers: [{ binding: "PRODUCER", queue: "shared-queue" }],
+					consumers: [{ queue: "shared-queue", max_batch_size: 10 }],
+				},
+			});
+
+			mockGetSettings();
+			// Use combined mock so queue is visible after creation (for updateQueueConsumers)
+			const createMock = mockQueueOperations([]);
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "PRODUCER",
+						type: "queue",
+						queue_name: "shared-queue",
+					},
+				],
+			});
+
+			// Mock the consumer update endpoints
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/queues/:queueId/consumers/:consumerId",
+					() => HttpResponse.json(createFetchResult({}))
+				),
+				http.post("*/accounts/:accountId/queues/:queueName/consumers", () =>
+					HttpResponse.json(createFetchResult({}))
+				)
+			);
+
+			await runWrangler("deploy --x-auto-create");
+
+			// Should only create queue ONCE despite being in both producers and consumers
+			expect(createMock.calls.length).toBe(1);
+			expect(createMock.calls[0].queue_name).toBe("shared-queue");
+		});
+
+		it("should handle multiple producers pointing to same queue", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				queues: {
+					producers: [
+						{ binding: "FAST", queue: "processing" },
+						{ binding: "SLOW", queue: "processing", delivery_delay: 60 },
+					],
+				},
+			});
+
+			mockGetSettings();
+			mockListQueues([]);
+			const createMock = mockCreateQueue();
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "FAST",
+						type: "queue",
+						queue_name: "processing",
+					},
+					{
+						name: "SLOW",
+						type: "queue",
+						queue_name: "processing",
+						delivery_delay: 60,
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create");
+
+			// Only create once despite two bindings
+			expect(createMock.calls.length).toBe(1);
+			expect(createMock.calls[0].queue_name).toBe("processing");
+		});
+
+		it("should provision consumer-only queues", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				queues: {
+					consumers: [{ queue: "incoming", max_batch_size: 5 }],
+				},
+			});
+
+			mockGetSettings();
+			// Use combined mock so queue is visible after creation (for updateQueueConsumers)
+			const createMock = mockQueueOperations([]);
+
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+			});
+
+			// Mock the consumer update endpoints
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/queues/:queueId/consumers/:consumerId",
+					() => HttpResponse.json(createFetchResult({}))
+				),
+				http.post("*/accounts/:accountId/queues/:queueName/consumers", () =>
+					HttpResponse.json(createFetchResult({}))
+				)
+			);
+
+			await runWrangler("deploy --x-auto-create");
+
+			// Should create the consumer queue even though there's no producer binding
+			expect(createMock.calls.length).toBe(1);
+			expect(createMock.calls[0].queue_name).toBe("incoming");
+		});
+	});
 });
+
+type MockQueueInfo = {
+	queue_id: string;
+	queue_name: string;
+	created_on: string;
+	modified_on: string;
+	producers: unknown[];
+	producers_total_count: number;
+	consumers: unknown[];
+	consumers_total_count: number;
+};
+
+/**
+ * Sets up queue mocks for both list and create operations.
+ * The mocks share state - when a queue is created, it becomes visible in list calls.
+ *
+ * @param initialQueues - Queues that exist at the start
+ * @returns An object with `calls` array tracking create requests
+ */
+function mockQueueOperations(initialQueues: MockQueueInfo[] = []) {
+	// Shared state for queues - mockListQueues uses this by reference
+	const queues = [...initialQueues];
+
+	const mock = {
+		calls: [] as Array<{ queue_name: string }>,
+	};
+
+	// Reuse mockListQueues - since queues is passed by reference,
+	// any mutations made below will be visible to list calls
+	mockListQueues(queues);
+
+	// Create queue - adds to shared state
+	msw.use(
+		http.post("*/accounts/:accountId/queues", async ({ request }) => {
+			const body = (await request.json()) as { queue_name: string };
+			mock.calls.push(body);
+
+			const newQueue: MockQueueInfo = {
+				queue_id: `queue-id-${body.queue_name}`,
+				queue_name: body.queue_name,
+				created_on: new Date().toISOString(),
+				modified_on: new Date().toISOString(),
+				producers: [],
+				producers_total_count: 0,
+				consumers: [],
+				consumers_total_count: 0,
+			};
+
+			// Add to shared state so subsequent list calls see it
+			queues.push(newQueue);
+
+			return HttpResponse.json(createFetchResult(newQueue));
+		})
+	);
+
+	return mock;
+}
+
+function mockListQueues(queues: MockQueueInfo[]) {
+	msw.use(
+		http.get("*/accounts/:accountId/queues", ({ request }) => {
+			const url = new URL(request.url);
+			const nameFilter = url.searchParams.get("name");
+
+			const filteredQueues = nameFilter
+				? queues.filter((q) => q.queue_name === nameFilter)
+				: queues;
+
+			return HttpResponse.json(createFetchResult(filteredQueues));
+		})
+	);
+}
+
+function mockCreateQueue() {
+	const mock = {
+		calls: [] as Array<{ queue_name: string }>,
+	};
+
+	msw.use(
+		http.post("*/accounts/:accountId/queues", async ({ request }) => {
+			const body = (await request.json()) as { queue_name: string };
+			mock.calls.push(body);
+
+			return HttpResponse.json(
+				createFetchResult({
+					queue_id: `queue-id-${body.queue_name}`,
+					queue_name: body.queue_name,
+					created_on: new Date().toISOString(),
+					modified_on: new Date().toISOString(),
+					producers: [],
+					producers_total_count: 0,
+					consumers: [],
+					consumers_total_count: 0,
+				})
+			);
+		})
+	);
+
+	return mock;
+}
 
 function mockCreateD1Database(
 	options: {

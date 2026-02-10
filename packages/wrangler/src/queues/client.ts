@@ -7,7 +7,7 @@ import type {
 	CreateEventSubscriptionRequest,
 	EventSubscription,
 } from "./subscription-types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export interface PostQueueBody {
 	queue_name: string;
@@ -171,6 +171,42 @@ export async function listQueues(
 	}
 
 	return fetchResult(config, queuesUrl(accountId), {}, params);
+}
+
+/**
+ * List queues using ComplianceConfig (for provisioning).
+ * This is a variant of listQueues that doesn't use requireAuth.
+ */
+export async function listQueuesForProvisioning(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	page?: number,
+	name?: string
+): Promise<QueueResponse[]> {
+	page = page ?? 1;
+	const params = new URLSearchParams({ page: page.toString() });
+
+	if (name) {
+		params.append("name", name);
+	}
+
+	return fetchResult(complianceConfig, queuesUrl(accountId), {}, params);
+}
+
+/**
+ * Create a queue using ComplianceConfig (for provisioning).
+ * This is a variant of createQueue that doesn't use requireAuth.
+ */
+export async function createQueueForProvisioning(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	queueName: string
+): Promise<QueueResponse> {
+	const body: PostQueueBody = { queue_name: queueName };
+	return fetchResult(complianceConfig, queuesUrl(accountId), {
+		method: "POST",
+		body: JSON.stringify(body),
+	});
 }
 
 async function listAllQueues(

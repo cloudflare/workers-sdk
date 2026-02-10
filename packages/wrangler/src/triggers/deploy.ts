@@ -13,6 +13,7 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
+import { getFlag } from "../experimental-flags";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -75,7 +76,9 @@ export default async function triggersDeploy(
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	if (!props.dryRun) {
+	if (!props.dryRun && !getFlag("RESOURCES_PROVISION")) {
+		// Only check if queues exist when provisioning is disabled.
+		// When provisioning is enabled, queues are created as part of provisioning.
 		await ensureQueuesExistByConfig(config);
 	}
 

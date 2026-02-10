@@ -13627,7 +13627,7 @@ export default{
 			`);
 		});
 
-		it("consumer should error when a queue doesn't exist", async () => {
+		it("consumer should error when a queue doesn't exist (with provisioning disabled)", async () => {
 			writeWranglerConfig({
 				queues: {
 					producers: [],
@@ -13648,13 +13648,13 @@ export default{
 			mockGetQueueByName(queueName, null);
 
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --x-provision=false")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
 		});
 
-		it("producer should error when a queue doesn't exist", async () => {
+		it("producer should error when a queue doesn't exist (with provisioning disabled)", async () => {
 			writeWranglerConfig({
 				queues: {
 					producers: [{ queue: queueName, binding: "QUEUE_ONE" }],
@@ -13667,7 +13667,7 @@ export default{
 			mockGetQueueByName(queueName, null);
 
 			await expect(
-				runWrangler("deploy index.js")
+				runWrangler("deploy index.js --x-provision=false")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
