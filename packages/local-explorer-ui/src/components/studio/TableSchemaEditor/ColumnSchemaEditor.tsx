@@ -359,62 +359,6 @@ export function StudioColumnEditiorDrawer({
 	return (
 		<Drawer
 			title="Add Column"
-			children={() => {
-				return (
-					<div className="flex flex-col gap-2">
-						<Label
-							title="Column name"
-							requiredDescription={"Column name must be unique"}
-							required
-							isValid={!isColumnNameDuplicated}
-						>
-							<Input
-								className="w-full"
-								placeholder="e.g., user_id"
-								value={value.name}
-								onValueChange={(newColumnName) => {
-									setValue(
-										produce(value, (draft) => {
-											draft.name = newColumnName;
-										})
-									);
-								}}
-							/>
-						</Label>
-
-						<Label title="Data type" className="w-full" required>
-							<Select
-								placeholder="Select a type"
-								className="w-full"
-								value={value.type}
-								onChange={(newType) => {
-									setValue((prev) =>
-										produce(prev, (draft) => {
-											draft.type = newType;
-										})
-									);
-								}}
-								options={[
-									...(["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
-										value.type?.toUpperCase()
-									)
-										? []
-										: [
-												{
-													label: value.type,
-													value: value.type,
-												},
-											]),
-									{ label: "Text", value: "TEXT" },
-									{ label: "Integer", value: "INTEGER" },
-									{ label: "Real", value: "REAL" },
-									{ label: "Blob", value: "BLOB" },
-								]}
-							/>
-						</Label>
-					</div>
-				);
-			}}
 			footer={({ onClose }) => {
 				return (
 					<Button
@@ -422,13 +366,66 @@ export function StudioColumnEditiorDrawer({
 						variant="primary"
 						onClick={() => {
 							onConfirm(value);
-							onClose();
+							void onClose();
 						}}
 					>
 						{defaultValue ? "Save column" : "Add column"}
 					</Button>
 				);
 			}}
-		/>
+		>
+			<div className="flex flex-col gap-2">
+				<Label
+					title="Column name"
+					requiredDescription={"Column name must be unique"}
+					required
+					isValid={!isColumnNameDuplicated}
+				>
+					<Input
+						className="w-full"
+						placeholder="e.g., user_id"
+						value={value.name}
+						onValueChange={(newColumnName) => {
+							setValue(
+								produce(value, (draft) => {
+									draft.name = newColumnName;
+								})
+							);
+						}}
+					/>
+				</Label>
+
+				<Label title="Data type" className="w-full" required>
+					<Select
+						placeholder="Select a type"
+						className="w-full"
+						value={value.type}
+						onChange={(newType) => {
+							setValue((prev) =>
+								produce(prev, (draft) => {
+									draft.type = newType;
+								})
+							);
+						}}
+						options={[
+							...(["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
+								value.type?.toUpperCase()
+							)
+								? []
+								: [
+										{
+											label: value.type,
+											value: value.type,
+										},
+									]),
+							{ label: "Text", value: "TEXT" },
+							{ label: "Integer", value: "INTEGER" },
+							{ label: "Real", value: "REAL" },
+							{ label: "Blob", value: "BLOB" },
+						]}
+					/>
+				</Label>
+			</div>
+		</Drawer>
 	);
 }

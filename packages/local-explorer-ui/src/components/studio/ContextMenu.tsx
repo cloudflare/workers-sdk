@@ -10,6 +10,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import type { DropdownItemBuilderProps } from "../../types/studio";
 // import type { DropdownItemBuilderProps } from "@cloudflare/kumo";
 import type { PropsWithChildren } from "react";
 
@@ -41,7 +42,7 @@ export function StudioContextMenuProvider({
 	const [position, setPosition] = useState({ x: 0, y: 0 });
 	const [open, setOpen] = useState(false);
 	const [_menuItems, setMenuItems] = useState<DropdownItemBuilderProps[]>([]);
-	const onOpenChange = useRef<Function | undefined>(undefined);
+	const onOpenChange = useRef<((open: boolean) => void) | undefined>(undefined);
 
 	const openContextMenu = useCallback(
 		(

@@ -93,12 +93,12 @@ export class StudioWhereParser {
 	}
 
 	// <expression> ::= <or_expr>
-	parseExpression(): any {
+	parseExpression() {
 		return this.parseOrExpr();
 	}
 
 	// <or_expr> ::= <and_expr> ( "OR" <and_expr> )*
-	private parseOrExpr(): any {
+	private parseOrExpr() {
 		let node = this.parseAndExpr();
 		while (this.match("OR")) {
 			const right = this.parseAndExpr();
@@ -108,7 +108,7 @@ export class StudioWhereParser {
 	}
 
 	// <and_expr> ::= <not_expr> ( "AND" <not_expr> )*
-	private parseAndExpr(): any {
+	private parseAndExpr() {
 		let node = this.parseNotExpr();
 		while (this.match("AND")) {
 			const right = this.parseNotExpr();
@@ -118,7 +118,7 @@ export class StudioWhereParser {
 	}
 
 	// <not_expr> ::= [ "NOT" ] <comp_expr>
-	private parseNotExpr(): any {
+	private parseNotExpr() {
 		if (this.match("NOT")) {
 			return { type: "not", expr: this.parseComparison() };
 		}
@@ -132,7 +132,7 @@ export class StudioWhereParser {
         | <arith_expr> "IS" [ "NOT" ] "NULL"
         | "(" <expression> ")"
    */
-	private parseComparison(): any {
+	private parseComparison() {
 		const left = this.parseArithmetic();
 
 		if (this.match("BETWEEN")) {
@@ -172,7 +172,7 @@ export class StudioWhereParser {
 	}
 
 	// <arith_expr> ::= <term> ( ("+" | "-") <term> )*
-	private parseArithmetic(): any {
+	private parseArithmetic() {
 		let expr = this.parseTerm();
 
 		while (this.match(["+", "-"])) {
@@ -189,7 +189,7 @@ export class StudioWhereParser {
 	}
 
 	// <term> ::= <factor> ( ("*" | "/") <factor> )*
-	private parseTerm(): any {
+	private parseTerm() {
 		let expr = this.parseFactor();
 		while (this.match(["*", "/"])) {
 			const op = this.prev().value;
@@ -204,7 +204,7 @@ export class StudioWhereParser {
 	}
 
 	// <factor> ::= [ "-" ] <primary>
-	private parseFactor(): any {
+	private parseFactor() {
 		if (this.match("-")) {
 			return { type: "neg", expr: this.parsePrimary() };
 		}
@@ -213,7 +213,7 @@ export class StudioWhereParser {
 	}
 
 	// <primary> ::= <literal> | <identifier> | <function_call> | "(" <arith_expr> ")"
-	private parsePrimary(): any {
+	private parsePrimary(): unknown {
 		const token = this.peek();
 
 		if (this.match("(")) {
@@ -255,7 +255,7 @@ export class StudioWhereParser {
 	}
 
 	// <function_call> ::= <identifier> "(" [ <arg_list> ] ")"
-	private parseFunctionCall(): any {
+	private parseFunctionCall() {
 		const name = this.expect(
 			this.functionNames,
 			"Unsupported function name"
@@ -263,7 +263,7 @@ export class StudioWhereParser {
 
 		this.expect("(", "Expected '(' to start function call");
 
-		const args: any[] = [];
+		const args: unknown[] = [];
 		while (this.peek().value !== ")") {
 			args.push(this.parseExpression());
 			if (this.peek().value === ",") {
@@ -279,7 +279,7 @@ export class StudioWhereParser {
 
 	// Utility methods
 	private prev(): StudioSQLToken {
-		return this.tokens[this.pos - 1];
+		return this.tokens[this.pos - 1] as StudioSQLToken;
 	}
 
 	private escapeId(id: string): string {

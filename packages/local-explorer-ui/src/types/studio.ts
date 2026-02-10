@@ -341,3 +341,17 @@ export type StudioResource = {
 	databaseId?: string;
 	type: "d1";
 };
+
+export type DropdownItemBuilderProps = {
+	checked?: boolean;
+	destructiveAction?: boolean;
+	disabled?: boolean;
+	icon?: Icon;
+	label?: string | React.ReactNode;
+	onClick?: () => void;
+	/** Optional keyboard shortcut displayed on the right side of the menu item */
+	shortcut?: string;
+	/** Optional nested menu items, used for creating dropdowns submenus  */
+	sub?: DropdownItemBuilderProps[];
+	type: "divider" | "checkbox" | "button";
+};
