@@ -9,6 +9,7 @@ import type { RawConfig, RedirectedRawConfig } from "./config";
 
 export type ResolveConfigPathOptions = {
 	useRedirectIfAvailable?: boolean;
+	onWarning?: (message: string) => void;
 };
 
 export type ConfigPaths = {
@@ -36,7 +37,7 @@ export function resolveWranglerConfigPath(
 		config?: string;
 		script?: string;
 	},
-	options: { useRedirectIfAvailable?: boolean }
+	options: ResolveConfigPathOptions
 ): ConfigPaths {
 	if (config !== undefined) {
 		return {
@@ -52,18 +53,47 @@ export function resolveWranglerConfigPath(
 	return findWranglerConfig(leafPath, options);
 }
 
+const CONFIG_FILE_NAMES = [
+	"wrangler.json",
+	"wrangler.jsonc",
+	"wrangler.toml",
+] as const;
+
 /**
  * Find the wrangler configuration file by searching up the file-system
  * from the current working directory.
  */
 export function findWranglerConfig(
 	referencePath: string = process.cwd(),
-	{ useRedirectIfAvailable = false } = {}
+	{ useRedirectIfAvailable = false, onWarning }: ResolveConfigPathOptions = {}
 ): ConfigPaths {
 	const userConfigPath =
 		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
 		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
 		findUpSync(`wrangler.toml`, { cwd: referencePath });
+
+	// Check for multiple config files in the same directory and warn if found
+	if (userConfigPath && onWarning) {
+		const configDir = path.dirname(userConfigPath);
+		const foundConfigs = CONFIG_FILE_NAMES.filter((name) =>
+			existsSync(path.join(configDir, name))
+		);
+
+		if (foundConfigs.length > 1) {
+			const [using, ...ignoring] = foundConfigs;
+			onWarning(dedent`
+				Multiple configuration files found in ${path.relative(".", configDir) || "."}:
+				  Using: ${using}
+				  Ignoring: ${ignoring.join(", ")}
+
+				To resolve this conflict, either:
+				  1. Delete the configuration file(s) you don't want to use
+				  2. Use the --config flag to explicitly specify which file to use
+
+				Priority order: wrangler.json > wrangler.jsonc > wrangler.toml
+			`);
+		}
+	}
 
 	if (!useRedirectIfAvailable) {
 		return {
