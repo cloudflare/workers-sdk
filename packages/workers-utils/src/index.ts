@@ -43,7 +43,6 @@ export {
 } from "./parse";
 export {
 	friendlyBindingNames,
-	bindingTypeFriendlyNames,
 	getBindingTypeFriendlyName,
 	extractBindingType,
 	isPagesConfig,
