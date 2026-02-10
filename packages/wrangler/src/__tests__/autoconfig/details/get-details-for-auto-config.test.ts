@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- it.each patterns */
@@ -212,6 +212,10 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	describe("Pages project detection", () => {
 		it("should detect Pages project when pages_build_output_dir is set in wrangler config", async () => {
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+			});
+
 			const result = await details.getDetailsForAutoConfig({
 				wranglerConfig: {
 					configPath: "/tmp/wrangler.toml",
@@ -225,13 +229,14 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 
 		it("should detect Pages project when pages.json cache file exists", async () => {
-			// Create a cache folder in the temp directory and add pages.json to it
 			const cacheFolder = join(process.cwd(), ".cache");
-			await mkdir(cacheFolder, { recursive: true });
-			await writeFile(
-				join(cacheFolder, PAGES_CONFIG_CACHE_FILENAME),
-				JSON.stringify({ account_id: "test-account" })
-			);
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				// Create a cache folder in the temp directory and add pages.json to it
+				[join(cacheFolder, PAGES_CONFIG_CACHE_FILENAME)]: JSON.stringify({
+					account_id: "test-account",
+				}),
+			});
 
 			// Mock getCacheFolder to return our temp cache folder
 			const getCacheFolderSpy = vi
@@ -249,15 +254,14 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 
 		it("should detect Pages project when functions directory exists, no framework is detected and the user confirms that it is", async () => {
-			await mkdir("functions", { recursive: true });
-			await writeFile(
-				"functions/hello.js",
-				`
-				export function onRequest(context) {
-					return new Response("Hello, world!");
-				}
-				`
-			);
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				"functions/hello.js": `
+					export function onRequest(context) {
+						return new Response("Hello, world!");
+					}
+				`,
+			});
 
 			mockConfirm({
 				text: "We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
@@ -271,15 +275,14 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 
 		it("should not detect Pages project when the user denies that, even it the functions directory exists and no framework is detected", async () => {
-			await mkdir("functions", { recursive: true });
-			await writeFile(
-				"functions/hello.js",
-				`
-				export function onRequest(context) {
-					return new Response("Hello, world!");
-				}
-				`
-			);
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				"functions/hello.js": `
+					export function onRequest(context) {
+						return new Response("Hello, world!");
+					}
+				`,
+			});
 
 			mockConfirm({
 				text: "We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
@@ -293,19 +296,15 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 
 		it("should not detect Pages project when functions directory exists but a framework is detected", async () => {
-			await mkdir("functions", { recursive: true });
-			await writeFile(
-				"functions/hello.js",
-				"export const myFun = () => { console.log('Hello!'); };"
-			);
-			await writeFile(
-				"package.json",
-				JSON.stringify({
+			await seed({
+				"functions/hello.js":
+					"export const myFun = () => { console.log('Hello!'); };",
+				"package.json": JSON.stringify({
 					dependencies: {
 						astro: "5",
 					},
-				})
-			);
+				}),
+			});
 
 			const result = await details.getDetailsForAutoConfig();
 
