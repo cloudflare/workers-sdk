@@ -13,6 +13,7 @@ import {
 import KVIcon from "../../assets/icons/kv.svg?react";
 import { AddKVForm } from "../../components/AddKVForm";
 import { KVTable } from "../../components/KVTable";
+import { SearchForm } from "../../components/SearchForm";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
@@ -60,9 +61,11 @@ function NamespaceView() {
 	const [overwriting, setOverwriting] = useState(false);
 	// Signal to clear AddKVForm after successful overwrite
 	const [clearAddForm, setClearAddForm] = useState(0);
+	// Search prefix filter
+	const [prefix, setPrefix] = useState<string | undefined>(undefined);
 
 	const fetchEntries = useCallback(
-		async (nextCursor?: string) => {
+		async (nextCursor?: string, prefixParam?: string) => {
 			try {
 				if (nextCursor) {
 					setLoadingMore(true);
@@ -74,7 +77,7 @@ function NamespaceView() {
 
 				const keysResponse = await workersKvNamespaceListANamespace_SKeys({
 					path: { namespace_id: namespaceId },
-					query: { cursor: nextCursor, limit: 50 },
+					query: { cursor: nextCursor, limit: 50, prefix: prefixParam },
 				});
 				const keys = keysResponse.data?.result ?? [];
 
@@ -118,19 +121,23 @@ function NamespaceView() {
 	);
 
 	useEffect(() => {
-		void fetchEntries();
-	}, [fetchEntries]);
-
-	useEffect(() => {
 		setDeleteTarget(null);
 		setOverwriteConfirm(null);
 		setError(null);
-	}, [namespaceId]);
+		setPrefix(undefined);
+		void fetchEntries(undefined, undefined);
+	}, [namespaceId, fetchEntries]);
 
 	const handleLoadMore = () => {
 		if (cursor && !loadingMore) {
-			void fetchEntries(cursor);
+			void fetchEntries(cursor, prefix);
 		}
+	};
+
+	const handleSearch = (searchPrefix: string) => {
+		const newPrefix = searchPrefix || undefined;
+		setPrefix(newPrefix);
+		void fetchEntries(undefined, newPrefix);
 	};
 
 	const checkKeyExists = async (key: string): Promise<boolean> => {
@@ -312,22 +319,38 @@ function NamespaceView() {
 				<span className="flex items-center gap-1.5">{namespaceId}</span>
 			</div>
 
-			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
-
 			{error && (
 				<div className="text-danger p-4 bg-danger/8 border border-danger/20 rounded-md mb-4">
 					{error}
 				</div>
 			)}
 
+			<SearchForm
+				key={namespaceId}
+				onSearch={handleSearch}
+				disabled={loading}
+			/>
+
+			<hr className="border-border my-4" />
+
+			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
+
 			{loading ? (
 				<div className="text-center p-12 text-text-secondary">Loading...</div>
 			) : entries.length === 0 ? (
 				<div className="text-center p-12 text-text-secondary space-y-2 flex flex-col items-center justify-center">
-					<h2 className="text-2xl font-medium">No keys in this namespace</h2>
-					<p className="text-sm font-light">
-						Add an entry using the form above.
-					</p>
+					{prefix ? (
+						<p className="text-sm font-light">{`No keys found matching prefix "${prefix}".`}</p>
+					) : (
+						<>
+							<h2 className="text-2xl font-medium">
+								No keys in this namespace
+							</h2>
+							<p className="text-sm font-light">
+								Add an entry using the form above.
+							</p>
+						</>
+					)}
 				</div>
 			) : (
 				<>

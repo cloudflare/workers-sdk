@@ -61,7 +61,7 @@ export function printBindings(
  * Print all the bindings a worker would have access to.
  * Accepts StartDevWorkerInput["bindings"] format
  */
-function printFlatBindings(
+export function printFlatBindings(
 	bindings: StartDevWorkerInput["bindings"],
 	tailConsumers: CfTailConsumer[] = [],
 	streamingTailConsumers: CfTailConsumer[] = [],

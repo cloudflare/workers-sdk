@@ -12,7 +12,7 @@ import { parse as dotenvParse } from "dotenv";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
-import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { createFlatWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -68,66 +68,32 @@ async function createDraftWorker({
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
 			method: "PUT",
-			body: createWorkerUploadForm({
-				name: scriptName,
-				main: {
+			body: createFlatWorkerUploadForm(
+				{
 					name: scriptName,
-					filePath: undefined,
-					content: `export default { fetch() {} }`,
-					type: "esm",
-				},
-				bindings: {
-					kv_namespaces: [],
-					send_email: [],
-					vars: {},
-					durable_objects: { bindings: [] },
-					workflows: [],
-					queues: [],
-					r2_buckets: [],
-					d1_databases: [],
-					vectorize: [],
-					hyperdrive: [],
-					secrets_store_secrets: [],
-					services: [],
-					vpc_services: [],
-					analytics_engine_datasets: [],
-					wasm_modules: {},
-					browser: undefined,
-					ai: undefined,
-					images: undefined,
-					version_metadata: undefined,
-					text_blobs: {},
-					data_blobs: {},
-					dispatch_namespaces: [],
-					mtls_certificates: [],
-					pipelines: [],
-					logfwdr: { bindings: [] },
-					ratelimits: [],
-					assets: undefined,
-					unsafe: {
-						bindings: undefined,
-						metadata: undefined,
-						capnp: undefined,
+					main: {
+						name: scriptName,
+						filePath: undefined,
+						content: `export default { fetch() {} }`,
+						type: "esm",
 					},
-					unsafe_hello_world: [],
-					worker_loaders: [],
-					media: undefined,
+					modules: [],
+					migrations: undefined,
+					compatibility_date: undefined,
+					compatibility_flags: undefined,
+					keepVars: false, // this doesn't matter since it's a new script anyway
+					keepSecrets: false, // this doesn't matter since it's a new script anyway
+					logpush: false,
+					sourceMaps: undefined,
+					placement: undefined,
+					tail_consumers: undefined,
+					limits: undefined,
+					assets: undefined,
+					containers: undefined,
+					observability: undefined,
 				},
-				modules: [],
-				migrations: undefined,
-				compatibility_date: undefined,
-				compatibility_flags: undefined,
-				keepVars: false, // this doesn't matter since it's a new script anyway
-				keepSecrets: false, // this doesn't matter since it's a new script anyway
-				logpush: false,
-				sourceMaps: undefined,
-				placement: undefined,
-				tail_consumers: undefined,
-				limits: undefined,
-				assets: undefined,
-				containers: undefined,
-				observability: undefined,
-			}),
+				{}
+			),
 		}
 	);
 }
