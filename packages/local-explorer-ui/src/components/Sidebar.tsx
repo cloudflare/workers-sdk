@@ -1,23 +1,25 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { cn } from "@cloudflare/kumo";
-import { CaretRightIcon } from "@phosphor-icons/react";
+import { CaretRightIcon, DatabaseIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
-import type { WorkersKvNamespace } from "../api";
+import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 
 interface SidebarProps {
-	namespaces: WorkersKvNamespace[];
-	loading: boolean;
-	error: string | null;
 	currentPath: string;
+	databases: D1DatabaseResponse[];
+	error: string | null;
+	loading: boolean;
+	namespaces: WorkersKvNamespace[];
 }
 
 export function Sidebar({
-	namespaces,
-	loading,
-	error,
 	currentPath,
+	databases,
+	error,
+	loading,
+	namespaces,
 }: SidebarProps) {
 	return (
 		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
@@ -31,7 +33,7 @@ export function Sidebar({
 						Local Explorer
 					</span>
 					<span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">
-						Cloudflare Dev Tools
+						Cloudflare DevTools
 					</span>
 				</div>
 			</a>
@@ -78,6 +80,55 @@ export function Sidebar({
 						{!loading && !error && namespaces.length === 0 && (
 							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
 								No namespaces
+							</li>
+						)}
+					</ul>
+				</Collapsible.Panel>
+			</Collapsible.Root>
+
+			<Collapsible.Root defaultOpen>
+				<Collapsible.Trigger className="group flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
+					<CaretRightIcon className="transition-transform duration-200 group-data-panel-open:rotate-90" />
+					<DatabaseIcon className="w-3.5 h-3.5" />
+					D1 Databases
+				</Collapsible.Trigger>
+				<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-starting-style:h-0 data-starting-style:opacity-0 data-ending-style:h-0 data-ending-style:opacity-0">
+					<ul className="list-none flex-1 overflow-y-auto">
+						{loading && (
+							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+								Loading...
+							</li>
+						)}
+						{error && (
+							<li className="block py-2.5 px-4 text-danger border-b border-border">
+								{error}
+							</li>
+						)}
+						{!loading &&
+							!error &&
+							databases.map((database) => {
+								const isActive = currentPath === `/d1/${database.uuid}`;
+								return (
+									<li key={database.uuid}>
+										<Link
+											className={cn(
+												"block py-2.5 px-4 text-text no-underline border-b border-border cursor-pointer transition-colors hover:bg-border",
+												isActive
+													? "bg-primary/8 text-primary border-l-3 border-l-primary pl-3.25"
+													: ""
+											)}
+											params={{ databaseId: database.uuid as string }}
+											search={{ table: undefined }}
+											to="/d1/$databaseId"
+										>
+											{database.name}
+										</Link>
+									</li>
+								);
+							})}
+						{!loading && !error && databases.length === 0 && (
+							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+								No databases
 							</li>
 						)}
 					</ul>
