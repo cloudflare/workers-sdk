@@ -1,5 +1,62 @@
 # miniflare
 
+## 4.20260210.0
+
+### Minor Changes
+
+- [#12469](https://github.com/cloudflare/workers-sdk/pull/12469) [`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add environment variables to control cf.json fetching behavior
+
+  You can now use environment variables to control how Miniflare handles the `Request.cf` object caching:
+
+  - `CLOUDFLARE_CF_FETCH_ENABLED` - Set to "false" to disable fetching entirely and use fallback data. No `node_modules/.mf/cf.json` file will be created. Defaults to "true".
+  - `CLOUDFLARE_CF_FETCH_PATH` - Set to a custom path to use a different location for caching the cf.json file instead of the default `node_modules/.mf/cf.json`.
+
+  This is particularly useful for non-JavaScript projects (like Rust or Go Workers) that don't want a `node_modules` directory created automatically.
+
+  Example:
+
+  ```sh
+  # Disable cf fetching for all projects
+  export CLOUDFLARE_CF_FETCH_ENABLED=false
+  npx wrangler dev
+
+  # Or use a custom cache location
+  export CLOUDFLARE_CF_FETCH_PATH=/tmp/.cf-cache.json
+  npx wrangler dev
+  ```
+
+- [#12391](https://github.com/cloudflare/workers-sdk/pull/12391) [`ce9dc01`](https://github.com/cloudflare/workers-sdk/commit/ce9dc01a4696e28bd9f3a900dd2f5a7783252906) Thanks [@emily-shen](https://github.com/emily-shen)! - Serve the local explorer UI from Miniflare
+
+  This bundles the local explorer UI into Miniflare, and if enabled, Miniflare serves the UI at `/cdn-cgi/explorer`.
+
+  This is an experimental, WIP feature.
+
+### Patch Changes
+
+- [#12440](https://github.com/cloudflare/workers-sdk/pull/12440) [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260205.0 | 1.20260206.0 |
+
+- [#12485](https://github.com/cloudflare/workers-sdk/pull/12485) [`d636d6a`](https://github.com/cloudflare/workers-sdk/commit/d636d6a2e419833a4a376a6b002da6dd5a85d369) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260206.0 | 1.20260207.0 |
+
+- [#12502](https://github.com/cloudflare/workers-sdk/pull/12502) [`bf8df0c`](https://github.com/cloudflare/workers-sdk/commit/bf8df0c1811ac82bec411a7e6aef1e431937c243) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260207.0 | 1.20260210.0 |
+
 ## 4.20260205.0
 
 ### Minor Changes

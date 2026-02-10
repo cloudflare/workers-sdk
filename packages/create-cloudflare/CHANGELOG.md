@@ -1,5 +1,62 @@
 # create-cloudflare
 
+## 2.64.0
+
+### Minor Changes
+
+- [#12286](https://github.com/cloudflare/workers-sdk/pull/12286) [`5ddd276`](https://github.com/cloudflare/workers-sdk/commit/5ddd2769e3ed50774f5742eb645355806f410fb2) Thanks [@elithrar](https://github.com/elithrar)! - Add AGENTS.md to Workers templates for AI coding agent guidance
+
+  New Workers projects created via `create-cloudflare` now include an `AGENTS.md` file that provides AI coding agents with retrieval-led guidance for Cloudflare APIs. This helps agents avoid using outdated knowledge from their training data and instead consult current documentation.
+
+  The file includes:
+
+  - Links to Cloudflare documentation and MCP servers
+  - Essential wrangler commands (`dev`, `deploy`, `types`)
+  - Pointers to product-specific documentation for limits and APIs
+
+- [#12454](https://github.com/cloudflare/workers-sdk/pull/12454) [`c99c437`](https://github.com/cloudflare/workers-sdk/commit/c99c4370dfdc7f4252eea590528bbd90e8dcc8f8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Respect `CLOUDFLARE_ACCOUNT_ID` environment variable for account selection
+
+  When the `CLOUDFLARE_ACCOUNT_ID` environment variable is set, C3 will now use it directly
+  instead of prompting for account selection. This matches wrangler's behavior and enables
+  seamless CI/CD workflows where the account is pre-configured via environment variables.
+
+  Previously, C3 would always call `wrangler whoami` and prompt for account selection when
+  multiple accounts were available, ignoring the environment variable.
+
+### Patch Changes
+
+- [#12365](https://github.com/cloudflare/workers-sdk/pull/12365) [`9eca052`](https://github.com/cloudflare/workers-sdk/commit/9eca0522e5540c76e4c56c8ed7dbc9c934a5a32a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.1.1 | 21.1.2 |
+
+- [#12366](https://github.com/cloudflare/workers-sdk/pull/12366) [`96d1605`](https://github.com/cloudflare/workers-sdk/commit/96d160561065e50c6a4426520460f4c8bd70e5c4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.20.0 | 3.21.0 |
+
+- [#12367](https://github.com/cloudflare/workers-sdk/pull/12367) [`9244501`](https://github.com/cloudflare/workers-sdk/commit/9244501b7b8191a977e20dc1cab8e2da7661a352) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.15.0 | 5.16.0 |
+
+- [#12481](https://github.com/cloudflare/workers-sdk/pull/12481) [`0ac76d5`](https://github.com/cloudflare/workers-sdk/commit/0ac76d5260c78fcb8c1908a5ff013ab77b9eccec) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.572 | 0.0.575 |
+
 ## 2.63.0
 
 ### Minor Changes
