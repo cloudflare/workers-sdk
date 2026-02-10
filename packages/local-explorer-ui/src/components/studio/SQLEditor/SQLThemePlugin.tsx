@@ -70,7 +70,7 @@ export const StudioSQLTheme = EditorView.baseTheme({
 
 	/* Gutters */
 	".cm-gutters": {
-		backgroundColor: "var(--color-bg)",
+		backgroundColor: "var(--color-bg-secondary)",
 		color: "var(--color-muted)",
 		borderRight: "none",
 		width: "30px",
