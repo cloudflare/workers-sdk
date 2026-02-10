@@ -22,17 +22,17 @@
 		"deploy": "echo 'no deploy'",
 		"test:ci": "vitest run"
 	},
+	"dependencies": {
+		"ci-info": "catalog:default"
+	},
 	"devDependencies": {
 		"@clack/core": "^0.3.2",
-		"@clack/prompts": "^0.6.3",
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"chalk": "^5.2.0",
-		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
-		"log-update": "^5.0.1",
-		"undici": "catalog:default"
+		"log-update": "^5.0.1"
 	},
 	"volta": {
 		"extends": "../../package.json"

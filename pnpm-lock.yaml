@@ -30,6 +30,9 @@ catalogs:
     capnp-es:
       specifier: ^0.0.14
       version: 0.0.14
+    ci-info:
+      specifier: ^4.4.0
+      version: 4.4.0
     esbuild:
       specifier: 0.27.3
       version: 0.27.3
@@ -1728,13 +1731,14 @@ importers:
         version: link:../wrangler
 
   packages/cli:
+    dependencies:
+      ci-info:
+        specifier: catalog:default
+        version: 4.4.0
     devDependencies:
       '@clack/core':
         specifier: ^0.3.2
         version: 0.3.2
-      '@clack/prompts':
-        specifier: ^0.6.3
-        version: 0.6.3
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
         version: link:../eslint-config-shared
@@ -1747,18 +1751,12 @@ importers:
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
-      esbuild:
-        specifier: catalog:default
-        version: 0.27.3
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
       log-update:
         specifier: ^5.0.1
         version: 5.0.1
-      undici:
-        specifier: catalog:default
-        version: 7.18.2
 
   packages/containers-shared:
     devDependencies:
@@ -2253,6 +2251,9 @@ importers:
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
+      ci-info:
+        specifier: catalog:default
+        version: 4.4.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -4184,9 +4185,6 @@ importers:
       '@types/glob-to-regexp':
         specifier: ^0.4.1
         version: 0.4.1
-      '@types/is-ci':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@types/javascript-time-ago':
         specifier: ^2.0.3
         version: 2.0.3
@@ -4244,6 +4242,9 @@ importers:
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
+      ci-info:
+        specifier: catalog:default
+        version: 4.4.0
       cli-table3:
         specifier: ^0.6.3
         version: 0.6.3
@@ -4295,9 +4296,6 @@ importers:
       https-proxy-agent:
         specifier: 7.0.2
         version: 7.0.2(supports-color@9.2.2)
-      is-ci:
-        specifier: ^3.0.1
-        version: 3.0.1
       itty-time:
         specifier: ^1.0.6
         version: 1.0.6
@@ -8497,9 +8495,6 @@ packages:
   '@types/http-errors@2.0.4':
     resolution: {integrity: sha512-D0CFMMtydbJAegzOyHjtiKPLlvnm3iTZyZRSZoLq2mRhDdmLfIWOCYPfQJ4cu2erKghU++QvjcUjp/5h7hESpA==}
 
-  '@types/is-ci@3.0.0':
-    resolution: {integrity: sha512-Q0Op0hdWbYd1iahB+IFNQcWXFq4O0Q5MwQP7uN0souuQ4rPg1vEYcnIOfr1gY+M+6rc8FGoRaBO1mOOvL29sEQ==}
-
   '@types/is-even@1.0.2':
     resolution: {integrity: sha512-qXDiw1zrRSrExwuJHRvxr5eGANlWscPwvQw3xURyax0GkY+fSwwei2uy0ReJBF2N0EeniUr+h2iD9e/KQNroaQ==}
 
@@ -9509,6 +9504,10 @@ packages:
 
   ci-info@3.9.0:
     resolution: {integrity: sha512-NIxF55hv4nSqQswkAeiOi1r83xy8JldOFDTWiug55KBu9Jnblncd2U6ViHmYgHf01TPZS77NJBhBMKdWj9HQMQ==}
+    engines: {node: '>=8'}
+
+  ci-info@4.4.0:
+    resolution: {integrity: sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==}
     engines: {node: '>=8'}
 
   citty@0.1.6:
@@ -11185,10 +11184,6 @@ packages:
   is-callable@1.2.7:
     resolution: {integrity: sha512-1BC0BVFhS/p0qtw6enp8e+8OD0UrK0oFLztSjNzhcKA3WDuJxxAPXzPuPtKkjEY9UUoEWlX/8fgKeu2S8i9JTA==}
     engines: {node: '>= 0.4'}
-
-  is-ci@3.0.1:
-    resolution: {integrity: sha512-ZYvCgrefwqoQ6yTyYUbQu64HsITZ3NfKX1lzaEYdkTDcfKzzCI/wthRRYKkdjHKFVgNiXKAKm65Zo1pk2as/QQ==}
-    hasBin: true
 
   is-core-module@2.13.0:
     resolution: {integrity: sha512-Z7dk6Qo8pOCp3l4tsX2C5ZVas4V+UxwQodwZhLopL91TX8UyyHEXafPcyoeeWuLrwzHcr3igO78wNLwHJHsMCQ==}
@@ -19202,10 +19197,6 @@ snapshots:
 
   '@types/http-errors@2.0.4': {}
 
-  '@types/is-ci@3.0.0':
-    dependencies:
-      ci-info: 3.9.0
-
   '@types/is-even@1.0.2': {}
 
   '@types/istanbul-lib-coverage@2.0.6': {}
@@ -20536,6 +20527,8 @@ snapshots:
   chownr@2.0.0: {}
 
   ci-info@3.9.0: {}
+
+  ci-info@4.4.0: {}
 
   citty@0.1.6:
     dependencies:
@@ -22640,10 +22633,6 @@ snapshots:
   is-buffer@1.1.6: {}
 
   is-callable@1.2.7: {}
-
-  is-ci@3.0.1:
-    dependencies:
-      ci-info: 3.9.0
 
   is-core-module@2.13.0:
     dependencies:
