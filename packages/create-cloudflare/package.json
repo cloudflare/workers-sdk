@@ -80,6 +80,7 @@
 		"recast": "^0.22.0",
 		"semver": "^7.7.1",
 		"smol-toml": "catalog:default",
+		"tree-kill": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vite": "catalog:default",
