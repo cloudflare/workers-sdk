@@ -579,6 +579,80 @@ describe("deploy", () => {
 		);
 	});
 
+	it("should attempt to run the autoconfig flow when pages_build_output_dir and (--x-autoconfig is used)", async () => {
+		writeWranglerConfig({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+
+		const getDetailsForAutoConfigSpy = vi
+			.spyOn(await import("../autoconfig/details"), "getDetailsForAutoConfig")
+			.mockResolvedValue({
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "test-name",
+				framework: {
+					id: "cloudflare-pages",
+					name: "Cloudflare Pages",
+					autoConfigSupported: false,
+					configure: async () => ({ wranglerConfig: {} }),
+					isConfigured: () => false,
+				},
+				outputDir: "public",
+			});
+
+		mockConfirm({
+			text: "Are you sure that you want to proceed?",
+			options: { defaultValue: false },
+			result: false,
+		});
+
+		await runWrangler("deploy --x-autoconfig");
+
+		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
+
+		expect(std.warn).toContain(
+			"It seems that you have run `wrangler deploy` on a Pages project"
+		);
+	});
+
+	it("in non-interactive mode, attempts to deploy a Pages project when --x-autoconfig is used", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+
+		const getDetailsForAutoConfigSpy = vi
+			.spyOn(await import("../autoconfig/details"), "getDetailsForAutoConfig")
+			.mockResolvedValue({
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "test-name",
+				framework: {
+					id: "cloudflare-pages",
+					name: "Cloudflare Pages",
+					autoConfigSupported: false,
+					configure: async () => ({ wranglerConfig: {} }),
+					isConfigured: () => false,
+				},
+				outputDir: "public",
+			});
+
+		// The command will fail later due to missing entry-point, but we can still verify
+		// that the deployment of the (Pages) project was attempted
+		await expect(runWrangler("deploy --x-autoconfig")).rejects.toThrow();
+
+		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
+
+		expect(std.warn).toContain(
+			"It seems that you have run `wrangler deploy` on a Pages project"
+		);
+		expect(std.out).toContain(
+			"Using fallback value in non-interactive context: yes"
+		);
+	});
+
 	describe("output additional script information", () => {
 		it("for first party workers, it should print worker information at log level", async () => {
 			setIsTTY(false);

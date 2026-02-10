@@ -3,10 +3,11 @@ import { fetchResult } from "../../cfetch";
 import { performApiFetch } from "../../cfetch/internal";
 import { createNamespace } from "../../core/create-command";
 import {
-	createWorkerUploadForm,
+	createFlatWorkerUploadForm,
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { getMetricsUsageHeaders } from "../../metrics";
+import type { StartDevWorkerOptions } from "../../api";
 import type {
 	CfModule,
 	CfTailConsumer,
@@ -125,30 +126,34 @@ export async function copyWorkerVersionWithNewSecrets({
 		`/accounts/${accountId}/workers/scripts/${scriptName}/script-settings`
 	);
 
-	// Filter out secrets because we're gonna inherit them
-	const bindings: WorkerMetadataBinding[] = versionInfo.resources.bindings
-		.filter((binding) => binding.type !== "secret_text")
-		.map((binding) => {
-			// Inherit all of the existing bindings
-			return {
-				name: binding.name,
-				type: "inherit",
-			};
-		});
+	const bindings: StartDevWorkerOptions["bindings"] = Object.fromEntries(
+		versionInfo.resources.bindings
+			// Filter out secrets because they're handled separately
+			.filter((binding) => binding.type !== "secret_text")
+			.map((binding) => {
+				return [
+					binding.name,
+					{
+						// Inherit all of the existing bindings. This will be sent to the API as "type": "inherit"
+						// We inherit rather than just sending the actual bindings to reduce the risk of
+						// something going wrong in the round trip from the API to Wrangler and back
+						type: "inherit",
+					},
+				];
+			})
+	);
 
 	// Add the new secrets
 	for (const secret of secrets) {
 		if (secret.inherit) {
-			bindings.push({
+			bindings[secret.name] = {
 				type: "inherit",
-				name: secret.name,
-			});
+			};
 		} else {
-			bindings.push({
+			bindings[secret.name] = {
 				type: "secret_text",
-				name: secret.name,
-				text: secret.value,
-			});
+				value: secret.value,
+			};
 		}
 	}
 
@@ -159,13 +164,9 @@ export async function copyWorkerVersionWithNewSecrets({
 		keepBindings.push("secret_text");
 	}
 
-	const worker: CfWorkerInit = {
+	const worker: Omit<CfWorkerInit, "bindings"> = {
 		name: scriptName,
 		main: mainModule,
-		bindings: {
-			unsafe: { metadata: unsafeMetadata }, // pass along unsafe metadata
-		} as CfWorkerInit["bindings"], // handled in rawBindings
-		rawBindings: bindings,
 		modules,
 		containers: config.containers,
 		sourceMaps: sourceMaps,
@@ -192,7 +193,9 @@ export async function copyWorkerVersionWithNewSecrets({
 		observability: scriptSettings.observability,
 	};
 
-	const body = createWorkerUploadForm(worker);
+	const body = createFlatWorkerUploadForm(worker, bindings, {
+		unsafe: { metadata: unsafeMetadata },
+	});
 	const result = await fetchResult<{
 		available_on_subdomain: boolean;
 		id: string | null;

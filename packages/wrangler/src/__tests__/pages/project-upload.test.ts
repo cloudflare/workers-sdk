@@ -1,5 +1,6 @@
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
+import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,7 +27,7 @@ describe("pages project upload", () => {
 	mockSetTimeout();
 
 	beforeEach(() => {
-		vi.stubEnv("CI", "true");
+		vi.mocked(ci).isCI = true;
 		vi.stubEnv("CF_PAGES_UPLOAD_JWT", "<<funfetti-auth-jwt>>");
 	});
 

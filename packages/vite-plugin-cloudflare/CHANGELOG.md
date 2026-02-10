@@ -1,5 +1,39 @@
 # @cloudflare/vite-plugin
 
+## 1.24.0
+
+### Minor Changes
+
+- [#12446](https://github.com/cloudflare/workers-sdk/pull/12446) [`1231a2e`](https://github.com/cloudflare/workers-sdk/commit/1231a2ee8bf2d80dac419ecb6db0e053820748ea) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Infer `upload_source_maps` setting in the output Worker config from the `build.sourcemap` setting in the Vite config.
+
+  If [build.sourcemap](https://vite.dev/config/build-options#build-sourcemap) is enabled for a Worker environment, as in the following example, `"upload_source_maps": true` will now automatically be added to the output `wrangler.json` file.
+  This removes the need to additionally specify the `upload_source_maps` property in the input Worker config.
+
+  ```ts
+  export default defineConfig({
+  	environments: {
+  		my_worker: {
+  			build: {
+  				sourcemap: true,
+  			},
+  		},
+  	},
+  	plugins: [cloudflare()],
+  });
+  ```
+
+  Note that if `upload_source_maps` is set in the input Worker config, this value will take precedence.
+  This makes it possible to generate source maps without uploading them.
+
+### Patch Changes
+
+- [#12393](https://github.com/cloudflare/workers-sdk/pull/12393) [`fd8b3e5`](https://github.com/cloudflare/workers-sdk/commit/fd8b3e58a190b8f611ca1469d3aa092f2911a85d) Thanks [@BlankParticle](https://github.com/BlankParticle)! - Provide proxy shared secret to Miniflare so that the Worker receives the original Host header
+
+- Updated dependencies [[`5d56487`](https://github.com/cloudflare/workers-sdk/commit/5d564871108884b2c4d7568a9b40f8b3e2257124), [`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9), [`2acb277`](https://github.com/cloudflare/workers-sdk/commit/2acb27794b3c76432cf2227b6b6bf0fcdb1e1093), [`c8dda16`](https://github.com/cloudflare/workers-sdk/commit/c8dda162976720d02089579a50c6efdc5f1d8ced), [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27), [`8ba1d11`](https://github.com/cloudflare/workers-sdk/commit/8ba1d117064dea630c2802db1a70ed563855b4eb), [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697), [`d636d6a`](https://github.com/cloudflare/workers-sdk/commit/d636d6a2e419833a4a376a6b002da6dd5a85d369), [`bf8df0c`](https://github.com/cloudflare/workers-sdk/commit/bf8df0c1811ac82bec411a7e6aef1e431937c243), [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27), [`988dea9`](https://github.com/cloudflare/workers-sdk/commit/988dea906454ddb7df5f79976af0536c39008963), [`1f1c3ce`](https://github.com/cloudflare/workers-sdk/commit/1f1c3cef7e6871e9612cf7788ce9a800d9ef94e2), [`62635a0`](https://github.com/cloudflare/workers-sdk/commit/62635a0fd83a9466cc833a010dd141917f10dbd5), [`fd902aa`](https://github.com/cloudflare/workers-sdk/commit/fd902aa16c5b0b29d942522c5afb24431a023547), [`312b5eb`](https://github.com/cloudflare/workers-sdk/commit/312b5ebd3866d8280f61bbe2af3bb1002f6cf461), [`961705c`](https://github.com/cloudflare/workers-sdk/commit/961705c0d151785c645987fcdf5be8ed4b23381f), [`355c6da`](https://github.com/cloudflare/workers-sdk/commit/355c6da3bcf99c3ccd153f03bdfcd61dded00379), [`bfd17cd`](https://github.com/cloudflare/workers-sdk/commit/bfd17cd7aa6aee9a5d4e5c797888eed148b6f069), [`3388c84`](https://github.com/cloudflare/workers-sdk/commit/3388c847b8be1e2831ca0b1cdfcff676d04d9c83), [`ce9dc01`](https://github.com/cloudflare/workers-sdk/commit/ce9dc01a4696e28bd9f3a900dd2f5a7783252906), [`21ac7ab`](https://github.com/cloudflare/workers-sdk/commit/21ac7ab7403ed87d47be2cd3c58e6655168eaa6f), [`937425c`](https://github.com/cloudflare/workers-sdk/commit/937425cdfe80c0c7f16b5ad47ba905a98fdb5f2e)]:
+  - wrangler@4.64.0
+  - miniflare@4.20260210.0
+  - @cloudflare/unenv-preset@2.12.1
+
 ## 1.23.1
 
 ### Patch Changes
