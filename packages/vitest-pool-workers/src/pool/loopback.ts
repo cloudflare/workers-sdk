@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { opendirSync, rmSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -61,27 +62,35 @@ async function handleSnapshotRequest(
 	return new Response(null, { status: 405 });
 }
 
-async function emptyDir(dirPath: string) {
-	let names: string[];
+function emptyDir(dirPath: string) {
+	let dir;
 	try {
-		names = await fs.readdir(dirPath);
+		dir = opendirSync(dirPath);
 	} catch (e) {
 		if (isFileNotFoundError(e)) {
 			return;
 		}
 		throw e;
 	}
-	for (const name of names) {
-		try {
-			await fs.rm(path.join(dirPath, name), { recursive: true, force: true });
-		} catch (e) {
-			if (isEbusyError(e)) {
-				// Sometimes workerd holds on to file handles in Windows, preventing us from cleaning up these.
-				console.warn(
-					`vitest-pool-worker: Unable to remove temporary directory: ${e}`
-				);
+	try {
+		let entry;
+		while ((entry = dir.readSync()) !== null) {
+			const fullPath = path.join(dirPath, entry.name);
+
+			if (entry.isDirectory()) {
+				emptyDir(fullPath);
+			} else {
+				try {
+					rmSync(fullPath, { force: true });
+				} catch (e) {
+					if (isEbusyError(e)) {
+						console.warn(`vitest-pool-worker: Unable to remove file: ${e}`);
+					}
+				}
 			}
 		}
+	} finally {
+		dir.closeSync();
 	}
 }
 
@@ -225,7 +234,7 @@ export function scheduleStorageReset(mf: Miniflare) {
 		await abortAllWorker.fetch("http://placeholder", { method: "DELETE" });
 		for (const persistPath of state.persistPaths) {
 			// Clear directory rather than removing it so `workerd` can retain handle
-			await emptyDir(persistPath);
+			emptyDir(persistPath);
 		}
 		state.depth = 0;
 		// If any of the code in this callback throws, the `storageResetPromise`

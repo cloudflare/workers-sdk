@@ -186,19 +186,12 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(
 				queueName: string,
-				queueSettings: {
+				queueSettings?: {
 					delivery_delay?: number;
 					message_retention_period?: number;
-				} = {}
+				}
 			) {
 				const requests = { count: 0 };
-
-				if (queueSettings?.delivery_delay === undefined) {
-					queueSettings.delivery_delay = 0;
-				}
-				if (queueSettings?.message_retention_period === undefined) {
-					queueSettings.message_retention_period = 345600;
-				}
 
 				msw.use(
 					http.post(
@@ -208,9 +201,9 @@ describe("wrangler", () => {
 
 							const body = (await request.json()) as {
 								queue_name: string;
-								settings: {
-									delivery_delay: number;
-									message_retention_period: number;
+								settings?: {
+									delivery_delay?: number;
+									message_retention_period?: number;
 								};
 							};
 							expect(body.queue_name).toEqual(queueName);
@@ -252,8 +245,8 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number] [default: 0]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number] [default: 345600]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
@@ -476,8 +469,8 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
 

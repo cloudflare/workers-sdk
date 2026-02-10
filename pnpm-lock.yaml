@@ -48,6 +48,9 @@ catalogs:
     smol-toml:
       specifier: ^1.5.2
       version: 1.5.2
+    tree-kill:
+      specifier: ^1.2.2
+      version: 1.2.2
     typescript:
       specifier: ~5.8.3
       version: 5.8.3
@@ -1910,6 +1913,9 @@ importers:
       smol-toml:
         specifier: catalog:default
         version: 1.5.2
+      tree-kill:
+        specifier: catalog:default
+        version: 1.2.2
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2353,6 +2359,9 @@ importers:
       get-port:
         specifier: ^7.0.0
         version: 7.0.0
+      tree-kill:
+        specifier: catalog:default
+        version: 1.2.2
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -2617,7 +2626,7 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       tree-kill:
-        specifier: ^1.2.2
+        specifier: catalog:default
         version: 1.2.2
       tsdown:
         specifier: 0.16.3
@@ -3770,6 +3779,9 @@ importers:
       semver:
         specifier: ^7.7.1
         version: 7.7.1
+      tree-kill:
+        specifier: catalog:default
+        version: 1.2.2
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -4374,6 +4386,9 @@ importers:
       timeago.js:
         specifier: ^4.0.2
         version: 4.0.2
+      tree-kill:
+        specifier: catalog:default
+        version: 1.2.2
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
