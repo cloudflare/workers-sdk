@@ -74,6 +74,7 @@
 		"eslint": "catalog:default",
 		"get-port": "^7.1.0",
 		"semver": "^7.7.1",
+		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
