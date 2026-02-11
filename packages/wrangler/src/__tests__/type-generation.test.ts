@@ -1,15 +1,5 @@
 import * as fs from "node:fs";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -34,7 +24,7 @@ import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {
-	it("should return true for valid identifiers", () => {
+	it("should return true for valid identifiers", ({ expect }) => {
 		expect(isValidIdentifier("valid")).toBe(true);
 		expect(isValidIdentifier("valid123")).toBe(true);
 		expect(isValidIdentifier("valid_123")).toBe(true);
@@ -45,7 +35,7 @@ describe("isValidIdentifier", () => {
 		expect(isValidIdentifier("$valid$")).toBe(true);
 	});
 
-	it("should return false for invalid identifiers", () => {
+	it("should return false for invalid identifiers", ({ expect }) => {
 		expect(isValidIdentifier("123invalid")).toBe(false);
 		expect(isValidIdentifier("invalid-123")).toBe(false);
 		expect(isValidIdentifier("invalid 123")).toBe(false);
@@ -53,7 +43,7 @@ describe("isValidIdentifier", () => {
 });
 
 describe("constructTypeKey", () => {
-	it("should return a valid type key", () => {
+	it("should return a valid type key", ({ expect }) => {
 		expect(constructTypeKey("valid")).toBe("valid");
 		expect(constructTypeKey("valid123")).toBe("valid123");
 		expect(constructTypeKey("valid_123")).toBe("valid_123");
@@ -70,7 +60,7 @@ describe("constructTypeKey", () => {
 });
 
 describe("constructTSModuleGlob() should return a valid TS glob ", () => {
-	it.each([
+	it.for([
 		["**/*.wasm", "*.wasm"],
 		["**/*.txt", "*.txt"],
 		["**/foo", "*/foo"],
@@ -80,13 +70,13 @@ describe("constructTSModuleGlob() should return a valid TS glob ", () => {
 		["folder/*", "folder/*"],
 		["folder/**", "folder/*"],
 		["folder/**/*", "folder/*"],
-	])("$1 -> $2", (from, to) => {
+	])("$1 -> $2", ([from, to], { expect }) => {
 		expect(constructTSModuleGlob(from)).toBe(to);
 	});
 });
 
 describe("generateImportSpecifier", () => {
-	it("should generate a relative import specifier", () => {
+	it("should generate a relative import specifier", ({ expect }) => {
 		expect(generateImportSpecifier("/app/types.ts", "/app/index.ts")).toBe(
 			"./index"
 		);
@@ -104,14 +94,16 @@ describe("generateImportSpecifier", () => {
 });
 
 describe("getEnvHeader", () => {
-	it("should generate a header with the provided hash and command", () => {
+	it("should generate a header with the provided hash and command", ({
+		expect,
+	}) => {
 		const result = getEnvHeader("abc123", "wrangler types");
 		expect(result).toBe(
 			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: abc123)`
 		);
 	});
 
-	it("should include complex commands with flags", () => {
+	it("should include complex commands with flags", ({ expect }) => {
 		const result = getEnvHeader(
 			"def456",
 			"wrangler types --strict-vars=false --env-interface=MyEnv"
@@ -121,14 +113,14 @@ describe("getEnvHeader", () => {
 		);
 	});
 
-	it("should handle empty hash", () => {
+	it("should handle empty hash", ({ expect }) => {
 		const result = getEnvHeader("", "wrangler types");
 		expect(result).toBe(
 			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: )`
 		);
 	});
 
-	it("should use process.argv when command is not provided", () => {
+	it("should use process.argv when command is not provided", ({ expect }) => {
 		const originalArgv = process.argv;
 		process.argv = ["node", "wrangler", "types", "--include-runtime=false"];
 
@@ -144,58 +136,60 @@ describe("getEnvHeader", () => {
 });
 
 describe("toPascalCase", () => {
-	it("should convert simple strings to PascalCase", () => {
+	it("should convert simple strings to PascalCase", ({ expect }) => {
 		expect(toPascalCase("staging")).toBe("Staging");
 		expect(toPascalCase("production")).toBe("Production");
 	});
 
-	it("should convert kebab-case to PascalCase", () => {
+	it("should convert kebab-case to PascalCase", ({ expect }) => {
 		expect(toPascalCase("my-prod-env")).toBe("MyProdEnv");
 		expect(toPascalCase("staging-env")).toBe("StagingEnv");
 	});
 
-	it("should convert snake_case to PascalCase", () => {
+	it("should convert snake_case to PascalCase", ({ expect }) => {
 		expect(toPascalCase("my_test_env")).toBe("MyTestEnv");
 		expect(toPascalCase("prod_env")).toBe("ProdEnv");
 	});
 
-	it("should handle mixed separators", () => {
+	it("should handle mixed separators", ({ expect }) => {
 		expect(toPascalCase("my-test_env")).toBe("MyTestEnv");
 	});
 });
 
 describe("toEnvInterfaceName", () => {
-	it("should add Env suffix to environment names", () => {
+	it("should add Env suffix to environment names", ({ expect }) => {
 		expect(toEnvInterfaceName("staging")).toBe("StagingEnv");
 		expect(toEnvInterfaceName("production")).toBe("ProductionEnv");
 	});
 
-	it("should deduplicate Env suffix", () => {
+	it("should deduplicate Env suffix", ({ expect }) => {
 		expect(toEnvInterfaceName("staging-env")).toBe("StagingEnv");
 		expect(toEnvInterfaceName("prod-env")).toBe("ProdEnv");
 		expect(toEnvInterfaceName("my_env")).toBe("MyEnv");
 	});
 
-	it("should handle kebab-case environment names", () => {
+	it("should handle kebab-case environment names", ({ expect }) => {
 		expect(toEnvInterfaceName("my-prod")).toBe("MyProdEnv");
 		expect(toEnvInterfaceName("test-staging")).toBe("TestStagingEnv");
 	});
 });
 
 describe("validateEnvInterfaceNames", () => {
-	it("should not throw for valid, unique environment names", () => {
+	it("should not throw for valid, unique environment names", ({ expect }) => {
 		expect(() =>
 			validateEnvInterfaceNames(["staging", "production", "dev"])
 		).not.toThrow();
 	});
 
-	it("should throw for reserved name Env", () => {
+	it("should throw for reserved name Env", ({ expect }) => {
 		expect(() => validateEnvInterfaceNames(["env"])).toThrowError(
 			/Environment name "env" converts to reserved interface name "Env"/
 		);
 	});
 
-	it("should throw when two environment names convert to the same interface name", () => {
+	it("should throw when two environment names convert to the same interface name", ({
+		expect,
+	}) => {
 		// Both staging-env and staging_env convert to StagingEnv
 		expect(() =>
 			validateEnvInterfaceNames(["staging-env", "staging_env"])
@@ -204,7 +198,9 @@ describe("validateEnvInterfaceNames", () => {
 		);
 	});
 
-	it("should throw when names with different separators collide", () => {
+	it("should throw when names with different separators collide", ({
+		expect,
+	}) => {
 		expect(() =>
 			validateEnvInterfaceNames(["my-prod", "my_prod"])
 		).toThrowError(
@@ -214,7 +210,9 @@ describe("validateEnvInterfaceNames", () => {
 });
 
 describe("throwMissingBindingError", () => {
-	it("should throw a `UserError` for top-level bindings with array index", () => {
+	it("should throw a `UserError` for top-level bindings with array index", ({
+		expect,
+	}) => {
 		expect(() =>
 			throwMissingBindingError({
 				binding: { id: "1234" },
@@ -229,7 +227,9 @@ describe("throwMissingBindingError", () => {
 		);
 	});
 
-	it("should throw a `UserError` for environment bindings with array index", () => {
+	it("should throw a `UserError` for environment bindings with array index", ({
+		expect,
+	}) => {
 		expect(() =>
 			throwMissingBindingError({
 				binding: { database_id: "abc123" },
@@ -244,7 +244,7 @@ describe("throwMissingBindingError", () => {
 		);
 	});
 
-	it("should handle non-array bindings (index omitted)", () => {
+	it("should handle non-array bindings (index omitted)", ({ expect }) => {
 		expect(() =>
 			throwMissingBindingError({
 				binding: {},
@@ -258,7 +258,7 @@ describe("throwMissingBindingError", () => {
 		);
 	});
 
-	it("should handle undefined config path", () => {
+	it("should handle undefined config path", ({ expect }) => {
 		expect(() =>
 			throwMissingBindingError({
 				binding: {},
@@ -273,7 +273,7 @@ describe("throwMissingBindingError", () => {
 		);
 	});
 
-	it("should handle different field names", () => {
+	it("should handle different field names", ({ expect }) => {
 		expect(() =>
 			throwMissingBindingError({
 				binding: { type: "ratelimit" },
@@ -518,13 +518,15 @@ describe("generate types", () => {
 			})
 		);
 	});
-	it("should error when no config file is detected", async () => {
+	it("should error when no config file is detected", async ({ expect }) => {
 		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
 			`[Error: No config file detected. This command requires a Wrangler configuration file.]`
 		);
 	});
 
-	it("should error when a specified custom config file is missing", async () => {
+	it("should error when a specified custom config file is missing", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler("types -c hello.toml")
 		).rejects.toMatchInlineSnapshot(
@@ -532,7 +534,7 @@ describe("generate types", () => {
 		);
 	});
 
-	it("should respect the top level -c|--config flag", async () => {
+	it("should respect the top level -c|--config flag", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -668,7 +670,9 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should log the interface type generated and declare modules", async () => {
+	it("should log the interface type generated and declare modules", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./index.ts",
 			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
@@ -773,7 +777,9 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should include stringified process.env types for vars, secrets, and json", async () => {
+	it("should include stringified process.env types for vars, secrets, and json", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./index.ts",
 			`import { DurableObject, WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
@@ -890,7 +896,7 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should handle multiple worker configs", async () => {
+	it("should handle multiple worker configs", async ({ expect }) => {
 		fs.mkdirSync("a");
 
 		fs.writeFileSync(
@@ -1065,7 +1071,9 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should create a DTS file at the location that the command is executed from", async () => {
+	it("should create a DTS file at the location that the command is executed from", async ({
+		expect,
+	}) => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(
 			"./wrangler.jsonc",
@@ -1104,7 +1112,9 @@ describe("generate types", () => {
 	});
 
 	describe("when nothing was found", () => {
-		it("should not create DTS file for service syntax workers if env only", async () => {
+		it("should not create DTS file for service syntax workers if env only", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./index.ts",
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
@@ -1135,7 +1145,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should create DTS file for service syntax workers with runtime types only", async () => {
+		it("should create DTS file for service syntax workers with runtime types only", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./index.ts",
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
@@ -1180,7 +1192,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
+		it("should create a DTS file with an empty env interface for module syntax workers", async ({
+			expect,
+		}) => {
 			fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 			fs.writeFileSync(
 				"./wrangler.jsonc",
@@ -1218,7 +1232,9 @@ describe("generate types", () => {
 		});
 	});
 
-	it("should create a DTS file at the location that the command is executed from", async () => {
+	it("should create a DTS file at the location that the command is executed from", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./worker-configuration.d.ts",
 			"NOT THE CONTENTS OF THE GENERATED FILE"
@@ -1241,7 +1257,9 @@ describe("generate types", () => {
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
-	it("should log the declare global type generated and declare modules", async () => {
+	it("should log the declare global type generated and declare modules", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./index.ts",
 			`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
@@ -1284,7 +1302,9 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async () => {
+	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1325,7 +1345,9 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should not error if expected entrypoint is not found and assume module worker", async () => {
+	it("should not error if expected entrypoint is not found and assume module worker", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1361,7 +1383,7 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should include secret keys from .dev.vars", async () => {
+	it("should include secret keys from .dev.vars", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1419,7 +1441,9 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should use explicit --env-file instead of .dev.vars when both exist", async () => {
+	it("should use explicit --env-file instead of .dev.vars when both exist", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1475,7 +1499,9 @@ describe("generate types", () => {
 		expect(out).not.toContain("ANOTHER_SECRET");
 	});
 
-	it("should include secret keys from .env, if there is no .dev.vars", async () => {
+	it("should include secret keys from .env, if there is no .dev.vars", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1523,7 +1549,7 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should allow opting out of strict-vars", async () => {
+	it("should allow opting out of strict-vars", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1563,7 +1589,7 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("should override vars with secrets", async () => {
+	it("should override vars with secrets", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1606,7 +1632,7 @@ describe("generate types", () => {
 		`);
 	});
 
-	it("various different types of vars", async () => {
+	it("various different types of vars", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
 			JSON.stringify({
@@ -1688,7 +1714,9 @@ describe("generate types", () => {
 			);
 		});
 
-		it("should produce string and union types for variables (default)", async () => {
+		it("should produce string and union types for variables (default)", async ({
+			expect,
+		}) => {
 			await runWrangler("types --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1724,7 +1752,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should produce non-strict types for variables (with --strict-vars=false)", async () => {
+		it("should produce non-strict types for variables (with --strict-vars=false)", async ({
+			expect,
+		}) => {
 			await runWrangler("types --strict-vars=false --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1762,7 +1792,9 @@ describe("generate types", () => {
 	});
 
 	describe("bindings present in multiple environments", () => {
-		it("should collect bindings from all environments when no --env is specified", async () => {
+		it("should collect bindings from all environments when no --env is specified", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -1850,7 +1882,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should only collect bindings from the specified environment when --env is used", async () => {
+		it("should only collect bindings from the specified environment when --env is used", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -1913,7 +1947,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should deduplicate bindings with the same name across environments", async () => {
+		it("should deduplicate bindings with the same name across environments", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -1974,7 +2010,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should produce union types when binding name has different types across environments", async () => {
+		it("should produce union types when binding name has different types across environments", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2024,7 +2062,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should error when a binding is missing its binding name in an environment", async () => {
+		it("should error when a binding is missing its binding name in an environment", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2051,7 +2091,9 @@ describe("generate types", () => {
 			);
 		});
 
-		it("should error when a binding is missing its binding name at top-level", async () => {
+		it("should error when a binding is missing its binding name at top-level", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2071,7 +2113,9 @@ describe("generate types", () => {
 			);
 		});
 
-		it("should collect vars only from specified environment with --env", async () => {
+		it("should collect vars only from specified environment with --env", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2120,7 +2164,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should mark bindings as optional if not present in all environments", async () => {
+		it("should mark bindings as optional if not present in all environments", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2176,7 +2222,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should not include top-level bindings in per-environment interfaces", async () => {
+		it("should not include top-level bindings in per-environment interfaces", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2223,7 +2271,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should include secrets in per-environment interfaces since they are inherited", async () => {
+		it("should include secrets in per-environment interfaces since they are inherited", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2266,7 +2316,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should produce union types for vars with different values across environments", async () => {
+		it("should produce union types for vars with different values across environments", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2312,7 +2364,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should generate simple Env when no environments are defined", async () => {
+		it("should generate simple Env when no environments are defined", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2346,7 +2400,9 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should error when environment names would collide after conversion", async () => {
+		it("should error when environment names would collide after conversion", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2372,7 +2428,9 @@ describe("generate types", () => {
 
 	describe("customization", () => {
 		describe("env", () => {
-			it("should allow the user to customize the interface name", async () => {
+			it("should allow the user to customize the interface name", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.jsonc",
 					JSON.stringify({
@@ -2408,7 +2466,9 @@ describe("generate types", () => {
 				`);
 			});
 
-			it("should error if --env-interface is specified with no argument", async () => {
+			it("should error if --env-interface is specified with no argument", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.jsonc",
 					JSON.stringify({
@@ -2422,7 +2482,9 @@ describe("generate types", () => {
 				);
 			});
 
-			it("should error if an invalid interface identifier is provided to --env-interface", async () => {
+			it("should error if an invalid interface identifier is provided to --env-interface", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.jsonc",
 					JSON.stringify({
@@ -2449,7 +2511,9 @@ describe("generate types", () => {
 				}
 			});
 
-			it("should error if --env-interface is used with a service-syntax worker", async () => {
+			it("should error if --env-interface is used with a service-syntax worker", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./index.ts",
 					`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
@@ -2474,7 +2538,9 @@ describe("generate types", () => {
 		});
 
 		describe("output file", () => {
-			it("should allow the user to specify where to write the result", async () => {
+			it("should allow the user to specify where to write the result", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.jsonc",
 					JSON.stringify({
@@ -2508,7 +2574,9 @@ describe("generate types", () => {
 					`);
 			});
 
-			it("should error if the user points to a non-d.ts file", async () => {
+			it("should error if the user points to a non-d.ts file", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.jsonc",
 					JSON.stringify({
@@ -2533,7 +2601,9 @@ describe("generate types", () => {
 			});
 		});
 
-		it("should allow multiple customizations to be applied together", async () => {
+		it("should allow multiple customizations to be applied together", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -2580,7 +2650,9 @@ describe("generate types", () => {
 				"utf-8"
 			);
 		});
-		it("errors helpfully if you use --experimental-include-runtime", async () => {
+		it("errors helpfully if you use --experimental-include-runtime", async ({
+			expect,
+		}) => {
 			await expect(runWrangler("types --experimental-include-runtime")).rejects
 				.toMatchInlineSnapshot(`
 				[Error: You no longer need to use --experimental-include-runtime.
@@ -2589,7 +2661,9 @@ describe("generate types", () => {
 				Then rerun \`wrangler types\`.]
 			`);
 		});
-		it("prints something helpful if you have @cloudflare/workers-types", async () => {
+		it("prints something helpful if you have @cloudflare/workers-types", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./tsconfig.json",
 				JSON.stringify({
@@ -2618,7 +2692,9 @@ describe("generate types", () => {
 				"
 			`);
 		});
-		it("prints something helpful if you have a runtime file at the old default location", async () => {
+		it("prints something helpful if you have a runtime file at the old default location", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./tsconfig.json",
 				JSON.stringify({
@@ -2656,7 +2732,7 @@ describe("generate types", () => {
 		});
 	});
 
-	it("should generate types for VPC services bindings", async () => {
+	it("should generate types for VPC services bindings", async ({ expect }) => {
 		fs.writeFileSync(
 			"./index.ts",
 			`export default { async fetch(request, env) { return await env.VPC_API.fetch(request); } };`
