@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
+		"build:default": "vite build",
 		"build:no-client-entry": "vite build -c vite.config.no-client-entry.ts",
 		"build:public-dir-only": "vite build -c vite.config.public-dir-only.ts",
 		"check:type": "tsc --build",
