@@ -56,8 +56,10 @@ class CursorV2 {
 		this.tokens = tokens;
 	}
 
-	/** Returns the current pointer position within the token array. */
-	getPointer() {
+	/**
+	 * Returns the current pointer position within the token array.
+	 */
+	getPointer(): number {
 		return this.ptr;
 	}
 
@@ -66,16 +68,19 @@ class CursorV2 {
 	 *
 	 * @param start - The start index (inclusive).
 	 * @param end - The end index (exclusive).
+	 *
 	 * @returns The reconstructed SQL fragment.
 	 */
-	toStringRange(start: number, end: number) {
+	toStringRange(start: number, end: number): string {
 		return this.tokens
 			.slice(start, end)
 			.map((t) => t.value)
 			.join("");
 	}
 
-	/** Returns the raw string value of the current token, or `""` if at end. */
+	/**
+	 * Returns the raw string value of the current token, or `""` if at end.
+	 */
 	read(): string {
 		if (this.end()) {
 			return "";
@@ -101,8 +106,10 @@ class CursorV2 {
 		return this.consume();
 	}
 
-	/** Returns the type of the current token (e.g. `STRING`, `NUMBER`, `OPERATOR`). */
-	currentType() {
+	/**
+	 * Returns the type of the current token (e.g. `STRING`, `NUMBER`, `OPERATOR`).
+	 */
+	currentType(): StudioSQLToken["type"] {
 		// Callers check `end()` before calling; `ptr` is within bounds
 		const token = this.tokens[this.ptr] as StudioSQLToken;
 		return token.type;
@@ -114,6 +121,7 @@ class CursorV2 {
 	 * Advances past the closing `)`.
 	 *
 	 * @returns A new cursor spanning the tokens inside the parentheses.
+	 *
 	 * @throws If the current token is not `(` or no matching `)` is found.
 	 */
 	consumeParen(): CursorV2 {
@@ -144,14 +152,14 @@ class CursorV2 {
 	}
 
 	/** Reads the current token value and advances the cursor. */
-	consume() {
+	consume(): string {
 		const value = this.read();
 		this.next();
 		return value;
 	}
 
 	/** Reads the current token as an unescaped identifier and advances the cursor. */
-	consumeIdentifier() {
+	consumeIdentifier(): string {
 		const value = unescapeIdentity(this.read());
 		this.next();
 		return value;
@@ -162,9 +170,10 @@ class CursorV2 {
 	 * and advances the cursor. Throws if the token does not match.
 	 *
 	 * @param value - The expected token value.
+	 *
 	 * @throws If the current token does not match.
 	 */
-	expectToken(value: string) {
+	expectToken(value: string): void {
 		if (!this.match(value)) {
 			throw new Error(`Expecting ${value}`);
 		}
@@ -177,7 +186,7 @@ class CursorV2 {
 	 *
 	 * @param value - The optional token value to consume.
 	 */
-	expectTokenOptional(value: string) {
+	expectTokenOptional(value: string): void {
 		if (this.match(value)) {
 			this.next();
 		}
@@ -190,7 +199,7 @@ class CursorV2 {
 	 *
 	 * @param values - The ordered sequence of token values.
 	 */
-	expectTokensOptional(values: string[]) {
+	expectTokensOptional(values: string[]): void {
 		if (values.length === 0) {
 			return;
 		}
@@ -208,7 +217,7 @@ class CursorV2 {
 	 *
 	 * @param values - The ordered sequence of expected token values.
 	 */
-	expectTokens(values: string[]) {
+	expectTokens(values: string[]): void {
 		for (const v of values) {
 			this.expectToken(v);
 		}
@@ -216,9 +225,10 @@ class CursorV2 {
 
 	/**
 	 * Next will skip to valid non-whitespace token
+	 *
 	 * @returns true if there is a next token, false otherwise
 	 */
-	next() {
+	next(): boolean {
 		for (this.ptr = this.ptr + 1; this.ptr < this.tokens.length; this.ptr++) {
 			if (this.currentType() !== "WHITESPACE") {
 				return true;
@@ -233,9 +243,10 @@ class CursorV2 {
 	 * without consuming it.
 	 *
 	 * @param value - The value to compare against.
+	 *
 	 * @returns `true` if the current token matches, `false` otherwise or if at end.
 	 */
-	match(value: string) {
+	match(value: string): boolean {
 		if (this.end()) {
 			return false;
 		}
@@ -247,24 +258,31 @@ class CursorV2 {
 	 * (case-insensitive) without consuming it.
 	 *
 	 * @param values - The candidate values to match against.
+	 *
 	 * @returns `true` if any value matches the current token.
 	 */
-	matchTokens(values: string[]) {
+	matchTokens(values: string[]): boolean {
 		return values.some((v) => this.read().toLowerCase() === v.toLowerCase());
 	}
 
-	/** Returns `true` if the cursor has passed the last token. */
-	end() {
+	/**
+	 * Returns `true` if the cursor has passed the last token.
+	 */
+	end(): boolean {
 		return this.ptr >= this.tokens.length;
 	}
 
-	/** Reconstructs the full SQL fragment from all tokens. */
-	toString() {
+	/**
+	 * Reconstructs the full SQL fragment from all tokens.
+	 */
+	toString(): string {
 		return this.tokens.map((t) => t.value).join("");
 	}
 
-	/** Reconstructs the SQL fragment wrapped in parentheses. */
-	toStringWithParen() {
+	/**
+	 * Reconstructs the SQL fragment wrapped in parentheses.
+	 */
+	toStringWithParen(): string {
 		return "(" + this.toString() + ")";
 	}
 }
