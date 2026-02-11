@@ -4004,10 +4004,6 @@ importers:
   packages/workers-tsconfig: {}
 
   packages/workers-utils:
-    dependencies:
-      esbuild:
-        specifier: catalog:default
-        version: 0.27.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -4033,6 +4029,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.0
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
