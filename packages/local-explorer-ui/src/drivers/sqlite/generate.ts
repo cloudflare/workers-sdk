@@ -6,12 +6,12 @@ import type {
 	StudioTableSchemaChange,
 } from "../../types/studio";
 
-function wrapParen(str: string) {
+function wrapParen(str: string): string {
 	if (str.length >= 2 && str.startsWith("(") && str.endsWith(")")) {
 		return str;
 	}
 
-	return "(" + str + ")";
+	return `(${str})`;
 }
 
 function generateCreateColumn(
@@ -113,11 +113,17 @@ function generateConstraintScript(
 		return `PRIMARY KEY (${con.primaryColumns
 			?.map(driver.escapeId)
 			.join(", ")})`;
-	} else if (con.unique) {
+	}
+
+	if (con.unique) {
 		return `UNIQUE (${con.uniqueColumns?.map(driver.escapeId).join(", ")})`;
-	} else if (con.checkExpression !== undefined) {
+	}
+
+	if (con.checkExpression !== undefined) {
 		return `CHECK (${con.checkExpression})`;
-	} else if (con.foreignKey) {
+	}
+
+	if (con.foreignKey) {
 		return (
 			`FOREIGN KEY (${con.foreignKey.columns
 				?.map(driver.escapeId)
@@ -190,10 +196,10 @@ export function buildSQLiteSchemaDiffStatement(
 				.map((line) => "  " + line)
 				.join(",\n")}\n)`,
 		];
-	} else {
-		const alter = `ALTER TABLE ${driver.escapeId(
-			change.schemaName ?? "main"
-		)}.${driver.escapeId(change.name.old ?? "")} `;
-		return lines.map((line) => alter + line);
 	}
+
+	const alter = `ALTER TABLE ${driver.escapeId(
+		change.schemaName ?? "main"
+	)}.${driver.escapeId(change.name.old ?? "")} `;
+	return lines.map((line) => alter + line);
 }
