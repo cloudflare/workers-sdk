@@ -311,6 +311,11 @@ export const dev = createCommand({
 });
 
 export type AdditionalDevProps = {
+	/**
+	 * Default vars that can be overridden by config vars.
+	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
+	 */
+	defaultVars?: Record<string, string>;
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
@@ -375,11 +380,19 @@ export type StartDevOptions = DevArguments &
  */
 export function maskVars(
 	bindings: CfWorkerInit["bindings"],
-	configParam: Config
+	configParam: Config,
+	defaultVars?: Record<string, string>
 ) {
 	const maskedVars = { ...bindings.vars };
 	for (const key of Object.keys(maskedVars)) {
-		if (maskedVars[key] !== configParam.vars[key]) {
+		// Don't mask if:
+		// 1. The value matches what's in config (wrangler.toml), OR
+		// 2. The value matches a default var (e.g., CF_PAGES vars which are not secrets)
+		const isFromConfig = maskedVars[key] === configParam.vars[key];
+		const isUnchangedDefault =
+			defaultVars?.[key] !== undefined && maskedVars[key] === defaultVars[key];
+
+		if (!isFromConfig && !isUnchangedDefault) {
 			// This means it was overridden in .dev.vars
 			// so let's mask it
 			maskedVars[key] = "(hidden)";
@@ -627,6 +640,9 @@ export function getBindings(
 
 		// non-inheritable fields
 		vars: {
+			// defaultVars provide baseline values (e.g., CF_PAGES vars for Pages dev)
+			// that can be overridden by config vars, .env, .dev.vars, and CLI args
+			...args.defaultVars,
 			// Use a copy of combinedVars since we're modifying it later
 			...getVarsForDev(
 				configParam.userConfigPath,

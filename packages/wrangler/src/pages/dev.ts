@@ -12,6 +12,7 @@ import {
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { readConfig } from "../config";
+import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
@@ -26,7 +27,11 @@ import { getBasePath } from "../paths";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
-import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import {
+	PAGES_CONFIG_CACHE_FILENAME,
+	ROUTES_SPEC_VERSION,
+	SECONDS_TO_WAIT_FOR_PROXY,
+} from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,
@@ -37,6 +42,7 @@ import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
+import type { PagesConfigCache } from "./types";
 import type {
 	CfModule,
 	Config,
@@ -81,6 +87,55 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
 const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
+
+/**
+ * Generates Pages-specific environment variables for local development.
+ * These variables are normally injected by Cloudflare Pages CI during builds/deployments.
+ * @see https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables
+ */
+function getPagesEnvironmentVariables(
+	projectName: string
+): Record<string, string> {
+	let branch = "local";
+
+	// Attempt to get actual git info to match what happens in Pages CI as accurately as possible.
+	try {
+		branch = execSync("git rev-parse --abbrev-ref HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	let commitSha = "0000000000000000000000000000000000000000";
+	try {
+		commitSha = execSync("git rev-parse HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	// Use short SHA (fallback to 8 characters of main commit) for preview URL format
+	let shortSha = commitSha.substring(0, 8);
+	try {
+		shortSha = execSync("git rev-parse --short HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	return {
+		CF_PAGES: "1",
+		CF_PAGES_BRANCH: branch,
+		CF_PAGES_COMMIT_SHA: commitSha,
+		CF_PAGES_URL: `https://${shortSha}.${projectName}.pages.dev`,
+	};
+}
 
 export const pagesDevCommand = createCommand({
 	metadata: {
@@ -873,6 +928,15 @@ export const pagesDevCommand = createCommand({
 			}
 		}
 
+		// Determine project name from config, cache, or directory name (matching deploy behavior)
+		const configCache = getConfigCache<PagesConfigCache>(
+			PAGES_CONFIG_CACHE_FILENAME
+		);
+		const projectName =
+			config.name ?? configCache.project_name ?? path.basename(process.cwd());
+
+		const pagesEnvVars = getPagesEnvironmentVariables(projectName);
+
 		const devServer = await run(
 			{
 				MULTIWORKER: Array.isArray(args.config),
@@ -927,6 +991,9 @@ export const pagesDevCommand = createCommand({
 					compatibilityDate,
 					compatibilityFlags,
 					nodeCompat: undefined,
+					// CF_PAGES vars as defaults (can be overridden by config vars)
+					defaultVars: pagesEnvVars,
+					// CLI vars override everything
 					vars,
 					kv: kv_namespaces,
 					durableObjects: do_bindings,
