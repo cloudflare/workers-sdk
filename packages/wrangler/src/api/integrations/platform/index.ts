@@ -215,6 +215,7 @@ async function getMiniflareOptionsFromConfig(args: {
 		options.environment,
 		options.envFiles,
 		true,
+		{},
 		{}
 	);
 
@@ -404,7 +405,14 @@ export function unstable_getMiniflareWorkerOptions(
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
-	const bindings = getBindings(config, env, options?.envFiles, true, undefined);
+	const bindings = getBindings(
+		config,
+		env,
+		options?.envFiles,
+		true,
+		undefined,
+		undefined
+	);
 
 	const enableContainers =
 		options?.overrides?.enableContainers !== undefined

@@ -181,7 +181,8 @@ async function resolveBindings(
 		input.env,
 		input.envFiles,
 		!input.dev?.remote,
-		input.bindings
+		input.bindings,
+		input.defaultBindings
 	);
 
 	// Create a print function that captures the current bindings context

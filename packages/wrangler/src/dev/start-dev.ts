@@ -226,7 +226,7 @@ async function setupDevEnv(
 				...collectPlainTextVars(args.var),
 				...convertStartDevOptionsToBindings(args as StartDevOptionsBindings),
 			},
-			defaultVars: args.defaultVars,
+			defaultBindings: args.defaultBindings,
 			dev: {
 				auth,
 				remote: args.enablePagesAssetsServiceBinding

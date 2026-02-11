@@ -579,10 +579,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
+		const bindings = getBindings(config);
+
+		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
+			bindings[bindingName] = {
+				type: "plain_text",
+				value,
+				hidden: true,
+			};
+		}
 
 		const {
 			modules,

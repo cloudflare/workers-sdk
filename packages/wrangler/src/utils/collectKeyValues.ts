@@ -22,7 +22,11 @@ export function collectPlainTextVars(
 		array?.reduce<Record<string, Extract<Binding, { type: "plain_text" }>>>(
 			(recordsToCollect, v) => {
 				const [key, ...value] = v.split(":");
-				recordsToCollect[key] = { type: "plain_text", value: value.join(":") };
+				recordsToCollect[key] = {
+					type: "plain_text",
+					value: value.join(":"),
+					hidden: true,
+				};
 				return recordsToCollect;
 			},
 			{}

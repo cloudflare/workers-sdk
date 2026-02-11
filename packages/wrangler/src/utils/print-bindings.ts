@@ -613,9 +613,13 @@ export function printBindings(
 
 	if (vars.length > 0) {
 		output.push(
-			...vars.map(({ binding, type: varType, value: varValue }) => {
+			...vars.map((variable) => {
+				const { binding, type: varType, value: varValue } = variable;
 				let parsedValue;
-				if (varType === "plain_text") {
+				/**
+				 * @see packages/workers-utils/src/types.ts for details on the hidden property
+				 */
+				if (varType === "plain_text" && variable.hidden !== true) {
 					parsedValue = `"${truncate(varValue)}"`;
 				} else if (varType === "json") {
 					parsedValue = truncate(JSON.stringify(varValue));

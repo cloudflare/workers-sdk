@@ -795,10 +795,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.oldAssetTtl
 		);
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
+		const bindings = getBindings(config);
+
+		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
+			bindings[bindingName] = {
+				type: "plain_text",
+				value,
+				hidden: true,
+			};
+		}
 
 		if (workersSitesAssets.manifest) {
 			modules.push({

@@ -44,6 +44,7 @@ import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { PagesConfigCache } from "./types";
 import type {
+	Binding,
 	CfModule,
 	Config,
 	DurableObjectBindings,
@@ -95,7 +96,7 @@ const DEFAULT_SCRIPT_PATH = "_worker.js";
  */
 function getPagesEnvironmentVariables(
 	projectName: string
-): Record<string, string> {
+): Record<string, Extract<Binding, { type: "plain_text" }>> {
 	let branch = "local";
 
 	// Attempt to get actual git info to match what happens in Pages CI as accurately as possible.
@@ -130,10 +131,13 @@ function getPagesEnvironmentVariables(
 	}
 
 	return {
-		CF_PAGES: "1",
-		CF_PAGES_BRANCH: branch,
-		CF_PAGES_COMMIT_SHA: commitSha,
-		CF_PAGES_URL: `https://${shortSha}.${projectName}.pages.dev`,
+		CF_PAGES: { type: "plain_text", value: "1" },
+		CF_PAGES_BRANCH: { type: "plain_text", value: branch },
+		CF_PAGES_COMMIT_SHA: { type: "plain_text", value: commitSha },
+		CF_PAGES_URL: {
+			type: "plain_text",
+			value: `https://${shortSha}.${projectName}.pages.dev`,
+		},
 	};
 }
 
@@ -992,7 +996,7 @@ export const pagesDevCommand = createCommand({
 					compatibilityFlags,
 					nodeCompat: undefined,
 					// CF_PAGES vars as defaults (can be overridden by config vars)
-					defaultVars: pagesEnvVars,
+					defaultBindings: pagesEnvVars,
 					// CLI vars override everything
 					vars,
 					kv: kv_namespaces,

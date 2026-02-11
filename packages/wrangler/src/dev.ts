@@ -17,6 +17,7 @@ import { getHostFromRoute } from "./zones";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
+	Binding,
 	CfModule,
 	Config,
 	Environment,
@@ -306,7 +307,7 @@ export type AdditionalDevProps = {
 	 * Default vars that can be overridden by config vars.
 	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
 	 */
-	defaultVars?: Record<string, string>;
+	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
