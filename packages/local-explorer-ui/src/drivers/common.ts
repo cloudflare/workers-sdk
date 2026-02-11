@@ -422,6 +422,10 @@ function buildWhereClause(
 ): string | null {
 	const conditions = Object.entries(where)
 		.map(([columnName, value]) => {
+			if (value === null || value === undefined) {
+				return `${dialect.escapeId(columnName)} IS NULL`;
+			}
+
 			return `${dialect.escapeId(columnName)} = ${dialect.escapeValue(value)}`;
 		})
 		.join(" AND ");

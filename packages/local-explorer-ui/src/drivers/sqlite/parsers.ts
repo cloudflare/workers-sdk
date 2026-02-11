@@ -203,7 +203,9 @@ class CursorV2 {
 		if (values.length === 0) {
 			return;
 		}
-		if (this.read() === values[0]) {
+
+		const [value] = values as [string];
+		if (this.match(value)) {
 			this.next();
 			for (const v of values.slice(1)) {
 				this.expectToken(v);

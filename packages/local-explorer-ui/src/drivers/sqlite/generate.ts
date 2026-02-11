@@ -186,7 +186,7 @@ export function buildSQLiteSchemaDiffStatement(
 
 	for (const col of change.columns) {
 		if (col.new === null) {
-			lines.push(`DROP COLUMN ${col.old?.name}`);
+			lines.push(`DROP COLUMN ${driver.escapeId(col.old?.name ?? "")}`);
 		} else if (col.old === null) {
 			if (isCreateScript) {
 				lines.push(generateCreateColumn(driver, col.new));
