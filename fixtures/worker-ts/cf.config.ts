@@ -1,6 +1,6 @@
-import { worker } from "wrangler/config";
+import { defineConfig } from "wrangler/config";
 
-export default worker(() => ({
+export default defineConfig(() => ({
 	name: "worker-ts",
 	entrypoint: "src/index.ts",
 	compatibilityDate: "2023-05-04",

@@ -37,6 +37,7 @@ type InternalFields =
 	| "legacy" // legacy site support
 	| "experimental" // internal feature flags
 	| "bindings" // renamed to `env` in WorkerConfig for user ergonomics
+	| "migrations" // DO migrations are managed separately
 	| "build"; // replaced with narrowed version below
 
 /**
@@ -85,7 +86,7 @@ export type WorkerConfigFn = (
 /**
  * Helper function to define a worker configuration with type safety.
  */
-export function worker(fn: WorkerConfigFn): WorkerConfigFn {
+export function defineConfig(fn: WorkerConfigFn): WorkerConfigFn {
 	return fn;
 }
 
@@ -94,6 +95,8 @@ export interface LoadProgrammaticConfigOptions {
 	configPath: string;
 	/** The environment/stage name from --env flag */
 	env: string | undefined;
+	/** Directory for temporary build artifacts. If not provided, uses a .wrangler/tmp dir next to the config. */
+	tmpDir?: string;
 }
 
 export interface LoadProgrammaticConfigResult {
@@ -113,17 +116,17 @@ export interface LoadProgrammaticConfigResult {
 export async function loadProgrammaticConfig(
 	options: LoadProgrammaticConfigOptions
 ): Promise<LoadProgrammaticConfigResult> {
-	const { configPath, env } = options;
+	const { configPath, env, tmpDir } = options;
 	const configDir = path.dirname(path.resolve(configPath));
 
 	// Find user's tsconfig for esbuild target
 	const tsconfigPath = findTsConfig(configDir);
 
-	// Create a unique temp file path in .wrangler directory (consistent with other wrangler temp files)
-	const wranglerDir = path.join(configDir, ".wrangler", "tmp");
-	await fs.promises.mkdir(wranglerDir, { recursive: true });
+	// Use provided tmpDir or fall back to .wrangler/tmp next to the config
+	const outDir = tmpDir ?? path.join(configDir, ".wrangler", "tmp");
+	await fs.promises.mkdir(outDir, { recursive: true });
 	const tmpFile = path.join(
-		wranglerDir,
+		outDir,
 		`cf-config-${Date.now()}-${Math.random().toString(36).slice(2)}.mjs`
 	);
 
@@ -156,7 +159,7 @@ export async function loadProgrammaticConfig(
 		if (typeof configFn !== "function") {
 			throw new Error(
 				`Config file must export a function as default export. ` +
-					`Got ${typeof configFn}. Use: export default worker(() => ({ ... }))`
+					`Got ${typeof configFn}. Use: export default defineConfig(() => ({ ... }))`
 			);
 		}
 
@@ -236,6 +239,8 @@ export interface WatchProgrammaticConfigOptions {
 	onChange: (result: LoadProgrammaticConfigResult) => void;
 	/** Callback when an error occurs during rebuild */
 	onError?: (error: Error) => void;
+	/** Directory for temporary build artifacts. If not provided, uses a .wrangler/tmp dir next to the config. */
+	tmpDir?: string;
 }
 
 export interface ConfigWatcher {
@@ -254,18 +259,18 @@ export interface ConfigWatcher {
 export async function watchProgrammaticConfig(
 	options: WatchProgrammaticConfigOptions
 ): Promise<ConfigWatcher> {
-	const { configPath, env, onChange, onError } = options;
+	const { configPath, env, onChange, onError, tmpDir } = options;
 	const configDir = path.dirname(path.resolve(configPath));
 
 	// Find user's tsconfig for esbuild target
 	const tsconfigPath = findTsConfig(configDir);
 
-	// Create a unique temp file path in .wrangler directory
-	const wranglerDir = path.join(configDir, ".wrangler", "tmp");
-	await fs.promises.mkdir(wranglerDir, { recursive: true });
+	// Use provided tmpDir or fall back to .wrangler/tmp next to the config
+	const outDir = tmpDir ?? path.join(configDir, ".wrangler", "tmp");
+	await fs.promises.mkdir(outDir, { recursive: true });
 
 	// Use a stable filename for watch mode (esbuild will overwrite it)
-	const tmpFile = path.join(wranglerDir, `cf-config-watch.mjs`);
+	const tmpFile = path.join(outDir, `cf-config-watch.mjs`);
 
 	// Track if this is the initial build
 	let isInitialBuild = true;
@@ -312,7 +317,7 @@ export async function watchProgrammaticConfig(
 					if (typeof configFn !== "function") {
 						throw new Error(
 							`Config file must export a function as default export. ` +
-								`Got ${typeof configFn}. Use: export default worker(() => ({ ... }))`
+								`Got ${typeof configFn}. Use: export default defineConfig(() => ({ ... }))`
 						);
 					}
 

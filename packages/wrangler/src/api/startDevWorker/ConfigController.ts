@@ -25,6 +25,7 @@ import { getBindings, getHostAndRoutes, getInferredHost } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { logger, runWithLogLevel } from "../../logger";
+import { getWranglerTmpDir } from "../../paths";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
 	loginOrRefreshIfRequired,
@@ -529,13 +530,19 @@ export class ConfigController extends Controller {
 				`Setting up programmatic config watcher for ${path.basename(configPath)}`
 			);
 
+			const watchTmpDir = getWranglerTmpDir(
+				path.dirname(configPath),
+				"cf-config-watch"
+			);
 			this.#programmaticWatcher = await watchProgrammaticConfig({
 				configPath,
 				env: this.latestInput?.env,
-				onChange: (_result: LoadProgrammaticConfigResult) => {
-					// Config file (or one of its dependencies) changed
+				tmpDir: watchTmpDir.path,
+				onChange: (result: LoadProgrammaticConfigResult) => {
+					// Config file (or one of its dependencies) changed — re-run config resolution
 					logger.debug(
-						`Programmatic config changed: ${path.basename(configPath)}`
+						`Programmatic config changed: ${path.basename(configPath)}`,
+						result
 					);
 					assert(
 						this.latestInput,
@@ -636,9 +643,14 @@ export class ConfigController extends Controller {
 			if (isProgrammaticConfigPath(configPath)) {
 				// Programmatic config (.ts/.js): load it and merge into input directly.
 				// This bypasses the RawConfig → Config pipeline entirely.
+				const configTmpDir = getWranglerTmpDir(
+					path.dirname(configPath!),
+					"cf-config"
+				);
 				const { workerConfig } = await loadProgrammaticConfig({
 					configPath: configPath!,
 					env: input.env,
+					tmpDir: configTmpDir.path,
 				});
 
 				// Merge WorkerConfig fields into StartDevWorkerInput.

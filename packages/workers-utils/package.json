@@ -40,9 +40,6 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
-	"dependencies": {
-		"esbuild": "catalog:default"
-	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
@@ -52,6 +49,7 @@
 		"@vitest/ui": "catalog:default",
 		"cloudflare": "^5.2.0",
 		"concurrently": "^8.2.2",
+		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
 		"find-up": "^6.3.0",
 		"jsonc-parser": "catalog:default",

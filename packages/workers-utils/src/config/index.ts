@@ -1,3 +1,4 @@
+import path from "node:path";
 import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import {
@@ -12,7 +13,7 @@ export { isProgrammaticConfigPath } from "./config-helpers";
 export {
 	loadProgrammaticConfig,
 	watchProgrammaticConfig,
-	worker,
+	defineConfig,
 	type WorkerConfig,
 	type WorkerConfigContext,
 	type WorkerConfigFn,
@@ -64,9 +65,7 @@ export function configFileName(configPath: string | undefined) {
 			return "wrangler.jsonc";
 		case "programmatic":
 			// Return the actual filename for programmatic configs
-			return configPath
-				? configPath.split("/").pop() ?? "config file"
-				: "config file";
+			return configPath ? path.basename(configPath) : "config file";
 		default:
 			return "Wrangler configuration";
 	}
@@ -142,16 +141,13 @@ export const experimental_readRawConfig = (
 	const { configPath, userConfigPath, deployConfigPath, redirected } =
 		resolveWranglerConfigPath(args, options);
 
-	// For programmatic configs, return empty config - they are handled
-	// separately via loadProgrammaticConfig() in the ConfigController
+	// Programmatic configs are handled separately via loadProgrammaticConfig()
+	// in the ConfigController. They should never reach this code path.
 	if (isProgrammaticConfigPath(configPath)) {
-		return {
-			rawConfig: {},
-			configPath,
-			userConfigPath,
-			deployConfigPath,
-			redirected,
-		};
+		throw new Error(
+			`Programmatic config files (${path.basename(configPath ?? "")}) cannot be read as raw config. ` +
+				`Use loadProgrammaticConfig() instead.`
+		);
 	}
 
 	const rawConfig = parseRawConfigFile(configPath ?? "");

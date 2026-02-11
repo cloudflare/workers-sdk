@@ -7,9 +7,9 @@
  * @example
  * ```ts
  * // cf.config.ts
- * import { worker } from "wrangler/config";
+ * import { defineConfig } from "wrangler/config";
  *
- * export default worker((ctx) => ({
+ * export default defineConfig((ctx) => ({
  *   name: `my-app-${ctx.env ?? "dev"}`,
  *   entrypoint: "./src/index.ts",
  *   compatibilityDate: "2025-02-05",
@@ -19,7 +19,7 @@
 
 // Re-export all programmatic config types and helpers
 export {
-	worker,
+	defineConfig,
 	type WorkerConfig,
 	type WorkerConfigContext,
 	type WorkerConfigFn,
