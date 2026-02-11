@@ -15,6 +15,17 @@ export {
 	configFormat,
 	configFileName,
 	experimental_readRawConfig,
+	isProgrammaticConfigPath,
+	loadProgrammaticConfig,
+	watchProgrammaticConfig,
+	worker,
+	type WorkerConfig,
+	type WorkerConfigContext,
+	type WorkerConfigFn,
+	type LoadProgrammaticConfigOptions,
+	type LoadProgrammaticConfigResult,
+	type WatchProgrammaticConfigOptions,
+	type ConfigWatcher,
 } from "./config";
 export {
 	experimental_patchConfig,

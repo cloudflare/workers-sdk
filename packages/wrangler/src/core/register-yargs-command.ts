@@ -1,11 +1,12 @@
 import {
 	defaultWranglerConfig,
+	experimental_readRawConfig,
 	FatalError,
 	getWranglerHideBanner,
+	isProgrammaticConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { experimental_readRawConfig } from "../../../workers-utils/src";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";

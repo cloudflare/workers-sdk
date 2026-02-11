@@ -3,10 +3,15 @@ import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	defaultWranglerConfig,
 	getDisableConfigWatching,
 	getDockerPath,
 	getLocalWorkerdCompatibilityDate,
+	isProgrammaticConfigPath,
+	loadProgrammaticConfig,
+	resolveWranglerConfigPath,
 	UserError,
+	watchProgrammaticConfig,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
@@ -45,7 +50,12 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
-import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
+import type {
+	CfUnsafe,
+	Config,
+	ConfigWatcher,
+	LoadProgrammaticConfigResult,
+} from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
@@ -495,17 +505,70 @@ export class ConfigController extends Controller {
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
-	#configWatcher?: ReturnType<typeof watch>;
+	// Chokidar watcher for TOML/JSON configs
+	#chokidarWatcher?: ReturnType<typeof watch>;
+	// Programmatic config watcher (uses esbuild watch mode)
+	#programmaticWatcher?: ConfigWatcher;
 	#abortController?: AbortController;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
-		await this.#configWatcher?.close();
-		if (configPath) {
-			this.#configWatcher = watch(configPath, {
+		// Close any existing watchers
+		await this.#chokidarWatcher?.close();
+		await this.#programmaticWatcher?.stop();
+		this.#chokidarWatcher = undefined;
+		this.#programmaticWatcher = undefined;
+
+		if (!configPath) {
+			return;
+		}
+
+		if (isProgrammaticConfigPath(configPath)) {
+			// Use esbuild watch for programmatic configs (.ts/.js)
+			// This automatically tracks all dependencies (imports)
+			logger.debug(
+				`Setting up programmatic config watcher for ${path.basename(configPath)}`
+			);
+
+			this.#programmaticWatcher = await watchProgrammaticConfig({
+				configPath,
+				env: this.latestInput?.env,
+				onChange: (_result: LoadProgrammaticConfigResult) => {
+					// Config file (or one of its dependencies) changed
+					logger.debug(
+						`Programmatic config changed: ${path.basename(configPath)}`
+					);
+					assert(
+						this.latestInput,
+						"Cannot be watching config without having first set an input"
+					);
+					this.#updateConfig(this.latestInput).catch((err) => {
+						this.emitErrorEvent({
+							type: "error",
+							reason: "Error resolving config after change",
+							cause: castErrorCause(err),
+							source: "ConfigController",
+							data: undefined,
+						});
+					});
+				},
+				onError: (err: Error) => {
+					logger.error("Config rebuild failed:", err.message);
+					this.emitErrorEvent({
+						type: "error",
+						reason: "Config rebuild failed",
+						cause: castErrorCause(err),
+						source: "ConfigController",
+						data: undefined,
+					});
+				},
+			});
+		} else {
+			// Use chokidar for TOML/JSON configs (existing behavior)
+			this.#chokidarWatcher = watch(configPath, {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
-				if (this.#configWatcher?.closed) {
+				if (this.#chokidarWatcher?.closed) {
 					return;
 				}
 				logger.debug(`${path.basename(configPath)} changed...`);
@@ -554,44 +617,94 @@ export class ConfigController extends Controller {
 		logger.debug(
 			"Updating config...",
 			this.#abortController?.signal,
-			this.#configWatcher?.closed
+			this.#chokidarWatcher?.closed
 		);
 		this.#abortController?.abort();
 		this.#abortController = new AbortController();
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
-				{
-					script: input.entrypoint,
-					config: input.config,
-					env: input.env,
-					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
-					remote: !!input.dev?.remote,
-					upstreamProtocol:
-						input.dev?.origin?.secure === undefined
-							? undefined
-							: input.dev?.origin?.secure
-								? "https"
-								: "http",
-					localProtocol:
-						input.dev?.server?.secure === undefined
-							? undefined
-							: input.dev?.server?.secure
-								? "https"
-								: "http",
-					generateTypes: input.dev?.generateTypes,
-				},
+			// Resolve config path to determine if this is a programmatic config
+			const { configPath } = resolveWranglerConfigPath(
+				{ config: input.config, script: input.entrypoint },
 				{ useRedirectIfAvailable: true }
 			);
 
+			let fileConfig: Config;
+			let resolvedInput = input;
+
+			if (isProgrammaticConfigPath(configPath)) {
+				// Programmatic config (.ts/.js): load it and merge into input directly.
+				// This bypasses the RawConfig → Config pipeline entirely.
+				const { workerConfig } = await loadProgrammaticConfig({
+					configPath: configPath!,
+					env: input.env,
+				});
+
+				// Merge WorkerConfig fields into StartDevWorkerInput.
+				// Destructure renamed/replaced fields, spread the rest (field names match).
+				const {
+					env: workerEnv,
+					build: workerBuild,
+					...workerRest
+				} = workerConfig;
+
+				// workerRest goes first (defaults), then input overrides.
+				// Fields needing special merge (deep merge or rename) are handled explicitly.
+				resolvedInput = {
+					...workerRest,
+					...input,
+					bindings: {
+						...workerEnv,
+						...input.bindings,
+					},
+					build: {
+						...workerBuild,
+						...input.build,
+					},
+					config: configPath,
+				};
+
+				// Use the default empty config as the file config fallback
+				fileConfig = defaultWranglerConfig;
+			} else {
+				// Static config (TOML/JSON/JSONC): use the existing sync readConfig
+				fileConfig = readConfig(
+					{
+						script: input.entrypoint,
+						config: input.config,
+						env: input.env,
+						"dispatch-namespace": undefined,
+						"legacy-env": !input.legacy?.useServiceEnvironments,
+						remote: !!input.dev?.remote,
+						upstreamProtocol:
+							input.dev?.origin?.secure === undefined
+								? undefined
+								: input.dev?.origin?.secure
+									? "https"
+									: "http",
+						localProtocol:
+							input.dev?.server?.secure === undefined
+								? undefined
+								: input.dev?.server?.secure
+									? "https"
+									: "http",
+						generateTypes: input.dev?.generateTypes,
+					},
+					{ useRedirectIfAvailable: true }
+				);
+			}
+
 			if (!getDisableConfigWatching()) {
-				await this.#ensureWatchingConfig(fileConfig.configPath);
+				await this.#ensureWatchingConfig(
+					isProgrammaticConfigPath(configPath)
+						? configPath
+						: fileConfig.configPath
+				);
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =
-				await resolveConfig(fileConfig, input);
+				await resolveConfig(fileConfig, resolvedInput);
 
 			if (signal.aborted) {
 				return;
@@ -608,7 +721,7 @@ export class ConfigController extends Controller {
 
 				return;
 			}
-			if (this.#configWatcher?.closed) {
+			if (this.#chokidarWatcher?.closed) {
 				logger.debug("Suppressing config error after watcher closed");
 				return;
 			}
@@ -638,7 +751,10 @@ export class ConfigController extends Controller {
 		logger.debug("ConfigController teardown beginning...");
 		await super.teardown();
 		this.#abortController?.abort();
-		await this.#configWatcher?.close();
+		await Promise.all([
+			this.#chokidarWatcher?.close(),
+			this.#programmaticWatcher?.stop(),
+		]);
 		logger.debug("ConfigController teardown complete");
 	}
 

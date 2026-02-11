@@ -4,7 +4,12 @@ export default defineConfig(() => [
 	{
 		treeshake: true,
 		keepNames: true,
-		entry: ["src/index.ts", "src/browser.ts", "src/test-helpers/index.ts"],
+		entry: [
+			"src/index.ts",
+			"src/browser.ts",
+			"src/test-helpers/index.ts",
+			"src/config/programmatic.ts",
+		],
 		platform: "node",
 		format: "esm",
 		dts: true,

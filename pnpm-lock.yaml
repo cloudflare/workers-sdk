@@ -4004,6 +4004,10 @@ importers:
   packages/workers-tsconfig: {}
 
   packages/workers-utils:
+    dependencies:
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*

@@ -1,9 +1,26 @@
 import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { resolveWranglerConfigPath } from "./config-helpers";
+import {
+	isProgrammaticConfigPath,
+	resolveWranglerConfigPath,
+} from "./config-helpers";
 import type { Config, RawConfig } from "./config";
 import type { ResolveConfigPathOptions } from "./config-helpers";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
+
+export { isProgrammaticConfigPath } from "./config-helpers";
+export {
+	loadProgrammaticConfig,
+	watchProgrammaticConfig,
+	worker,
+	type WorkerConfig,
+	type WorkerConfigContext,
+	type WorkerConfigFn,
+	type LoadProgrammaticConfigOptions,
+	type LoadProgrammaticConfigResult,
+	type WatchProgrammaticConfigOptions,
+	type ConfigWatcher,
+} from "./programmatic";
 
 export type {
 	Config,
@@ -20,7 +37,10 @@ export type {
 
 export function configFormat(
 	configPath: string | undefined
-): "json" | "jsonc" | "toml" | "none" {
+): "json" | "jsonc" | "toml" | "programmatic" | "none" {
+	if (configPath?.endsWith(".ts") || configPath?.endsWith(".js")) {
+		return "programmatic";
+	}
 	if (configPath?.endsWith("toml")) {
 		return "toml";
 	}
@@ -42,6 +62,11 @@ export function configFileName(configPath: string | undefined) {
 			return "wrangler.json";
 		case "jsonc":
 			return "wrangler.jsonc";
+		case "programmatic":
+			// Return the actual filename for programmatic configs
+			return configPath
+				? configPath.split("/").pop() ?? "config file"
+				: "config file";
 		default:
 			return "Wrangler configuration";
 	}
@@ -116,6 +141,18 @@ export const experimental_readRawConfig = (
 	// Load the configuration from disk if available
 	const { configPath, userConfigPath, deployConfigPath, redirected } =
 		resolveWranglerConfigPath(args, options);
+
+	// For programmatic configs, return empty config - they are handled
+	// separately via loadProgrammaticConfig() in the ConfigController
+	if (isProgrammaticConfigPath(configPath)) {
+		return {
+			rawConfig: {},
+			configPath,
+			userConfigPath,
+			deployConfigPath,
+			redirected,
+		};
+	}
 
 	const rawConfig = parseRawConfigFile(configPath ?? "");
 

@@ -33,6 +33,10 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
+ *
+ * This handles TOML/JSON/JSONC config files.
+ * Programmatic config (.ts/.js) is handled separately by ConfigController
+ * which loads it directly as StartDevWorkerInput, bypassing this function entirely.
  */
 export function readConfig(
 	args: ReadConfigCommandArgs,
