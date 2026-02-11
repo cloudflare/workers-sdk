@@ -96,8 +96,8 @@ const TOKEN_DEFINITIONS = [
 		type: "PUNCTUATION",
 	},
 ] satisfies {
-	type: StudioSQLToken["type"];
 	matchToken: (input: string, dialect?: StudioDialect) => string | null;
+	type: StudioSQLToken["type"];
 }[];
 
 /**

@@ -15,6 +15,7 @@ import type {
  * identifier and un-doubles any escaped double-quotes within.
  *
  * @param str - The raw identifier string, possibly quoted.
+ *
  * @returns The unescaped identifier.
  */
 function unescapeIdentity(str: string): string {
@@ -269,12 +270,13 @@ class CursorV2 {
 }
 
 /**
- * Parses a single column definition from a CREATE TABLE body.
+ * Parses a single column definition from a `CREATE TABLE` body.
  * Extracts the column name, data type (including parenthesised type
  * parameters like `VARCHAR(255)`), and any inline column constraints.
  *
  * @param schemaName - The schema name, passed through to constraint parsing.
  * @param cursor - The cursor positioned at the start of the column definition.
+ *
  * @returns The parsed column, or `null` if no column name is found.
  */
 function parseColumnDef(
@@ -329,6 +331,7 @@ function parseColumnDef(
  * clause is present.
  *
  * @param cursor - The cursor positioned where an ON CONFLICT clause may appear.
+ *
  * @returns The conflict strategy, or `undefined`.
  */
 function parseConstraintConflict(
@@ -358,6 +361,7 @@ function parseConstraintConflict(
  * typically from inside a parenthesised group.
  *
  * @param columnPtr - The cursor over the column list tokens.
+ *
  * @returns An array of unescaped column name strings.
  */
 function parseColumnList(columnPtr: CursorV2): string[] {
@@ -377,14 +381,15 @@ function parseColumnList(columnPtr: CursorV2): string[] {
 
 /**
  * Recursively parses column-level and table-level constraints from the
- * current cursor position. Handles CONSTRAINT, PRIMARY KEY, NOT NULL,
- * NULL, UNIQUE, DEFAULT, CHECK, COLLATE, FOREIGN KEY, REFERENCES, and
- * GENERATED ALWAYS AS. Constraints are merged via recursive calls so
+ * current cursor position. Handles `CONSTRAINT`, `PRIMARY KEY`, `NOT NULL`,
+ * `NULL`, `UNIQUE`, `DEFAULT`, `CHECK`, `COLLATE`, `FOREIGN KEY`, `REFERENCES`,
+ * and `GENERATED ALWAYS AS`. Constraints are merged via recursive calls so
  * that multiple constraints on a single column are combined into one
  * object.
  *
  * @param schemaName - The schema name, used when resolving foreign key references.
  * @param cursor - The cursor positioned at the start of a constraint keyword.
+ *
  * @returns The parsed constraint object, or `undefined` if no constraint is found.
  */
 function parseColumnConstraint(
@@ -606,7 +611,7 @@ function parseColumnConstraint(
 }
 
 /**
- * Parses the body of a CREATE TABLE statement (the content inside the
+ * Parses the body of a `CREATE TABLE` statement (the content inside the
  * outer parentheses) into column definitions and table-level constraints.
  * Column definitions are expected to appear before any table-level
  * constraints. After parsing, table-level PRIMARY KEY constraints are
@@ -614,7 +619,8 @@ function parseColumnConstraint(
  * columns with empty `foreignColumns` are backfilled with the column name.
  *
  * @param schemaName - The schema name, passed to constraint parsers.
- * @param cursor - A cursor over the tokens inside the CREATE TABLE parentheses.
+ * @param cursor - A cursor over the tokens inside the `CREATE TABLE` parentheses.
+ *
  * @returns An object containing the parsed columns and constraints.
  */
 function parseTableDefinition(
@@ -702,6 +708,7 @@ function parseTableDefinition(
  * and `content_rowid` options when present.
  *
  * @param cursor - A cursor over the tokens inside the FTS5 argument list.
+ *
  * @returns The parsed FTS5 options.
  */
 function parseFTS5(cursor: CursorV2): StudioTableFTSv5Options {
@@ -749,6 +756,7 @@ function parseFTS5(cursor: CursorV2): StudioTableFTSv5Options {
  * `STRICT`). Options may be comma-separated and are parsed recursively.
  *
  * @param cursor - The cursor positioned after the CREATE TABLE body.
+ *
  * @returns An object with `withoutRowId` and/or `strict` flags, or `undefined`.
  */
 function parseTableOption(cursor: CursorV2):
@@ -790,7 +798,7 @@ function parseTableOption(cursor: CursorV2):
 }
 
 /**
- * Parses a SQL CREATE TABLE statement into a structured table definition.
+ * Parses a SQL `CREATE TABLE` statement into a structured table definition.
  * Supports regular tables, TEMP/TEMPORARY tables, virtual tables (FTS5),
  * and table options (WITHOUT ROWID, STRICT).
  *
@@ -798,7 +806,8 @@ function parseTableOption(cursor: CursorV2):
  * {@link https://www.sqlite.org/lang_createtable.html}
  *
  * @param schemaName - The schema the table belongs to (e.g. `"main"`).
- * @param sql - The raw CREATE TABLE SQL string to parse.
+ * @param sql - The raw `CREATE TABLE` SQL string to parse.
+ *
  * @returns A fully parsed {@link StudioTableSchema} including columns,
  *   constraints, primary keys, auto-increment, FTS5 options, and table flags.
  */
@@ -853,11 +862,12 @@ export function parseSQLiteCreateTableScript(
 }
 
 /**
- * Parses a SQL CREATE INDEX statement into a structured index definition.
+ * Parses a SQL `CREATE INDEX` statement into a structured index definition.
  * Handles both regular and UNIQUE indexes, and extracts the index name,
  * target table, and indexed column list.
  *
- * @param sql - The raw CREATE INDEX SQL string to parse.
+ * @param sql - The raw `CREATE INDEX` SQL string to parse.
+ *
  * @returns The parsed {@link StudioTableIndex}.
  */
 export function parseSQLiteIndexScript(sql: string): StudioTableIndex {

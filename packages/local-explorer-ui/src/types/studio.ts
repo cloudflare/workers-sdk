@@ -191,9 +191,13 @@ export interface StudioResultSet {
 }
 
 interface StudioResultStat {
-	// Time taken to execute the SQL query on the server (excluding network latency), in milliseconds
+	/**
+	 * Time taken to execute the SQL query on the server (excluding network latency), in milliseconds
+	 */
 	queryDurationMs: number | null;
-	// Total duration of the API request, including network latency and server processing, in milliseconds
+	/**
+	 * Total duration of the API request, including network latency and server processing, in milliseconds
+	 */
 	requestDurationMs?: number | null;
 	rowsAffected: number;
 	rowsRead: number | null;
