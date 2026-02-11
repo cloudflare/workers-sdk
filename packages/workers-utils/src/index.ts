@@ -18,7 +18,7 @@ export {
 	isProgrammaticConfigPath,
 	loadProgrammaticConfig,
 	watchProgrammaticConfig,
-	worker,
+	defineConfig,
 	type WorkerConfig,
 	type WorkerConfigContext,
 	type WorkerConfigFn,

@@ -56,6 +56,7 @@ import type {
 	Config,
 	ConfigWatcher,
 	LoadProgrammaticConfigResult,
+	WorkerConfig,
 } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
@@ -540,15 +541,19 @@ export class ConfigController extends Controller {
 				tmpDir: watchTmpDir.path,
 				onChange: (result: LoadProgrammaticConfigResult) => {
 					// Config file (or one of its dependencies) changed — re-run config resolution
+					// Pass the pre-loaded workerConfig to avoid loading the config a second time
 					logger.debug(
-						`Programmatic config changed: ${path.basename(configPath)}`,
-						result
+						`Programmatic config changed: ${path.basename(configPath)}`
 					);
 					assert(
 						this.latestInput,
 						"Cannot be watching config without having first set an input"
 					);
-					this.#updateConfig(this.latestInput).catch((err) => {
+					this.#updateConfig(
+						this.latestInput,
+						false,
+						result.workerConfig
+					).catch((err) => {
 						this.emitErrorEvent({
 							type: "error",
 							reason: "Error resolving config after change",
@@ -620,7 +625,11 @@ export class ConfigController extends Controller {
 		);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+	async #updateConfig(
+		input: StartDevWorkerInput,
+		throwErrors = false,
+		preloadedWorkerConfig?: WorkerConfig
+	) {
 		logger.debug(
 			"Updating config...",
 			this.#abortController?.signal,
@@ -643,15 +652,22 @@ export class ConfigController extends Controller {
 			if (isProgrammaticConfigPath(configPath)) {
 				// Programmatic config (.ts/.js): load it and merge into input directly.
 				// This bypasses the RawConfig → Config pipeline entirely.
-				const configTmpDir = getWranglerTmpDir(
-					path.dirname(configPath!),
-					"cf-config"
-				);
-				const { workerConfig } = await loadProgrammaticConfig({
-					configPath: configPath!,
-					env: input.env,
-					tmpDir: configTmpDir.path,
-				});
+				let workerConfig: WorkerConfig;
+				if (preloadedWorkerConfig) {
+					// Config was already loaded by the watcher — reuse it
+					workerConfig = preloadedWorkerConfig;
+				} else {
+					// Initial load or non-watcher path — load from disk
+					const configTmpDir = getWranglerTmpDir(
+						path.dirname(configPath!),
+						"cf-config"
+					);
+					({ workerConfig } = await loadProgrammaticConfig({
+						configPath: configPath!,
+						env: input.env,
+						tmpDir: configTmpDir.path,
+					}));
+				}
 
 				// Merge WorkerConfig fields into StartDevWorkerInput.
 				// Destructure renamed/replaced fields, spread the rest (field names match).
