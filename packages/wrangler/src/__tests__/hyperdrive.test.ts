@@ -111,9 +111,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -132,10 +132,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -165,9 +165,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -186,8 +186,8 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			[[hyperdrive]]
-			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			binding = "HYPERDRIVE"
+			id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			"
 		`);
 	});
@@ -201,9 +201,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -221,10 +221,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -240,9 +240,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -260,10 +260,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -279,13 +279,13 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "caching": Object {
+			{
+			  "caching": {
 			    "max_age": 30,
 			    "stale_while_revalidate": 15,
 			  },
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -303,10 +303,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -322,9 +322,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -343,10 +343,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -362,9 +362,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -382,10 +382,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -401,9 +401,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "a#?81n(7",
@@ -421,10 +421,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -440,10 +440,10 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
-			    "database": "\\"weird\\" dbname",
+			  "origin": {
+			    "database": ""weird" dbname",
 			    "host": "example.com",
 			    "password": "password",
 			    "port": 5432,
@@ -460,10 +460,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -479,9 +479,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -499,10 +499,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -518,9 +518,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -538,10 +538,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -557,9 +557,9 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -577,10 +577,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -613,7 +613,7 @@ describe("hyperdrive commands", () => {
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-			    Argument: origin-scheme, Given: \\"mongodb\\", Choices: \\"postgres\\", \\"postgresql\\", \\"mysql\\"
+			    Argument: origin-scheme, Given: "mongodb", Choices: "postgres", "postgresql", "mysql"
 
 			"
 		`);
@@ -642,9 +642,9 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access",
 			    "access_client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			    "database": "neondb",
@@ -663,10 +663,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -681,9 +681,9 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --host=example.com/database --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access",
 			    "access_client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			    "database": "neondb",
@@ -702,10 +702,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -752,14 +752,14 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=12345 --mtls-certificate-id=1234 --sslmode=verify-full"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "mtls": Object {
+			{
+			  "mtls": {
 			    "ca_certificate_id": "12345",
 			    "mtls_certificate_id": "1234",
 			    "sslmode": "verify-full",
 			  },
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -777,10 +777,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -795,13 +795,13 @@ describe("hyperdrive commands", () => {
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=require"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "mtls": Object {
+			{
+			  "mtls": {
 			    "mtls_certificate_id": "1234",
 			    "sslmode": "require",
 			  },
 			  "name": "test123",
-			  "origin": Object {
+			  "origin": {
 			    "database": "neondb",
 			    "host": "example.com",
 			    "password": "password",
@@ -819,10 +819,10 @@ describe("hyperdrive commands", () => {
 			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"hyperdrive\\": [
+			  "hyperdrive": [
 			    {
-			      \\"binding\\": \\"HYPERDRIVE\\",
-			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 			    }
 			  ]
 			}"
@@ -885,7 +885,7 @@ describe("hyperdrive commands", () => {
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-			    Argument: sslmode, Given: \\"random\\", Choices: \\"require\\", \\"verify-ca\\", \\"verify-full\\"
+			    Argument: sslmode, Given: "random", Choices: "require", "verify-ca", "verify-full"
 
 			"
 		`);
@@ -906,7 +906,7 @@ describe("hyperdrive commands", () => {
 			├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤
 			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db │ dbuser │ www.google.com │ 3211 │ PostgreSQL │ mydb │ disabled │ │ │
 			├─┼─┼─┼─┼─┼─┼─┼─┼─┼─┤
-			│ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz │ new-db-mtls │ pg-mtls │ www.mtls.com │ 3212 │ │ mydb-mtls │ enabled │ {\\"ca_certificate_id\\":\\"1234\\",\\"mtls_certificate_id\\":\\"1234\\",\\"sslmode\\":\\"verify-full\\"} │ │
+			│ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz │ new-db-mtls │ pg-mtls │ www.mtls.com │ 3212 │ │ mydb-mtls │ enabled │ {"ca_certificate_id":"1234","mtls_certificate_id":"1234","sslmode":"verify-full"} │ │
 			└─┴─┴─┴─┴─┴─┴─┴─┴─┴─┘"
 		`);
 	});
@@ -919,16 +919,16 @@ describe("hyperdrive commands", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			{
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -953,8 +953,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --origin-port=1234"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "origin": Object {
+			{
+			  "origin": {
 			    "host": "example.com",
 			    "port": 1234,
 			  },
@@ -967,16 +967,16 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 1234,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 1234,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -989,8 +989,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-user=newuser --origin-password='passw0rd!'"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "origin": Object {
+			{
+			  "origin": {
 			    "password": "passw0rd!",
 			    "user": "newuser",
 			  },
@@ -1003,16 +1003,16 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"newuser\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "newuser"
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -1062,8 +1062,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --max-age=30 --swr=15"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "caching": Object {
+			{
+			  "caching": {
 			    "max_age": 30,
 			    "stale_while_revalidate": 15,
 			  },
@@ -1076,20 +1076,20 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"caching\\": {
-			    \\"max_age\\": 30,
-			    \\"stale_while_revalidate\\": 15
+			  "caching": {
+			    "max_age": 30,
+			    "stale_while_revalidate": 15
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -1103,8 +1103,8 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "caching": Object {
+			{
+			  "caching": {
 			    "disabled": true,
 			  },
 			}
@@ -1116,19 +1116,19 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"caching\\": {
-			    \\"disabled\\": true
+			  "caching": {
+			    "disabled": true
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -1142,7 +1142,7 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "origin_connection_limit": 100,
 			}
 		`);
@@ -1153,16 +1153,16 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"origin_connection_limit\\": 100
+			  "origin_connection_limit": 100
 			}"
 		`);
 	});
@@ -1176,7 +1176,7 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
+			{
 			  "name": "new-name",
 			}
 		`);
@@ -1187,16 +1187,16 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"new-name\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "new-name",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -1210,8 +1210,8 @@ describe("hyperdrive commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "origin": Object {
+			{
+			  "origin": {
 			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access",
 			    "access_client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			    "database": "mydb",
@@ -1228,16 +1228,16 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"database\\": \\"mydb\\",
-			    \\"user\\": \\"newuser\\",
-			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "database": "mydb",
+			    "user": "newuser",
+			    "access_client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access"
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});
@@ -1325,8 +1325,8 @@ describe("hyperdrive commands", () => {
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --ca-certificate-id=2345 --mtls-certificate-id=234 --sslmode=verify-full"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "mtls": Object {
+			{
+			  "mtls": {
 			    "ca_certificate_id": "2345",
 			    "mtls_certificate_id": "234",
 			    "sslmode": "verify-full",
@@ -1340,21 +1340,21 @@ describe("hyperdrive commands", () => {
 			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
 			 {
-			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-			  \\"name\\": \\"test123\\",
-			  \\"origin\\": {
-			    \\"scheme\\": \\"postgresql\\",
-			    \\"host\\": \\"example.com\\",
-			    \\"port\\": 5432,
-			    \\"database\\": \\"neondb\\",
-			    \\"user\\": \\"test\\"
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
 			  },
-			  \\"mtls\\": {
-			    \\"ca_certificate_id\\": \\"2345\\",
-			    \\"mtls_certificate_id\\": \\"234\\",
-			    \\"sslmode\\": \\"verify-full\\"
+			  "mtls": {
+			    "ca_certificate_id": "2345",
+			    "mtls_certificate_id": "234",
+			    "sslmode": "verify-full"
 			  },
-			  \\"origin_connection_limit\\": 25
+			  "origin_connection_limit": 25
 			}"
 		`);
 	});

@@ -72,10 +72,10 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 					delete headersObject["user-agent"];
 
 					expect(headersObject).toMatchInlineSnapshot(`
-			Object {
-			  "authorization": "Bearer 123456789",
-			}
-		`);
+						{
+						  "authorization": "Bearer 123456789",
+						}
+					`);
 					return HttpResponse.json(createFetchResult([]));
 				},
 				{ once: true }
@@ -346,7 +346,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 
 
-			🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
+			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
 			- Test role"
 		`);
 	});
@@ -411,7 +411,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 
 
-			🎢 Membership roles in \\"(redacted)\\": Contact account super admin to change your permissions.
+			🎢 Membership roles in "(redacted)": Contact account super admin to change your permissions.
 			- Test role"
 		`);
 	});

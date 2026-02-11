@@ -577,29 +577,29 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// a comment
-						\\"compatibility_date\\": \\"2022-01-12\\",
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"compatibility_date": "2022-01-12",
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// more comments!
-								\\"binding\\": \\"KV\\"
+								"binding": "KV"
 							},
 							{
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 							},
 							{
-								\\"binding\\": \\"KV3\\"
+								"binding": "KV3"
 							}
 						],
-						\\"d1_databases\\": [
+						"d1_databases": [
 							/**
 											 * multiline comment
 											 */
 							{
-								\\"binding\\": \\"DB\\"
+								"binding": "DB"
 							},
 							{
-								\\"binding\\": \\"DB2\\"
+								"binding": "DB2"
 							}
 						]
 					}"
@@ -658,29 +658,29 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// a comment
-						\\"compatibility_date\\": \\"2022-01-12\\",
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"compatibility_date": "2022-01-12",
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// more comments!
-								\\"binding\\": \\"KV\\"
+								"binding": "KV"
 							},
 							{
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 							},
 							{
-								\\"binding\\": \\"KV3\\"
+								"binding": "KV3"
 							}
 						],
-						\\"d1_databases\\": [
+						"d1_databases": [
 							/**
 							 * multiline comment
 							 */
 							{
-								\\"binding\\": \\"DB\\"
+								"binding": "DB"
 							},
 							{
-								\\"binding\\": \\"DB2\\"
+								"binding": "DB2"
 							}
 						]
 					}"
@@ -709,9 +709,9 @@ describe("experimental_patchConfig()", () => {
 			expect(result).not.toBeFalsy();
 			expect(result).toMatchInlineSnapshot(`
 				"{
-					\\"compatibility_date\\": \\"2022-01-12\\",
-					\\"name\\": \\"test-name\\",
-					\\"tail_consumers\\": null,
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"tail_consumers": null,
 				}"
 			`);
 		});
@@ -760,19 +760,19 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// comment one
-						\\"compatibility_date\\": \\"2024-27-09\\",
+						"compatibility_date": "2024-27-09",
 						// comment two
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// comment three
-								\\"binding\\": \\"KV\\",
-								\\"id\\": \\"hello-id\\"
+								"binding": "KV",
+								"id": "hello-id"
 								// comment four
 							},
 							{
 								// comment five
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 								// comment six
 							}
 						]
@@ -827,19 +827,19 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// comment one
-						\\"compatibility_date\\": \\"2024-27-09\\",
+						"compatibility_date": "2024-27-09",
 						// comment two
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// comment three
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 								// comment four
 							},
 							{
 								// comment five
-								\\"binding\\": \\"KV\\",
-								\\"id\\": \\"hello-id\\"
+								"binding": "KV",
+								"id": "hello-id"
 								// comment six
 							}
 						]
@@ -884,9 +884,9 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// comment one
-						\\"compatibility_date\\": \\"2024-27-09\\",
+						"compatibility_date": "2024-27-09",
 						// comment two
-						\\"name\\": \\"test-name\\"
+						"name": "test-name"
 					}"
 				`);
 			});

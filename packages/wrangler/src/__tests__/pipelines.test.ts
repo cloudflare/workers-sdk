@@ -561,20 +561,20 @@ describe("wrangler pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				    {
-				        \\"id\\": \\"pipeline_1\\",
-				        \\"name\\": \\"pipeline_one\\",
-				        \\"sql\\": \\"INSERT INTO sink1 SELECT * FROM stream1;\\",
-				        \\"status\\": \\"active\\",
-				        \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				        \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
+				        "id": "pipeline_1",
+				        "name": "pipeline_one",
+				        "sql": "INSERT INTO sink1 SELECT * FROM stream1;",
+				        "status": "active",
+				        "created_at": "2024-01-01T00:00:00Z",
+				        "modified_at": "2024-01-01T00:00:00Z"
 				    },
 				    {
-				        \\"id\\": \\"pipeline_2\\",
-				        \\"name\\": \\"pipeline_two\\",
-				        \\"sql\\": \\"INSERT INTO sink2 SELECT * FROM stream2;\\",
-				        \\"status\\": \\"active\\",
-				        \\"created_at\\": \\"2024-01-02T00:00:00Z\\",
-				        \\"modified_at\\": \\"2024-01-02T00:00:00Z\\"
+				        "id": "pipeline_2",
+				        "name": "pipeline_two",
+				        "sql": "INSERT INTO sink2 SELECT * FROM stream2;",
+				        "status": "active",
+				        "created_at": "2024-01-02T00:00:00Z",
+				        "modified_at": "2024-01-02T00:00:00Z"
 				    }
 				]"
 			`);
@@ -777,28 +777,28 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				    \\"id\\": \\"pipeline_123\\",
-				    \\"name\\": \\"my_pipeline\\",
-				    \\"sql\\": \\"INSERT INTO test_sink SELECT * FROM test_stream;\\",
-				    \\"status\\": \\"active\\",
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"tables\\": [
+				    "id": "pipeline_123",
+				    "name": "my_pipeline",
+				    "sql": "INSERT INTO test_sink SELECT * FROM test_stream;",
+				    "status": "active",
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "modified_at": "2024-01-01T00:00:00Z",
+				    "tables": [
 				        {
-				            \\"id\\": \\"stream_456\\",
-				            \\"name\\": \\"test_stream\\",
-				            \\"type\\": \\"stream\\",
-				            \\"version\\": 1,
-				            \\"latest\\": 1,
-				            \\"href\\": \\"/accounts/some-account-id/pipelines/v1/streams/stream_456\\"
+				            "id": "stream_456",
+				            "name": "test_stream",
+				            "type": "stream",
+				            "version": 1,
+				            "latest": 1,
+				            "href": "/accounts/some-account-id/pipelines/v1/streams/stream_456"
 				        },
 				        {
-				            \\"id\\": \\"sink_789\\",
-				            \\"name\\": \\"test_sink\\",
-				            \\"type\\": \\"sink\\",
-				            \\"version\\": 1,
-				            \\"latest\\": 1,
-				            \\"href\\": \\"/accounts/some-account-id/pipelines/v1/sinks/sink_789\\"
+				            "id": "sink_789",
+				            "name": "test_sink",
+				            "type": "sink",
+				            "version": 1,
+				            "latest": 1,
+				            "href": "/accounts/some-account-id/pipelines/v1/sinks/sink_789"
 				        }
 				    ]
 				}"
@@ -1047,8 +1047,8 @@ describe("wrangler pipelines", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Updating pipeline \\"my-legacy-pipeline\\"
-				✨ Successfully updated pipeline \\"my-legacy-pipeline\\" with ID legacy_123
+				🌀 Updating pipeline "my-legacy-pipeline"
+				✨ Successfully updated pipeline "my-legacy-pipeline" with ID legacy_123
 				"
 			`);
 		});
@@ -1347,24 +1347,24 @@ describe("wrangler pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				    {
-				        \\"id\\": \\"stream_1\\",
-				        \\"name\\": \\"stream_one\\",
-				        \\"version\\": 1,
-				        \\"endpoint\\": \\"https://pipelines.cloudflare.com/stream_1\\",
-				        \\"format\\": {
-				            \\"type\\": \\"json\\",
-				            \\"unstructured\\": true
+				        "id": "stream_1",
+				        "name": "stream_one",
+				        "version": 1,
+				        "endpoint": "https://pipelines.cloudflare.com/stream_1",
+				        "format": {
+				            "type": "json",
+				            "unstructured": true
 				        },
-				        \\"schema\\": null,
-				        \\"http\\": {
-				            \\"enabled\\": true,
-				            \\"authentication\\": false
+				        "schema": null,
+				        "http": {
+				            "enabled": true,
+				            "authentication": false
 				        },
-				        \\"worker_binding\\": {
-				            \\"enabled\\": true
+				        "worker_binding": {
+				            "enabled": true
 				        },
-				        \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				        \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
+				        "created_at": "2024-01-01T00:00:00Z",
+				        "modified_at": "2024-01-01T00:00:00Z"
 				    }
 				]"
 			`);
@@ -1435,24 +1435,24 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				    \\"id\\": \\"stream_123\\",
-				    \\"name\\": \\"my_stream\\",
-				    \\"version\\": 1,
-				    \\"endpoint\\": \\"https://pipelines.cloudflare.com/stream_123\\",
-				    \\"format\\": {
-				        \\"type\\": \\"json\\",
-				        \\"unstructured\\": true
+				    "id": "stream_123",
+				    "name": "my_stream",
+				    "version": 1,
+				    "endpoint": "https://pipelines.cloudflare.com/stream_123",
+				    "format": {
+				        "type": "json",
+				        "unstructured": true
 				    },
-				    \\"schema\\": null,
-				    \\"http\\": {
-				        \\"enabled\\": true,
-				        \\"authentication\\": true
+				    "schema": null,
+				    "http": {
+				        "enabled": true,
+				        "authentication": true
 				    },
-				    \\"worker_binding\\": {
-				        \\"enabled\\": true
+				    "worker_binding": {
+				        "enabled": true
 				    },
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "modified_at": "2024-01-01T00:00:00Z"
 				}"
 			`);
 		});
@@ -1903,18 +1903,18 @@ describe("wrangler pipelines", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				    \\"id\\": \\"sink_123\\",
-				    \\"name\\": \\"my_sink\\",
-				    \\"type\\": \\"r2\\",
-				    \\"format\\": {
-				        \\"type\\": \\"json\\"
+				    "id": "sink_123",
+				    "name": "my_sink",
+				    "type": "r2",
+				    "format": {
+				        "type": "json"
 				    },
-				    \\"schema\\": null,
-				    \\"config\\": {
-				        \\"bucket\\": \\"my-bucket\\"
+				    "schema": null,
+				    "config": {
+				        "bucket": "my-bucket"
 				    },
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "modified_at": "2024-01-01T00:00:00Z"
 				}"
 			`);
 		});

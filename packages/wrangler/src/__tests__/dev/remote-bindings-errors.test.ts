@@ -93,7 +93,7 @@ describe("errors during dev with remote bindings", () => {
 		);
 
 		expect(thrownError.cause).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "cause": [Error: The remote worker preview failed.],
 			  "data": undefined,
 			  "reason": "Failed to obtain a preview token",

@@ -295,7 +295,7 @@ describe("r2 sql", () => {
 				"┌─┐
 				│ approx_top_k(value, Int64(3)) │
 				├─┤
-				│ [{\\"value\\":0,\\"count\\":961},{\\"value\\":1,\\"count\\":485},{\\"value\\":2,\\"count\\":\\"\\"}] │
+				│ [{"value":0,"count":961},{"value":1,"count":485},{"value":2,"count":""}] │
 				└─┘"
 			`);
 		});

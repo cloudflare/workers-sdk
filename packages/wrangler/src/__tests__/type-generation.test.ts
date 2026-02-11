@@ -603,7 +603,7 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					var: \\"from wrangler toml\\";
+					var: "from wrangler toml";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -626,7 +626,7 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					var: \\"from my-wrangler-config-a\\";
+					var: "from my-wrangler-config-a";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -649,7 +649,7 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					var: \\"from my-wrangler-config-b\\";
+					var: "from my-wrangler-config-b";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -704,8 +704,8 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface GlobalProps {
-					mainModule: typeof import(\\"./index\\");
-					durableNamespaces: \\"DurableDirect\\" | \\"DurableReexport\\";
+					mainModule: typeof import("./index");
+					durableNamespaces: "DurableDirect" | "DurableReexport";
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
@@ -723,7 +723,7 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					PIPELINE: import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -731,19 +731,19 @@ describe("generate types", () => {
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
-					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+					SOMETHING: "asdasdfasdf";
+					ANOTHER: "thing";
+					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+					"some-other-var": "some-other-value";
+					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import("./index").DurableDirect>;
+					DURABLE_RE_EXPORT: DurableObjectNamespace<import("./index").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
@@ -753,15 +753,15 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-			declare module \\"*.txt\\" {
+			declare module "*.txt" {
 				const value: string;
 				export default value;
 			}
-			declare module \\"*.webp\\" {
+			declare module "*.webp" {
 				const value: ArrayBuffer;
 				export default value;
 			}
-			declare module \\"*.wasm\\" {
+			declare module "*.wasm" {
 				const value: WebAssembly.Module;
 				export default value;
 			}
@@ -814,8 +814,8 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface GlobalProps {
-					mainModule: typeof import(\\"./index\\");
-					durableNamespaces: \\"DurableDirect\\" | \\"DurableReexport\\";
+					mainModule: typeof import("./index");
+					durableNamespaces: "DurableDirect" | "DurableReexport";
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
@@ -833,7 +833,7 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					PIPELINE: import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -841,20 +841,20 @@ describe("generate types", () => {
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
+					SOMETHING: "asdasdfasdf";
+					ANOTHER: "thing";
+					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+					"some-other-var": "some-other-value";
 					SECRET: string;
-					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import("./index").DurableDirect>;
+					DURABLE_RE_EXPORT: DurableObjectNamespace<import("./index").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
@@ -868,17 +868,17 @@ describe("generate types", () => {
 				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 			};
 			declare namespace NodeJS {
-				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, \\"SOMETHING\\" | \\"ANOTHER\\" | \\"OBJECT_VAR\\" | \\"some-other-var\\" | \\"SECRET\\">> {}
+				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SOMETHING" | "ANOTHER" | "OBJECT_VAR" | "some-other-var" | "SECRET">> {}
 			}
-			declare module \\"*.txt\\" {
+			declare module "*.txt" {
 				const value: string;
 				export default value;
 			}
-			declare module \\"*.webp\\" {
+			declare module "*.webp" {
 				const value: ArrayBuffer;
 				export default value;
 			}
-			declare module \\"*.wasm\\" {
+			declare module "*.wasm" {
 				const value: WebAssembly.Module;
 				export default value;
 			}
@@ -989,8 +989,8 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface GlobalProps {
-					mainModule: typeof import(\\"./index\\");
-					durableNamespaces: \\"DurableDirect\\" | \\"DurableReexport\\";
+					mainModule: typeof import("./index");
+					durableNamespaces: "DurableDirect" | "DurableReexport";
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
@@ -1008,7 +1008,7 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					PIPELINE: import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1016,20 +1016,20 @@ describe("generate types", () => {
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
+					SOMETHING: "asdasdfasdf";
+					ANOTHER: "thing";
+					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+					"some-other-var": "some-other-value";
 					SECRET: string;
-					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import("./index").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
-					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
-					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import("../c/index").RealDurableExternal>;
+					SERVICE_BINDING: Service<typeof import("../b/index").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import("../c/index").RealEntrypoint>;
+					MY_WORKFLOW: Workflow<Parameters<import("./index").MyWorkflow['run']>[0]['payload']>;
 					testing_unsafe: any;
 					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
@@ -1043,17 +1043,17 @@ describe("generate types", () => {
 				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 			};
 			declare namespace NodeJS {
-				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, \\"SOMETHING\\" | \\"ANOTHER\\" | \\"OBJECT_VAR\\" | \\"some-other-var\\" | \\"SECRET\\">> {}
+				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "SOMETHING" | "ANOTHER" | "OBJECT_VAR" | "some-other-var" | "SECRET">> {}
 			}
-			declare module \\"*.txt\\" {
+			declare module "*.txt" {
 				const value: string;
 				export default value;
 			}
-			declare module \\"*.webp\\" {
+			declare module "*.webp" {
 				const value: ArrayBuffer;
 				export default value;
 			}
-			declare module \\"*.wasm\\" {
+			declare module "*.wasm" {
 				const value: WebAssembly.Module;
 				export default value;
 			}
@@ -1087,13 +1087,13 @@ describe("generate types", () => {
 				// Runtime types generated with workerd@
 				declare namespace Cloudflare {
 					interface GlobalProps {
-						mainModule: typeof import(\\"./index\\");
+						mainModule: typeof import("./index");
 					}
 					interface Env {
-						SOMETHING: \\"asdasdfasdf\\";
-						ANOTHER: \\"thing\\";
-						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-						\\"some-other-var\\": \\"some-other-value\\";
+						SOMETHING: "asdasdfasdf";
+						ANOTHER: "thing";
+						OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+						"some-other-var": "some-other-value";
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1202,7 +1202,7 @@ describe("generate types", () => {
 
 				declare namespace Cloudflare {
 					interface GlobalProps {
-						mainModule: typeof import(\\"./index\\");
+						mainModule: typeof import("./index");
 					}
 					interface Env {
 					}
@@ -1303,10 +1303,10 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
+					SOMETHING: "asdasdfasdf";
+					ANOTHER: "thing";
+					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+					"some-other-var": "some-other-value";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1345,10 +1345,10 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
+					SOMETHING: "asdasdfasdf";
+					ANOTHER: "thing";
+					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+					"some-other-var": "some-other-value";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1402,8 +1402,8 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					myTomlVarA: \\"A from wrangler toml\\";
-					myTomlVarB: \\"B from wrangler toml\\";
+					myTomlVarA: "A from wrangler toml";
+					myTomlVarB: "B from wrangler toml";
 					SECRET_A: string;
 					MULTI_LINE_SECRET: string;
 					UNQUOTED_SECRET: string;
@@ -1456,7 +1456,7 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					myTomlVarA: \\"A from wrangler toml\\";
+					myTomlVarA: "A from wrangler toml";
 					SECRET_FROM_TEMPLATE: string;
 					TEMPLATE_ONLY: string;
 				}
@@ -1506,8 +1506,8 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					myTomlVarA: \\"A from wrangler toml\\";
-					myTomlVarB: \\"B from wrangler toml\\";
+					myTomlVarA: "A from wrangler toml";
+					myTomlVarB: "B from wrangler toml";
 					SECRET_A_DOT_ENV: string;
 					MULTI_LINE_SECRET: string;
 					UNQUOTED_SECRET: string;
@@ -1634,17 +1634,17 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					\\"1\\": 1;
-					\\"12345\\": 12345;
-					\\"var-a\\": \\"/\\"a///\\"/\\"\\";
-					\\"var-a-1\\": \\"/\\"a/////\\"\\";
-					\\"var-a-b\\": \\"/\\"a////b/\\"\\";
-					\\"var-a-b-\\": \\"/\\"a////b///\\"/\\"\\";
+					"1": 1;
+					"12345": 12345;
+					"var-a": "/"a///"/"";
+					"var-a-1": "/"a/////"";
+					"var-a-b": "/"a////b/"";
+					"var-a-b-": "/"a////b///"/"";
 					true: true;
 					false: false;
-					\\"multi
+					"multi
 			line
-			var\\": \\"this/nis/na/nmulti/nline/nvariable!\\";
+			var": "this/nis/na/nmulti/nline/nvariable!";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1699,19 +1699,19 @@ describe("generate types", () => {
 
 				declare namespace Cloudflare {
 					interface ProductionEnv {
-						MY_VAR: \\"a var\\";
-						MY_VAR_A: \\"A (prod)\\";
-						MY_VAR_B: {\\"value\\":\\"B (prod)\\"};
+						MY_VAR: "a var";
+						MY_VAR_A: "A (prod)";
+						MY_VAR_B: {"value":"B (prod)"};
 						MY_VAR_C: [1,2,3];
 					}
 					interface StagingEnv {
-						MY_VAR_A: \\"A (stag)\\";
+						MY_VAR_A: "A (stag)";
 					}
 					interface Env {
-						MY_VAR?: \\"a var\\";
-						MY_VAR_A: \\"A (prod)\\" | \\"A (stag)\\" | \\"A (dev)\\";
-						MY_VAR_B?: {\\"value\\":\\"B (prod)\\"} | {\\"value\\":\\"B (dev)\\"};
-						MY_VAR_C?: [1,2,3] | [\\"a\\",\\"b\\",\\"c\\"];
+						MY_VAR?: "a var";
+						MY_VAR_A: "A (prod)" | "A (stag)" | "A (dev)";
+						MY_VAR_B?: {"value":"B (prod)"} | {"value":"B (dev)"};
+						MY_VAR_C?: [1,2,3] | ["a","b","c"];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -2106,8 +2106,8 @@ describe("generate types", () => {
 
 				declare namespace Cloudflare {
 					interface Env {
-						MY_VAR: \\"staging\\";
-						STAGING_ONLY: \\"staging-only-value\\";
+						MY_VAR: "staging";
+						STAGING_ONLY: "staging-only-value";
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -2293,13 +2293,13 @@ describe("generate types", () => {
 
 				declare namespace Cloudflare {
 					interface StagingEnv {
-						DEBUG: \\"true\\";
+						DEBUG: "true";
 					}
 					interface ProductionEnv {
-						DEBUG: \\"false\\";
+						DEBUG: "false";
 					}
 					interface Env {
-						DEBUG: \\"true\\" | \\"false\\";
+						DEBUG: "true" | "false";
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -2333,7 +2333,7 @@ describe("generate types", () => {
 				declare namespace Cloudflare {
 					interface Env {
 						MY_KV: KVNamespace;
-						MY_VAR: \\"value\\";
+						MY_VAR: "value";
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -2392,10 +2392,10 @@ describe("generate types", () => {
 
 					declare namespace Cloudflare {
 						interface Env {
-							SOMETHING: \\"asdasdfasdf\\";
-							ANOTHER: \\"thing\\";
-							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-							\\"some-other-var\\": \\"some-other-value\\";
+							SOMETHING: "asdasdfasdf";
+							ANOTHER: "thing";
+							OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+							"some-other-var": "some-other-value";
 						}
 					}
 					interface CloudflareEnv extends Cloudflare.Env {}
@@ -2495,10 +2495,10 @@ describe("generate types", () => {
 						// Runtime types generated with workerd@
 						declare namespace Cloudflare {
 							interface Env {
-								SOMETHING: \\"asdasdfasdf\\";
-								ANOTHER: \\"thing\\";
-								OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-								\\"some-other-var\\": \\"some-other-value\\";
+								SOMETHING: "asdasdfasdf";
+								ANOTHER: "thing";
+								OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+								"some-other-var": "some-other-value";
 							}
 						}
 						interface Env extends Cloudflare.Env {}
@@ -2553,10 +2553,10 @@ describe("generate types", () => {
 					// Runtime types generated with workerd@
 					declare namespace Cloudflare {
 						interface Env {
-							SOMETHING: \\"asdasdfasdf\\";
-							ANOTHER: \\"thing\\";
-							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-							\\"some-other-var\\": \\"some-other-value\\";
+							SOMETHING: "asdasdfasdf";
+							ANOTHER: "thing";
+							OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
+							"some-other-var": "some-other-value";
 						}
 					}
 					interface MyCloudflareEnvInterface extends Cloudflare.Env {}
@@ -2690,7 +2690,7 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface GlobalProps {
-					mainModule: typeof import(\\"./index\\");
+					mainModule: typeof import("./index");
 				}
 				interface Env {
 					VPC_API: Fetcher;

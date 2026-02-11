@@ -159,7 +159,7 @@ describe("vectorize help", () => {
 			      --vector-id        Identifier for a vector in the index against which the index should be queried  [string]
 			      --top-k            The number of results (nearest neighbors) to return  [number] [default: 5]
 			      --return-values    Specify if the vector values should be included in the results  [boolean] [default: false]
-			      --return-metadata  Specify if the vector metadata should be included in the results  [string] [choices: \\"all\\", \\"indexed\\", \\"none\\"] [default: \\"none\\"]
+			      --return-metadata  Specify if the vector metadata should be included in the results  [string] [choices: "all", "indexed", "none"] [default: "none"]
 			      --namespace        Filter the query results based on this namespace  [string]
 			      --filter           Filter the query results based on this metadata filter.  [string]
 
@@ -209,10 +209,10 @@ describe("vectorize commands", () => {
 			✅ Successfully created a new Vectorize index: 'test-index'
 			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"vectorize\\": [
+			  "vectorize": [
 			    {
-			      \\"binding\\": \\"VECTORIZE_INDEX\\",
-			      \\"index_name\\": \\"test-index\\"
+			      "binding": "VECTORIZE_INDEX",
+			      "index_name": "test-index"
 			    }
 			  ]
 			}"
@@ -232,10 +232,10 @@ describe("vectorize commands", () => {
 			✅ Successfully created a new Vectorize index: 'test-index'
 			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"vectorize\\": [
+			  "vectorize": [
 			    {
-			      \\"binding\\": \\"VECTORIZE\\",
-			      \\"index_name\\": \\"test-index\\"
+			      "binding": "VECTORIZE",
+			      "index_name": "test-index"
 			    }
 			  ]
 			}"
@@ -256,10 +256,10 @@ describe("vectorize commands", () => {
 			✅ Successfully created a new Vectorize index: 'test-index'
 			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"vectorize\\": [
+			  "vectorize": [
 			    {
-			      \\"binding\\": \\"VECTORIZE\\",
-			      \\"index_name\\": \\"test-index\\"
+			      "binding": "VECTORIZE",
+			      "index_name": "test-index"
 			    }
 			  ]
 			}"
@@ -279,12 +279,12 @@ describe("vectorize commands", () => {
 		);
 
 		expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-				    Argument: metric, Given: \\"pythagorian\\", Choices: \\"euclidean\\", \\"cosine\\", \\"dot-product\\"
+			    Argument: metric, Given: "pythagorian", Choices: "euclidean", "cosine", "dot-product"
 
-				"
-			`);
+			"
+		`);
 	});
 
 	it("should fail index creation with invalid preset", async () => {
@@ -300,14 +300,14 @@ describe("vectorize commands", () => {
 		);
 
 		expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-    Argument: preset, Given: \\"openai/gpt-400-pro-max-ultra\\", Choices: \\"@cf/baai/bge-small-en-v1.5\\",
-  \\"@cf/baai/bge-base-en-v1.5\\", \\"@cf/baai/bge-large-en-v1.5\\", \\"openai/text-embedding-ada-002\\",
-  \\"cohere/embed-multilingual-v2.0\\"
+			    Argument: preset, Given: "openai/gpt-400-pro-max-ultra", Choices: "@cf/baai/bge-small-en-v1.5",
+			  "@cf/baai/bge-base-en-v1.5", "@cf/baai/bge-large-en-v1.5", "openai/text-embedding-ada-002",
+			  "cohere/embed-multilingual-v2.0"
 
-"
-			`);
+			"
+		`);
 	});
 
 	it("should fail index creation with invalid config", async () => {
@@ -451,30 +451,30 @@ describe("vectorize commands", () => {
 			📋 Fetching vectors...
 			[
 			  {
-			    \\"id\\": \\"a\\",
-			    \\"values\\": [
+			    "id": "a",
+			    "values": [
 			      1,
 			      2,
 			      3,
 			      4
 			    ],
-			    \\"namespace\\": \\"abcd\\",
-			    \\"metadata\\": {
-			      \\"a\\": true,
-			      \\"b\\": 123
+			    "namespace": "abcd",
+			    "metadata": {
+			      "a": true,
+			      "b": 123
 			    }
 			  },
 			  {
-			    \\"id\\": \\"b\\",
-			    \\"values\\": [
+			    "id": "b",
+			    "values": [
 			      5,
 			      6,
 			      7,
 			      8
 			    ],
-			    \\"metadata\\": {
-			      \\"c\\": false,
-			      \\"b\\": \\"123\\"
+			    "metadata": {
+			      "c": false,
+			      "b": "123"
 			    }
 			  }
 			]"
@@ -542,35 +542,35 @@ describe("vectorize commands", () => {
 			──────────────────
 			📋 Searching for relevant vectors...
 			{
-			  \\"count\\": 2,
-			  \\"matches\\": [
+			  "count": 2,
+			  "matches": [
 			    {
-			      \\"id\\": \\"a\\",
-			      \\"score\\": 0.5,
-			      \\"values\\": [
+			      "id": "a",
+			      "score": 0.5,
+			      "values": [
 			        1,
 			        2,
 			        3,
 			        4
 			      ],
-			      \\"namespace\\": \\"abcd\\",
-			      \\"metadata\\": {
-			        \\"a\\": true,
-			        \\"b\\": 123
+			      "namespace": "abcd",
+			      "metadata": {
+			        "a": true,
+			        "b": 123
 			      }
 			    },
 			    {
-			      \\"id\\": \\"b\\",
-			      \\"score\\": 0.75,
-			      \\"values\\": [
+			      "id": "b",
+			      "score": 0.75,
+			      "values": [
 			        5,
 			        6,
 			        7,
 			        8
 			      ],
-			      \\"metadata\\": {
-			        \\"c\\": false,
-			        \\"b\\": \\"123\\"
+			      "metadata": {
+			        "c": false,
+			        "b": "123"
 			      }
 			    }
 			  ]
@@ -587,35 +587,35 @@ describe("vectorize commands", () => {
 			──────────────────
 			📋 Searching for relevant vectors...
 			{
-			  \\"count\\": 2,
-			  \\"matches\\": [
+			  "count": 2,
+			  "matches": [
 			    {
-			      \\"id\\": \\"a\\",
-			      \\"score\\": 0.5,
-			      \\"values\\": [
+			      "id": "a",
+			      "score": 0.5,
+			      "values": [
 			        1,
 			        2,
 			        3,
 			        4
 			      ],
-			      \\"namespace\\": \\"abcd\\",
-			      \\"metadata\\": {
-			        \\"a\\": true,
-			        \\"b\\": 123
+			      "namespace": "abcd",
+			      "metadata": {
+			        "a": true,
+			        "b": 123
 			      }
 			    },
 			    {
-			      \\"id\\": \\"b\\",
-			      \\"score\\": 0.75,
-			      \\"values\\": [
+			      "id": "b",
+			      "score": 0.75,
+			      "values": [
 			        5,
 			        6,
 			        7,
 			        8
 			      ],
-			      \\"metadata\\": {
-			        \\"c\\": false,
-			        \\"b\\": \\"123\\"
+			      "metadata": {
+			        "c": false,
+			        "b": "123"
 			      }
 			    }
 			  ]
@@ -638,35 +638,35 @@ describe("vectorize commands", () => {
 			──────────────────
 			📋 Searching for relevant vectors...
 			{
-			  \\"count\\": 2,
-			  \\"matches\\": [
+			  "count": 2,
+			  "matches": [
 			    {
-			      \\"id\\": \\"a\\",
-			      \\"score\\": 0.5,
-			      \\"values\\": [
+			      "id": "a",
+			      "score": 0.5,
+			      "values": [
 			        1,
 			        2,
 			        3,
 			        4
 			      ],
-			      \\"namespace\\": \\"abcd\\",
-			      \\"metadata\\": {
-			        \\"a\\": true,
-			        \\"b\\": 123
+			      "namespace": "abcd",
+			      "metadata": {
+			        "a": true,
+			        "b": 123
 			      }
 			    },
 			    {
-			      \\"id\\": \\"b\\",
-			      \\"score\\": 0.75,
-			      \\"values\\": [
+			      "id": "b",
+			      "score": 0.75,
+			      "values": [
 			        5,
 			        6,
 			        7,
 			        8
 			      ],
-			      \\"metadata\\": {
-			        \\"c\\": false,
-			        \\"b\\": \\"123\\"
+			      "metadata": {
+			        "c": false,
+			        "b": "123"
 			      }
 			    }
 			  ]
@@ -688,35 +688,35 @@ describe("vectorize commands", () => {
 			──────────────────
 			📋 Searching for relevant vectors...
 			{
-			  \\"count\\": 2,
-			  \\"matches\\": [
+			  "count": 2,
+			  "matches": [
 			    {
-			      \\"id\\": \\"a\\",
-			      \\"score\\": 0.5,
-			      \\"values\\": [
+			      "id": "a",
+			      "score": 0.5,
+			      "values": [
 			        1,
 			        2,
 			        3,
 			        4
 			      ],
-			      \\"namespace\\": \\"abcd\\",
-			      \\"metadata\\": {
-			        \\"a\\": true,
-			        \\"b\\": 123
+			      "namespace": "abcd",
+			      "metadata": {
+			        "a": true,
+			        "b": 123
 			      }
 			    },
 			    {
-			      \\"id\\": \\"b\\",
-			      \\"score\\": 0.75,
-			      \\"values\\": [
+			      "id": "b",
+			      "score": 0.75,
+			      "values": [
 			        5,
 			        6,
 			        7,
 			        8
 			      ],
-			      \\"metadata\\": {
-			        \\"c\\": false,
-			        \\"b\\": \\"123\\"
+			      "metadata": {
+			        "c": false,
+			        "b": "123"
 			      }
 			    }
 			  ]
@@ -780,12 +780,12 @@ describe("vectorize commands", () => {
 		);
 
 		expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-				    Argument: return-metadata, Given: \\"truncated\\", Choices: \\"all\\", \\"indexed\\", \\"none\\"
+			    Argument: return-metadata, Given: "truncated", Choices: "all", "indexed", "none"
 
-				"
-			`);
+			"
+		`);
 	});
 
 	it("should handle info on a vectorize index", async () => {
@@ -830,7 +830,7 @@ describe("vectorize commands", () => {
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-			    Argument: type, Given: \\"array\\", Choices: \\"string\\", \\"number\\", \\"boolean\\"
+			    Argument: type, Given: "array", Choices: "string", "number", "boolean"
 
 			"
 		`);
@@ -1007,20 +1007,20 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list-vectors test-index --json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			  \\"count\\": 3,
-			  \\"totalCount\\": 5,
-			  \\"isTruncated\\": true,
-			  \\"nextCursor\\": \\"next-page-cursor\\",
-			  \\"cursorExpirationTimestamp\\": \\"2025-08-13T20:32:52.469144957+00:00\\",
-			  \\"vectors\\": [
+			  "count": 3,
+			  "totalCount": 5,
+			  "isTruncated": true,
+			  "nextCursor": "next-page-cursor",
+			  "cursorExpirationTimestamp": "2025-08-13T20:32:52.469144957+00:00",
+			  "vectors": [
 			    {
-			      \\"id\\": \\"vector-1\\"
+			      "id": "vector-1"
 			    },
 			    {
-			      \\"id\\": \\"vector-2\\"
+			      "id": "vector-2"
 			    },
 			    {
-			      \\"id\\": \\"vector-3\\"
+			      "id": "vector-3"
 			    }
 			  ]
 			}"
@@ -1052,7 +1052,7 @@ describe("vectorize query filter", () => {
 		expect(
 			JSON.stringify(validateQueryFilter(JSON.parse(jsonString)))
 		).toMatchInlineSnapshot(
-			`"{\\"p1\\":\\"abc\\",\\"p2\\":{\\"$ne\\":true},\\"p3\\":10,\\"p4\\":false,\\"nested.p5\\":\\"abcd\\",\\"p6\\":{\\"$in\\":[\\"a\\",3,4]},\\"p7\\":{\\"$gt\\":4,\\"$lte\\":\\"aaa\\"}}"`
+			`"{"p1":"abc","p2":{"$ne":true},"p3":10,"p4":false,"nested.p5":"abcd","p6":{"$in":["a",3,4]},"p7":{"$gt":4,"$lte":"aaa"}}"`
 		);
 
 		jsonString =
@@ -1060,13 +1060,13 @@ describe("vectorize query filter", () => {
 		expect(
 			JSON.stringify(validateQueryFilter(JSON.parse(jsonString)))
 		).toMatchInlineSnapshot(
-			`"{\\"streaming_platform\\":\\"netflix\\",\\"has_viewed\\":{\\"$ne\\":true}}"`
+			`"{"streaming_platform":"netflix","has_viewed":{"$ne":true}}"`
 		);
 
 		jsonString = '{ "prop_5": "" }'; // Successful parse
 		expect(
 			JSON.stringify(validateQueryFilter(JSON.parse(jsonString)))
-		).toMatchInlineSnapshot(`"{\\"prop_5\\":\\"\\"}"`);
+		).toMatchInlineSnapshot(`"{"prop_5":""}"`);
 
 		const jsonStrings = new Map<number, string>([
 			[0, ""], // Does not get parsed as JSON Object

@@ -68,7 +68,7 @@ describe("versions deploy", () => {
 			await runWrangler("deploy ./index");
 
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
-				"╭  WARNING  Your last deployment has multiple versions. To progress that deployment use \\"wrangler versions deploy\\" instead.
+				"╭  WARNING  Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.
 				│
 				├ Your last deployment has 2 version(s):
 				│
@@ -82,7 +82,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ \\"wrangler deploy\\" will upload a new version and deploy it globally immediately.
+				├ "wrangler deploy" will upload a new version and deploy it globally immediately.
 				Are you sure you want to continue?
 				│ yes
 				│"
@@ -1010,7 +1010,7 @@ describe("versions deploy", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+					  string to the flag to target such environment. For example \`--env=""\`.
 
 					"
 				`);

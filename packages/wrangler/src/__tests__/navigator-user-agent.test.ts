@@ -141,15 +141,15 @@ describe("defineNavigatorUserAgent is respected", () => {
 
 		// Build time warning that the dynamic import of `require("node:crypto")` may not be safe
 		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package \\"node:crypto\\" wasn't found on the file system but is built into node.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package "node:crypto" wasn't found on the file system but is built into node.[0m
 
-		  Your Worker may throw errors at runtime unless you enable the \\"nodejs_compat\\" compatibility flag.
-		  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
-		  from:
-		   - src/index.js
+			  Your Worker may throw errors at runtime unless you enable the "nodejs_compat" compatibility flag.
+			  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
+			  from:
+			   - src/index.js
 
-		"
-	`);
+			"
+		`);
 		const fileContents = await readFile("dist/index.js", "utf8");
 
 		// navigator.userAgent should have been preserved as-is

@@ -206,12 +206,12 @@ describe("kv", () => {
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in "keys.json".[0m
 
-			            The item at index 5 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 5 contains unexpected properties: ["invalid"].
 
-			          "
-		        `);
+					"
+				`);
 			});
 
 			it("should cap the number of errors", async () => {
@@ -269,20 +269,20 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 
 				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in "keys.json".[0m
 
-					  The item at index 0 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 1 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 2 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 3 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 4 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 5 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 6 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 7 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 8 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 9 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 10 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 11 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 0 contains unexpected properties: ["invalid"].
+					  The item at index 1 contains unexpected properties: ["invalid"].
+					  The item at index 2 contains unexpected properties: ["invalid"].
+					  The item at index 3 contains unexpected properties: ["invalid"].
+					  The item at index 4 contains unexpected properties: ["invalid"].
+					  The item at index 5 contains unexpected properties: ["invalid"].
+					  The item at index 6 contains unexpected properties: ["invalid"].
+					  The item at index 7 contains unexpected properties: ["invalid"].
+					  The item at index 8 contains unexpected properties: ["invalid"].
+					  The item at index 9 contains unexpected properties: ["invalid"].
+					  The item at index 10 contains unexpected properties: ["invalid"].
+					  The item at index 11 contains unexpected properties: ["invalid"].
 					  ...
 
 					"
@@ -426,7 +426,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Not deleting keys read from \\"keys.json\\"."
+					Not deleting keys read from "keys.json"."
 				`
 				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -582,8 +582,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
-					  \\"someKey1\\": \\"someKey1-value\\",
-					  \\"key2\\": \\"key2-value\\"
+					  "someKey1": "someKey1-value",
+					  "key2": "key2-value"
 					}
 
 					Success!"
@@ -609,8 +609,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
-					  \\"someKey1\\": \\"someKey1-value\\",
-					  \\"ns:someKey2\\": \\"ns:someKey2-value\\"
+					  "someKey1": "someKey1-value",
+					  "ns:someKey2": "ns:someKey2-value"
 					}
 
 					Success!"

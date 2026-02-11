@@ -35,10 +35,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}
@@ -48,8 +48,8 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-			  \\"compatibility_date\\": \\"2022-01-12\\",
-			  \\"name\\": \\"worker\\"
+			  "compatibility_date": "2022-01-12",
+			  "name": "worker"
 			}"
 		`
 		);
@@ -73,10 +73,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -84,8 +84,8 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-			  \\"compatibility_date\\": \\"2022-01-12\\",
-			  \\"name\\": \\"worker\\"
+			  "compatibility_date": "2022-01-12",
+			  "name": "worker"
 			}"
 		`
 		);
@@ -117,10 +117,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -128,12 +128,12 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"kv_namespaces\\": [
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"kv_namespaces": [
 					{
-						\\"binding\\": \\"KV\\",
-						\\"id\\": \\"random-id\\"
+						"binding": "KV",
+						"id": "random-id"
 					}
 				]
 			}"
@@ -167,12 +167,12 @@ describe("createdResourceConfig()", () => {
 			"testEnv"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the \\"testEnv\\" environment:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the "testEnv" environment:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -180,15 +180,15 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"env\\": {
-					\\"testEnv\\": {
-						\\"kv_namespaces\\": [
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"env": {
+					"testEnv": {
+						"kv_namespaces": [
 							{
-								\\"binding\\": \\"KV\\",
-								\\"id\\": \\"random-id\\",
-								\\"remote\\": true
+								"binding": "KV",
+								"id": "random-id",
+								"remote": true
 							}
 						]
 					}
@@ -225,10 +225,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -236,12 +236,12 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"kv_namespaces\\": [
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"kv_namespaces": [
 					{
-						\\"binding\\": \\"HELLO\\",
-						\\"id\\": \\"random-id\\"
+						"binding": "HELLO",
+						"id": "random-id"
 					}
 				]
 			}"
@@ -265,14 +265,14 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			[[kv_namespaces]]
-			binding = \\"KV\\"
-			id = \\"random-id\\"
+			binding = "KV"
+			id = "random-id"
 			"
 		`);
 		expect(await readFile("wrangler.toml", "utf8")).toMatchInlineSnapshot(
 			`
-			"compatibility_date = \\"2022-01-12\\"
-			name = \\"worker\\"
+			"compatibility_date = "2022-01-12"
+			name = "worker"
 			"
 		`
 		);
@@ -292,10 +292,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -320,10 +320,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"d1_databases\\": [
+			  "d1_databases": [
 			    {
-			      \\"binding\\": \\"D1\\",
-			      \\"database_id\\": \\"database_id\\"
+			      "binding": "D1",
+			      "database_id": "database_id"
 			    }
 			  ]
 			}
@@ -352,27 +352,27 @@ describe("createdResourceConfig()", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 				{
-				  \\"kv_namespaces\\": [
+				  "kv_namespaces": [
 				    {
-				      \\"binding\\": \\"HELLO\\",
-				      \\"id\\": \\"random-id\\"
+				      "binding": "HELLO",
+				      "id": "random-id"
 				    }
 				  ]
 				}"
 			`);
 			expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 				`
-			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"kv_namespaces\\": [
-					{
-						\\"binding\\": \\"HELLO\\",
-						\\"id\\": \\"random-id\\"
-					}
-				]
-			}"
-		`
+				"{
+					"compatibility_date": "2022-01-12",
+					"name": "worker",
+					"kv_namespaces": [
+						{
+							"binding": "HELLO",
+							"id": "random-id"
+						}
+					]
+				}"
+			`
 			);
 		});
 	});
