@@ -13,9 +13,9 @@ interface StudioSQLiteExplainRow {
 	detail: string;
 }
 
-type StudioSQLiteExplainTree = StudioSQLiteExplainRow & {
+interface StudioSQLiteExplainTree extends StudioSQLiteExplainRow {
 	children: StudioSQLiteExplainTree[];
-};
+}
 
 export function StudioSQLiteExplainTab({
 	data,

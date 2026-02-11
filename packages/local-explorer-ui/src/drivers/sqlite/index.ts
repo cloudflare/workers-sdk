@@ -76,7 +76,7 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		const defaultSchemaName = "main";
 		const result = await this.query(`SELECT * FROM sqlite_master;`);
 
-		let schemaItems: StudioSchemaItem[] = [];
+		let schemaItems = new Array<StudioSchemaItem>();
 		const rows = result.rows as Array<SQLiteMasterRow>;
 
 		for (const row of rows) {
@@ -189,9 +189,9 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 			const schema = {
 				...parseSQLiteCreateTableScript(schemaName, createScript),
 				createScript,
+				indexes: indexList,
 				schemaName,
 				type: "table",
-				indexes: indexList,
 			} as StudioTableSchema;
 
 			if (schema.fts5) {
@@ -218,22 +218,22 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 
 		const rows = result.rows as Array<{
 			name: string;
-			type: string;
 			pk: number;
+			type: string;
 		}>;
 
 		const columns: StudioTableColumn[] = rows.map((row) => ({
 			name: row.name,
-			type: row.type,
 			pk: !!row.pk,
+			type: row.type,
 		}));
 
 		return {
+			autoIncrement: false,
 			columns,
+			pk: columns.filter((col) => col.pk).map((col) => col.name),
 			schemaName,
 			tableName,
-			pk: columns.filter((col) => col.pk).map((col) => col.name),
-			autoIncrement: false,
 		};
 	}
 
@@ -241,7 +241,10 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		schemaName: string,
 		tableName: string,
 		options: StudioSelectFromTableOptions
-	): Promise<{ result: StudioResultSet; schema: StudioTableSchema }> {
+	): Promise<{
+		result: StudioResultSet;
+		schema: StudioTableSchema;
+	}> {
 		const schema = await this.tableSchema(schemaName, tableName);
 		const { limit, offset, orderByColumn, orderByDirection } = options;
 
@@ -257,12 +260,12 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		if (canInjectRowId) {
 			schema.columns = [
 				{
-					name: "rowid",
-					type: "INTEGER",
 					constraint: {
 						primaryKey: true,
 						autoIncrement: true,
 					},
+					name: "rowid",
+					type: "INTEGER",
 				},
 				...schema.columns,
 			];
@@ -309,7 +312,13 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 				result,
 				schema: {
 					...schema,
-					columns: [{ name: "rank", type: "INTEGER" }, ...schema.columns],
+					columns: [
+						{
+							name: "rank",
+							type: "INTEGER",
+						},
+						...schema.columns,
+					],
 				},
 			};
 		}
@@ -333,7 +342,12 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 			.filter((t) => t.type !== "COMMENT")
 			.map(
 				(t): StudioSQLToken =>
-					t.value === "?" ? { type: "STRING", value: `''` } : t
+					t.value === "?"
+						? {
+								type: "STRING",
+								value: `''`,
+							}
+						: t
 			);
 
 		const normalizedSql = sanitizedTokens.map((t) => t.value).join("");
@@ -355,7 +369,11 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 	override getQueryTabOverride(
 		statement: string,
 		result: StudioResultSet
-	): { label: string; icon: Icon; component: JSX.Element } | null {
+	): {
+		component: JSX.Element;
+		icon: Icon;
+		label: string;
+	} | null {
 		if (!statement.toUpperCase().startsWith("EXPLAIN QUERY PLAN ")) {
 			return null;
 		}
