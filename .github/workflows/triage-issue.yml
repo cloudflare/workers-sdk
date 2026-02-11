@@ -10,6 +10,10 @@ on:
         required: true
         type: number
 
+permissions:
+  contents: read
+  issues: read
+
 # Cancel in-progress runs for the same issue
 concurrency:
   group: triage-${{ github.event.issue.number || inputs.issue-number }}
@@ -24,7 +28,6 @@ jobs:
       (!github.event.issue.pull_request &&
       github.event.issue.user.type != 'Bot')
     timeout-minutes: 15
-
     steps:
       - name: Resolve issue number
         id: issue
