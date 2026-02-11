@@ -39,9 +39,7 @@ function RootLayout() {
 					setDatabases(d1Response.value.data?.result ?? []);
 				}
 			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to fetch namespaces"
-				);
+				setError(err instanceof Error ? err.message : "Failed to fetch data");
 			} finally {
 				setLoading(false);
 			}
