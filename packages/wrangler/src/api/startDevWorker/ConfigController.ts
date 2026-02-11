@@ -191,6 +191,7 @@ async function resolveBindings(
 		input.envFiles,
 		!input.dev?.remote,
 		{
+			defaultVars: input.defaultVars,
 			kv: extractBindingsOfType("kv_namespace", input.bindings),
 			vars: Object.fromEntries(
 				extractBindingsOfType("plain_text", input.bindings).map((b) => [
@@ -215,7 +216,7 @@ async function resolveBindings(
 
 	// Create a print function that captures the current bindings context
 	const printCurrentBindings = (registry: WorkerRegistry | null) => {
-		const maskedVars = maskVars(bindings, config);
+		const maskedVars = maskVars(bindings, config, input.defaultVars);
 
 		printBindings(
 			{
