@@ -53,14 +53,14 @@ describe("list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			  {
-			    \\"uuid\\": \\"1\\",
-			    \\"name\\": \\"a\\",
-			    \\"binding\\": \\"A\\"
+			    "uuid": "1",
+			    "name": "a",
+			    "binding": "A"
 			  },
 			  {
-			    \\"uuid\\": \\"2\\",
-			    \\"name\\": \\"b\\",
-			    \\"binding\\": \\"B\\"
+			    "uuid": "2",
+			    "name": "b",
+			    "binding": "B"
 			  }
 			]"
 		`);

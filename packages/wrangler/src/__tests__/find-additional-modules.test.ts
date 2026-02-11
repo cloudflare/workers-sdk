@@ -245,7 +245,7 @@ describe("traverse module graph", () => {
 			]
 		);
 
-		expect(modules.map((m) => m.name)).toMatchInlineSnapshot(`Array []`);
+		expect(modules.map((m) => m.name)).toMatchInlineSnapshot(`[]`);
 	});
 
 	it("should resolve files that match the default rules", async () => {

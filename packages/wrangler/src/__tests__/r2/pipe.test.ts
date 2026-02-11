@@ -28,7 +28,7 @@ describe("pipe test", () => {
 
 			Use --remote if you want to access the remote instance.
 
-			Creating object \\"wormhole.txt\\" in bucket \\"bucket-object-test\\".
+			Creating object "wormhole.txt" in bucket "bucket-object-test".
 			Upload complete.
 
 			 ⛅️ wrangler x.x.x
@@ -37,7 +37,7 @@ describe("pipe test", () => {
 
 			Use --remote if you want to access the remote instance.
 
-			Downloading \\"wormhole.txt\\" from \\"bucket-object-test\\".
+			Downloading "wormhole.txt" from "bucket-object-test".
 			Download complete."
 		`);
 	});

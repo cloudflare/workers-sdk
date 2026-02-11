@@ -21,7 +21,7 @@ describe("config cache", () => {
 	it("should return an empty config if no file exists", ({ expect }) => {
 		expect(
 			getConfigCache<PagesConfigCache>(pagesConfigCacheFilename)
-		).toMatchInlineSnapshot(`Object {}`);
+		).toMatchInlineSnapshot(`{}`);
 	});
 
 	it("should read and write values without overriding old ones", ({

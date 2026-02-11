@@ -39,7 +39,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Static {
@@ -90,7 +90,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				framework: new Static({ id: "static", name: "Static" }),
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run app:build",
 				  "configured": false,
 				  "framework": Static {
@@ -141,12 +141,12 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Astro {
 				    "autoConfigSupported": true,
-				    "configurationDescription": "Configuring project for Astro with \\"astro add cloudflare\\"",
+				    "configurationDescription": "Configuring project for Astro with "astro add cloudflare"",
 				    "id": "astro",
 				    "name": "Astro",
 				  },
@@ -213,7 +213,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Static {

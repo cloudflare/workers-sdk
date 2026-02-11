@@ -107,82 +107,82 @@ describe("deployments list", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"upload\\"
+				    "id": "Galaxy-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "annotations": {
+				      "workers/triggered_by": "upload"
 				    },
-				    \\"versions\\": [
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 20
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 20
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 80
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 80
 				      }
 				    ]
 				  },
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"api\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    "id": "Galaxy-Class-test-name",
+				    "source": "api",
+				    "strategy": "percentage",
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-04T00:00:00.000000Z",
+				    "annotations": {
+				      "workers/triggered_by": "rollback",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222"
 				    },
-				    \\"versions\\": [
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 10
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 10
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 90
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 90
 				      }
 				    ]
 				  },
 				  {
-				    \\"id\\": \\"Intrepid-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    "id": "Intrepid-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-02T00:00:00.000000Z",
+				    "annotations": {
+				      "workers/triggered_by": "rollback",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+				      "workers/message": "Rolled back for this version"
 				    },
-				    \\"versions\\": [
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 30
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 30
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 70
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 70
 				      }
 				    ]
 				  },
 				  {
-				    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-				    \\"versions\\": [
+				    "id": "3mEgaU1T-Intrepid-someThing-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-03T00:00:00.000000Z",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 40
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 40
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 60
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 60
 				      }
 				    ]
 				  }
@@ -270,82 +270,82 @@ describe("deployments list", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"upload\\"
+				    "id": "Galaxy-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "annotations": {
+				      "workers/triggered_by": "upload"
 				    },
-				    \\"versions\\": [
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 20
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 20
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 80
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 80
 				      }
 				    ]
 				  },
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"api\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    "id": "Galaxy-Class-test-name",
+				    "source": "api",
+				    "strategy": "percentage",
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-04T00:00:00.000000Z",
+				    "annotations": {
+				      "workers/triggered_by": "rollback",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222"
 				    },
-				    \\"versions\\": [
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 10
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 10
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 90
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 90
 				      }
 				    ]
 				  },
 				  {
-				    \\"id\\": \\"Intrepid-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    "id": "Intrepid-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-02T00:00:00.000000Z",
+				    "annotations": {
+				      "workers/triggered_by": "rollback",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+				      "workers/message": "Rolled back for this version"
 				    },
-				    \\"versions\\": [
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 30
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 30
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 70
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 70
 				      }
 				    ]
 				  },
 				  {
-				    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-				    \\"versions\\": [
+				    "id": "3mEgaU1T-Intrepid-someThing-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-03T00:00:00.000000Z",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 40
+				        "version_id": "10000000-0000-0000-0000-000000000000",
+				        "percentage": 40
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 60
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				        "percentage": 60
 				      }
 				    ]
 				  }

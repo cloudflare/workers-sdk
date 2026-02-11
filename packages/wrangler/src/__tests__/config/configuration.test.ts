@@ -16,9 +16,9 @@ describe("readConfig()", () => {
 		});
 		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.rules).toMatchInlineSnapshot(`
-			Array [
-			  Object {
-			    "globs": Array [
+			[
+			  {
+			    "globs": [
 			      "**/*.py",
 			    ],
 			    "type": "PythonModule",

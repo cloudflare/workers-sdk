@@ -414,7 +414,7 @@ describe("containers registries list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			    {
-			        \\"domain\\": \\"123456789012.dkr.ecr.us-west-2.amazonaws.com\\"
+			        "domain": "123456789012.dkr.ecr.us-west-2.amazonaws.com"
 			    }
 			]"
 		`);

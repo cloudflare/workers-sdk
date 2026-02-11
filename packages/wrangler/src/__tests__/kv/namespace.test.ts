@@ -388,12 +388,12 @@ describe("kv", () => {
 					A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
 
-			            A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".
+					  A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".
 
-			          "
-		        `);
+					"
+				`);
 			});
 
 			it("should delete a namespace specified by binding name in a given environment", async () => {
@@ -551,8 +551,8 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
-					✨ Successfully renamed namespace to \\"new-namespace-name\\""
+					Renaming KV namespace some-namespace-id to "new-namespace-name".
+					✨ Successfully renamed namespace to "new-namespace-name""
 				`);
 			});
 
@@ -578,8 +578,8 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
-					✨ Successfully renamed namespace to \\"new-namespace-name\\""
+					Renaming KV namespace some-namespace-id to "new-namespace-name".
+					✨ Successfully renamed namespace to "new-namespace-name""
 				`);
 			});
 

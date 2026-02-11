@@ -52,7 +52,7 @@ describe("containers push", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string] [default: \\"docker\\"]"
+			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string] [default: "docker"]"
 		`);
 	});
 
