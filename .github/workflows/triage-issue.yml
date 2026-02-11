@@ -64,9 +64,11 @@ jobs:
 
       - name: Analyze issue with OpenCode
         env:
+          GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
           CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
+
         run: |
           ISSUE=${{ steps.issue.outputs.number }}
           REPO=${{ github.repository }}
