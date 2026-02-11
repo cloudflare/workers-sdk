@@ -5,6 +5,7 @@ import {
 	checkWorkflowConflicts,
 	WORKFLOW_NOT_FOUND_CODE,
 } from "../../deploy/check-workflow-conflicts";
+import type { WorkflowConflict } from "../../deploy/check-workflow-conflicts";
 import type { Workflow } from "../../workflows/types";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -29,14 +30,12 @@ function mockWorkflowGet(workflowsByName: Record<string, Workflow | null>) {
 	);
 }
 
-const baseConfig = {} as Config;
-
 describe("checkWorkflowConflicts", () => {
 	it("should return { hasConflicts: false } when there are no workflows in config", async ({
 		expect,
 	}) => {
 		const result = await checkWorkflowConflicts(
-			{ ...baseConfig, workflows: [] },
+			{ workflows: [] } as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
@@ -48,7 +47,7 @@ describe("checkWorkflowConflicts", () => {
 		expect,
 	}) => {
 		const result = await checkWorkflowConflicts(
-			baseConfig,
+			{} as Config,
 			"account-id",
 			"my-worker"
 		);
@@ -62,11 +61,10 @@ describe("checkWorkflowConflicts", () => {
 		mockWorkflowGet({ "my-workflow": null });
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
@@ -88,11 +86,10 @@ describe("checkWorkflowConflicts", () => {
 		});
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
@@ -114,25 +111,27 @@ describe("checkWorkflowConflicts", () => {
 		});
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
-		if (result.hasConflicts) {
-			expect(result.conflicts).toHaveLength(1);
-			expect(result.conflicts[0]).toEqual({
-				name: "my-workflow",
-				currentOwner: "other-worker",
-			});
-			expect(result.message).toContain("my-workflow");
-			expect(result.message).toContain("other-worker");
-			expect(result.message).toContain("my-worker");
-		}
+		const { conflicts, message } = result as {
+			hasConflicts: true;
+			conflicts: WorkflowConflict[];
+			message: string;
+		};
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]).toEqual({
+			name: "my-workflow",
+			currentOwner: "other-worker",
+		});
+		expect(message).toContain("my-workflow");
+		expect(message).toContain("other-worker");
+		expect(message).toContain("my-worker");
 	});
 
 	it("should detect multiple conflicts", async ({ expect }) => {
@@ -156,23 +155,25 @@ describe("checkWorkflowConflicts", () => {
 		});
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					{ binding: "WF1", name: "workflow-a", class_name: "A" },
 					{ binding: "WF2", name: "workflow-b", class_name: "B" },
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
-		if (result.hasConflicts) {
-			expect(result.conflicts).toHaveLength(2);
-			expect(result.message).toContain("workflow-a");
-			expect(result.message).toContain("worker-x");
-			expect(result.message).toContain("workflow-b");
-			expect(result.message).toContain("worker-y");
-		}
+		const { conflicts, message } = result as {
+			hasConflicts: true;
+			conflicts: WorkflowConflict[];
+			message: string;
+		};
+		expect(conflicts).toHaveLength(2);
+		expect(message).toContain("workflow-a");
+		expect(message).toContain("worker-x");
+		expect(message).toContain("workflow-b");
+		expect(message).toContain("worker-y");
 	});
 
 	it("should skip workflows that bind to another script", async ({
@@ -192,7 +193,6 @@ describe("checkWorkflowConflicts", () => {
 		});
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					{
 						binding: "WF",
@@ -201,7 +201,7 @@ describe("checkWorkflowConflicts", () => {
 						script_name: "other-worker",
 					},
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
@@ -227,7 +227,6 @@ describe("checkWorkflowConflicts", () => {
 		});
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					// This one will be deployed by us (no script_name)
 					{ binding: "WF1", name: "local-workflow", class_name: "A" },
@@ -239,16 +238,19 @@ describe("checkWorkflowConflicts", () => {
 						script_name: "some-other-worker",
 					},
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
-		if (result.hasConflicts) {
-			// Only the local workflow should be flagged as a conflict
-			expect(result.conflicts).toHaveLength(1);
-			expect(result.conflicts[0].name).toBe("local-workflow");
-		}
+		const { conflicts } = result as {
+			hasConflicts: true;
+			conflicts: WorkflowConflict[];
+			message: string;
+		};
+		// Only the local workflow should be flagged as a conflict
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0].name).toBe("local-workflow");
 	});
 
 	it("should generate correct message for single conflict", async ({
@@ -266,21 +268,23 @@ describe("checkWorkflowConflicts", () => {
 		});
 		const result = await checkWorkflowConflicts(
 			{
-				...baseConfig,
 				workflows: [
 					{ binding: "WF", name: "my-workflow", class_name: "MyWorkflow" },
 				],
-			},
+			} as unknown as Config,
 			"account-id",
 			"my-worker"
 		);
 		expect(result.hasConflicts).toBe(true);
-		if (result.hasConflicts) {
-			expect(result.message).toBe(
-				`The following workflow(s) already exist and belong to different workers:\n` +
-					`  - "my-workflow" (currently belongs to "other-worker")\n\n` +
-					`Deploying will reassign these workflows to "my-worker".`
-			);
-		}
+		const { message } = result as {
+			hasConflicts: true;
+			conflicts: WorkflowConflict[];
+			message: string;
+		};
+		expect(message).toBe(
+			`The following workflow(s) already exist and belong to different workers:\n` +
+				`  - "my-workflow" (currently belongs to "other-worker")\n\n` +
+				`Deploying will reassign these workflows to "my-worker".`
+		);
 	});
 });
