@@ -65,7 +65,13 @@ export const structuredSerializableReducers: ReducersRevivers = {
 					}
 				}
 			}
-			return [name, value.buffer, value.byteOffset, value.byteLength];
+			let buf = value.buffer;
+			let off = value.byteOffset;
+			if (off !== 0 || buf.byteLength !== value.byteLength) {
+				buf = buf.slice(off, off + value.byteLength);
+				off = 0;
+			}
+			return [name, buf, off, value.byteLength];
 		}
 	},
 	RegExp(value) {
