@@ -4288,66 +4288,6 @@ and that at least one include rule is provided.
 					},
 					{ once: true }
 				),
-				http.post(
-					"*/accounts/:accountId/pages/projects/foo/deployments",
-					async ({ request, params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						const body = await request.formData();
-						const manifest = JSON.parse(await toString(body.get("manifest")));
-						const workerBundle = body.get("_worker.bundle");
-
-						// make sure this is all we uploaded
-						expect([...body.keys()].sort()).toEqual(
-							["manifest", "_worker.bundle"].sort()
-						);
-
-						expect(manifest).toMatchInlineSnapshot(`
-																								Object {
-																									"/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-																								}
-																				`);
-
-						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
-						expect(await toString(workerBundle)).toContain(`some-module`);
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									id: "123-456-789",
-									url: "https://abcxyz.foo.pages.dev/",
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
-				http.get(
-					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
-					async ({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						expect(params.deploymentId).toEqual("123-456-789");
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									latest_stage: {
-										name: "deploy",
-										status: "success",
-									},
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
 				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async ({ params }) => {
