@@ -1,3 +1,4 @@
+import type { PackageManager } from "../package-manager";
 import type { Optional } from "../utils/types";
 import type { Framework } from "./frameworks/index";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
@@ -17,6 +18,8 @@ type AutoConfigDetailsBase = {
 	buildCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
 	outputDir: string;
+	/** The detected package manager for the project */
+	packageManager: PackageManager;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<

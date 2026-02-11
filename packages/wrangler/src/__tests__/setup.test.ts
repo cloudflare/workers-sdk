@@ -9,14 +9,18 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
 
-vi.mock("../package-manager", () => ({
-	getPackageManager() {
-		return {
-			type: "npm",
-			npx: "npx",
-		};
-	},
-}));
+vi.mock("../package-manager", async (importOriginal) => {
+	const actual = (await importOriginal()) as Record<string, unknown>;
+	return {
+		...actual,
+		getPackageManager() {
+			return {
+				type: "npm",
+				npx: "npx",
+			};
+		},
+	};
+});
 
 describe("wrangler setup", () => {
 	const std = mockConsoleMethods();

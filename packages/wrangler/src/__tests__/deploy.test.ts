@@ -29,6 +29,7 @@ import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packa
 import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
+import { NpmPackageManager } from "../package-manager";
 import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
 import { fetchSecrets } from "../utils/fetch-secrets";
@@ -599,6 +600,7 @@ describe("deploy", () => {
 					isConfigured: () => false,
 				},
 				outputDir: "public",
+				packageManager: NpmPackageManager,
 			});
 
 		mockConfirm({
@@ -637,6 +639,7 @@ describe("deploy", () => {
 					isConfigured: () => false,
 				},
 				outputDir: "public",
+				packageManager: NpmPackageManager,
 			});
 
 		// The command will fail later due to missing entry-point, but we can still verify
@@ -15947,6 +15950,7 @@ export default{
 			workerName: "my-site",
 			projectPath: ".",
 			outputDir: "./public",
+			packageManager: NpmPackageManager,
 		});
 
 		vi.mocked(runAutoConfig).mockImplementation(async () => {

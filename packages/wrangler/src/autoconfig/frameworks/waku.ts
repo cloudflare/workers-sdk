@@ -19,13 +19,18 @@ export class Waku extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(["hono", "@hiogawa/node-loader-cloudflare"], {
-				dev: true,
-				startText: "Installing additional dependencies",
-				doneText: `${brandColor("installed")}`,
-			});
+			await installPackages(
+				packageManager,
+				["hono", "@hiogawa/node-loader-cloudflare"],
+				{
+					dev: true,
+					startText: "Installing additional dependencies",
+					doneText: `${brandColor("installed")}`,
+				}
+			);
 
 			await createCloudflareMiddleware(projectPath);
 			await createWakuServerFile(projectPath);
