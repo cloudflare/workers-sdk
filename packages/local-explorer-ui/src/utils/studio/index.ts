@@ -52,7 +52,6 @@ const TOKEN_NUMBER_LITERAL = /^\d+(\.\d+)?/;
 const TOKEN_PLACEHOLDER = /^:[a-zA-Z_][a-zA-Z0-9_]*/;
 
 const TOKEN_COMMENT = /^(--.*|\/\*[\s\S]*?\*\/)/; // Supporting -- and /* comments */
-const TOKEN_MYSQL_COMMENT = /^(--.*|#.*|\/\*[\s\S]*?\*\/)/; // Support --, #, and /* comments */
 
 const TOKEN_OPERATOR = /^(::|<>|!=|<=|>=|=|<|>|\+|-|\*|\/)/;
 const TOKEN_PUNCTUATION = /^[`,;().]/;
@@ -85,13 +84,7 @@ const TOKEN_DEFINITIONS = [
 		type: "PLACEHOLDER",
 	},
 	{
-		matchToken: (input, dialect) => {
-			return (
-				(dialect === "mysql" ? TOKEN_MYSQL_COMMENT : TOKEN_COMMENT).exec(
-					input
-				)?.[0] ?? null
-			);
-		},
+		matchToken: (input) => TOKEN_COMMENT.exec(input)?.[0] ?? null,
 		type: "COMMENT",
 	},
 	{
@@ -115,13 +108,14 @@ const TOKEN_DEFINITIONS = [
  * It does not perform full SQL parsing, but provides enough structure
  * for simple analysis, syntax highlighting, or building a custom parser.
  *
- * @param sql The SQL statement to tokenize
- * @param dialect
- * @returns
+ * @param sql - The SQL statement to tokenize
+ * @param dialect - The studio dialect type
+ *
+ * @returns A list of SQL tokens
  */
 export function tokenizeSQL(
 	sql: string,
-	dialect: StudioDialect
+	_dialect: StudioDialect
 ): StudioSQLToken[] {
 	try {
 		const tokens = new Array<StudioSQLToken>();
@@ -139,7 +133,7 @@ export function tokenizeSQL(
 			const remainingSQL = sql.substring(cursor);
 
 			for (const { type, matchToken } of TOKEN_DEFINITIONS) {
-				const match = matchToken(remainingSQL, dialect);
+				const match = matchToken(remainingSQL);
 				if (match) {
 					if (accumulateUnknown !== "") {
 						tokens.push({ type: "UNKNOWN", value: accumulateUnknown });

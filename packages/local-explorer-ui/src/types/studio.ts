@@ -149,7 +149,7 @@ export type StudioColumnConflict =
  */
 export type StudioColumnTypeHint = "TEXT" | "NUMBER" | "BLOB" | null;
 
-export type StudioDialect = "mysql" | "sqlite";
+export type StudioDialect = "sqlite";
 
 type StudioForeignKeyAction =
 	| "CASCADE"
