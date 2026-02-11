@@ -8,16 +8,18 @@ import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 
 interface SidebarProps {
 	currentPath: string;
+	d1Error: string | null;
 	databases: D1DatabaseResponse[];
-	error: string | null;
+	kvError: string | null;
 	loading: boolean;
 	namespaces: WorkersKvNamespace[];
 }
 
 export function Sidebar({
 	currentPath,
+	d1Error,
 	databases,
-	error,
+	kvError,
 	loading,
 	namespaces,
 }: SidebarProps) {
@@ -51,13 +53,13 @@ export function Sidebar({
 								Loading...
 							</li>
 						)}
-						{error && (
+						{kvError && (
 							<li className="block py-2.5 px-4 text-danger border-b border-border">
-								{error}
+								{kvError}
 							</li>
 						)}
 						{!loading &&
-							!error &&
+							!kvError &&
 							namespaces.map((ns) => {
 								const isActive = currentPath === `/kv/${ns.id}`;
 								return (
@@ -77,7 +79,7 @@ export function Sidebar({
 									</li>
 								);
 							})}
-						{!loading && !error && namespaces.length === 0 && (
+						{!loading && !kvError && namespaces.length === 0 && (
 							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
 								No namespaces
 							</li>
@@ -99,13 +101,13 @@ export function Sidebar({
 								Loading...
 							</li>
 						)}
-						{error && (
+						{d1Error && (
 							<li className="block py-2.5 px-4 text-danger border-b border-border">
-								{error}
+								{d1Error}
 							</li>
 						)}
 						{!loading &&
-							!error &&
+							!d1Error &&
 							databases.map((database) => {
 								const isActive = currentPath === `/d1/${database.uuid}`;
 								return (
@@ -126,7 +128,7 @@ export function Sidebar({
 									</li>
 								);
 							})}
-						{!loading && !error && databases.length === 0 && (
+						{!loading && !d1Error && databases.length === 0 && (
 							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
 								No databases
 							</li>

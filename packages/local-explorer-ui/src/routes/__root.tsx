@@ -19,30 +19,36 @@ function RootLayout() {
 	const [namespaces, setNamespaces] = useState<WorkersKvNamespace[]>([]);
 	const [databases, setDatabases] = useState<D1DatabaseResponse[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const [kvError, setKvError] = useState<string | null>(null);
+	const [d1Error, setD1Error] = useState<string | null>(null);
 
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 
 	useEffect(() => {
 		async function fetchData() {
-			try {
-				const [kvResponse, d1Response] = await Promise.allSettled([
-					workersKvNamespaceListNamespaces(),
-					cloudflareD1ListDatabases(),
-				]);
+			const [kvResponse, d1Response] = await Promise.allSettled([
+				workersKvNamespaceListNamespaces(),
+				cloudflareD1ListDatabases(),
+			]);
 
-				if (kvResponse.status === "fulfilled") {
-					setNamespaces(kvResponse.value.data?.result ?? []);
-				}
-				if (d1Response.status === "fulfilled") {
-					setDatabases(d1Response.value.data?.result ?? []);
-				}
-			} catch (err) {
-				setError(err instanceof Error ? err.message : "Failed to fetch data");
-			} finally {
-				setLoading(false);
+			if (kvResponse.status === "fulfilled") {
+				setNamespaces(kvResponse.value.data?.result ?? []);
+			} else {
+				setKvError(
+					`KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : String(kvResponse.reason)}`
+				);
 			}
+
+			if (d1Response.status === "fulfilled") {
+				setDatabases(d1Response.value.data?.result ?? []);
+			} else {
+				setD1Error(
+					`D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : String(d1Response.reason)}`
+				);
+			}
+
+			setLoading(false);
 		}
 		void fetchData();
 	}, []);
@@ -51,8 +57,9 @@ function RootLayout() {
 		<div className="flex min-h-screen">
 			<Sidebar
 				currentPath={currentPath}
+				d1Error={d1Error}
 				databases={databases}
-				error={error}
+				kvError={kvError}
 				loading={loading}
 				namespaces={namespaces}
 			/>
