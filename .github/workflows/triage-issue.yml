@@ -87,8 +87,8 @@ jobs:
 
       - name: Upload report to dashboard
         env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF1_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF1_ACCESS_CLIENT_SECRET }}
           DASHBOARD_URL: ${{ secrets.REPORTS_DASHBOARD_URL }}
         run: |
           ISSUE=${{ steps.issue.outputs.number }}
