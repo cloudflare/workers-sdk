@@ -158,6 +158,40 @@ describe("versions upload", () => {
 		`);
 	});
 
+	test("should render config vars literally and --var as hidden", async () => {
+		mockGetScript();
+		mockUploadVersion(false);
+
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			vars: {
+				CONFIG_VAR: "visible value",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --var CLI_VAR:from_cli");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your Worker has access to the following bindings:
+			Binding                               Resource
+			env.CONFIG_VAR ("visible value")      Environment Variable
+			env.CLI_VAR ("(hidden)")              Environment Variable
+
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
+		`);
+	});
+
 	test("should accept script as a positional arg", async () => {
 		mockGetScript();
 		mockUploadVersion(false);

@@ -1595,6 +1595,33 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("variable display", () => {
+		it("should render config vars literally, --var as hidden, and .dev.vars as hidden", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", `SECRET_VAR=from_dotenv`);
+			writeWranglerConfig({
+				main: "index.js",
+				vars: {
+					CONFIG_VAR: "visible value",
+				},
+			});
+			await runWranglerUntilConfig("dev --var CLI_VAR:from_cli");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Using vars defined in .dev.vars
+				Your Worker has access to the following bindings:
+				Binding                               Resource                  Mode
+				env.CONFIG_VAR ("visible value")      Environment Variable      local
+				env.SECRET_VAR ("(hidden)")           Environment Variable      local
+				env.CLI_VAR ("(hidden)")              Environment Variable      local
+
+				"
+			`);
+		});
+	});
+
 	describe(".dev.vars", () => {
 		it("should override `vars` bindings from `wrangler.toml` with values in `.dev.vars`", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
@@ -1629,8 +1656,12 @@ describe.sequential("wrangler dev", () => {
 					.filter(
 						(
 							binding
-						): binding is [string, Extract<Binding, { type: "plain_text" }>] =>
-							binding[1].type === "plain_text"
+						): binding is [
+							string,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+						] =>
+							binding[1].type === "plain_text" ||
+							binding[1].type === "secret_text"
 					)
 					.map(([b, v]) => [b, v.value])
 			);
@@ -1675,8 +1706,12 @@ describe.sequential("wrangler dev", () => {
 					.filter(
 						(
 							binding
-						): binding is [string, Extract<Binding, { type: "plain_text" }>] =>
-							binding[1].type === "plain_text"
+						): binding is [
+							string,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+						] =>
+							binding[1].type === "plain_text" ||
+							binding[1].type === "secret_text"
 					)
 					.map(([b, v]) => [b, v.value])
 			);

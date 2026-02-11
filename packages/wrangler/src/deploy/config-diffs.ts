@@ -7,8 +7,8 @@ import {
 } from "../utils/diff-json";
 import type { JsonLike } from "../utils/diff-json";
 import type {
-	CfWorkerInit,
 	Config,
+	ConfigBindingFieldName,
 	RawConfig,
 } from "@cloudflare/workers-utils";
 
@@ -51,7 +51,7 @@ const reorderableBindings = {
 	version_metadata: false,
 	unsafe: false,
 	assets: false,
-} satisfies Record<keyof CfWorkerInit["bindings"], boolean>;
+} satisfies Record<ConfigBindingFieldName, boolean>;
 
 /** Extracts the keys of T whose values are `true` */
 type ReorderableKeys<T extends Record<string, boolean>> = {

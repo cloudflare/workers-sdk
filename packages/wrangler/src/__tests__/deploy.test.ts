@@ -10227,6 +10227,34 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should render config vars literally and --var as hidden", async () => {
+				writeWranglerConfig({
+					vars: {
+						CONFIG_VAR: "visible value",
+					},
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				await runWrangler("deploy index.js --var CLI_VAR:from_cli");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                               Resource
+					env.CONFIG_VAR ("visible value")      Environment Variable
+					env.CLI_VAR ("(hidden)")              Environment Variable
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
 			it("should read vars passed as cli arguments", async () => {
 				writeWranglerConfig();
 				writeWorkerSource();

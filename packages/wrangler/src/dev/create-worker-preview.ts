@@ -3,7 +3,7 @@ import { URL } from "node:url";
 import { ParseError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
-import { createFlatWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
@@ -281,7 +281,7 @@ async function createPreviewToken(
 			}
 		: { workers_dev: true, minimal_mode };
 
-	const formData = createFlatWorkerUploadForm(worker, worker.bindings);
+	const formData = createWorkerUploadForm(worker, worker.bindings);
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
 	const { preview_token, tail_url } = await fetchResult<{
