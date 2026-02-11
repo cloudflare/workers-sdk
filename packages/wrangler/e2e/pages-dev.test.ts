@@ -467,9 +467,9 @@ describe.sequential("wrangler pages dev", () => {
 			env.CF_PAGES_BRANCH ("local")                                                Environment Variable      local
 			env.CF_PAGES_COMMIT_SHA ("0000000000000000000000000000000000000...")         Environment Variable      local
 			env.CF_PAGES_URL ("https://00000000.pages-project.pages....")                Environment Variable      local
-			env.VAR1 ("NEW_VAR_1")                                                       Environment Variable      local
+			env.VAR1 ("(hidden)")                                                        Environment Variable      local
 			env.VAR2 ("VAR_2_TOML")                                                      Environment Variable      local
-			env.VAR3 ("VAR_3_ARGS")                                                      Environment Variable      local
+			env.VAR3 ("(hidden)")                                                        Environment Variable      local
 			Service bindings, Durable Object bindings, and Tail consumers connect to other Wrangler or Vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 			"
 		`);

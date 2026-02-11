@@ -394,7 +394,7 @@ export const pagesDevCommand = createCommand({
 		} = resolvePagesDevServerSettings(config, args);
 
 		const {
-			vars,
+			cliVars,
 			kv_namespaces,
 			do_bindings,
 			d1_databases,
@@ -975,7 +975,7 @@ export const pagesDevCommand = createCommand({
 					host: undefined,
 					localUpstream: undefined,
 					upstreamProtocol: undefined,
-					var: undefined,
+					var: cliVars,
 					define: undefined,
 					alias: undefined,
 					jsxFactory: undefined,
@@ -997,8 +997,7 @@ export const pagesDevCommand = createCommand({
 					nodeCompat: undefined,
 					// CF_PAGES vars as defaults (can be overridden by config vars)
 					defaultBindings: pagesEnvVars,
-					// CLI vars override everything
-					vars,
+					vars: undefined,
 					kv: kv_namespaces,
 					durableObjects: do_bindings,
 					r2: r2_buckets,
@@ -1231,7 +1230,6 @@ function resolvePagesDevServerSettings(
 function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 	Pick<
 		EnvironmentNonInheritable,
-		| "vars"
 		| "kv_namespaces"
 		| "r2_buckets"
 		| "d1_databases"
@@ -1240,16 +1238,17 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 		| "version_metadata"
 	>
 > & {
+	cliVars?: string[];
 	do_bindings?: DurableObjectBindings;
 } {
-	// get environment variables from the [--vars] arg
-	let vars: EnvironmentNonInheritable["vars"] = {};
+	// get environment variables from the [--binding] arg
+	// These are formatted as KEY:VALUE strings (for collectPlainTextVars)
+	// so they will be marked as hidden in the output display
+	let cliVars: string[] | undefined;
 	if (args.binding?.length) {
-		vars = Object.fromEntries(
-			args.binding
-				.map((binding) => binding.toString().split("="))
-				.map(([key, ...values]) => [key, values.join("=")])
-		);
+		cliVars = args.binding
+			.map((binding) => binding.toString().split("="))
+			.map(([key, ...values]) => `${key}:${values.join("=")}`);
 	}
 
 	// get KV bindings from the [--kv] arg
@@ -1400,7 +1399,7 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 	 * that here
 	 */
 	return {
-		vars: vars,
+		cliVars,
 		kv_namespaces: kvNamespaces,
 		d1_databases: d1Databases,
 		r2_buckets: r2Buckets,

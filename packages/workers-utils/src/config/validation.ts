@@ -188,17 +188,14 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 export function getBindingTypeFriendlyName(
 	bindingType: Binding["type"]
 ): string {
-	// Check for exact match first
 	if (bindingType in bindingTypeFriendlyNames) {
 		return bindingTypeFriendlyNames[bindingType];
 	}
 
-	// Handle unsafe_* bindings
 	if (bindingType.startsWith("unsafe_")) {
 		return "Unsafe Metadata";
 	}
 
-	// Fallback for unknown types
 	return bindingType;
 }
 
