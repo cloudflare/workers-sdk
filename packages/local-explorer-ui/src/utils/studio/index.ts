@@ -46,8 +46,8 @@ export function escapeSqlValue(value: unknown): string {
 
 const TOKEN_WHITESPACE = /^\s+/;
 const TOKEN_IDENTIFIER =
-	/^(`([^(`\n)]|``)+`|"([^("\n)]|"")+"|\[[^(\]\n)]+\]|[a-zA-Z_][a-zA-Z0-9_]*)/;
-const TOKEN_STRING_LITERAL = /^(?:'(?:[^('\n)]|'')*'|"(?:[^("\n)]|"")*")/;
+	/^(`([^`\n]|``)+`|"([^"\n]|"")+"|\[[^\]\n]+\]|[a-zA-Z_][a-zA-Z0-9_]*)/;
+const TOKEN_STRING_LITERAL = /^(?:'(?:[^'\n]|'')*'|"(?:[^"\n]|"")*")/;
 const TOKEN_NUMBER_LITERAL = /^\d+(\.\d+)?/;
 const TOKEN_PLACEHOLDER = /^:[a-zA-Z_][a-zA-Z0-9_]*/;
 
