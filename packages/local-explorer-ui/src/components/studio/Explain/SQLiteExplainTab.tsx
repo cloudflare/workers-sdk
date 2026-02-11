@@ -1,5 +1,6 @@
 import { cn, Tooltip } from "@cloudflare/kumo";
 import { TableIcon } from "@phosphor-icons/react";
+import { Fragment } from "react";
 import type { StudioResultSet } from "../../../types/studio";
 import type { ReactNode } from "react";
 
@@ -66,8 +67,8 @@ function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 				const { label, performance } = describeExplainNode(row.detail);
 
 				return (
-					<>
-						<div key={row.id} className="h-8 flex gap-2 items-center">
+					<Fragment key={row.id}>
+						<div className="h-8 flex gap-2 items-center">
 							<div
 								className={cn("inline-flex border rounded-full", {
 									"bg-green-500": performance === "fast",
@@ -79,10 +80,10 @@ function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 							/>
 							<div>{label}</div>
 						</div>
-						<div key={`${row.id}-children`} className="pl-4 border-l">
+						<div className="pl-4 border-l">
 							<ExplainNodes data={row.children} />
 						</div>
-					</>
+					</Fragment>
 				);
 			})}
 		</>
@@ -195,9 +196,7 @@ function describeExplainNode(d: string): {
 						</div>
 					}
 				>
-					<strong className="underline cursor-pointer">
-						USE TEMP B-TREE FOR ORDER BY
-					</strong>
+					<strong className="underline cursor-pointer">{d}</strong>
 				</Tooltip>
 			),
 		};
