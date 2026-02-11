@@ -8,18 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as details from "../../../autoconfig/details";
 import * as configCache from "../../../config-cache";
 import { clearOutputFilePath } from "../../../output";
-import {
-	getPackageManager,
-	NpmPackageManager,
-	PnpmPackageManager,
-} from "../../../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../../pages/constants";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
-import type { Mock } from "vitest";
 
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
@@ -28,7 +22,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	beforeEach(() => {
 		setIsTTY(true);
-		(getPackageManager as Mock).mockResolvedValue(NpmPackageManager);
 	});
 
 	afterEach(() => {
@@ -49,10 +42,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	it.each(["npm", "pnpm"] as const)(
 		"should perform basic framework detection (using %s)",
 		async (pm) => {
-			(getPackageManager as Mock).mockResolvedValue(
-				pm === "pnpm" ? PnpmPackageManager : NpmPackageManager
-			);
-
 			await writeFile(
 				"package.json",
 				JSON.stringify({
@@ -61,6 +50,16 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					},
 				})
 			);
+
+			// Create the appropriate lockfile so @netlify/build-info detects the package manager
+			if (pm === "pnpm") {
+				await writeFile("pnpm-lock.yaml", "lockfileVersion: 6.0");
+			} else {
+				await writeFile(
+					"package-lock.json",
+					JSON.stringify({ lockfileVersion: 3 })
+				);
+			}
 
 			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",

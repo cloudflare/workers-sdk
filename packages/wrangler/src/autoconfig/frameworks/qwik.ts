@@ -4,7 +4,6 @@ import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import * as recast from "recast";
 import * as typescriptParser from "recast/parsers/typescript";
-import { getPackageManager } from "../../package-manager";
 import { transformFile } from "../c3-vendor/codemod";
 import { quoteShellArgs, runCommand } from "../c3-vendor/command";
 import { usesTypescript } from "../uses-typescript";
@@ -16,9 +15,8 @@ export class Qwik extends Framework {
 	async configure({
 		projectPath,
 		dryRun,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const packageManager = await getPackageManager();
-
 		if (!dryRun) {
 			// Add the pages integration
 			const cmd = [
