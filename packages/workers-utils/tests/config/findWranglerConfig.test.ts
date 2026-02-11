@@ -176,8 +176,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: A deploy configuration file was found at \\".wrangler/deploy/config.json\\".
-				But this is not valid - the required \\"configPath\\" property was not found.
+				"Error: A deploy configuration file was found at ".wrangler/deploy/config.json".
+				But this is not valid - the required "configPath" property was not found.
 				Instead this file contains:
 				\`\`\`
 				{}
@@ -199,8 +199,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: There is a deploy configuration at \\".wrangler/deploy/config.json\\".
-				But the redirected configuration path it points to, \\".wrangler/deploy/missing/wrangler.json\\", does not exist."
+				"Error: There is a deploy configuration at ".wrangler/deploy/config.json".
+				But the redirected configuration path it points to, ".wrangler/deploy/missing/wrangler.json", does not exist."
 			`);
 			expect(std).toMatchObject(NO_LOGS);
 		});
@@ -224,8 +224,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: Found both a user configuration file at \\"foo/wrangler.toml\\"
-				and a deploy configuration file at \\"foo/bar/.wrangler/deploy/config.json\\".
+				"Error: Found both a user configuration file at "foo/wrangler.toml"
+				and a deploy configuration file at "foo/bar/.wrangler/deploy/config.json".
 				But these do not share the same base path so it is not clear which should be used."
 			`);
 			expect(std).toMatchObject(NO_LOGS);
@@ -238,8 +238,8 @@ describe("config findWranglerConfig()", () => {
 			}
 
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(`
-				"Error: Found both a user configuration file at \\"bar/foo/wrangler.toml\\"
-				and a deploy configuration file at \\"bar/.wrangler/deploy/config.json\\".
+				"Error: Found both a user configuration file at "bar/foo/wrangler.toml"
+				and a deploy configuration file at "bar/.wrangler/deploy/config.json".
 				But these do not share the same base path so it is not clear which should be used."
 			`);
 			expect(std).toMatchObject(NO_LOGS);

@@ -8,10 +8,6 @@ export default defineConfig({
 		include: ["**/tests/**/*.test.ts"],
 		globalSetup: path.resolve(__dirname, "tests/vitest.global.ts"),
 		reporters: ["default"],
-		snapshotFormat: {
-			escapeString: true,
-			printBasicPrototype: true,
-		},
 		unstubEnvs: true,
 		mockReset: true,
 	},
