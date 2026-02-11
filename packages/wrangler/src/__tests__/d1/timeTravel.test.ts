@@ -175,16 +175,16 @@ describe("time-travel", () => {
 			vi.useRealTimers();
 		});
 		describe("restore", () => {
-			it("should print as json, without wrangler banner", async ({
+			it("should print valid json, without wrangler banner", async ({
 				expect,
 			}) => {
 				await runWrangler(
 					`d1 time-travel restore db --timestamp=2011-09-05T14:48:00.000Z --json`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"{
-					  "bookmark": "a"
-					}"
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+					{
+					  "bookmark": "a",
+					}
 				`);
 			});
 
@@ -213,22 +213,22 @@ describe("time-travel", () => {
 			});
 		});
 		describe("info", () => {
-			it("should print as json, without wrangler banner", async ({
+			it("should print valid json, without wrangler banner", async ({
 				expect,
 			}) => {
 				await runWrangler(
 					`d1 time-travel info db --timestamp=2011-09-05T14:48:00.000Z --json`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-					"{
-					  "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-					  "name": "db",
+				expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+					{
 					  "created_at": "2023-05-23T08:33:54.590Z",
-					  "version": "beta",
-					  "num_tables": 13,
 					  "file_size": 33067008,
-					  "running_in_region": "WEUR"
-					}"
+					  "name": "db",
+					  "num_tables": 13,
+					  "running_in_region": "WEUR",
+					  "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+					  "version": "beta",
+					}
 				`);
 			});
 			it("should pretty print by default", async ({ expect }) => {

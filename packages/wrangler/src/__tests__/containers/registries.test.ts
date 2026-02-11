@@ -405,18 +405,18 @@ describe("containers registries list", () => {
 		`);
 	});
 
-	it("should output JSON when --json flag is used", async () => {
+	it("should output valid JSON when --json flag is used", async () => {
 		const mockRegistries = [
 			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
 		];
 		mockListRegistries(mockRegistries);
 		await runWrangler("containers registries list --json");
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
-			    {
-			        "domain": "123456789012.dkr.ecr.us-west-2.amazonaws.com"
-			    }
-			]"
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
+			  {
+			    "domain": "123456789012.dkr.ecr.us-west-2.amazonaws.com",
+			  },
+			]
 		`);
 	});
 });

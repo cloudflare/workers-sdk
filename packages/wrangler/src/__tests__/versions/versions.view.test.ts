@@ -93,7 +93,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints version to stdout as --json", async ({ expect }) => {
+		test("prints version to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --name test-name --json"
 			);
@@ -102,55 +102,54 @@ describe("versions view", () => {
 
 			expect(cnsl.out).not.toMatch(/⛅️ wrangler/);
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  "id": "10000000-0000-0000-0000-000000000000",
-				  "number": 1,
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
 				  "annotations": {
-				    "workers/triggered_by": "upload"
+				    "workers/triggered_by": "upload",
 				  },
+				  "id": "10000000-0000-0000-0000-000000000000",
 				  "metadata": {
-				    "author_id": "Picard-Gamma-6-0-7-3",
 				    "author_email": "Jean-Luc-Picard@federation.org",
-				    "source": "wrangler",
+				    "author_id": "Picard-Gamma-6-0-7-3",
 				    "created_on": "2021-01-01T00:00:00.000000Z",
-				    "modified_on": "2021-01-01T00:00:00.000000Z"
+				    "modified_on": "2021-01-01T00:00:00.000000Z",
+				    "source": "wrangler",
 				  },
+				  "number": 1,
 				  "resources": {
 				    "bindings": [
 				      {
-				        "type": "analytics_engine",
+				        "dataset": "analytics_dataset",
 				        "name": "ANALYTICS",
-				        "dataset": "analytics_dataset"
+				        "type": "analytics_engine",
 				      },
 				      {
-				        "type": "kv_namespace",
 				        "name": "KV",
-				        "namespace_id": "kv-namespace-id"
-				      }
+				        "namespace_id": "kv-namespace-id",
+				        "type": "kv_namespace",
+				      },
 				    ],
 				    "script": {
 				      "etag": "aaabbbccc",
 				      "handlers": [
 				        "fetch",
-				        "scheduled"
+				        "scheduled",
 				      ],
-				      "last_deployed_from": "api"
+				      "last_deployed_from": "api",
 				    },
 				    "script_runtime": {
 				      "compatibility_date": "2020-01-01",
 				      "compatibility_flags": [
 				        "test",
-				        "flag"
+				        "flag",
 				      ],
-				      "usage_model": "standard",
 				      "limits": {
-				        "cpu_ms": 50
-				      }
-				    }
-				  }
+				        "cpu_ms": 50,
+				      },
+				      "usage_model": "standard",
+				    },
+				  },
 				}
-				"
 			`);
 		});
 	});
@@ -221,62 +220,61 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints version to stdout as --json", async ({ expect }) => {
+		test("prints version to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --json"
 			);
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  "id": "10000000-0000-0000-0000-000000000000",
-				  "number": 1,
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
 				  "annotations": {
-				    "workers/triggered_by": "upload"
+				    "workers/triggered_by": "upload",
 				  },
+				  "id": "10000000-0000-0000-0000-000000000000",
 				  "metadata": {
-				    "author_id": "Picard-Gamma-6-0-7-3",
 				    "author_email": "Jean-Luc-Picard@federation.org",
-				    "source": "wrangler",
+				    "author_id": "Picard-Gamma-6-0-7-3",
 				    "created_on": "2021-01-01T00:00:00.000000Z",
-				    "modified_on": "2021-01-01T00:00:00.000000Z"
+				    "modified_on": "2021-01-01T00:00:00.000000Z",
+				    "source": "wrangler",
 				  },
+				  "number": 1,
 				  "resources": {
 				    "bindings": [
 				      {
-				        "type": "analytics_engine",
+				        "dataset": "analytics_dataset",
 				        "name": "ANALYTICS",
-				        "dataset": "analytics_dataset"
+				        "type": "analytics_engine",
 				      },
 				      {
-				        "type": "kv_namespace",
 				        "name": "KV",
-				        "namespace_id": "kv-namespace-id"
-				      }
+				        "namespace_id": "kv-namespace-id",
+				        "type": "kv_namespace",
+				      },
 				    ],
 				    "script": {
 				      "etag": "aaabbbccc",
 				      "handlers": [
 				        "fetch",
-				        "scheduled"
+				        "scheduled",
 				      ],
-				      "last_deployed_from": "api"
+				      "last_deployed_from": "api",
 				    },
 				    "script_runtime": {
 				      "compatibility_date": "2020-01-01",
 				      "compatibility_flags": [
 				        "test",
-				        "flag"
+				        "flag",
 				      ],
-				      "usage_model": "standard",
 				      "limits": {
-				        "cpu_ms": 50
-				      }
-				    }
-				  }
+				        "cpu_ms": 50,
+				      },
+				      "usage_model": "standard",
+				    },
+				  },
 				}
-				"
 			`);
 		});
 	});
