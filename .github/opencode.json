@@ -14,7 +14,7 @@
 		"edit": "allow",
 		"glob": "allow",
 		"grep": "allow",
-		"bash": "allow",
+		"bash": "deny",
 		"task": "allow",
 		"skill": "allow",
 		"todoread": "allow",

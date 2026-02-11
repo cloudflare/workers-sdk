@@ -64,11 +64,9 @@ jobs:
 
       - name: Analyze issue with OpenCode
         env:
-          GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
           CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
-
         run: |
           ISSUE=${{ steps.issue.outputs.number }}
           REPO=${{ github.repository }}
@@ -77,8 +75,8 @@ jobs:
             --print-logs \
             "Analyze GitHub issue ${REPO}#${ISSUE} using the skill at .github/skills/issue-review.md.
 
-          The issue data has been pre-fetched to data/${ISSUE}/context.json — read it instead of running gh commands.
-          Skip Step 1 of the skill. Continue from Step 2.
+          The issue data has been pre-fetched to data/${ISSUE}/context.json.
+          Read it with the read tool and follow the triage process.
 
           Create:
           - data/${ISSUE}/report.md (full report)
