@@ -350,7 +350,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "nuxt:pages",
 			promptHandlers: [
 				{
-					matcher: /Would you like to install any of the official modules\?/,
+					matcher: /Would you like to .* install .*modules\?/,
 					input: [keys.enter],
 				},
 			],
@@ -369,12 +369,13 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "nuxt:workers",
 			promptHandlers: [
 				{
-					matcher: /Would you like to install any of the official modules\?/,
+					matcher: /Would you like to .* install .*modules\?/,
 					input: [keys.enter],
 				},
 			],
@@ -393,6 +394,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "react:pages",
@@ -780,7 +782,7 @@ function getExperimentalFrameworkTestConfig(
 			name: "nuxt:workers",
 			promptHandlers: [
 				{
-					matcher: /Would you like to install any of the official modules\?/,
+					matcher: /Would you like to .* install .*modules\?/,
 					input: [keys.enter],
 				},
 			],
@@ -799,6 +801,7 @@ function getExperimentalFrameworkTestConfig(
 			},
 			nodeCompat: false,
 			verifyTypes: false,
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "solid",
