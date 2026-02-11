@@ -233,7 +233,9 @@ export function createCloudflareEnvironmentOptions({
 			createEnvironment(name, config) {
 				// CloudflareDevEnvironment requires initRunner() to be called
 				// via configureServer. If that hook was stripped, fall back
-				// to a standard Vite environment.
+				// to a standard Vite environment. This is needed to support
+				// React Router's child compiler, which is a separate Vite dev server
+				// that runs during the build.
 				const hasConfigureServer = config.plugins.some(
 					(plugin) =>
 						plugin.name === "vite-plugin-cloudflare:dev" &&

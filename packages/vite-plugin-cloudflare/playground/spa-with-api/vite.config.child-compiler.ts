@@ -4,8 +4,8 @@ import { createServer, defineConfig } from "vite";
 import type { Plugin } from "vite";
 
 /**
- * Simulates frameworks like React Router that create a child Vite dev server
- * during builds with `configureServer` stripped from plugins.
+ * Emulates React Router's child compiler setup, which create a child Vite dev server and
+ * removes `configureServer` hooks from plugins.
  *
  * @see https://github.com/cloudflare/workers-sdk/issues/8909
  */
