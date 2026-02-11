@@ -27,12 +27,17 @@ function RootLayout() {
 	useEffect(() => {
 		async function fetchData() {
 			try {
-				const [kvResponse, d1Response] = await Promise.all([
+				const [kvResponse, d1Response] = await Promise.allSettled([
 					workersKvNamespaceListNamespaces(),
 					cloudflareD1ListDatabases(),
 				]);
-				setNamespaces(kvResponse.data?.result ?? []);
-				setDatabases(d1Response.data?.result ?? []);
+
+				if (kvResponse.status === "fulfilled") {
+					setNamespaces(kvResponse.value.data?.result ?? []);
+				}
+				if (d1Response.status === "fulfilled") {
+					setDatabases(d1Response.value.data?.result ?? []);
+				}
 			} catch (err) {
 				setError(
 					err instanceof Error ? err.message : "Failed to fetch namespaces"
