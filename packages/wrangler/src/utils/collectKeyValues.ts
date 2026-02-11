@@ -15,6 +15,10 @@ export function collectKeyValues(array?: string[]) {
 	);
 }
 
+/**
+ * Collects `key:value` strings into plain_text bindings marked as hidden.
+ * Used for CLI `--var` args, whose values should not be printed to the terminal.
+ */
 export function collectPlainTextVars(
 	array?: string[]
 ): Record<string, Extract<Binding, { type: "plain_text" }>> {

@@ -581,6 +581,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const bindings = getBindings(config);
 
+		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
 		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
 			bindings[bindingName] = {
 				type: "plain_text",

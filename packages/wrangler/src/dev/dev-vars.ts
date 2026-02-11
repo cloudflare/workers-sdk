@@ -58,7 +58,7 @@ export function getVarsForDev(
 	// Start with config vars (plain_text or json, not secret)
 	const result: Record<string, VarBinding> = {};
 	for (const [key, value] of Object.entries(vars)) {
-		result[key] = toVarBinding(value, false);
+		result[key] = toVarBinding(value);
 	}
 
 	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
@@ -102,15 +102,11 @@ export function getVarsForDev(
 }
 
 /**
- * Convert a raw var value to a VarBinding.
- * @param value - The raw value (string or Json)
- * @param isSecret - If true, string values become secret_text; otherwise plain_text
+ * Convert a raw config var value to a VarBinding (plain_text or json).
  */
-function toVarBinding(value: string | Json, isSecret: boolean): VarBinding {
+function toVarBinding(value: string | Json): VarBinding {
 	if (typeof value === "string") {
-		return isSecret
-			? { type: "secret_text", value }
-			: { type: "plain_text", value };
+		return { type: "plain_text", value };
 	}
 	return { type: "json", value };
 }
