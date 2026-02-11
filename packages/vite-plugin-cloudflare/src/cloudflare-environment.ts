@@ -239,7 +239,7 @@ export function createCloudflareEnvironmentOptions({
 				const hasConfigureServer = config.plugins.some(
 					(plugin) =>
 						plugin.name === "vite-plugin-cloudflare:dev" &&
-						typeof plugin.configureServer === "function"
+						plugin.configureServer !== undefined
 				);
 				if (!hasConfigureServer) {
 					return vite.createRunnableDevEnvironment(name, config);

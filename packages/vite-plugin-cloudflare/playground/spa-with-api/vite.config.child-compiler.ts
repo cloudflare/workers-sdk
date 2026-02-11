@@ -20,11 +20,9 @@ function childCompilerPlugin(): Plugin {
 			const childServer = await createServer({
 				root: resolvedConfig.root,
 				configFile: false,
-				plugins: [
-					resolvedConfig.plugins
-						.filter((plugin) => plugin.name !== "test-child-compiler")
-						.map((plugin) => ({ ...plugin, configureServer: undefined })),
-				],
+				plugins: resolvedConfig.plugins
+					.filter((plugin) => plugin.name !== "test-child-compiler")
+					.map((plugin) => ({ ...plugin, configureServer: undefined })),
 			});
 
 			// This is the code path that triggers the bug: Vite's dep optimizer
