@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { printBindings } from "../utils/print-bindings";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 
@@ -12,7 +12,7 @@ function callPrintBindings(bindings: StartDevWorkerInput["bindings"]) {
 }
 
 describe("printBindings — variable display", () => {
-	it("shows config vars literally", () => {
+	it("shows config vars literally", ({ expect }) => {
 		const output = callPrintBindings({
 			CONFIG_VAR: { type: "plain_text", value: "visible value" },
 		});
@@ -20,7 +20,7 @@ describe("printBindings — variable display", () => {
 		expect(output).toContain('env.CONFIG_VAR ("visible value")');
 	});
 
-	it("shows --var/--vars as (hidden)", () => {
+	it("shows --var/--vars as (hidden)", ({ expect }) => {
 		const output = callPrintBindings({
 			CLI_VAR: { type: "plain_text", value: "secret from cli", hidden: true },
 		});
@@ -29,7 +29,7 @@ describe("printBindings — variable display", () => {
 		expect(output).not.toContain("secret from cli");
 	});
 
-	it("shows .dev.vars / secret file vars as (hidden)", () => {
+	it("shows .dev.vars / secret file vars as (hidden)", ({ expect }) => {
 		const output = callPrintBindings({
 			SECRET_VAR: { type: "secret_text", value: "secret from dotenv" },
 		});
@@ -38,7 +38,7 @@ describe("printBindings — variable display", () => {
 		expect(output).not.toContain("secret from dotenv");
 	});
 
-	it("shows json vars literally", () => {
+	it("shows json vars literally", ({ expect }) => {
 		const output = callPrintBindings({
 			JSON_VAR: { type: "json", value: { key: "val" } },
 		});
@@ -47,7 +47,7 @@ describe("printBindings — variable display", () => {
 		expect(output).toContain('{"key":"val"}');
 	});
 
-	it("handles all three sources together in one table", () => {
+	it("handles all three sources together in one table", ({ expect }) => {
 		const output = callPrintBindings({
 			FROM_CONFIG: { type: "plain_text", value: "config value" },
 			FROM_CLI: { type: "plain_text", value: "cli value", hidden: true },
@@ -61,7 +61,7 @@ describe("printBindings — variable display", () => {
 		expect(output).not.toContain("dotenv value");
 	});
 
-	it("truncates long config var values", () => {
+	it("truncates long config var values", ({ expect }) => {
 		const longValue = "a".repeat(100);
 		const output = callPrintBindings({
 			LONG_VAR: { type: "plain_text", value: longValue },
