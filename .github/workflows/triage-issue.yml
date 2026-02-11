@@ -10,6 +10,10 @@ on:
         required: true
         type: number
 
+permissions:
+  contents: read
+  issues: read
+
 # Cancel in-progress runs for the same issue
 concurrency:
   group: triage-${{ github.event.issue.number || inputs.issue-number }}
