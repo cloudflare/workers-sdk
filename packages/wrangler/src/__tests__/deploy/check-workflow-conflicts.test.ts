@@ -47,11 +47,8 @@ describe("checkWorkflowConflicts", () => {
 	it("should return { hasConflicts: false } when workflows is undefined", async ({
 		expect,
 	}) => {
-		const configWithoutWorkflows = { ...baseConfig } as Config;
-		// @ts-expect-error - testing undefined workflows
-		delete configWithoutWorkflows.workflows;
 		const result = await checkWorkflowConflicts(
-			configWithoutWorkflows,
+			baseConfig,
 			"account-id",
 			"my-worker"
 		);

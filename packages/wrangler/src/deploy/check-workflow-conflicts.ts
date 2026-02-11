@@ -10,6 +10,15 @@ export interface WorkflowConflict {
 
 export const WORKFLOW_NOT_FOUND_CODE = 10200;
 
+/**
+ * Fetches a single workflow by name from the Cloudflare API.
+ *
+ * @param config - The resolved config
+ * @param accountId - The account ID
+ * @param workflowName - The name of the workflow to fetch
+ * @returns The workflow if it exists, or `null` if not found (API error code 10200)
+ * @throws {APIError} Re-throws any API error that is not a "workflow not found" error (e.g., network errors, auth errors, rate limits)
+ */
 async function getWorkflow(
 	config: Config,
 	accountId: string,
@@ -45,6 +54,9 @@ export async function checkWorkflowConflicts(
 	| { hasConflicts: true; conflicts: WorkflowConflict[]; message: string }
 > {
 	// Only check workflows that will be deployed by this script
+	// script_name defines the worker name of the workflow owner
+	// Workflows with script_name set to another worker are external bindings
+	// referencing workflows owned by other workers and should be skipped
 	const workflowsToDeploy = config.workflows?.filter(
 		(w) => w.script_name === undefined || w.script_name === scriptName
 	);
