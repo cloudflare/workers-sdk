@@ -22,10 +22,13 @@ export function StudioSQLiteExplainTab({
 }: StudioSQLiteExplainProps): JSX.Element {
 	const rows = data.rows as unknown as StudioSQLiteExplainRow[];
 
-	let tree: StudioSQLiteExplainTree[] = rows.map((r) => ({
-		...r,
-		children: [],
-	}));
+	let tree = rows.map(
+		(r) =>
+			({
+				...r,
+				children: [],
+			}) satisfies StudioSQLiteExplainTree
+	);
 
 	const nodeTable = tree.reduce(
 		(a, b) => ({
@@ -35,11 +38,11 @@ export function StudioSQLiteExplainTab({
 		{} as Record<string, StudioSQLiteExplainTree>
 	);
 
-	tree.forEach((node) => {
+	for (const node of tree) {
 		if (node.parent) {
 			nodeTable[node.parent]?.children.push(node);
 		}
-	});
+	}
 
 	tree = tree.filter((node) => node.parent === 0);
 
