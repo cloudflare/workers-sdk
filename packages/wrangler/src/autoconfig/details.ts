@@ -8,6 +8,7 @@ import {
 	getCIOverrideName,
 	parsePackageJSON,
 	readFileSync,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
@@ -185,6 +186,7 @@ async function detectFramework(
 	const fs = new NodeFS();
 
 	fs.logger = logger;
+
 	const project = new Project(fs, projectPath, projectPath)
 		.setEnvironment(process.env)
 		.setNodeVersion(process.version)
@@ -193,6 +195,12 @@ async function detectFramework(
 		});
 
 	const buildSettings = await project.getBuildSettings();
+
+	if (project.workspace?.isRoot) {
+		throw new UserError(
+			"The auto-configuration logic has been run in the root of a workspace, please run it in a specific project's directory instead."
+		);
+	}
 
 	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
 	if (buildSettings && buildSettings?.length > 1) {

@@ -94,6 +94,24 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 	});
 
+	it("should bail when run in the root of a workspace", async ({ expect }) => {
+		await seed({
+			"pnpm-workspace.yaml": "packages:\n  - 'packages/*'\n",
+			"package.json": JSON.stringify({
+				name: "my-workspace",
+				workspaces: ["packages/*"],
+			}),
+			"packages/my-app/package.json": JSON.stringify({ name: "my-app" }),
+			"packages/my-app/index.html": "<h1>Hello World</h1>",
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The auto-configuration logic has been run in the root of a workspace, please run it in a specific project's directory instead.]`
+		);
+	});
+
 	it("should use npm build instead of framework build if present", async ({
 		expect,
 	}) => {
