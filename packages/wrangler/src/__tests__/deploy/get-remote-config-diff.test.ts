@@ -753,22 +753,22 @@ describe("getRemoteConfigsDiff", () => {
 			     ...
 			     ...
 			     {
-			-      id: \\"id-3\\"
-			+      id: \\"id-4\\"
-			-      binding: \\"KV_C\\"
-			+      binding: \\"KV_D\\"
+			-      id: "id-3"
+			+      id: "id-4"
+			-      binding: "KV_C"
+			+      binding: "KV_D"
 			     }
 			   ]
 			   durable_objects: {
 			     bindings: [
 			+      {
-			+        name: \\"DO_B\\"
-			+        class_name: \\"DurableObjectB\\"
+			+        name: "DO_B"
+			+        class_name: "DurableObjectB"
 			+      }
 			       ...
 			-      {
-			-        name: \\"DO_C\\"
-			-        class_name: \\"DurableObjectC\\"
+			-        name: "DO_C"
+			-        class_name: "DurableObjectC"
 			-      }
 			     ]
 			   }
