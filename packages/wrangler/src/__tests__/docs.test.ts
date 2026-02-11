@@ -63,7 +63,7 @@ describe("wrangler docs", () => {
 	}) => {
 		await runWrangler("docs");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -84,14 +84,14 @@ describe("wrangler docs", () => {
 	}) => {
 		await runWrangler("docs dev");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=dev&hitsPerPage=1&getRankingInfo=0\\"}",
+			Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=dev&hitsPerPage=1&getRankingInfo=0"}",
 			  "warn": "",
 			}
 		`);
@@ -105,14 +105,14 @@ describe("wrangler docs", () => {
 	}) => {
 		await runWrangler("docs foo bar");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=foo+bar&hitsPerPage=1&getRankingInfo=0\\"}",
+			Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=foo+bar&hitsPerPage=1&getRankingInfo=0"}",
 			  "warn": "",
 			}
 		`);

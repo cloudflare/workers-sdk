@@ -28,7 +28,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id."
+				Writing the value "value" to key "val" on namespace some-namespace-id."
 			`);
 
 			await runWrangler(
@@ -76,16 +76,16 @@ describe("kv", () => {
 				Success!
 				[
 				  {
-				    \\"name\\": \\"a\\"
+				    "name": "a"
 				  },
 				  {
-				    \\"name\\": \\"a/b\\"
+				    "name": "a/b"
 				  },
 				  {
-				    \\"name\\": \\"a/c\\"
+				    "name": "a/c"
 				  },
 				  {
-				    \\"name\\": \\"b\\"
+				    "name": "b"
 				  }
 				]"
 			`);
@@ -103,18 +103,18 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"a\\"
+				    "name": "a"
 				  },
 				  {
-				    \\"name\\": \\"a/b\\"
+				    "name": "a/b"
 				  },
 				  {
-				    \\"name\\": \\"a/c\\"
+				    "name": "a/c"
 				  }
 				]
 				[
 				  {
-				    \\"name\\": \\"a/b\\"
+				    "name": "a/b"
 				  }
 				]
 				[]"
@@ -136,7 +136,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				Writing the value "value" to key "val" on namespace some-namespace-id.
 				value"
 			`);
 			await runWrangler(`kv key delete val --namespace-id some-namespace-id`);
@@ -148,7 +148,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Deleting the key \\"val\\" on namespace some-namespace-id."
+				Deleting the key "val" on namespace some-namespace-id."
 			`);
 
 			await runWrangler(
@@ -205,13 +205,13 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"encoded\\"
+				    "name": "encoded"
 				  },
 				  {
-				    \\"name\\": \\"hello\\"
+				    "name": "hello"
 				  },
 				  {
-				    \\"name\\": \\"test\\"
+				    "name": "test"
 				  }
 				]"
 			`);
@@ -244,10 +244,10 @@ describe("kv", () => {
 				Success!
 				[
 				  {
-				    \\"name\\": \\"hello\\"
+				    "name": "hello"
 				  },
 				  {
-				    \\"name\\": \\"test\\"
+				    "name": "test"
 				  }
 				]"
 			`);
@@ -298,10 +298,10 @@ describe("kv", () => {
 				Success!
 				[
 				  {
-				    \\"name\\": \\"hello\\"
+				    "name": "hello"
 				  },
 				  {
-				    \\"name\\": \\"test\\"
+				    "name": "test"
 				  }
 				]"
 			`);
@@ -359,10 +359,10 @@ describe("kv", () => {
 				Success!
 				[
 				  {
-				    \\"name\\": \\"hello\\"
+				    "name": "hello"
 				  },
 				  {
-				    \\"name\\": \\"test\\"
+				    "name": "test"
 				  }
 				]"
 			`);
@@ -373,11 +373,11 @@ describe("kv", () => {
 			);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 				"{
-				  \\"hello\\": {
-				    \\"value\\": \\"world\\"
+				  "hello": {
+				    "value": "world"
 				  },
-				  \\"test\\": {
-				    \\"value\\": \\"value\\"
+				  "test": {
+				    "value": "value"
 				  }
 				}
 
@@ -401,7 +401,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				Writing the value "value" to key "val" on namespace some-namespace-id.
 
 				 ⛅️ wrangler x.x.x
 				──────────────────
@@ -409,7 +409,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id."
+				Writing the value "persistValue" to key "val" on namespace some-namespace-id."
 			`);
 
 			await runWrangler(

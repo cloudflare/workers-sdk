@@ -204,15 +204,15 @@ describe("insights", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			  {
-			    \\"query\\": \\"sample query\\",
-			    \\"avgRowsRead\\": 0,
-			    \\"totalRowsRead\\": 10,
-			    \\"avgRowsWritten\\": 0,
-			    \\"totalRowsWritten\\": 0,
-			    \\"avgDurationMs\\": 0,
-			    \\"totalDurationMs\\": 0,
-			    \\"numberOfTimesRun\\": 0,
-			    \\"queryEfficiency\\": 0
+			    "query": "sample query",
+			    "avgRowsRead": 0,
+			    "totalRowsRead": 10,
+			    "avgRowsWritten": 0,
+			    "totalRowsWritten": 0,
+			    "avgDurationMs": 0,
+			    "totalDurationMs": 0,
+			    "numberOfTimesRun": 0,
+			    "queryEfficiency": 0
 			  }
 			]"
 		`);

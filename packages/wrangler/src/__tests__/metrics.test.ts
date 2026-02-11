@@ -106,7 +106,7 @@ describe("metrics", () => {
 				await allMetricsDispatchesCompleted();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"some-event","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","wranglerMajorVersion":1,"wranglerMinorVersion":2,"wranglerPatchVersion":3,"osPlatform":"mock platform","osVersion":"mock os version","nodeVersion":1,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":false,"isPagesCI":false,"isWorkersCI":false,"isInteractive":true,"hasAssets":false,"agent":null,"category":"Workers","os":"foo:bar","a":1,"b":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -137,7 +137,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}."`
+					`"Metrics dispatcher: Dispatching disabled - would have sent {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"some-event","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","wranglerMajorVersion":1,"wranglerMinorVersion":2,"wranglerPatchVersion":3,"osPlatform":"mock platform","osVersion":"mock os version","nodeVersion":1,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":false,"isPagesCI":false,"isWorkersCI":false,"isInteractive":true,"hasAssets":false,"agent":null,"category":"Workers","os":"foo:bar","a":1,"b":2}}."`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -157,7 +157,7 @@ describe("metrics", () => {
 				await allMetricsDispatchesCompleted();
 
 				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
+					"Metrics dispatcher: Posting data {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"some-event","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","wranglerMajorVersion":1,"wranglerMinorVersion":2,"wranglerPatchVersion":3,"osPlatform":"mock platform","osVersion":"mock os version","nodeVersion":1,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":false,"isPagesCI":false,"isWorkersCI":false,"isInteractive":true,"hasAssets":false,"agent":null,"category":"Workers","os":"foo:bar","a":1,"b":2}}
 					Metrics dispatcher: Failed to send request: Failed to fetch"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
@@ -176,7 +176,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {"deviceId":"f82b1f46-eb7b-4154-aa9f-ce95f23b2288","event":"some-event","timestamp":1733961600000,"properties":{"amplitude_session_id":1733961600000,"amplitude_event_id":0,"wranglerVersion":"1.2.3","wranglerMajorVersion":1,"wranglerMinorVersion":2,"wranglerPatchVersion":3,"osPlatform":"mock platform","osVersion":"mock os version","nodeVersion":1,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":false,"isPagesCI":false,"isWorkersCI":false,"isInteractive":true,"hasAssets":false,"agent":null,"category":"Workers","os":"foo:bar","a":1,"b":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -314,7 +314,7 @@ describe("metrics", () => {
 					──────────────────
 
 					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
+					Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -436,7 +436,7 @@ describe("metrics", () => {
 					──────────────────
 
 					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
+					Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -541,7 +541,7 @@ describe("metrics", () => {
 						──────────────────
 
 						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
+						Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 					`);
 
 					expect(requests.count).toBe(2);
@@ -576,7 +576,7 @@ describe("metrics", () => {
 						──────────────────
 
 						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
+						Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 					`);
 					expect(requests.count).toBe(2);
 					const { permission } = readMetricsConfig();

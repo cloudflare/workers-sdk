@@ -47,29 +47,29 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				"
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"worker-name\\",
-				    \\"compatibility_date\\": \\"2025-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "worker-name",
+				    "compatibility_date": "2025-01-01",
+				    "observability": {
+				      "enabled": true
 				    }
 				  }
 				"
 			`);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "public",
-				  "scripts": Object {},
+				  "scripts": {},
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -109,21 +109,21 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "dist",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -165,21 +165,21 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "out",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },

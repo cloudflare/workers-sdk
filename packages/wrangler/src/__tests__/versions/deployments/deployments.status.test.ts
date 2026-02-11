@@ -63,29 +63,29 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"id\\": \\"Galaxy-Class-test-name\\",
-			  \\"source\\": \\"api\\",
-			  \\"strategy\\": \\"percentage\\",
-			  \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			  \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			  \\"annotations\\": {
-			    \\"workers/triggered_by\\": \\"rollback\\",
-			    \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			  },
-			  \\"versions\\": [
-			    {
-			      \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 10
-			    },
-			    {
-			      \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 90
-			    }
-			  ]
-			}
-			"
-		`);
+				"{
+				  "id": "Galaxy-Class-test-name",
+				  "source": "api",
+				  "strategy": "percentage",
+				  "author_email": "Jean-Luc-Picard@federation.org",
+				  "created_on": "2021-01-04T00:00:00.000000Z",
+				  "annotations": {
+				    "workers/triggered_by": "rollback",
+				    "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222"
+				  },
+				  "versions": [
+				    {
+				      "version_id": "10000000-0000-0000-0000-000000000000",
+				      "percentage": 10
+				    },
+				    {
+				      "version_id": "20000000-0000-0000-0000-000000000000",
+				      "percentage": 90
+				    }
+				  ]
+				}
+				"
+			`);
 		});
 	});
 
@@ -123,29 +123,29 @@ describe("deployments list", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"id\\": \\"Galaxy-Class-test-name\\",
-			  \\"source\\": \\"api\\",
-			  \\"strategy\\": \\"percentage\\",
-			  \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			  \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			  \\"annotations\\": {
-			    \\"workers/triggered_by\\": \\"rollback\\",
-			    \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			  },
-			  \\"versions\\": [
-			    {
-			      \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 10
-			    },
-			    {
-			      \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 90
-			    }
-			  ]
-			}
-			"
-		`);
+				"{
+				  "id": "Galaxy-Class-test-name",
+				  "source": "api",
+				  "strategy": "percentage",
+				  "author_email": "Jean-Luc-Picard@federation.org",
+				  "created_on": "2021-01-04T00:00:00.000000Z",
+				  "annotations": {
+				    "workers/triggered_by": "rollback",
+				    "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222"
+				  },
+				  "versions": [
+				    {
+				      "version_id": "10000000-0000-0000-0000-000000000000",
+				      "percentage": 10
+				    },
+				    {
+				      "version_id": "20000000-0000-0000-0000-000000000000",
+				      "percentage": 90
+				    }
+				  ]
+				}
+				"
+			`);
 		});
 	});
 });

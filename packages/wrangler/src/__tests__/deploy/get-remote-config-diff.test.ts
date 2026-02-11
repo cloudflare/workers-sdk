@@ -75,8 +75,8 @@ describe("getRemoteConfigsDiff", () => {
 			" {
 			   kv_namespaces: [
 			-    {
-			-      binding: \\"MY_KV\\"
-			-      id: \\"<kv-id>\\"
+			-      binding: "MY_KV"
+			-      id: "<kv-id>"
 			-    }
 			   ]
 			 }
@@ -117,8 +117,8 @@ describe("getRemoteConfigsDiff", () => {
 		assert(diff);
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
-			-  compatibility_date: \\"2025-07-08\\"
-			+  compatibility_date: \\"2025-07-09\\"
+			-  compatibility_date: "2025-07-08"
+			+  compatibility_date: "2025-07-09"
 			 }
 			"
 		`);
@@ -157,8 +157,8 @@ describe("getRemoteConfigsDiff", () => {
 			   kv_namespaces: [
 			     ...
 			+    {
-			+      binding: \\"MY_KV_2\\"
-			+      id: \\"my-kv-456\\"
+			+      binding: "MY_KV_2"
+			+      id: "my-kv-456"
 			+    }
 			   ]
 			 }
@@ -200,8 +200,8 @@ describe("getRemoteConfigsDiff", () => {
 			" {
 			-  kv_namespaces: [
 			-    {
-			-      binding: \\"MY_KV\\"
-			-      id: \\"my-kv-123\\"
+			-      binding: "MY_KV"
+			-      id: "my-kv-123"
 			-    }
 			-  ]
 			 }
@@ -242,12 +242,12 @@ describe("getRemoteConfigsDiff", () => {
 			" {
 			-  kv_namespaces: [
 			-    {
-			-      binding: \\"MY_KV\\"
-			-      id: \\"my-kv-123\\"
+			-      binding: "MY_KV"
+			-      id: "my-kv-123"
 			-    }
 			-  ]
-			-  compatibility_date: \\"2025-07-08\\"
-			+  compatibility_date: \\"2025-07-09\\"
+			-  compatibility_date: "2025-07-08"
+			+  compatibility_date: "2025-07-09"
 			   observability: {
 			-    enabled: true
 			+    enabled: false
@@ -527,8 +527,8 @@ describe("getRemoteConfigsDiff", () => {
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
 			   assets: {
-			-    binding: \\"ASSETS\\"
-			+    binding: \\"MY_ASSETS\\"
+			-    binding: "ASSETS"
+			+    binding: "MY_ASSETS"
 			   }
 			 }
 			"

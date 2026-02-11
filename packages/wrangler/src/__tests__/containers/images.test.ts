@@ -158,24 +158,24 @@ describe("containers images list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			  {
-			    \\"name\\": \\"one\\",
-			    \\"tags\\": [
-			      \\"hundred\\",
-			      \\"ten\\"
+			    "name": "one",
+			    "tags": [
+			      "hundred",
+			      "ten"
 			    ]
 			  },
 			  {
-			    \\"name\\": \\"two\\",
-			    \\"tags\\": [
-			      \\"thousand\\",
-			      \\"twenty\\"
+			    "name": "two",
+			    "tags": [
+			      "thousand",
+			      "twenty"
 			    ]
 			  },
 			  {
-			    \\"name\\": \\"three\\",
-			    \\"tags\\": [
-			      \\"million\\",
-			      \\"thirty\\"
+			    "name": "three",
+			    "tags": [
+			      "million",
+			      "thirty"
 			    ]
 			  }
 			]"

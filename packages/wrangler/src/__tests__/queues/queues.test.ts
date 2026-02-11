@@ -311,11 +311,11 @@ describe("wrangler", () => {
 					Configure your Worker to send messages to this queue:
 
 					{
-					  \\"queues\\": {
-					    \\"producers\\": [
+					  "queues": {
+					    "producers": [
 					      {
-					        \\"queue\\": \\"testQueue\\",
-					        \\"binding\\": \\"testQueue\\"
+					        "queue": "testQueue",
+					        "binding": "testQueue"
 					      }
 					    ]
 					  }
@@ -323,10 +323,10 @@ describe("wrangler", () => {
 					Configure your Worker to consume messages from this queue:
 
 					{
-					  \\"queues\\": {
-					    \\"consumers\\": [
+					  "queues": {
+					    "consumers": [
 					      {
-					        \\"queue\\": \\"testQueue\\"
+					        "queue": "testQueue"
 					      }
 					    ]
 					  }
@@ -1800,10 +1800,10 @@ describe("wrangler", () => {
 					Number of Consumers: 1
 					Consumers: HTTP Pull Consumer.
 					Pull messages using:
-					curl \\"https://api.cloudflare.com/client/v4/accounts/some-account-id/queues/1234567/messages/pull\\" /
-						--header \\"Authorization: Bearer <add your api key here>\\" /
-						--header \\"Content-Type: application/json\\" /
-						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
+					curl "https://api.cloudflare.com/client/v4/accounts/some-account-id/queues/1234567/messages/pull" /
+						--header "Authorization: Bearer <add your api key here>" /
+						--header "Content-Type: application/json" /
+						--data '{ "visibility_timeout": 10000, "batch_size": 2 }'"
 				`);
 			});
 			it("should return the list of r2 bucket producers when the queue is used in an r2 event notification", async () => {

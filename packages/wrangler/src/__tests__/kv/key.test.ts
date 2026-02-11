@@ -101,7 +101,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
+					Writing the value "my-value" to key "my-key" on namespace some-namespace-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -125,7 +125,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"my-value\\" to key \\"/my-key\\" on namespace DS9."
+					Writing the value "my-value" to key "/my-key" on namespace DS9."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -148,7 +148,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace bound-id."
+					Writing the value "my-value" to key "my-key" on namespace bound-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -173,7 +173,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace preview-bound-id."
+					Writing the value "my-value" to key "my-key" on namespace preview-bound-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -198,7 +198,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
+					Writing the value "my-value" to key "my-key" on namespace some-namespace-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -220,7 +220,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."
+					Writing the value "my-value" to key "my-key" on namespace env-bound-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -244,7 +244,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."
+					Writing the contents of foo.txt to the key "my-key" on namespace some-namespace-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -271,7 +271,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."
+					Writing the contents of test.png to the key "my-key" on namespace another-namespace-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -297,7 +297,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value \\"dVal\\" to key \\"dKey\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
+					Writing the value "dVal" to key "dKey" on namespace some-namespace-id with metadata "{"mKey":"mValue"}"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -327,7 +327,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the contents of test.png to the key \\"another-my-key\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
+					Writing the contents of test.png to the key "another-my-key" on namespace some-namespace-id with metadata "{"mKey":"mValue"}"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -630,10 +630,10 @@ describe("kv", () => {
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
 
-			          "
-		        `);
+					"
+				`);
 			});
 
 			it("should error if a given binding has both preview and non-preview and --preview is not specified", async () => {
@@ -658,10 +658,10 @@ describe("kv", () => {
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.[0m
 
-			          "
-		        `);
+					"
+				`);
 				expect(requests.count).toEqual(0);
 			});
 		});
@@ -681,15 +681,15 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"key-1\\"
+					    "name": "key-1"
 					  },
 					  {
-					    \\"name\\": \\"key-2\\",
-					    \\"expiration\\": 123456789
+					    "name": "key-2",
+					    "expiration": 123456789
 					  },
 					  {
-					    \\"name\\": \\"key-3\\",
-					    \\"expiration_ttl\\": 666
+					    "name": "key-3",
+					    "expiration_ttl": 666
 					  }
 					]"
 				`);
@@ -705,13 +705,13 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"key-1\\"
+					    "name": "key-1"
 					  },
 					  {
-					    \\"name\\": \\"key-2\\"
+					    "name": "key-2"
 					  },
 					  {
-					    \\"name\\": \\"key-3\\"
+					    "name": "key-3"
 					  }
 					]"
 				`);
@@ -728,13 +728,13 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"key-1\\"
+					    "name": "key-1"
 					  },
 					  {
-					    \\"name\\": \\"key-2\\"
+					    "name": "key-2"
 					  },
 					  {
-					    \\"name\\": \\"key-3\\"
+					    "name": "key-3"
 					  }
 					]"
 				`);
@@ -751,13 +751,13 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"key-1\\"
+					    "name": "key-1"
 					  },
 					  {
-					    \\"name\\": \\"key-2\\"
+					    "name": "key-2"
 					  },
 					  {
-					    \\"name\\": \\"key-3\\"
+					    "name": "key-3"
 					  }
 					]"
 				`);
@@ -774,13 +774,13 @@ describe("kv", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"key-1\\"
+					    "name": "key-1"
 					  },
 					  {
-					    \\"name\\": \\"key-2\\"
+					    "name": "key-2"
 					  },
 					  {
-					    \\"name\\": \\"key-3\\"
+					    "name": "key-3"
 					  }
 					]"
 				`);
@@ -826,10 +826,10 @@ describe("kv", () => {
 					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
 
-			          "
-		        `);
+					"
+				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 			});
 		});
@@ -863,7 +863,7 @@ describe("kv", () => {
 				);
 				expect(proc.write).not.toEqual(Buffer.from("my-value"));
 				expect(std).toMatchInlineSnapshot(`
-					Object {
+					{
 					  "debug": "",
 					  "err": "",
 					  "info": "",
@@ -889,7 +889,7 @@ describe("kv", () => {
 				);
 				expect(proc.write).not.toEqual(buf);
 				expect(JSON.stringify(std)).toMatchInlineSnapshot(
-					`"{\\"debug\\":\\"\\",\\"out\\":\\"�PNG\\\\n\\\\u001a\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\rIHDR\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\b\\\\u0006\\\\u0000\\\\u0000\\\\u0000�2Ͻ\\\\u0000\\\\u0000\\\\u0000\\\\tpHYs\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0001\\\\u0000��\\\\u0018\\\\u0000\\\\u0000\\\\u0000\\\\u0001sRGB\\\\u0000��\\\\u001c�\\\\u0000\\\\u0000\\\\u0000\\\\u0004gAMA\\\\u0000\\\\u0000��\\\\u000b�a\\\\u0005\\\\u0000\\\\u0000\\\\u0000\\\\\\"IDATx\\\\u0001��1\\\\u0011\\\\u0000\\\\u0000\\\\b���π\\\\u0003:tl.����׈\\\\u0005z�\\\\u0002=�\\\\u0002\\\\u0012\\\\u0005O�1\\\\u0000\\\\u0000\\\\u0000\\\\u0000IEND�B\`�\\",\\"info\\":\\"\\",\\"err\\":\\"\\",\\"warn\\":\\"\\"}"`
+					`"{"debug":"","out":"�PNG\\n\\u001a\\n\\u0000\\u0000\\u0000\\rIHDR\\u0000\\u0000\\u0000\\n\\u0000\\u0000\\u0000\\n\\b\\u0006\\u0000\\u0000\\u0000�2Ͻ\\u0000\\u0000\\u0000\\tpHYs\\u0000\\u0000\\u000b\\u0013\\u0000\\u0000\\u000b\\u0013\\u0001\\u0000��\\u0018\\u0000\\u0000\\u0000\\u0001sRGB\\u0000��\\u001c�\\u0000\\u0000\\u0000\\u0004gAMA\\u0000\\u0000��\\u000b�a\\u0005\\u0000\\u0000\\u0000\\"IDATx\\u0001��1\\u0011\\u0000\\u0000\\b���π\\u0003:tl.����׈\\u0005z�\\u0002=�\\u0002\\u0012\\u0005O�1\\u0000\\u0000\\u0000\\u0000IEND�B\`�","info":"","err":"","warn":""}"`
 				);
 			});
 
@@ -1098,10 +1098,10 @@ describe("kv", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
 
-			          "
-		        `);
+					"
+				`);
 			});
 
 			describe("non-interactive", () => {
@@ -1232,7 +1232,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting the key \\"/NCC-74656\\" on namespace voyager."
+					Deleting the key "/NCC-74656" on namespace voyager."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1265,10 +1265,10 @@ describe("kv", () => {
 				);
 
 				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".[0m
 
-			          "
-		        `);
+					"
+				`);
 			});
 
 			it("should delete a key in a namespace specified by binding name in a given environment", async () => {
@@ -1284,7 +1284,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting the key \\"someKey\\" on namespace env-bound-id."
+					Deleting the key "someKey" on namespace env-bound-id."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);

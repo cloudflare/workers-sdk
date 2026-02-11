@@ -104,48 +104,48 @@ describe("versions view", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				  \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				  \\"number\\": 1,
-				  \\"annotations\\": {
-				    \\"workers/triggered_by\\": \\"upload\\"
+				  "id": "10000000-0000-0000-0000-000000000000",
+				  "number": 1,
+				  "annotations": {
+				    "workers/triggered_by": "upload"
 				  },
-				  \\"metadata\\": {
-				    \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+				  "metadata": {
+				    "author_id": "Picard-Gamma-6-0-7-3",
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "source": "wrangler",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "modified_on": "2021-01-01T00:00:00.000000Z"
 				  },
-				  \\"resources\\": {
-				    \\"bindings\\": [
+				  "resources": {
+				    "bindings": [
 				      {
-				        \\"type\\": \\"analytics_engine\\",
-				        \\"name\\": \\"ANALYTICS\\",
-				        \\"dataset\\": \\"analytics_dataset\\"
+				        "type": "analytics_engine",
+				        "name": "ANALYTICS",
+				        "dataset": "analytics_dataset"
 				      },
 				      {
-				        \\"type\\": \\"kv_namespace\\",
-				        \\"name\\": \\"KV\\",
-				        \\"namespace_id\\": \\"kv-namespace-id\\"
+				        "type": "kv_namespace",
+				        "name": "KV",
+				        "namespace_id": "kv-namespace-id"
 				      }
 				    ],
-				    \\"script\\": {
-				      \\"etag\\": \\"aaabbbccc\\",
-				      \\"handlers\\": [
-				        \\"fetch\\",
-				        \\"scheduled\\"
+				    "script": {
+				      "etag": "aaabbbccc",
+				      "handlers": [
+				        "fetch",
+				        "scheduled"
 				      ],
-				      \\"last_deployed_from\\": \\"api\\"
+				      "last_deployed_from": "api"
 				    },
-				    \\"script_runtime\\": {
-				      \\"compatibility_date\\": \\"2020-01-01\\",
-				      \\"compatibility_flags\\": [
-				        \\"test\\",
-				        \\"flag\\"
+				    "script_runtime": {
+				      "compatibility_date": "2020-01-01",
+				      "compatibility_flags": [
+				        "test",
+				        "flag"
 				      ],
-				      \\"usage_model\\": \\"standard\\",
-				      \\"limits\\": {
-				        \\"cpu_ms\\": 50
+				      "usage_model": "standard",
+				      "limits": {
+				        "cpu_ms": 50
 				      }
 				    }
 				  }
@@ -230,48 +230,48 @@ describe("versions view", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"{
-				  \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				  \\"number\\": 1,
-				  \\"annotations\\": {
-				    \\"workers/triggered_by\\": \\"upload\\"
+				  "id": "10000000-0000-0000-0000-000000000000",
+				  "number": 1,
+				  "annotations": {
+				    "workers/triggered_by": "upload"
 				  },
-				  \\"metadata\\": {
-				    \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+				  "metadata": {
+				    "author_id": "Picard-Gamma-6-0-7-3",
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "source": "wrangler",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "modified_on": "2021-01-01T00:00:00.000000Z"
 				  },
-				  \\"resources\\": {
-				    \\"bindings\\": [
+				  "resources": {
+				    "bindings": [
 				      {
-				        \\"type\\": \\"analytics_engine\\",
-				        \\"name\\": \\"ANALYTICS\\",
-				        \\"dataset\\": \\"analytics_dataset\\"
+				        "type": "analytics_engine",
+				        "name": "ANALYTICS",
+				        "dataset": "analytics_dataset"
 				      },
 				      {
-				        \\"type\\": \\"kv_namespace\\",
-				        \\"name\\": \\"KV\\",
-				        \\"namespace_id\\": \\"kv-namespace-id\\"
+				        "type": "kv_namespace",
+				        "name": "KV",
+				        "namespace_id": "kv-namespace-id"
 				      }
 				    ],
-				    \\"script\\": {
-				      \\"etag\\": \\"aaabbbccc\\",
-				      \\"handlers\\": [
-				        \\"fetch\\",
-				        \\"scheduled\\"
+				    "script": {
+				      "etag": "aaabbbccc",
+				      "handlers": [
+				        "fetch",
+				        "scheduled"
 				      ],
-				      \\"last_deployed_from\\": \\"api\\"
+				      "last_deployed_from": "api"
 				    },
-				    \\"script_runtime\\": {
-				      \\"compatibility_date\\": \\"2020-01-01\\",
-				      \\"compatibility_flags\\": [
-				        \\"test\\",
-				        \\"flag\\"
+				    "script_runtime": {
+				      "compatibility_date": "2020-01-01",
+				      "compatibility_flags": [
+				        "test",
+				        "flag"
 				      ],
-				      \\"usage_model\\": \\"standard\\",
-				      \\"limits\\": {
-				        \\"cpu_ms\\": 50
+				      "usage_model": "standard",
+				      "limits": {
+				        "cpu_ms": 50
 				      }
 				    }
 				  }
