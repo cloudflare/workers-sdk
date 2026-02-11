@@ -101,7 +101,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace some-namespace-id."
+					Writing the value "my-value" to key "my-key" on namespace id: "some-namespace-id"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -125,7 +125,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "/my-key" on namespace DS9."
+					Writing the value "my-value" to key "/my-key" on namespace id: "DS9"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -148,7 +148,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace bound-id."
+					Writing the value "my-value" to key "my-key" on namespace binding: "someBinding" (id: "bound-id")."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -173,7 +173,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace preview-bound-id."
+					Writing the value "my-value" to key "my-key" on namespace binding: "someBinding" (id: "preview-bound-id")."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -198,7 +198,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace some-namespace-id."
+					Writing the value "my-value" to key "my-key" on namespace id: "some-namespace-id"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -220,7 +220,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace env-bound-id."
+					Writing the value "my-value" to key "my-key" on namespace binding: "someBinding" (id: "env-bound-id")."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -244,7 +244,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the contents of foo.txt to the key "my-key" on namespace some-namespace-id."
+					Writing the contents of foo.txt to the key "my-key" on namespace id: "some-namespace-id"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -271,7 +271,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the contents of test.png to the key "my-key" on namespace another-namespace-id."
+					Writing the contents of test.png to the key "my-key" on namespace id: "another-namespace-id"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -297,7 +297,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "dVal" to key "dKey" on namespace some-namespace-id with metadata "{"mKey":"mValue"}"."
+					Writing the value "dVal" to key "dKey" on namespace id: "some-namespace-id" with metadata "{"mKey":"mValue"}"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -327,7 +327,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the contents of test.png to the key "another-my-key" on namespace some-namespace-id with metadata "{"mKey":"mValue"}"."
+					Writing the contents of test.png to the key "another-my-key" on namespace id: "some-namespace-id" with metadata "{"mKey":"mValue"}"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1232,7 +1232,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting the key "/NCC-74656" on namespace voyager."
+					Deleting the key "/NCC-74656" on namespace id: "voyager"."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1284,7 +1284,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting the key "someKey" on namespace env-bound-id."
+					Deleting the key "someKey" on namespace binding: "someBinding" (id: "env-bound-id")."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);

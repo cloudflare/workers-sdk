@@ -28,7 +28,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value "value" to key "val" on namespace some-namespace-id."
+				Writing the value "value" to key "val" on namespace id: "some-namespace-id"."
 			`);
 
 			await runWrangler(
@@ -136,7 +136,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value "value" to key "val" on namespace some-namespace-id.
+				Writing the value "value" to key "val" on namespace id: "some-namespace-id".
 				value"
 			`);
 			await runWrangler(`kv key delete val --namespace-id some-namespace-id`);
@@ -148,7 +148,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Deleting the key "val" on namespace some-namespace-id."
+				Deleting the key "val" on namespace id: "some-namespace-id"."
 			`);
 
 			await runWrangler(
@@ -401,7 +401,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value "value" to key "val" on namespace some-namespace-id.
+				Writing the value "value" to key "val" on namespace id: "some-namespace-id".
 
 				 ⛅️ wrangler x.x.x
 				──────────────────
@@ -409,7 +409,7 @@ describe("kv", () => {
 
 				Use --remote if you want to access the remote instance.
 
-				Writing the value "persistValue" to key "val" on namespace some-namespace-id."
+				Writing the value "persistValue" to key "val" on namespace id: "some-namespace-id"."
 			`);
 
 			await runWrangler(
