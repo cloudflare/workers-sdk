@@ -44,7 +44,6 @@ export {
 export {
 	friendlyBindingNames,
 	getBindingTypeFriendlyName,
-	extractBindingType,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	type NormalizeAndValidateConfigArgs,

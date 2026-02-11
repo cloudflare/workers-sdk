@@ -199,13 +199,6 @@ export function getBindingTypeFriendlyName(
 	return bindingType;
 }
 
-/**
- * Extract the binding type from a binding object
- */
-export function extractBindingType(binding: { type: string }): string {
-	return binding.type;
-}
-
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
 	env?: string;
