@@ -10,6 +10,13 @@ import type {
 	StudioTableSchema,
 } from "../../types/studio";
 
+/**
+ * Strips surrounding quote characters (`"`, `` ` ``, `[`/`]`) from a SQL
+ * identifier and un-doubles any escaped double-quotes within.
+ *
+ * @param str - The raw identifier string, possibly quoted.
+ * @returns The unescaped identifier.
+ */
 function unescapeIdentity(str: string): string {
 	let r = str.replace(/^["`[]/g, "");
 	r = r.replace(/["`\]]$/g, "");
@@ -17,9 +24,19 @@ function unescapeIdentity(str: string): string {
 	return r;
 }
 
+/**
+ * A token-based cursor for navigating and consuming a sequence of
+ * {@link StudioSQLToken} values. Automatically skips whitespace tokens
+ * when advancing. Used internally by the SQLite parser functions to
+ * walk through tokenised SQL statements.
+ */
 class CursorV2 {
 	private ptr: number = 0;
 
+	/**
+	 * @param tokens - The token array to iterate over. Leading and
+	 *   trailing whitespace tokens are trimmed during construction.
+	 */
 	constructor(private tokens: StudioSQLToken[]) {
 		// Trim whitespace tokens from the beginning and end
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Length check above guarantees this exists
@@ -38,10 +55,18 @@ class CursorV2 {
 		this.tokens = tokens;
 	}
 
+	/** Returns the current pointer position within the token array. */
 	getPointer() {
 		return this.ptr;
 	}
 
+	/**
+	 * Concatenates the raw token values between two indices (exclusive end).
+	 *
+	 * @param start - The start index (inclusive).
+	 * @param end - The end index (exclusive).
+	 * @returns The reconstructed SQL fragment.
+	 */
 	toStringRange(start: number, end: number) {
 		return this.tokens
 			.slice(start, end)
@@ -49,6 +74,7 @@ class CursorV2 {
 			.join("");
 	}
 
+	/** Returns the raw string value of the current token, or `""` if at end. */
 	read(): string {
 		if (this.end()) {
 			return "";
@@ -59,6 +85,13 @@ class CursorV2 {
 		return token.value;
 	}
 
+	/**
+	 * Consumes the current token as a "block": if the current token is an
+	 * opening parenthesis, the entire parenthesised group is consumed and
+	 * returned as a string. Otherwise, a single token is consumed.
+	 *
+	 * @returns The consumed string content.
+	 */
 	consumeBlock(): string {
 		if (this.match("(")) {
 			return this.consumeParen().toString();
@@ -67,12 +100,21 @@ class CursorV2 {
 		return this.consume();
 	}
 
+	/** Returns the type of the current token (e.g. `STRING`, `NUMBER`, `OPERATOR`). */
 	currentType() {
 		// Callers check `end()` before calling; `ptr` is within bounds
 		const token = this.tokens[this.ptr] as StudioSQLToken;
 		return token.type;
 	}
 
+	/**
+	 * Consumes a balanced parenthesised group starting from the current `(`
+	 * token and returns a new {@link CursorV2} over the inner tokens.
+	 * Advances past the closing `)`.
+	 *
+	 * @returns A new cursor spanning the tokens inside the parentheses.
+	 * @throws If the current token is not `(` or no matching `)` is found.
+	 */
 	consumeParen(): CursorV2 {
 		if (this.read() !== "(") {
 			throw new Error("Expecting (");
@@ -100,18 +142,27 @@ class CursorV2 {
 		return newCursor;
 	}
 
+	/** Reads the current token value and advances the cursor. */
 	consume() {
 		const value = this.read();
 		this.next();
 		return value;
 	}
 
+	/** Reads the current token as an unescaped identifier and advances the cursor. */
 	consumeIdentifier() {
 		const value = unescapeIdentity(this.read());
 		this.next();
 		return value;
 	}
 
+	/**
+	 * Asserts that the current token matches the expected value (case-insensitive)
+	 * and advances the cursor. Throws if the token does not match.
+	 *
+	 * @param value - The expected token value.
+	 * @throws If the current token does not match.
+	 */
 	expectToken(value: string) {
 		if (!this.match(value)) {
 			throw new Error(`Expecting ${value}`);
@@ -119,12 +170,25 @@ class CursorV2 {
 		this.next();
 	}
 
+	/**
+	 * If the current token matches the expected value, advances the cursor.
+	 * Otherwise does nothing.
+	 *
+	 * @param value - The optional token value to consume.
+	 */
 	expectTokenOptional(value: string) {
 		if (this.match(value)) {
 			this.next();
 		}
 	}
 
+	/**
+	 * Optionally consumes a sequence of tokens. If the first value matches,
+	 * all subsequent values are consumed with {@link expectToken} (required).
+	 * If the first value does not match, nothing is consumed.
+	 *
+	 * @param values - The ordered sequence of token values.
+	 */
 	expectTokensOptional(values: string[]) {
 		if (values.length === 0) {
 			return;
@@ -137,6 +201,12 @@ class CursorV2 {
 		}
 	}
 
+	/**
+	 * Asserts and consumes a required sequence of tokens. Each value is
+	 * consumed with {@link expectToken}.
+	 *
+	 * @param values - The ordered sequence of expected token values.
+	 */
 	expectTokens(values: string[]) {
 		for (const v of values) {
 			this.expectToken(v);
@@ -157,6 +227,13 @@ class CursorV2 {
 		return false;
 	}
 
+	/**
+	 * Checks whether the current token matches a value (case-insensitive)
+	 * without consuming it.
+	 *
+	 * @param value - The value to compare against.
+	 * @returns `true` if the current token matches, `false` otherwise or if at end.
+	 */
 	match(value: string) {
 		if (this.end()) {
 			return false;
@@ -164,23 +241,42 @@ class CursorV2 {
 		return this.read().toLowerCase() === value.toLowerCase();
 	}
 
+	/**
+	 * Checks whether the current token matches any of the provided values
+	 * (case-insensitive) without consuming it.
+	 *
+	 * @param values - The candidate values to match against.
+	 * @returns `true` if any value matches the current token.
+	 */
 	matchTokens(values: string[]) {
 		return values.some((v) => this.read().toLowerCase() === v.toLowerCase());
 	}
 
+	/** Returns `true` if the cursor has passed the last token. */
 	end() {
 		return this.ptr >= this.tokens.length;
 	}
 
+	/** Reconstructs the full SQL fragment from all tokens. */
 	toString() {
 		return this.tokens.map((t) => t.value).join("");
 	}
 
+	/** Reconstructs the SQL fragment wrapped in parentheses. */
 	toStringWithParen() {
 		return "(" + this.toString() + ")";
 	}
 }
 
+/**
+ * Parses a single column definition from a CREATE TABLE body.
+ * Extracts the column name, data type (including parenthesised type
+ * parameters like `VARCHAR(255)`), and any inline column constraints.
+ *
+ * @param schemaName - The schema name, passed through to constraint parsing.
+ * @param cursor - The cursor positioned at the start of the column definition.
+ * @returns The parsed column, or `null` if no column name is found.
+ */
 function parseColumnDef(
 	schemaName: string,
 	cursor: CursorV2
@@ -226,6 +322,15 @@ function parseColumnDef(
 	};
 }
 
+/**
+ * Attempts to parse an `ON CONFLICT` clause from the current cursor
+ * position. Returns the conflict resolution strategy (e.g. `ROLLBACK`,
+ * `ABORT`, `FAIL`, `IGNORE`, `REPLACE`) or `undefined` if no such
+ * clause is present.
+ *
+ * @param cursor - The cursor positioned where an ON CONFLICT clause may appear.
+ * @returns The conflict strategy, or `undefined`.
+ */
 function parseConstraintConflict(
 	cursor: CursorV2
 ): StudioColumnConflict | undefined {
@@ -248,6 +353,13 @@ function parseConstraintConflict(
 	return;
 }
 
+/**
+ * Parses a comma-separated list of column identifiers from a cursor,
+ * typically from inside a parenthesised group.
+ *
+ * @param columnPtr - The cursor over the column list tokens.
+ * @returns An array of unescaped column name strings.
+ */
 function parseColumnList(columnPtr: CursorV2): string[] {
 	const columns: string[] = [];
 
@@ -263,6 +375,18 @@ function parseColumnList(columnPtr: CursorV2): string[] {
 	return columns;
 }
 
+/**
+ * Recursively parses column-level and table-level constraints from the
+ * current cursor position. Handles CONSTRAINT, PRIMARY KEY, NOT NULL,
+ * NULL, UNIQUE, DEFAULT, CHECK, COLLATE, FOREIGN KEY, REFERENCES, and
+ * GENERATED ALWAYS AS. Constraints are merged via recursive calls so
+ * that multiple constraints on a single column are combined into one
+ * object.
+ *
+ * @param schemaName - The schema name, used when resolving foreign key references.
+ * @param cursor - The cursor positioned at the start of a constraint keyword.
+ * @returns The parsed constraint object, or `undefined` if no constraint is found.
+ */
 function parseColumnConstraint(
 	schemaName: string,
 	cursor: CursorV2
@@ -481,6 +605,18 @@ function parseColumnConstraint(
 	return undefined;
 }
 
+/**
+ * Parses the body of a CREATE TABLE statement (the content inside the
+ * outer parentheses) into column definitions and table-level constraints.
+ * Column definitions are expected to appear before any table-level
+ * constraints. After parsing, table-level PRIMARY KEY constraints are
+ * applied back to the corresponding column objects, and foreign key
+ * columns with empty `foreignColumns` are backfilled with the column name.
+ *
+ * @param schemaName - The schema name, passed to constraint parsers.
+ * @param cursor - A cursor over the tokens inside the CREATE TABLE parentheses.
+ * @returns An object containing the parsed columns and constraints.
+ */
 function parseTableDefinition(
 	schemaName: string,
 	cursor: CursorV2
@@ -560,6 +696,14 @@ function parseTableDefinition(
 	};
 }
 
+/**
+ * Parses FTS5 virtual table options from the arguments inside
+ * `CREATE VIRTUAL TABLE ... USING FTS5(...)`. Extracts the `content`
+ * and `content_rowid` options when present.
+ *
+ * @param cursor - A cursor over the tokens inside the FTS5 argument list.
+ * @returns The parsed FTS5 options.
+ */
 function parseFTS5(cursor: CursorV2): StudioTableFTSv5Options {
 	if (!cursor) {
 		return {};
@@ -599,6 +743,14 @@ function parseFTS5(cursor: CursorV2): StudioTableFTSv5Options {
 	};
 }
 
+/**
+ * Parses trailing table options that appear after the closing
+ * parenthesis of a CREATE TABLE statement (`WITHOUT ROWID` and/or
+ * `STRICT`). Options may be comma-separated and are parsed recursively.
+ *
+ * @param cursor - The cursor positioned after the CREATE TABLE body.
+ * @returns An object with `withoutRowId` and/or `strict` flags, or `undefined`.
+ */
 function parseTableOption(cursor: CursorV2):
 	| {
 			strict?: boolean;
@@ -639,10 +791,16 @@ function parseTableOption(cursor: CursorV2):
 
 /**
  * Parses a SQL CREATE TABLE statement into a structured table definition.
- * This parser follows SQLite specification: https://www.sqlite.org/lang_createtable.html
+ * Supports regular tables, TEMP/TEMPORARY tables, virtual tables (FTS5),
+ * and table options (WITHOUT ROWID, STRICT).
  *
- * @param schemaName
- * @param sql
+ * This parser follows the SQLite specification:
+ * {@link https://www.sqlite.org/lang_createtable.html}
+ *
+ * @param schemaName - The schema the table belongs to (e.g. `"main"`).
+ * @param sql - The raw CREATE TABLE SQL string to parse.
+ * @returns A fully parsed {@link StudioTableSchema} including columns,
+ *   constraints, primary keys, auto-increment, FTS5 options, and table flags.
  */
 export function parseSQLiteCreateTableScript(
 	schemaName: string,
@@ -694,6 +852,14 @@ export function parseSQLiteCreateTableScript(
 	};
 }
 
+/**
+ * Parses a SQL CREATE INDEX statement into a structured index definition.
+ * Handles both regular and UNIQUE indexes, and extracts the index name,
+ * target table, and indexed column list.
+ *
+ * @param sql - The raw CREATE INDEX SQL string to parse.
+ * @returns The parsed {@link StudioTableIndex}.
+ */
 export function parseSQLiteIndexScript(sql: string): StudioTableIndex {
 	const cursor = new CursorV2(tokenizeSQL(sql, "sqlite"));
 

@@ -6,6 +6,14 @@ import type {
 	StudioTableSchemaChange,
 } from "../../types/studio";
 
+/**
+ * Ensures a string is wrapped in parentheses. If the string already
+ * starts with `(` and ends with `)`, it is returned as-is.
+ *
+ * @param str - The string to wrap.
+ *
+ * @returns The parenthesised string.
+ */
 function wrapParen(str: string): string {
 	if (str.length >= 2 && str.startsWith("(") && str.endsWith(")")) {
 		return str;
@@ -14,6 +22,16 @@ function wrapParen(str: string): string {
 	return `(${str})`;
 }
 
+/**
+ * Generates a column definition clause for use inside a CREATE TABLE
+ * statement. Handles PRIMARY KEY, UNIQUE, NOT NULL, DEFAULT, GENERATED,
+ * CHECK, and REFERENCES constraints.
+ *
+ * @param driver - The driver used for identifier and value escaping.
+ * @param col - The column definition including name, type, and constraints.
+ *
+ * @returns The SQL column definition string.
+ */
 function generateCreateColumn(
 	driver: IStudioDriver,
 	col: StudioTableColumn
@@ -105,6 +123,15 @@ function generateCreateColumn(
 	return tokens.join(" ");
 }
 
+/**
+ * Generates a table-level constraint clause (PRIMARY KEY, UNIQUE, CHECK,
+ * or FOREIGN KEY) for use inside a CREATE TABLE statement.
+ *
+ * @param driver - The driver used for identifier escaping.
+ * @param con - The constraint definition.
+ *
+ * @returns The SQL constraint clause string, or an empty string if unrecognised.
+ */
 function generateConstraintScript(
 	driver: IStudioDriver,
 	con: StudioTableColumnConstraint
@@ -136,6 +163,19 @@ function generateConstraintScript(
 	return "";
 }
 
+/**
+ * Generates an array of SQL statements that apply a table schema change.
+ *
+ * When the change represents a new table (no `old` name), a single
+ * `CREATE TABLE` statement is returned. Otherwise, one or more
+ * `ALTER TABLE` statements are produced for column additions, drops,
+ * renames, type changes, constraint additions, and table renames.
+ *
+ * @param driver - The driver used for identifier and value escaping.
+ * @param change - The schema change descriptor containing old/new column and constraint definitions.
+ *
+ * @returns An array of SQL statements to apply the change.
+ */
 export function buildSQLiteSchemaDiffStatement(
 	driver: IStudioDriver,
 	change: StudioTableSchemaChange
