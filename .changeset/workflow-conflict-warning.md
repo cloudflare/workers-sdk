@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Add confirmation prompt when deploying workflows with names that belong to different workers.
