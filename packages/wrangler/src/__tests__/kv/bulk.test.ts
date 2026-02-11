@@ -477,24 +477,25 @@ describe("kv", () => {
 				const keys = 12354;
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				await expect(
 					runWrangler(
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[AssertionError: expected { Object (type, name, ...) } to strictly equal { Object (type, name, ...) }]`
-				);
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings but got:
+					12354]
+			`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
 
-
-					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -503,24 +504,27 @@ describe("kv", () => {
 				const keys = ["good", 12354, { key: "someKey" }, null];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				await expect(
 					runWrangler(
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[AssertionError: expected { Object (type, name, ...) } to strictly equal { Object (type, name, ...) }]`
-				);
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings or objects with a "name" key.
+					The item at index 1 is type: "number" - 12354
+					The item at index 2 is type: "object" - {"key":"someKey"}
+					The item at index 3 is type: "object" - null]
+				`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
 
-
-					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
