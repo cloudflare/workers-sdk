@@ -3,10 +3,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
 		"build:custom-build-app": "vite build -c ./vite.config.custom-build-app.ts",
 		"build:custom-output-directories": "vite build -c ./vite.config.custom-output-directories.ts",
 		"build:customize-config": "vite build -c ./vite.config.customize-config.ts",
+		"build:default": "vite build",
 		"build:no-config-file": "vite build -c ./vite.config.no-config-file.ts",
 		"build:with-worker-configs-warning": "vite build -c vite.config.with-worker-configs-warning.ts",
 		"check:type": "tsc --build",
