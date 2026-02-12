@@ -12,7 +12,10 @@
 		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
 		"dev:ui": "concurrently -n api,ui -c green,blue \"openapi-ts --watch\" \"vite\"",
 		"postinstall": "openapi-ts",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
@@ -38,6 +41,7 @@
 		"concurrently": "^9.0.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
-		"vite-plugin-svgr": "^4.3.0"
+		"vite-plugin-svgr": "^4.3.0",
+		"vitest": "catalog:default"
 	}
 }

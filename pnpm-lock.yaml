@@ -2166,6 +2166,9 @@ importers:
       vite-plugin-svgr:
         specifier: ^4.3.0
         version: 4.5.0(rollup@4.44.1)(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+      vitest:
+        specifier: catalog:default
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(tsx@4.21.0)(yaml@2.8.1)
 
   packages/miniflare:
     dependencies:
