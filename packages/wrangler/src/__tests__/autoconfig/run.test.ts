@@ -289,7 +289,8 @@ describe("autoconfig (deploy)", () => {
 				  "assets": {
 				    "directory": "dist"
 				  }
-				}"
+				}
+				"
 			`);
 
 			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
@@ -455,7 +456,8 @@ describe("autoconfig (deploy)", () => {
 				  "assets": {
 				    "directory": "dist"
 				  }
-				}"
+				}
+				"
 			`);
 		});
 
