@@ -31,7 +31,7 @@ export const vectorizeListCommand = createCommand({
 		const indexes = await listIndexes(config, args.deprecatedV1);
 
 		if (args.json) {
-			logger.log(JSON.stringify(indexes, null, 2));
+			logger.json(indexes);
 			return;
 		}
 

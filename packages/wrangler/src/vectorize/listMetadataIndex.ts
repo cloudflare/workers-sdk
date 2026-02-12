@@ -32,7 +32,7 @@ export const vectorizeListMetadataIndexCommand = createCommand({
 		const res = await listMetadataIndex(config, args.name);
 
 		if (args.json) {
-			logger.log(JSON.stringify(res.metadataIndexes, null, 2));
+			logger.json(res.metadataIndexes);
 			return;
 		}
 
