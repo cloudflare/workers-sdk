@@ -75,7 +75,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry";
-import type { BindingIdMap } from "./constants";
+import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses

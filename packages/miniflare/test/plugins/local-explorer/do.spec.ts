@@ -51,7 +51,7 @@ describe("Durable Objects API", () => {
 		mf = new Miniflare({
 			name: "my-worker",
 			inspectorPort: 0,
-			compatibilityDate: "2025-01-01",
+			compatibilityDate: "2026-01-01",
 			modules: true,
 			script: `
 				export class TestDO {

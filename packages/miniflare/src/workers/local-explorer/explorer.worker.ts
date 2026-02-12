@@ -28,7 +28,7 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
-import type { BindingIdMap } from "../../plugins/core/constants";
+import type { BindingIdMap } from "../../plugins/core/types";
 
 export type Env = {
 	[key: string]: unknown;

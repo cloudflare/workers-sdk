@@ -1,3 +1,4 @@
+import { sanitisePath } from "../../shared/data";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zDurableObjectsNamespaceListNamespacesData,
@@ -60,19 +61,6 @@ interface DirectoryEntry {
 }
 
 /**
- * Parse the disk service directory listing response.
- * The disk service returns a JSON array of file objects.
- * @params content - the response from the disk service listing the directory
- * @returns an array of DO objects IDs
- */
-function parseDirectoryListing(content: string): string[] {
-	const entries = JSON.parse(content) as DirectoryEntry[];
-	return entries
-		.filter((entry) => entry.type === "file" && entry.name.endsWith(".sqlite"))
-		.map((entry) => entry.name.replace(/\.sqlite$/, ""));
-}
-
-/**
  * List Durable Objects in a namespace
  * https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list_objects/
  *
@@ -97,9 +85,10 @@ export async function listDOObjects(
 	// The DO storage structure is: <persistPath>/<uniqueKey>/<objectId>.sqlite
 	// namespaceId is the uniqueKey (e.g., "my-worker-TestDO")
 	// Fetch directory listing from disk service
-	const dirPath = `/${namespaceId}/`;
+	// Sanitise and encode the namespace ID for safe filesystem and URL usage
+	const encodedNamespaceId = encodeURIComponent(sanitisePath(namespaceId));
 	const response = await c.env.MINIFLARE_EXPLORER_DO_STORAGE.fetch(
-		new URL(dirPath, "http://placeholder")
+		`http://placeholder/${encodedNamespaceId}/`
 	);
 
 	if (!response.ok) {
@@ -120,8 +109,13 @@ export async function listDOObjects(
 		);
 	}
 
-	const content = await response.text();
-	let objectIds = parseDirectoryListing(content);
+	const files = (await response.json()) as DirectoryEntry[];
+
+	// Each DO object gets a sqlite file named <objectId>.sqlite,
+	// so filter for those and use that to extract object IDs
+	let objectIds = files
+		.filter((entry) => entry.type === "file" && entry.name.endsWith(".sqlite"))
+		.map((entry) => entry.name.replace(/\.sqlite$/, ""));
 
 	// Sort for consistent ordering (required for cursor pagination)
 	objectIds.sort();
