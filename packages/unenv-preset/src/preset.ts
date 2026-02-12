@@ -5,8 +5,6 @@ import type { Preset } from "unenv";
 //
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-//
-// NOTE: Please sync any changes to `testNodeCompatModules`.
 const nativeModules = [
 	"_stream_duplex",
 	"_stream_passthrough",

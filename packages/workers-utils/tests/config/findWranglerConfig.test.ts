@@ -1,6 +1,5 @@
 import path from "node:path";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { findWranglerConfig } from "../../src/config/config-helpers";
 import {
 	mockConsoleMethods,
@@ -15,9 +14,9 @@ describe("config findWranglerConfig()", () => {
 	const NO_LOGS = { debug: "", err: "", info: "", out: "", warn: "" };
 
 	describe("(useRedirectIfAvailable: false)", () => {
-		it.each(["toml", "json", "jsonc"])(
+		it.for(["toml", "json", "jsonc"])(
 			"should find the nearest wrangler.%s to the reference directory",
-			async (ext) => {
+			async (ext, { expect }) => {
 				await seed({
 					[`wrangler.${ext}`]: "DUMMY",
 					[`foo/wrangler.${ext}`]: "DUMMY",
@@ -53,7 +52,7 @@ describe("config findWranglerConfig()", () => {
 			["json", "toml"],
 			["jsonc", "toml"],
 		])("should prefer the wrangler.%s over wrangler.%s", (ext1, ext2) => {
-			it("in the same directory", async () => {
+			it("in the same directory", async ({ expect }) => {
 				await seed({
 					[`wrangler.${ext1}`]: "DUMMY",
 					[`wrangler.${ext2}`]: "DUMMY",
@@ -66,7 +65,7 @@ describe("config findWranglerConfig()", () => {
 				expect(std).toMatchObject(NO_LOGS);
 			});
 
-			it("in different directories", async () => {
+			it("in different directories", async ({ expect }) => {
 				await seed({
 					[`wrangler.${ext1}`]: "DUMMY",
 					[`foo/wrangler.${ext2}`]: "DUMMY",
@@ -80,7 +79,9 @@ describe("config findWranglerConfig()", () => {
 			});
 		});
 
-		it("should return user config path even if a deploy config is found", async () => {
+		it("should return user config path even if a deploy config is found", async ({
+			expect,
+		}) => {
 			await seed({
 				[`wrangler.toml`]: "DUMMY",
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
@@ -96,7 +97,9 @@ describe("config findWranglerConfig()", () => {
 	});
 
 	describe("(useRedirectIfAvailable: true)", () => {
-		it("should return redirected config path if no user config and a deploy config is found", async () => {
+		it("should return redirected config path if no user config and a deploy config is found", async ({
+			expect,
+		}) => {
 			await seed({
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
 				[`dist/wrangler.json`]: "DUMMY",
@@ -119,7 +122,9 @@ describe("config findWranglerConfig()", () => {
 			expect(std).toMatchObject(NO_LOGS);
 		});
 
-		it("should return redirected config path if matching user config and a deploy config is found", async () => {
+		it("should return redirected config path if matching user config and a deploy config is found", async ({
+			expect,
+		}) => {
 			await seed({
 				[`wrangler.toml`]: "DUMMY",
 				[".wrangler/deploy/config.json"]: `{"configPath": "../../dist/wrangler.json" }`,
@@ -145,7 +150,9 @@ describe("config findWranglerConfig()", () => {
 			expect(std).toMatchObject(NO_LOGS);
 		});
 
-		it("should error if deploy config is not valid JSON", async () => {
+		it("should error if deploy config is not valid JSON", async ({
+			expect,
+		}) => {
 			await seed({
 				[".wrangler/deploy/config.json"]: `INVALID JSON`,
 			});
@@ -163,7 +170,9 @@ describe("config findWranglerConfig()", () => {
 			expect(std).toMatchObject(NO_LOGS);
 		});
 
-		it("should error if deploy config does not contain a `configPath` property", async () => {
+		it("should error if deploy config does not contain a `configPath` property", async ({
+			expect,
+		}) => {
 			await seed({
 				[".wrangler/deploy/config.json"]: `{}`,
 			});
@@ -186,7 +195,9 @@ describe("config findWranglerConfig()", () => {
 			expect(std).toMatchObject(NO_LOGS);
 		});
 
-		it("should error if redirected config file does not exist", async () => {
+		it("should error if redirected config file does not exist", async ({
+			expect,
+		}) => {
 			await seed({
 				[".wrangler/deploy/config.json"]: `{ "configPath": "missing/wrangler.json" }`,
 			});
@@ -205,7 +216,9 @@ describe("config findWranglerConfig()", () => {
 			expect(std).toMatchObject(NO_LOGS);
 		});
 
-		it("should error if deploy config file and user config file do not have the same base path", async () => {
+		it("should error if deploy config file and user config file do not have the same base path", async ({
+			expect,
+		}) => {
 			await seed({
 				[`foo/wrangler.toml`]: "DUMMY",
 				["foo/bar/.wrangler/deploy/config.json"]: `{ "configPath": "../../dist/wrangler.json" }`,

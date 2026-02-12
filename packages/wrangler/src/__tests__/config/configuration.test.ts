@@ -1,15 +1,15 @@
 import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- describe.each pattern */
-import { describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { describe, it } from "vitest";
 import { readConfig } from "../../config";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("readConfig()", () => {
 	runInTempDir();
-	it("should not error if a python entrypoint is used with the right compatibility_flag", () => {
+	it("should not error if a python entrypoint is used with the right compatibility_flag", ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
@@ -26,7 +26,9 @@ describe("readConfig()", () => {
 			]
 		`);
 	});
-	it("should error if a python entrypoint is used without the right compatibility_flag", () => {
+	it("should error if a python entrypoint is used without the right compatibility_flag", ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			main: "index.py",
 		});
@@ -46,7 +48,9 @@ describe("experimental_readRawConfig()", () => {
 		`with %s config files`,
 		(configType) => {
 			runInTempDir();
-			it(`should find a ${configType} config file given a specific path`, () => {
+			it(`should find a ${configType} config file given a specific path`, ({
+				expect,
+			}) => {
 				fs.mkdirSync("../folder", { recursive: true });
 				writeWranglerConfig(
 					{ name: "config-one" },
@@ -63,7 +67,7 @@ describe("experimental_readRawConfig()", () => {
 				);
 			});
 
-			it("should find a config file given a specific script", () => {
+			it("should find a config file given a specific script", ({ expect }) => {
 				fs.mkdirSync("./path/to", { recursive: true });
 				writeWranglerConfig(
 					{ name: "config-one" },
@@ -101,7 +105,7 @@ describe("experimental_readRawConfig()", () => {
 describe("BOM (Byte Order Marker) handling", () => {
 	runInTempDir();
 
-	it("should remove UTF-8 BOM from TOML config files", () => {
+	it("should remove UTF-8 BOM from TOML config files", ({ expect }) => {
 		const configContent = `name = "test-worker"
 compatibility_date = "2022-01-12"`;
 
@@ -118,7 +122,7 @@ compatibility_date = "2022-01-12"`;
 		expect(config.compatibility_date).toBe("2022-01-12");
 	});
 
-	it("should remove UTF-8 BOM from JSON config files", () => {
+	it("should remove UTF-8 BOM from JSON config files", ({ expect }) => {
 		const configContent = `{
 	"name": "test-worker",
 	"compatibility_date": "2022-01-12"
@@ -137,7 +141,7 @@ compatibility_date = "2022-01-12"`;
 		expect(config.compatibility_date).toBe("2022-01-12");
 	});
 
-	it("should error on UTF-16 BE BOM", () => {
+	it("should error on UTF-16 BE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xfe, 0xff]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -147,7 +151,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should error on UTF-16 LE BOM", () => {
+	it("should error on UTF-16 LE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xff, 0xfe]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -157,7 +161,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should error on UTF-32 BE BOM", () => {
+	it("should error on UTF-32 BE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0x00, 0x00, 0xfe, 0xff]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -167,7 +171,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should error on UTF-32 LE BOM", () => {
+	it("should error on UTF-32 LE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xff, 0xfe, 0x00, 0x00]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
@@ -177,7 +181,7 @@ compatibility_date = "2022-01-12"`;
 		);
 	});
 
-	it("should handle files without BOM normally", () => {
+	it("should handle files without BOM normally", ({ expect }) => {
 		writeWranglerConfig({ name: "no-bom-test" });
 
 		const config = readConfig({ config: "wrangler.toml" });

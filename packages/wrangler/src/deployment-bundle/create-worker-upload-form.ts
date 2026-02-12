@@ -4,7 +4,6 @@ import path from "node:path";
 import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import {
-	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 	isUnsafeBindingType,
 } from "../api/startDevWorker/utils";
@@ -56,17 +55,6 @@ export function fromMimeType(mimeType: string): CfModuleType {
  * Creates a `FormData` upload from Worker data and bindings
  */
 export function createWorkerUploadForm(
-	worker: CfWorkerInit,
-	options?: { dryRun: true }
-): FormData {
-	const bindings = convertCfWorkerInitBindingsToBindings(worker.bindings);
-	return createFlatWorkerUploadForm(worker, bindings, {
-		dryRun: options?.dryRun,
-		unsafe: worker.bindings.unsafe,
-	});
-}
-
-export function createFlatWorkerUploadForm(
 	worker: Omit<CfWorkerInit, "bindings" | "rawBindings">,
 	bindings: StartDevWorkerInput["bindings"],
 	options?: {

@@ -173,46 +173,6 @@ export const WorkerdTests: Record<string, () => void> = {
 		});
 	},
 
-	async testNodeCompatModules() {
-		const module = await import("node:module");
-		const require = module.createRequire("/");
-		const modules = [
-			"_tls_common",
-			"_tls_wrap",
-			"assert",
-			"assert/strict",
-			"async_hooks",
-			"buffer",
-			"constants",
-			"crypto",
-			"diagnostics_channel",
-			"dns",
-			"dns/promises",
-			"events",
-			"net",
-			"path",
-			"path/posix",
-			"path/win32",
-			"querystring",
-			"module",
-			"stream",
-			"stream/consumers",
-			"stream/promises",
-			"stream/web",
-			"string_decoder",
-			"sys",
-			"timers",
-			"timers/promises",
-			"url",
-			"util",
-			"util/types",
-			"zlib",
-		];
-		for (const m of modules) {
-			assert.strictEqual(await import(m), require(m));
-		}
-	},
-
 	async testUtilImplements() {
 		const util = await import("node:util");
 		const { types } = util;

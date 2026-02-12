@@ -46,23 +46,23 @@ describe("list", () => {
 			})
 		);
 	});
-	it("should print as json if `--json` flag is specified, without wrangler banner", async ({
+	it("should print valid json if `--json` flag is specified, without wrangler banner", async ({
 		expect,
 	}) => {
 		await runWrangler("d1 list --json");
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    "uuid": "1",
+			    "binding": "A",
 			    "name": "a",
-			    "binding": "A"
+			    "uuid": "1",
 			  },
 			  {
-			    "uuid": "2",
+			    "binding": "B",
 			    "name": "b",
-			    "binding": "B"
-			  }
-			]"
+			    "uuid": "2",
+			  },
+			]
 		`);
 	});
 

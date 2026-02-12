@@ -44,6 +44,7 @@ import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { PagesConfigCache } from "./types";
 import type {
+	Binding,
 	CfModule,
 	Config,
 	DurableObjectBindings,
@@ -95,7 +96,7 @@ const DEFAULT_SCRIPT_PATH = "_worker.js";
  */
 function getPagesEnvironmentVariables(
 	projectName: string
-): Record<string, string> {
+): Record<string, Extract<Binding, { type: "plain_text" }>> {
 	let branch = "local";
 
 	// Attempt to get actual git info to match what happens in Pages CI as accurately as possible.
@@ -130,10 +131,13 @@ function getPagesEnvironmentVariables(
 	}
 
 	return {
-		CF_PAGES: "1",
-		CF_PAGES_BRANCH: branch,
-		CF_PAGES_COMMIT_SHA: commitSha,
-		CF_PAGES_URL: `https://${shortSha}.${projectName}.pages.dev`,
+		CF_PAGES: { type: "plain_text", value: "1" },
+		CF_PAGES_BRANCH: { type: "plain_text", value: branch },
+		CF_PAGES_COMMIT_SHA: { type: "plain_text", value: commitSha },
+		CF_PAGES_URL: {
+			type: "plain_text",
+			value: `https://${shortSha}.${projectName}.pages.dev`,
+		},
 	};
 }
 
@@ -390,7 +394,7 @@ export const pagesDevCommand = createCommand({
 		} = resolvePagesDevServerSettings(config, args);
 
 		const {
-			vars,
+			cliVars,
 			kv_namespaces,
 			do_bindings,
 			d1_databases,
@@ -971,7 +975,7 @@ export const pagesDevCommand = createCommand({
 					host: undefined,
 					localUpstream: undefined,
 					upstreamProtocol: undefined,
-					var: undefined,
+					var: cliVars,
 					define: undefined,
 					alias: undefined,
 					jsxFactory: undefined,
@@ -992,9 +996,8 @@ export const pagesDevCommand = createCommand({
 					compatibilityFlags,
 					nodeCompat: undefined,
 					// CF_PAGES vars as defaults (can be overridden by config vars)
-					defaultVars: pagesEnvVars,
-					// CLI vars override everything
-					vars,
+					defaultBindings: pagesEnvVars,
+					vars: undefined,
 					kv: kv_namespaces,
 					durableObjects: do_bindings,
 					r2: r2_buckets,
@@ -1227,7 +1230,6 @@ function resolvePagesDevServerSettings(
 function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 	Pick<
 		EnvironmentNonInheritable,
-		| "vars"
 		| "kv_namespaces"
 		| "r2_buckets"
 		| "d1_databases"
@@ -1236,16 +1238,17 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 		| "version_metadata"
 	>
 > & {
+	cliVars?: string[];
 	do_bindings?: DurableObjectBindings;
 } {
-	// get environment variables from the [--vars] arg
-	let vars: EnvironmentNonInheritable["vars"] = {};
+	// get environment variables from the [--binding] arg
+	// These are formatted as KEY:VALUE strings (for collectPlainTextVars)
+	// so they will be marked as hidden in the output display
+	let cliVars: string[] | undefined;
 	if (args.binding?.length) {
-		vars = Object.fromEntries(
-			args.binding
-				.map((binding) => binding.toString().split("="))
-				.map(([key, ...values]) => [key, values.join("=")])
-		);
+		cliVars = args.binding
+			.map((binding) => binding.toString().split("="))
+			.map(([key, ...values]) => `${key}:${values.join("=")}`);
 	}
 
 	// get KV bindings from the [--kv] arg
@@ -1396,7 +1399,7 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 	 * that here
 	 */
 	return {
-		vars: vars,
+		cliVars,
 		kv_namespaces: kvNamespaces,
 		d1_databases: d1Databases,
 		r2_buckets: r2Buckets,

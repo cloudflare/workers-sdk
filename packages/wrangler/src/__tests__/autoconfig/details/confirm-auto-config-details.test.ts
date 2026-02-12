@@ -52,8 +52,8 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Static",
 				  },
 				  "outputDir": "./public",
-				  "packageManager": Object {
-				    "dlx": Array [
+				  "packageManager": {
+				    "dlx": [
 				      "npx",
 				    ],
 				    "npx": "npx",
@@ -111,8 +111,8 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Static",
 				  },
 				  "outputDir": "./_public_",
-				  "packageManager": Object {
-				    "dlx": Array [
+				  "packageManager": {
+				    "dlx": [
 				      "npx",
 				    ],
 				    "npx": "npx",
@@ -170,8 +170,8 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Astro",
 				  },
 				  "outputDir": "",
-				  "packageManager": Object {
-				    "dlx": Array [
+				  "packageManager": {
+				    "dlx": [
 				      "npx",
 				    ],
 				    "npx": "npx",
@@ -251,8 +251,8 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Static",
 				  },
 				  "outputDir": "./public",
-				  "packageManager": Object {
-				    "dlx": Array [
+				  "packageManager": {
+				    "dlx": [
 				      "npx",
 				    ],
 				    "npx": "npx",

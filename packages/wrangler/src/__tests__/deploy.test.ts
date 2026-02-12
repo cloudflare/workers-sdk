@@ -27,6 +27,7 @@ import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
+import { WORKFLOW_NOT_FOUND_CODE } from "../deploy/check-workflow-conflicts";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { NpmPackageManager } from "../package-manager";
@@ -10226,6 +10227,34 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should render config vars literally and --var as hidden", async () => {
+				writeWranglerConfig({
+					vars: {
+						CONFIG_VAR: "visible value",
+					},
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				await runWrangler("deploy index.js --var CLI_VAR:from_cli");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                               Resource
+					env.CONFIG_VAR ("visible value")      Environment Variable
+					env.CLI_VAR ("(hidden)")              Environment Variable
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
 			it("should read vars passed as cli arguments", async () => {
 				writeWranglerConfig();
 				writeWorkerSource();
@@ -14660,6 +14689,22 @@ export default{
 			msw.use(handler);
 		}
 
+		beforeEach(() => {
+			msw.use(
+				http.get("*/accounts/:accountId/workflows/:workflowName", () => {
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 10200, message: "Workflow not found" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 404 }
+					);
+				})
+			);
+		});
+
 		it("should deploy a workflow", async () => {
 			writeWranglerConfig({
 				main: "index.js",
@@ -14776,6 +14821,371 @@ export default{
 				  https://this-script.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		describe("workflow conflict detection", () => {
+			function mockGetWorkflow(
+				workflowsByName: Record<
+					string,
+					{
+						id: string;
+						name: string;
+						script_name: string;
+						class_name: string;
+						created_on: string;
+						modified_on: string;
+					} | null
+				>
+			) {
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/workflows/:workflowName",
+						({ params }) => {
+							const workflow = workflowsByName[params.workflowName as string];
+							if (workflow === null || workflow === undefined) {
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{ code: WORKFLOW_NOT_FOUND_CODE, message: "Not found" },
+										],
+										messages: [],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: workflow,
+							});
+						}
+					)
+				);
+			}
+
+			it("should warn when deploying a workflow that belongs to a different worker", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"my-workflow": {
+						id: "existing-workflow-id",
+						name: "my-workflow",
+						script_name: "other-worker",
+						class_name: "SomeClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow("my-workflow");
+
+				mockConfirm({
+					text: "Do you want to continue?",
+					result: true,
+				});
+
+				await runWrangler("deploy");
+
+				expect(std.warn).toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.warn).toContain(
+					'"my-workflow" (currently belongs to "other-worker")'
+				);
+				expect(std.warn).toContain(
+					'Deploying will reassign these workflows to "test-name".'
+				);
+			});
+
+			it("should abort deploy when user declines the workflow conflict confirmation", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"my-workflow": {
+						id: "existing-workflow-id",
+						name: "my-workflow",
+						script_name: "other-worker",
+						class_name: "SomeClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				mockConfirm({
+					text: "Do you want to continue?",
+					result: false,
+				});
+
+				await runWrangler("deploy");
+
+				expect(std.warn).toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.out).not.toContain("Uploaded");
+			});
+
+			it("should not warn when workflow belongs to the same worker", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"my-workflow": {
+						id: "existing-workflow-id",
+						name: "my-workflow",
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow("my-workflow");
+
+				await runWrangler("deploy");
+
+				expect(std.warn).not.toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.out).toContain("Uploaded test-name");
+			});
+
+			it("should not warn when workflow does not exist yet", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"my-workflow": null,
+				});
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow("my-workflow");
+
+				await runWrangler("deploy");
+
+				expect(std.warn).not.toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.out).toContain("Uploaded test-name");
+			});
+
+			it("should warn about multiple conflicting workflows", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW1",
+							name: "workflow-one",
+							class_name: "WorkflowOne",
+						},
+						{
+							binding: "WORKFLOW2",
+							name: "workflow-two",
+							class_name: "WorkflowTwo",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class WorkflowOne extends WorkflowEntrypoint {};
+					export class WorkflowTwo extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"workflow-one": {
+						id: "existing-workflow-1",
+						name: "workflow-one",
+						script_name: "other-worker-a",
+						class_name: "SomeClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+					"workflow-two": {
+						id: "existing-workflow-2",
+						name: "workflow-two",
+						script_name: "other-worker-b",
+						class_name: "AnotherClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow();
+
+				mockConfirm({
+					text: "Do you want to continue?",
+					result: true,
+				});
+
+				await runWrangler("deploy");
+
+				expect(std.warn).toContain(
+					'"workflow-one" (currently belongs to "other-worker-a")'
+				);
+				expect(std.warn).toContain(
+					'"workflow-two" (currently belongs to "other-worker-b")'
+				);
+			});
+
+			it("should skip workflow conflict check in non-interactive mode without --strict", async () => {
+				setIsTTY(false);
+
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				// Note: we don't mock the workflows API endpoint - if it's called, the test will fail
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow("my-workflow");
+
+				await runWrangler("deploy");
+
+				// Should deploy without warning (check was skipped)
+				expect(std.warn).not.toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.out).toContain("Uploaded test-name");
+			});
+
+			it("should abort deploy in non-interactive strict mode when workflow belongs to different worker", async () => {
+				setIsTTY(false);
+
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"my-workflow": {
+						id: "existing-workflow-id",
+						name: "my-workflow",
+						script_name: "other-worker",
+						class_name: "SomeClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				await runWrangler("deploy --strict");
+
+				expect(std.warn).toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.err).toContain(
+					"Aborting the deployment operation because of conflicts"
+				);
+				expect(std.out).not.toContain("Uploaded");
+				expect(process.exitCode).not.toBe(0);
+			});
 		});
 	});
 
