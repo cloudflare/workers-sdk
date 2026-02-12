@@ -1,5 +1,37 @@
 # create-cloudflare
 
+## 2.64.1
+
+### Patch Changes
+
+- [#12529](https://github.com/cloudflare/workers-sdk/pull/12529) [`3777bcd`](https://github.com/cloudflare/workers-sdk/commit/3777bcdc9b9e8c6d6e1c4ffd4d812e02d713c9be) Thanks [@ascorbic](https://github.com/ascorbic)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To      |
+  | ---------------------- | ------ | ------- |
+  | @tanstack/create-start | 0.40.0 | 0.48.10 |
+
+- [#12531](https://github.com/cloudflare/workers-sdk/pull/12531) [`93b177f`](https://github.com/cloudflare/workers-sdk/commit/93b177fb423749f55bccd88a86e4857c27b0aa78) Thanks [@ascorbic](https://github.com/ascorbic)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 7.1.1 | 8.3.0 |
+
+- [#12482](https://github.com/cloudflare/workers-sdk/pull/12482) [`cef3278`](https://github.com/cloudflare/workers-sdk/commit/cef3278a19b27206a1208c66d7b1c036faaea1fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.11.4 | 0.12.1 |
+
+- [#11725](https://github.com/cloudflare/workers-sdk/pull/11725) [`be9745f`](https://github.com/cloudflare/workers-sdk/commit/be9745fc2a663f6da2addf2f784392a21dab9475) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix the experimental SvelteKit implementation incorrectly including the `"@sveltejs/adapter-auto"` dependency in the project's `package.json` file
+
+- [#12528](https://github.com/cloudflare/workers-sdk/pull/12528) [`73e5aa8`](https://github.com/cloudflare/workers-sdk/commit/73e5aa8205fb6310bc780e9952e1a3cae3dca3cf) Thanks [@ascorbic](https://github.com/ascorbic)! - Bump nuxi from 3.30.0 to 3.33.1
+
 ## 2.64.0
 
 ### Minor Changes

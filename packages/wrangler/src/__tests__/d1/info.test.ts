@@ -32,7 +32,7 @@ describe("info", () => {
 			],
 		});
 	});
-	it("should display version when alpha", async ({ expect }) => {
+	it("should display version as valid json when alpha", async ({ expect }) => {
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(
@@ -55,20 +55,22 @@ describe("info", () => {
 			})
 		);
 		await runWrangler("d1 info northwind --json");
-		expect(std.out).toMatchInlineSnapshot(`
-		"{
-		  \\"uuid\\": \\"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06\\",
-		  \\"name\\": \\"northwind\\",
-		  \\"created_at\\": \\"2023-05-23T08:33:54.590Z\\",
-		  \\"version\\": \\"alpha\\",
-		  \\"num_tables\\": 13,
-		  \\"running_in_region\\": \\"WEUR\\",
-		  \\"database_size\\": 33067008
-		}"
-	`);
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "created_at": "2023-05-23T08:33:54.590Z",
+			  "database_size": 33067008,
+			  "name": "northwind",
+			  "num_tables": 13,
+			  "running_in_region": "WEUR",
+			  "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+			  "version": "alpha",
+			}
+		`);
 	});
 
-	it("should not display version when not alpha", async ({ expect }) => {
+	it("should not display version as valid json when not alpha", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(
@@ -107,23 +109,23 @@ describe("info", () => {
 			})
 		);
 		await runWrangler("d1 info northwind --json");
-		expect(std.out).toMatchInlineSnapshot(`
-		"{
-		  \\"uuid\\": \\"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06\\",
-		  \\"name\\": \\"northwind\\",
-		  \\"created_at\\": \\"2023-05-23T08:33:54.590Z\\",
-		  \\"num_tables\\": 13,
-		  \\"running_in_region\\": \\"WEUR\\",
-		  \\"read_replication\\": {
-		    \\"mode\\": \\"disabled\\"
-		  },
-		  \\"database_size\\": 33067008,
-		  \\"read_queries_24h\\": 0,
-		  \\"write_queries_24h\\": 0,
-		  \\"rows_read_24h\\": 0,
-		  \\"rows_written_24h\\": 0
-		}"
-	`);
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "created_at": "2023-05-23T08:33:54.590Z",
+			  "database_size": 33067008,
+			  "name": "northwind",
+			  "num_tables": 13,
+			  "read_queries_24h": 0,
+			  "read_replication": {
+			    "mode": "disabled",
+			  },
+			  "rows_read_24h": 0,
+			  "rows_written_24h": 0,
+			  "running_in_region": "WEUR",
+			  "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+			  "write_queries_24h": 0,
+			}
+		`);
 	});
 
 	it("should pretty print by default, incl. the wrangler banner", async ({
@@ -186,7 +188,7 @@ describe("info", () => {
 			├─┼─┤
 			│ running_in_region │ WEUR │
 			├─┼─┤
-			│ unexpected_object │ {\\"iron\\":\\"man\\"} │
+			│ unexpected_object │ {"iron":"man"} │
 			├─┼─┤
 			│ database_size │ 33.1 MB │
 			├─┼─┤

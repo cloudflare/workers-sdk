@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.9.1",
+	"version": "0.10.0",
 	"description": "Utility package for common Worker operations",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {

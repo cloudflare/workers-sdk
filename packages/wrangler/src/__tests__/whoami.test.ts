@@ -72,10 +72,10 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 					delete headersObject["user-agent"];
 
 					expect(headersObject).toMatchInlineSnapshot(`
-			Object {
-			  "authorization": "Bearer 123456789",
-			}
-		`);
+						{
+						  "authorization": "Bearer 123456789",
+						}
+					`);
 					return HttpResponse.json(createFetchResult([]));
 				},
 				{ once: true }
@@ -346,7 +346,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 
 
-			🎢 Membership roles in \\"Account Two\\": Contact account super admin to change your permissions.
+			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
 			- Test role"
 		`);
 	});
@@ -411,9 +411,54 @@ describe("whoami", () => {
 			  - connectivity:admin
 
 
-			🎢 Membership roles in \\"(redacted)\\": Contact account super admin to change your permissions.
+			🎢 Membership roles in "(redacted)": Contact account super admin to change your permissions.
 			- Test role"
 		`);
+	});
+
+	it("should output JSON with user info when --json flag is used and authenticated", async ({
+		expect,
+	}) => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		await runWrangler("whoami --json");
+		let output;
+		expect(() => (output = JSON.parse(std.out))).not.toThrow();
+		expect(output).toEqual({
+			loggedIn: true,
+			authType: "OAuth Token",
+			email: "user@example.com",
+			accounts: [
+				{ name: "Account One", id: "account-1" },
+				{ name: "Account Two", id: "account-2" },
+				{ name: "Account Three", id: "account-3" },
+			],
+		});
+	});
+
+	it("should output JSON with loggedIn:false and exit with non-zero when --json flag is used and not authenticated", async ({
+		expect,
+	}) => {
+		await expect(runWrangler("whoami --json")).rejects.toThrow();
+		const output = JSON.parse(std.out);
+		expect(output).toEqual({ loggedIn: false });
+	});
+
+	it("should output JSON with API token auth type", async ({ expect }) => {
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
+		msw.use(
+			http.get(
+				"*/user/tokens/verify",
+				() => {
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			)
+		);
+		await runWrangler("whoami --json");
+		const output = JSON.parse(std.out);
+		expect(output.loggedIn).toBe(true);
+		expect(output.authType).toBe("User API Token");
+		expect(output.email).toBe("user@example.com");
 	});
 
 	it("should display membership error on authentication error 10000", async ({

@@ -82,7 +82,7 @@ describe("queues subscription", () => {
 				  -v, --version   Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: \\"kv\\", \\"r2\\", \\"superSlurper\\", \\"vectorize\\", \\"workersAi.model\\", \\"workersBuilds.worker\\", \\"workflows.workflow\\"]
+				      --source         The event source type  [string] [required] [choices: "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 				      --events         Comma-separated list of event types to subscribe to  [string] [required]
 				      --name           Name for the subscription (auto-generated if not provided)  [string]
 				      --enabled        Whether the subscription should be active  [boolean] [default: true]
@@ -338,7 +338,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async ({ expect }) => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			mockGetQueueByNameRequest(expectedQueueName, {
 				queue_id: expectedQueueId,
 				queue_name: expectedQueueName,
@@ -357,45 +357,45 @@ describe("queues subscription", () => {
 			await runWrangler("queues subscription list testQueue --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
-				    \\"id\\": \\"sub-123\\",
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"name\\": \\"Test Subscription 1\\",
-				    \\"enabled\\": true,
-				    \\"source\\": {
-				      \\"type\\": \\"workersBuilds.worker\\",
-				      \\"worker_name\\": \\"my-worker\\"
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "destination": {
+				      "queue_id": "queueId",
+				      "type": "queues.queue",
 				    },
-				    \\"destination\\": {
-				      \\"type\\": \\"queues.queue\\",
-				      \\"queue_id\\": \\"queueId\\"
+				    "enabled": true,
+				    "events": [
+				      "build.completed",
+				      "build.failed",
+				    ],
+				    "id": "sub-123",
+				    "modified_at": "2024-01-01T00:00:00Z",
+				    "name": "Test Subscription 1",
+				    "source": {
+				      "type": "workersBuilds.worker",
+				      "worker_name": "my-worker",
 				    },
-				    \\"events\\": [
-				      \\"build.completed\\",
-				      \\"build.failed\\"
-				    ]
 				  },
 				  {
-				    \\"id\\": \\"sub-456\\",
-				    \\"created_at\\": \\"2024-01-02T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-02T00:00:00Z\\",
-				    \\"name\\": \\"Test Subscription 2\\",
-				    \\"enabled\\": false,
-				    \\"source\\": {
-				      \\"type\\": \\"kv\\"
+				    "created_at": "2024-01-02T00:00:00Z",
+				    "destination": {
+				      "queue_id": "queueId",
+				      "type": "queues.queue",
 				    },
-				    \\"destination\\": {
-				      \\"type\\": \\"queues.queue\\",
-				      \\"queue_id\\": \\"queueId\\"
+				    "enabled": false,
+				    "events": [
+				      "namespace.created",
+				    ],
+				    "id": "sub-456",
+				    "modified_at": "2024-01-02T00:00:00Z",
+				    "name": "Test Subscription 2",
+				    "source": {
+				      "type": "kv",
 				    },
-				    \\"events\\": [
-				      \\"namespace.created\\"
-				    ]
-				  }
-				]"
+				  },
+				]
 			`);
 		});
 
@@ -477,7 +477,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async ({ expect }) => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			mockGetQueueByNameRequest("testQueue", {
 				queue_id: expectedQueueId,
 				queue_name: "testQueue",
@@ -495,26 +495,26 @@ describe("queues subscription", () => {
 			);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  \\"id\\": \\"sub-123\\",
-				  \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				  \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
-				  \\"name\\": \\"Test Subscription 1\\",
-				  \\"enabled\\": true,
-				  \\"source\\": {
-				    \\"type\\": \\"workersBuilds.worker\\",
-				    \\"worker_name\\": \\"my-worker\\"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "created_at": "2024-01-01T00:00:00Z",
+				  "destination": {
+				    "queue_id": "queueId",
+				    "type": "queues.queue",
 				  },
-				  \\"destination\\": {
-				    \\"type\\": \\"queues.queue\\",
-				    \\"queue_id\\": \\"queueId\\"
+				  "enabled": true,
+				  "events": [
+				    "build.completed",
+				    "build.failed",
+				  ],
+				  "id": "sub-123",
+				  "modified_at": "2024-01-01T00:00:00Z",
+				  "name": "Test Subscription 1",
+				  "source": {
+				    "type": "workersBuilds.worker",
+				    "worker_name": "my-worker",
 				  },
-				  \\"events\\": [
-				    \\"build.completed\\",
-				    \\"build.failed\\"
-				  ]
-				}"
+				}
 			`);
 		});
 
@@ -742,21 +742,21 @@ describe("queues subscription", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Updating event subscription...
 				{
-				  \\"id\\": \\"subscription-123\\",
-				  \\"name\\": \\"updated-subscription\\",
-				  \\"source\\": {
-				    \\"type\\": \\"workersBuilds.worker\\",
-				    \\"worker_name\\": \\"my-worker\\"
+				  "id": "subscription-123",
+				  "name": "updated-subscription",
+				  "source": {
+				    "type": "workersBuilds.worker",
+				    "worker_name": "my-worker"
 				  },
-				  \\"destination\\": {
-				    \\"queue_id\\": \\"queue-id-1\\"
+				  "destination": {
+				    "queue_id": "queue-id-1"
 				  },
-				  \\"events\\": [
-				    \\"build.completed\\",
-				    \\"build.failed\\"
+				  "events": [
+				    "build.completed",
+				    "build.failed"
 				  ],
-				  \\"enabled\\": false,
-				  \\"modified_at\\": \\"2023-01-01T00:00:00.000Z\\"
+				  "enabled": false,
+				  "modified_at": "2023-01-01T00:00:00.000Z"
 				}"
 			`);
 		});

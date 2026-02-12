@@ -73,15 +73,15 @@ describe("dataset upsert", () => {
 
 					if (insertRequestCount === 0) {
 						expect(vectors).toMatchInlineSnapshot(`
-"{\\"id\\":\\"b0daca4a-ffd8-4865-926b-e24800af2a2d\\",\\"values\\":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121],\\"metadata\\":{\\"text\\":\\"She sells seashells by the seashore\\"}}
-{\\"id\\":\\"a44706aa-a366-48bc-8cc1-3feffd87d548\\",\\"values\\":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512],\\"metadata\\":{\\"text\\":\\"Peter Piper picked a peck of pickled peppers\\"}}
-{\\"id\\":\\"43cfcb31-07e2-411f-8bf9-f82a95ba8b96\\",\\"values\\":[0.0515,0.7512,0.8612,0.2153,0.1521,0.6812],\\"metadata\\":{\\"text\\":\\"You know New York, you need New York, you know you need unique New York\\"}}"
-`);
+							"{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121],"metadata":{"text":"She sells seashells by the seashore"}}
+							{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}
+							{"id":"43cfcb31-07e2-411f-8bf9-f82a95ba8b96","values":[0.0515,0.7512,0.8612,0.2153,0.1521,0.6812],"metadata":{"text":"You know New York, you need New York, you know you need unique New York"}}"
+						`);
 					} else {
 						expect(vectors).toMatchInlineSnapshot(`
-"{\\"id\\":\\"15cc795d-93d3-416d-9a2a-36fa6fac73da\\",\\"values\\":[0.8525,0.7751,0.6326,0.1512,0.9655,0.6626],\\"metadata\\":{\\"text\\":\\"He threw three free throws\\"}}
-{\\"id\\":\\"15cc795d-93d3-416d-9a2a-36fa6fac73da\\",\\"values\\":[0.6323,0.1111,0.5136,0.7512,0.6632,0.5254],\\"metadata\\":{\\"text\\":\\"Which witch is which?\\",\\"boo\\":false,\\"num\\":100,\\"nested\\":{\\"t\\":\\"abcd\\"}}}"
-`);
+							"{"id":"15cc795d-93d3-416d-9a2a-36fa6fac73da","values":[0.8525,0.7751,0.6326,0.1512,0.9655,0.6626],"metadata":{"text":"He threw three free throws"}}
+							{"id":"15cc795d-93d3-416d-9a2a-36fa6fac73da","values":[0.6323,0.1111,0.5136,0.7512,0.6632,0.5254],"metadata":{"text":"Which witch is which?","boo":false,"num":100,"nested":{"t":"abcd"}}}"
+						`);
 					}
 					insertRequestCount++;
 
@@ -134,15 +134,15 @@ describe("dataset upsert", () => {
 
 					if (insertRequestCount === 0) {
 						expect(vectors).toMatchInlineSnapshot(`
-"{\\"id\\":\\"b0daca4a-ffd8-4865-926b-e24800af2a2d\\",\\"values\\":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121],\\"metadata\\":{\\"text\\":\\"She sells seashells by the seashore\\"}}
-{\\"id\\":\\"a44706aa-a366-48bc-8cc1-3feffd87d548\\",\\"values\\":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512],\\"metadata\\":{\\"text\\":\\"Peter Piper picked a peck of pickled peppers\\"}}
-{\\"id\\":\\"43cfcb31-07e2-411f-8bf9-f82a95ba8b96\\",\\"values\\":[0.0515,0.7512,0.8612,0.2153,0.1521,0.6812],\\"metadata\\":{\\"text\\":\\"You know New York, you need New York, you know you need unique New York\\"}}"
-`);
+							"{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121],"metadata":{"text":"She sells seashells by the seashore"}}
+							{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}
+							{"id":"43cfcb31-07e2-411f-8bf9-f82a95ba8b96","values":[0.0515,0.7512,0.8612,0.2153,0.1521,0.6812],"metadata":{"text":"You know New York, you need New York, you know you need unique New York"}}"
+						`);
 					} else {
 						expect(vectors).toMatchInlineSnapshot(`
-"{\\"id\\":\\"15cc795d-93d3-416d-9a2a-36fa6fac73da\\",\\"values\\":[0.8525,0.7751,0.6326,0.1512,0.9655,0.6626],\\"metadata\\":{\\"text\\":\\"He threw three free throws\\"}}
-{\\"id\\":\\"15cc795d-93d3-416d-9a2a-36fa6fac73da\\",\\"values\\":[0.6323,0.1111,0.5136,0.7512,0.6632,0.5254],\\"metadata\\":{\\"text\\":\\"Which witch is which?\\",\\"boo\\":false,\\"num\\":100,\\"nested\\":{\\"t\\":\\"abcd\\"}}}"
-`);
+							"{"id":"15cc795d-93d3-416d-9a2a-36fa6fac73da","values":[0.8525,0.7751,0.6326,0.1512,0.9655,0.6626],"metadata":{"text":"He threw three free throws"}}
+							{"id":"15cc795d-93d3-416d-9a2a-36fa6fac73da","values":[0.6323,0.1111,0.5136,0.7512,0.6632,0.5254],"metadata":{"text":"Which witch is which?","boo":false,"num":100,"nested":{"t":"abcd"}}}"
+						`);
 					}
 					insertRequestCount++;
 
@@ -197,15 +197,15 @@ describe("dataset upsert", () => {
 
 					if (insertRequestCount === 0) {
 						expect(vectors).toMatchInlineSnapshot(`
-"{\\"id\\":\\"b0daca4a-ffd8-4865-926b-e24800af2a2d\\",\\"values\\":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121],\\"metadata\\":{\\"text\\":\\"She sells seashells by the seashore\\"}}
-{\\"id\\":\\"a44706aa-a366-48bc-8cc1-3feffd87d548\\",\\"values\\":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512],\\"metadata\\":{\\"text\\":\\"Peter Piper picked a peck of pickled peppers\\"}}
-{\\"id\\":\\"43cfcb31-07e2-411f-8bf9-f82a95ba8b96\\",\\"values\\":[0.0515,0.7512,0.8612,0.2153,0.1521,0.6812],\\"metadata\\":{\\"text\\":\\"You know New York, you need New York, you know you need unique New York\\"}}"
-`);
+							"{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121],"metadata":{"text":"She sells seashells by the seashore"}}
+							{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}
+							{"id":"43cfcb31-07e2-411f-8bf9-f82a95ba8b96","values":[0.0515,0.7512,0.8612,0.2153,0.1521,0.6812],"metadata":{"text":"You know New York, you need New York, you know you need unique New York"}}"
+						`);
 					} else {
 						expect(vectors).toMatchInlineSnapshot(`
-"{\\"id\\":\\"15cc795d-93d3-416d-9a2a-36fa6fac73da\\",\\"values\\":[0.8525,0.7751,0.6326,0.1512,0.9655,0.6626],\\"metadata\\":{\\"text\\":\\"He threw three free throws\\"}}
-{\\"id\\":\\"15cc795d-93d3-416d-9a2a-36fa6fac73da\\",\\"values\\":[0.6323,0.1111,0.5136,0.7512,0.6632,0.5254],\\"metadata\\":{\\"text\\":\\"Which witch is which?\\",\\"boo\\":false,\\"num\\":100,\\"nested\\":{\\"t\\":\\"abcd\\"}}}"
-`);
+							"{"id":"15cc795d-93d3-416d-9a2a-36fa6fac73da","values":[0.8525,0.7751,0.6326,0.1512,0.9655,0.6626],"metadata":{"text":"He threw three free throws"}}
+							{"id":"15cc795d-93d3-416d-9a2a-36fa6fac73da","values":[0.6323,0.1111,0.5136,0.7512,0.6632,0.5254],"metadata":{"text":"Which witch is which?","boo":false,"num":100,"nested":{"t":"abcd"}}}"
+						`);
 					}
 					insertRequestCount++;
 

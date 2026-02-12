@@ -1,5 +1,6 @@
 import { cn, Tooltip } from "@cloudflare/kumo";
 import { TableIcon } from "@phosphor-icons/react";
+import { Fragment } from "react";
 import type { StudioResultSet } from "../../../types/studio";
 import type { ReactNode } from "react";
 
@@ -13,16 +14,22 @@ interface StudioSQLiteExplainRow {
 	detail: string;
 }
 
-type StudioSQLiteExplainTree = StudioSQLiteExplainRow & {
+interface StudioSQLiteExplainTree extends StudioSQLiteExplainRow {
 	children: StudioSQLiteExplainTree[];
-};
+}
 
-export function StudioSQLiteExplainTab({ data }: StudioSQLiteExplainProps) {
+export function StudioSQLiteExplainTab({
+	data,
+}: StudioSQLiteExplainProps): JSX.Element {
 	const rows = data.rows as unknown as StudioSQLiteExplainRow[];
-	let tree: StudioSQLiteExplainTree[] = rows.map((r) => ({
-		...r,
-		children: [],
-	}));
+
+	let tree = rows.map(
+		(r) =>
+			({
+				...r,
+				children: [],
+			}) satisfies StudioSQLiteExplainTree
+	);
 
 	const nodeTable = tree.reduce(
 		(a, b) => ({
@@ -32,11 +39,11 @@ export function StudioSQLiteExplainTab({ data }: StudioSQLiteExplainProps) {
 		{} as Record<string, StudioSQLiteExplainTree>
 	);
 
-	tree.forEach((node) => {
+	for (const node of tree) {
 		if (node.parent) {
 			nodeTable[node.parent]?.children.push(node);
 		}
-	});
+	}
 
 	tree = tree.filter((node) => node.parent === 0);
 
@@ -49,15 +56,19 @@ export function StudioSQLiteExplainTab({ data }: StudioSQLiteExplainProps) {
 	);
 }
 
-function ExplainNodes({ data }: { data: StudioSQLiteExplainTree[] }) {
+interface ExplainNodesProps {
+	data: StudioSQLiteExplainTree[];
+}
+
+function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 	return (
 		<>
 			{data.map((row) => {
 				const { label, performance } = describeExplainNode(row.detail);
 
 				return (
-					<>
-						<div key={row.id} className="h-8 flex gap-2 items-center">
+					<Fragment key={row.id}>
+						<div className="h-8 flex gap-2 items-center">
 							<div
 								className={cn("inline-flex border rounded-full", {
 									"bg-green-500": performance === "fast",
@@ -69,10 +80,10 @@ function ExplainNodes({ data }: { data: StudioSQLiteExplainTree[] }) {
 							/>
 							<div>{label}</div>
 						</div>
-						<div key={`${row.id}-children`} className="pl-4 border-l">
+						<div className="pl-4 border-l">
 							<ExplainNodes data={row.children} />
 						</div>
-					</>
+					</Fragment>
 				);
 			})}
 		</>
@@ -92,6 +103,7 @@ type ExplainNodePerformance = "slow" | "medium" | "fast" | "neutral";
  *   - neutral: informational only
  *
  * @param detail - The raw detail text from the EXPLAIN result
+ *
  * @returns Object containing a ReactNode label and performance level
  */
 function describeExplainNode(d: string): {
@@ -111,7 +123,9 @@ function describeExplainNode(d: string): {
 				</div>
 			),
 		};
-	} else if (d.startsWith("CORRELATED ")) {
+	}
+
+	if (d.startsWith("CORRELATED ")) {
 		return {
 			performance: "slow",
 			label: (
@@ -141,7 +155,9 @@ function describeExplainNode(d: string): {
 				</div>
 			),
 		};
-	} else if (d.startsWith("SEARCH ")) {
+	}
+
+	if (d.startsWith("SEARCH ")) {
 		return {
 			performance: "fast",
 			label: (
@@ -151,7 +167,9 @@ function describeExplainNode(d: string): {
 				</div>
 			),
 		};
-	} else if (
+	}
+
+	if (
 		d.startsWith("USE TEMP B-TREE FOR ORDER BY") ||
 		d.startsWith("USE TEMP B-TREE FOR GROUP BY") ||
 		d.startsWith("USE TEMP B-TREE FOR DISTINCT")
@@ -178,16 +196,14 @@ function describeExplainNode(d: string): {
 						</div>
 					}
 				>
-					<strong className="underline cursor-pointer">
-						USE TEMP B-TREE FOR ORDER BY
-					</strong>
+					<strong className="underline cursor-pointer">{d}</strong>
 				</Tooltip>
 			),
 		};
 	}
 
 	return {
-		performance: "neutral",
 		label: <span>{d}</span>,
+		performance: "neutral",
 	};
 }

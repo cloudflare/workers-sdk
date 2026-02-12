@@ -23,7 +23,7 @@ export function getLocalDevVarsForPreview(
 	const dotDevDotVarsEntries = Array.from(Object.entries(dotDevDotVars));
 	if (dotDevDotVarsEntries.length > 0) {
 		const dotDevDotVarsContent = dotDevDotVarsEntries
-			.map(([key, value]) => {
+			.map(([key, { value }]) => {
 				return `${key} = "${value?.toString().replaceAll(`"`, `\\"`)}"\n`;
 			})
 			.join("");

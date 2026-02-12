@@ -150,8 +150,42 @@ describe("versions upload", () => {
 			Your Worker has access to the following bindings:
 			Binding                                   Resource
 			env.KV (xxxx-xxxx-xxxx-xxxx)              KV Namespace
-			env.TEST (\\"test-string\\")                  Environment Variable
-			env.JSON ({\\"abc\\":\\"def\\",\\"bool\\":true})      Environment Variable
+			env.TEST ("test-string")                  Environment Variable
+			env.JSON ({"abc":"def","bool":true})      Environment Variable
+
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
+		`);
+	});
+
+	test("should render config vars literally and --var as hidden", async () => {
+		mockGetScript();
+		mockUploadVersion(false);
+
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			vars: {
+				CONFIG_VAR: "visible value",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --var CLI_VAR:from_cli");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your Worker has access to the following bindings:
+			Binding                               Resource
+			env.CONFIG_VAR ("visible value")      Environment Variable
+			env.CLI_VAR ("(hidden)")              Environment Variable
 
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
@@ -215,7 +249,7 @@ describe("versions upload", () => {
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
 			Binding                       Resource
-			env.TEST (\\"test-string\\")      Environment Variable
+			env.TEST ("test-string")      Environment Variable
 
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
@@ -277,7 +311,7 @@ describe("versions upload", () => {
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
 			Binding                       Resource
-			env.TEST (\\"test-string\\")      Environment Variable
+			env.TEST ("test-string")      Environment Variable
 
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
@@ -735,7 +769,7 @@ describe("versions upload", () => {
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 				  the target environment using the \`-e|--env\` flag.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
-				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+				  string to the flag to target such environment. For example \`--env=""\`.
 
 				"
 			`);

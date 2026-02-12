@@ -21,16 +21,49 @@ import type {
 } from "../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
 
+/**
+ * Represents a row from SQLite's `sqlite_master` system table.
+ * Each row describes a schema object (table, view, trigger, or index).
+ */
+type SQLiteMasterRow = {
+	name: string;
+	sql: string;
+	tbl_name: string;
+	type: string;
+};
+
+/**
+ * SQLite-specific driver implementation. Extends {@link StudioDriverCommon}
+ * with SQLite dialect behaviour including identifier escaping, type hinting,
+ * schema introspection via `sqlite_master`, and EXPLAIN QUERY PLAN support.
+ */
 export class StudioSQLiteDriver extends StudioDriverCommon {
 	override isSupportEditTable = true;
 	override isSupportExplain = true;
 	override isSupportReturningValue = true;
 	override isSupportRowid = true;
 
+	/**
+	 * Escapes a SQL identifier using double-quotes, doubling any existing
+	 * double-quote characters within the identifier.
+	 *
+	 * @param id - The identifier to escape.
+	 *
+	 * @returns The escaped identifier wrapped in double-quotes.
+	 */
 	escapeId(id: string): string {
 		return `"${id.replace(/"/g, `""`)}"`;
 	}
 
+	/**
+	 * Maps a SQLite column type name to a broad type hint category
+	 * (`TEXT`, `NUMBER`, or `BLOB`). Returns `null` when the type
+	 * cannot be determined.
+	 *
+	 * @param type - The column type name (e.g. `VARCHAR`, `INTEGER`, `BLOB`).
+	 *
+	 * @returns The type hint, or `null` if the type is not provided.
+	 */
 	override getColumnTypeHint(type?: string | null): StudioColumnTypeHint {
 		if (!type) {
 			return null;
@@ -65,11 +98,18 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		return "TEXT";
 	}
 
+	/**
+	 * Retrieves all database schemas by querying `sqlite_master`.
+	 * Parses CREATE TABLE scripts to extract column definitions and
+	 * constraints, and filters out internal FTS5 helper tables.
+	 *
+	 * @returns A map of schema names to their schema items (tables, views, triggers).
+	 */
 	async schemas(): Promise<StudioSchemas> {
 		const defaultSchemaName = "main";
 		const result = await this.query(`SELECT * FROM sqlite_master;`);
 
-		let schemaItems: StudioSchemaItem[] = [];
+		let schemaItems = new Array<StudioSchemaItem>();
 		const rows = result.rows as Array<SQLiteMasterRow>;
 
 		for (const row of rows) {
@@ -137,6 +177,19 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		};
 	}
 
+	/**
+	 * Retrieves the full schema definition for a specific table or view,
+	 * including column definitions, constraints, and indexes. Falls back
+	 * to `pragma_table_info` for views or when the CREATE TABLE script
+	 * cannot be parsed.
+	 *
+	 * @param schemaName - The schema containing the table.
+	 * @param tableName - The name of the table or view.
+	 *
+	 * @returns The parsed table schema.
+	 *
+	 * @throws If the table cannot be found or its CREATE TABLE script fails to parse.
+	 */
 	async tableSchema(
 		schemaName: string,
 		tableName: string
@@ -182,9 +235,9 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 			const schema = {
 				...parseSQLiteCreateTableScript(schemaName, createScript),
 				createScript,
+				indexes: indexList,
 				schemaName,
 				type: "table",
-				indexes: indexList,
 			} as StudioTableSchema;
 
 			if (schema.fts5) {
@@ -200,6 +253,16 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		}
 	}
 
+	/**
+	 * Retrieves a simplified table schema using `pragma_table_info` as a
+	 * fallback when the CREATE TABLE script cannot be parsed (e.g. for
+	 * views or virtual tables).
+	 *
+	 * @param schemaName - The schema containing the table.
+	 * @param tableName - The name of the table or view.
+	 *
+	 * @returns A basic table schema with column names, types, and primary keys.
+	 */
 	protected async getFallbackTableSchema(
 		schemaName: string,
 		tableName: string
@@ -211,30 +274,45 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 
 		const rows = result.rows as Array<{
 			name: string;
-			type: string;
 			pk: number;
+			type: string;
 		}>;
 
 		const columns: StudioTableColumn[] = rows.map((row) => ({
 			name: row.name,
-			type: row.type,
 			pk: !!row.pk,
+			type: row.type,
 		}));
 
 		return {
+			autoIncrement: false,
 			columns,
+			pk: columns.filter((col) => col.pk).map((col) => col.name),
 			schemaName,
 			tableName,
-			pk: columns.filter((col) => col.pk).map((col) => col.name),
-			autoIncrement: false,
 		};
 	}
 
+	/**
+	 * Queries rows from a table with pagination, sorting, and optional
+	 * filtering. Automatically injects a `rowid` column for tables that
+	 * lack an explicit primary key, and includes a `rank` column for
+	 * FTS5 virtual tables.
+	 *
+	 * @param schemaName - The schema containing the table.
+	 * @param tableName - The table to query.
+	 * @param options - Pagination, sorting, and filter options.
+	 *
+	 * @returns The query result set and the resolved table schema.
+	 */
 	async selectTable(
 		schemaName: string,
 		tableName: string,
 		options: StudioSelectFromTableOptions
-	): Promise<{ result: StudioResultSet; schema: StudioTableSchema }> {
+	): Promise<{
+		result: StudioResultSet;
+		schema: StudioTableSchema;
+	}> {
 		const schema = await this.tableSchema(schemaName, tableName);
 		const { limit, offset, orderByColumn, orderByDirection } = options;
 
@@ -250,12 +328,12 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		if (canInjectRowId) {
 			schema.columns = [
 				{
-					name: "rowid",
-					type: "INTEGER",
 					constraint: {
 						primaryKey: true,
 						autoIncrement: true,
 					},
+					name: "rowid",
+					type: "INTEGER",
 				},
 				...schema.columns,
 			];
@@ -302,7 +380,13 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 				result,
 				schema: {
 					...schema,
-					columns: [{ name: "rank", type: "INTEGER" }, ...schema.columns],
+					columns: [
+						{
+							name: "rank",
+							type: "INTEGER",
+						},
+						...schema.columns,
+					],
 				},
 			};
 		}
@@ -313,12 +397,31 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		};
 	}
 
+	/**
+	 * Generates SQL ALTER or CREATE TABLE statements from a schema diff.
+	 *
+	 * @param change - The schema change descriptor.
+	 *
+	 * @returns An array of SQL statements to apply the change.
+	 */
 	override generateTableSchemaStatement(
 		change: StudioTableSchemaChange
 	): string[] {
 		return buildSQLiteSchemaDiffStatement(this, change);
 	}
 
+	/**
+	 * Builds an `EXPLAIN QUERY PLAN` statement from the given SQL.
+	 * Parameter placeholders (`?`) are replaced with empty strings so
+	 * SQLite can plan without bindings. Any existing `EXPLAIN` or
+	 * `EXPLAIN ANALYZE` prefix is upgraded to `EXPLAIN QUERY PLAN`.
+	 *
+	 * @param sql - The SQL query to explain.
+	 *
+	 * @returns The EXPLAIN QUERY PLAN SQL string.
+	 *
+	 * @throws If the resulting statement does not start with `EXPLAIN QUERY PLAN`.
+	 */
 	override buildExplainStatement(sql: string): string {
 		// Replaces parameter placeholders with benign literals so SQLite can plan
 		// without bindings (no need to provide real values).
@@ -326,7 +429,12 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 			.filter((t) => t.type !== "COMMENT")
 			.map(
 				(t): StudioSQLToken =>
-					t.value === "?" ? { type: "STRING", value: `''` } : t
+					t.value === "?"
+						? {
+								type: "STRING",
+								value: `''`,
+							}
+						: t
 			);
 
 		const normalizedSql = sanitizedTokens.map((t) => t.value).join("");
@@ -345,10 +453,24 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		return eqpSql;
 	}
 
+	/**
+	 * Returns a custom "Explain" tab for EXPLAIN QUERY PLAN results,
+	 * rendering the query plan in a dedicated UI component. Returns
+	 * `null` for all other statement types.
+	 *
+	 * @param statement - The executed SQL statement.
+	 * @param result - The result set from the query.
+	 *
+	 * @returns A tab descriptor for EQP results, or `null`.
+	 */
 	override getQueryTabOverride(
 		statement: string,
 		result: StudioResultSet
-	): { label: string; icon: Icon; component: JSX.Element } | null {
+	): {
+		component: JSX.Element;
+		icon: Icon;
+		label: string;
+	} | null {
 		if (!statement.toUpperCase().startsWith("EXPLAIN QUERY PLAN ")) {
 			return null;
 		}
@@ -360,10 +482,3 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		};
 	}
 }
-
-type SQLiteMasterRow = {
-	type: string;
-	name: string;
-	tbl_name: string;
-	sql: string;
-};

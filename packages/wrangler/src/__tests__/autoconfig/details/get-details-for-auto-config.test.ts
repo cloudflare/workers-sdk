@@ -2,24 +2,16 @@ import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- it.each patterns */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as details from "../../../autoconfig/details";
 import * as configCache from "../../../config-cache";
 import { clearOutputFilePath } from "../../../output";
-import {
-	getPackageManager,
-	NpmPackageManager,
-	PnpmPackageManager,
-} from "../../../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../../pages/constants";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
-import type { Mock } from "vitest";
 
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
@@ -28,7 +20,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	beforeEach(() => {
 		setIsTTY(true);
-		(getPackageManager as Mock).mockResolvedValue(NpmPackageManager);
 	});
 
 	afterEach(() => {
@@ -36,7 +27,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		clearOutputFilePath();
 	});
 
-	it("should set configured: true if a configPath exists", async () => {
+	it("should set configured: true if a configPath exists", async ({
+		expect,
+	}) => {
 		await expect(
 			details.getDetailsForAutoConfig({
 				wranglerConfig: { configPath: "/tmp" } as Config,
@@ -46,13 +39,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
 	// by exhaustively checking every possible combination
-	it.each(["npm", "pnpm"] as const)(
+	it.for(["npm", "pnpm"] as const)(
 		"should perform basic framework detection (using %s)",
-		async (pm) => {
-			(getPackageManager as Mock).mockResolvedValue(
-				pm === "pnpm" ? PnpmPackageManager : NpmPackageManager
-			);
-
+		async (pm, { expect }) => {
 			await writeFile(
 				"package.json",
 				JSON.stringify({
@@ -61,6 +50,16 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					},
 				})
 			);
+
+			// Create the appropriate lockfile so @netlify/build-info detects the package manager
+			if (pm === "pnpm") {
+				await writeFile("pnpm-lock.yaml", "lockfileVersion: 6.0");
+			} else {
+				await writeFile(
+					"package-lock.json",
+					JSON.stringify({ lockfileVersion: 3 })
+				);
+			}
 
 			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
@@ -75,7 +74,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		}
 	);
 
-	it("should bail when multiple frameworks are detected", async () => {
+	it("should bail when multiple frameworks are detected", async ({
+		expect,
+	}) => {
 		await writeFile(
 			"package.json",
 			JSON.stringify({
@@ -93,7 +94,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 	});
 
-	it("should use npm build instead of framework build if present", async () => {
+	it("should use npm build instead of framework build if present", async ({
+		expect,
+	}) => {
 		await writeFile(
 			"package.json",
 			JSON.stringify({
@@ -111,7 +114,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("an error should be thrown if no output dir can be detected", async () => {
+	it("an error should be thrown if no output dir can be detected", async ({
+		expect,
+	}) => {
 		await expect(
 			details.getDetailsForAutoConfig()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -119,7 +124,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 	});
 
-	it("outputDir should be set to cwd if an index.html file exists", async () => {
+	it("outputDir should be set to cwd if an index.html file exists", async ({
+		expect,
+	}) => {
 		await writeFile("index.html", `<h1>Hello World</h1>`);
 
 		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
@@ -127,7 +134,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("outputDir should find first child directory with an index.html file", async () => {
+	it("outputDir should find first child directory with an index.html file", async ({
+		expect,
+	}) => {
 		await seed({
 			"public/index.html": `<h1>Hello World</h1>`,
 			"random/index.html": `<h1>Hello World</h1>`,
@@ -138,7 +147,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("outputDir should prioritize the project directory over its child directories", async () => {
+	it("outputDir should prioritize the project directory over its child directories", async ({
+		expect,
+	}) => {
 		await seed({
 			"index.html": `<h1>Hello World</h1>`,
 			"public/index.html": `<h1>Hello World</h1>`,
@@ -161,9 +172,12 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		},
 	];
 
-	it.each(workerNamesToTest)(
+	it.for(workerNamesToTest)(
 		"should use the directory name as the worker name for a plain static site, normalizing it if needed (%s)",
-		async ({ rawName: dirname, normalizedName: expectedWorkerName }) => {
+		async (
+			{ rawName: dirname, normalizedName: expectedWorkerName },
+			{ expect }
+		) => {
 			await seed({
 				[`./${dirname}/index.html`]: "<h1>Hello World</h1>",
 			});
@@ -177,9 +191,12 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		}
 	);
 
-	it.each(workerNamesToTest)(
+	it.for(workerNamesToTest)(
 		"should use the project name from the package.json file when available as the worker name, normalizing it if needed (%s)",
-		async ({ rawName: projectName, normalizedName: expectedWorkerName }) => {
+		async (
+			{ rawName: projectName, normalizedName: expectedWorkerName },
+			{ expect }
+		) => {
 			const dirname = `project-${randomUUID()}`;
 			await seed({
 				[`./${dirname}/package.json`]: JSON.stringify({ name: projectName }),
@@ -195,7 +212,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		}
 	);
 
-	it("WRANGLER_CI_OVERRIDE_NAME, when set should override the worker name", async () => {
+	it("WRANGLER_CI_OVERRIDE_NAME, when set should override the worker name", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "overridden-worker-name");
 
 		await seed({
@@ -211,7 +230,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	});
 
 	describe("Pages project detection", () => {
-		it("should detect Pages project when pages_build_output_dir is set in wrangler config", async () => {
+		it("should detect Pages project when pages_build_output_dir is set in wrangler config", async ({
+			expect,
+		}) => {
 			await seed({
 				"public/index.html": `<h1>Hello World</h1>`,
 			});
@@ -228,7 +249,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.name).toBe("Cloudflare Pages");
 		});
 
-		it("should detect Pages project when pages.json cache file exists", async () => {
+		it("should detect Pages project when pages.json cache file exists", async ({
+			expect,
+		}) => {
 			const cacheFolder = join(process.cwd(), ".cache");
 			await seed({
 				"public/index.html": `<h1>Hello World</h1>`,
@@ -253,7 +276,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			}
 		});
 
-		it("should detect Pages project when functions directory exists, no framework is detected and the user confirms that it is", async () => {
+		it("should detect Pages project when functions directory exists, no framework is detected and the user confirms that it is", async ({
+			expect,
+		}) => {
 			await seed({
 				"public/index.html": `<h1>Hello World</h1>`,
 				"functions/hello.js": `
@@ -274,7 +299,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.name).toBe("Cloudflare Pages");
 		});
 
-		it("should not detect Pages project when the user denies that, even it the functions directory exists and no framework is detected", async () => {
+		it("should not detect Pages project when the user denies that, even it the functions directory exists and no framework is detected", async ({
+			expect,
+		}) => {
 			await seed({
 				"public/index.html": `<h1>Hello World</h1>`,
 				"functions/hello.js": `
@@ -295,7 +322,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.name).toBe("Static");
 		});
 
-		it("should not detect Pages project when functions directory exists but a framework is detected", async () => {
+		it("should not detect Pages project when functions directory exists but a framework is detected", async ({
+			expect,
+		}) => {
 			await seed({
 				"functions/hello.js":
 					"export const myFun = () => { console.log('Hello!'); };",

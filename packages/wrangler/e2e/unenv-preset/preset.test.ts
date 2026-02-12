@@ -483,13 +483,13 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// node:inspector and node:inspector/promises
 	[
-		// {
-		// 	name: "inspector enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_inspector_module: true,
-		// 	},
-		// },
+		{
+			name: "inspector enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: true,
+			},
+		},
 		{
 			name: "inspector disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -505,24 +505,24 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_inspector_module: true,
 			},
 		},
-		// {
-		// 	name: "inspector disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_inspector_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_inspector_module: false,
-		// 	},
-		// },
+		{
+			name: "inspector disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_inspector_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: false,
+			},
+		},
 	],
 	// node:sqlite
 	[
-		// {
-		// 	name: "sqlite enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_sqlite_module: true,
-		// 	},
-		// },
+		{
+			name: "sqlite enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_sqlite_module: true,
+			},
+		},
 		{
 			name: "sqlite disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -538,24 +538,24 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_sqlite_module: true,
 			},
 		},
-		// {
-		// 	name: "sqlite disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_sqlite_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_sqlite_module: false,
-		// 	},
-		// },
+		{
+			name: "sqlite disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_sqlite_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_sqlite_module: false,
+			},
+		},
 	],
 	// node:dgram
 	[
-		// {
-		// 	name: "dgram enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_dgram_module: true,
-		// 	},
-		// },
+		{
+			name: "dgram enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: true,
+			},
+		},
 		{
 			name: "dgram disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -571,24 +571,24 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_dgram_module: true,
 			},
 		},
-		// {
-		// 	name: "dgram disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_dgram_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_dgram_module: false,
-		// 	},
-		// },
+		{
+			name: "dgram disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_dgram_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: false,
+			},
+		},
 	],
 	// node:_stream_wrap
 	[
-		// {
-		// 	name: "_stream_wrap enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_stream_wrap_module: true,
-		// 	},
-		// },
+		{
+			name: "_stream_wrap enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_stream_wrap_module: true,
+			},
+		},
 		{
 			name: "_stream_wrap disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -604,14 +604,14 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_stream_wrap_module: true,
 			},
 		},
-		// {
-		// 	name: "_stream_wrap disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_stream_wrap_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_stream_wrap_module: false,
-		// 	},
-		// },
+		{
+			name: "_stream_wrap disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_stream_wrap_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_stream_wrap_module: false,
+			},
+		},
 	],
 	// node:repl (experimental, no default enable date)
 	[
@@ -631,6 +631,27 @@ const localTestConfigs: TestConfig[] = [
 			compatibilityFlags: ["disable_nodejs_repl_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_repl_module: false,
+			},
+		},
+	],
+	// node:v8 (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "v8 enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_v8_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: true,
+			},
+		},
+		{
+			name: "v8 disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_v8_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: false,
 			},
 		},
 	],
@@ -672,7 +693,7 @@ describe.each(localTestConfigs)(
 			}
 
 			return async () => await wrangler.stop();
-		}, 5_000);
+		}, 10_000);
 
 		test.for(Object.keys(WorkerdTests))(
 			"%s",

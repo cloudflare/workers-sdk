@@ -3,8 +3,7 @@ import {
 	detectPackageManager,
 	detectPmMismatch,
 } from "helpers/packageManagers";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { mockPackageManager } from "./mocks";
 import type { C3Context } from "types";
@@ -21,13 +20,13 @@ describe("Package Managers", () => {
 	describe("detectPackageManager", async () => {
 		let pm = detectPackageManager();
 
-		test("npm", () => {
+		test("npm", ({ expect }) => {
 			expect(pm.npm).toBe("npm");
 			expect(pm.npx).toBe("npx");
 			expect(pm.dlx).toEqual(["npx"]);
 		});
 
-		test("pnpm", () => {
+		test("pnpm", ({ expect }) => {
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "pnpm",
 				version: "8.5.1",
@@ -56,7 +55,7 @@ describe("Package Managers", () => {
 			expect(pm.dlx).toEqual(["pnpx"]);
 		});
 
-		test("yarn", () => {
+		test("yarn", ({ expect }) => {
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "yarn",
 				version: "3.5.1",
@@ -83,12 +82,12 @@ describe("Package Managers", () => {
 				mockPackageManager("pnpm");
 			});
 
-			test.each([
+			test.for([
 				["yarn.lock", true],
 				["pnpm-lock.yaml", false],
 				["bun.lock", true],
 				["bun.lockb", true],
-			])("with %s", (file, isMismatch) => {
+			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
 					(path) => !!(path as string).includes(file),
 				);
@@ -103,12 +102,12 @@ describe("Package Managers", () => {
 				mockPackageManager("yarn");
 			});
 
-			test.each([
+			test.for([
 				["yarn.lock", false],
 				["pnpm-lock.yaml", true],
 				["bun.lock", true],
 				["bun.lockb", true],
-			])("with %s", (file, isMismatch) => {
+			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
 					(path) => !!(path as string).includes(file),
 				);
@@ -123,12 +122,12 @@ describe("Package Managers", () => {
 				mockPackageManager("bun");
 			});
 
-			test.each([
+			test.for([
 				["yarn.lock", true],
 				["pnpm-lock.yaml", true],
 				["bun.lock", false],
 				["bun.lockb", false],
-			])("with %s", (file, isMismatch) => {
+			] as const)("with %s", ([file, isMismatch], { expect }) => {
 				vi.mocked(existsSync).mockImplementationOnce(
 					(path) => !!(path as string).includes(file),
 				);

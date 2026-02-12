@@ -13,8 +13,20 @@ import type {
  * Uses the generated API client to execute queries.
  */
 export class LocalD1Connection implements IStudioConnection {
+	/**
+	 * @param databaseId - The unique identifier of the D1 database to connect to.
+	 */
 	constructor(private readonly databaseId: string) {}
 
+	/**
+	 * Executes a single SQL statement by delegating to {@link transaction}.
+	 *
+	 * @param statement - The SQL statement to execute.
+	 *
+	 * @returns The result set produced by the statement.
+	 *
+	 * @throws If no result is returned from the query.
+	 */
 	async query(statement: string): Promise<StudioResultSet> {
 		const [result] = await this.transaction([statement]);
 		if (!result) {
@@ -24,6 +36,17 @@ export class LocalD1Connection implements IStudioConnection {
 		return result;
 	}
 
+	/**
+	 * Executes multiple SQL statements as a single semicolon-joined query
+	 * via the D1 raw database API. Trailing semicolons are stripped from
+	 * individual statements before joining.
+	 *
+	 * @param statements - The SQL statements to execute.
+	 *
+	 * @returns An array of result sets, one per statement.
+	 *
+	 * @throws If the API response is missing result data.
+	 */
 	async transaction(statements: string[]): Promise<StudioResultSet[]> {
 		const trimmedStatements = statements.map((s) =>
 			s.trim().replace(/;+$/, "")
@@ -45,6 +68,14 @@ export class LocalD1Connection implements IStudioConnection {
 		return response.data.result.map((result) => this.transformResult(result));
 	}
 
+	/**
+	 * Transforms a raw D1 API result into a standardised {@link StudioResultSet},
+	 * mapping columns, rows, and execution metadata.
+	 *
+	 * @param result - The raw result object from the D1 API response.
+	 *
+	 * @returns A normalised result set for use by the studio UI.
+	 */
 	private transformResult(result: D1RawResultResponse): StudioResultSet {
 		return {
 			...transformStudioArrayBasedResult({
@@ -71,10 +102,19 @@ export class LocalD1Connection implements IStudioConnection {
  * Filters out internal D1 tables from the schema.
  */
 export class LocalD1Driver extends StudioSQLiteDriver {
+	/**
+	 * @param databaseId - The unique identifier of the D1 database.
+	 */
 	constructor(databaseId: string) {
 		super(new LocalD1Connection(databaseId));
 	}
 
+	/**
+	 * Retrieves the database schemas, filtering out internal D1 metadata
+	 * tables (e.g. `_cf_METADATA`) that should not be exposed to users.
+	 *
+	 * @returns The filtered schema map.
+	 */
 	override async schemas(): Promise<StudioSchemas> {
 		const result = await super.schemas();
 

@@ -6,39 +6,39 @@ describe("experimental_getWranglerCommands", () => {
 		const commandTree = experimental_getWranglerCommands().globalFlags;
 
 		expect(commandTree).toMatchInlineSnapshot(`
-			Object {
-			  "config": Object {
+			{
+			  "config": {
 			    "alias": "c",
 			    "describe": "Path to Wrangler configuration file",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "cwd": Object {
+			  "cwd": {
 			    "describe": "Run as if Wrangler was started in the specified directory instead of the current working directory",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "env": Object {
+			  "env": {
 			    "alias": "e",
 			    "describe": "Environment to use for operations, and for selecting .env and .dev.vars files",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "env-file": Object {
+			  "env-file": {
 			    "array": true,
 			    "describe": "Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "experimental-auto-create": Object {
+			  "experimental-auto-create": {
 			    "alias": "x-auto-create",
 			    "default": true,
 			    "describe": "Automatically provision draft bindings with new resources",
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "experimental-provision": Object {
-			    "alias": Array [
+			  "experimental-provision": {
+			    "alias": [
 			      "x-provision",
 			    ],
 			    "default": true,
@@ -46,7 +46,7 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "v": Object {
+			  "v": {
 			    "alias": "version",
 			    "describe": "Show version number",
 			    "type": "boolean",

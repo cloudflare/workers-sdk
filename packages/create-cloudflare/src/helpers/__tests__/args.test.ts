@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
-import { assert, describe, expect, test, vi } from "vitest";
+import { assert, describe, test, vi } from "vitest";
 import { parseArgs } from "../args";
 
 vi.mock("@cloudflare/cli");
@@ -7,7 +6,7 @@ vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {
 	describe("parseArgs", () => {
-		test("no arguments provide", async () => {
+		test("no arguments provide", async ({ expect }) => {
 			const result = await parseArgs([]);
 
 			assert(result.type === "default");
@@ -15,14 +14,16 @@ describe("Cli", () => {
 			expect(result.args.additionalArgs).toEqual([]);
 		});
 
-		test("parsing the first argument as the projectName", async () => {
+		test("parsing the first argument as the projectName", async ({
+			expect,
+		}) => {
 			const result = await parseArgs(["my-project"]);
 
 			assert(result.type === "default");
 			expect(result.args.projectName).toBe("my-project");
 		});
 
-		test("too many positional arguments provided", async () => {
+		test("too many positional arguments provided", async ({ expect }) => {
 			const result = await parseArgs(["my-project", "123"]);
 
 			assert(result.type === "unknown");
@@ -33,14 +34,16 @@ describe("Cli", () => {
 			);
 		});
 
-		test("not parsing first argument as the projectName if it is after --", async () => {
+		test("not parsing first argument as the projectName if it is after --", async ({
+			expect,
+		}) => {
 			const result = await parseArgs(["--", "my-project"]);
 
 			assert(result.type === "default");
 			expect(result.args.projectName).toBeFalsy();
 		});
 
-		test("parsing optional C3 arguments correctly", async () => {
+		test("parsing optional C3 arguments correctly", async ({ expect }) => {
 			const result = await parseArgs(["--framework", "angular", "--ts=true"]);
 
 			assert(result.type === "default");
@@ -50,7 +53,9 @@ describe("Cli", () => {
 			expect(result.args.additionalArgs).toEqual([]);
 		});
 
-		test("parsing positional + optional C3 arguments correctly", async () => {
+		test("parsing positional + optional C3 arguments correctly", async ({
+			expect,
+		}) => {
 			const result = await parseArgs([
 				"my-project",
 				"--framework",
@@ -68,7 +73,9 @@ describe("Cli", () => {
 			expect(result.args.additionalArgs).toEqual([]);
 		});
 
-		test("parsing optional C3 arguments + additional arguments correctly", async () => {
+		test("parsing optional C3 arguments + additional arguments correctly", async ({
+			expect,
+		}) => {
 			const result = await parseArgs([
 				"--framework",
 				"react",
@@ -90,7 +97,9 @@ describe("Cli", () => {
 			]);
 		});
 
-		test("parsing positional + optional C3 arguments + additional arguments correctly", async () => {
+		test("parsing positional + optional C3 arguments + additional arguments correctly", async ({
+			expect,
+		}) => {
 			const result = await parseArgs([
 				"my-react-project",
 				"--framework",
@@ -114,7 +123,7 @@ describe("Cli", () => {
 		});
 
 		const stringArgs = ["framework", "template", "type", "existing-script"];
-		test.each(stringArgs)("%s requires an argument", async (arg) => {
+		test.for(stringArgs)("%s requires an argument", async (arg, { expect }) => {
 			const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 			await expect(
 				parseArgs(["my-react-project", `--${arg}`]),
@@ -134,7 +143,9 @@ describe("Cli", () => {
 			assert(result.args.templateMode === "git");
 		});
 
-		test("template-mode correctly defaults to be undefined", async () => {
+		test("template-mode correctly defaults to be undefined", async ({
+			expect,
+		}) => {
 			const result = await parseArgs([
 				"--template",
 				"git@github.com:user/repo",

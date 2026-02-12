@@ -47,7 +47,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			`);
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "An error occurred while trying to locally profile the Worker: Error: workerd profiling failed",
 			  "err": "",
 			  "info": "",
@@ -80,7 +80,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			"
 		`);
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -112,7 +112,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			A CPU Profile of your Worker's startup phase has been written to .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph."
 		`);
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",

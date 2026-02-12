@@ -11,6 +11,7 @@ import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
+import { NpmPackageManager } from "../../package-manager";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -44,7 +45,13 @@ vi.mock("../../package-manager", () => ({
 		return {
 			type: "npm",
 			npx: "npx",
+			dlx: ["npx"],
 		};
+	},
+	NpmPackageManager: {
+		type: "npm",
+		npx: "npx",
+		dlx: ["npx"],
 	},
 }));
 
@@ -114,6 +121,7 @@ describe("autoconfig (deploy)", () => {
 					workerName: "my-worker",
 					framework: new Static({ id: "static", name: "Static" }),
 					outputDir: "./public",
+					packageManager: NpmPackageManager,
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -132,6 +140,7 @@ describe("autoconfig (deploy)", () => {
 					configured: true,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
+					packageManager: NpmPackageManager,
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -156,6 +165,7 @@ describe("autoconfig (deploy)", () => {
 					isConfigured: () => false,
 				},
 				outputDir: "public",
+				packageManager: NpmPackageManager,
 			})
 		);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -229,6 +239,7 @@ describe("autoconfig (deploy)", () => {
 							astro: "5",
 						},
 					},
+					packageManager: NpmPackageManager,
 				},
 				{ enableWranglerInstallation: true }
 			);
@@ -246,19 +257,19 @@ describe("autoconfig (deploy)", () => {
 				 - wrangler (devDependency)
 
 				📝 Update package.json scripts:
-				 - \\"deploy\\": \\"echo 'built' > build.txt && wrangler deploy\\"
-				 - \\"preview\\": \\"echo 'built' > build.txt && wrangler dev\\"
+				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
+				 - "preview": "echo 'built' > build.txt && wrangler dev"
 
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"my-worker\\",
-				    \\"compatibility_date\\": \\"2000-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "my-worker",
+				    "compatibility_date": "2000-01-01",
+				    "observability": {
+				      "enabled": true
 				    },
-				    \\"assets\\": {
-				      \\"directory\\": \\"dist\\"
+				    "assets": {
+				      "directory": "dist"
 				    }
 				  }
 
@@ -269,14 +280,14 @@ describe("autoconfig (deploy)", () => {
 
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
-				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				  \\"name\\": \\"my-worker\\",
-				  \\"compatibility_date\\": \\"2000-01-01\\",
-				  \\"observability\\": {
-				    \\"enabled\\": true
+				  "$schema": "node_modules/wrangler/config-schema.json",
+				  "name": "my-worker",
+				  "compatibility_date": "2000-01-01",
+				  "observability": {
+				    "enabled": true
 				  },
-				  \\"assets\\": {
-				    \\"directory\\": \\"dist\\"
+				  "assets": {
+				    "directory": "dist"
 				  }
 				}"
 			`);
@@ -333,6 +344,7 @@ describe("autoconfig (deploy)", () => {
 				framework: new Static({ id: "static", name: "Static" }),
 				workerName: "my-worker",
 				outputDir: "dist",
+				packageManager: NpmPackageManager,
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -351,14 +363,14 @@ describe("autoconfig (deploy)", () => {
 
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"edited-worker-name\\",
-				    \\"compatibility_date\\": \\"2000-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "edited-worker-name",
+				    "compatibility_date": "2000-01-01",
+				    "observability": {
+				      "enabled": true
 				    },
-				    \\"assets\\": {
-				      \\"directory\\": \\"dist\\"
+				    "assets": {
+				      "directory": "dist"
 				    }
 				  }
 				"
@@ -366,14 +378,14 @@ describe("autoconfig (deploy)", () => {
 
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
-				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				  \\"name\\": \\"edited-worker-name\\",
-				  \\"compatibility_date\\": \\"2000-01-01\\",
-				  \\"observability\\": {
-				    \\"enabled\\": true
+				  "$schema": "node_modules/wrangler/config-schema.json",
+				  "name": "edited-worker-name",
+				  "compatibility_date": "2000-01-01",
+				  "observability": {
+				    "enabled": true
 				  },
-				  \\"assets\\": {
-				    \\"directory\\": \\"dist\\"
+				  "assets": {
+				    "directory": "dist"
 				  }
 				}"
 			`);
@@ -395,6 +407,7 @@ describe("autoconfig (deploy)", () => {
 				configured: false,
 				outputDir: process.cwd(),
 				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
 			});
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
@@ -423,6 +436,7 @@ describe("autoconfig (deploy)", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					workerName: "my-worker",
 					outputDir: "",
+					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[AssertionError: The Output Directory is unexpectedly missing]`
@@ -448,6 +462,7 @@ describe("autoconfig (deploy)", () => {
 					},
 					workerName: "my-worker",
 					outputDir: "dist",
+					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.]`
@@ -473,6 +488,7 @@ describe("autoconfig (deploy)", () => {
 					},
 					workerName: "my-worker",
 					outputDir: "dist",
+					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The detected framework ("Some Unsupported Framework") cannot be automatically configured.]`

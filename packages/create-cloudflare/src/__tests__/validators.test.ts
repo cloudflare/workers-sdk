@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import {
 	isAllowedExistingFile,
 	validateProjectDirectory,
@@ -10,14 +9,14 @@ describe("validators", () => {
 	describe("validateProjectDirectory", () => {
 		let args = {};
 
-		test("allow valid project names", async () => {
+		test("allow valid project names", async ({ expect }) => {
 			expect(validateProjectDirectory("foo", args)).toBeUndefined();
 			expect(validateProjectDirectory("foo/bar/baz", args)).toBeUndefined();
 			expect(validateProjectDirectory("./foobar", args)).toBeUndefined();
 			expect(validateProjectDirectory("f".repeat(58), args)).toBeUndefined();
 		});
 
-		test("disallow invalid project names", async () => {
+		test("disallow invalid project names", async ({ expect }) => {
 			// Invalid pages project names should return an error
 			expect(validateProjectDirectory("foobar-", args)).not.toBeUndefined();
 			expect(validateProjectDirectory("-foobar-", args)).not.toBeUndefined();
@@ -27,12 +26,14 @@ describe("validators", () => {
 			).not.toBeUndefined();
 		});
 
-		test("disallow existing, non-empty directories", async () => {
+		test("disallow existing, non-empty directories", async ({ expect }) => {
 			// Existing, non-empty directories should return an error
 			expect(validateProjectDirectory(".", args)).not.toBeUndefined();
 		});
 
-		test("Relax validation when --existing-script is passed", async () => {
+		test("Relax validation when --existing-script is passed", async ({
+			expect,
+		}) => {
 			args = { existingScript: "FooBar" };
 			expect(validateProjectDirectory("foobar-", args)).toBeUndefined();
 			expect(validateProjectDirectory("FooBar", args)).toBeUndefined();
@@ -49,12 +50,12 @@ describe("validators", () => {
 			".git",
 			".DS_Store",
 		];
-		test.each(allowed)("%s", (val) => {
+		test.for(allowed)("%s", (val, { expect }) => {
 			expect(isAllowedExistingFile(val)).toBe(true);
 		});
 
 		const disallowed = ["foobar", "potato"];
-		test.each(disallowed)("%s", (val) => {
+		test.for(disallowed)("%s", (val, { expect }) => {
 			expect(isAllowedExistingFile(val)).toBe(false);
 		});
 	});
@@ -71,7 +72,7 @@ describe("validators", () => {
 			"gitlab:user/my-template",
 		];
 
-		test.each(allowed)("%s", (val) => {
+		test.for(allowed)("%s", (val, { expect }) => {
 			expect(validateTemplateUrl(val)).toBeUndefined();
 		});
 
@@ -81,7 +82,7 @@ describe("validators", () => {
 			"ftp://foo.com/user/my-template",
 		];
 
-		test.each(disallowed)("%s", (val) => {
+		test.for(disallowed)("%s", (val, { expect }) => {
 			expect(validateTemplateUrl(val)).toEqual(expect.any(String));
 		});
 	});

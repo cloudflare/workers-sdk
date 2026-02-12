@@ -223,6 +223,83 @@ describe("r2 sql", () => {
 			).rejects.toThrow("Received a malformed response from the API");
 		});
 
+		it("should handle nested objects (as JSON with null converted to '') in query results", async () => {
+			const mockResponse = {
+				success: true,
+				errors: [],
+				messages: [],
+				result: {
+					request_id: "dqe-prod-test",
+					schema: [
+						{
+							name: "approx_top_k(value, Int64(3))",
+							descriptor: {
+								type: {
+									name: "list",
+									item: {
+										type: {
+											name: "struct",
+											fields: [
+												{
+													type: { name: "int64" },
+													nullable: true,
+													name: "value",
+												},
+												{
+													type: { name: "uint64" },
+													nullable: false,
+													name: "count",
+												},
+											],
+										},
+										nullable: true,
+									},
+								},
+								nullable: true,
+							},
+						},
+					],
+					rows: [
+						{
+							"approx_top_k(value, Int64(3))": [
+								{ value: 0, count: 961 },
+								{ value: 1, count: 485 },
+								{ value: 2, count: null },
+							],
+						},
+					],
+					metrics: {
+						r2_requests_count: 6,
+						files_scanned: 3,
+						bytes_scanned: 62878,
+					},
+				},
+			};
+
+			msw.use(
+				http.post(
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					async () => {
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+
+			const startOfTable = std.out.indexOf("┌");
+			const endOfTable = std.out.indexOf("┘") + 1;
+
+			expect(std.out.slice(startOfTable, endOfTable)).toMatchInlineSnapshot(`
+				"┌─┐
+				│ approx_top_k(value, Int64(3)) │
+				├─┤
+				│ [{"value":0,"count":961},{"value":1,"count":485},{"value":2,"count":""}] │
+				└─┘"
+			`);
+		});
+
 		it("should handle null values in query results", async () => {
 			const mockResponse = {
 				success: true,

@@ -6,7 +6,6 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
-	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 	isUnsafeBindingType,
 } from "../api/startDevWorker/utils";
@@ -16,7 +15,6 @@ import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	CfSendEmailBindings,
 	CfTailConsumer,
-	CfWorkerInit,
 	ContainerApp,
 } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
@@ -39,29 +37,10 @@ type PrintContext = {
 };
 
 /**
- * Print all the bindings a worker using a given config would have access to
- */
-export function printBindings(
-	bindings: Partial<CfWorkerInit["bindings"]>,
-	tailConsumers: CfTailConsumer[] = [],
-	streamingTailConsumers: CfTailConsumer[] = [],
-	containers: ContainerApp[] = [],
-	context: Omit<PrintContext, "unsafeMetadata"> = {}
-) {
-	return printFlatBindings(
-		convertCfWorkerInitBindingsToBindings(bindings),
-		tailConsumers,
-		streamingTailConsumers,
-		containers,
-		{ ...context, unsafeMetadata: bindings.unsafe?.metadata }
-	);
-}
-
-/**
  * Print all the bindings a worker would have access to.
  * Accepts StartDevWorkerInput["bindings"] format
  */
-export function printFlatBindings(
+export function printBindings(
 	bindings: StartDevWorkerInput["bindings"],
 	tailConsumers: CfTailConsumer[] = [],
 	streamingTailConsumers: CfTailConsumer[] = [],
@@ -634,9 +613,13 @@ export function printFlatBindings(
 
 	if (vars.length > 0) {
 		output.push(
-			...vars.map(({ binding, type: varType, value: varValue }) => {
+			...vars.map((variable) => {
+				const { binding, type: varType, value: varValue } = variable;
 				let parsedValue;
-				if (varType === "plain_text") {
+				/**
+				 * @see packages/workers-utils/src/types.ts for details on the hidden property
+				 */
+				if (varType === "plain_text" && variable.hidden !== true) {
 					parsedValue = `"${truncate(varValue)}"`;
 				} else if (varType === "json") {
 					parsedValue = truncate(JSON.stringify(varValue));

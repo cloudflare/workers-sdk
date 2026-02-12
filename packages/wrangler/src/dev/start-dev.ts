@@ -7,7 +7,7 @@ import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
-import { convertCfWorkerInitBindingsToBindings } from "../api/startDevWorker/utils";
+import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
 import isInteractive from "../is-interactive";
@@ -19,6 +19,7 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
+import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
@@ -223,36 +224,9 @@ async function setupDevEnv(
 			bindings: {
 				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
 				...collectPlainTextVars(args.var),
-				...convertCfWorkerInitBindingsToBindings({
-					kv_namespaces: args.kv,
-					vars: args.vars,
-					send_email: undefined,
-					wasm_modules: undefined,
-					text_blobs: undefined,
-					browser: undefined,
-					ai: args.ai,
-					images: undefined,
-					version_metadata: args.version_metadata,
-					data_blobs: undefined,
-					durable_objects: { bindings: args.durableObjects ?? [] },
-					workflows: undefined,
-					queues: undefined,
-					r2_buckets: args.r2,
-					d1_databases: args.d1Databases,
-					vectorize: undefined,
-					hyperdrive: undefined,
-					secrets_store_secrets: undefined,
-					unsafe_hello_world: undefined,
-					services: args.services,
-					analytics_engine_datasets: undefined,
-					dispatch_namespaces: undefined,
-					mtls_certificates: undefined,
-					pipelines: undefined,
-					logfwdr: undefined,
-					unsafe: undefined,
-					assets: undefined,
-				}),
+				...convertStartDevOptionsToBindings(args as StartDevOptionsBindings),
 			},
+			defaultBindings: args.defaultBindings,
 			dev: {
 				auth,
 				remote: args.enablePagesAssetsServiceBinding
