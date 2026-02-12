@@ -956,10 +956,6 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testWorkerThreads() {
 		const workerThreads = await import("node:worker_threads");
 
-		// Check if native workerd implementation is enabled via the compatibility flag
-		const isNative =
-			getRuntimeFlagValue("enable_nodejs_worker_threads_module") === true;
-
 		// Common exports available in both unenv stub and native workerd
 		for (const target of [workerThreads, workerThreads.default]) {
 			assertTypeOfProperties(target, {
@@ -975,6 +971,7 @@ export const WorkerdTests: Record<string, () => void> = {
 				postMessageToThread: "function",
 				isInternalThread: "boolean",
 				BroadcastChannel: "function",
+				MessageChannel: "function",
 				Worker: "function",
 			});
 
@@ -1014,15 +1011,14 @@ export const WorkerdTests: Record<string, () => void> = {
 			"getEnvironmentData should return the set value"
 		);
 
-		// Test MessageChannel creates ports using native Web API
-		// (MessageChannel is a native Web API available in workerd with recent compatibility dates)
-		if (typeof MessageChannel !== "undefined") {
-			const channel = new MessageChannel();
-			assert.ok(channel.port1, "MessageChannel should have port1");
-			assert.ok(channel.port2, "MessageChannel should have port2");
-		}
+		// Test MessageChannel creates ports
+		const channel = new workerThreads.MessageChannel();
+		assert.ok(channel.port1, "MessageChannel should have port1");
+		assert.ok(channel.port2, "MessageChannel should have port2");
 
 		// Test behavioral differences between native workerd and unenv stub
+		const isNative =
+			getRuntimeFlagValue("enable_nodejs_worker_threads_module") === true;
 		if (isNative) {
 			// Native workerd: Worker and BroadcastChannel constructors throw
 			assert.throws(
