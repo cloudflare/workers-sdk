@@ -2114,9 +2114,6 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.158.0
         version: 1.158.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      lodash:
-        specifier: ^4.17.23
-        version: 4.17.23
       react:
         specifier: ^19.2.0
         version: 19.2.1
@@ -2142,9 +2139,6 @@ importers:
       '@tanstack/router-plugin':
         specifier: ^1.158.0
         version: 1.158.0(@tanstack/react-router@1.158.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
-      '@types/lodash':
-        specifier: ^4.17.23
-        version: 4.17.23
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.10
@@ -8554,9 +8548,6 @@ packages:
 
   '@types/lodash@4.14.198':
     resolution: {integrity: sha512-trNJ/vtMZYMLhfN45uLq4ShQSw0/S7xCTLLVM+WM1rmFpba/VS42jVUgaO3w/NOLiWR/09lnYk0yMaA/atdIsg==}
-
-  '@types/lodash@4.17.23':
-    resolution: {integrity: sha512-RDvF6wTulMPjrNdCoYRC8gNR880JNGT8uB+REUpC2Ns4pRqQJhGz90wh7rgdXDPpCczF3VGktDuFGVnz8zP7HA==}
 
   '@types/mime-types@3.0.1':
     resolution: {integrity: sha512-xRMsfuQbnRq1Ef+C+RKaENOxXX87Ygl38W1vDfPHRku02TgQr+Qd8iivLtAMcR0KF5/29xlnFihkTlbqFrGOVQ==}
@@ -19261,8 +19252,6 @@ snapshots:
   '@types/json5@0.0.29': {}
 
   '@types/lodash@4.14.198': {}
-
-  '@types/lodash@4.17.23': {}
 
   '@types/mime-types@3.0.1': {}
 
