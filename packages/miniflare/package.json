@@ -44,7 +44,7 @@
 		"test": "vitest run",
 		"posttest": "node -r esbuild-register ../../tools/clean/clean.ts ./.tmp",
 		"test:ci": "pnpm run test",
-		"types:build": "node scripts/types.mjs tsconfig.json --bundle && node scripts/types.mjs src/workers/tsconfig.json"
+		"types:build": "pnpm generate:types && node scripts/types.mjs tsconfig.json --bundle && node scripts/types.mjs src/workers/tsconfig.json"
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
