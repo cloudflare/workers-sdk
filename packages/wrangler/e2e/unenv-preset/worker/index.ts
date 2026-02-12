@@ -860,6 +860,34 @@ export const WorkerdTests: Record<string, () => void> = {
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
 		);
 	},
+
+	async testV8() {
+		const v8 = await import("node:v8");
+
+		for (const target of [v8, v8.default]) {
+			assertTypeOfProperties(target, {
+				getHeapSnapshot: "function",
+				getHeapStatistics: "function",
+				getHeapSpaceStatistics: "function",
+				getHeapCodeStatistics: "function",
+				setFlagsFromString: "function",
+				Serializer: "function",
+				Deserializer: "function",
+				DefaultSerializer: "function",
+				DefaultDeserializer: "function",
+				deserialize: "function",
+				takeCoverage: "function",
+				stopCoverage: "function",
+				serialize: "function",
+				writeHeapSnapshot: "function",
+				promiseHooks: "object",
+				startupSnapshot: "object",
+				setHeapSnapshotNearHeapLimit: "function",
+				GCProfiler: "function",
+				cachedDataVersionTag: "function",
+			});
+		}
+	},
 };
 
 /**
