@@ -80,6 +80,7 @@ export function getCloudflarePreset({
 	const streamWrapOverrides = getStreamWrapOverrides(compat);
 	const replOverrides = getReplOverrides(compat);
 	const processOverrides = getProcessOverrides(compat);
+	const v8Overrides = getV8Overrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -101,6 +102,7 @@ export function getCloudflarePreset({
 		...streamWrapOverrides.nativeModules,
 		...replOverrides.nativeModules,
 		...processOverrides.nativeModules,
+		...v8Overrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -122,6 +124,7 @@ export function getCloudflarePreset({
 		...streamWrapOverrides.hybridModules,
 		...replOverrides.hybridModules,
 		...processOverrides.hybridModules,
+		...v8Overrides.hybridModules,
 	];
 
 	return {
@@ -899,4 +902,40 @@ function hasFetchIterableFixes({
 		!adjustmentDisabledByFlag;
 
 	return adjustmentEnabled;
+}
+
+/**
+ * Returns the overrides for `node:v8` (unenv or workerd)
+ *
+ * The native v8 implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_v8_module" flag
+ * - can be disabled with the "disable_nodejs_v8_module" flag
+ */
+function getV8Overrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_v8_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_v8_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `v8` module from workerd
+	return enabled
+		? {
+				nativeModules: ["v8"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
 }
