@@ -4,6 +4,84 @@ export type ClientOptions = {
 	baseUrl: `${string}://${string}/cdn-cgi/explorer/api` | (string & {});
 };
 
+/**
+ * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+ */
+export type WorkersCursor = string;
+
+export type WorkersObject = {
+	/**
+	 * Whether the Durable Object has stored data.
+	 */
+	readonly hasStoredData?: boolean;
+	/**
+	 * ID of the Durable Object.
+	 */
+	readonly id?: string;
+};
+
+/**
+ * ID of the namespace.
+ */
+export type WorkersSchemasId = string;
+
+export type WorkersApiResponseCommonFailure = {
+	errors: WorkersMessages;
+	messages: WorkersMessages;
+	result: null;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: false;
+};
+
+export type WorkersMessages = Array<{
+	code: number;
+	documentation_url?: string;
+	message: string;
+	source?: {
+		pointer?: string;
+	};
+}>;
+
+export type WorkersNamespace = {
+	class?: string;
+	readonly id?: string;
+	name?: string;
+	script?: string;
+	use_sqlite?: boolean;
+};
+
+export type WorkersApiResponseCollection = WorkersApiResponseCommon & {
+	result_info?: {
+		/**
+		 * Total number of results for the requested service.
+		 */
+		count?: number;
+		/**
+		 * Current page within paginated list of results.
+		 */
+		page?: number;
+		/**
+		 * Number of results per page of results.
+		 */
+		per_page?: number;
+		/**
+		 * Total results available without any search parameters.
+		 */
+		total_count?: number;
+	};
+};
+
+export type WorkersApiResponseCommon = {
+	errors: WorkersMessages;
+	messages: WorkersMessages;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: true;
+};
+
 export type D1RawResultResponse = {
 	meta?: D1QueryMeta;
 	results?: {
@@ -286,6 +364,13 @@ export type WorkersKvResultInfo = {
 	 * Total results available without any search parameters.
 	 */
 	total_count?: number;
+};
+
+export type WorkersNamespaceWritable = {
+	class?: string;
+	name?: string;
+	script?: string;
+	use_sqlite?: boolean;
 };
 
 export type D1DatabaseResponseWritable = {
@@ -619,3 +704,99 @@ export type CloudflareD1RawDatabaseQueryResponses = {
 
 export type CloudflareD1RawDatabaseQueryResponse =
 	CloudflareD1RawDatabaseQueryResponses[keyof CloudflareD1RawDatabaseQueryResponses];
+
+export type DurableObjectsNamespaceListNamespacesData = {
+	body?: never;
+	path?: never;
+	query?: {
+		/**
+		 * Current page.
+		 */
+		page?: number;
+		/**
+		 * Items per-page.
+		 */
+		per_page?: number;
+	};
+	url: "/workers/durable_objects/namespaces";
+};
+
+export type DurableObjectsNamespaceListNamespacesErrors = {
+	/**
+	 * List Namespaces response failure.
+	 */
+	"4XX": WorkersApiResponseCollection & {
+		result?: Array<WorkersNamespace>;
+	} & WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceListNamespacesError =
+	DurableObjectsNamespaceListNamespacesErrors[keyof DurableObjectsNamespaceListNamespacesErrors];
+
+export type DurableObjectsNamespaceListNamespacesResponses = {
+	/**
+	 * List Namespaces response.
+	 */
+	200: WorkersApiResponseCollection & {
+		result?: Array<WorkersNamespace>;
+	};
+};
+
+export type DurableObjectsNamespaceListNamespacesResponse =
+	DurableObjectsNamespaceListNamespacesResponses[keyof DurableObjectsNamespaceListNamespacesResponses];
+
+export type DurableObjectsNamespaceListObjectsData = {
+	body?: never;
+	path: {
+		id: WorkersSchemasId;
+	};
+	query?: {
+		/**
+		 * The number of objects to return. The cursor attribute may be used to iterate over the next batch of objects if there are more than the limit.
+		 */
+		limit?: number;
+		/**
+		 * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+		 */
+		cursor?: string;
+	};
+	url: "/workers/durable_objects/namespaces/{id}/objects";
+};
+
+export type DurableObjectsNamespaceListObjectsErrors = {
+	/**
+	 * List Objects response failure.
+	 */
+	"4XX": WorkersApiResponseCollection & {
+		result?: Array<WorkersObject>;
+		result_info?: {
+			/**
+			 * Total results returned based on your list parameters.
+			 */
+			count?: number;
+			cursor?: WorkersCursor;
+		};
+	} & WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceListObjectsError =
+	DurableObjectsNamespaceListObjectsErrors[keyof DurableObjectsNamespaceListObjectsErrors];
+
+export type DurableObjectsNamespaceListObjectsResponses = {
+	/**
+	 * List Objects response.
+	 */
+	200: WorkersApiResponseCollection & {
+		result?: Array<WorkersObject>;
+		result_info?: {
+			/**
+			 * Total results returned based on your list parameters.
+			 */
+			count?: number;
+			cursor?: WorkersCursor;
+		};
+	};
+};
+
+export type DurableObjectsNamespaceListObjectsResponse =
+	DurableObjectsNamespaceListObjectsResponses[keyof DurableObjectsNamespaceListObjectsResponses];
