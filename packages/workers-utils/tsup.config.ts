@@ -20,6 +20,6 @@ export default defineConfig(() => [
 		define: {
 			"process.env.NODE_ENV": `'${"production"}'`,
 		},
-		external: ["@cloudflare/*", "vitest", "msw", "undici"],
+		external: ["@cloudflare/*", "vitest", "msw", "undici", "esbuild"],
 	},
 ]);

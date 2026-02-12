@@ -677,11 +677,19 @@ export class ConfigController extends Controller {
 					...workerRest
 				} = workerConfig;
 
-				// workerRest goes first (defaults), then input overrides.
+				// Strip undefined values from input so they don't clobber
+				// defined values from the programmatic config (e.g. entrypoint).
+				// Without this, `{ entrypoint: "src/index.ts", ...{ entrypoint: undefined } }`
+				// would result in `{ entrypoint: undefined }`.
+				const definedInput = Object.fromEntries(
+					Object.entries(input).filter(([_, v]) => v !== undefined)
+				) as Partial<StartDevWorkerInput>;
+
+				// workerConfig goes first (defaults), then CLI/input overrides (only defined values).
 				// Fields needing special merge (deep merge or rename) are handled explicitly.
 				resolvedInput = {
 					...workerRest,
-					...input,
+					...definedInput,
 					bindings: {
 						...workerEnv,
 						...input.bindings,

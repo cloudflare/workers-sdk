@@ -44,7 +44,8 @@
 		"./config": {
 			"types": "./wrangler-dist/config.d.mts",
 			"import": "./wrangler-dist/config.mjs"
-		}
+		},
+		"./package.json": "./package.json"
 	},
 	"main": "wrangler-dist/cli.js",
 	"types": "wrangler-dist/cli.d.ts",
