@@ -8,14 +8,16 @@ import {
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import type {
-	CfWorkerInit,
 	Config,
+	ConfigBindingFieldName,
 	RawConfig,
 } from "@cloudflare/workers-utils";
 
-// All config keys that follow a "regular" binding shape (Binding[]) and so can be modified using `updateConfigFile`.
+// Config binding field names that follow a "regular" binding shape (Binding[])
+// and can be modified using `updateConfigFile`. Excludes singleton bindings,
+// record-style bindings, and nested bindings like durable_objects.
 type ValidKeys = Exclude<
-	keyof CfWorkerInit["bindings"],
+	ConfigBindingFieldName,
 	| "ai"
 	| "browser"
 	| "vars"

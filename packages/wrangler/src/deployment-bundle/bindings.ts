@@ -7,7 +7,7 @@ import {
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { convertCfWorkerInitBindingsToBindings } from "../api/startDevWorker/utils";
+import { convertConfigToBindings } from "../api/startDevWorker/utils";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
@@ -22,14 +22,13 @@ import {
 	getR2Bucket,
 	listR2Buckets,
 } from "../r2/helpers/bucket";
-import { printFlatBindings } from "../utils/print-bindings";
+import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	CfD1Database,
 	CfKvNamespace,
 	CfR2Bucket,
-	CfWorkerInit,
 	ComplianceConfig,
 	Config,
 	RawConfig,
@@ -41,54 +40,14 @@ export function getBindings(
 	options?: {
 		pages?: boolean;
 	}
-): CfWorkerInit["bindings"] {
-	return {
-		kv_namespaces: config?.kv_namespaces,
-		send_email: options?.pages ? undefined : config?.send_email,
-		vars: config?.vars,
-		wasm_modules: options?.pages ? undefined : config?.wasm_modules,
-		browser: config?.browser,
-		ai: config?.ai,
-		images: config?.images,
-		version_metadata: config?.version_metadata,
-		text_blobs: options?.pages ? undefined : config?.text_blobs,
-		data_blobs: options?.pages ? undefined : config?.data_blobs,
-		durable_objects: config?.durable_objects,
-		workflows: config?.workflows,
-		queues: config?.queues.producers?.map((producer) => {
-			return { binding: producer.binding, queue_name: producer.queue };
-		}),
-		r2_buckets: config?.r2_buckets,
-		d1_databases: config?.d1_databases,
-		vectorize: config?.vectorize,
-		hyperdrive: config?.hyperdrive,
-		secrets_store_secrets: config?.secrets_store_secrets,
-		services: config?.services,
-		analytics_engine_datasets: config?.analytics_engine_datasets,
-		dispatch_namespaces: options?.pages
-			? undefined
-			: config?.dispatch_namespaces,
-		mtls_certificates: config?.mtls_certificates,
-		pipelines: options?.pages ? undefined : config?.pipelines,
-		logfwdr: options?.pages ? undefined : config?.logfwdr,
-		assets: options?.pages
-			? undefined
-			: config?.assets?.binding
-				? { binding: config?.assets?.binding }
-				: undefined,
-		unsafe: options?.pages
-			? undefined
-			: {
-					bindings: config?.unsafe.bindings,
-					metadata: config?.unsafe.metadata,
-					capnp: config?.unsafe.capnp,
-				},
-		unsafe_hello_world: options?.pages ? undefined : config?.unsafe_hello_world,
-		ratelimits: config?.ratelimits,
-		worker_loaders: config?.worker_loaders,
-		vpc_services: config?.vpc_services,
-		media: config?.media,
-	};
+): NonNullable<StartDevWorkerInput["bindings"]> {
+	if (!config) {
+		return {};
+	}
+	return convertConfigToBindings(config, {
+		usePreviewIds: false,
+		pages: options?.pages,
+	});
 }
 
 export type Settings = {
@@ -547,7 +506,7 @@ async function collectPendingResources(
 	);
 }
 
-export async function provisionBindingsFromInput(
+export async function provisionBindings(
 	bindings: StartDevWorkerInput["bindings"],
 	accountId: string,
 	scriptName: string,
@@ -577,7 +536,7 @@ export async function provisionBindingsFromInput(
 		}
 		logger.log();
 
-		printFlatBindings(
+		printBindings(
 			Object.fromEntries(
 				pendingResources.map((r) => [r.binding, { type: r.resourceType }])
 			),
@@ -687,61 +646,6 @@ export async function provisionBindingsFromInput(
 		metrics.sendMetricsEvent("provision resources", resourceCount, {
 			sendMetrics: config.send_metrics,
 		});
-	}
-}
-
-/**
- * Provision bindings from the legacy CfWorkerInit format.
- * This is a wrapper around provisionBindingsFromInput that converts the input format
- * and writes the provisioned IDs back to the original bindings.
- *
- * @deprecated Use {@link provisionBindingsFromInput} instead with the flat bindings format.
- */
-export async function provisionBindings(
-	bindings: CfWorkerInit["bindings"],
-	accountId: string,
-	scriptName: string,
-	autoCreate: boolean,
-	config: Config,
-	requireRemote = false
-): Promise<void> {
-	const convertedBindings = convertCfWorkerInitBindingsToBindings(bindings);
-	await provisionBindingsFromInput(
-		convertedBindings,
-		accountId,
-		scriptName,
-		autoCreate,
-		config,
-		requireRemote
-	);
-
-	// Write provisioned IDs back to the original bindings
-	// (provisionBindingsFromInput mutated convertedBindings in place)
-	for (const [bindingName, binding] of Object.entries(
-		convertedBindings ?? {}
-	)) {
-		if (binding.type === "kv_namespace") {
-			const original = bindings.kv_namespaces?.find(
-				(b) => b.binding === bindingName
-			);
-			if (original && binding.id) {
-				original.id = binding.id;
-			}
-		} else if (binding.type === "d1") {
-			const original = bindings.d1_databases?.find(
-				(b) => b.binding === bindingName
-			);
-			if (original && binding.database_id) {
-				original.database_id = binding.database_id;
-			}
-		} else if (binding.type === "r2_bucket") {
-			const original = bindings.r2_buckets?.find(
-				(b) => b.binding === bindingName
-			);
-			if (original && binding.bucket_name) {
-				original.bucket_name = binding.bucket_name;
-			}
-		}
 	}
 }
 

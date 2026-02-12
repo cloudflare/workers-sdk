@@ -21,7 +21,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 	return {
 		config(userConfig, env) {
 			if (ctx.resolvedPluginConfig.type === "preview") {
-				return { appType: "custom" };
+				return {
+					appType: "custom",
+					rsc: { serverHandler: false },
+				};
 			}
 
 			if (!ctx.hasShownWorkerConfigWarnings) {
@@ -43,6 +46,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			return {
 				appType: "custom",
+				rsc: { serverHandler: false },
 				server: {
 					fs: {
 						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],

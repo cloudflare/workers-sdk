@@ -31,23 +31,6 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	preserveOriginalMain?: boolean;
 };
 
-export type ConfigBindingOptions = Pick<
-	Config,
-	| "ai"
-	| "browser"
-	| "d1_databases"
-	| "dispatch_namespaces"
-	| "durable_objects"
-	| "queues"
-	| "r2_buckets"
-	| "services"
-	| "kv_namespaces"
-	| "mtls_certificates"
-	| "vectorize"
-	| "workflows"
-	| "vpc_services"
->;
-
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
