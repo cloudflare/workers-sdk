@@ -1,6 +1,10 @@
 import { assert, describe, it } from "vitest";
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	RawConfig,
+	StartDevWorkerInput,
+} from "@cloudflare/workers-utils";
 
 function normalizeDiff(log: string): string {
 	let normalizedLog = log;
@@ -776,5 +780,322 @@ describe("getRemoteConfigsDiff", () => {
 			"
 		`);
 		expect(nonDestructive).toBe(false);
+	});
+});
+
+describe("getRemoteConfigDiff (StartDevWorkerInput path)", () => {
+	it("should produce no diff when remote and local match", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+			} satisfies StartDevWorkerInput
+		);
+
+		expect(diff).toBe(null);
+		expect(nonDestructive).toBe(true);
+	});
+
+	it("should detect additive changes as non-destructive", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				kv_namespaces: [{ binding: "MY_KV", id: "kv-123" }],
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				bindings: {
+					MY_KV: { type: "kv_namespace", id: "kv-123" },
+					MY_KV_2: { type: "kv_namespace", id: "kv-456" },
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		assert(diff);
+		expect(nonDestructive).toBe(true);
+		expect(normalizeDiff(diff.toString())).toContain("MY_KV_2");
+	});
+
+	it("should detect destructive changes (binding removal)", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				kv_namespaces: [
+					{ binding: "MY_KV", id: "kv-123" },
+					{ binding: "MY_KV_2", id: "kv-456" },
+				],
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				bindings: {
+					MY_KV: { type: "kv_namespace", id: "kv-123" },
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		assert(diff);
+		expect(nonDestructive).toBe(false);
+	});
+
+	it("should detect destructive changes (binding value modification)", ({
+		expect,
+	}) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				kv_namespaces: [{ binding: "MY_KV", id: "kv-123" }],
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				bindings: {
+					MY_KV: { type: "kv_namespace", id: "kv-999" },
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		assert(diff);
+		expect(nonDestructive).toBe(false);
+		const diffStr = normalizeDiff(diff.toString());
+		expect(diffStr).toContain("kv-123");
+		expect(diffStr).toContain("kv-999");
+	});
+
+	it("should detect compatibility_date changes", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-09",
+				triggers: [{ type: "workers.dev" }],
+			} satisfies StartDevWorkerInput
+		);
+
+		assert(diff);
+		expect(nonDestructive).toBe(false);
+		const diffStr = normalizeDiff(diff.toString());
+		expect(diffStr).toContain("2025-07-08");
+		expect(diffStr).toContain("2025-07-09");
+	});
+
+	it("should detect trigger differences (route added locally)", ({
+		expect,
+	}) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [
+					{ type: "workers.dev" },
+					{ type: "route", pattern: "example.com/*" },
+				],
+			} satisfies StartDevWorkerInput
+		);
+
+		assert(diff);
+		// Adding a route is non-destructive
+		expect(nonDestructive).toBe(true);
+		expect(normalizeDiff(diff.toString())).toContain("example.com/*");
+	});
+
+	it("should detect trigger differences (remote has route, local does not)", ({
+		expect,
+	}) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: false,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				routes: [{ pattern: "example.com/*", zone_name: "example.com" }],
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [],
+			} satisfies StartDevWorkerInput
+		);
+
+		assert(diff);
+		expect(nonDestructive).toBe(false);
+	});
+
+	it("should not show spurious diffs for binding key reordering", ({
+		expect,
+	}) => {
+		// Remote and local have same bindings but in different key order
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				kv_namespaces: [
+					{ binding: "KV_A", id: "id-1" },
+					{ binding: "KV_B", id: "id-2" },
+				],
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				bindings: {
+					KV_B: { type: "kv_namespace", id: "id-2" },
+					KV_A: { type: "kv_namespace", id: "id-1" },
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		expect(diff).toBe(null);
+		expect(nonDestructive).toBe(true);
+	});
+
+	it("should handle multiple binding types", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				kv_namespaces: [{ binding: "MY_KV", id: "kv-123" }],
+				r2_buckets: [{ binding: "MY_R2", bucket_name: "my-bucket" }],
+				d1_databases: [{ binding: "MY_D1", database_id: "db-123" }],
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				bindings: {
+					MY_KV: { type: "kv_namespace", id: "kv-123" },
+					MY_R2: { type: "r2_bucket", bucket_name: "my-bucket" },
+					MY_D1: { type: "d1", database_id: "db-123" },
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		expect(diff).toBe(null);
+		expect(nonDestructive).toBe(true);
+	});
+
+	it("should handle cron triggers", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				triggers: { crons: ["0 * * * *", "30 8 * * 1-5"] },
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [
+					{ type: "workers.dev" },
+					{ type: "cron", cron: "0 * * * *" },
+					{ type: "cron", cron: "30 8 * * 1-5" },
+				],
+			} satisfies StartDevWorkerInput
+		);
+
+		expect(diff).toBe(null);
+		expect(nonDestructive).toBe(true);
+	});
+
+	it("should ignore dev-only fields from local config", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				// dev-only fields should be stripped
+				dev: {
+					remote: false,
+					persist: "/tmp",
+				},
+				build: {
+					bundle: true,
+					minify: true,
+				},
+				legacy: {
+					useServiceEnvironments: false,
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		expect(diff).toBe(null);
+		expect(nonDestructive).toBe(true);
+	});
+
+	it("should handle vars (plain_text bindings)", ({ expect }) => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				vars: { API_URL: "https://api.example.com" },
+			},
+			{
+				name: "my-worker",
+				entrypoint: "src/index.ts",
+				compatibilityDate: "2025-07-08",
+				triggers: [{ type: "workers.dev" }],
+				bindings: {
+					API_URL: { type: "plain_text", value: "https://api.example.com" },
+				},
+			} satisfies StartDevWorkerInput
+		);
+
+		expect(diff).toBe(null);
+		expect(nonDestructive).toBe(true);
 	});
 });

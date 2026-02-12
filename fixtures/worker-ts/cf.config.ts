@@ -7,7 +7,7 @@ export default defineConfig({
 	env: {
 		MY_TEXT: {
 			type: "plain_text",
-			value: "test",
+			value: "test2",
 		},
 		MY_R2: {
 			type: "r2_bucket",
