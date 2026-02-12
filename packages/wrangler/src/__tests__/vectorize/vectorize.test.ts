@@ -1002,28 +1002,28 @@ describe("vectorize commands", () => {
 		`);
 	});
 
-	it("should handle list-vectors with JSON output", async () => {
+	it("should handle list-vectors with valid JSON output", async () => {
 		mockVectorizeV2Request();
 		await runWrangler("vectorize list-vectors test-index --json");
-		expect(std.out).toMatchInlineSnapshot(`
-			"{
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
 			  "count": 3,
-			  "totalCount": 5,
+			  "cursorExpirationTimestamp": "2025-08-13T20:32:52.469144957+00:00",
 			  "isTruncated": true,
 			  "nextCursor": "next-page-cursor",
-			  "cursorExpirationTimestamp": "2025-08-13T20:32:52.469144957+00:00",
+			  "totalCount": 5,
 			  "vectors": [
 			    {
-			      "id": "vector-1"
+			      "id": "vector-1",
 			    },
 			    {
-			      "id": "vector-2"
+			      "id": "vector-2",
 			    },
 			    {
-			      "id": "vector-3"
-			    }
-			  ]
-			}"
+			      "id": "vector-3",
+			    },
+			  ],
+			}
 		`);
 	});
 

@@ -338,7 +338,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async ({ expect }) => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			mockGetQueueByNameRequest(expectedQueueName, {
 				queue_id: expectedQueueId,
 				queue_name: expectedQueueName,
@@ -357,45 +357,45 @@ describe("queues subscription", () => {
 			await runWrangler("queues subscription list testQueue --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
-				    "id": "sub-123",
 				    "created_at": "2024-01-01T00:00:00Z",
-				    "modified_at": "2024-01-01T00:00:00Z",
-				    "name": "Test Subscription 1",
-				    "enabled": true,
-				    "source": {
-				      "type": "workersBuilds.worker",
-				      "worker_name": "my-worker"
-				    },
 				    "destination": {
+				      "queue_id": "queueId",
 				      "type": "queues.queue",
-				      "queue_id": "queueId"
 				    },
+				    "enabled": true,
 				    "events": [
 				      "build.completed",
-				      "build.failed"
-				    ]
+				      "build.failed",
+				    ],
+				    "id": "sub-123",
+				    "modified_at": "2024-01-01T00:00:00Z",
+				    "name": "Test Subscription 1",
+				    "source": {
+				      "type": "workersBuilds.worker",
+				      "worker_name": "my-worker",
+				    },
 				  },
 				  {
-				    "id": "sub-456",
 				    "created_at": "2024-01-02T00:00:00Z",
+				    "destination": {
+				      "queue_id": "queueId",
+				      "type": "queues.queue",
+				    },
+				    "enabled": false,
+				    "events": [
+				      "namespace.created",
+				    ],
+				    "id": "sub-456",
 				    "modified_at": "2024-01-02T00:00:00Z",
 				    "name": "Test Subscription 2",
-				    "enabled": false,
 				    "source": {
-				      "type": "kv"
+				      "type": "kv",
 				    },
-				    "destination": {
-				      "type": "queues.queue",
-				      "queue_id": "queueId"
-				    },
-				    "events": [
-				      "namespace.created"
-				    ]
-				  }
-				]"
+				  },
+				]
 			`);
 		});
 
@@ -477,7 +477,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async ({ expect }) => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			mockGetQueueByNameRequest("testQueue", {
 				queue_id: expectedQueueId,
 				queue_name: "testQueue",
@@ -495,26 +495,26 @@ describe("queues subscription", () => {
 			);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  "id": "sub-123",
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
 				  "created_at": "2024-01-01T00:00:00Z",
-				  "modified_at": "2024-01-01T00:00:00Z",
-				  "name": "Test Subscription 1",
-				  "enabled": true,
-				  "source": {
-				    "type": "workersBuilds.worker",
-				    "worker_name": "my-worker"
-				  },
 				  "destination": {
+				    "queue_id": "queueId",
 				    "type": "queues.queue",
-				    "queue_id": "queueId"
 				  },
+				  "enabled": true,
 				  "events": [
 				    "build.completed",
-				    "build.failed"
-				  ]
-				}"
+				    "build.failed",
+				  ],
+				  "id": "sub-123",
+				  "modified_at": "2024-01-01T00:00:00Z",
+				  "name": "Test Subscription 1",
+				  "source": {
+				    "type": "workersBuilds.worker",
+				    "worker_name": "my-worker",
+				  },
+				}
 			`);
 		});
 
