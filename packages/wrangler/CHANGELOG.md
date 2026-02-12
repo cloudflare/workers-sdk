@@ -1,5 +1,126 @@
 # wrangler
 
+## 4.65.0
+
+### Minor Changes
+
+- [#12473](https://github.com/cloudflare/workers-sdk/pull/12473) [`b900c5a`](https://github.com/cloudflare/workers-sdk/commit/b900c5adc18c12d500e0fb8c58c2295843518695) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add CF_PAGES environment variables to `wrangler pages dev`
+
+  `wrangler pages dev` now automatically injects Pages-specific environment variables (`CF_PAGES`, `CF_PAGES_BRANCH`, `CF_PAGES_COMMIT_SHA`, `CF_PAGES_URL`) for improved dev/prod parity. This enables frameworks like SvelteKit to auto-detect the Pages environment during local development.
+
+  - `CF_PAGES` is set to `"1"` to indicate the Pages environment
+  - `CF_PAGES_BRANCH` defaults to the current git branch (or `"local"` if not in a git repo)
+  - `CF_PAGES_COMMIT_SHA` defaults to the current git commit SHA (or a placeholder if not in a git repo)
+  - `CF_PAGES_URL` is set to a simulated commit preview URL (e.g., `https://<sha>.<project-name>.pages.dev`)
+
+  These variables are displayed with their actual values in the bindings table during startup, making it easy to verify what branch and commit SHA were detected.
+
+  These variables can be overridden by user-defined vars in the Wrangler configuration, `.env`, `.dev.vars`, or via CLI flags.
+
+- [#12464](https://github.com/cloudflare/workers-sdk/pull/12464) [`10a1c4a`](https://github.com/cloudflare/workers-sdk/commit/10a1c4a9a92f57806e9314ba3ba558c9a0fdd5e2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Allow deleting KV namespaces by name
+
+  You can now delete a KV namespace by providing its name as a positional argument:
+
+  ```bash
+  wrangler kv namespace delete my-namespace
+  ```
+
+  This aligns the delete command with the create command, which also accepts a namespace name.
+  The existing `--namespace-id` and `--binding` flags continue to work as before.
+
+- [#12382](https://github.com/cloudflare/workers-sdk/pull/12382) [`d7b492c`](https://github.com/cloudflare/workers-sdk/commit/d7b492c37838929d37901c628ecbdd718f5a1258) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add Pages detection to autoconfig flows
+
+  When running the autoconfig logic (via `wrangler setup`, `wrangler deploy --x-autoconfig`, or the programmatic autoconfig API), Wrangler now detects when a project appears to be a Pages project and handles it appropriately:
+
+  - For `wrangler deploy`, it warns the user but still allows them to proceed
+  - For `wrangler setup` and the programmatic autoconfig API, it throws a fatal error
+
+- [#12461](https://github.com/cloudflare/workers-sdk/pull/12461) [`8809411`](https://github.com/cloudflare/workers-sdk/commit/880941158c82e4d907538bfdede06ed0ce5d772d) Thanks [@penalosa](https://github.com/penalosa)! - Support `type: inherit` bindings when using startWorker()
+
+  This is an internal binding type that should not be used by external users of the API
+
+- [#12515](https://github.com/cloudflare/workers-sdk/pull/12515) [`1a9eddd`](https://github.com/cloudflare/workers-sdk/commit/1a9eddd1fc14c9f449dab05d000ef395d34fe096) Thanks [@ascorbic](https://github.com/ascorbic)! - Add `--json` flag to `wrangler whoami` for machine-readable output
+
+  `wrangler whoami --json` now outputs structured JSON containing authentication status, auth type, email, accounts, and token permissions. When the user is not authenticated, the command exits with a non-zero status code and outputs `{"loggedIn":false}`, making it easy to check auth status in shell scripts without parsing text output.
+
+  ```bash
+  # Parse the JSON output
+  wrangler whoami --json | jq '.accounts'
+
+  # Check if authenticated in a script. Returns 0 if authenticated, non-zero if not.
+  if wrangler whoami --json > /dev/null 2>&1; then
+    echo "Authenticated"
+  else
+    echo "Not authenticated"
+  fi
+
+  ```
+
+### Patch Changes
+
+- [#12437](https://github.com/cloudflare/workers-sdk/pull/12437) [`ad817dd`](https://github.com/cloudflare/workers-sdk/commit/ad817ddc475bac3d5e87108eacddb611a9f822f2) Thanks [@MattieTK](https://github.com/MattieTK)! - fix: use project's package manager in wranger autoconfig
+
+  `wrangler setup` now correctly detects and uses the project's package manager based on lockfiles (`pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`, `package-lock.json`) and the `packageManager` field in `package.json`. Previously, it would fall back to the package manager used to execute the command when run directly from the terminal, causing failures in pnpm and yarn workspace projects if the wrong manager was used in this step due to the `workspace:` protocol not being supported by npm.
+
+  This change leverages the package manager detection already performed by `@netlify/build-info` during framework detection, ensuring consistent behaviour across the autoconfig process.
+
+- [#12541](https://github.com/cloudflare/workers-sdk/pull/12541) [`f7fa326`](https://github.com/cloudflare/workers-sdk/commit/f7fa3269c14bf50c8129de9d38276cd02189a39a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260210.0 | 1.20260212.0 |
+
+- [#12498](https://github.com/cloudflare/workers-sdk/pull/12498) [`734792a`](https://github.com/cloudflare/workers-sdk/commit/734792ac064c323746eba5d72323287c2f226894) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix: make sure that remote proxy sessions's logs can be silenced when the wrangler log level is set to "none"
+
+- [#12135](https://github.com/cloudflare/workers-sdk/pull/12135) [`cc5ac22`](https://github.com/cloudflare/workers-sdk/commit/cc5ac22c1d5ea90ea07850a22d0aa515e3d5e517) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix spurious config diffs when bindings from local and remote config are shown in different order
+
+  When comparing local and remote Worker configurations, binding arrays like `kv_namespaces` would incorrectly show additions and removals if the elements were in a different order. The diff now correctly recognizes these as equivalent by reordering remote arrays to match the local config's order before comparison.
+
+- [#12476](https://github.com/cloudflare/workers-sdk/pull/12476) [`62a8d48`](https://github.com/cloudflare/workers-sdk/commit/62a8d485bd16084bb7db58bdd16405a8b60c1835) Thanks [@MattieTK](https://github.com/MattieTK)! - fix: use unscoped binary name for OpenNext autoconfig command overrides
+
+  The build, deploy, and version command overrides in the Next.js (OpenNext) autoconfig handler used the scoped package name `@opennextjs/cloudflare`, which pnpm interprets as a workspace filter rather than a binary name. This caused `wrangler deploy --x-autoconfig` to fail for pnpm-based Next.js projects with `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL`. Changed to use the unscoped binary name `opennextjs-cloudflare`, which resolves correctly across all package managers.
+
+- [#12516](https://github.com/cloudflare/workers-sdk/pull/12516) [`84252b7`](https://github.com/cloudflare/workers-sdk/commit/84252b7ae2185e20dd8c5254e53dbcfed30cae64) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop proxying localhost requests when proxy environment variables are set
+
+  When `HTTP_PROXY` or `HTTPS_PROXY` is configured, all fetch requests including ones to `localhost` were routed through the proxy. This caused `wrangler dev` and the Vite plugin to fail with "TypeError: fetch failed" because the proxy can't reach local addresses.
+
+  This switches from `ProxyAgent` to undici's `EnvHttpProxyAgent`, which supports the `NO_PROXY` environment variable. When `NO_PROXY` is not set, it defaults to `localhost,127.0.0.1,::1` so local requests are never proxied.
+
+  The `NO_PROXY` config only applies to the request destination, not the proxy server address. So a proxy running on localhost (e.g. HTTP_PROXY=http://127.0.0.1:11451) still works for outbound API calls.
+
+- [#12506](https://github.com/cloudflare/workers-sdk/pull/12506) [`e5efa5d`](https://github.com/cloudflare/workers-sdk/commit/e5efa5d00dc68c2862f0d4c931784f32ac29e84c) Thanks [@sesteves](https://github.com/sesteves)! - Fix `wrangler r2 sql query` displaying `[object Object]` for nested values
+
+  SQL functions that return complex types such as arrays of objects (e.g. `approx_top_k`) were rendered as `[object Object]` in the table output because `String()` was called directly on non-primitive values. These values are now serialized with `JSON.stringify` so they display as readable JSON strings.
+
+- [#11725](https://github.com/cloudflare/workers-sdk/pull/11725) [`be9745f`](https://github.com/cloudflare/workers-sdk/commit/be9745fc2a663f6da2addf2f784392a21dab9475) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix incorrect logic during autoconfiguration (when running `wrangler setup` or `wrangler deploy --x-autoconfig`) that caused parts of the project's `package.json` file, removed during the process, to incorrectly be added back
+
+- [#12458](https://github.com/cloudflare/workers-sdk/pull/12458) [`122791d`](https://github.com/cloudflare/workers-sdk/commit/122791dbc721a7f237dad89c7b5649bb8437fde0) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - Remove default values for delivery delay and message retention and update messaging on limits
+
+  Fixes the issue of the default maximum message retention (365400 seconds) being longer than the maximum allowed retention period for free tier users (86400 seconds).
+
+  Previous:
+
+  - Wrangler set a default value of 365400 seconds max message retention if the setting was not explicitly provided in the Wrangler configuration.
+  - The maximum retention period was documented as 1209600 seconds for all queues users because it was required to be on paid tier.
+  - Wrangler also set a default value of 0 seconds for delivery delay if the setting was not explicitly provided in the Wrangler configuration.
+
+  Updated:
+
+  - Wrangler no longer sets a default value for max message retention so that the default can be applied at the API.
+  - The maximum retention period is now documented as 86400 seconds for free tier queues and 1209600 seconds for paid tier queues
+  - Wrangler also no longer sets a default value for delivery delay so that the default can be applied at the API.
+
+- [#12513](https://github.com/cloudflare/workers-sdk/pull/12513) [`41e18aa`](https://github.com/cloudflare/workers-sdk/commit/41e18aa51e14061a51cb2fae1fada1ea560838aa) Thanks [@pombosilva](https://github.com/pombosilva)! - Add confirmation prompt when deploying workflows with names that belong to different workers.
+
+  When deploying a workflow with a name that already exists and is currently associated with a different worker script, Wrangler will now display a warning and prompt for confirmation before proceeding. This helps prevent accidentally overriding workflows.
+
+  In non-interactive environments this check is skipped by default. Use the `--strict` flag to enable the check in non-interactive environments, which will cause the deployment to fail if workflow conflicts are detected.
+
+- Updated dependencies [[`f7fa326`](https://github.com/cloudflare/workers-sdk/commit/f7fa3269c14bf50c8129de9d38276cd02189a39a), [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41), [`d06ad09`](https://github.com/cloudflare/workers-sdk/commit/d06ad0967a2636a9f7e43babf5209bcec1af81d5)]:
+  - miniflare@4.20260212.0
+
 ## 4.64.0
 
 ### Minor Changes
