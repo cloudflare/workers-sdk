@@ -85,9 +85,15 @@ export type WorkerConfigFn = (
 
 /**
  * Helper function to define a worker configuration with type safety.
+ * Accepts either a config object directly or a function that returns one.
  */
-export function defineConfig(fn: WorkerConfigFn): WorkerConfigFn {
-	return fn;
+export function defineConfig(
+	fnOrConfig: WorkerConfigFn | WorkerConfig
+): WorkerConfigFn {
+	if (typeof fnOrConfig === "function") {
+		return fnOrConfig;
+	}
+	return () => fnOrConfig;
 }
 
 export interface LoadProgrammaticConfigOptions {
