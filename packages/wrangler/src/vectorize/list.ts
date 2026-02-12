@@ -30,6 +30,11 @@ export const vectorizeListCommand = createCommand({
 		}
 		const indexes = await listIndexes(config, args.deprecatedV1);
 
+		if (args.json) {
+			logger.log(JSON.stringify(indexes, null, 2));
+			return;
+		}
+
 		if (indexes.length === 0) {
 			logger.warn(`
 You haven't created any indexes on this account.
@@ -37,11 +42,6 @@ You haven't created any indexes on this account.
 Use 'wrangler vectorize create <name>' to create one, or visit
 https://developers.cloudflare.com/vectorize/ to get started.
 			`);
-			return;
-		}
-
-		if (args.json) {
-			logger.log(JSON.stringify(indexes, null, 2));
 			return;
 		}
 
