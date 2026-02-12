@@ -12,11 +12,14 @@ import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
+	zDurableObjectsNamespaceListNamespacesData,
+	zDurableObjectsNamespaceListObjectsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
+import { listDONamespaces, listDOObjects } from "./resources/do";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -154,6 +157,24 @@ app.post(
 	"/api/d1/database/:database_id/raw",
 	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
+);
+
+// ============================================================================
+// Durable Objects Endpoints
+// ============================================================================
+
+app.get(
+	"/api/workers/durable_objects/namespaces",
+	validateQuery(
+		zDurableObjectsNamespaceListNamespacesData.shape.query.unwrap()
+	),
+	(c) => listDONamespaces(c, c.req.valid("query"))
+);
+
+app.get(
+	"/api/workers/durable_objects/namespaces/:namespace_id/objects",
+	validateQuery(zDurableObjectsNamespaceListObjectsData.shape.query.unwrap()),
+	(c) => listDOObjects(c, c.req.param("namespace_id"), c.req.valid("query"))
 );
 
 export default app;
