@@ -40,6 +40,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	DurableObjectClassNames,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	Plugin,
@@ -74,6 +75,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { BindingIdMap } from "./constants";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -966,6 +968,8 @@ export interface GlobalServicesOptions {
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
+	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
+	durableObjectClassNames: DurableObjectClassNames;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -974,6 +978,7 @@ export function getGlobalServices({
 	loopbackPort,
 	log,
 	proxyBindings,
+	durableObjectClassNames,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1091,14 +1096,12 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		// Build binding ID map from proxyBindings
-		// Maps binding names to their actual resource IDs
-		const IDToBindingName: {
-			d1: Record<string, string>;
-			kv: Record<string, string>;
-		} = {
+		// Build binding ID map from proxyBindings and durableObjectClassNames
+		// Maps resource IDs to binding information for the local explorer
+		const IDToBindingName: BindingIdMap = {
 			d1: {},
 			kv: {},
+			do: {},
 		};
 
 		for (const binding of proxyBindings) {
@@ -1130,6 +1133,30 @@ export function getGlobalServices({
 				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
 				IDToBindingName.kv[namespaceId] = binding.name;
 			}
+
+			if (
+				binding.name?.startsWith(
+					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:do:`
+				) &&
+				"durableObjectNamespace" in binding &&
+				binding.durableObjectNamespace
+			) {
+				const { className, serviceName } = binding.durableObjectNamespace;
+				if (className && serviceName) {
+					const scriptName = serviceName.replace(/^core:user:/, "");
+					const uniqueKey = `${scriptName}-${className}`;
+					// Look up enableSql from durableObjectClassNames
+					const classInfo = durableObjectClassNames
+						.get(serviceName)
+						?.get(className);
+					IDToBindingName.do[uniqueKey] = {
+						className,
+						scriptName,
+						useSQLite: classInfo?.enableSql ?? false,
+						binding: binding.name,
+					};
+				}
+			}
 		}
 
 		// Disk service for serving local-explorer-ui assets
@@ -1151,6 +1178,34 @@ export function getGlobalServices({
 			);
 		}
 
+		// Check if any DOs are configured (DO storage service only exists when DOs are configured)
+		const hasDurableObjects = [...durableObjectClassNames.values()].some(
+			(classNames) => classNames.size > 0
+		);
+
+		const explorerBindings: Worker_Binding[] = [
+			// gives explorer access to all user resource bindings
+			...proxyBindings,
+			{
+				name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
+				json: JSON.stringify(IDToBindingName),
+			},
+			{
+				name: CoreBindings.EXPLORER_DISK,
+				service: { name: LOCAL_EXPLORER_DISK },
+			},
+		];
+
+		// Only add DO storage binding if DOs are configured
+		if (hasDurableObjects) {
+			explorerBindings.push({
+				name: CoreBindings.EXPLORER_DO_STORAGE,
+				// This is the underlying storage service used by all DOs
+				// We use this to list object ids based on the sqlite files
+				service: { name: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+			});
+		}
+
 		services.push({
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
@@ -1162,17 +1217,7 @@ export function getGlobalServices({
 						esModule: SCRIPT_LOCAL_EXPLORER(),
 					},
 				],
-				bindings: [
-					...proxyBindings,
-					{
-						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
-						json: JSON.stringify(IDToBindingName),
-					},
-					{
-						name: CoreBindings.EXPLORER_DISK,
-						service: { name: LOCAL_EXPLORER_DISK },
-					},
-				],
+				bindings: explorerBindings,
 			},
 		});
 	}

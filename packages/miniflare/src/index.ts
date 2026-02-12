@@ -1913,6 +1913,7 @@ export class Miniflare {
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,
+			durableObjectClassNames,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names

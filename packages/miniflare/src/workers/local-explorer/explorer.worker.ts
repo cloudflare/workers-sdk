@@ -7,6 +7,7 @@ import {
 	LOCAL_EXPLORER_API_PATH,
 	LOCAL_EXPLORER_BASE_PATH,
 } from "../../plugins/core/constants";
+import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
 	zCloudflareD1ListDatabasesData,
@@ -24,15 +25,13 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import type { BindingIdMap } from "../../plugins/core/constants";
 
-type BindingIdMap = {
-	d1: Record<string, string>; // databaseId -> bindingName
-	kv: Record<string, string>; // namespaceId -> bindingName
-};
 export type Env = {
 	[key: string]: unknown;
-	LOCAL_EXPLORER_BINDING_MAP: BindingIdMap;
-	MINIFLARE_EXPLORER_DISK: Fetcher;
+	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
+	[CoreBindings.EXPLORER_DISK]: Fetcher;
+	[CoreBindings.EXPLORER_DO_STORAGE]?: Fetcher;
 };
 
 export type AppBindings = { Bindings: Env };
