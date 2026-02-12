@@ -36,7 +36,7 @@ function RootLayout() {
 				setNamespaces(kvResponse.value.data?.result ?? []);
 			} else {
 				setKvError(
-					`KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : String(kvResponse.reason)}`
+					`KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : JSON.stringify(kvResponse.reason)}`
 				);
 			}
 
@@ -44,7 +44,7 @@ function RootLayout() {
 				setDatabases(d1Response.value.data?.result ?? []);
 			} else {
 				setD1Error(
-					`D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : String(d1Response.reason)}`
+					`D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : JSON.stringify(d1Response.reason)}`
 				);
 			}
 
