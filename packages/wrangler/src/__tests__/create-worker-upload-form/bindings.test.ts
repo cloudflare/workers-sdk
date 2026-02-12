@@ -1,14 +1,10 @@
 import { INHERIT_SYMBOL } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
-import { createFlatWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
-import {
-	createEsmWorker,
-	getBindings,
-	getMetadata,
-} from "./helpers";
+import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import { createEsmWorker, getBindings } from "./helpers";
 import type { StartDevWorkerInput } from "./helpers";
 
-describe("createFlatWorkerUploadForm — bindings", () => {
+describe("createWorkerUploadForm — bindings", () => {
 	describe("plain_text / json / secret_text bindings", () => {
 		it.for([
 			{
@@ -26,17 +22,20 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 				input: { type: "secret_text" as const, value: "s3cret" },
 				expected: { type: "secret_text", text: "s3cret" },
 			},
-		])("should include $label binding in metadata", ({ input, expected }, { expect }) => {
-			const bindings: StartDevWorkerInput["bindings"] = {
-				MY_BINDING: input,
-			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
-			const metadataBindings = getBindings(form);
-			expect(metadataBindings).toContainEqual({
-				name: "MY_BINDING",
-				...expected,
-			});
-		});
+		])(
+			"should include $label binding in metadata",
+			({ input, expected }, { expect }) => {
+				const bindings: StartDevWorkerInput["bindings"] = {
+					MY_BINDING: input,
+				};
+				const form = createWorkerUploadForm(createEsmWorker(), bindings);
+				const metadataBindings = getBindings(form);
+				expect(metadataBindings).toContainEqual({
+					name: "MY_BINDING",
+					...expected,
+				});
+			}
+		);
 	});
 
 	describe("kv_namespace bindings", () => {
@@ -44,7 +43,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_KV: { type: "kv_namespace", id: "abc123" },
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_KV",
 				type: "kv_namespace",
@@ -59,7 +58,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 				MY_KV: { type: "kv_namespace" } as never,
 			};
 			expect(() =>
-				createFlatWorkerUploadForm(createEsmWorker(), bindings)
+				createWorkerUploadForm(createEsmWorker(), bindings)
 			).toThrowError('MY_KV bindings must have an "id" field');
 		});
 
@@ -69,7 +68,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_KV: { type: "kv_namespace" } as never,
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings, {
+			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
 				dryRun: true,
 			});
 			expect(getBindings(form)).toContainEqual({
@@ -84,7 +83,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_KV: { type: "kv_namespace", id: INHERIT_SYMBOL },
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_KV",
 				type: "inherit",
@@ -101,7 +100,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					jurisdiction: "eu",
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_BUCKET",
 				type: "r2_bucket",
@@ -117,7 +116,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 				MY_BUCKET: { type: "r2_bucket" } as never,
 			};
 			expect(() =>
-				createFlatWorkerUploadForm(createEsmWorker(), bindings)
+				createWorkerUploadForm(createEsmWorker(), bindings)
 			).toThrowError('MY_BUCKET bindings must have a "bucket_name" field');
 		});
 
@@ -127,7 +126,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_BUCKET: { type: "r2_bucket" } as never,
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings, {
+			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
 				dryRun: true,
 			});
 			expect(getBindings(form)).toContainEqual({
@@ -142,7 +141,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_DB: { type: "d1", database_id: "db-123" },
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_DB",
 				type: "d1",
@@ -157,7 +156,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 				MY_DB: { type: "d1" } as never,
 			};
 			expect(() =>
-				createFlatWorkerUploadForm(createEsmWorker(), bindings)
+				createWorkerUploadForm(createEsmWorker(), bindings)
 			).toThrowError('MY_DB bindings must have a "database_id" field');
 		});
 
@@ -167,7 +166,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			const bindings: StartDevWorkerInput["bindings"] = {
 				MY_DB: { type: "d1" } as never,
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings, {
+			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
 				dryRun: true,
 			});
 			expect(getBindings(form)).toContainEqual({
@@ -187,7 +186,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					environment: "production",
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_DO",
 				type: "durable_object_namespace",
@@ -206,7 +205,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					class_name: "MyDO",
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			const doBinding = getBindings(form).find((b) => b.name === "MY_DO");
 			expect(doBinding).toBeDefined();
 			expect(doBinding?.script_name).toBeUndefined();
@@ -226,7 +225,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					entrypoint: "AuthHandler",
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "AUTH",
 				type: "service",
@@ -246,7 +245,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					delivery_delay: 60,
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_QUEUE",
 				type: "queue",
@@ -266,7 +265,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					script_name: "workflow-worker",
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_WORKFLOW",
 				type: "workflow",
@@ -277,72 +276,47 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 		});
 	});
 
-	describe("simple binding types", () => {
+	describe("pass-through binding types", () => {
 		it.for([
+			{ type: "vectorize" as const, index_name: "my-index" },
+			{ type: "hyperdrive" as const, id: "hd-123" },
+			{ type: "analytics_engine" as const, dataset: "my-dataset" },
+			{ type: "mtls_certificate" as const, certificate_id: "cert-123" },
 			{
-				label: "vectorize",
-				input: { type: "vectorize" as const, index_name: "my-index" },
-				expected: { type: "vectorize", index_name: "my-index" },
+				type: "secrets_store_secret" as const,
+				store_id: "store-1",
+				secret_name: "my-secret",
 			},
 			{
-				label: "hyperdrive",
-				input: { type: "hyperdrive" as const, id: "hd-123" },
-				expected: { type: "hyperdrive", id: "hd-123" },
+				type: "ratelimit" as const,
+				namespace_id: "rl-123",
+				simple: { limit: 100, period: 60 },
 			},
-			{
-				label: "analytics_engine",
-				input: { type: "analytics_engine" as const, dataset: "my-dataset" },
-				expected: { type: "analytics_engine", dataset: "my-dataset" },
-			},
-			{
-				label: "mtls_certificate",
-				input: { type: "mtls_certificate" as const, certificate_id: "cert-123" },
-				expected: { type: "mtls_certificate", certificate_id: "cert-123" },
-			},
-			{
-				label: "pipeline",
-				input: { type: "pipeline" as const, pipeline: "my-pipeline" },
-				expected: { type: "pipelines", pipeline: "my-pipeline" },
-			},
-			{
-				label: "secrets_store_secret",
-				input: {
-					type: "secrets_store_secret" as const,
-					store_id: "store-1",
-					secret_name: "my-secret",
-				},
-				expected: {
-					type: "secrets_store_secret",
-					store_id: "store-1",
-					secret_name: "my-secret",
-				},
-			},
-			{
-				label: "ratelimit",
-				input: {
-					type: "ratelimit" as const,
-					namespace_id: "rl-123",
-					simple: { limit: 100, period: 60 },
-				},
-				expected: {
-					type: "ratelimit",
-					namespace_id: "rl-123",
-					simple: { limit: 100, period: 60 },
-				},
-			},
-			{
-				label: "inherit",
-				input: { type: "inherit" as const },
-				expected: { type: "inherit" },
-			},
-		])("should include $label binding in metadata", ({ input, expected }, { expect }) => {
+			{ type: "inherit" as const },
+		])("should pass through $type binding unchanged", (input, { expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
-				MY_BINDING: input as StartDevWorkerInput["bindings"][string],
+				MY_BINDING: input as NonNullable<
+					StartDevWorkerInput["bindings"]
+				>[string],
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_BINDING",
-				...expected,
+				...input,
+			});
+		});
+	});
+
+	describe("pipeline bindings", () => {
+		it("should transform type from pipeline to pipelines", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				MY_PIPELINE: { type: "pipeline", pipeline: "my-pipeline" },
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "MY_PIPELINE",
+				type: "pipelines",
+				pipeline: "my-pipeline",
 			});
 		});
 	});
@@ -355,19 +329,16 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 			{ bindingName: "MEDIA", type: "media" as const },
 			{ bindingName: "VERSION", type: "version_metadata" as const },
 			{ bindingName: "ASSETS", type: "assets" as const },
-		])(
-			"should include $type binding",
-			({ bindingName, type }, { expect }) => {
-				const bindings: StartDevWorkerInput["bindings"] = {
-					[bindingName]: { type },
-				};
-				const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
-				expect(getBindings(form)).toContainEqual({
-					name: bindingName,
-					type,
-				});
-			}
-		);
+		])("should include $type binding", ({ bindingName, type }, { expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				[bindingName]: { type },
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: bindingName,
+				type,
+			});
+		});
 	});
 
 	describe("dispatch_namespace bindings", () => {
@@ -378,7 +349,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					namespace: "my-namespace",
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "DISPATCH",
 				type: "dispatch_namespace",
@@ -400,7 +371,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					},
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			const dispatchBinding = getBindings(form).find(
 				(b) => b.name === "DISPATCH"
 			);
@@ -430,7 +401,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					source: { contents: wasmContent },
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_WASM",
 				type: "wasm_module",
@@ -452,7 +423,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					source: { contents: "hello text", path: "my-text.txt" },
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_TEXT",
 				type: "text_blob",
@@ -472,7 +443,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					source: { contents: "{}", path: "__STATIC_CONTENT_MANIFEST" },
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			// The binding should still be in metadata
 			expect(getBindings(form)).toContainEqual({
 				name: "__STATIC_CONTENT_MANIFEST",
@@ -495,7 +466,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 					source: { contents: blobContent },
 				},
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_DATA",
 				type: "data_blob",
@@ -520,7 +491,7 @@ describe("createFlatWorkerUploadForm — bindings", () => {
 				AI: { type: "ai" },
 				BROWSER: { type: "browser" },
 			};
-			const form = createFlatWorkerUploadForm(createEsmWorker(), bindings);
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
 			const metadataBindings = getBindings(form);
 			expect(metadataBindings).toHaveLength(7);
 			expect(metadataBindings.map((b) => b.type).sort()).toEqual([

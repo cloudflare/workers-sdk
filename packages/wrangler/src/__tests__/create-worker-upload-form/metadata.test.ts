@@ -1,25 +1,25 @@
 import { describe, it } from "vitest";
-import { createFlatWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
-import { createEsmWorker, createCjsWorker, getMetadata } from "./helpers";
+import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import { createCjsWorker, createEsmWorker, getMetadata } from "./helpers";
 import type { CfWorkerInit } from "./helpers";
 
-describe("createFlatWorkerUploadForm — basic structure", () => {
+describe("createWorkerUploadForm — basic structure", () => {
 	it("should set main_module for ESM workers", ({ expect }) => {
-		const form = createFlatWorkerUploadForm(createEsmWorker(), {});
+		const form = createWorkerUploadForm(createEsmWorker(), {});
 		const metadata = getMetadata(form);
 		expect(metadata.main_module).toBe("index.js");
 		expect(metadata.body_part).toBeUndefined();
 	});
 
 	it("should set body_part for commonjs workers", ({ expect }) => {
-		const form = createFlatWorkerUploadForm(createCjsWorker(), {});
+		const form = createWorkerUploadForm(createCjsWorker(), {});
 		const metadata = getMetadata(form);
 		expect(metadata.body_part).toBe("index.js");
 		expect(metadata.main_module).toBeUndefined();
 	});
 
 	it("should include the main module as a form part", ({ expect }) => {
-		const form = createFlatWorkerUploadForm(createEsmWorker(), {});
+		const form = createWorkerUploadForm(createEsmWorker(), {});
 		const mainPart = form.get("index.js") as File;
 		expect(mainPart).not.toBeNull();
 		expect(mainPart.type).toBe("application/javascript+module");
@@ -28,7 +28,7 @@ describe("createFlatWorkerUploadForm — basic structure", () => {
 	it("should include compatibility_date and compatibility_flags", ({
 		expect,
 	}) => {
-		const form = createFlatWorkerUploadForm(
+		const form = createWorkerUploadForm(
 			createEsmWorker({
 				compatibility_date: "2024-06-01",
 				compatibility_flags: ["nodejs_compat"],
@@ -41,7 +41,7 @@ describe("createFlatWorkerUploadForm — basic structure", () => {
 	});
 
 	it("should include source maps as form parts", ({ expect }) => {
-		const form = createFlatWorkerUploadForm(
+		const form = createWorkerUploadForm(
 			createEsmWorker({
 				sourceMaps: [
 					{
@@ -58,7 +58,7 @@ describe("createFlatWorkerUploadForm — basic structure", () => {
 	});
 
 	it("should include additional ESM modules as form parts", ({ expect }) => {
-		const form = createFlatWorkerUploadForm(
+		const form = createWorkerUploadForm(
 			createEsmWorker({
 				modules: [
 					{
@@ -80,7 +80,7 @@ describe("createFlatWorkerUploadForm — basic structure", () => {
 		expect,
 	}) => {
 		expect(() =>
-			createFlatWorkerUploadForm(
+			createWorkerUploadForm(
 				createCjsWorker({
 					modules: [
 						{
@@ -99,11 +99,11 @@ describe("createFlatWorkerUploadForm — basic structure", () => {
 	});
 });
 
-describe("createFlatWorkerUploadForm — keep_bindings", () => {
+describe("createWorkerUploadForm — keep_bindings", () => {
 	it("should include plain_text and json in keep_bindings when keepVars is true", ({
 		expect,
 	}) => {
-		const form = createFlatWorkerUploadForm(
+		const form = createWorkerUploadForm(
 			createEsmWorker({ keepVars: true }),
 			{}
 		);
@@ -114,7 +114,7 @@ describe("createFlatWorkerUploadForm — keep_bindings", () => {
 	it("should include secret_text and secret_key in keep_bindings when keepSecrets is true", ({
 		expect,
 	}) => {
-		const form = createFlatWorkerUploadForm(
+		const form = createWorkerUploadForm(
 			createEsmWorker({ keepSecrets: true }),
 			{}
 		);
@@ -122,10 +122,8 @@ describe("createFlatWorkerUploadForm — keep_bindings", () => {
 		expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 	});
 
-	it("should combine keepVars, keepSecrets, and keepBindings", ({
-		expect,
-	}) => {
-		const form = createFlatWorkerUploadForm(
+	it("should combine keepVars, keepSecrets, and keepBindings", ({ expect }) => {
+		const form = createWorkerUploadForm(
 			createEsmWorker({
 				keepVars: true,
 				keepSecrets: true,
@@ -146,13 +144,13 @@ describe("createFlatWorkerUploadForm — keep_bindings", () => {
 	it("should not include keep_bindings when none of keepVars/keepSecrets/keepBindings are set", ({
 		expect,
 	}) => {
-		const form = createFlatWorkerUploadForm(createEsmWorker(), {});
+		const form = createWorkerUploadForm(createEsmWorker(), {});
 		const metadata = getMetadata(form);
 		expect(metadata.keep_bindings).toBeUndefined();
 	});
 });
 
-describe("createFlatWorkerUploadForm — optional metadata fields", () => {
+describe("createWorkerUploadForm — optional metadata fields", () => {
 	it.for([
 		{
 			label: "logpush",
@@ -201,7 +199,7 @@ describe("createFlatWorkerUploadForm — optional metadata fields", () => {
 	])(
 		"should include $label when specified",
 		({ overrides, key, expected }, { expect }) => {
-			const form = createFlatWorkerUploadForm(
+			const form = createWorkerUploadForm(
 				createEsmWorker(overrides as Partial<CfWorkerInit>),
 				{}
 			);
@@ -211,7 +209,7 @@ describe("createFlatWorkerUploadForm — optional metadata fields", () => {
 	);
 
 	it("should include containers when specified", ({ expect }) => {
-		const form = createFlatWorkerUploadForm(
+		const form = createWorkerUploadForm(
 			createEsmWorker({
 				containers: [
 					{ class_name: "MyContainer" },
@@ -224,11 +222,9 @@ describe("createFlatWorkerUploadForm — optional metadata fields", () => {
 	});
 });
 
-describe("createFlatWorkerUploadForm — unsafe metadata", () => {
-	it("should merge unsafe metadata into the metadata object", ({
-		expect,
-	}) => {
-		const form = createFlatWorkerUploadForm(
+describe("createWorkerUploadForm — unsafe metadata", () => {
+	it("should merge unsafe metadata into the metadata object", ({ expect }) => {
+		const form = createWorkerUploadForm(
 			createEsmWorker(),
 			{},
 			{
@@ -240,7 +236,7 @@ describe("createFlatWorkerUploadForm — unsafe metadata", () => {
 	});
 });
 
-describe("createFlatWorkerUploadForm — static assets only", () => {
+describe("createWorkerUploadForm — static assets only", () => {
 	it("should short-circuit for assets-only uploads", ({ expect }) => {
 		const worker = createEsmWorker({
 			assets: {
@@ -252,7 +248,7 @@ describe("createFlatWorkerUploadForm — static assets only", () => {
 				},
 			} as CfWorkerInit["assets"],
 		});
-		const form = createFlatWorkerUploadForm(worker, {});
+		const form = createWorkerUploadForm(worker, {});
 		const metadata = getMetadata(form);
 		expect(metadata.assets).toEqual({
 			jwt: "test-jwt",
@@ -279,7 +275,7 @@ describe("createFlatWorkerUploadForm — static assets only", () => {
 				jwt: "test-jwt",
 			} as CfWorkerInit["assets"],
 		});
-		const form = createFlatWorkerUploadForm(worker, {});
+		const form = createWorkerUploadForm(worker, {});
 		const metadata = getMetadata(form);
 		expect(metadata.compatibility_date).toBe("2024-06-01");
 		expect(metadata.compatibility_flags).toEqual(["nodejs_compat"]);
