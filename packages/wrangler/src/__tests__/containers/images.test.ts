@@ -129,7 +129,7 @@ describe("containers images list", () => {
 		`);
 	});
 
-	it("should list repos with json flag set", async () => {
+	it("should list repos as valid json with json flag set", async () => {
 		setWranglerConfig({});
 		const tags = {
 			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
@@ -155,30 +155,30 @@ describe("containers images list", () => {
 		);
 		await runWrangler("containers images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
 			    "name": "one",
 			    "tags": [
 			      "hundred",
-			      "ten"
-			    ]
+			      "ten",
+			    ],
 			  },
 			  {
 			    "name": "two",
 			    "tags": [
 			      "thousand",
-			      "twenty"
-			    ]
+			      "twenty",
+			    ],
 			  },
 			  {
 			    "name": "three",
 			    "tags": [
 			      "million",
-			      "thirty"
-			    ]
-			  }
-			]"
+			      "thirty",
+			    ],
+			  },
+			]
 		`);
 	});
 });

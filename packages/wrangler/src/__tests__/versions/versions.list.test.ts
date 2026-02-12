@@ -76,75 +76,74 @@ describe("versions list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to stdout as --json", async ({ expect }) => {
+		test("prints versions to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler("versions list --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
+				    "annotations": {
+				      "workers/triggered_by": "upload",
+				    },
 				    "id": "10000000-0000-0000-0000-000000000000",
-				    "number": "1701-E",
-				    "annotations": {
-				      "workers/triggered_by": "upload"
-				    },
 				    "metadata": {
-				      "author_id": "Picard-Gamma-6-0-7-3",
 				      "author_email": "Jean-Luc-Picard@federation.org",
-				      "source": "wrangler",
+				      "author_id": "Picard-Gamma-6-0-7-3",
 				      "created_on": "2021-01-01T00:00:00.000000Z",
-				      "modified_on": "2021-01-01T00:00:00.000000Z"
-				    }
-				  },
-				  {
-				    "id": "20000000-0000-0000-0000-000000000000",
+				      "modified_on": "2021-01-01T00:00:00.000000Z",
+				      "source": "wrangler",
+				    },
 				    "number": "1701-E",
-				    "annotations": {
-				      "workers/triggered_by": "rollback",
-				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222"
-				    },
-				    "metadata": {
-				      "author_id": "Picard-Gamma-6-0-7-3",
-				      "author_email": "Jean-Luc-Picard@federation.org",
-				      "source": "wrangler",
-				      "created_on": "2021-01-04T00:00:00.000000Z",
-				      "modified_on": "2021-01-04T00:00:00.000000Z"
-				    },
-				    "resources": {
-				      "script": "test-name",
-				      "bindings": []
-				    }
 				  },
 				  {
-				    "id": "30000000-0000-0000-0000-000000000000",
-				    "number": "NCC-74656",
 				    "annotations": {
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
 				      "workers/triggered_by": "rollback",
-				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
-				      "workers/message": "Rolled back for this version"
 				    },
+				    "id": "20000000-0000-0000-0000-000000000000",
 				    "metadata": {
-				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
-				      "author_email": "Kathryn-Janeway@federation.org",
+				      "author_email": "Jean-Luc-Picard@federation.org",
+				      "author_id": "Picard-Gamma-6-0-7-3",
+				      "created_on": "2021-01-04T00:00:00.000000Z",
+				      "modified_on": "2021-01-04T00:00:00.000000Z",
 				      "source": "wrangler",
+				    },
+				    "number": "1701-E",
+				    "resources": {
+				      "bindings": [],
+				      "script": "test-name",
+				    },
+				  },
+				  {
+				    "annotations": {
+				      "workers/message": "Rolled back for this version",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+				      "workers/triggered_by": "rollback",
+				    },
+				    "id": "30000000-0000-0000-0000-000000000000",
+				    "metadata": {
+				      "author_email": "Kathryn-Janeway@federation.org",
+				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
 				      "created_on": "2021-02-02T00:00:00.000000Z",
-				      "modified_on": "2021-02-02T00:00:00.000000Z"
-				    }
+				      "modified_on": "2021-02-02T00:00:00.000000Z",
+				      "source": "wrangler",
+				    },
+				    "number": "NCC-74656",
 				  },
 				  {
 				    "id": "40000000-0000-0000-0000-000000000000",
-				    "number": "NCC-74656",
 				    "metadata": {
-				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
 				      "author_email": "Kathryn-Janeway@federation.org",
-				      "source": "wrangler",
+				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
 				      "created_on": "2021-02-03T00:00:00.000000Z",
-				      "modified_on": "2021-02-03T00:00:00.000000Z"
-				    }
-				  }
+				      "modified_on": "2021-02-03T00:00:00.000000Z",
+				      "source": "wrangler",
+				    },
+				    "number": "NCC-74656",
+				  },
 				]
-				"
 			`);
 
 			expect(cnsl.out).not.toMatch(/⛅️ wrangler/);
@@ -196,75 +195,74 @@ describe("versions list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to as --json", async ({ expect }) => {
+		test("prints versions as valid json", async ({ expect }) => {
 			const result = runWrangler("versions list --json");
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
+				    "annotations": {
+				      "workers/triggered_by": "upload",
+				    },
 				    "id": "10000000-0000-0000-0000-000000000000",
-				    "number": "1701-E",
-				    "annotations": {
-				      "workers/triggered_by": "upload"
-				    },
 				    "metadata": {
-				      "author_id": "Picard-Gamma-6-0-7-3",
 				      "author_email": "Jean-Luc-Picard@federation.org",
-				      "source": "wrangler",
+				      "author_id": "Picard-Gamma-6-0-7-3",
 				      "created_on": "2021-01-01T00:00:00.000000Z",
-				      "modified_on": "2021-01-01T00:00:00.000000Z"
-				    }
-				  },
-				  {
-				    "id": "20000000-0000-0000-0000-000000000000",
+				      "modified_on": "2021-01-01T00:00:00.000000Z",
+				      "source": "wrangler",
+				    },
 				    "number": "1701-E",
-				    "annotations": {
-				      "workers/triggered_by": "rollback",
-				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222"
-				    },
-				    "metadata": {
-				      "author_id": "Picard-Gamma-6-0-7-3",
-				      "author_email": "Jean-Luc-Picard@federation.org",
-				      "source": "wrangler",
-				      "created_on": "2021-01-04T00:00:00.000000Z",
-				      "modified_on": "2021-01-04T00:00:00.000000Z"
-				    },
-				    "resources": {
-				      "script": "test-name",
-				      "bindings": []
-				    }
 				  },
 				  {
-				    "id": "30000000-0000-0000-0000-000000000000",
-				    "number": "NCC-74656",
 				    "annotations": {
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
 				      "workers/triggered_by": "rollback",
-				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
-				      "workers/message": "Rolled back for this version"
 				    },
+				    "id": "20000000-0000-0000-0000-000000000000",
 				    "metadata": {
-				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
-				      "author_email": "Kathryn-Janeway@federation.org",
+				      "author_email": "Jean-Luc-Picard@federation.org",
+				      "author_id": "Picard-Gamma-6-0-7-3",
+				      "created_on": "2021-01-04T00:00:00.000000Z",
+				      "modified_on": "2021-01-04T00:00:00.000000Z",
 				      "source": "wrangler",
+				    },
+				    "number": "1701-E",
+				    "resources": {
+				      "bindings": [],
+				      "script": "test-name",
+				    },
+				  },
+				  {
+				    "annotations": {
+				      "workers/message": "Rolled back for this version",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+				      "workers/triggered_by": "rollback",
+				    },
+				    "id": "30000000-0000-0000-0000-000000000000",
+				    "metadata": {
+				      "author_email": "Kathryn-Janeway@federation.org",
+				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
 				      "created_on": "2021-02-02T00:00:00.000000Z",
-				      "modified_on": "2021-02-02T00:00:00.000000Z"
-				    }
+				      "modified_on": "2021-02-02T00:00:00.000000Z",
+				      "source": "wrangler",
+				    },
+				    "number": "NCC-74656",
 				  },
 				  {
 				    "id": "40000000-0000-0000-0000-000000000000",
-				    "number": "NCC-74656",
 				    "metadata": {
-				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
 				      "author_email": "Kathryn-Janeway@federation.org",
-				      "source": "wrangler",
+				      "author_id": "Kathryn-Jane-Gamma-6-0-7-3",
 				      "created_on": "2021-02-03T00:00:00.000000Z",
-				      "modified_on": "2021-02-03T00:00:00.000000Z"
-				    }
-				  }
+				      "modified_on": "2021-02-03T00:00:00.000000Z",
+				      "source": "wrangler",
+				    },
+				    "number": "NCC-74656",
+				  },
 				]
-				"
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
