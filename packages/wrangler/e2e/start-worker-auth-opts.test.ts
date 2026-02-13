@@ -1,7 +1,14 @@
-import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	importWrangler,

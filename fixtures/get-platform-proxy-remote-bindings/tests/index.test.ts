@@ -1,10 +1,10 @@
 import { execSync } from "child_process";
 import { randomUUID } from "crypto";
-import assert from "node:assert";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in helper functions and beforeAll */
 import {
 	afterAll,
+	assert,
 	beforeAll,
 	beforeEach,
 	describe,

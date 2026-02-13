@@ -55,7 +55,6 @@ describe("checkRemoteSecretsOverride", () => {
 			["MY_SECRET"]
 		);
 
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Environment variable `MY_SECRET` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable."
@@ -81,7 +80,6 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Environment variables `MY_SECRET_1` and `MY_SECRET_2` conflict with existing remote secrets. This deployment will replace these remote secrets with your environment variables."
@@ -108,7 +106,6 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2", "MY_SECRET_3"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Environment variables `MY_SECRET_1`, `MY_SECRET_2`, and `MY_SECRET_3` conflict with existing remote secrets. This deployment will replace these remote secrets with your environment variables."
@@ -136,7 +133,6 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Binding `MY_SECRET` conflicts with an existing remote secret. This deployment will replace the remote secret with your binding."
@@ -168,7 +164,6 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2", "MY_SECRET_3"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Bindings `MY_SECRET_1`, `MY_SECRET_2`, and `MY_SECRET_3` conflict with existing remote secrets. This deployment will replace these remote secrets with your bindings."
@@ -193,7 +188,6 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2", "MY_SECRET_3"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Configuration values (`MY_SECRET_1`, `MY_SECRET_2`, and `MY_SECRET_3`) conflict with existing remote secrets. This deployment will replace these remote secrets with the configuration values."

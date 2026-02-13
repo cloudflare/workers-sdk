@@ -1,7 +1,6 @@
-import assert from "node:assert";
 import events from "node:events";
 import { SELF } from "cloudflare:test";
-import { afterEach, it, vi } from "vitest";
+import { afterEach, assert, it, vi } from "vitest";
 
 afterEach(() => {
 	vi.restoreAllMocks();

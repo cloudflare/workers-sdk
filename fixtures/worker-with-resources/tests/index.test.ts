@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { LOCAL_EXPLORER_API_PATH, LOCAL_EXPLORER_BASE_PATH } from "miniflare";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, assert, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("local explorer", () => {
@@ -85,8 +85,8 @@ describe("local explorer", () => {
 			// Extract JS asset path from the HTML
 			// The HTML looks like: <script type="module" crossorigin src="/cdn-cgi/explorer/assets/index-xxx.js">
 			const jsMatch = html.match(/assets\/index-[^"]+\.js/);
-			expect(jsMatch).not.toBeNull();
-			const jsPath = jsMatch![0];
+			assert(jsMatch, "Expected JS asset path in HTML");
+			const jsPath = jsMatch[0];
 
 			// Fetch the JS asset
 			const jsResponse = await fetch(

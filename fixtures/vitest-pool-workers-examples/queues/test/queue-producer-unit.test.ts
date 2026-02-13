@@ -3,7 +3,7 @@ import {
 	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { afterEach, it, vi } from "vitest";
+import { afterEach, assert, it, vi } from "vitest";
 import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
@@ -63,8 +63,8 @@ it("produces queue message with mocked consumer", async ({ expect }) => {
 	await vi.waitUntil(() => consumerSpy.mock.calls.length > 0);
 	expect(consumerSpy).toBeCalledTimes(1);
 	const batch = consumerSpy.mock.lastCall?.[0];
-	expect(batch).toBeDefined();
-	expect(batch?.messages[0].body).toStrictEqual({
+	assert(batch);
+	expect(batch.messages[0].body).toStrictEqual({
 		key: "/key",
 		value: "another value",
 	});
