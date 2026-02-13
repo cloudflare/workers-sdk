@@ -2302,6 +2302,9 @@ importers:
       kleur:
         specifier: ^4.1.5
         version: 4.1.5
+      mime:
+        specifier: ^3.0.0
+        version: 3.0.0
       postal-mime:
         specifier: ^2.4.3
         version: 2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
