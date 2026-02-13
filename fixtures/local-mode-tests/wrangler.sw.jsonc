@@ -1,6 +1,11 @@
 {
 	"name": "local-mode-tests",
 	"compatibility_date": "2022-03-27",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"vars": {
 		"VAR1": "value1",
 		"VAR2": 123,

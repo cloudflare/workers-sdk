@@ -2,7 +2,12 @@
 	"name": "worker",
 	"main": "./src/index.ts",
 	"compatibility_date": "2025-11-06",
-	"compatibility_flags": ["enable_ctx_exports"],
+	"compatibility_flags": [
+		"enable_ctx_exports",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"migrations": [
 		{
 			"tag": "v1",

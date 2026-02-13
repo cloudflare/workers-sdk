@@ -14,7 +14,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("pages deploy", () => {
 				name = "${projectName}"
 				pages_build_output_dir = "public"
 				compatibility_date = "2025-03-10"
-				compatibility_flags = ["nodejs_compat"]
+				compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"functions/_middleware.js": dedent`
 				const { performance } = require('perf_hooks');

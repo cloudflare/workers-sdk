@@ -3,6 +3,11 @@
 	"main": "src/index.ts",
 	"name": "quick-edit",
 	"compatibility_date": "2025-07-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"assets": {
 		"directory": "web",
 		"binding": "ASSETS",

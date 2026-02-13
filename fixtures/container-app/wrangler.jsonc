@@ -2,7 +2,12 @@
 	"name": "container-app",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-03",
-	"compatibility_flags": ["enable_ctx_exports"],
+	"compatibility_flags": [
+		"enable_ctx_exports",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"containers": [
 		{
 			"image": "./Dockerfile",

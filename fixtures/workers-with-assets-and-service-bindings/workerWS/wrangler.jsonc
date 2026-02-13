@@ -2,6 +2,11 @@
 	"name": "worker-ws",
 	"main": "./src/index.ts",
 	"compatibility_date": "2025-03-20",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"assets": {
 		"directory": "./public/",
 	},

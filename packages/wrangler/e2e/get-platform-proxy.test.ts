@@ -32,7 +32,7 @@ describe("getPlatformProxy()", () => {
 						name = "ai-app"
 						account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 						compatibility_date = "2023-01-01"
-						compatibility_flags = ["nodejs_compat"]
+						compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[ai]
 						binding = "AI"
@@ -92,7 +92,7 @@ describe("getPlatformProxy()", () => {
 						name = "app"
 						account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 						compatibility_date = "2023-01-01"
-						compatibility_flags = ["nodejs_compat"]
+						compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "WORKER"
@@ -113,6 +113,7 @@ describe("getPlatformProxy()", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 				"src/index.ts": dedent/* javascript */ `
 						export default {
@@ -172,7 +173,7 @@ describe("getPlatformProxy()", () => {
 						name = "app"
 						account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 						compatibility_date = "2023-01-01"
-						compatibility_flags = ["nodejs_compat"]
+						compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[durable_objects]
 						bindings = [
@@ -199,6 +200,7 @@ describe("getPlatformProxy()", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						[[durable_objects.bindings]]
 						name = "MY_DO"
 						class_name = "DurableObjectClass"
@@ -297,7 +299,7 @@ describe("getPlatformProxy()", () => {
 							name = "app"
 							account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 							compatibility_date = "2023-01-01"
-							compatibility_flags = ["nodejs_compat"]
+							compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[[services]]
 							binding = "WORKER"
@@ -474,7 +476,7 @@ describe("getPlatformProxy()", () => {
 					"wrangler.toml": dedent`
 							name = "hyperdrive-app"
 							compatibility_date = "2025-09-06"
-							compatibility_flags = ["nodejs_compat"]
+							compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[[hyperdrive]]
 							binding = "HYPERDRIVE"
@@ -531,7 +533,7 @@ describe("getPlatformProxy()", () => {
 						"wrangler.toml": dedent`
 							name = "hyperdrive-app"
 							compatibility_date = "2025-09-06"
-							compatibility_flags = ["nodejs_compat"]
+							compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[[hyperdrive]]
 							binding = "HYPERDRIVE"
@@ -587,7 +589,7 @@ describe("getPlatformProxy()", () => {
 						"wrangler.toml": dedent`
 						name = "hyperdrive-app"
 						compatibility_date = "2025-09-06"
-						compatibility_flags = ["nodejs_compat"]
+						compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[hyperdrive]]
 						binding = "HYPERDRIVE"

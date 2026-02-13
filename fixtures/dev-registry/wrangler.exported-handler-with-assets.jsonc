@@ -3,6 +3,11 @@
 	"name": "exported-handler-with-assets",
 	"main": "./workers/exported-handler.ts",
 	"compatibility_date": "2025-05-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"assets": {
 		"directory": "./assets",
 	},

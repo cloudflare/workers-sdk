@@ -1,4 +1,9 @@
 {
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"name": "pages-with-config",
 	// don't provide compatibility_date so that vitest will infer the latest one
 	"pages_build_output_dir": "public",

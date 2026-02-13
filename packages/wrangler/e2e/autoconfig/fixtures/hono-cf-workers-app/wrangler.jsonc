@@ -3,4 +3,9 @@
 	"name": "my-hono-cf-workers-app",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-12-15",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 }

@@ -15,6 +15,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
 					name = "dev-env-app"
 					account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"index.ts": dedent/*javascript*/ `
 				export default {
@@ -36,7 +37,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
                     worker = await startWorker({
                         name: "worker",
                         entrypoint: "index.ts",
-                        compatibilityFlags: ["nodejs_compat"],
+                        compatibilityFlags: ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"],
                         compatibilityDate: "2023-10-01",
                         bindings: {
                             REMOTE: {

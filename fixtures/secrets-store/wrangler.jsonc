@@ -1,6 +1,11 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"compatibility_date": "2025-01-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"main": "src/index.ts",
 	"name": "secret-store",
 	"secrets_store_secrets": [

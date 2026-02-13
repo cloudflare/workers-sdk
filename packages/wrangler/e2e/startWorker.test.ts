@@ -620,6 +620,11 @@ describe("DevEnv", { sequential: true }, () => {
 					}
 				`,
 				"wrangler.jsonc": JSON.stringify({
+					compatibility_flags: [
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						WRANGLER_ENV_VAR_0: "default-0",
 						WRANGLER_ENV_VAR_1: "default-1",
@@ -677,6 +682,11 @@ describe("DevEnv", { sequential: true }, () => {
 					}
 				`,
 				"wrangler.jsonc": JSON.stringify({
+					compatibility_flags: [
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						WRANGLER_ENV_VAR_0: "default-0",
 						WRANGLER_ENV_VAR_1: "default-1",
@@ -726,6 +736,11 @@ describe("DevEnv", { sequential: true }, () => {
 					}
 				`,
 				"wrangler.jsonc": JSON.stringify({
+					compatibility_flags: [
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						WRANGLER_ENV_VAR_0: "default-0",
 						WRANGLER_ENV_VAR_1: "default-1",
@@ -788,6 +803,11 @@ describe("DevEnv", { sequential: true }, () => {
 					}
 				`,
 				"wrangler.jsonc": JSON.stringify({
+					compatibility_flags: [
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						WRANGLER_ENV_VAR_0: "default-0",
 						WRANGLER_ENV_VAR_1: "default-1",
@@ -850,6 +870,11 @@ describe("DevEnv", { sequential: true }, () => {
 				}
 			`,
 				"wrangler.jsonc": JSON.stringify({
+					compatibility_flags: [
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						WRANGLER_ENV_VAR_0: "default-0",
 					},
@@ -898,6 +923,11 @@ describe("DevEnv", { sequential: true }, () => {
 				}
 			`,
 				"wrangler.jsonc": JSON.stringify({
+					compatibility_flags: [
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						WRANGLER_ENV_VAR_0: "default-0",
 					},

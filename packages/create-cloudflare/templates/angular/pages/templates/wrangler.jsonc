@@ -1,5 +1,6 @@
 {
 	"name": "<WORKER_NAME>",
 	"compatibility_date": "<COMPATIBILITY_DATE>",
+	"compatibility_flags": ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"],
 	"pages_build_output_dir": "./dist/cloudflare"
   }

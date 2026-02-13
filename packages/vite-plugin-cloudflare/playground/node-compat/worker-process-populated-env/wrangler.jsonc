@@ -5,6 +5,10 @@
 	"compatibility_flags": [
 		"nodejs_compat",
 		"nodejs_compat_populate_process_env",
+		"",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
 	],
 	"vars": {
 		"FOO": "foo value",

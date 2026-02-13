@@ -2,10 +2,7 @@
   "name": "<WORKER_NAME>",
   "main": "./dist/_worker.js",
   "compatibility_date": "<COMPATIBILITY_DATE>",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "global_fetch_strictly_public"
-  ],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"],
   "assets": {
     "binding": "ASSET",
     "directory": "./dist"

@@ -2,6 +2,11 @@
 	"name": "a",
 	"main": "src/worker-a.mjs",
 	"compatibility_date": "2023-12-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"services": [
 		{
 			"binding": "WORKER",

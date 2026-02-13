@@ -3,6 +3,11 @@
 	"name": "worker-w-resources",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-05-04",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"kv_namespaces": [
 		{
 			"binding": "KV",

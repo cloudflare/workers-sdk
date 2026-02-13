@@ -1,4 +1,9 @@
 {
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"name": "static-mpa",
 	"assets": {
 		"html_handling": "auto-trailing-slash",

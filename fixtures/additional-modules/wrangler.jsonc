@@ -2,6 +2,11 @@
 	"name": "additional-modules",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-08-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"find_additional_modules": true,
 	"rules": [
 		{

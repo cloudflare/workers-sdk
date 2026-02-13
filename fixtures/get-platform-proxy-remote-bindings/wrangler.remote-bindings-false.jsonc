@@ -1,6 +1,11 @@
 {
 	"name": "get-platform-proxy-remote-bindings-with-local-bindings-only-test",
 	"compatibility_date": "2025-05-07",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"ai": {
 		"binding": "AI",
 		"remote": true,

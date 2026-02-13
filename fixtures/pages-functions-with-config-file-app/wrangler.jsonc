@@ -2,6 +2,11 @@
 	"pages_build_output_dir": "./public",
 	"name": "pages-functions-with-config-file-app",
 	"compatibility_date": "2024-01-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"vars": {
 		"VAR1": "holiday",
 		"VAR2": "celebrate",

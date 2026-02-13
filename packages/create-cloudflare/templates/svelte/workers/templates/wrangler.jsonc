@@ -2,7 +2,7 @@
   "name": "<WORKER_NAME>",
   "main": ".svelte-kit/cloudflare/_worker.js",
   "compatibility_date": "<COMPATIBILITY_DATE>",
-  "compatibility_flags": ["nodejs_als"],
+  "compatibility_flags": ["nodejs_als", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"],
   "assets": {
     "binding": "ASSETS",
     "directory": ".svelte-kit/cloudflare"

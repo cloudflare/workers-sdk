@@ -9,7 +9,13 @@ export const auxiliaryWorker = {
 	modules: true,
 	scriptPath: "./auxiliary-worker/dist/index.js", // Built by `global-setup.ts`
 	compatibilityDate: "2025-11-01",
-	compatibilityFlags: ["nodejs_compat", "enable_ctx_exports"],
+	compatibilityFlags: [
+		"nodejs_compat",
+		"enable_ctx_exports",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	bindings: {
 		NAME: "AuxiliaryWorker",
 	},

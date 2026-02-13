@@ -25,6 +25,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     name = "${workerName}"
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
                 `,
 				"src/index.ts": dedent`
                     export default {
@@ -66,6 +67,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     name = "${workerName}"
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
                     workers_dev = false
                     preview_urls = false
                 `,
@@ -77,6 +79,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     name = "${workerName}"
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
                     # workers_dev = true # Defaults to true.
                     preview_urls = false
                 `,
@@ -102,6 +105,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     name = "${workerName}"
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
                     workers_dev = true
                     preview_urls = false
                 `,
@@ -113,6 +117,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
                     name = "${workerName}"
                     main = "src/index.ts"
                     compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
                     workers_dev = true
                     # preview_urls = workers_dev = true # Defaults to true.
                 `,

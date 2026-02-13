@@ -123,6 +123,11 @@ if (auth) {
 						{
 							name: "get-platform-proxy-fixture-test",
 							compatibility_date: "2025-06-01",
+							compatibility_flags: [
+								"fetch_iterable_type_support",
+								"fetch_iterable_type_support_override_adjustment",
+								"enable_nodejs_process_v2",
+							],
 							services: [
 								{
 									binding: "MY_WORKER",
@@ -225,6 +230,11 @@ if (auth) {
 							name: "get-platform-proxy-fixture-test",
 							account_id: "NOT a valid account id",
 							compatibility_date: "2025-06-01",
+							compatibility_flags: [
+								"fetch_iterable_type_support",
+								"fetch_iterable_type_support_override_adjustment",
+								"enable_nodejs_process_v2",
+							],
 							services: [
 								{
 									binding: "MY_WORKER",
@@ -272,6 +282,11 @@ if (auth) {
 							name: "get-platform-proxy-fixture-test",
 							account_id: auth.CLOUDFLARE_ACCOUNT_ID,
 							compatibility_date: "2025-06-01",
+							compatibility_flags: [
+								"fetch_iterable_type_support",
+								"fetch_iterable_type_support_override_adjustment",
+								"enable_nodejs_process_v2",
+							],
 							services: [
 								{
 									binding: "MY_WORKER",

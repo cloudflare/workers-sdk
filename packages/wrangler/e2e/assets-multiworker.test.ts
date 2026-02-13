@@ -108,6 +108,7 @@ describe.each(
 						name = "${assetWorkerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[assets]
 						directory = "public"
@@ -175,6 +176,7 @@ describe.each(
 					name = "${regularWorkerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 				"src/index.ts": dedent/* javascript */ `
 					import { DurableObject, WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
@@ -304,6 +306,7 @@ describe.each(
 						name = "${regularWorkerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						[[services]]
 						binding = "AW"
 						service = '${assetWorkerName}'
@@ -323,6 +326,7 @@ describe.each(
 					"wrangler.toml": dedent`
 								name = "${assetWorkerName}"
 								compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "public"
@@ -387,6 +391,7 @@ describe.each(
 							name = "${regularWorkerName}"
 							main = "src/index.ts"
 							compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[[services]]
 							binding = "AW"
@@ -407,6 +412,7 @@ describe.each(
 					"wrangler.toml": dedent`
 								name = "${assetWorkerName}"
 								compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 								main = "src/index.ts"
 
 								[assets]
@@ -630,6 +636,7 @@ describe.each(
 									name = "${regularWorkerName}"
 									main = "src/index.ts"
 									compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 									[[services]]
 									binding = "AW"

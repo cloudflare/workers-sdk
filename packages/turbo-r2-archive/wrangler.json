@@ -1,6 +1,11 @@
 {
 	"main": "src/index.ts",
 	"compatibility_date": "2023-08-14",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2"
+	],
 	"name": "turbo-r2-archive",
 	"account_id": "e35fd947284363a46fd7061634477114",
 	"r2_buckets": [

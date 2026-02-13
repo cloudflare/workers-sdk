@@ -14,6 +14,9 @@ describe("Pages Dev", () => {
 				"--port=0",
 				"--inspector-port=0",
 				"--compatibility-flags=nodejs_compat",
+				"--compatibility-flags=fetch_iterable_type_support",
+				"--compatibility-flags=fetch_iterable_type_support_override_adjustment",
+				"--compatibility-flags=enable_nodejs_process_v2",
 				"--compatibility-date=2024-11-01",
 			]
 		);

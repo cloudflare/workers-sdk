@@ -10,7 +10,7 @@ const seed = {
 		name = "test-worker"
 		main = "src/index.ts"
 		compatibility_date = "2023-01-01"
-		compatibility_flags = ["nodejs_compat", "no_global_navigator"]
+		compatibility_flags = ["nodejs_compat", "no_global_navigator", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 		[vars]
 		MY_VAR = "my-var-value"
 	`,
@@ -114,6 +114,7 @@ describe("types", () => {
 			name = "test-worker"
 			main = "src/index.ts"
 			compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 		`,
 		});
 		await helper.run(
@@ -220,7 +221,13 @@ describe("types", () => {
 					name: "test-worker",
 					main: "src/index.ts",
 					compatibility_date: "2026-01-01",
-					compatibility_flags: ["nodejs_compat", "no_global_navigator"],
+					compatibility_flags: [
+						"nodejs_compat",
+						"no_global_navigator",
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						NEW_VAR: "new-value",
 					},
@@ -241,7 +248,12 @@ describe("types", () => {
 					name: "test-worker",
 					main: "src/index.ts",
 					compatibility_date: "2026-01-01",
-					compatibility_flags: ["nodejs_compat"],
+					compatibility_flags: [
+						"nodejs_compat",
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					vars: {
 						MY_VAR: "my-var-value",
 					},

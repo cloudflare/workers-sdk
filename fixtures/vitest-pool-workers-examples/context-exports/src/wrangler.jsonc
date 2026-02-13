@@ -3,7 +3,12 @@
 	"name": "main-worker",
 	"main": "./index.ts",
 	"compatibility_date": "2025-11-01",
-	"compatibility_flags": ["enable_ctx_exports"],
+	"compatibility_flags": [
+		"enable_ctx_exports",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"vars": {
 		"NAME": "MainWorker",
 	},

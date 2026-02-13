@@ -2,7 +2,12 @@
 	"name": "email-to-rss",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-02-14",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"send_email": [
 		{
 			"name": "UNBOUND_SEND",

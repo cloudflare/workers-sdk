@@ -2,5 +2,10 @@
 	"name": "nodejs-als-app",
 	"main": "src/index.ts",
 	"compatibility_date": "2024-08-03",
-	"compatibility_flags": ["nodejs_als"],
+	"compatibility_flags": [
+		"nodejs_als",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 }

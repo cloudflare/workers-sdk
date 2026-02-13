@@ -47,6 +47,11 @@ for (const source of imageSource) {
 				name: `${workerName}`,
 				main: "src/index.ts",
 				compatibility_date: "2025-04-03",
+				compatibility_flags: [
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				containers: [
 					{
 						image: "./Dockerfile",

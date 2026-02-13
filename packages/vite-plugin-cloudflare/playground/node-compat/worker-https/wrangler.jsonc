@@ -3,5 +3,10 @@
 	"main": "./index.ts",
 	// This is the minimum compatibility_date that has http_modules enabled by default
 	"compatibility_date": "2025-08-15",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 }

@@ -14,7 +14,12 @@
 	"main": "src/worker.ts",
 	"compatibility_date": "2024-07-31",
 	// nodejs_compat required when using @cloudflare/vitest-pool-workers
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"unsafe": {
 		"metadata": {
 			"build_options": {

@@ -2,7 +2,12 @@
 	"name": "worker-with-assets-spa",
 	"main": "./src/index.ts",
 	"compatibility_date": "2025-03-11",
-	"compatibility_flags": ["assets_navigation_prefers_asset_serving"],
+	"compatibility_flags": [
+		"assets_navigation_prefers_asset_serving",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"assets": {
 		"directory": "./public/",
 		"binding": "ASSETS",

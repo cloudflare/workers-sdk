@@ -2,7 +2,12 @@
 	"name": "cloudflare-vite-e2e-remote-bindings-auxiliary-worker",
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"services": [
 		{
 			"binding": "REMOTE_WORKER",

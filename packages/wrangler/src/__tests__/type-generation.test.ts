@@ -539,7 +539,12 @@ describe("generate types", () => {
 			"./wrangler.jsonc",
 			JSON.stringify({
 				compatibility_date: "2022-01-12",
-				compatibility_flags: ["fake-compat-1"],
+				compatibility_flags: [
+					"fake-compat-1",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				vars: {
 					var: "from wrangler toml",
 				},
@@ -551,7 +556,12 @@ describe("generate types", () => {
 			"./my-wrangler-config-a.jsonc",
 			JSON.stringify({
 				compatibility_date: "2023-01-12",
-				compatibility_flags: ["fake-compat-2"],
+				compatibility_flags: [
+					"fake-compat-2",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				vars: {
 					var: "from my-wrangler-config-a",
 				},
@@ -563,7 +573,12 @@ describe("generate types", () => {
 			"./my-wrangler-config-b.jsonc",
 			JSON.stringify({
 				compatibility_date: "2024-01-12",
-				compatibility_flags: ["fake-compat-3"],
+				compatibility_flags: [
+					"fake-compat-3",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				vars: {
 					var: "from my-wrangler-config-b",
 				},
@@ -575,7 +590,12 @@ describe("generate types", () => {
 		expect(spy).toHaveBeenNthCalledWith(1, {
 			config: expect.objectContaining({
 				compatibility_date: "2022-01-12",
-				compatibility_flags: ["fake-compat-1"],
+				compatibility_flags: [
+					"fake-compat-1",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			}),
 			outFile: "worker-configuration.d.ts",
 		});
@@ -584,7 +604,12 @@ describe("generate types", () => {
 		expect(spy).toHaveBeenNthCalledWith(2, {
 			config: expect.objectContaining({
 				compatibility_date: "2023-01-12",
-				compatibility_flags: ["fake-compat-2"],
+				compatibility_flags: [
+					"fake-compat-2",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			}),
 			outFile: "worker-configuration.d.ts",
 		});
@@ -593,7 +618,12 @@ describe("generate types", () => {
 		expect(spy).toHaveBeenNthCalledWith(3, {
 			config: expect.objectContaining({
 				compatibility_date: "2024-01-12",
-				compatibility_flags: ["fake-compat-3"],
+				compatibility_flags: [
+					"fake-compat-3",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			}),
 			outFile: "worker-configuration.d.ts",
 		});
@@ -691,6 +721,11 @@ describe("generate types", () => {
 			"./wrangler.jsonc",
 			JSON.stringify({
 				compatibility_date: "2022-01-12",
+				compatibility_flags: [
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				name: "test-name",
 				main: "./index.ts",
 				...bindingsConfigMock,
@@ -801,6 +836,9 @@ describe("generate types", () => {
 				compatibility_flags: [
 					"nodejs_compat",
 					"nodejs_compat_populate_process_env",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
 				],
 				name: "test-name",
 				main: "./index.ts",
@@ -917,6 +955,9 @@ describe("generate types", () => {
 				compatibility_flags: [
 					"nodejs_compat",
 					"nodejs_compat_populate_process_env",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
 				],
 				name: "test-name",
 				main: "./index.ts",
@@ -937,6 +978,9 @@ describe("generate types", () => {
 				compatibility_flags: [
 					"nodejs_compat",
 					"nodejs_compat_populate_process_env",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
 				],
 				name: "service_name",
 				main: "./index.ts",
@@ -969,6 +1013,9 @@ describe("generate types", () => {
 				compatibility_flags: [
 					"nodejs_compat",
 					"nodejs_compat_populate_process_env",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
 				],
 				name: "service_name_2",
 				main: "./index.ts",

@@ -2,6 +2,11 @@
 	"name": "worker",
 	"main": "./api/index.ts",
 	"compatibility_date": "2025-06-04",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"assets": {
 		"not_found_handling": "single-page-application",
 		"binding": "ASSETS",

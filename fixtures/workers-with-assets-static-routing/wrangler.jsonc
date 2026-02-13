@@ -2,6 +2,11 @@
 	"name": "workers-with-assets-static-routing",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-05-20",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./public",

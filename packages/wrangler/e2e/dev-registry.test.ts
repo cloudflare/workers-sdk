@@ -51,7 +51,7 @@ describe("unstable_dev()", () => {
 			"wrangler.toml": dedent`
 					name = "app"
 					compatibility_date = "2023-01-01"
-					compatibility_flags = ["nodejs_compat"]
+					compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[[services]]
 					binding = "WORKER"
@@ -79,6 +79,7 @@ describe("unstable_dev()", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 			"src/index.ts": dedent/* javascript */ `
 					export default {
@@ -173,6 +174,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -218,6 +220,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 					name = "${workerName2}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 
                     [durable_objects]
@@ -251,6 +254,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		await baseSeed(c, {
 			"wrangler.toml": dedent`
 					name = "${workerName3}"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					main = "src/index.ts"
 			`,
 			"src/index.ts": dedent/* javascript */ `
@@ -275,6 +279,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "BEE"
@@ -331,6 +336,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
                     [[services]]
 					binding = "CEE"
@@ -386,6 +392,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2025-04-28"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[[tail_consumers]]
 							service = "${workerName2}"
@@ -406,6 +413,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 							name = "${workerName2}"
 							main = "src/index.ts"
 							compatibility_date = "2025-04-28"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 				"src/index.ts": dedent/* javascript */ `
 						export default {
@@ -451,6 +459,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "BEE"
@@ -534,6 +543,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 						name = "${workerName}"
 						pages_build_output_dir = "dist"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "BEE"

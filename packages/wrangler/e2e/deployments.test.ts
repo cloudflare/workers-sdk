@@ -41,6 +41,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						`,
 				"src/index.ts": dedent`
 						export default {
@@ -275,6 +276,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				"wrangler.toml": dedent`
 							name = "${workerName}"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 					`,
@@ -330,6 +332,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 							binding = "ASSETS"
@@ -400,6 +403,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				"wrangler.toml": dedent`
 					name = "${workerName}"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					[assets]
 					directory = "public"
 				`,
@@ -458,6 +462,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 							binding = "ASSETS"
@@ -507,6 +512,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 							binding = "ASSETS"
@@ -565,6 +571,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 							name = "${dispatchWorkerName}"
 							main = "./src/index.js"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[[dispatch_namespaces]]
 							binding = "DISPATCH"
@@ -594,6 +601,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 				"wrangler.toml": dedent`
 							name = "${workerName}"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 					`,
@@ -674,6 +682,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 							binding = "ASSETS"
@@ -772,6 +781,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 							[assets]
 							directory = "public"
 							binding = "ASSETS"
@@ -858,6 +868,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[durable_objects]
 						bindings = [

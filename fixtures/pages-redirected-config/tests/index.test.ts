@@ -31,6 +31,7 @@ describe("wrangler pages dev", () => {
 			[
 				`name = "redirected-config-worker"`,
 				`compatibility_date = "2024-12-01"`,
+				`compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]`,
 				`pages_build_output_dir = "public"`,
 			].join("\n")
 		);

@@ -2,7 +2,12 @@
 	"name": "unbound-durable-object",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-01-01",
-	"compatibility_flags": ["enable_ctx_exports"],
+	"compatibility_flags": [
+		"enable_ctx_exports",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	// This DO intentionally doesn't have a binding
 	// "durable_objects": {
 	// 	"bindings": [

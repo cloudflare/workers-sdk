@@ -160,6 +160,7 @@ describe.sequential("wrangler pages dev", () => {
 					name = "pages-project"
 					pages_build_output_dir = "public"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 		});
 		const worker = helper.runLongLived(
@@ -319,6 +320,7 @@ describe.sequential("wrangler pages dev", () => {
 					# commenting this out would result in a warning. If there is no "compatibility_date"
 					# related warning in stdout, then this value was picked up
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[vars]
 					PAGES = "⚡️ Pages ⚡️"
@@ -377,6 +379,7 @@ describe.sequential("wrangler pages dev", () => {
 				name = "pages-project"
 				pages_build_output_dir = "public"
 				compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[vars]
 				VAR1 = "VAR_1_TOML" # to override
@@ -488,6 +491,7 @@ describe.sequential("wrangler pages dev", () => {
 			"wrangler.toml": dedent`
 				name = "pages-project"
 				compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[vars]
 				PAGES_EMOJI = "⚡️"
@@ -549,6 +553,7 @@ describe.sequential("wrangler pages dev", () => {
 				name = "test-pages"
 				pages_build_output_dir = "."
 				compatibility_date = "2024-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[vars]
 				CF_PAGES_BRANCH = "custom-branch"

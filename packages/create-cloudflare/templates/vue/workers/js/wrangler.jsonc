@@ -1,6 +1,7 @@
 {
 	"name": "<WORKER_NAME>",
 	"compatibility_date": "<COMPATIBILITY_DATE>",
+	"compatibility_flags": ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"],
 	"main": "server/index.js",
 	"assets": {
 		"not_found_handling": "single-page-application",

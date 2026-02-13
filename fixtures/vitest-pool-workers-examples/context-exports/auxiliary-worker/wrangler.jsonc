@@ -3,4 +3,9 @@
 	"main": "./index.ts",
 	// compatibility_date is required so we can run `wrangler build`
 	"compatibility_date": "2025-11-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 }

@@ -37,6 +37,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 				"src/index.ts": dedent`
 							export default {
@@ -526,6 +527,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
                 name = "${workerName}"
                 main = "src/index.ts"
                 compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
                 [site]
                 bucket = "./public"
@@ -559,6 +561,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				"wrangler.toml": dedent`
 	            name = "${workerName}"
 	            compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 	            [assets]
 	            directory = "./public"
@@ -585,6 +588,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				"wrangler.toml": dedent`
 					name = "${workerName}"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[assets]
 					directory = "./public"
@@ -625,6 +629,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					preview_urls = true
 				`,
 				"src/index.ts": dedent`

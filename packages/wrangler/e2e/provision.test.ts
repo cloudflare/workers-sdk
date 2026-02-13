@@ -44,6 +44,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						workers_dev = true
 
 					[[kv_namespaces]]
@@ -188,6 +189,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[r2_buckets]]
 						binding = "R2"
@@ -234,6 +236,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[d1_databases]]
 						binding = "D1"

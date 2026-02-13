@@ -2,6 +2,11 @@
 	"name": "existing-script-test-do-not-delete",
 	"main": "index.js",
 	"compatibility_date": "2023-05-18",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"vars": {
 		"FOO": "bar",
 	},

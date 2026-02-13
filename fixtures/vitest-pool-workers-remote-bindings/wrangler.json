@@ -2,6 +2,11 @@
 	"name": "vitest-remote-bindings-fixture-test",
 	"main": "src/index.js",
 	"compatibility_date": "2025-06-01",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2"
+	],
 	"services": [
 		{
 			"binding": "MY_WORKER",

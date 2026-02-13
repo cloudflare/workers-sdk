@@ -2,6 +2,11 @@
 	"name": "no-bundle-import",
 	"main": "src/index.js",
 	"compatibility_date": "2023-02-20",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"no_bundle": true,
 	"rules": [
 		{

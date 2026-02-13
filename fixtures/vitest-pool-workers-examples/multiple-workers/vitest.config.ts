@@ -81,7 +81,12 @@ export default defineWorkersProject({
 							modules: true,
 							scriptPath: "./auth-service/dist/index.js", // Built by `global-setup.ts`
 							compatibilityDate: "2024-01-01",
-							compatibilityFlags: ["nodejs_compat"],
+							compatibilityFlags: [
+								"nodejs_compat",
+								"fetch_iterable_type_support",
+								"fetch_iterable_type_support_override_adjustment",
+								"enable_nodejs_process_v2",
+							],
 							bindings: { AUTH_PUBLIC_KEY: authKeypair.publicKey },
 							// Mock outbound `fetch()`es from the `auth-service`
 							outboundService: handleAuthServiceOutbound,
@@ -91,7 +96,12 @@ export default defineWorkersProject({
 							modules: true,
 							scriptPath: "./database-service/dist/index.js", // Built by `global-setup.ts`
 							compatibilityDate: "2024-01-01",
-							compatibilityFlags: ["nodejs_compat"],
+							compatibilityFlags: [
+								"nodejs_compat",
+								"fetch_iterable_type_support",
+								"fetch_iterable_type_support_override_adjustment",
+								"enable_nodejs_process_v2",
+							],
 							kvNamespaces: ["KV_NAMESPACE"],
 						},
 						{

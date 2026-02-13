@@ -9,6 +9,37 @@ import {
 } from "@cloudflare/workers-utils";
 import type { RawConfig, RedirectedRawConfig } from "@cloudflare/workers-utils";
 
+/**
+ * Compatibility flags that are automatically injected into every test config.
+ *
+ * These flags are required for the Node.js compatibility layer and are added
+ * by default to ensure consistent test behavior.
+ */
+const INJECTED_COMPAT_FLAGS = [
+	"fetch_iterable_type_support",
+	"fetch_iterable_type_support_override_adjustment",
+	"enable_nodejs_process_v2",
+];
+
+/**
+ * Merge the injected compatibility flags with any caller-provided flags.
+ *
+ * Caller-provided flags take precedence and duplicates are avoided.
+ *
+ * @param config - The raw config that may already contain compatibility_flags
+ * @returns The merged compatibility_flags array
+ */
+function mergeCompatFlags(config: RawConfig): string[] {
+	const existing = config.compatibility_flags ?? [];
+	const merged = [...INJECTED_COMPAT_FLAGS];
+	for (const flag of existing) {
+		if (!merged.includes(flag)) {
+			merged.push(flag);
+		}
+	}
+	return merged;
+}
+
 /** Write a mock wrangler config file to disk. */
 export function writeWranglerConfig(
 	config: RawConfig = {},
@@ -23,6 +54,7 @@ export function writeWranglerConfig(
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				...config,
+				compatibility_flags: mergeCompatFlags(config),
 			},
 			path,
 			!!json
@@ -44,6 +76,7 @@ export function writeRedirectedWranglerConfig(
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				...config,
+				compatibility_flags: mergeCompatFlags(config),
 			},
 			path,
 			!!json

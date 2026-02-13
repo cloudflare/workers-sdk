@@ -46,6 +46,7 @@ describe("multiworker", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"src/index.ts": dedent/* javascript */ `
 				import { DurableObject } from "cloudflare:workers";
@@ -106,6 +107,7 @@ describe("multiworker", () => {
 					name = "${workerName2}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 
                     [durable_objects]
@@ -167,6 +169,7 @@ describe("multiworker", () => {
 		await baseSeed(c, {
 			"wrangler.toml": dedent`
 					name = "${workerName3}"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					main = "src/index.ts"
 			`,
 			"src/index.ts": dedent/* javascript */ `
@@ -191,6 +194,7 @@ describe("multiworker", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "BEE"
@@ -267,6 +271,7 @@ describe("multiworker", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "BEE"
@@ -298,6 +303,7 @@ describe("multiworker", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
                     [[services]]
 					binding = "CEE"
@@ -330,6 +336,7 @@ describe("multiworker", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[services]]
 						binding = "BEE"
@@ -404,6 +411,7 @@ describe("multiworker", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2025-04-28"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[tail_consumers]]
 						service = "${workerName2}"
@@ -424,6 +432,7 @@ describe("multiworker", () => {
 						name = "${workerName2}"
 						main = "src/index.ts"
 						compatibility_date = "2025-04-28"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 				"src/index.ts": dedent/* javascript */ `
 					export default {
@@ -467,7 +476,7 @@ describe("multiworker", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2025-04-28"
-						compatibility_flags = ["streaming_tail_worker"]
+						compatibility_flags = ["streaming_tail_worker", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[[tail_consumers]]
 						service = "${workerName2}"
@@ -491,6 +500,7 @@ describe("multiworker", () => {
 						name = "${workerName2}"
 						main = "src/index.ts"
 						compatibility_date = "2025-04-28"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 				"src/index.ts": dedent/* javascript */ `
 					export default {
@@ -529,6 +539,7 @@ describe("multiworker", () => {
 					name = "${workerName}"
 					pages_build_output_dir = "./public"
 					compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
                     [[services]]
 					binding = "CEE"
@@ -614,6 +625,7 @@ describe("multiworker", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[triggers]
 						crons = ["* * * * *"]
@@ -639,6 +651,7 @@ describe("multiworker", () => {
 						name = "${workerName2}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 						[triggers]
 						crons = ["0 * * * *"]

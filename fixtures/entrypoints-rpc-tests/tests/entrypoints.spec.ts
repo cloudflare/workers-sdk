@@ -869,7 +869,12 @@ describe("entrypoints", () => {
 		const boundWorker = new Miniflare({
 			name: "bound",
 			unsafeDevRegistryPath: isolatedDevRegistryPath,
-			compatibilityFlags: ["experimental"],
+			compatibilityFlags: [
+				"experimental",
+				"fetch_iterable_type_support",
+				"fetch_iterable_type_support_override_adjustment",
+				"enable_nodejs_process_v2",
+			],
 			modules: true,
 			https: true,
 			script: `

@@ -17,6 +17,9 @@ export default defineWorkersProject({
 						// Required to use `WORKER.scheduled()`. This is an experimental
 						// compatibility flag, and cannot be enabled in production.
 						"service_binding_extra_handlers",
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
 					],
 					serviceBindings: {
 						WORKER: "worker-under-test",
@@ -32,7 +35,12 @@ export default defineWorkersProject({
 							modules: true,
 							scriptPath: "./dist/index.js", // Built by `global-setup.ts`
 							compatibilityDate: "2024-01-01",
-							compatibilityFlags: ["nodejs_compat"],
+							compatibilityFlags: [
+								"nodejs_compat",
+								"fetch_iterable_type_support",
+								"fetch_iterable_type_support_override_adjustment",
+								"enable_nodejs_process_v2",
+							],
 						},
 					],
 				},

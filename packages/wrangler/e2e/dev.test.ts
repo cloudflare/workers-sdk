@@ -58,7 +58,7 @@ describe.each([
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
-							compatibility_flags = ["nodejs_compat"]
+							compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[vars]
 							KEY = "value"
@@ -108,6 +108,7 @@ describe.each([
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				# TODO: This is a workaround for an EWC bug where remote dev workers only log properly if they have bindings.
 				#       Remove the below line when MR:7727 is merged
 				version_metadata = { binding = "METADATA" }
@@ -151,7 +152,7 @@ describe.each([
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
-							compatibility_flags = ["nodejs_compat"]
+							compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[vars]
 							KEY = "value"
@@ -189,6 +190,7 @@ describe.each([
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 								[build]
 								command = "true"
 						`,
@@ -224,6 +226,7 @@ describe.each([
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						`,
 				"src/index.ts": dedent`
 								export default {
@@ -259,6 +262,7 @@ describe.each([
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[triggers]
 								crons = ["* * * * *"]
@@ -302,6 +306,7 @@ describe.each([
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[triggers]
 								crons = ["* * * * *"]
@@ -342,7 +347,7 @@ describe.each([
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
-								compatibility_flags = ["nodejs_compat"]
+								compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "public"
@@ -390,7 +395,7 @@ describe.each([
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
-								compatibility_flags = ["nodejs_compat"]
+								compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "public"
@@ -439,6 +444,7 @@ it.runIf(process.platform !== "win32")(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 			"src/index.ts": dedent`
 						export default {
@@ -466,6 +472,7 @@ it.runIf(process.platform !== "win32")(
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 			"src/index.ts": dedent`
 						export default {
@@ -765,6 +772,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
@@ -813,6 +821,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
@@ -878,6 +887,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
@@ -950,6 +960,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
@@ -996,6 +1007,7 @@ describe("queue dev tests", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-04-04"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 					[[queues.producers]]
 					binding = "QUEUE"
@@ -1033,6 +1045,7 @@ describe("writes debug logs to hidden file", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 			"src/index.ts": dedent/* javascript */ `
 					export default {
@@ -1070,6 +1083,7 @@ describe("writes debug logs to hidden file", () => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -1107,6 +1121,7 @@ describe("analytics engine", () => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2022-08-08"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[[analytics_engine_datasets]]
 				binding = "ANALYTICS_BINDING"
@@ -1152,6 +1167,7 @@ describe("analytics engine", () => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2024-08-08"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[[analytics_engine_datasets]]
 				binding = "ANALYTICS_BINDING"
@@ -1198,7 +1214,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
-				compatibility_flags = ["nodejs_compat"]`,
+				compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]`,
 				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
@@ -1229,7 +1245,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
-				compatibility_flags = ["nodejs_compat"]
+				compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[dev]
 				host = "wrangler-testing.testing.devprod.cloudflare.dev"`,
@@ -1265,7 +1281,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
-				compatibility_flags = ["nodejs_compat"]
+				compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[[routes]]
 				pattern = "wrangler-testing.testing.devprod.cloudflare.dev/*"
@@ -1303,7 +1319,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
-				compatibility_flags = ["nodejs_compat"]
+				compatibility_flags = ["nodejs_compat", "fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 				[[routes]]
 				pattern = "not-a-domain.testing.devprod.cloudflare.dev/*"
@@ -1339,6 +1355,7 @@ describe("custom builds", () => {
 			"wrangler.toml": dedent`
 						name = "${workerName}"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						main = "src/index.ts"
 						build.command = "echo 'hello'"
 						build.watch_dir = "custom_src"
@@ -1376,6 +1393,7 @@ describe("custom builds", () => {
 			"wrangler.toml": dedent`
                     name = "${workerName}"
                     compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
                     main = "src/index.ts"
                     build.command = "echo 'hello' > ./public/index.html"
 
@@ -1442,6 +1460,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								main = "src/workerA.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						`,
 					"src/workerA.ts": dedent`
 						export default {
@@ -1462,6 +1481,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								main = "src/workerB.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						`,
 					"src/workerB.ts": dedent`
 						export default {
@@ -1492,6 +1512,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1535,6 +1556,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1589,6 +1611,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1639,6 +1662,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1691,6 +1715,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1717,6 +1742,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 							name = "${workerName}"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[assets]
 							directory = "./public2"
@@ -1748,6 +1774,7 @@ describe("watch mode", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 					"src/index.ts": dedent`
 						export default {
@@ -1772,6 +1799,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1812,6 +1840,7 @@ describe("watch mode", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 					"src/index.ts": dedent`
 						export default {
@@ -1837,6 +1866,7 @@ describe("watch mode", () => {
 								name = "${workerName}"
 								main = "src/index.ts"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1877,6 +1907,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1902,6 +1933,7 @@ describe("watch mode", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[assets]
 							directory = "./public"
@@ -1934,6 +1966,7 @@ describe("watch mode", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 							[assets]
 							directory = "./public"
@@ -1965,6 +1998,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -1989,6 +2023,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 						name = "${workerName}"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						main = "src/index.ts"
 
 						[assets]
@@ -2036,6 +2071,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 
 								[assets]
 								directory = "./public"
@@ -2054,6 +2090,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 								route = "example.com/path/*"
 
 								[assets]
@@ -2076,6 +2113,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						`,
 					"dist/index.html": dedent`
 								<h1>Hello Workers + Assets</h1>`,
@@ -2159,6 +2197,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 							name = "${workerName}"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 					"dist/index.html": dedent`
 					<h1>Hello Workers + Assets</h1>`,
@@ -2187,6 +2226,7 @@ describe("watch mode", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 				});
 
@@ -2210,6 +2250,7 @@ describe("watch mode", () => {
 							name = "${workerName}"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					`,
 					"dist/index.html": dedent`
 					<h1>Hello Workers + Assets</h1>`,
@@ -2237,6 +2278,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 						name = "${workerName}"
 						compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 				`,
 				});
 
@@ -2258,6 +2300,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 						`,
 					"dist/index.html": dedent`
 								<h1>Hello Workers + Assets</h1>`,
@@ -2273,6 +2316,7 @@ describe("watch mode", () => {
 					"wrangler.toml": dedent`
 								name = "${workerName}"
 								compatibility_date = "2023-01-01"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 								route = "example.com/path/*"
 						`,
 				});
@@ -2292,6 +2336,7 @@ describe("email local dev", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2025-03-17"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"src/index.ts": dedent`
 			import { EmailMessage } from "cloudflare:email";
@@ -2374,6 +2419,7 @@ This is a random email body.
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2025-03-17"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"src/index.ts": dedent`
 			import { EmailMessage } from "cloudflare:email";
@@ -2418,6 +2464,7 @@ This is a random email body.
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2025-03-17"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 			`,
 			"src/index.ts": dedent`
 			import { EmailMessage } from "cloudflare:email";
@@ -2463,6 +2510,7 @@ This is a random email body.
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2025-03-17"
+compatibility_flags = ["fetch_iterable_type_support", "fetch_iterable_type_support_override_adjustment", "enable_nodejs_process_v2"]
 					send_email = [{name = "SEND_EMAIL"}]
 			`,
 			"src/index.ts": dedent`
@@ -2539,6 +2587,11 @@ describe(".env support in local dev", () => {
 			name: workerName,
 			main: "src/index.ts",
 			compatibility_date: "2025-07-01",
+			compatibility_flags: [
+				"fetch_iterable_type_support",
+				"fetch_iterable_type_support_override_adjustment",
+				"enable_nodejs_process_v2",
+			],
 			vars: {
 				WRANGLER_ENV_VAR_0: "default-0",
 				WRANGLER_ENV_VAR_1: "default-1",

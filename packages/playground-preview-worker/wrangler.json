@@ -2,7 +2,12 @@
 	"name": "playground-preview-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-08-17",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2"
+	],
 	"workers_dev": false,
 	"account_id": "e35fd947284363a46fd7061634477114",
 	"rules": [

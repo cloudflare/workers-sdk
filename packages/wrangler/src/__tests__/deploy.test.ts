@@ -6394,7 +6394,12 @@ addEventListener('fetch', event => {});`
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -6412,7 +6417,12 @@ addEventListener('fetch', event => {});`
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			});
 			await runWrangler("deploy");
 		});
@@ -6427,7 +6437,12 @@ addEventListener('fetch', event => {});`
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -6450,7 +6465,12 @@ addEventListener('fetch', event => {});`
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			});
 			await runWrangler("deploy");
 		});
@@ -6465,7 +6485,12 @@ addEventListener('fetch', event => {});`
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -6488,7 +6513,12 @@ addEventListener('fetch', event => {});`
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			});
 			await runWrangler("deploy");
 		});
@@ -6503,7 +6533,12 @@ addEventListener('fetch', event => {});`
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -6526,7 +6561,12 @@ addEventListener('fetch', event => {});`
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			});
 			await runWrangler("deploy");
 		});
@@ -6541,7 +6581,12 @@ addEventListener('fetch', event => {});`
 			writeWranglerConfig({
 				main: "index.js",
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					binding: "ASSETS",
@@ -6562,7 +6607,12 @@ addEventListener('fetch', event => {});`
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			});
 			await runWrangler("deploy");
 		});
@@ -6576,7 +6626,12 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource({ format: "js" });
 			writeWranglerConfig({
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					html_handling: "none",
@@ -6590,7 +6645,12 @@ addEventListener('fetch', event => {});`
 					config: { html_handling: "none" },
 				},
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				expectedMainModule: undefined,
 			});
 			await runWrangler("deploy");
@@ -6605,7 +6665,12 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource({ format: "js" });
 			writeWranglerConfig({
 				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				assets: {
 					directory: "assets",
 					html_handling: "none",
@@ -6619,7 +6684,12 @@ addEventListener('fetch', event => {});`
 					config: { html_handling: "none" },
 				},
 				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
+				expectedCompatibilityFlags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 				expectedMainModule: undefined,
 				expectedDispatchNamespace: "my-namespace",
 			});
@@ -11793,7 +11863,12 @@ addEventListener('fetch', event => {});`
 		it("should error if nodejs_compat (v2) is turned on when in service worker format", async () => {
 			writeWranglerConfig({
 				compatibility_date: "2024-09-23", // Sept 23 to turn on nodejs compat v2 mode
-				compatibility_flags: ["nodejs_compat"],
+				compatibility_flags: [
+					"nodejs_compat",
+					"fetch_iterable_type_support",
+					"fetch_iterable_type_support_override_adjustment",
+					"enable_nodejs_process_v2",
+				],
 			});
 			fs.writeFileSync(
 				"index.js",
@@ -11814,7 +11889,7 @@ addEventListener('fetch', event => {});`
 					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"X [ERROR] Unexpected external import of "node:events", "node:perf_hooks", "node:stream", and "node:tty".
+				"X [ERROR] Unexpected external import of "node:perf_hooks" and "node:stream".
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.
@@ -12639,7 +12714,7 @@ export default{
 			);
 
 			await runWrangler(
-				"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat"
+				"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --compatibility-flag=fetch_iterable_type_support --compatibility-flag=fetch_iterable_type_support_override_adjustment --compatibility-flag=enable_nodejs_process_v2"
 			);
 
 			expect(std).toMatchInlineSnapshot(`

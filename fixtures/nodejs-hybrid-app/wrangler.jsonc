@@ -4,7 +4,12 @@
 	// Setting compat date after 2024/09/23 means we don't need to use `nodejs_compat_v2`
 	// Setting compat date after 2025/04/01 means we don't need to use `nodejs_compat_populate_process_env`
 	"compatibility_date": "2025-07-01",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	/*
     These DB connection values are to a public database containing information about
     RNA, genes, etc. See https://rnacentral.org/help/public-database.

@@ -14,7 +14,12 @@ export default defineWorkersProject(async () => ({
 				main: "./dist-functions/index.js", // Built by `global-setup.ts`
 				singleWorker: true,
 				miniflare: {
-					compatibilityFlags: ["nodejs_compat"],
+					compatibilityFlags: [
+						"nodejs_compat",
+						"fetch_iterable_type_support",
+						"fetch_iterable_type_support_override_adjustment",
+						"enable_nodejs_process_v2",
+					],
 					compatibilityDate: "2024-01-01",
 					kvNamespaces: ["KV_NAMESPACE"],
 					serviceBindings: {

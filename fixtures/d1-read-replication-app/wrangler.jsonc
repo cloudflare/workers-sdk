@@ -6,6 +6,9 @@
 		"nodejs_compat",
 		"experimental",
 		"enable_d1_with_sessions_api",
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
 	],
 	"d1_databases": [
 		{

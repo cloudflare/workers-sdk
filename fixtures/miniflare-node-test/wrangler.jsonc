@@ -2,6 +2,11 @@
 	"name": "miniflare-node-test",
 	"main": "dist/out.js",
 	"compatibility_date": "2022-12-08",
+	"compatibility_flags": [
+		"fetch_iterable_type_support",
+		"fetch_iterable_type_support_override_adjustment",
+		"enable_nodejs_process_v2",
+	],
 	"build": {
 		"command": "npx esbuild src/index.js --outfile=dist/out.js",
 	},
