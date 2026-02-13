@@ -7,15 +7,19 @@ import {
 	LOCAL_EXPLORER_API_PATH,
 	LOCAL_EXPLORER_BASE_PATH,
 } from "../../plugins/core/constants";
+import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
+	zDurableObjectsNamespaceListNamespacesData,
+	zDurableObjectsNamespaceListObjectsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
+import { listDONamespaces, listDOObjects } from "./resources/do";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -24,15 +28,14 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import type { BindingIdMap } from "../../plugins/core/types";
 
-type BindingIdMap = {
-	d1: Record<string, string>; // databaseId -> bindingName
-	kv: Record<string, string>; // namespaceId -> bindingName
-};
 export type Env = {
 	[key: string]: unknown;
-	LOCAL_EXPLORER_BINDING_MAP: BindingIdMap;
-	MINIFLARE_EXPLORER_DISK: Fetcher;
+	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
+	[CoreBindings.EXPLORER_DISK]: Fetcher;
+	// Loopback service for calling Node.js endpoints (used for DO storage listing)
+	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -155,6 +158,24 @@ app.post(
 	"/api/d1/database/:database_id/raw",
 	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
+);
+
+// ============================================================================
+// Durable Objects Endpoints
+// ============================================================================
+
+app.get(
+	"/api/workers/durable_objects/namespaces",
+	validateQuery(
+		zDurableObjectsNamespaceListNamespacesData.shape.query.unwrap()
+	),
+	(c) => listDONamespaces(c, c.req.valid("query"))
+);
+
+app.get(
+	"/api/workers/durable_objects/namespaces/:namespace_id/objects",
+	validateQuery(zDurableObjectsNamespaceListObjectsData.shape.query.unwrap()),
+	(c) => listDOObjects(c, c.req.param("namespace_id"), c.req.valid("query"))
 );
 
 export default app;
