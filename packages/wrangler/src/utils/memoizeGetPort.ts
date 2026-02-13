@@ -25,12 +25,12 @@ function isNetworkBindPermissionError(e: unknown): boolean {
  * - Avoiding calling `getPort()` multiple times by memoizing the first result.
  *
  * @param defaultPort The preferred port to use when available
- * @param host The host to probe for available ports
+ * @param defaultHost The default host to probe for available ports (can be overridden per-call)
  */
-export function memoizeGetPort(defaultPort: number, host: string) {
+export function memoizeGetPort(defaultPort: number, defaultHost: string) {
 	let portValue: number | undefined;
-	let cachedHost = host;
-	return async (forHost: string = host) => {
+	let cachedHost = defaultHost;
+	return async (forHost: string = defaultHost) => {
 		if (forHost !== cachedHost) {
 			portValue = undefined;
 			cachedHost = forHost;
