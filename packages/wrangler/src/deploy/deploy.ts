@@ -811,7 +811,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.oldAssetTtl
 		);
 
-		const bindings = getBindings(config);
+		// Use pre-flattened bindings from programmatic config if available,
+		// avoiding the unflatten→reflatten round-trip through Config's typed arrays
+		const bindings = config.flatBindings
+			? {
+					...(config.flatBindings as NonNullable<
+						StartDevWorkerInput["bindings"]
+					>),
+				}
+			: getBindings(config);
 
 		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
 		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {

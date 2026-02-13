@@ -4,6 +4,7 @@ import {
 	experimental_patchConfig,
 	experimental_readRawConfig,
 	INHERIT_SYMBOL,
+	isProgrammaticConfigPath,
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -567,13 +568,16 @@ export async function provisionBindings(
 
 		const existingBindingNames = new Set<string>();
 
+		const isProgrammatic = isProgrammaticConfigPath(configPath);
+
 		const isUsingRedirectedConfig =
 			config.userConfigPath && config.userConfigPath !== config.configPath;
 
 		// If we're using a redirected config, then the redirected config potentially has injected
 		// bindings that weren't originally in the user config. These can be provisioned, but we
 		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
-		if (isUsingRedirectedConfig) {
+		// Skip for programmatic configs — experimental_readRawConfig can't parse .ts files
+		if (isUsingRedirectedConfig && !isProgrammatic) {
 			const { rawConfig: unredirectedConfig } =
 				await experimental_readRawConfig(
 					{ config: config.userConfigPath },
@@ -620,15 +624,29 @@ export async function provisionBindings(
 		// This is not necessary, as future deploys can use inherited resources, but it can help with
 		// portability of the config file, and adds robustness to bindings being renamed.
 		if (!isNonInteractiveOrCI()) {
-			try {
-				await experimental_patchConfig(configPath, patch, false);
+			if (isProgrammatic) {
+				// Can't patch a programmatic config file — log the provisioned IDs for the user to add manually
 				logger.log(
-					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
+					"Your Worker was deployed with provisioned resources. Since you're using a programmatic config file, you'll need to add the resource IDs to your config manually. Future deploys will continue to work either way."
 				);
-			} catch (e) {
-				// no-op — if the user is using TOML config we can't update it.
-				if (!(e instanceof PatchConfigError)) {
-					throw e;
+				for (const [configField, entries] of Object.entries(patch)) {
+					if (Array.isArray(entries)) {
+						for (const entry of entries) {
+							logger.log(`  ${configField}: ${JSON.stringify(entry)}`);
+						}
+					}
+				}
+			} else {
+				try {
+					await experimental_patchConfig(configPath, patch, false);
+					logger.log(
+						"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
+					);
+				} catch (e) {
+					// no-op — if the user is using TOML config we can't update it.
+					if (!(e instanceof PatchConfigError)) {
+						throw e;
+					}
 				}
 			}
 		}

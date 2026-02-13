@@ -53,6 +53,15 @@ export interface ComputedFields {
 	definedEnvironments: string[] | undefined;
 	/** The name of the environment being targeted. */
 	targetEnvironment: string | undefined;
+	/**
+	 * Pre-flattened bindings from programmatic config.
+	 * When set, deploy can use these directly instead of calling getBindings(config)
+	 * which would unflatten→reflatten. TOML configs leave this undefined.
+	 *
+	 * Typed as `Record<string, unknown>` to avoid cross-module type dependency in
+	 * the DTS bundle. Consumers should cast to `Record<string, Binding>`.
+	 */
+	flatBindings?: Record<string, unknown>;
 }
 
 export interface ConfigFields<Dev extends RawDevConfig> {

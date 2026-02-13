@@ -4,12 +4,15 @@ import {
 	FatalError,
 	getWranglerHideBanner,
 	isProgrammaticConfigPath,
+	resolveWranglerConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { loadProgrammaticConfig } from "@cloudflare/workers-utils/programmatic";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
+import { workerConfigToConfig } from "../config/worker-config-to-config";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
@@ -183,14 +186,31 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					};
 
 			await run(experimentalFlags, async () => {
-				const config =
-					def.behaviour?.provideConfig ?? true
-						? readConfig(args, {
-								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-								useRedirectIfAvailable:
-									def.behaviour?.useConfigRedirectIfAvailable,
-							})
-						: defaultWranglerConfig;
+				let config: typeof defaultWranglerConfig;
+				if (!(def.behaviour?.provideConfig ?? true)) {
+					config = defaultWranglerConfig;
+				} else {
+					// Resolve the config path to check if it's programmatic
+					const { configPath } = resolveWranglerConfigPath(args, {
+						useRedirectIfAvailable: def.behaviour?.useConfigRedirectIfAvailable,
+					});
+
+					if (isProgrammaticConfigPath(configPath)) {
+						// Programmatic config (.ts/.js) — load and convert to Config
+						const { workerConfig } = await loadProgrammaticConfig({
+							configPath: configPath!,
+							env: "env" in args ? (args.env as string | undefined) : undefined,
+						});
+						config = workerConfigToConfig(workerConfig, { configPath });
+					} else {
+						// TOML/JSON config — existing path
+						config = readConfig(args, {
+							hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+							useRedirectIfAvailable:
+								def.behaviour?.useConfigRedirectIfAvailable,
+						});
+					}
+				}
 
 				const dispatcher = getMetricsDispatcher({
 					sendMetrics: config.send_metrics,
@@ -200,7 +220,11 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				});
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					if (!("env" in args) && config.configPath) {
+					if (
+						!("env" in args) &&
+						config.configPath &&
+						!isProgrammaticConfigPath(config.configPath)
+					) {
 						const { rawConfig } = experimental_readRawConfig(
 							{
 								config: config.configPath,

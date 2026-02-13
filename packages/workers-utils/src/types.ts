@@ -7,6 +7,7 @@ import type {
 	Observability,
 	Rule,
 	TailConsumer,
+	UserLimits,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
@@ -477,6 +478,8 @@ export interface StartDevWorkerInput {
 		nodejsCompatMode?: Hook<NodeJSCompatMode, [Config]>;
 
 		moduleRoot?: string;
+		/** Preserve original file names in modules (no content hashing). */
+		preserveFileNames?: boolean;
 	};
 
 	/** Options applying to the worker's development preview environment. */
@@ -531,6 +534,28 @@ export interface StartDevWorkerInput {
 		/** Re-generate your worker types when your Wrangler configuration file changes */
 		generateTypes?: boolean;
 	};
+	/** Options applying to Worker deployment. */
+	deploy?: {
+		/** Smart placement configuration. */
+		placement?: Config["placement"];
+		/** Worker CPU/subrequest limits. */
+		limits?: UserLimits;
+		/** Enable logpush for this Worker. */
+		logpush?: boolean;
+		/** Observability/logging configuration. */
+		observability?: Observability;
+		/** Preserve existing env vars on deploy (don't delete vars not in config). */
+		keepVars?: boolean;
+		/** Upload source maps alongside the Worker. */
+		uploadSourceMaps?: boolean;
+		/** Internal: first-party worker flag. */
+		firstPartyWorker?: boolean;
+		/** Enable the workers.dev subdomain for this Worker. */
+		workersDev?: boolean;
+		/** Enable preview URLs for this Worker. */
+		previewUrls?: boolean;
+	};
+
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
 		useServiceEnvironments?: boolean;
