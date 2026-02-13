@@ -888,6 +888,31 @@ export const WorkerdTests: Record<string, () => void> = {
 			});
 		}
 	},
+
+	async testTty() {
+		const tty = await import("node:tty");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(tty, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		assertTypeOfProperties(tty.default, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		// isatty should return false (both unenv and workerd)
+		assert.strictEqual(tty.isatty(0), false);
+		assert.strictEqual(tty.isatty(1), false);
+		assert.strictEqual(tty.isatty(2), false);
+
+		assert.doesNotThrow(() => new tty.ReadStream(0));
+		assert.doesNotThrow(() => new tty.WriteStream(1));
+	},
 };
 
 /**
