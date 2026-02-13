@@ -16,7 +16,7 @@ import { StudioWindowTab } from "./WindowTab";
 import type {
 	StudioMultipleQueryProgress,
 	StudioMultipleQueryResult,
-} from "../../utils/studio";
+} from "../../types/studio";
 import type { StudioCodeMirrorReference } from "./CodeMirror";
 import type { StudioWindowTabItem } from "./WindowTab";
 
@@ -265,7 +265,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 
 					<div className="flex overflow-hidden">
 						<Button
-							className="h-8 text-xs rounded-r-none !pr-2"
+							className="h-8 text-xs rounded-r-none pr-2!"
 							icon={<PlayIcon weight="fill" />}
 							loading={loading}
 							onClick={onRunCurrentClicked}
