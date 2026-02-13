@@ -453,7 +453,16 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				await expect(
 					details.getDetailsForAutoConfig()
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: Gatsby, Gridsome. None of which are known by Wrangler.]`
+					`
+					[Error: Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: Gatsby, Gridsome.
+
+					To fix this issue either:
+					  - check your project's configuration to make sure that the target framework
+					    is the only configured one and try again
+					  - run \`wrangler setup\` locally to get an interactive user experience where
+					    you can specify what framework you want to target
+					]
+				`
 				);
 			});
 		});

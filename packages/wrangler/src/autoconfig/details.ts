@@ -13,6 +13,7 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import dedent from "ts-dedent";
 import { getCacheFolder } from "../config-cache";
 import { getErrorType } from "../core/handle-errors";
 import { confirm, prompt, select } from "../dialogs";
@@ -26,7 +27,6 @@ import {
 	YarnPackageManager,
 } from "../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../pages/constants";
-import { dedent } from "../utils/dedent";
 import {
 	allKnownFrameworks,
 	allKnownFrameworksIds,
@@ -87,22 +87,17 @@ export function assertNonConfigured(
 }
 
 class MultipleFrameworksCIError extends FatalError {
-	constructor(frameworks: string[], noneKnown = false) {
+	constructor(frameworks: string[]) {
 		super(
-			dedent`
-				Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(", ")}.${
-					noneKnown ? " None of which are known by Wrangler." : ""
-				}
-			${
-				noneKnown
-					? ""
-					: `
+			dedent`Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(", ")}.
 
 				To fix this issue either:
-					- check your project's configuration to make sure that the target framework is the only configured one and try again
-					- run \`wrangler setup\` locally to get an interactive user experience where you can specify what framework you want to target
-				`
-			}`,
+				  - check your project's configuration to make sure that the target framework
+				    is the only configured one and try again
+				  - run \`wrangler setup\` locally to get an interactive user experience where
+				    you can specify what framework you want to target
+
+			`,
 			1,
 			{ telemetryMessage: true }
 		);
@@ -110,14 +105,10 @@ class MultipleFrameworksCIError extends FatalError {
 }
 
 function throwMultipleFrameworksNonInteractiveError(
-	settings: Settings[],
-	noneKnown = false
+	settings: Settings[]
 ): never {
-	assert(isNonInteractiveOrCI());
-	throw new MultipleFrameworksCIError(
-		settings.map((b) => b.name),
-		noneKnown
-	);
+	// assert(isNonInteractiveOrCI());
+	throw new MultipleFrameworksCIError(settings.map((b) => b.name));
 }
 
 async function hasIndexHtml(dir: string): Promise<boolean> {
@@ -287,7 +278,7 @@ function findDetectedFramework(
 	if (settingsForOnlyKnownFrameworks.length === 0) {
 		if (isNonInteractiveOrCI()) {
 			// If we're in a non interactive session (e.g. CI) let's throw to be on the safe side
-			throwMultipleFrameworksNonInteractiveError(settings, true);
+			throwMultipleFrameworksNonInteractiveError(settings);
 		}
 		// Locally we can just return the first one since the user can anyways choose a different
 		// framework or abort the process anyways
