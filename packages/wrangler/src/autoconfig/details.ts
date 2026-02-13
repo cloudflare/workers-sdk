@@ -303,11 +303,12 @@ function findDetectedFramework(
 				({ framework }) => framework.id !== viteId
 			);
 
-			assert(knownNonViteSettings);
-
-			// If we've found a known framework and Vite, then most likely the Vite is there only either as an extra build tool
-			// or as part of a Vitest installation, so it's pretty safe to ignore it in this case
-			return knownNonViteSettings;
+			// Here knownNonViteSettings should always be defined, it only could be undefined if the detected frameworks are both Vite.
+			if (knownNonViteSettings) {
+				// If we've found a known framework and Vite, then most likely the Vite is there only either as an extra build tool
+				// or as part of a Vitest installation, so it's pretty safe to ignore it in this case
+				return knownNonViteSettings;
+			}
 		}
 	}
 
