@@ -1,7 +1,7 @@
 import { join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- expect used inside .forEach() parameterized test generation */
-import { describe, expect, test } from "vitest";
+import { assert, describe, expect, test } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getValidatedWranglerConfigPath } from "../workers-configs";
 
@@ -12,9 +12,8 @@ const isWindows = process.platform === "win32";
 describe("valid cases", () => {
 	test("should return the value of a found wrangler config", () => {
 		const result = getValidatedWranglerConfigPath(fixturesPath, undefined);
-		expect(result).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(normalize(result!)).toMatch(
+		assert(result, "Expected a wrangler config path to be found");
+		expect(normalize(result)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\wrangler\.jsonc/
 				: /\/__tests__\/fixtures\/wrangler\.jsonc/
@@ -26,9 +25,8 @@ describe("valid cases", () => {
 			fixturesPath,
 			join(fixturesPath, "simple-wrangler.jsonc")
 		);
-		expect(result).toBeDefined();
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		expect(normalize(result!)).toMatch(
+		assert(result, "Expected a wrangler config path to be found");
+		expect(normalize(result)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\simple-wrangler\.jsonc/
 				: /\/__tests__\/fixtures\/simple-wrangler\.jsonc/

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { assert, describe, expect, test } from "vitest";
 import {
 	parseSQLiteCreateTableScript,
 	parseSQLiteIndexScript,
@@ -100,8 +100,8 @@ describe("parseSQLiteCreateTableScript", () => {
 		expect(schema.columns[1]?.pk).toBe(true);
 
 		const pkConstraint = schema.constraints?.find((c) => c.primaryKey);
-		expect(pkConstraint).toBeDefined();
-		expect(pkConstraint?.primaryColumns).toEqual(["order_id", "product_id"]);
+		assert(pkConstraint);
+		expect(pkConstraint.primaryColumns).toEqual(["order_id", "product_id"]);
 	});
 
 	test("table with `FOREIGN KEY` / REFERENCES", () => {
@@ -119,10 +119,10 @@ describe("parseSQLiteCreateTableScript", () => {
 		const schema = parseSQLiteCreateTableScript("main", sql);
 
 		const fkConstraint = schema.constraints?.find((c) => c.foreignKey);
-		expect(fkConstraint).toBeDefined();
-		expect(fkConstraint?.foreignKey?.foreignTableName).toBe("users");
-		expect(fkConstraint?.foreignKey?.foreignColumns).toEqual(["id"]);
-		expect(fkConstraint?.foreignKey?.columns).toEqual(["user_id"]);
+		assert(fkConstraint?.foreignKey);
+		expect(fkConstraint.foreignKey.foreignTableName).toBe("users");
+		expect(fkConstraint.foreignKey.foreignColumns).toEqual(["id"]);
+		expect(fkConstraint.foreignKey.columns).toEqual(["user_id"]);
 	});
 
 	test("table with `GENERATED ALWAYS AS`", () => {
@@ -167,18 +167,18 @@ describe("parseSQLiteCreateTableScript", () => {
 		const sql = `CREATE VIRTUAL TABLE search USING FTS5(title, body, content=pages, content_rowid=rowid)`;
 		const schema = parseSQLiteCreateTableScript("main", sql);
 
-		expect(schema.fts5).toBeDefined();
-		expect(schema.fts5?.content).toBe("pages");
-		expect(schema.fts5?.contentRowId).toBe("rowid");
+		assert(schema.fts5);
+		expect(schema.fts5.content).toBe("pages");
+		expect(schema.fts5.contentRowId).toBe("rowid");
 	});
 
 	test("`FTS5` virtual table without options", () => {
 		const sql = `CREATE VIRTUAL TABLE search USING FTS5(title, body)`;
 		const schema = parseSQLiteCreateTableScript("main", sql);
 
-		expect(schema.fts5).toBeDefined();
-		expect(schema.fts5?.content).toBeUndefined();
-		expect(schema.fts5?.contentRowId).toBeUndefined();
+		assert(schema.fts5);
+		expect(schema.fts5.content).toBeUndefined();
+		expect(schema.fts5.contentRowId).toBeUndefined();
 	});
 
 	test("table with column type parameters like `VARCHAR(255)`", () => {
@@ -262,8 +262,8 @@ describe("parseSQLiteCreateTableScript", () => {
 		const schema = parseSQLiteCreateTableScript("main", sql);
 
 		const uniqueConstraint = schema.constraints?.find((c) => c.unique);
-		expect(uniqueConstraint).toBeDefined();
-		expect(uniqueConstraint?.uniqueColumns).toEqual(["a", "b"]);
+		assert(uniqueConstraint);
+		expect(uniqueConstraint.uniqueColumns).toEqual(["a", "b"]);
 	});
 
 	test("table-level `CHECK` constraint", () => {

@@ -200,8 +200,8 @@ describe("sentry", () => {
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
-			expect(sentryRequests?.length).toBeGreaterThan(0);
 			assert(sentryRequests !== undefined);
+			expect(sentryRequests.length).toBeGreaterThan(0);
 
 			// Check requests don't include PII
 			const envelopes = sentryRequests.map(({ envelope }) => {
@@ -507,8 +507,8 @@ describe("sentry", () => {
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
-			expect(sentryRequests?.length).toBeGreaterThan(0);
 			assert(sentryRequests !== undefined);
+			expect(sentryRequests.length).toBeGreaterThan(0);
 
 			// Check requests don't include PII
 			const envelopes = sentryRequests.map(({ envelope }) => {

@@ -24,7 +24,6 @@ describe("Custom Builds", () => {
 			);
 			assert(false, "Unreachable");
 		} catch (e) {
-			expect(e).toBeInstanceOf(UserError);
 			assert(e instanceof UserError);
 			expect(e.message).toMatchInlineSnapshot(
 				`"Running custom build \`node -e "process.exit(1)"\` failed. There are likely more logs from your build command above."`
