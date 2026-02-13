@@ -22,6 +22,7 @@ Perform the following steps in order. **Stop and skip to Output as soon as you h
 Read the pre-fetched `context.json` file using the `read` tool.
 
 Extract and note:
+
 - Title and description
 - Issue type (bug report vs feature request vs question)
 - Product/component affected
@@ -34,12 +35,14 @@ Extract and note:
 ### Step 2: Check for Empty or Invalid Issues
 
 Recommend **CLOSE** if:
+
 - The body is empty or contains only template headers with no content filled in
 - The issue is clearly spam or off-topic (not related to workers-sdk)
 - The reporter confirmed the issue is resolved (in comments)
 - A maintainer indicated it should be closed (in comments)
 
 Recommend **NEEDS MORE INFO** if:
+
 - Bug report has no reproduction steps or link (the template requires one)
 - Bug report is missing version information
 - The description is too vague to act on
@@ -50,29 +53,31 @@ Recommend **NEEDS MORE INFO** if:
 
 Map the issue to a package based on labels, title, and body content:
 
-| Signal | Package |
-|--------|---------|
-| `wrangler` label, wrangler CLI commands, `wrangler.toml` | `packages/wrangler` |
-| `miniflare` label, local dev simulation | `packages/miniflare` |
-| `d1` label, D1 database | `packages/wrangler` (D1 code is in wrangler) |
-| `vitest` label, worker tests | `packages/vitest-pool-workers` |
-| `vite-plugin` label, vite dev | `packages/vite-plugin-cloudflare` |
-| `c3` label, `create-cloudflare`, project scaffolding | `packages/create-cloudflare` |
-| `pages` label, Pages deployment | `packages/wrangler` (Pages code is in wrangler) |
-| R2, KV, Queues, Durable Objects bindings | `packages/wrangler` |
-| Workers runtime behavior (not tooling) | May be a platform issue, not workers-sdk |
+| Signal                                                   | Package                                         |
+| -------------------------------------------------------- | ----------------------------------------------- |
+| `wrangler` label, wrangler CLI commands, `wrangler.toml` | `packages/wrangler`                             |
+| `miniflare` label, local dev simulation                  | `packages/miniflare`                            |
+| `d1` label, D1 database                                  | `packages/wrangler` (D1 code is in wrangler)    |
+| `vitest` label, worker tests                             | `packages/vitest-pool-workers`                  |
+| `vite-plugin` label, vite dev                            | `packages/vite-plugin-cloudflare`               |
+| `c3` label, `create-cloudflare`, project scaffolding     | `packages/create-cloudflare`                    |
+| `pages` label, Pages deployment                          | `packages/wrangler` (Pages code is in wrangler) |
+| R2, KV, Queues, Durable Objects bindings                 | `packages/wrangler`                             |
+| Workers runtime behavior (not tooling)                   | May be a platform issue, not workers-sdk        |
 
 If the issue describes Workers **runtime** behavior (e.g., fetch API quirks, V8 issues, compatibility flags) rather than **tooling** behavior, note that it may belong in a different repo.
 
 ### Step 4: Assess Reproducibility and Severity
 
 For **bug reports**, evaluate:
+
 - **Has reproduction?** Does the issue include a minimal repro link or clear steps?
 - **Severity estimate:** Is this a crash, data loss, incorrect behavior, or cosmetic issue?
 - **Scope:** Does it affect all users or a specific configuration?
 - **Workaround available?** Did the reporter or comments mention one?
 
 For **feature requests**, evaluate:
+
 - **Clarity:** Is the proposed solution clearly described?
 - **Use case:** Is the motivation explained?
 - **Scope:** Small enhancement vs large new feature?
@@ -95,6 +100,7 @@ Write the full report to `./data/<issue_number>/report.md`:
 # Issue Triage: <owner/repo>#<number>
 
 ## Summary
+
 <One-line summary of the issue>
 
 ## Classification
@@ -114,6 +120,7 @@ Write the full report to `./data/<issue_number>/report.md`:
 - **Comments:** <count>
 
 ### Analysis
+
 <2-5 bullet points covering what you found — component identification,
 reproducibility assessment, severity reasoning. Only include what's relevant.>
 
@@ -128,6 +135,7 @@ reproducibility assessment, severity reasoning. Only include what's relevant.>
 **Suggested Labels:** <labels to add, if any>
 
 ### Suggested Comment
+
 > <The exact comment to post on the issue, if applicable. For NEEDS MORE INFO,
 > ask specific questions. For CLOSE, explain why.
 > Omit this section if no comment is needed.>
@@ -142,6 +150,7 @@ Write a single tab-separated line to `./data/<issue_number>/summary.md` with the
 ```
 
 **Column definitions:**
+
 - **Issue #**: Link to the issue in markdown format `[number](url)`
 - **Title**: Issue title (remove any emoji prefixes like "Bug:")
 - **Recommendation**: One of CLOSE, KEEP OPEN, NEEDS MORE INFO, NEEDS VERIFICATION
