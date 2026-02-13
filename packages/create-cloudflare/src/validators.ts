@@ -84,6 +84,7 @@ export const isAllowedExistingFile = (file: string) => {
 		".git",
 		".gitattributes",
 		".gitignore",
+		".gitkeep",
 		".gitlab-ci.yml",
 		".hg",
 		".hgcheck",
@@ -91,16 +92,17 @@ export const isAllowedExistingFile = (file: string) => {
 		".idea",
 		".npmignore",
 		".travis.yml",
+		".venv",
 		".vscode",
-		"Thumbs.db",
+		".yarn",
 		"docs",
+		"Makefile",
 		"mkdocs.yml",
 		"npm-debug.log",
+		"Thumbs.db",
 		"yarn-debug.log",
 		"yarn-error.log",
 		"yarnrc.yml",
-		".yarn",
-		".gitkeep",
 	]);
 
 	if (allowedExistingFiles.has(file)) {
