@@ -12,7 +12,6 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
-import { getPackageManager } from "../package-manager";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
@@ -79,16 +78,18 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
+		if (!autoConfigDetails.framework.autoConfigSupported) {
+			throw new FatalError(
+				autoConfigDetails.framework.id === "cloudflare-pages"
+					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
+					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+			);
+		}
+
 		assert(
 			autoConfigDetails.outputDir,
 			"The Output Directory is unexpectedly missing"
 		);
-
-		if (!autoConfigDetails.framework.autoConfigSupported) {
-			throw new FatalError(
-				`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
-			);
-		}
 
 		const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
 			projectPath: autoConfigDetails.projectPath,
@@ -103,15 +104,18 @@ export async function runAutoConfig(
 			},
 		} satisfies RawConfig;
 
+		const { packageManager } = autoConfigDetails;
+
 		const dryRunConfigurationResults =
 			await autoConfigDetails.framework.configure({
 				outputDir: autoConfigDetails.outputDir,
 				projectPath: autoConfigDetails.projectPath,
 				workerName: autoConfigDetails.workerName,
 				dryRun: true,
+				packageManager,
 			});
 
-		const { npx } = await getPackageManager();
+		const { npx } = packageManager;
 
 		autoConfigSummary = await buildOperationsSummary(
 			{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
@@ -162,7 +166,7 @@ export async function runAutoConfig(
 		);
 
 		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-			await installWrangler();
+			await installWrangler(packageManager);
 		}
 
 		const configurationResults = await autoConfigDetails.framework.configure({
@@ -170,6 +174,7 @@ export async function runAutoConfig(
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
 			dryRun: false,
+			packageManager,
 		});
 
 		if (autoConfigDetails.packageJson) {
@@ -186,19 +191,8 @@ export async function runAutoConfig(
 				JSON.stringify(
 					{
 						...existingPackageJson,
-						name:
-							autoConfigDetails.packageJson.name ?? existingPackageJson.name,
-						dependencies: {
-							...existingPackageJson.dependencies,
-							...autoConfigDetails.packageJson.dependencies,
-						},
-						devDependencies: {
-							...existingPackageJson.devDependencies,
-							...autoConfigDetails.packageJson.devDependencies,
-						},
 						scripts: {
 							...existingPackageJson.scripts,
-							...autoConfigDetails.packageJson.scripts,
 							...autoConfigSummary.scripts,
 						},
 					} satisfies PackageJSON,

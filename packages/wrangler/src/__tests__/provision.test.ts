@@ -453,15 +453,15 @@ describe("resource provisioning", () => {
 
 
 				Provisioning KV (KV Namespace)...
-				🌀 Creating new KV Namespace \\"new-kv\\"...
+				🌀 Creating new KV Namespace "new-kv"...
 				✨ KV provisioned 🎉
 
 				Provisioning D1 (D1 Database)...
-				🌀 Creating new D1 Database \\"new-d1\\"...
+				🌀 Creating new D1 Database "new-d1"...
 				✨ D1 provisioned 🎉
 
 				Provisioning R2 (R2 Bucket)...
-				🌀 Creating new R2 Bucket \\"new-r2\\"...
+				🌀 Creating new R2 Bucket "new-r2"...
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
@@ -484,21 +484,21 @@ describe("resource provisioning", () => {
 
 			// IDs should be written back to the config file
 			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
-				"compatibility_date = \\"2022-01-12\\"
-				name = \\"test-name\\"
-				main = \\"index.js\\"
+				"compatibility_date = "2022-01-12"
+				name = "test-name"
+				main = "index.js"
 
 				[[kv_namespaces]]
-				binding = \\"KV\\"
-				id = \\"new-kv-id\\"
+				binding = "KV"
+				id = "new-kv-id"
 
 				[[r2_buckets]]
-				binding = \\"R2\\"
-				bucket_name = \\"new-r2\\"
+				binding = "R2"
+				bucket_name = "new-r2"
 
 				[[d1_databases]]
-				binding = \\"D1\\"
-				database_id = \\"new-d1-id\\"
+				binding = "D1"
+				database_id = "new-d1-id"
 				"
 			`);
 		});
@@ -614,15 +614,15 @@ describe("resource provisioning", () => {
 
 
 				Provisioning KV (KV Namespace)...
-				🌀 Creating new KV Namespace \\"new-kv\\"...
+				🌀 Creating new KV Namespace "new-kv"...
 				✨ KV provisioned 🎉
 
 				Provisioning D1 (D1 Database)...
-				🌀 Creating new D1 Database \\"new-d1\\"...
+				🌀 Creating new D1 Database "new-d1"...
 				✨ D1 provisioned 🎉
 
 				Provisioning R2 (R2 Bucket)...
-				🌀 Creating new R2 Bucket \\"new-r2\\"...
+				🌀 Creating new R2 Bucket "new-r2"...
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
@@ -645,21 +645,21 @@ describe("resource provisioning", () => {
 
 			// IDs should be written back to the user config file
 			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
-				"compatibility_date = \\"2022-01-12\\"
-				name = \\"test-name\\"
-				main = \\"index.js\\"
+				"compatibility_date = "2022-01-12"
+				name = "test-name"
+				main = "index.js"
 
 				[[kv_namespaces]]
-				binding = \\"KV\\"
-				id = \\"new-kv-id\\"
+				binding = "KV"
+				id = "new-kv-id"
 
 				[[r2_buckets]]
-				binding = \\"R2\\"
-				bucket_name = \\"new-r2\\"
+				binding = "R2"
+				bucket_name = "new-r2"
 
 				[[d1_databases]]
-				binding = \\"D1\\"
-				database_id = \\"new-d1-id\\"
+				binding = "D1"
+				database_id = "new-d1-id"
 				"
 			`);
 
@@ -763,19 +763,19 @@ describe("resource provisioning", () => {
 
 
 				Provisioning KV (KV Namespace)...
-				🌀 Creating new KV Namespace \\"test-name-kv\\"...
+				🌀 Creating new KV Namespace "test-name-kv"...
 				✨ KV provisioned 🎉
 
 				Provisioning PLATFORM_KV (KV Namespace)...
-				🌀 Creating new KV Namespace \\"test-name-platform-kv\\"...
+				🌀 Creating new KV Namespace "test-name-platform-kv"...
 				✨ PLATFORM_KV provisioned 🎉
 
 				Provisioning D1 (D1 Database)...
-				🌀 Creating new D1 Database \\"test-name-d1\\"...
+				🌀 Creating new D1 Database "test-name-d1"...
 				✨ D1 provisioned 🎉
 
 				Provisioning R2 (R2 Bucket)...
-				🌀 Creating new R2 Bucket \\"test-name-r2\\"...
+				🌀 Creating new R2 Bucket "test-name-r2"...
 				✨ R2 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
@@ -799,21 +799,21 @@ describe("resource provisioning", () => {
 
 			// IDs should be written back to the user config file, except the injected PLATFORM_KV one
 			expect(await readFile("wrangler.toml", "utf-8")).toMatchInlineSnapshot(`
-				"compatibility_date = \\"2022-01-12\\"
-				name = \\"test-name\\"
-				main = \\"index.js\\"
+				"compatibility_date = "2022-01-12"
+				name = "test-name"
+				main = "index.js"
 
 				[[kv_namespaces]]
-				binding = \\"KV\\"
-				id = \\"test-name-kv-id\\"
+				binding = "KV"
+				id = "test-name-kv-id"
 
 				[[r2_buckets]]
-				binding = \\"R2\\"
-				bucket_name = \\"test-name-r2\\"
+				binding = "R2"
+				bucket_name = "test-name-r2"
 
 				[[d1_databases]]
-				binding = \\"D1\\"
-				database_id = \\"test-name-d1-id\\"
+				binding = "D1"
+				database_id = "test-name-d1-id"
 				"
 			`);
 
@@ -871,7 +871,7 @@ describe("resource provisioning", () => {
 
 				Provisioning D1 (D1 Database)...
 				Resource name found in config: prefilled-d1-name
-				🌀 Creating new D1 Database \\"prefilled-d1-name\\"...
+				🌀 Creating new D1 Database "prefilled-d1-name"...
 				✨ D1 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
@@ -1000,7 +1000,7 @@ describe("resource provisioning", () => {
 
 				Provisioning D1 (D1 Database)...
 				Resource name found in config: new-d1-name
-				🌀 Creating new D1 Database \\"new-d1-name\\"...
+				🌀 Creating new D1 Database "new-d1-name"...
 				✨ D1 provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
@@ -1079,7 +1079,7 @@ describe("resource provisioning", () => {
 
 				Provisioning BUCKET (R2 Bucket)...
 				Resource name found in config: prefilled-r2-name
-				🌀 Creating new R2 Bucket \\"prefilled-r2-name\\"...
+				🌀 Creating new R2 Bucket "prefilled-r2-name"...
 				✨ BUCKET provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.
@@ -1275,7 +1275,7 @@ describe("resource provisioning", () => {
 
 				Provisioning BUCKET (R2 Bucket)...
 				Resource name found in config: existing-bucket-name
-				🌀 Creating new R2 Bucket \\"existing-bucket-name\\"...
+				🌀 Creating new R2 Bucket "existing-bucket-name"...
 				✨ BUCKET provisioned 🎉
 
 				Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work.

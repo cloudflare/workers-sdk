@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.63.0",
+	"version": "4.65.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -73,7 +73,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260207.0"
+		"workerd": "1.20260213.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -97,7 +97,6 @@
 		"@types/cross-spawn": "^6.0.2",
 		"@types/esprima": "^4.0.3",
 		"@types/glob-to-regexp": "^0.4.1",
-		"@types/is-ci": "^3.0.0",
 		"@types/javascript-time-ago": "^2.0.3",
 		"@types/json-diff": "^1.0.3",
 		"@types/mime": "^3.0.4",
@@ -117,6 +116,7 @@
 		"capnweb": "^0.1.0",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
+		"ci-info": "catalog:default",
 		"cli-table3": "^0.6.3",
 		"cloudflare": "^5.2.0",
 		"cmd-shim": "^4.1.0",
@@ -133,7 +133,6 @@
 		"get-port": "^7.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"https-proxy-agent": "7.0.2",
-		"is-ci": "^3.0.1",
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",
 		"json-diff": "^1.0.6",
@@ -159,6 +158,7 @@
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"tinyexec": "^1.0.2",
+		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"ts-json-schema-generator": "^1.5.0",
 		"tsup": "8.3.0",

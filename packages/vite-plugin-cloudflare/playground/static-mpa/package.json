@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build:default": "vite build --app",
 		"build:with-worker-configs-warning": "vite build --app -c vite.config.with-worker-configs-warning.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",

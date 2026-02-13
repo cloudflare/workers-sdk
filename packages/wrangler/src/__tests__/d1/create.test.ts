@@ -75,11 +75,11 @@ describe("create", () => {
 
 			To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"d1_databases\\": [
+			  "d1_databases": [
 			    {
-			      \\"binding\\": \\"MY_TEST_DB\\",
-			      \\"database_name\\": \\"test\\",
-			      \\"database_id\\": \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
+			      "binding": "MY_TEST_DB",
+			      "database_name": "test",
+			      "database_id": "51e7c314-456e-4167-b6c3-869ad188fc23"
 			    }
 			  ]
 			}"
@@ -132,11 +132,11 @@ describe("create", () => {
 
 			To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"d1_databases\\": [
+			  "d1_databases": [
 			    {
-			      \\"binding\\": \\"MY_TEST_DB\\",
-			      \\"database_name\\": \\"test\\",
-			      \\"database_id\\": \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
+			      "binding": "MY_TEST_DB",
+			      "database_name": "test",
+			      "database_id": "51e7c314-456e-4167-b6c3-869ad188fc23"
 			    }
 			  ]
 			}"

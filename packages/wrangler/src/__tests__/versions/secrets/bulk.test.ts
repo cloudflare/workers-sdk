@@ -31,7 +31,7 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\" "
+			🌀 Creating the secrets for the Worker "script-name" "
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
@@ -74,12 +74,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -98,12 +98,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -151,12 +151,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -200,7 +200,7 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\" "
+			🌀 Creating the secrets for the Worker "script-name" "
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
@@ -248,12 +248,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -296,12 +296,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -328,7 +328,7 @@ describe("versions secret bulk", () => {
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 				  the target environment using the \`-e|--env\` flag.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
-				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+				  string to the flag to target such environment. For example \`--env=""\`.
 
 				"
 			`);
