@@ -1,5 +1,5 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
@@ -29,7 +29,7 @@ describe("wrangler", () => {
 	const std = mockConsoleMethods();
 
 	describe("no command", () => {
-		it("should display a list of available commands", async () => {
+		it("should display a list of available commands", async ({ expect }) => {
 			await runWrangler();
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -95,7 +95,7 @@ describe("wrangler", () => {
 	});
 
 	describe("invalid command", () => {
-		it("should display an error", async () => {
+		it("should display an error", async ({ expect }) => {
 			await expect(
 				runWrangler("invalid-command")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -167,7 +167,7 @@ describe("wrangler", () => {
 		      `);
 		});
 
-		it("should display an error even with --help flag", async () => {
+		it("should display an error even with --help flag", async ({ expect }) => {
 			await expect(
 				runWrangler("invalid-command --help")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -184,7 +184,9 @@ describe("wrangler", () => {
 	});
 
 	describe("invalid flag on valid command", () => {
-		it("should display command-specific help for unknown flag", async () => {
+		it("should display command-specific help for unknown flag", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("types --invalid-flag-xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -203,7 +205,9 @@ describe("wrangler", () => {
 	});
 
 	describe("global options", () => {
-		it("should display an error if duplicated --env or --config arguments are provided", async () => {
+		it("should display an error if duplicated --env or --config arguments are provided", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("--env prod -e prod")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -217,7 +221,7 @@ describe("wrangler", () => {
 			);
 		});
 
-		it("should change cwd with --cwd", async () => {
+		it("should change cwd with --cwd", async ({ expect }) => {
 			const spy = vi.spyOn(process, "chdir").mockImplementation(() => {});
 			await runWrangler("--cwd /path");
 			expect(process.chdir).toHaveBeenCalledTimes(1);
@@ -227,7 +231,9 @@ describe("wrangler", () => {
 	});
 
 	describe("preview", () => {
-		it("should throw an error if the deprecated command is used with positional arguments", async () => {
+		it("should throw an error if the deprecated command is used with positional arguments", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("preview GET")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -242,7 +248,9 @@ describe("wrangler", () => {
 	});
 
 	describe("subcommand implicit help ran on incomplete command execution", () => {
-		it("no subcommand for 'secret' should display a list of available subcommands", async () => {
+		it("no subcommand for 'secret' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("secret");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -266,7 +274,9 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("no subcommand 'kv namespace' should display a list of available subcommands", async () => {
+		it("no subcommand 'kv namespace' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("kv namespace");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -277,7 +287,7 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler kv namespace create <namespace>  Create a new namespace
 				  wrangler kv namespace list                Output a list of all KV namespaces associated with your account id
-				  wrangler kv namespace delete              Delete a given namespace.
+				  wrangler kv namespace delete [namespace]  Delete a given namespace.
 				  wrangler kv namespace rename [old-name]   Rename a KV namespace
 
 				GLOBAL FLAGS
@@ -290,7 +300,9 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("no subcommand 'kv key' should display a list of available subcommands", async () => {
+		it("no subcommand 'kv key' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("kv key");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -314,7 +326,9 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("no subcommand 'kv bulk' should display a list of available subcommands", async () => {
+		it("no subcommand 'kv bulk' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("kv bulk");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -337,7 +351,9 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("no subcommand 'r2' should display a list of available subcommands", async () => {
+		it("no subcommand 'r2' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("r2");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -361,7 +377,7 @@ describe("wrangler", () => {
 		});
 	});
 
-	it("build should run `deploy --dry-run --outdir`", async () => {
+	it("build should run `deploy --dry-run --outdir`", async ({ expect }) => {
 		writeWranglerConfig({
 			main: "index.js",
 		});
@@ -379,14 +395,16 @@ describe("wrangler", () => {
 	});
 
 	describe("logPossibleBugMessage()", () => {
-		it("should display a 'possible bug' message", async () => {
+		it("should display a 'possible bug' message", async ({ expect }) => {
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(
 				`"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"`
 			);
 		});
 
-		it("should display a 'try updating' message if there is one available", async () => {
+		it("should display a 'try updating' message if there is one available", async ({
+			expect,
+		}) => {
 			(updateCheck as Mock).mockImplementation(async () => "123.123.123");
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -395,7 +413,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should display a warning if Bun is in use", async () => {
+		it("should display a warning if Bun is in use", async ({ expect }) => {
 			const original = process.versions.bun;
 			process.versions.bun = "v1";
 			await logPossibleBugMessage();

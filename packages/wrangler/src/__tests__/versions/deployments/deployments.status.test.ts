@@ -1,5 +1,5 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
@@ -20,7 +20,7 @@ describe("deployments list", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler("deployments status");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -32,7 +32,7 @@ describe("deployments list", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints latest deployment to stdout", async () => {
+		test("prints latest deployment to stdout", async ({ expect }) => {
 			const result = runWrangler("deployments status --name test-name");
 
 			await expect(result).resolves.toBeUndefined();
@@ -57,42 +57,43 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints latest deployment to stdout as --json", async () => {
+		test("prints latest deployment to stdout as valid json", async ({
+			expect,
+		}) => {
 			const result = runWrangler("deployments status --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"id\\": \\"Galaxy-Class-test-name\\",
-			  \\"source\\": \\"api\\",
-			  \\"strategy\\": \\"percentage\\",
-			  \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			  \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			  \\"annotations\\": {
-			    \\"workers/triggered_by\\": \\"rollback\\",
-			    \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			  },
-			  \\"versions\\": [
-			    {
-			      \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 10
-			    },
-			    {
-			      \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 90
-			    }
-			  ]
-			}
-			"
-		`);
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "annotations": {
+				    "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
+				    "workers/triggered_by": "rollback",
+				  },
+				  "author_email": "Jean-Luc-Picard@federation.org",
+				  "created_on": "2021-01-04T00:00:00.000000Z",
+				  "id": "Galaxy-Class-test-name",
+				  "source": "api",
+				  "strategy": "percentage",
+				  "versions": [
+				    {
+				      "percentage": 10,
+				      "version_id": "10000000-0000-0000-0000-000000000000",
+				    },
+				    {
+				      "percentage": 90,
+				      "version_id": "20000000-0000-0000-0000-000000000000",
+				    },
+				  ],
+				}
+			`);
 		});
 	});
 
 	describe("with wrangler.toml", () => {
 		beforeEach(() => writeWranglerConfig());
 
-		test("prints latest deployment to stdout", async () => {
+		test("prints latest deployment to stdout", async ({ expect }) => {
 			const result = runWrangler("deployments status");
 
 			await expect(result).resolves.toBeUndefined();
@@ -117,35 +118,36 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints latest deployment to stdout as --json", async () => {
+		test("prints latest deployment to stdout as valid json", async ({
+			expect,
+		}) => {
 			const result = runWrangler("deployments status --json");
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"id\\": \\"Galaxy-Class-test-name\\",
-			  \\"source\\": \\"api\\",
-			  \\"strategy\\": \\"percentage\\",
-			  \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-			  \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-			  \\"annotations\\": {
-			    \\"workers/triggered_by\\": \\"rollback\\",
-			    \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
-			  },
-			  \\"versions\\": [
-			    {
-			      \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 10
-			    },
-			    {
-			      \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-			      \\"percentage\\": 90
-			    }
-			  ]
-			}
-			"
-		`);
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "annotations": {
+				    "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
+				    "workers/triggered_by": "rollback",
+				  },
+				  "author_email": "Jean-Luc-Picard@federation.org",
+				  "created_on": "2021-01-04T00:00:00.000000Z",
+				  "id": "Galaxy-Class-test-name",
+				  "source": "api",
+				  "strategy": "percentage",
+				  "versions": [
+				    {
+				      "percentage": 10,
+				      "version_id": "10000000-0000-0000-0000-000000000000",
+				    },
+				    {
+				      "percentage": 90,
+				      "version_id": "20000000-0000-0000-0000-000000000000",
+				    },
+				  ],
+				}
+			`);
 		});
 	});
 });

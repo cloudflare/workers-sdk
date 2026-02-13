@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
@@ -9,6 +11,8 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	mockCreateSecret,
 	mockCreateSecretStore,
+	mockDeleteSecret,
+	mockListSecrets,
 	mockListSecretStores,
 } from "../helpers/mock-secrets-store";
 import { useMockStdin } from "../helpers/mock-stdin";
@@ -16,7 +20,6 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("containers registries configure", () => {
-	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
 	mockAccountId();
@@ -27,31 +30,6 @@ describe("containers registries configure", () => {
 
 	afterEach(() => {
 		clearDialogs();
-	});
-
-	it("should not show in top level help (remove this when ready for public)", async () => {
-		await runWrangler("containers --help");
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers
-
-			📦 Manage Containers [open beta]
-
-			COMMANDS
-			  wrangler containers list          List containers [open beta]
-			  wrangler containers info <ID>     Get information about a specific container [open beta]
-			  wrangler containers delete <ID>   Delete a container [open beta]
-			  wrangler containers build <PATH>  Build a container image [open beta]
-			  wrangler containers push <TAG>    Push a local image to the Cloudflare managed registry [open beta]
-			  wrangler containers images        Manage images in the Cloudflare managed registry [open beta]
-
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
 	});
 
 	it("should reject unsupported registry domains", async () => {
@@ -427,18 +405,18 @@ describe("containers registries list", () => {
 		`);
 	});
 
-	it("should output JSON when --json flag is used", async () => {
+	it("should output valid JSON when --json flag is used", async () => {
 		const mockRegistries = [
 			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
 		];
 		mockListRegistries(mockRegistries);
 		await runWrangler("containers registries list --json");
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
-			    {
-			        \\"domain\\": \\"123456789012.dkr.ecr.us-west-2.amazonaws.com\\"
-			    }
-			]"
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
+			  {
+			    "domain": "123456789012.dkr.ecr.us-west-2.amazonaws.com",
+			  },
+			]
 		`);
 	});
 });
@@ -525,6 +503,110 @@ describe("containers registries delete", () => {
 			"
 		`);
 	});
+
+	describe("secret cleanup", () => {
+		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+		const storeId = "test-store-id";
+		const secretName = "my-secret";
+		const secretId = "secret-id-456";
+		const secretsStoreRef = `${storeId}:${secretName}`;
+
+		it("should delete registry and associated secret when user confirms", async () => {
+			setIsTTY(true);
+			mockConfirm({
+				text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
+				result: true,
+			});
+			mockConfirm({
+				text: `Do you want to delete the secret "${secretName}"? (Store ID: ${storeId})`,
+				result: true,
+			});
+			mockDeleteRegistry(domain, secretsStoreRef);
+			mockListSecrets(storeId, [
+				{
+					id: secretId,
+					store_id: storeId,
+					name: secretName,
+					comment: "",
+					scopes: ["containers"],
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+					status: "active",
+				},
+			]);
+			mockDeleteSecret(storeId, secretId);
+
+			await runWrangler(`containers registries delete ${domain}`);
+
+			expect(cliStd.stdout).toContain(`Deleted registry ${domain}`);
+			expect(cliStd.stdout).toContain(`Deleted secret ${secretsStoreRef}`);
+		});
+
+		it("should delete registry but not secret when user declines secret deletion", async () => {
+			setIsTTY(true);
+			mockConfirm({
+				text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
+				result: true,
+			});
+			mockConfirm({
+				text: `Do you want to delete the secret "${secretName}"? (Store ID: ${storeId})`,
+				result: false,
+			});
+			mockDeleteRegistry(domain, secretsStoreRef);
+
+			await runWrangler(`containers registries delete ${domain}`);
+
+			expect(cliStd.stdout).toContain(`Deleted registry ${domain}`);
+			expect(cliStd.stdout).toContain("The secret was not deleted.");
+		});
+
+		it("should delete registry and secret with --skip-confirmation flag", async () => {
+			setIsTTY(true);
+			mockDeleteRegistry(domain, secretsStoreRef);
+			mockListSecrets(storeId, [
+				{
+					id: secretId,
+					store_id: storeId,
+					name: secretName,
+					comment: "",
+					scopes: ["containers"],
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+					status: "active",
+				},
+			]);
+			mockDeleteSecret(storeId, secretId);
+
+			await runWrangler(
+				`containers registries delete ${domain} --skip-confirmation`
+			);
+
+			expect(cliStd.stdout).toContain(`Deleted registry ${domain}`);
+			expect(cliStd.stdout).toContain(`Deleted secret ${secretsStoreRef}`);
+		});
+
+		it("should handle case when secret is already deleted", async () => {
+			setIsTTY(true);
+			mockConfirm({
+				text: `Are you sure you want to delete the registry credentials for ${domain}? This action cannot be undone.`,
+				result: true,
+			});
+			mockConfirm({
+				text: `Do you want to delete the secret "${secretName}"? (Store ID: ${storeId})`,
+				result: true,
+			});
+			mockDeleteRegistry(domain, secretsStoreRef);
+			// Return empty list - secret not found
+			mockListSecrets(storeId, []);
+
+			await runWrangler(`containers registries delete ${domain}`);
+
+			expect(cliStd.stdout).toContain(`Deleted registry ${domain}`);
+			expect(cliStd.stdout).toContain(
+				`Secret "${secretName}" not found in store. It may have already been deleted.`
+			);
+		});
+	});
 });
 
 const mockPutRegistry = (expected?: object) => {
@@ -556,12 +638,17 @@ const mockListRegistries = (registries: { domain: string }[]) => {
 	);
 };
 
-const mockDeleteRegistry = (domain: string) => {
+const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 	msw.use(
 		http.delete(
 			`*/accounts/:accountId/containers/registries/${domain}`,
 			async () => {
-				return HttpResponse.json({ success: true });
+				return HttpResponse.json(
+					createFetchResult({
+						domain: domain,
+						secrets_store_ref: secretsStoreRef,
+					})
+				);
 			}
 		)
 	);

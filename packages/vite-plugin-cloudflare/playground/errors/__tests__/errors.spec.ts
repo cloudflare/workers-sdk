@@ -1,12 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { isBuild, page, viteTestUrl } from "../../__test-utils__";
-
-export const browserMode = true;
 
 describe.runIf(!isBuild)(
 	"error thrown in the default export of the entry Worker",
 	async () => {
-		test("displays the correct message", async () => {
+		test("displays the correct message", async ({ expect }) => {
 			await page.goto(`${viteTestUrl}/default-export`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const message = await errorOverlay
@@ -16,7 +14,9 @@ describe.runIf(!isBuild)(
 			expect(message).toMatch("a is not defined");
 		});
 
-		test("displays the correct source link in the stack trace", async () => {
+		test("displays the correct source link in the stack trace", async ({
+			expect,
+		}) => {
 			await page.goto(`${viteTestUrl}/default-export`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const stack = errorOverlay.locator(".stack");
@@ -29,7 +29,7 @@ describe.runIf(!isBuild)(
 describe.runIf(!isBuild)(
 	"error thrown in a named entrypoint of the entry Worker",
 	async () => {
-		test("displays the correct message", async () => {
+		test("displays the correct message", async ({ expect }) => {
 			await page.goto(`${viteTestUrl}/named-entrypoint`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const message = await errorOverlay
@@ -39,7 +39,9 @@ describe.runIf(!isBuild)(
 			expect(message).toMatch("b is not defined");
 		});
 
-		test("displays the correct source link in the stack trace", async () => {
+		test("displays the correct source link in the stack trace", async ({
+			expect,
+		}) => {
 			await page.goto(`${viteTestUrl}/named-entrypoint`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const stack = errorOverlay.locator(".stack");
@@ -52,7 +54,7 @@ describe.runIf(!isBuild)(
 describe.runIf(!isBuild)(
 	"error thrown in the default export of an auxiliary Worker",
 	async () => {
-		test("displays the correct message", async () => {
+		test("displays the correct message", async ({ expect }) => {
 			await page.goto(`${viteTestUrl}/auxiliary-worker/default-export`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const message = await errorOverlay
@@ -62,7 +64,9 @@ describe.runIf(!isBuild)(
 			expect(message).toMatch("c is not defined");
 		});
 
-		test("displays the correct source link in the stack trace", async () => {
+		test("displays the correct source link in the stack trace", async ({
+			expect,
+		}) => {
 			await page.goto(`${viteTestUrl}/auxiliary-worker/default-export`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const stack = errorOverlay.locator(".stack");
@@ -75,7 +79,7 @@ describe.runIf(!isBuild)(
 describe.runIf(!isBuild)(
 	"error thrown in a named entrypoint of an auxiliary Worker",
 	async () => {
-		test("displays the correct message", async () => {
+		test("displays the correct message", async ({ expect }) => {
 			await page.goto(`${viteTestUrl}/auxiliary-worker/named-entrypoint`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const message = await errorOverlay
@@ -85,7 +89,9 @@ describe.runIf(!isBuild)(
 			expect(message).toMatch("d is not defined");
 		});
 
-		test("displays the correct source link in the stack trace", async () => {
+		test("displays the correct source link in the stack trace", async ({
+			expect,
+		}) => {
 			await page.goto(`${viteTestUrl}/auxiliary-worker/named-entrypoint`);
 			const errorOverlay = page.locator("vite-error-overlay");
 			const stack = errorOverlay.locator(".stack");

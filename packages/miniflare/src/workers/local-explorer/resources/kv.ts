@@ -5,10 +5,8 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "../generated/zod.gen";
-import type { AppBindings, Env } from "../api.worker";
-import type { Context } from "hono";
-
-type AppContext = Context<AppBindings>;
+import type { AppContext } from "../common";
+import type { Env } from "../explorer.worker";
 
 /**
  * Get a KV binding by namespace ID
@@ -82,13 +80,14 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 	const namespace_id = c.req.param("namespace_id");
 	const cursor = query.cursor;
 	const limit = query.limit;
+	const prefix = query.prefix;
 
 	const kv = getKVBinding(c.env, namespace_id);
 	if (!kv) {
 		return errorResponse(404, 10000, "Namespace not found");
 	}
 
-	const listResult = await kv.list({ cursor, limit });
+	const listResult = await kv.list({ cursor, limit, prefix });
 	const resultCursor = "cursor" in listResult ? listResult.cursor ?? "" : "";
 
 	return c.json({

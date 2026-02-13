@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
+import { NpmPackageManager } from "../../package-manager";
 import { dedent } from "../../utils/dedent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -24,13 +25,17 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 	});
 
 	describe("interactive mode", () => {
-		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async () => {
+		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					configured: false,
 					outputDir: "public",
+					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -44,29 +49,29 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				"
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"worker-name\\",
-				    \\"compatibility_date\\": \\"2025-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "worker-name",
+				    "compatibility_date": "2025-01-01",
+				    "observability": {
+				      "enabled": true
 				    }
 				  }
 				"
 			`);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
-				  "frameworkId": undefined,
+				  "frameworkId": "static",
 				  "outputDir": "public",
-				  "scripts": Object {},
+				  "scripts": {},
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -75,7 +80,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("shows that wrangler will be added as a devDependency when not already installed as such", async () => {
+		test("shows that wrangler will be added as a devDependency when not already installed as such", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -86,6 +93,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					},
 					configured: false,
 					outputDir: "dist",
+					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -103,21 +112,21 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
-				  "frameworkId": undefined,
+				  "frameworkId": "static",
 				  "outputDir": "dist",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -126,7 +135,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async () => {
+		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -139,6 +150,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					},
 					configured: false,
 					outputDir: "out",
+					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -156,21 +169,21 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
-				  "frameworkId": undefined,
+				  "frameworkId": "static",
 				  "outputDir": "out",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -179,7 +192,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("shows that when needed a framework specific configuration will be run", async () => {
+		test("shows that when needed a framework specific configuration will be run", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -187,6 +202,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Astro({ id: "astro", name: "Astro" }),
 					configured: false,
 					outputDir: "dist",
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -206,7 +222,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary.frameworkId).toBe("astro");
 		});
 
-		test("doesn't show the framework specific configuration step for the Static framework", async () => {
+		test("doesn't show the framework specific configuration step for the Static framework", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -214,6 +232,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					configured: false,
 					outputDir: "public",
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{

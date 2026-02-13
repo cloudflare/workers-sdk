@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
+		"build:default": "vite build",
 		"build:nested-config": "vite build -c vite.config.nested-config.ts",
 		"build:package-export-main": "vite build -c vite.config.package-export-main.ts",
 		"build:virtual-module-main": "vite build -c vite.config.virtual-module-main.ts",

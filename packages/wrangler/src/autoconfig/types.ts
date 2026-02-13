@@ -1,7 +1,9 @@
+import type { PackageManager } from "../package-manager";
+import type { Optional } from "../utils/types";
 import type { Framework } from "./frameworks/index";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
-export type AutoConfigDetails = {
+type AutoConfigDetailsBase = {
 	/** The name of the worker */
 	workerName: string;
 	/** The path to the project (defaults to cwd) */
@@ -10,13 +12,32 @@ export type AutoConfigDetails = {
 	packageJson?: PackageJSON;
 	/** Whether the project is already configured (no autoconfig required) */
 	configured: boolean;
-	/** Details about the detected framework (if any) */
-	framework?: Framework;
+	/** Details about the detected framework. It can be a JS framework or 'Static' if no actual JS framework is used. */
+	framework: Framework;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
-	outputDir?: string;
+	outputDir: string;
+	/** The detected package manager for the project */
+	packageManager: PackageManager;
 };
+
+export type AutoConfigDetailsForConfiguredProject = Optional<
+	AutoConfigDetailsBase,
+	// If AutoConfig detects that the project is already configured it's unnecessary to check
+	// what framework is being used nor the output directory, so in this case thee fields are optional
+	"framework" | "outputDir"
+> & {
+	configured: true;
+};
+
+export type AutoConfigDetailsForNonConfiguredProject = AutoConfigDetailsBase & {
+	configured: false;
+};
+
+export type AutoConfigDetails =
+	| AutoConfigDetailsForConfiguredProject
+	| AutoConfigDetailsForNonConfiguredProject;
 
 export type AutoConfigOptions = {
 	/** Whether to run autoconfig without actually applying any filesystem modification (default: false) */

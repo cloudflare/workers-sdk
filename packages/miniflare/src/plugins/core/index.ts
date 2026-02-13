@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -9,7 +9,7 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
-import SCRIPT_LOCAL_EXPLORER_API from "worker:local-explorer/api";
+import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -55,6 +55,7 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
+	LOCAL_EXPLORER_DISK,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
@@ -1091,10 +1092,32 @@ export function getGlobalServices({
 
 	if (sharedOptions.unsafeLocalExplorer) {
 		// Build binding ID map from proxyBindings
-		// Maps binding names to their actual namespace/bucket IDs
-		const IDToBindingName: { kv: Record<string, string> } = { kv: {} };
+		// Maps binding names to their actual resource IDs
+		const IDToBindingName: {
+			d1: Record<string, string>;
+			kv: Record<string, string>;
+		} = {
+			d1: {},
+			kv: {},
+		};
 
 		for (const binding of proxyBindings) {
+			// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING", wrapped.innerBindings[0].service.name = "d1:db:ID"
+			if (
+				binding.name?.startsWith(
+					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
+				) &&
+				"wrapped" in binding
+			) {
+				const [innerBinding] = binding.wrapped?.innerBindings ?? [];
+				assert(innerBinding && "service" in innerBinding);
+
+				const databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
+				assert(databaseId);
+
+				IDToBindingName.d1[databaseId] = binding.name;
+			}
+
 			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
 			if (
 				binding.name?.startsWith(
@@ -1109,6 +1132,25 @@ export function getGlobalServices({
 			}
 		}
 
+		// Disk service for serving local-explorer-ui assets
+		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
+		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
+		const distPath = path.join(__dirname, "../local-explorer-ui");
+		if (existsSync(distPath)) {
+			services.push({
+				name: LOCAL_EXPLORER_DISK,
+				disk: {
+					path: distPath,
+					writable: false,
+				},
+			});
+		} else {
+			throw new MiniflareCoreError(
+				"ERR_MISSING_EXPLORER_UI",
+				`Local Explorer UI assets not found at expected path: ${distPath}`
+			);
+		}
+
 		services.push({
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
@@ -1116,8 +1158,8 @@ export function getGlobalServices({
 				compatibilityFlags: ["nodejs_compat"],
 				modules: [
 					{
-						name: "api.worker.js",
-						esModule: SCRIPT_LOCAL_EXPLORER_API(),
+						name: "explorer.worker.js",
+						esModule: SCRIPT_LOCAL_EXPLORER(),
 					},
 				],
 				bindings: [
@@ -1125,6 +1167,10 @@ export function getGlobalServices({
 					{
 						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
 						json: JSON.stringify(IDToBindingName),
+					},
+					{
+						name: CoreBindings.EXPLORER_DISK,
+						service: { name: LOCAL_EXPLORER_DISK },
 					},
 				],
 			},

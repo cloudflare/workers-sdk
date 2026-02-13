@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -23,7 +23,7 @@ describe("createdResourceConfig()", () => {
 		clearDialogs();
 	});
 
-	it("non interactive: no prompts and no file update", async () => {
+	it("non interactive: no prompts and no file update", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await createdResourceConfig(
@@ -35,10 +35,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}
@@ -48,14 +48,14 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-			  \\"compatibility_date\\": \\"2022-01-12\\",
-			  \\"name\\": \\"worker\\"
+			  "compatibility_date": "2022-01-12",
+			  "name": "worker"
 			}"
 		`
 		);
 	});
 
-	it("interactive: no file update after answering no", async () => {
+	it("interactive: no file update after answering no", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -73,10 +73,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -84,14 +84,14 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-			  \\"compatibility_date\\": \\"2022-01-12\\",
-			  \\"name\\": \\"worker\\"
+			  "compatibility_date": "2022-01-12",
+			  "name": "worker"
 			}"
 		`
 		);
 	});
 
-	it("interactive: file update after answering yes", async () => {
+	it("interactive: file update after answering yes", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -117,10 +117,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -128,12 +128,12 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"kv_namespaces\\": [
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"kv_namespaces": [
 					{
-						\\"binding\\": \\"KV\\",
-						\\"id\\": \\"random-id\\"
+						"binding": "KV",
+						"id": "random-id"
 					}
 				]
 			}"
@@ -141,7 +141,9 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: file update in env after answering yes", async () => {
+	it("interactive: file update in env after answering yes", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -165,12 +167,12 @@ describe("createdResourceConfig()", () => {
 			"testEnv"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the \\"testEnv\\" environment:
+			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file in the "testEnv" environment:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -178,15 +180,15 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"env\\": {
-					\\"testEnv\\": {
-						\\"kv_namespaces\\": [
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"env": {
+					"testEnv": {
+						"kv_namespaces": [
 							{
-								\\"binding\\": \\"KV\\",
-								\\"id\\": \\"random-id\\",
-								\\"remote\\": true
+								"binding": "KV",
+								"id": "random-id",
+								"remote": true
 							}
 						]
 					}
@@ -196,7 +198,7 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: file update after answering yes-but", async () => {
+	it("interactive: file update after answering yes-but", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -223,10 +225,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -234,12 +236,12 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 			`
 			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"kv_namespaces\\": [
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"kv_namespaces": [
 					{
-						\\"binding\\": \\"HELLO\\",
-						\\"id\\": \\"random-id\\"
+						"binding": "HELLO",
+						"id": "random-id"
 					}
 				]
 			}"
@@ -247,7 +249,9 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: no prompts & no file update for toml", async () => {
+	it("interactive: no prompts & no file update for toml", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.toml");
 
 		setIsTTY(true);
@@ -261,20 +265,22 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			[[kv_namespaces]]
-			binding = \\"KV\\"
-			id = \\"random-id\\"
+			binding = "KV"
+			id = "random-id"
 			"
 		`);
 		expect(await readFile("wrangler.toml", "utf8")).toMatchInlineSnapshot(
 			`
-			"compatibility_date = \\"2022-01-12\\"
-			name = \\"worker\\"
+			"compatibility_date = "2022-01-12"
+			name = "worker"
 			"
 		`
 		);
 	});
 
-	it("interactive: no prompts & no file update for no config file", async () => {
+	it("interactive: no prompts & no file update for no config file", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 
 		await createdResourceConfig(
@@ -286,10 +292,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"kv_namespaces\\": [
+			  "kv_namespaces": [
 			    {
-			      \\"binding\\": \\"KV\\",
-			      \\"id\\": \\"random-id\\"
+			      "binding": "KV",
+			      "id": "random-id"
 			    }
 			  ]
 			}"
@@ -299,7 +305,7 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("logs correct binding type", async () => {
+	it("logs correct binding type", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await createdResourceConfig(
@@ -314,10 +320,10 @@ describe("createdResourceConfig()", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"To access your new D1 Database in your Worker, add the following snippet to your configuration file:
 			{
-			  \\"d1_databases\\": [
+			  "d1_databases": [
 			    {
-			      \\"binding\\": \\"D1\\",
-			      \\"database_id\\": \\"database_id\\"
+			      "binding": "D1",
+			      "database_id": "database_id"
 			    }
 			  ]
 			}
@@ -327,7 +333,7 @@ describe("createdResourceConfig()", () => {
 	});
 
 	describe("defaults", () => {
-		it("no prompts if all defaults provided", async () => {
+		it("no prompts if all defaults provided", async ({ expect }) => {
 			writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 			setIsTTY(true);
@@ -346,27 +352,27 @@ describe("createdResourceConfig()", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 				{
-				  \\"kv_namespaces\\": [
+				  "kv_namespaces": [
 				    {
-				      \\"binding\\": \\"HELLO\\",
-				      \\"id\\": \\"random-id\\"
+				      "binding": "HELLO",
+				      "id": "random-id"
 				    }
 				  ]
 				}"
 			`);
 			expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(
 				`
-			"{
-				\\"compatibility_date\\": \\"2022-01-12\\",
-				\\"name\\": \\"worker\\",
-				\\"kv_namespaces\\": [
-					{
-						\\"binding\\": \\"HELLO\\",
-						\\"id\\": \\"random-id\\"
-					}
-				]
-			}"
-		`
+				"{
+					"compatibility_date": "2022-01-12",
+					"name": "worker",
+					"kv_namespaces": [
+						{
+							"binding": "HELLO",
+							"id": "random-id"
+						}
+					]
+				}"
+			`
 			);
 		});
 	});

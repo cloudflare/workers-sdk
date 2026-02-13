@@ -4,10 +4,9 @@ import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
-	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
@@ -67,7 +66,7 @@ import {
 import { demandSingleValue } from "./core";
 import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
-import { getErrorType, handleError } from "./core/handle-errors";
+import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -134,6 +133,7 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
+import { sanitizeError } from "./metrics/sanitization";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -156,7 +156,10 @@ import {
 	pagesPublishCommand,
 } from "./pages/deploy";
 import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
+import {
+	pagesDeploymentDeleteCommand,
+	pagesDeploymentListCommand,
+} from "./pages/deployments";
 import { pagesDevCommand } from "./pages/dev";
 import { pagesDownloadConfigCommand } from "./pages/download-config";
 import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
@@ -334,7 +337,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { proxy } from "./utils/constants";
+import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -391,7 +394,9 @@ import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
 if (proxy) {
-	setGlobalDispatcher(new ProxyAgent(proxy));
+	setGlobalDispatcher(
+		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
+	);
 	logger.log(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
@@ -1367,6 +1372,10 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler pages deployment tail",
 			definition: pagesDeploymentTailCommand,
 		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
+		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
 		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
@@ -2042,8 +2051,6 @@ function dispatchGenericCommandErrorEvent(
 		sanitizedArgs,
 		argsUsed: [],
 		durationMs,
-		errorType: getErrorType(error),
-		errorMessage:
-			error instanceof UserError ? error.telemetryMessage : undefined,
+		...sanitizeError(error),
 	});
 }

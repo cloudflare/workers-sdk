@@ -1,5 +1,5 @@
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { loadDotEnv } from "../../config/dot-env";
 import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -21,7 +21,9 @@ describe("loadDotEnv()", () => {
 		return () => logger.resetLoggerLevel();
 	});
 
-	it("should load environment variables from .env files", async () => {
+	it("should load environment variables from .env files", async ({
+		expect,
+	}) => {
 		await seed({
 			".env": "FOO=bar\nBAZ=${FOO}\n",
 			".env.local": "FOO=qux\n",
@@ -39,7 +41,7 @@ describe("loadDotEnv()", () => {
 		`);
 	});
 
-	it("should support silent processing", async () => {
+	it("should support silent processing", async ({ expect }) => {
 		await seed({
 			".env": "FOO=bar\nBAZ=${FOO}\n",
 			".env.local": "FOO=qux\n",
@@ -54,7 +56,7 @@ describe("loadDotEnv()", () => {
 		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should debug log if .env files are missing", async () => {
+	it("should debug log if .env files are missing", async ({ expect }) => {
 		const envPaths = ["./.env.missing"];
 		const result = loadDotEnv(envPaths, {
 			includeProcessEnv: false,
@@ -63,13 +65,13 @@ describe("loadDotEnv()", () => {
 
 		expect(result).toEqual({});
 		expect(std.debug).toMatchInlineSnapshot(
-			`".env file not found at \\"./.env.missing\\". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/"`
+			`".env file not found at "./.env.missing". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/"`
 		);
 	});
 
 	it.skipIf(isWindows)(
 		"should have case sensitive env properties",
-		async () => {
+		async ({ expect }) => {
 			await seed({
 				".env": "FOO=bar",
 			});
@@ -85,7 +87,7 @@ describe("loadDotEnv()", () => {
 
 	it.skipIf(!isWindows)(
 		"should have case insensitive env properties",
-		async () => {
+		async ({ expect }) => {
 			await seed({
 				".env": "FOO=bar",
 			});
@@ -99,7 +101,9 @@ describe("loadDotEnv()", () => {
 		}
 	);
 
-	it("should include process.env variables if specified", async () => {
+	it("should include process.env variables if specified", async ({
+		expect,
+	}) => {
 		process.env = {
 			TEST_ENV_VAR: "test_value",
 		};

@@ -1,7 +1,9 @@
 import { ParseError } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- helper functions with expect */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
@@ -45,7 +47,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			`);
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "An error occurred while trying to locally profile the Worker: Error: workerd profiling failed",
 			  "err": "",
 			  "info": "",
@@ -78,7 +80,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			"
 		`);
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -110,7 +112,7 @@ describe("helpIfErrorIsSizeOrScriptStartup", () => {
 			A CPU Profile of your Worker's startup phase has been written to .wrangler/tmp/startup-profile-<HASH>/worker.cpuprofile - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph."
 		`);
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",

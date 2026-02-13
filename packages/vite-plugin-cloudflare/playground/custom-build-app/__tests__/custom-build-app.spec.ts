@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
@@ -6,19 +6,17 @@ import {
 	serverLogs,
 } from "../../__test-utils__";
 
-export const browserMode = true;
-
-test("returns the index.html page", async () => {
+test("returns the index.html page", async ({ expect }) => {
 	const content = await page.textContent("h1");
 	expect(content).toBe("HTML page");
 });
 
-test("returns the Worker response", async () => {
+test("returns the Worker response", async ({ expect }) => {
 	const response = await getTextResponse("/another-path");
 	expect(response).toBe("Worker response");
 });
 
-test.runIf(isBuild)("runs a custom buildApp function", async () => {
+test.runIf(isBuild)("runs a custom buildApp function", async ({ expect }) => {
 	expect(serverLogs.info.join()).toContain("__before-build__");
 	expect(serverLogs.info.join()).toContain("__after-build__");
 });

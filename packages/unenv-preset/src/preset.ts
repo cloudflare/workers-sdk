@@ -5,8 +5,6 @@ import type { Preset } from "unenv";
 //
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-//
-// NOTE: Please sync any changes to `testNodeCompatModules`.
 const nativeModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
@@ -46,9 +44,6 @@ const nativeModules = [
 	"zlib",
 ];
 
-// Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["process"];
-
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
  *
@@ -84,6 +79,9 @@ export function getCloudflarePreset({
 	const dgramOverrides = getDgramOverrides(compat);
 	const streamWrapOverrides = getStreamWrapOverrides(compat);
 	const replOverrides = getReplOverrides(compat);
+	const processOverrides = getProcessOverrides(compat);
+	const v8Overrides = getV8Overrides(compat);
+	const ttyOverrides = getTtyOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -104,11 +102,13 @@ export function getCloudflarePreset({
 		...dgramOverrides.nativeModules,
 		...streamWrapOverrides.nativeModules,
 		...replOverrides.nativeModules,
+		...processOverrides.nativeModules,
+		...v8Overrides.nativeModules,
+		...ttyOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicHybridModules = [
-		...hybridModules,
 		...httpOverrides.hybridModules,
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
@@ -125,6 +125,9 @@ export function getCloudflarePreset({
 		...dgramOverrides.hybridModules,
 		...streamWrapOverrides.hybridModules,
 		...replOverrides.hybridModules,
+		...processOverrides.hybridModules,
+		...v8Overrides.hybridModules,
+		...ttyOverrides.hybridModules,
 	];
 
 	return {
@@ -158,7 +161,7 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			...consoleOverrides.inject,
-			process: "@cloudflare/unenv-preset/node/process",
+			...processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
@@ -792,6 +795,182 @@ function getReplOverrides({
 	return enabled
 		? {
 				nativeModules: ["repl"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:process` (unenv or workerd)
+ *
+ * The native process v2 implementation:
+ * - is enabled starting from 2025-09-15
+ * - can be enabled with the "enable_nodejs_process_v2" flag
+ * - can be disabled with the "disable_nodejs_process_v2" flag
+ * - can only be used when the fixes for iterable request/response bodies are enabled
+ */
+function getProcessOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: { process: string | false };
+} {
+	const disabledV2ByFlag = compatibilityFlags.includes(
+		"disable_nodejs_process_v2"
+	);
+
+	const enabledV2ByFlag = compatibilityFlags.includes(
+		"enable_nodejs_process_v2"
+	);
+	const enabledV2ByDate = compatibilityDate >= "2025-09-15";
+
+	// When `node:process` v2 is enabled, astro will detect workerd as it was Node.js.
+	// This causes astro to take a code path that uses iterable request/response bodies.
+	// So we need to make sure that the fixes for iterable bodies are also enabled.
+	// @see https://github.com/cloudflare/workers-sdk/issues/10855
+	const hasFixes = hasFetchIterableFixes({
+		compatibilityDate,
+		compatibilityFlags,
+	});
+
+	const useV2 =
+		hasFixes && (enabledV2ByFlag || enabledV2ByDate) && !disabledV2ByFlag;
+
+	return useV2
+		? {
+				nativeModules: ["process"],
+				hybridModules: [],
+				// We can use the native global, return `false` to drop the unenv default
+				inject: { process: false },
+			}
+		: {
+				nativeModules: [],
+				hybridModules: ["process"],
+				// Use the module default export as the global `process`
+				inject: { process: "@cloudflare/unenv-preset/node/process" },
+			};
+}
+
+/**
+ * Workerd fixes iterable request/response bodies when both these compatibility flags are used:
+ * - `fetch_iterable_type_support`
+ * - `fetch_iterable_type_support_override_adjustment`
+ *
+ * @see https://github.com/cloudflare/workerd/issues/2746
+ * @see https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp
+ */
+function hasFetchIterableFixes({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): boolean {
+	const supportEnabledByFlag = compatibilityFlags.includes(
+		"fetch_iterable_type_support"
+	);
+
+	const supportDisabledByFlag = compatibilityFlags.includes(
+		"no_fetch_iterable_type_support"
+	);
+
+	const supportEnabledByDate = compatibilityDate >= "2026-02-19";
+
+	const supportEnabled =
+		(supportEnabledByDate || supportEnabledByFlag) && !supportDisabledByFlag;
+
+	if (!supportEnabled) {
+		return false;
+	}
+
+	const adjustmentEnabledByFlag = compatibilityFlags.includes(
+		"fetch_iterable_type_support_override_adjustment"
+	);
+	const adjustmentDisabledByFlag = compatibilityFlags.includes(
+		"no_fetch_iterable_type_support_override_adjustment"
+	);
+	// At this point, we know that `supportEnabled` is `true`
+	const adjustmentImpliedBySupport = compatibilityDate >= "2026-01-15";
+
+	const adjustmentEnabled =
+		(adjustmentEnabledByFlag || adjustmentImpliedBySupport) &&
+		!adjustmentDisabledByFlag;
+
+	return adjustmentEnabled;
+}
+
+/**
+ * Returns the overrides for `node:v8` (unenv or workerd)
+ *
+ * The native v8 implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_v8_module" flag
+ * - can be disabled with the "disable_nodejs_v8_module" flag
+ */
+function getV8Overrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_v8_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_v8_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `v8` module from workerd
+	return enabled
+		? {
+				nativeModules: ["v8"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:tty` (unenv or workerd)
+ *
+ * The native tty implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_tty_module" flag
+ * - can be disabled with the "disable_nodejs_tty_module" flag
+ */
+function getTtyOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_tty_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_tty_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `tty` module from workerd
+	return enabled
+		? {
+				nativeModules: ["tty"],
 				hybridModules: [],
 			}
 		: {

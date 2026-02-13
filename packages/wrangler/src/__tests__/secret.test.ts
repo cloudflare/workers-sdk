@@ -4,7 +4,9 @@ import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,
@@ -173,7 +175,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret secret-name"
 				`);
 			});
@@ -192,7 +194,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -218,7 +220,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name-some-env\\"
+					🌀 Creating the secret for the Worker "script-name-some-env"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -244,7 +246,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
+					🌀 Creating the secret for the Worker "script-name" (some-env)
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -291,7 +293,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					🌀 Creating the secret for the Worker "non-existent-worker"
 					Aborting. No secrets added."
 				`);
 			});
@@ -318,7 +320,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -335,7 +337,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -388,7 +390,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					🌀 Creating the secret for the Worker "non-existent-worker"
 					✨ Success! Uploaded secret the-key"
 				`);
 			});
@@ -429,7 +431,7 @@ describe("wrangler secret", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						🌀 Creating the secret for the Worker \\"script-name\\"
+						🌀 Creating the secret for the Worker "script-name"
 						✨ Success! Uploaded secret the-key"
 					`);
 					expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -457,9 +459,9 @@ describe("wrangler secret", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`account-name-1\`: \`account-id-1\`
-						  \`account-name-2\`: \`account-id-2\`
-						  \`account-name-3\`: \`account-id-3\`]
+						  \`(redacted)\`: \`account-id-1\`
+						  \`(redacted)\`: \`account-id-2\`
+						  \`(redacted)\`: \`account-id-3\`]
 					`);
 				});
 			});
@@ -480,7 +482,7 @@ describe("wrangler secret", () => {
 						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 						  the target environment using the \`-e|--env\` flag.
 						  If your intention is to use the top-level environment of your configuration simply pass an empty
-						  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+						  string to the flag to target such environment. For example \`--env=""\`.
 
 						"
 					`);
@@ -735,7 +737,7 @@ describe("wrangler secret", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+					  string to the flag to target such environment. For example \`--env=""\`.
 
 					"
 				`);
@@ -839,8 +841,8 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"the-secret-name\\",
-				    \\"type\\": \\"secret_text\\"
+				    "name": "the-secret-name",
+				    "type": "secret_text"
 				  }
 				]"
 			`);
@@ -855,8 +857,8 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"the-secret-name\\",
-				    \\"type\\": \\"secret_text\\"
+				    "name": "the-secret-name",
+				    "type": "secret_text"
 				  }
 				]"
 			`);
@@ -871,8 +873,8 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"the-secret-name\\",
-				    \\"type\\": \\"secret_text\\"
+				    "name": "the-secret-name",
+				    "type": "secret_text"
 				  }
 				]"
 			`);
@@ -944,8 +946,8 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"the-secret-name\\",
-					    \\"type\\": \\"secret_text\\"
+					    "name": "the-secret-name",
+					    "type": "secret_text"
 					  }
 					]"
 				`);
@@ -1005,7 +1007,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\" "
+				🌀 Creating the secrets for the Worker "script-name" "
 			`
 			);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1032,7 +1034,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
 
@@ -1060,7 +1062,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
@@ -1085,7 +1087,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: SECRET_NAME_1
 				✨ Successfully created secret for key: SECRET_NAME_2
 
@@ -1146,7 +1148,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 
@@ -1180,7 +1182,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 
@@ -1235,7 +1237,7 @@ describe("wrangler secret", () => {
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
 
@@ -1249,7 +1251,7 @@ describe("wrangler secret", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 				",
@@ -1338,7 +1340,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-2
 				✨ Successfully created secret for key: secret-name-3
 				✨ Successfully created secret for key: secret-name-4
@@ -1370,7 +1372,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
+				🌀 Creating the secrets for the Worker "non-existent-worker"
 				Aborting. No secrets added."
 			`);
 		});
@@ -1401,7 +1403,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
@@ -1430,7 +1432,7 @@ describe("wrangler secret", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+					  string to the flag to target such environment. For example \`--env=""\`.
 
 					"
 				`);

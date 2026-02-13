@@ -1,11 +1,11 @@
 import { configFormat } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
+import ci from "ci-info";
 import { fetch } from "undici";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
-import { CI, isPagesCI, isWorkersCI } from "./../is-ci";
 import {
 	getNodeVersion,
 	getOS,
@@ -20,7 +20,11 @@ import {
 } from "./metrics-config";
 import type { CommandDefinition } from "../core/types";
 import type { MetricsConfigOptions } from "./metrics-config";
-import type { CommonEventProperties, Events } from "./types";
+import type {
+	CommonCommandEventProperties,
+	CommonEventProperties,
+	Events,
+} from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
@@ -60,6 +64,29 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		// Silent failure - agent remains null
 	}
 
+	function getCommonEventProperties(): CommonEventProperties {
+		return {
+			amplitude_session_id,
+			amplitude_event_id: amplitude_event_id++,
+			wranglerVersion,
+			wranglerMajorVersion,
+			wranglerMinorVersion,
+			wranglerPatchVersion,
+			osPlatform: getPlatform(),
+			osVersion: getOSVersion(),
+			nodeVersion: getNodeVersion(),
+			packageManager: sniffUserAgent(),
+			isFirstUsage: readMetricsConfig().permission === undefined,
+			configFileType: configFormat(options.configPath),
+			isCI: ci.isCI,
+			isPagesCI: ci.CLOUDFLARE_PAGES,
+			isWorkersCI: ci.CLOUDFLARE_WORKERS,
+			isInteractive: isInteractive(),
+			hasAssets: options.hasAssets ?? false,
+			agent,
+		};
+	}
+
 	return {
 		/**
 		 * This doesn't have a session id and is not tied to the command events.
@@ -72,6 +99,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			dispatch({
 				name,
 				properties: {
+					...getCommonEventProperties(),
 					category: "Workers",
 					wranglerVersion,
 					wranglerMajorVersion,
@@ -95,7 +123,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			name: EventName,
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
-				keyof CommonEventProperties
+				keyof CommonCommandEventProperties
 			> & { argsUsed: string[] },
 			cmdBehaviour?: CommandDefinition["behaviour"]
 		): void {
@@ -112,33 +140,16 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				const argsUsed = properties.argsUsed;
 				const argsCombination = argsUsed.join(", ");
 
-				const commonEventProperties: CommonEventProperties = {
-					amplitude_session_id,
-					amplitude_event_id: amplitude_event_id++,
-					wranglerVersion,
-					wranglerMajorVersion,
-					wranglerMinorVersion,
-					wranglerPatchVersion,
-					osPlatform: getPlatform(),
-					osVersion: getOSVersion(),
-					nodeVersion: getNodeVersion(),
-					packageManager: sniffUserAgent(),
-					isFirstUsage: readMetricsConfig().permission === undefined,
-					configFileType: configFormat(options.configPath),
-					isCI: CI.isCI(),
-					isPagesCI: isPagesCI(),
-					isWorkersCI: isWorkersCI(),
-					isInteractive: isInteractive(),
-					hasAssets: options.hasAssets ?? false,
+				const commonCommandEventProperties: CommonCommandEventProperties = {
+					...getCommonEventProperties(),
 					argsUsed,
 					argsCombination,
-					agent,
 				};
 
 				dispatch({
 					name,
 					properties: {
-						...commonEventProperties,
+						...commonCommandEventProperties,
 						...properties,
 					},
 				});

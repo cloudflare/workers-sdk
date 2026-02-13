@@ -1,4 +1,5 @@
-import { statSync } from "node:fs";
+import assert from "node:assert";
+import { existsSync, statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
@@ -11,13 +12,70 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
-import { confirm, prompt } from "../dialogs";
+import { getCacheFolder } from "../config-cache";
+import { getErrorType } from "../core/handle-errors";
+import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
-import { getPackageManager } from "../package-manager";
-import { getFramework } from "./frameworks/get-framework";
-import type { AutoConfigDetails } from "./types";
+import { sendMetricsEvent } from "../metrics";
+import {
+	BunPackageManager,
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+} from "../package-manager";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../pages/constants";
+import { allKnownFrameworks, getFramework } from "./frameworks/get-framework";
+import {
+	getAutoConfigId,
+	getAutoConfigTriggerCommand,
+} from "./telemetry-utils";
+import type { PackageManager } from "../package-manager";
+import type {
+	AutoConfigDetails,
+	AutoConfigDetailsForNonConfiguredProject,
+} from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
-import type { Settings } from "@netlify/build-info";
+
+/**
+ * Converts the package manager detected by @netlify/build-info to our PackageManager type.
+ * Falls back to npm if no package manager was detected.
+ *
+ * @param pkgManager The package manager detected by @netlify/build-info (from project.packageManager)
+ * @returns A PackageManager object compatible with wrangler's package manager utilities
+ */
+function convertDetectedPackageManager(
+	pkgManager: { name: string } | null
+): PackageManager {
+	if (!pkgManager) {
+		return NpmPackageManager;
+	}
+
+	switch (pkgManager?.name) {
+		case "pnpm":
+			return PnpmPackageManager;
+		case "yarn":
+			return YarnPackageManager;
+		case "bun":
+			return BunPackageManager;
+		case "npm":
+		default:
+			return NpmPackageManager;
+	}
+}
+
+/**
+ * Asserts that the current project being targeted for autoconfig is not already configured.
+ *
+ * @param details The details detected for the project.
+ */
+export function assertNonConfigured(
+	details: AutoConfigDetails
+): asserts details is AutoConfigDetailsForNonConfiguredProject {
+	assert(
+		details.configured === false,
+		"Error: expected the current project not to be already configured"
+	);
+}
 
 class MultipleFrameworksError extends FatalError {
 	constructor(frameworks: string[]) {
@@ -41,9 +99,9 @@ async function hasIndexHtml(dir: string): Promise<boolean> {
 }
 
 /**
- * If we haven't detected a framework being used, we need to "guess" what output dir the user is intending to use.
- * This is best-effort, and so will not be accurate all the time. The heuristic we use is the first child directory
- * with an `index.html` file present.
+ * If we haven't detected a framework being used, or the project is a Pages one, we need to "guess" what output dir the
+ * user is intending to use. This is best-effort, and so will not be accurate all the time. The heuristic we use is the
+ * first child directory with an `index.html` file present.
  */
 async function findAssetsDir(from: string): Promise<string | undefined> {
 	if (await hasIndexHtml(from)) {
@@ -65,6 +123,101 @@ function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
 		getCIOverrideName() ?? (projectOrWorkerName || basename(projectPath));
 
 	return toValidWorkerName(rawName);
+}
+
+type DetectedFramework = {
+	framework: {
+		name: string;
+		id: string;
+	};
+	buildCommand?: string | undefined;
+	dist?: string;
+};
+
+async function isPagesProject(
+	projectPath: string,
+	wranglerConfig: Config | undefined,
+	detectedFramework?: DetectedFramework | undefined
+): Promise<boolean> {
+	if (wranglerConfig?.pages_build_output_dir) {
+		// The `pages_build_output_dir` is set only for Pages projects
+		return true;
+	}
+
+	const cacheFolder = getCacheFolder();
+	if (cacheFolder) {
+		const pagesConfigCache = join(cacheFolder, PAGES_CONFIG_CACHE_FILENAME);
+		if (existsSync(pagesConfigCache)) {
+			// If there is a cached pages.json we can safely assume that the project
+			// is a Pages one
+			return true;
+		}
+	}
+
+	if (detectedFramework === undefined) {
+		const functionsPath = join(projectPath, "functions");
+		if (existsSync(functionsPath)) {
+			const functionsStat = statSync(functionsPath);
+			if (functionsStat.isDirectory()) {
+				const pagesConfirmed = await confirm(
+					"We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
+					{
+						defaultValue: true,
+						// In CI we do want to fallback to `false` so that we can proceed with the autoconfig flow
+						fallbackValue: false,
+					}
+				);
+				return pagesConfirmed;
+			}
+		}
+	}
+
+	return false;
+}
+
+async function detectFramework(
+	projectPath: string,
+	wranglerConfig?: Config
+): Promise<{
+	detectedFramework: DetectedFramework | undefined;
+	packageManager: PackageManager;
+}> {
+	const fs = new NodeFS();
+
+	fs.logger = logger;
+	const project = new Project(fs, projectPath, projectPath)
+		.setEnvironment(process.env)
+		.setNodeVersion(process.version)
+		.setReportFn((err) => {
+			captureException(err);
+		});
+
+	const buildSettings = await project.getBuildSettings();
+
+	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
+	if (buildSettings && buildSettings?.length > 1) {
+		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
+	}
+
+	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
+	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
+	const packageManager = convertDetectedPackageManager(project.packageManager);
+
+	const detectedFramework: DetectedFramework | undefined = buildSettings[0];
+
+	if (await isPagesProject(projectPath, wranglerConfig, detectedFramework)) {
+		return {
+			detectedFramework: {
+				framework: {
+					name: "Cloudflare Pages",
+					id: "cloudflare-pages",
+				},
+			},
+			packageManager,
+		};
+	}
+
+	return { detectedFramework, packageManager };
 }
 
 /**
@@ -104,34 +257,38 @@ export async function getDetailsForAutoConfig({
 } = {}): Promise<AutoConfigDetails> {
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
-	// If a real Wrangler config has been found & used, don't run autoconfig
-	if (wranglerConfig?.configPath) {
+	const autoConfigId = getAutoConfigId();
+
+	sendMetricsEvent(
+		"autoconfig_detection_started",
+		{
+			autoConfigId,
+			command: getAutoConfigTriggerCommand(),
+		},
+		{}
+	);
+
+	if (
+		// If a real Wrangler config has been found the project is already configured for Workers
+		wranglerConfig?.configPath &&
+		// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
+		!wranglerConfig.pages_build_output_dir
+	) {
 		return {
 			configured: true,
 			projectPath,
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
+			// Fall back to npm when already configured since we don't need to run package manager commands
+			packageManager: NpmPackageManager,
 		};
 	}
-	const fs = new NodeFS();
 
-	fs.logger = logger;
-	const project = new Project(fs, projectPath, projectPath)
-		.setEnvironment(process.env)
-		.setNodeVersion(process.version)
-		.setReportFn((err) => {
-			captureException(err);
-		});
+	const { detectedFramework, packageManager } = await detectFramework(
+		projectPath,
+		wranglerConfig
+	);
 
-	const buildSettings = await project.getBuildSettings();
-
-	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
-	if (buildSettings && buildSettings?.length > 1) {
-		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
-	}
-
-	const detectedFramework: Settings | undefined = buildSettings?.[0];
-
-	const framework = getFramework(detectedFramework?.framework);
+	const framework = getFramework(detectedFramework?.framework?.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -145,14 +302,83 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	return {
-		projectPath: projectPath,
-		configured: framework?.isConfigured(projectPath) ?? false,
+	const configured = framework.isConfigured(projectPath) ?? false;
+
+	const outputDir =
+		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+
+	const baseDetails = {
+		projectPath,
 		framework,
 		packageJson,
-		buildCommand: await getProjectBuildCommand(detectedFramework),
-		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
+		packageManager,
+		...(detectedFramework
+			? {
+					buildCommand: getProjectBuildCommand(
+						detectedFramework,
+						packageManager
+					),
+				}
+			: {}),
 		workerName: getWorkerName(packageJson?.name, projectPath),
+	};
+
+	if (configured) {
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: true,
+			},
+			{}
+		);
+		return {
+			...baseDetails,
+			configured: true,
+		};
+	}
+
+	if (!outputDir) {
+		const errorMessage =
+			framework.id === "static" || framework.id === "cloudflare-pages"
+				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
+				: "Failed to detect an output directory for the project";
+
+		const error = new FatalError(errorMessage);
+
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: false,
+				errorType: getErrorType(error),
+				errorMessage,
+			},
+			{}
+		);
+
+		throw error;
+	}
+
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			autoConfigId,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
+	return {
+		...baseDetails,
+		outputDir,
+		configured: false,
 	};
 }
 
@@ -161,16 +387,18 @@ export async function getDetailsForAutoConfig({
  * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
  *
  * @param detectedFramework The detected framework (or settings) for the project
+ * @param packageManager The package manager to use for command prefixes
  * @returns A runnable command for the build process if detected, undefined otherwise
  */
-async function getProjectBuildCommand(
-	detectedFramework: Settings
-): Promise<string | undefined> {
-	if (!detectedFramework?.buildCommand) {
+function getProjectBuildCommand(
+	detectedFramework: DetectedFramework,
+	packageManager: PackageManager
+): string | undefined {
+	if (!detectedFramework.buildCommand) {
 		return undefined;
 	}
 
-	const { type, dlx, npx } = await getPackageManager();
+	const { type, dlx, npx } = packageManager;
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
 		if (
@@ -322,6 +550,30 @@ export async function confirmAutoConfigDetails(
 	});
 
 	updatedAutoConfigDetails.workerName = workerName;
+
+	const frameworkId = await select(
+		"What framework is your application using?",
+		{
+			choices: allKnownFrameworks.map((f) => ({
+				title: f.name,
+				value: f.id,
+				description:
+					f.id === "static"
+						? "No framework at all, or a static framework such as Vite, React or Gatsby."
+						: `The ${f.name} JavaScript framework`,
+			})),
+			defaultOption: allKnownFrameworks.findIndex((framework) => {
+				if (!autoConfigDetails?.framework) {
+					// If there is no framework already detected let's default to the static one
+					// (note: there should always be a framework at this point)
+					return framework.id === "static";
+				}
+				return autoConfigDetails.framework.id === framework.id;
+			}),
+		}
+	);
+
+	updatedAutoConfigDetails.framework = getFramework(frameworkId);
 
 	const outputDir = await prompt(
 		"What directory contains your applications' output/asset files?",

@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
 import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";
@@ -14,7 +13,7 @@ const mockEnv = {
 describe("[Asset Worker] `handleRequest`", () => {
 	const analytics = new Analytics();
 
-	it("attaches ETag headers to responses", async () => {
+	it("attaches ETag headers to responses", async ({ expect }) => {
 		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
@@ -41,7 +40,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.headers.get("ETag")).toBe(`"${eTag}"`);
 	});
 
-	it("returns 304 Not Modified responses for a valid strong ETag in If-None-Match", async () => {
+	it("returns 304 Not Modified responses for a valid strong ETag in If-None-Match", async ({
+		expect,
+	}) => {
 		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
@@ -69,7 +70,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.status).toBe(304);
 	});
 
-	it("returns 304 Not Modified responses for a valid weak ETag in If-None-Match", async () => {
+	it("returns 304 Not Modified responses for a valid weak ETag in If-None-Match", async ({
+		expect,
+	}) => {
 		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
@@ -97,7 +100,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.status).toBe(304);
 	});
 
-	it("returns 200 OK responses for an invalid ETag in If-None-Match", async () => {
+	it("returns 200 OK responses for an invalid ETag in If-None-Match", async ({
+		expect,
+	}) => {
 		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
@@ -125,7 +130,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("cannot fetch assets outside of configured path", async () => {
+	it("cannot fetch assets outside of configured path", async ({ expect }) => {
 		const assets: Record<string, string> = {
 			"/blog/test.html": "aaaaaaaaaa",
 			"/blog/index.html": "bbbbbbbbbb",
@@ -182,7 +187,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response.status).toBe(404);
 	});
 
-	it("returns expected responses for malformed path", async () => {
+	it("returns expected responses for malformed path", async ({ expect }) => {
 		const assets: Record<string, string> = {
 			"/index.html": "aaaaaaaaaa",
 			"/%A0%A0.html": "bbbbbbbbbb",
@@ -226,7 +231,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(response2.status).toBe(307);
 	});
 
-	it("attaches CF-Cache-Status headers to responses", async () => {
+	it("attaches CF-Cache-Status headers to responses", async ({ expect }) => {
 		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
@@ -275,7 +280,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	describe("_headers", () => {
-		it("attaches custom headers", async () => {
+		it("attaches custom headers", async ({ expect }) => {
 			const configuration: AssetConfig = normalizeConfiguration({
 				html_handling: "none",
 				not_found_handling: "none",
@@ -548,7 +553,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	describe("_redirects", () => {
-		it("evaluates custom redirects", async () => {
+		it("evaluates custom redirects", async ({ expect }) => {
 			const configuration: AssetConfig = normalizeConfiguration({
 				html_handling: "none",
 				not_found_handling: "none",
@@ -1028,7 +1033,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 			expect(response.status).toBe(200);
 		});
 
-		it("should prevent external redirects via double slash", async () => {
+		it("should prevent external redirects via double slash", async ({
+			expect,
+		}) => {
 			const configuration: AssetConfig = normalizeConfiguration({
 				html_handling: "none",
 				not_found_handling: "none",
@@ -1073,7 +1080,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 });
 
 describe("[Asset Worker] `canFetch`", () => {
-	it('should return "true" if for exact and nearby assets with html_handling on', async () => {
+	it('should return "true" if for exact and nearby assets with html_handling on', async ({
+		expect,
+	}) => {
 		const exists = (pathname: string) => {
 			if (pathname === "/foo.html") {
 				return "some-etag";
@@ -1113,7 +1122,7 @@ describe("[Asset Worker] `canFetch`", () => {
 		).toBeTruthy();
 	});
 
-	it("should not consider 404s or SPAs", async () => {
+	it("should not consider 404s or SPAs", async ({ expect }) => {
 		const exists = (pathname: string) => {
 			if (["/404.html", "/index.html", "/foo.html"].includes(pathname)) {
 				return "some-etag";
@@ -1196,7 +1205,9 @@ describe("[Asset Worker] `canFetch`", () => {
 						has_static_routing: true,
 					});
 
-					it(`notFoundHandling=${notFoundHandling} Sec-Fetch-Mode=${headers["Sec-Fetch-Mode"]} flags=${flags}`, async () => {
+					it(`notFoundHandling=${notFoundHandling} Sec-Fetch-Mode=${headers["Sec-Fetch-Mode"]} flags=${flags}`, async ({
+						expect,
+					}) => {
 						expect(
 							await canFetch(
 								new Request("https://example.com/foo", { headers }),
@@ -1242,7 +1253,7 @@ describe("[Asset Worker] `canFetch`", () => {
 		}
 	});
 
-	it('should return "true" even for a bad method', async () => {
+	it('should return "true" even for a bad method', async ({ expect }) => {
 		const exists = (pathname: string) => {
 			if (pathname === "/foo.html") {
 				return "some-etag";
@@ -1272,7 +1283,9 @@ describe("[Asset Worker] `canFetch`", () => {
 		).toBeFalsy();
 	});
 
-	it('should return "true" for custom redirects without underlying assets', async () => {
+	it('should return "true" for custom redirects without underlying assets', async ({
+		expect,
+	}) => {
 		const exists = (pathname: string) => {
 			if (["/404.html", "/does-exist"].includes(pathname)) {
 				return "some-etag";
@@ -1468,16 +1481,19 @@ describe("[Asset Worker] `canFetch`", () => {
 			}
 		}
 
-		it.each(matrix)(
+		it.for(matrix)(
 			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers, hasStaticRouting $hasStaticRouting -> $expected",
-			async ({
-				compatibilityDate,
-				compatibilityFlags,
-				notFoundHandling,
-				headers,
-				hasStaticRouting,
-				expected,
-			}) => {
+			async (
+				{
+					compatibilityDate,
+					compatibilityFlags,
+					notFoundHandling,
+					headers,
+					hasStaticRouting,
+					expected,
+				},
+				{ expect }
+			) => {
 				expect(
 					await canFetch(
 						new Request("https://example.com/foo", { headers }),

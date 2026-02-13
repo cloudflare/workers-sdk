@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -20,7 +20,7 @@ describe("containers ssh", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers ssh --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -50,7 +50,7 @@ describe("containers ssh", () => {
 		`);
 	});
 
-	it("should reject invalid container ID format", async () => {
+	it("should reject invalid container ID format", async ({ expect }) => {
 		setWranglerConfig({});
 		await expect(
 			runWrangler("containers ssh invalid-id")
@@ -59,7 +59,7 @@ describe("containers ssh", () => {
 		);
 	});
 
-	it("should handle 500s when getting ssh jwt", async () => {
+	it("should handle 500s when getting ssh jwt", async ({ expect }) => {
 		const instanceId = "a".repeat(64);
 
 		setWranglerConfig({});
@@ -87,7 +87,7 @@ describe("containers ssh", () => {
 	// This covers up to trying to connect to the container with ssh. The
 	// actual ssh attempt will fail since we don't have an ssh instance to test
 	// against, but everything up until that point is covered.
-	it("should try ssh'ing into a container", async () => {
+	it("should try ssh'ing into a container", async ({ expect }) => {
 		const instanceId = "a".repeat(64);
 		const wsUrl = "ws://localhost:1234";
 		const sshJwt = "asd";

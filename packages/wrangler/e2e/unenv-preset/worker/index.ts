@@ -173,46 +173,6 @@ export const WorkerdTests: Record<string, () => void> = {
 		});
 	},
 
-	async testNodeCompatModules() {
-		const module = await import("node:module");
-		const require = module.createRequire("/");
-		const modules = [
-			"_tls_common",
-			"_tls_wrap",
-			"assert",
-			"assert/strict",
-			"async_hooks",
-			"buffer",
-			"constants",
-			"crypto",
-			"diagnostics_channel",
-			"dns",
-			"dns/promises",
-			"events",
-			"net",
-			"path",
-			"path/posix",
-			"path/win32",
-			"querystring",
-			"module",
-			"stream",
-			"stream/consumers",
-			"stream/promises",
-			"stream/web",
-			"string_decoder",
-			"sys",
-			"timers",
-			"timers/promises",
-			"url",
-			"util",
-			"util/types",
-			"zlib",
-		];
-		for (const m of modules) {
-			assert.strictEqual(await import(m), require(m));
-		}
-	},
-
 	async testUtilImplements() {
 		const util = await import("node:util");
 		const { types } = util;
@@ -580,7 +540,11 @@ export const WorkerdTests: Record<string, () => void> = {
 		const mProcess = await import("node:process");
 		const gProcess = globalThis.process;
 
-		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
+		// V2 is only used when workerd has fixes for iterable fetch bodies enabled.
+		const useV2 =
+			getRuntimeFlagValue("enable_nodejs_process_v2") &&
+			getRuntimeFlagValue("fetch_iterable_type_support") &&
+			getRuntimeFlagValue("fetch_iterable_type_support_override_adjustment");
 
 		for (const p of [mProcess, gProcess]) {
 			assert.equal(typeof (p as any).binding, "function");
@@ -895,6 +859,59 @@ export const WorkerdTests: Record<string, () => void> = {
 			() => repl.start(),
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
 		);
+	},
+
+	async testV8() {
+		const v8 = await import("node:v8");
+
+		for (const target of [v8, v8.default]) {
+			assertTypeOfProperties(target, {
+				getHeapSnapshot: "function",
+				getHeapStatistics: "function",
+				getHeapSpaceStatistics: "function",
+				getHeapCodeStatistics: "function",
+				setFlagsFromString: "function",
+				Serializer: "function",
+				Deserializer: "function",
+				DefaultSerializer: "function",
+				DefaultDeserializer: "function",
+				deserialize: "function",
+				takeCoverage: "function",
+				stopCoverage: "function",
+				serialize: "function",
+				writeHeapSnapshot: "function",
+				promiseHooks: "object",
+				startupSnapshot: "object",
+				setHeapSnapshotNearHeapLimit: "function",
+				GCProfiler: "function",
+				cachedDataVersionTag: "function",
+			});
+		}
+	},
+
+	async testTty() {
+		const tty = await import("node:tty");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(tty, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		assertTypeOfProperties(tty.default, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		// isatty should return false (both unenv and workerd)
+		assert.strictEqual(tty.isatty(0), false);
+		assert.strictEqual(tty.isatty(1), false);
+		assert.strictEqual(tty.isatty(2), false);
+
+		assert.doesNotThrow(() => new tty.ReadStream(0));
+		assert.doesNotThrow(() => new tty.WriteStream(1));
 	},
 };
 

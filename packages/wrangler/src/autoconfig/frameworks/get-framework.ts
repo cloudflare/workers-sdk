@@ -4,6 +4,7 @@ import { Astro } from "./astro";
 import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
+import { CloudflarePages } from "./pages";
 import { Qwik } from "./qwik";
 import { ReactRouter } from "./react-router";
 import { SolidStart } from "./solid-start";
@@ -18,39 +19,38 @@ import type { Framework } from ".";
 export type FrameworkInfo = {
 	id: string;
 	name: string;
+	class: typeof Framework;
 };
 
-export function getFramework(detectedFramework?: FrameworkInfo): Framework {
-	switch (detectedFramework?.id) {
-		case "astro":
-			return new Astro(detectedFramework);
-		case "svelte-kit":
-			return new SvelteKit(detectedFramework);
-		case "tanstack-start":
-			return new TanstackStart(detectedFramework);
-		case "react-router":
-			return new ReactRouter(detectedFramework);
-		case "angular":
-			return new Angular(detectedFramework);
-		case "nuxt":
-			return new Nuxt(detectedFramework);
-		case "solid-start":
-			return new SolidStart(detectedFramework);
-		case "qwik":
-			return new Qwik(detectedFramework);
-		case "vite":
-			return new Vite(detectedFramework);
-		case "analog":
-			return new Analog(detectedFramework);
-		case "next":
-			return new NextJs(detectedFramework);
-		case "hono":
-			return new Hono(detectedFramework);
-		case "vike":
-			return new Vike(detectedFramework);
-		case "waku":
-			return new Waku(detectedFramework);
-		default:
-			return new Static(detectedFramework ?? { id: "static", name: "Static" });
-	}
+const staticFramework = {
+	id: "static",
+	name: "Static",
+	class: Static,
+} as const satisfies FrameworkInfo;
+
+export const allKnownFrameworks = [
+	staticFramework,
+	{ id: "analog", name: "Analog", class: Analog },
+	{ id: "angular", name: "Angular", class: Angular },
+	{ id: "astro", name: "Astro", class: Astro },
+	{ id: "hono", name: "Hono", class: Hono },
+	{ id: "next", name: "Next.js", class: NextJs },
+	{ id: "nuxt", name: "Nuxt", class: Nuxt },
+	{ id: "qwik", name: "Qwik", class: Qwik },
+	{ id: "react-router", name: "React Router", class: ReactRouter },
+	{ id: "solid-start", name: "Solid Start", class: SolidStart },
+	{ id: "svelte-kit", name: "SvelteKit", class: SvelteKit },
+	{ id: "tanstack-start", name: "TanStack Start", class: TanstackStart },
+	{ id: "vite", name: "Vite", class: Vite },
+	{ id: "vike", name: "Vike", class: Vike },
+	{ id: "waku", name: "Waku", class: Waku },
+	{ id: "cloudflare-pages", name: "Cloudflare Pages", class: CloudflarePages },
+] as const satisfies FrameworkInfo[];
+
+export function getFramework(frameworkId?: FrameworkInfo["id"]): Framework {
+	const targetedFramework = allKnownFrameworks.find(
+		(framework) => framework.id === frameworkId
+	);
+	const framework = targetedFramework ?? staticFramework;
+	return new framework.class({ id: framework.id, name: framework.name });
 }

@@ -1,8 +1,8 @@
 import { SELF } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 describe("functions", () => {
-	it("calls function", async () => {
+	it("calls function", async ({ expect }) => {
 		// `SELF` here points to the worker running in the current isolate.
 		// This gets its handler from the `main` option in `vitest.config.mts`.
 		const response = await SELF.fetch("http://example.com/api/ping");
@@ -11,7 +11,7 @@ describe("functions", () => {
 		expect(await response.text()).toBe("GET PONG");
 	});
 
-	it("calls function with params", async () => {
+	it("calls function with params", async ({ expect }) => {
 		let response = await SELF.fetch("https://example.com/api/kv/key", {
 			method: "PUT",
 			body: "value",
@@ -23,7 +23,7 @@ describe("functions", () => {
 		expect(await response.text()).toBe("VALUE");
 	});
 
-	it("uses isolated storage for each test", async () => {
+	it("uses isolated storage for each test", async ({ expect }) => {
 		// Check write in previous test undone
 		const response = await SELF.fetch("https://example.com/api/kv/key");
 		expect(response.status).toBe(204);
@@ -31,7 +31,7 @@ describe("functions", () => {
 });
 
 describe("assets", () => {
-	it("serves static assets", async () => {
+	it("serves static assets", async ({ expect }) => {
 		const response = await SELF.fetch("http://example.com/");
 		expect(await response.text()).toMatchInlineSnapshot(`
 		"<p>Homepage 🏡</p>
@@ -39,7 +39,7 @@ describe("assets", () => {
 	`);
 	});
 
-	it("respects 404.html", async () => {
+	it("respects 404.html", async ({ expect }) => {
 		// `404.html` should be served for all unmatched requests
 		const response = await SELF.fetch("http://example.com/not-found");
 		expect(await response.text()).toMatchInlineSnapshot(`
@@ -48,7 +48,7 @@ describe("assets", () => {
 `);
 	});
 
-	it("respects _redirects", async () => {
+	it("respects _redirects", async ({ expect }) => {
 		const response = await SELF.fetch("http://example.com/take-me-home", {
 			redirect: "manual",
 		});
@@ -56,7 +56,7 @@ describe("assets", () => {
 		expect(response.headers.get("Location")).toBe("/");
 	});
 
-	it("respects _headers", async () => {
+	it("respects _headers", async ({ expect }) => {
 		let response = await SELF.fetch("http://example.com/secure");
 		expect(response.headers.get("X-Frame-Options")).toBe("DENY");
 		expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");

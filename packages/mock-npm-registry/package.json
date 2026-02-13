@@ -19,6 +19,7 @@
 		"@verdaccio/types": "^10.8.0",
 		"eslint": "catalog:default",
 		"get-port": "^7.0.0",
+		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"verdaccio": "^6.0.5"

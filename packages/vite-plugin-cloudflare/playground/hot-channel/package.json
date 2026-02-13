@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build:default": "vite build --app",
 		"check:type": "tsc --build",
 		"dev": "vite dev"
 	},

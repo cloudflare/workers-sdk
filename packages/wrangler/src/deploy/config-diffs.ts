@@ -6,7 +6,57 @@ import {
 	isNonDestructive,
 } from "../utils/diff-json";
 import type { JsonLike } from "../utils/diff-json";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	ConfigBindingFieldName,
+	RawConfig,
+} from "@cloudflare/workers-utils";
+
+// Exhaustive map of all binding keys in CfWorkerInit["bindings"].
+// When a new binding type is added, TypeScript will error here until it is handled.
+const reorderableBindings = {
+	// Top-level binding arrays
+	kv_namespaces: true,
+	r2_buckets: true,
+	d1_databases: true,
+	services: true,
+	send_email: true,
+	vectorize: true,
+	hyperdrive: true,
+	workflows: true,
+	dispatch_namespaces: true,
+	mtls_certificates: true,
+	pipelines: true,
+	secrets_store_secrets: true,
+	ratelimits: true,
+	analytics_engine_datasets: true,
+	unsafe_hello_world: true,
+	worker_loaders: true,
+	vpc_services: true,
+
+	// Wrapper objects containing binding arrays
+	durable_objects: true,
+	queues: true,
+	logfwdr: true,
+
+	// Non-array bindings (nothing to reorder)
+	vars: false,
+	wasm_modules: false,
+	text_blobs: false,
+	data_blobs: false,
+	browser: false,
+	ai: false,
+	images: false,
+	media: false,
+	version_metadata: false,
+	unsafe: false,
+	assets: false,
+} satisfies Record<ConfigBindingFieldName, boolean>;
+
+/** Extracts the keys of T whose values are `true` */
+type ReorderableKeys<T extends Record<string, boolean>> = {
+	[K in keyof T]: T[K] extends true ? K : never;
+}[keyof T];
 
 /**
  * Object representing the difference of two configuration objects.
@@ -37,7 +87,7 @@ export function getRemoteConfigDiff(
 		normalizeLocalResolvedConfigAsRemote(localResolvedConfig);
 	const normalizedRemoteConfig = normalizeRemoteConfigAsResolvedLocal(
 		remoteConfig,
-		localResolvedConfig
+		normalizedLocalConfig
 	);
 
 	const diff = diffJsonObjects(
@@ -245,19 +295,19 @@ function normalizeObservability(
  *  - removing from the remote config all the default values that in the local config are either not present or undefined
  *
  * @param remoteConfig The remote config object to normalize
- * @param localResolvedConfig The target/local (resolved) config object
+ * @param localConfig The target/local (resolved) config object
  * @returns The remote config object normalized and ready to be compared with the local one
  */
 function normalizeRemoteConfigAsResolvedLocal(
 	remoteConfig: RawConfig,
-	localResolvedConfig: Config
+	localConfig: Config
 ): Config {
 	let normalizedRemote = {} as Config;
 
 	// We start by adding all the local configs to the normalized remote config object
 	// in this way we can make sure that local-only configurations are not shown as
 	// differences between local and remote configs
-	Object.entries(localResolvedConfig).forEach(([key, value]) => {
+	Object.entries(localConfig).forEach(([key, value]) => {
 		if (
 			// We want to skip observability since it has a remote default behavior
 			// different from that of wrangler
@@ -287,10 +337,129 @@ function normalizeRemoteConfigAsResolvedLocal(
 	// the configuration options in the same order as their config file)
 	normalizedRemote = orderObjectFields(
 		normalizedRemote as unknown as Record<string, unknown>,
-		localResolvedConfig as unknown as Record<string, unknown>
+		localConfig as unknown as Record<string, unknown>
 	) as unknown as Config;
 
+	// Reorder binding arrays to match local's order so the diff is intuitive.
+	// Binding array order doesn't matter semantically, but positional diffing
+	// would show spurious changes if the same elements appear in different order.
+	for (const [bindingKey, shouldReorder] of Object.entries(
+		reorderableBindings
+	)) {
+		if (!shouldReorder) {
+			continue;
+		}
+
+		const key = bindingKey as ReorderableKeys<typeof reorderableBindings>;
+
+		// Handle wrapper objects that contain binding arrays as nested properties
+		if (key === "queues") {
+			// Only producers are bindings (accessible from Worker code).
+			// Consumers configure message delivery to the Worker and are
+			// managed through the Queues API, not the Worker bindings API,
+			// so they don't appear in the remote config.
+			if (normalizedRemote.queues?.producers && localConfig.queues?.producers) {
+				normalizedRemote.queues.producers = reorderBindings(
+					normalizedRemote.queues.producers,
+					localConfig.queues.producers
+				);
+			}
+			continue;
+		}
+
+		if (key === "durable_objects") {
+			if (
+				normalizedRemote.durable_objects?.bindings &&
+				localConfig.durable_objects?.bindings
+			) {
+				normalizedRemote.durable_objects.bindings = reorderBindings(
+					normalizedRemote.durable_objects.bindings,
+					localConfig.durable_objects.bindings
+				);
+			}
+			continue;
+		}
+
+		if (key === "logfwdr") {
+			if (normalizedRemote.logfwdr?.bindings && localConfig.logfwdr?.bindings) {
+				normalizedRemote.logfwdr.bindings = reorderBindings(
+					normalizedRemote.logfwdr.bindings,
+					localConfig.logfwdr.bindings
+				);
+			}
+			continue;
+		}
+
+		// Top-level binding arrays
+		reorderConfigBindings(normalizedRemote, localConfig, key);
+	}
+
 	return normalizedRemote;
+}
+
+/**
+ * Generates a stable key for a binding object by JSON-serializing it with sorted keys,
+ * so that objects with the same properties in different order produce the same key.
+ */
+function getBindingKey(obj: unknown): string {
+	return JSON.stringify(obj, (_, v) =>
+		v && typeof v === "object" && !Array.isArray(v)
+			? Object.fromEntries(
+					Object.keys(v)
+						.sort()
+						.map((k) => [k, v[k]])
+				)
+			: v
+	);
+}
+
+/**
+ * Reorders a remote binding array to match the local array's order.
+ * Elements present in both arrays are placed first (in local order),
+ * followed by elements only in the remote array.
+ *
+ * @example
+ * ```ts
+ * reorderBindings(
+ *   [{ binding: "A" }, { binding: "B" }, { binding: "C" }],  // remote
+ *   [{ binding: "C" }, { binding: "A" }, { binding: "D" }]   // local
+ * )
+ * // => [{ binding: "C" }, { binding: "A" }, { binding: "B" }]
+ * //    matched C and A are placed in local order, then unmatched B is appended
+ * ```
+ */
+function reorderBindings<T>(remote: T[], local: T[]): T[] {
+	const remoteByKey = new Map(remote.map((el) => [getBindingKey(el), el]));
+	const used = new Set<string>();
+	const result: T[] = [];
+	for (const binding of local) {
+		const key = getBindingKey(binding);
+		const remoteEl = remoteByKey.get(key);
+		if (remoteEl !== undefined) {
+			result.push(remoteEl);
+			used.add(key);
+		}
+	}
+	for (const binding of remote) {
+		if (!used.has(getBindingKey(binding))) {
+			result.push(binding);
+		}
+	}
+	return result;
+}
+
+/**
+ * Reorders a top-level binding array on the remote config to match the local config's order.
+ * Uses a generic key parameter so TypeScript can correlate the types of both accesses.
+ */
+function reorderConfigBindings<
+	K extends ReorderableKeys<typeof reorderableBindings>,
+>(normalizedRemote: Config, localConfig: Config, key: K): void {
+	const remoteArr = normalizedRemote[key];
+	const localArr = localConfig[key];
+	if (Array.isArray(remoteArr) && Array.isArray(localArr)) {
+		normalizedRemote[key] = reorderBindings(remoteArr, localArr) as Config[K];
+	}
 }
 
 /**

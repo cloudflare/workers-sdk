@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme {
+	/* Cloudflare Workers brand colors - Light mode (default) */
+	--color-bg: #fffdfb;
+	--color-bg-secondary: #fef7ed;
+	--color-bg-tertiary: #fffbf5;
+	--color-text: #521000;
+	--color-text-secondary: #521000b3;
+	--color-border: #ebd5c1;
+	--color-primary: #ff4801;
+	--color-primary-hover: #ff7038;
+	--color-danger: #fb2c36;
+	--color-danger-hover: #dc2626;
+	--color-success: #16a34a;
+
+	/* Focus ring shadows */
+	--shadow-focus-primary: 0 0 0 3px rgba(255, 72, 1, 0.15);
+	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
+
+	/* Custom sizing */
+	--width-sidebar: 240px;
+}
+
+/* Dark mode color overrides */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-bg: #1a1412;
+		--color-bg-secondary: #0f0c0a;
+		--color-bg-tertiary: #231c18;
+		--color-text: #ffeee6;
+		--color-text-secondary: #ffeee6b3;
+		--color-border: #3d2e24;
+		--color-primary: #ff6b33;
+		--color-primary-hover: #ff8855;
+		--color-danger: #ff4d55;
+		--color-danger-hover: #ef4444;
+		--color-success: #22c55e;
+
+		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
+		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
+	}
+}
+
+@layer base {
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+			Ubuntu, sans-serif;
+		@apply text-sm leading-normal text-text bg-bg-secondary;
+	}
+}

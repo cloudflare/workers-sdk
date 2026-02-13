@@ -1,9 +1,7 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import { page, WAIT_FOR_OPTIONS } from "../../__test-utils__";
 
-export const browserMode = true;
-
-test("sends and receives PartyServer messages", async () => {
+test("sends and receives PartyServer messages", async ({ expect }) => {
 	const sendButton = page.getByRole("button", { name: "Send message" });
 	const messageTextBefore = await page.textContent("p");
 	expect(messageTextBefore).toBe("");

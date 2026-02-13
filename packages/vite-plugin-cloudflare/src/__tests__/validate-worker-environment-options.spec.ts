@@ -1,8 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 
 describe("validateWorkerEnvironmentOptions", () => {
-	test("doesn't throw if there are no config violations", () => {
+	test("doesn't throw if there are no config violations", ({ expect }) => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,7 +17,9 @@ describe("validateWorkerEnvironmentOptions", () => {
 		).not.toThrow();
 	});
 
-	test("throws with an appropriate error message if a Worker environment contains disallowed options", () => {
+	test("throws with an appropriate error message if a Worker environment contains disallowed options", ({
+		expect,
+	}) => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,7 +41,9 @@ describe("validateWorkerEnvironmentOptions", () => {
 		);
 	});
 
-	test("throws with an appropriate error message if multiple worker environments contain config violations", () => {
+	test("throws with an appropriate error message if multiple worker environments contain config violations", ({
+		expect,
+	}) => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([
 				["workerA", { config: {} }],

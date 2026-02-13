@@ -1,44 +1,44 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
 
 describe("experimental_getWranglerCommands", () => {
-	test("returns global flags", () => {
+	test("returns global flags", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().globalFlags;
 
 		expect(commandTree).toMatchInlineSnapshot(`
-			Object {
-			  "config": Object {
+			{
+			  "config": {
 			    "alias": "c",
 			    "describe": "Path to Wrangler configuration file",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "cwd": Object {
+			  "cwd": {
 			    "describe": "Run as if Wrangler was started in the specified directory instead of the current working directory",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "env": Object {
+			  "env": {
 			    "alias": "e",
 			    "describe": "Environment to use for operations, and for selecting .env and .dev.vars files",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "env-file": Object {
+			  "env-file": {
 			    "array": true,
 			    "describe": "Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "experimental-auto-create": Object {
+			  "experimental-auto-create": {
 			    "alias": "x-auto-create",
 			    "default": true,
 			    "describe": "Automatically provision draft bindings with new resources",
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "experimental-provision": Object {
-			    "alias": Array [
+			  "experimental-provision": {
+			    "alias": [
 			      "x-provision",
 			    ],
 			    "default": true,
@@ -46,7 +46,7 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "v": Object {
+			  "v": {
 			    "alias": "version",
 			    "describe": "Show version number",
 			    "type": "boolean",
@@ -54,14 +54,14 @@ describe("experimental_getWranglerCommands", () => {
 			}
 		`);
 	});
-	test("returns command tree structure", () => {
+	test("returns command tree structure", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		expect(commandTree).toBeDefined();
 		expect(commandTree.subtree).toBeInstanceOf(Map);
 	});
 
-	test("includes expected commands with metadata", () => {
+	test("includes expected commands with metadata", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		expect(commandTree.subtree.has("docs")).toBe(true);
@@ -75,7 +75,7 @@ describe("experimental_getWranglerCommands", () => {
 		expect(docsCommand?.definition?.metadata?.status).toBeDefined();
 	});
 
-	test("includes nested commands", () => {
+	test("includes nested commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const d1Command = commandTree.subtree.get("d1");
@@ -85,7 +85,7 @@ describe("experimental_getWranglerCommands", () => {
 		expect(d1Command?.subtree.has("delete")).toBe(true);
 	});
 
-	test("includes command arguments and metadata", () => {
+	test("includes command arguments and metadata", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const initCommand = commandTree.subtree.get("init");
@@ -98,7 +98,7 @@ describe("experimental_getWranglerCommands", () => {
 		}
 	});
 
-	test("includes namespace commands", () => {
+	test("includes namespace commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const kvCommand = commandTree.subtree.get("kv");
@@ -108,7 +108,7 @@ describe("experimental_getWranglerCommands", () => {
 		expect(kvCommand?.subtree.has("key")).toBe(true);
 	});
 
-	test("preserves command metadata properties", () => {
+	test("preserves command metadata properties", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const deployCommand = commandTree.subtree.get("deploy");

@@ -6,7 +6,9 @@ import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";
@@ -60,25 +62,21 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0\`...",
+				🌀 Running \`mockpm create cloudflare\`...",
 				  "warn": "",
 				}
 			`);
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare@^2.5.0"],
-				{
-					stdio: ["inherit", "pipe", "pipe"],
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 
 		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
@@ -86,11 +84,57 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@^2.5.0", "--wrangler-defaults"],
+				["create", "cloudflare", "--wrangler-defaults"],
 				{
 					stdio: ["inherit", "pipe", "pipe"],
 				}
 			);
+		});
+
+		describe("with yarn package manager", () => {
+			beforeEach(() => {
+				mockPackageManager = {
+					type: "yarn",
+					npx: "yarn",
+					dlx: ["yarn", "dlx"],
+				};
+				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
+
+				// Update the mock to handle "yarn" for these tests
+				(execa as Mock).mockImplementation((command: string) => {
+					if (command === "yarn" || command === "mockpm") {
+						return Promise.resolve();
+					}
+					return Promise.reject(new Error(`Unexpected command: ${command}`));
+				});
+			});
+
+			test("uses C3 command without version specifier for yarn", async () => {
+				await runWrangler("init");
+
+				// No version specifier needed since C3 has auto-update behavior
+				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
+					stdio: ["inherit", "pipe", "pipe"],
+				});
+			});
+
+			test("uses C3 command without version specifier when using --from-dash with yarn", async () => {
+				await runWrangler("init --from-dash my-worker");
+
+				expect(execa).toHaveBeenCalledWith(
+					"yarn",
+					[
+						"create",
+						"cloudflare",
+						"my-worker",
+						"--existing-script",
+						"my-worker",
+					],
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+					}
+				);
+			});
 		});
 
 		describe("with custom C3 command", () => {
@@ -112,7 +156,7 @@ describe("init", () => {
 				});
 
 				expect(std).toMatchInlineSnapshot(`
-					Object {
+					{
 					  "debug": "",
 					  "err": "",
 					  "info": "",
@@ -155,16 +199,12 @@ describe("init", () => {
 			});
 			await runWrangler("init");
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare@^2.5.0"],
-				{
-					env: {
-						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
-					},
-					stdio: ["inherit", "pipe", "pipe"],
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				env: {
+					CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+				},
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 	});
 
@@ -793,14 +833,14 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
+				🌀 Running \`mockpm create cloudflare existing-memory-crystal --existing-script existing-memory-crystal\`...",
 				  "warn": "",
 				}
 			`);
@@ -810,7 +850,7 @@ describe("init", () => {
 				"mockpm",
 				[
 					"create",
-					"cloudflare@^2.5.0",
+					"cloudflare",
 					"existing-memory-crystal",
 					"--existing-script",
 					"existing-memory-crystal",
@@ -844,33 +884,33 @@ describe("init", () => {
 
 			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.jsonc", "utf8"))
 				.toMatchInlineSnapshot(`
-				"{
-				  \\"name\\": \\"isolinear-optical-chip\\",
-				  \\"main\\": \\"src/index.js\\",
-				  \\"workers_dev\\": false,
-				  \\"compatibility_date\\": \\"1987-09-27\\",
-				  \\"routes\\": [
-				    {
-				      \\"pattern\\": \\"delta.quadrant\\",
-				      \\"zone_name\\": \\"delta.quadrant\\"
-				    },
-				    {
-				      \\"pattern\\": \\"random.host.name\\",
-				      \\"zone_name\\": \\"some-zone-name\\",
-				      \\"custom_domain\\": true
-				    }
-				  ],
-				  \\"tail_consumers\\": [
-				    {
-				      \\"service\\": \\"listener\\"
-				    }
-				  ],
-				  \\"observability\\": {
-				    \\"enabled\\": true,
-				    \\"head_sampling_rate\\": 0.5
-				  }
-				}"
-			`);
+					"{
+					  "name": "isolinear-optical-chip",
+					  "main": "src/index.js",
+					  "workers_dev": false,
+					  "compatibility_date": "1987-09-27",
+					  "routes": [
+					    {
+					      "pattern": "delta.quadrant",
+					      "zone_name": "delta.quadrant"
+					    },
+					    {
+					      "pattern": "random.host.name",
+					      "zone_name": "some-zone-name",
+					      "custom_domain": true
+					    }
+					  ],
+					  "tail_consumers": [
+					    {
+					      "service": "listener"
+					    }
+					  ],
+					  "observability": {
+					    "enabled": true,
+					    "head_sampling_rate": 0.5
+					  }
+					}"
+				`);
 		});
 
 		it("should fail on init --from-dash on non-existent worker name", async () => {
@@ -923,181 +963,181 @@ describe("init", () => {
 			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.jsonc", "utf8"))
 				.toMatchInlineSnapshot(`
 					"{
-					  \\"name\\": \\"isolinear-optical-chip\\",
-					  \\"main\\": \\"src/index.js\\",
-					  \\"workers_dev\\": true,
-					  \\"compatibility_date\\": \\"1987-09-27\\",
-					  \\"routes\\": [
+					  "name": "isolinear-optical-chip",
+					  "main": "src/index.js",
+					  "workers_dev": true,
+					  "compatibility_date": "1987-09-27",
+					  "routes": [
 					    {
-					      \\"pattern\\": \\"delta.quadrant\\",
-					      \\"zone_name\\": \\"delta.quadrant\\"
+					      "pattern": "delta.quadrant",
+					      "zone_name": "delta.quadrant"
 					    }
 					  ],
-					  \\"migrations\\": [
+					  "migrations": [
 					    {
-					      \\"tag\\": \\"some-migration-tag\\",
-					      \\"new_classes\\": [
-					        \\"DurabilitySameWorker\\"
+					      "tag": "some-migration-tag",
+					      "new_classes": [
+					        "DurabilitySameWorker"
 					      ]
 					    }
 					  ],
-					  \\"triggers\\": {
-					    \\"crons\\": [
-					      \\"0 0 0 * * *\\"
+					  "triggers": {
+					    "crons": [
+					      "0 0 0 * * *"
 					    ]
 					  },
-					  \\"tail_consumers\\": [
+					  "tail_consumers": [
 					    {
-					      \\"service\\": \\"listener\\"
+					      "service": "listener"
 					    }
 					  ],
-					  \\"observability\\": {
-					    \\"enabled\\": true,
-					    \\"head_sampling_rate\\": 0.5
+					  "observability": {
+					    "enabled": true,
+					    "head_sampling_rate": 0.5
 					  },
-					  \\"vars\\": {
-					    \\"ANOTHER-NAME\\": \\"thing-TEXT\\"
+					  "vars": {
+					    "ANOTHER-NAME": "thing-TEXT"
 					  },
-					  \\"durable_objects\\": {
-					    \\"bindings\\": [
+					  "durable_objects": {
+					    "bindings": [
 					      {
-					        \\"name\\": \\"DURABLE_TEST\\",
-					        \\"class_name\\": \\"Durability\\",
-					        \\"script_name\\": \\"another-durable-object-worker\\",
-					        \\"environment\\": \\"production\\"
+					        "name": "DURABLE_TEST",
+					        "class_name": "Durability",
+					        "script_name": "another-durable-object-worker",
+					        "environment": "production"
 					      },
 					      {
-					        \\"name\\": \\"DURABLE_TEST_SAME_WORKER\\",
-					        \\"class_name\\": \\"DurabilitySameWorker\\",
-					        \\"script_name\\": \\"isolinear-optical-chip\\"
+					        "name": "DURABLE_TEST_SAME_WORKER",
+					        "class_name": "DurabilitySameWorker",
+					        "script_name": "isolinear-optical-chip"
 					      }
 					    ]
 					  },
-					  \\"kv_namespaces\\": [
+					  "kv_namespaces": [
 					    {
-					      \\"id\\": \\"some-namespace-id\\",
-					      \\"binding\\": \\"kv_testing\\"
+					      "id": "some-namespace-id",
+					      "binding": "kv_testing"
 					    }
 					  ],
-					  \\"r2_buckets\\": [
+					  "r2_buckets": [
 					    {
-					      \\"binding\\": \\"test-bucket\\",
-					      \\"bucket_name\\": \\"test-bucket\\"
+					      "binding": "test-bucket",
+					      "bucket_name": "test-bucket"
 					    }
 					  ],
-					  \\"services\\": [
+					  "services": [
 					    {
-					      \\"binding\\": \\"website\\",
-					      \\"service\\": \\"website\\",
-					      \\"environment\\": \\"production\\",
-					      \\"entrypoint\\": \\"WWWHandler\\"
+					      "binding": "website",
+					      "service": "website",
+					      "environment": "production",
+					      "entrypoint": "WWWHandler"
 					    }
 					  ],
-					  \\"dispatch_namespaces\\": [
+					  "dispatch_namespaces": [
 					    {
-					      \\"binding\\": \\"name-namespace-mock\\",
-					      \\"namespace\\": \\"namespace-mock\\"
+					      "binding": "name-namespace-mock",
+					      "namespace": "namespace-mock"
 					    }
 					  ],
-					  \\"logfwdr\\": {
-					    \\"bindings\\": [
+					  "logfwdr": {
+					    "bindings": [
 					      {
-					        \\"name\\": \\"httplogs\\",
-					        \\"destination\\": \\"httplogs\\"
+					        "name": "httplogs",
+					        "destination": "httplogs"
 					      },
 					      {
-					        \\"name\\": \\"trace\\",
-					        \\"destination\\": \\"trace\\"
+					        "name": "trace",
+					        "destination": "trace"
 					      }
 					    ]
 					  },
-					  \\"wasm_modules\\": {
-					    \\"WASM_MODULE_ONE\\": \\"./some_wasm.wasm\\",
-					    \\"WASM_MODULE_TWO\\": \\"./more_wasm.wasm\\"
+					  "wasm_modules": {
+					    "WASM_MODULE_ONE": "./some_wasm.wasm",
+					    "WASM_MODULE_TWO": "./more_wasm.wasm"
 					  },
-					  \\"text_blobs\\": {
-					    \\"TEXT_BLOB_ONE\\": \\"./my-entire-app-depends-on-this.cfg\\",
-					    \\"TEXT_BLOB_TWO\\": \\"./the-entirety-of-human-knowledge.txt\\"
+					  "text_blobs": {
+					    "TEXT_BLOB_ONE": "./my-entire-app-depends-on-this.cfg",
+					    "TEXT_BLOB_TWO": "./the-entirety-of-human-knowledge.txt"
 					  },
-					  \\"d1_databases\\": [
+					  "d1_databases": [
 					    {
-					      \\"binding\\": \\"DB\\",
-					      \\"database_id\\": \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\"
+					      "binding": "DB",
+					      "database_id": "40160e84-9fdb-4ce7-8578-23893cecc5a3"
 					    }
 					  ],
-					  \\"data_blobs\\": {
-					    \\"DATA_BLOB_ONE\\": \\"DATA_BLOB_ONE\\",
-					    \\"DATA_BLOB_TWO\\": \\"DATA_BLOB_TWO\\"
+					  "data_blobs": {
+					    "DATA_BLOB_ONE": "DATA_BLOB_ONE",
+					    "DATA_BLOB_TWO": "DATA_BLOB_TWO"
 					  },
-					  \\"unsafe\\": {
-					    \\"bindings\\": [
+					  "unsafe": {
+					    "bindings": [
 					      {
-					        \\"type\\": \\"some unsafe thing\\",
-					        \\"name\\": \\"UNSAFE_BINDING_ONE\\",
-					        \\"data\\": {
-					          \\"some\\": {
-					            \\"unsafe\\": \\"thing\\"
+					        "type": "some unsafe thing",
+					        "name": "UNSAFE_BINDING_ONE",
+					        "data": {
+					          "some": {
+					            "unsafe": "thing"
 					          }
 					        }
 					      },
 					      {
-					        \\"type\\": \\"another unsafe thing\\",
-					        \\"name\\": \\"UNSAFE_BINDING_TWO\\",
-					        \\"data\\": 1337
+					        "type": "another unsafe thing",
+					        "name": "UNSAFE_BINDING_TWO",
+					        "data": 1337
 					      },
 					      {
-					        \\"type\\": \\"inherit\\",
-					        \\"name\\": \\"INHERIT_BINDING\\"
+					        "type": "inherit",
+					        "name": "INHERIT_BINDING"
 					      }
 					    ]
 					  },
-					  \\"pipelines\\": [
+					  "pipelines": [
 					    {
-					      \\"binding\\": \\"PIPELINE_BINDING\\",
-					      \\"pipeline\\": \\"some-name\\"
+					      "binding": "PIPELINE_BINDING",
+					      "pipeline": "some-name"
 					    }
 					  ],
-					  \\"mtls_certificates\\": [
+					  "mtls_certificates": [
 					    {
-					      \\"binding\\": \\"MTLS_BINDING\\",
-					      \\"certificate_id\\": \\"some-id\\"
+					      "binding": "MTLS_BINDING",
+					      "certificate_id": "some-id"
 					    }
 					  ],
-					  \\"hyperdrive\\": [
+					  "hyperdrive": [
 					    {
-					      \\"binding\\": \\"HYPER_BINDING\\",
-					      \\"id\\": \\"some-id\\"
+					      "binding": "HYPER_BINDING",
+					      "id": "some-id"
 					    }
 					  ],
-					  \\"vectorize\\": [
+					  "vectorize": [
 					    {
-					      \\"binding\\": \\"VECTOR_BINDING\\",
-					      \\"index_name\\": \\"some-name\\"
+					      "binding": "VECTOR_BINDING",
+					      "index_name": "some-name"
 					    }
 					  ],
-					  \\"queues\\": {
-					    \\"producers\\": [
+					  "queues": {
+					    "producers": [
 					      {
-					        \\"binding\\": \\"queue_BINDING\\",
-					        \\"queue\\": \\"some-name\\",
-					        \\"delivery_delay\\": 1
+					        "binding": "queue_BINDING",
+					        "queue": "some-name",
+					        "delivery_delay": 1
 					      }
 					    ]
 					  },
-					  \\"send_email\\": [
+					  "send_email": [
 					    {
-					      \\"name\\": \\"EMAIL_BINDING\\",
-					      \\"destination_address\\": \\"some@address.com\\",
-					      \\"allowed_destination_addresses\\": [
-					        \\"some2@address.com\\"
+					      "name": "EMAIL_BINDING",
+					      "destination_address": "some@address.com",
+					      "allowed_destination_addresses": [
+					        "some2@address.com"
 					      ],
-					      \\"allowed_sender_addresses\\": [
-					        \\"some2@address.com\\"
+					      "allowed_sender_addresses": [
+					        "some2@address.com"
 					      ]
 					    }
 					  ],
-					  \\"version_metadata\\": {
-					    \\"binding\\": \\"Version_BINDING\\"
+					  "version_metadata": {
+					    "binding": "Version_BINDING"
 					  }
 					}"
 				`);

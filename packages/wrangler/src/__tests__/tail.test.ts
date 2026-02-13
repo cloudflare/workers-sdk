@@ -2,7 +2,9 @@ import { setTimeout } from "node:timers/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -604,7 +606,7 @@ describe("tail", () => {
 				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
-				\\"* * * * *\\" @ [mock timestamp string] - Ok"
+				"* * * * *" @ [mock timestamp string] - Ok"
 			`);
 			await api.closeHelper();
 		});

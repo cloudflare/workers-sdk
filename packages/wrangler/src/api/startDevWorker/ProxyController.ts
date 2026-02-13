@@ -7,6 +7,7 @@ import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
+import { version as packageVersion } from "../../../package.json";
 import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
@@ -161,6 +162,7 @@ export class ProxyController extends Controller {
 				},
 				bindings: {
 					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+					WRANGLER_VERSION: packageVersion,
 				},
 
 				unsafeDirectSockets: [

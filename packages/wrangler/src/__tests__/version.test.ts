@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { version } from "./../../package.json";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -11,7 +11,7 @@ describe("version", () => {
 	// We cannot test output of version banner,
 	// as it is disabled in testing environments
 
-	// it("should output version banner", async () => {
+	// it("should output version banner", async ({ expect }) => {
 	// 	await runWrangler("-v");
 	// 	expect(std.out).toMatchInlineSnapshot(`
 	// 	" ⛅️ wrangler 2.0.22
@@ -19,7 +19,9 @@ describe("version", () => {
 	// `);
 	// });
 
-	it("should output current version if !isTTY calling with `-v` flag", async () => {
+	it("should output current version if !isTTY calling with `-v` flag", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 
 		await runWrangler("-v");
@@ -28,7 +30,9 @@ describe("version", () => {
 	});
 
 	// This run separately as command handling is different
-	it("should output current version if !isTTY calling with `--version` flag", async () => {
+	it("should output current version if !isTTY calling with `--version` flag", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 
 		await runWrangler("--version");

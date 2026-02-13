@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_APPLICATIONS } from "../helpers/mock-cloudchamber";
@@ -60,60 +62,60 @@ describe("containers list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			    {
-			        \\"id\\": \\"asdf-2\\",
-			        \\"created_at\\": \\"123\\",
-			        \\"account_id\\": \\"test-account\\",
-			        \\"name\\": \\"Test-app\\",
-			        \\"version\\": 1,
-			        \\"configuration\\": {
-			            \\"image\\": \\"test-registry.cfdata.org/test-app:v1\\",
-			            \\"network\\": {
-			                \\"mode\\": \\"private\\"
+			        "id": "asdf-2",
+			        "created_at": "123",
+			        "account_id": "test-account",
+			        "name": "Test-app",
+			        "version": 1,
+			        "configuration": {
+			            "image": "test-registry.cfdata.org/test-app:v1",
+			            "network": {
+			                "mode": "private"
 			            }
 			        },
-			        \\"scheduling_policy\\": \\"regional\\",
-			        \\"instances\\": 2,
-			        \\"jobs\\": false,
-			        \\"constraints\\": {
-			            \\"region\\": \\"WNAM\\"
+			        "scheduling_policy": "regional",
+			        "instances": 2,
+			        "jobs": false,
+			        "constraints": {
+			            "region": "WNAM"
 			        }
 			    },
 			    {
-			        \\"id\\": \\"asdf-1\\",
-			        \\"created_at\\": \\"123\\",
-			        \\"account_id\\": \\"test-account\\",
-			        \\"name\\": \\"Test-app\\",
-			        \\"version\\": 1,
-			        \\"configuration\\": {
-			            \\"image\\": \\"test-registry.cfdata.org/test-app:v10\\",
-			            \\"network\\": {
-			                \\"mode\\": \\"private\\"
+			        "id": "asdf-1",
+			        "created_at": "123",
+			        "account_id": "test-account",
+			        "name": "Test-app",
+			        "version": 1,
+			        "configuration": {
+			            "image": "test-registry.cfdata.org/test-app:v10",
+			            "network": {
+			                "mode": "private"
 			            }
 			        },
-			        \\"scheduling_policy\\": \\"regional\\",
-			        \\"instances\\": 10,
-			        \\"jobs\\": false,
-			        \\"constraints\\": {
-			            \\"region\\": \\"WNAM\\"
+			        "scheduling_policy": "regional",
+			        "instances": 10,
+			        "jobs": false,
+			        "constraints": {
+			            "region": "WNAM"
 			        }
 			    },
 			    {
-			        \\"id\\": \\"asdf-3\\",
-			        \\"created_at\\": \\"123\\",
-			        \\"account_id\\": \\"test-account\\",
-			        \\"name\\": \\"Test-app\\",
-			        \\"version\\": 1,
-			        \\"configuration\\": {
-			            \\"image\\": \\"test-registry.cfdata.org/test-app:v2\\",
-			            \\"network\\": {
-			                \\"mode\\": \\"private\\"
+			        "id": "asdf-3",
+			        "created_at": "123",
+			        "account_id": "test-account",
+			        "name": "Test-app",
+			        "version": 1,
+			        "configuration": {
+			            "image": "test-registry.cfdata.org/test-app:v2",
+			            "network": {
+			                "mode": "private"
 			            }
 			        },
-			        \\"scheduling_policy\\": \\"regional\\",
-			        \\"instances\\": 2,
-			        \\"jobs\\": false,
-			        \\"constraints\\": {
-			            \\"region\\": \\"WNAM\\"
+			        "scheduling_policy": "regional",
+			        "instances": 2,
+			        "jobs": false,
+			        "constraints": {
+			            "region": "WNAM"
 			        }
 			    }
 			]"

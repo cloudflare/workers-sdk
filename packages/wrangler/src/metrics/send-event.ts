@@ -48,6 +48,7 @@ export type EventNames =
 	| "list pages projects"
 	| "create pages deployment"
 	| "list pages deployments"
+	| "delete pages deployment"
 	| "build pages functions"
 	| "run dev"
 	| "run dev (api)"
@@ -70,8 +71,16 @@ export type EventNames =
 	| "update pipeline"
 	| "show pipeline"
 	| "provision resources"
-	| "autoconfig detected"
-	| "autoconfig accepted";
+	| AutoConfigEvent;
+
+/** Event related to the autoconfig flow */
+type AutoConfigEvent =
+	| "autoconfig_process_started"
+	| "autoconfig_process_ended"
+	| "autoconfig_detection_started"
+	| "autoconfig_detection_completed"
+	| "autoconfig_configuration_started"
+	| "autoconfig_configuration_completed";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

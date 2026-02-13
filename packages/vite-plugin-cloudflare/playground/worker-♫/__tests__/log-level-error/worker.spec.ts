@@ -1,9 +1,7 @@
-import { expect, test } from "vitest";
-import { getResponse, serverLogs } from "../../../__test-utils__";
+import { test } from "vitest";
+import { serverLogs } from "../../../__test-utils__";
 
-test("basic dev logging with logLevel: error", async () => {
-	await getResponse();
-
+test("basic dev logging with logLevel: error", async ({ expect }) => {
 	expect(serverLogs.info.join()).toEqual("");
 	expect(serverLogs.warns.join()).toEqual("");
 

@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large test file */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -63,25 +65,25 @@ describe("cloudchamber delete", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
 			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
 			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
 			}"
 		`
 		);

@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -63,7 +65,7 @@ describe("cloudchamber modify", () => {
 			      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
 			      --image              The new image that the deployment will have from now on  [string]
 			      --location           The new location that the deployment will have from now on  [string]
-			      --instance-type      The new instance type that the deployment will have from now on  [choices: \\"dev\\", \\"basic\\", \\"standard\\"]
+			      --instance-type      The new instance type that the deployment will have from now on  [choices: "dev", "basic", "standard"]
 			      --vcpu               The new vcpu that the deployment will have from now on  [number]
 			      --memory             The new memory that the deployment will have from now on  [string]"
 		`);
@@ -81,25 +83,25 @@ describe("cloudchamber modify", () => {
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
 			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
 			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
 			}"
 		`);
 	});
@@ -119,25 +121,25 @@ describe("cloudchamber modify", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
+			    "id": "1",
+			    "type": "default",
+			    "created_at": "123",
+			    "account_id": "123",
+			    "vcpu": 4,
+			    "memory": "400MB",
+			    "memory_mib": 400,
+			    "version": 1,
+			    "image": "hello",
+			    "location": {
+			        "name": "sfo06",
+			        "enabled": true
 			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
+			    "network": {
+			        "mode": "public",
+			        "ipv4": "1.1.1.1"
 			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
+			    "placements_ref": "http://ref",
+			    "node_group": "metal"
 			}"
 		`);
 	});

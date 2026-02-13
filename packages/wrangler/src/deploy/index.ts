@@ -11,6 +11,10 @@ import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";
+import {
+	sendAutoConfigProcessEndedMetricsEvent,
+	sendAutoConfigProcessStartedMetricsEvent,
+} from "../autoconfig/telemetry-utils";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
@@ -264,14 +268,6 @@ export const deployCommand = createCommand({
 		}
 	},
 	async handler(args, { config }) {
-		if (config.pages_build_output_dir) {
-			throw new UserError(
-				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: true }
-			);
-		}
-
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
 			// If there is a positional parameter or an assets directory specified via --assets then
@@ -280,28 +276,82 @@ export const deployCommand = createCommand({
 			!args.script &&
 			!args.assets;
 
+		if (
+			config.pages_build_output_dir &&
+			// Note: autoconfig handle Pages projects on its own, so we don't want to hard fail here if autoconfig run
+			!shouldRunAutoConfig
+		) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages deploy` instead.",
+				{ telemetryMessage: true }
+			);
+		}
+
 		if (shouldRunAutoConfig) {
-			const details = await getDetailsForAutoConfig({
-				wranglerConfig: config,
+			sendAutoConfigProcessStartedMetricsEvent({
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
 			});
 
-			// Only run auto config if the project is not already configured
-			if (!details.configured) {
-				const autoConfigSummary = await runAutoConfig(details);
-
-				writeOutput({
-					type: "autoconfig",
-					version: 1,
-					command: "deploy",
-					summary: autoConfigSummary,
+			try {
+				const details = await getDetailsForAutoConfig({
+					wranglerConfig: config,
 				});
 
-				// If autoconfig worked, there should now be a new config file, and so we need to read config again
-				config = readConfig(args, {
-					hideWarnings: false,
-					useRedirectIfAvailable: true,
+				if (details.framework?.id === "cloudflare-pages") {
+					// If the project is a Pages project then warn the user but allow them to proceed if they wish so
+					logger.warn(
+						"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead. Proceeding will likely produce unwanted results."
+					);
+					const proceedWithPagesProject = await confirm(
+						"Are you sure that you want to proceed?",
+						{
+							defaultValue: false,
+							fallbackValue: true,
+						}
+					);
+
+					if (!proceedWithPagesProject) {
+						sendAutoConfigProcessEndedMetricsEvent({
+							success: false,
+							command: "wrangler deploy",
+							dryRun: !!args.dryRun,
+						});
+						return;
+					}
+				} else if (!details.configured) {
+					// Only run auto config if the project is not already configured
+					const autoConfigSummary = await runAutoConfig(details);
+
+					writeOutput({
+						type: "autoconfig",
+						version: 1,
+						command: "deploy",
+						summary: autoConfigSummary,
+					});
+
+					// If autoconfig worked, there should now be a new config file, and so we need to read config again
+					config = readConfig(args, {
+						hideWarnings: false,
+						useRedirectIfAvailable: true,
+					});
+				}
+			} catch (error) {
+				sendAutoConfigProcessEndedMetricsEvent({
+					command: "wrangler deploy",
+					dryRun: !!args.dryRun,
+					success: false,
+					error,
 				});
+				throw error;
 			}
+
+			sendAutoConfigProcessEndedMetricsEvent({
+				success: true,
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
+			});
 		}
 
 		// Note: the open-next delegation should happen after we run the auto-config logic so that we

@@ -1,7 +1,9 @@
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -127,7 +129,7 @@ describe("containers images list", () => {
 		`);
 	});
 
-	it("should list repos with json flag set", async () => {
+	it("should list repos as valid json with json flag set", async () => {
 		setWranglerConfig({});
 		const tags = {
 			one: ["hundred", "ten", "sha256:239a0dfhasdfui235"],
@@ -153,30 +155,30 @@ describe("containers images list", () => {
 		);
 		await runWrangler("containers images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    \\"name\\": \\"one\\",
-			    \\"tags\\": [
-			      \\"hundred\\",
-			      \\"ten\\"
-			    ]
+			    "name": "one",
+			    "tags": [
+			      "hundred",
+			      "ten",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"two\\",
-			    \\"tags\\": [
-			      \\"thousand\\",
-			      \\"twenty\\"
-			    ]
+			    "name": "two",
+			    "tags": [
+			      "thousand",
+			      "twenty",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"three\\",
-			    \\"tags\\": [
-			      \\"million\\",
-			      \\"thirty\\"
-			    ]
-			  }
-			]"
+			    "name": "three",
+			    "tags": [
+			      "million",
+			      "thirty",
+			    ],
+			  },
+			]
 		`);
 	});
 });

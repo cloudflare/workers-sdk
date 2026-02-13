@@ -1,3 +1,4 @@
+import type { PackageManager } from "../../package-manager";
 import type { FrameworkInfo } from "./get-framework";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -6,6 +7,7 @@ export type ConfigurationOptions = {
 	projectPath: string;
 	workerName: string;
 	dryRun: boolean;
+	packageManager: PackageManager;
 };
 
 export type PackageJsonScriptsOverrides = {
@@ -31,7 +33,7 @@ export abstract class Framework {
 	readonly id: string;
 	readonly name: string;
 
-	constructor(frameworkInfo: FrameworkInfo) {
+	constructor(frameworkInfo: Pick<FrameworkInfo, "id" | "name">) {
 		this.id = frameworkInfo.id;
 		this.name = frameworkInfo.name;
 	}
