@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import childProcess, { execSync } from "node:child_process";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,6 +11,7 @@ import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	assert,
 	describe as baseDescribe,
 	beforeAll,
 	expect,

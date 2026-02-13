@@ -1,6 +1,5 @@
-import assert from "node:assert";
 import { UserError } from "@cloudflare/workers-utils";
-import { describe, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import {
 	runCommand,
 	runCustomBuild,

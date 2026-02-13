@@ -1,8 +1,7 @@
-import assert from "node:assert";
 import path from "node:path";
 import * as Sentry from "@sentry/node";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, assert, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -200,7 +199,7 @@ describe("sentry", () => {
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
-			assert(sentryRequests !== undefined);
+			assert(sentryRequests);
 			expect(sentryRequests.length).toBeGreaterThan(0);
 
 			// Check requests don't include PII
@@ -210,7 +209,7 @@ describe("sentry", () => {
 				return { header: parts[0], type: parts[1], data: parts[2] };
 			});
 			const event = envelopes.find(({ type }) => type.type === "event");
-			assert(event !== undefined);
+			assert(event);
 
 			// Redact fields with random contents we know don't contain PII
 			event.header.event_id = "";
