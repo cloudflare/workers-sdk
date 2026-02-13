@@ -481,7 +481,38 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
+				"# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
 				"
+			`);
+		});
+
+		it("pre-existing assetsignore with trailing newline gets one empty separator line", async () => {
+			await writeFile(".assetsignore", "*.bak\n");
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: process.cwd(),
+				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
+			});
+
+			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
+				"*.bak
 
 				# wrangler files
 				.wrangler
