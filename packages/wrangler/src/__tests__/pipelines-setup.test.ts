@@ -669,11 +669,11 @@ describe("wrangler pipelines setup", () => {
 
 				SINK
 
-				  Using existing bucket \\"valid-bucket-name\\"
+				  Using existing bucket "valid-bucket-name"
 
 				  To create R2 API credentials:
 				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
-				  Create token with \\"Object Read & Write\\" permissions
+				  Create token with "Object Read & Write" permissions
 
 				 done
 
@@ -688,10 +688,21 @@ describe("wrangler pipelines setup", () => {
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name \\"invalid_bucket\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name "invalid_bucket" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
 
 
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name \\"UPPERCASE\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name "UPPERCASE" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mSetup cancelled[0m
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name "invalid_bucket" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name "UPPERCASE" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
 
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mSetup cancelled[0m
@@ -881,11 +892,11 @@ describe("wrangler pipelines setup", () => {
 
 				SINK
 
-				  Using existing bucket \\"test-bucket\\"
+				  Using existing bucket "test-bucket"
 
 				  To create R2 API credentials:
 				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
-				  Create token with \\"Object Read & Write\\" permissions
+				  Create token with "Object Read & Write" permissions
 
 				 done
 
@@ -965,11 +976,11 @@ describe("wrangler pipelines setup", () => {
 
 				SINK
 
-				  Using existing bucket \\"test-bucket\\"
+				  Using existing bucket "test-bucket"
 
 				  To create R2 API credentials:
 				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
-				  Create token with \\"Object Read & Write\\" permissions
+				  Create token with "Object Read & Write" permissions
 
 				 done
 
@@ -1000,7 +1011,7 @@ describe("wrangler pipelines setup", () => {
 				  Stream and sink were created, but pipeline creation failed.
 
 				  You can create the pipeline later with: wrangler pipelines create
-				  Your stream \\"test_pipeline_stream\\" and sink \\"test_pipeline_sink\\" are ready."
+				  Your stream "test_pipeline_stream" and sink "test_pipeline_sink" are ready."
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1325,12 +1336,12 @@ describe("wrangler pipelines setup", () => {
 
 				SINK
 
-				  Using existing bucket \\"test-bucket\\"
+				  Using existing bucket "test-bucket"
 				 done
 
 				  To create a Catalog API token:
 				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
-				  Create token with \\"Admin Read & Write\\" permissions
+				  Create token with "Admin Read & Write" permissions
 
 				 done
 
@@ -1361,23 +1372,23 @@ describe("wrangler pipelines setup", () => {
 
 				To access your new Pipeline in your Worker, add the following snippet to your configuration file:
 				{
-				  \\"pipelines\\": [
+				  "pipelines": [
 				    {
-				      \\"pipeline\\": \\"stream_123\\",
-				      \\"binding\\": \\"TEST_PIPELINE_STREAM\\"
+				      "pipeline": "stream_123",
+				      "binding": "TEST_PIPELINE_STREAM"
 				    }
 				  ]
 				}
 
 				Then send events:
 
-				  await env.TEST_PIPELINE_STREAM.send([{\\"user_id\\":\\"sample_user_id\\",\\"event_name\\":\\"sample_event_name\\",\\"timestamp\\":1735689600000}]);
+				  await env.TEST_PIPELINE_STREAM.send([{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1735689600000}]);
 
 				Or via HTTP:
 
 				  curl -X POST https://pipelines.cloudflare.com/test_pipeline_stream /
-				     -H \\"Content-Type: application/json\\" /
-				     -d '[{\\"user_id\\":\\"sample_user_id\\",\\"event_name\\":\\"sample_event_name\\",\\"timestamp\\":1735689600000}]'
+				     -H "Content-Type: application/json" /
+				     -d '[{"user_id":"sample_user_id","event_name":"sample_event_name","timestamp":1735689600000}]'
 
 				Docs: https://developers.cloudflare.com/pipelines/
 				"
