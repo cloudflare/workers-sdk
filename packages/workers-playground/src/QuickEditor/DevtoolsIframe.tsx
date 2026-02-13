@@ -141,10 +141,12 @@ const RETRY_BASE_DELAY = 1000;
 function TailLogsConnector({
 	url,
 	onError,
+	onConnected,
 	onData,
 }: {
 	url: string;
 	onError: () => void;
+	onConnected: () => void;
 	onData: (event: TailEvent) => void;
 }) {
 	const errorNotified = useRef(false);
@@ -152,6 +154,10 @@ function TailLogsConnector({
 	useWebSocket<string>(url, {
 		protocols: "trace-v1",
 		disableJson: true,
+		onOpen() {
+			errorNotified.current = false;
+			onConnected();
+		},
 		async onMessage(event) {
 			const messageEvent: TailEvent = JSON.parse(await event.data.text());
 			onData(messageEvent);
@@ -184,6 +190,11 @@ export function DevtoolsIframe({ url }: { url: string }) {
 	const retryCountRef = useRef(0);
 	const [retrying, setRetrying] = useState(false);
 	const [exhaustedRetries, setExhaustedRetries] = useState(false);
+
+	const handleConnected = useCallback(() => {
+		retryCountRef.current = 0;
+		setExhaustedRetries(false);
+	}, []);
 
 	const handleError = useCallback(() => {
 		const count = retryCountRef.current;
@@ -226,6 +237,7 @@ export function DevtoolsIframe({ url }: { url: string }) {
 					key={retryKey}
 					url={url}
 					onError={handleError}
+					onConnected={handleConnected}
 					onData={handleData}
 				/>
 			)}
