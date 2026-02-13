@@ -19,7 +19,7 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
-		"@cloudflare/kumo": "^1.1.0",
+		"@cloudflare/kumo": "^1.5.0",
 		"@phosphor-icons/react": "^2.1.10",
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-router": "^1.158.0",
