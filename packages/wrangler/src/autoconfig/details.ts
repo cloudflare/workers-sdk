@@ -221,7 +221,7 @@ async function detectFramework(
 
 	if (project.workspace?.isRoot) {
 		throw new UserError(
-			"The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the application in the workspace and try again."
+			"The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the applications in the workspace and try again."
 		);
 	}
 
