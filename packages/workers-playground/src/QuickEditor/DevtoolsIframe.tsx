@@ -131,8 +131,6 @@ const TailRow = ({ event }: { event: TailEvent }) => {
 };
 
 // Up to 3 retries with exponential backoff (1s, 2s, 4s) before giving up.
-// The tail WebSocket is server-terminated when a new preview token is created,
-// so retries are expected during normal editing.
 const MAX_RETRIES = 3;
 const RETRY_BASE_DELAY = 1000;
 
