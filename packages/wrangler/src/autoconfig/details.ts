@@ -285,12 +285,9 @@ function findDetectedFramework(
 	);
 
 	if (settingsForOnlyKnownFrameworks.length === 0) {
-		if (!isNonInteractiveOrCI()) {
+		if (isNonInteractiveOrCI()) {
 			// If we're in a non interactive session (e.g. CI) let's throw to be on the safe side
-			throwMultipleFrameworksNonInteractiveError(
-				settingsForOnlyKnownFrameworks,
-				true
-			);
+			throwMultipleFrameworksNonInteractiveError(settings, true);
 		}
 		// Locally we can just return the first one since the user can anyways choose a different
 		// framework or abort the process anyways

@@ -436,6 +436,26 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				const result = await details.getDetailsForAutoConfig();
 				expect(result.framework?.id).toBe("astro");
 			});
+
+			it("should throw MultipleFrameworksCIError when multiple unknown frameworks are detected in CI", async ({
+				expect,
+			}) => {
+				await writeFile(
+					"package.json",
+					JSON.stringify({
+						dependencies: {
+							gatsby: "5",
+							gridsome: "1",
+						},
+					})
+				);
+
+				await expect(
+					details.getDetailsForAutoConfig()
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: Gatsby, Gridsome. None of which are known by Wrangler.]`
+				);
+			});
 		});
 
 		it("should return non-Vite framework when Vite and another known framework are detected", async ({
