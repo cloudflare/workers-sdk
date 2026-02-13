@@ -16696,6 +16696,89 @@ export default{
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 	});
+
+	describe("--tag and --message", () => {
+		it("should send tag and message annotations via the new versions API", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/message": "my deploy message",
+					"workers/tag": "v1.0.0",
+				},
+				expectedDeploymentMessage: "my deploy message",
+			});
+
+			await runWrangler(
+				'deploy ./index --tag v1.0.0 --message "my deploy message"'
+			);
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.out).toContain("Current Version ID: Galaxy-Class");
+		});
+
+		it("should send tag and message annotations via the legacy PUT API", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/message": "legacy deploy msg",
+					"workers/tag": "v2.0.0",
+				},
+				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+
+			await runWrangler(
+				'deploy ./index --dispatch-namespace test-dispatch-namespace --tag v2.0.0 --message "legacy deploy msg"'
+			);
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should send only --tag without --message", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/message": undefined,
+					"workers/tag": "v1.0.0",
+				},
+				expectedDeploymentMessage: undefined,
+			});
+
+			await runWrangler("deploy ./index --tag v1.0.0");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should send only --message without --tag", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: {
+					"workers/message": "just a message",
+					"workers/tag": undefined,
+				},
+				expectedDeploymentMessage: "just a message",
+			});
+
+			await runWrangler('deploy ./index --message "just a message"');
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
+		it("should not set annotations when neither --tag nor --message is provided", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAnnotations: undefined,
+			});
+
+			await runWrangler("deploy ./index");
+			expect(std.out).toContain("Uploaded test-name");
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
