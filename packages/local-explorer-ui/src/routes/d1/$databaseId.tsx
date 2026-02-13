@@ -88,7 +88,6 @@ function TableSelect(): JSX.Element {
 
 	return (
 		<Select.Root
-			disabled={data.tables.length <= 0}
 			key="table-select"
 			onValueChange={handleTableChange}
 			value={searchParams.table ?? null}
