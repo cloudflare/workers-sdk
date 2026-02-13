@@ -37,7 +37,9 @@ const CONFIG_FILE_NAMES = [
 export function isProgrammaticConfigPath(
 	configPath: string | undefined
 ): boolean {
-	if (!configPath) return false;
+	if (!configPath) {
+		return false;
+	}
 	return configPath.endsWith(".ts") || configPath.endsWith(".js");
 }
 
@@ -98,7 +100,9 @@ export function findWranglerConfig(
 	let userConfigPath: string | undefined;
 	for (const fileName of CONFIG_FILE_NAMES) {
 		userConfigPath = findUpSync(fileName, { cwd: referencePath });
-		if (userConfigPath) break;
+		if (userConfigPath) {
+			break;
+		}
 	}
 
 	if (!useRedirectIfAvailable) {

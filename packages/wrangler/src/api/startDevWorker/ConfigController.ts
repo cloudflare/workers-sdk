@@ -649,7 +649,7 @@ export class ConfigController extends Controller {
 			let fileConfig: Config;
 			let resolvedInput = input;
 
-			if (isProgrammaticConfigPath(configPath)) {
+			if (configPath && isProgrammaticConfigPath(configPath)) {
 				// Programmatic config (.ts/.js): load it and merge into input directly.
 				// This bypasses the RawConfig → Config pipeline entirely.
 				let workerConfig: WorkerConfig;
@@ -659,11 +659,11 @@ export class ConfigController extends Controller {
 				} else {
 					// Initial load or non-watcher path — load from disk
 					const configTmpDir = getWranglerTmpDir(
-						path.dirname(configPath!),
+						path.dirname(configPath),
 						"cf-config"
 					);
 					({ workerConfig } = await loadProgrammaticConfig({
-						configPath: configPath!,
+						configPath,
 						env: input.env,
 						tmpDir: configTmpDir.path,
 					}));

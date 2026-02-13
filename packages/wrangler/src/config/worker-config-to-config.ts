@@ -267,7 +267,7 @@ function unflattenBindings(
 			}
 			case "service": {
 				const { type: _, ...rest } = binding;
-				result.services!.push({ binding: name, ...rest });
+				result.services?.push({ binding: name, ...rest });
 				break;
 			}
 			case "queue": {
@@ -377,8 +377,8 @@ function unflattenBindings(
 				if (!result.wasm_modules) {
 					result.wasm_modules = {};
 				}
-				if ("path" in binding.source) {
-					result.wasm_modules[name] = binding.source.path!;
+				if ("path" in binding.source && binding.source.path) {
+					result.wasm_modules[name] = binding.source.path;
 				}
 				break;
 			}
@@ -386,8 +386,8 @@ function unflattenBindings(
 				if (!result.text_blobs) {
 					result.text_blobs = {};
 				}
-				if ("path" in binding.source) {
-					result.text_blobs[name] = binding.source.path!;
+				if ("path" in binding.source && binding.source.path) {
+					result.text_blobs[name] = binding.source.path;
 				}
 				break;
 			}
@@ -395,8 +395,8 @@ function unflattenBindings(
 				if (!result.data_blobs) {
 					result.data_blobs = {};
 				}
-				if ("path" in binding.source) {
-					result.data_blobs[name] = binding.source.path!;
+				if ("path" in binding.source && binding.source.path) {
+					result.data_blobs[name] = binding.source.path;
 				}
 				break;
 			}

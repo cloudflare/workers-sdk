@@ -13,7 +13,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
 import type { StartDevWorkerInput } from "../types";
-import type { BuildContext } from "esbuild";
 
 /**
  * Context passed to the worker configuration function.
@@ -198,7 +197,9 @@ function findTsConfig(startDir: string): string | undefined {
 			return tsconfig;
 		}
 		const parent = path.dirname(dir);
-		if (parent === dir) break;
+		if (parent === dir) {
+			break;
+		}
 		dir = parent;
 	}
 	return undefined;
@@ -280,8 +281,6 @@ export async function watchProgrammaticConfig(
 
 	// Track if this is the initial build
 	let isInitialBuild = true;
-	let ctx: BuildContext | undefined;
-
 	// AbortController to cancel in-flight config loads when a new build comes in
 	// This prevents race conditions where an older build's async work completes
 	// after a newer build has already started processing
@@ -317,7 +316,9 @@ export async function watchProgrammaticConfig(
 					const module = await import(fileUrl);
 
 					// Check if this load was aborted (newer build came in)
-					if (signal.aborted) return;
+					if (signal.aborted) {
+						return;
+					}
 
 					const configFn = module.default;
 					if (typeof configFn !== "function") {
@@ -332,7 +333,9 @@ export async function watchProgrammaticConfig(
 					const workerConfig = await configFn(configCtx);
 
 					// Check again after async config function execution
-					if (signal.aborted) return;
+					if (signal.aborted) {
+						return;
+					}
 
 					// Validate the config
 					validateWorkerConfig(workerConfig, configPath);
@@ -341,7 +344,9 @@ export async function watchProgrammaticConfig(
 					onChange({ workerConfig });
 				} catch (err) {
 					// Don't report errors if this load was aborted
-					if (signal.aborted) return;
+					if (signal.aborted) {
+						return;
+					}
 
 					onError?.(
 						err instanceof Error
@@ -354,7 +359,7 @@ export async function watchProgrammaticConfig(
 	};
 
 	// Create esbuild context with watch mode
-	ctx = await esbuild.context({
+	const ctx = await esbuild.context({
 		entryPoints: [configPath],
 		bundle: true,
 		platform: "node",

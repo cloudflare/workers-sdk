@@ -5,18 +5,12 @@ import type { DevEnv } from "./DevEnv";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	AsyncHook,
-	BinaryFile,
-	Binding,
 	CfAccount,
 	CfModule,
 	CfScriptFormat,
 	Config,
-	File,
-	HookValues,
 	Rule,
-	ServiceFetch,
 	StartDevWorkerInput,
-	Trigger,
 } from "@cloudflare/workers-utils";
 import type { DispatchFetch, Miniflare, NodeJSCompatMode } from "miniflare";
 

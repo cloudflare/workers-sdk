@@ -195,10 +195,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						useRedirectIfAvailable: def.behaviour?.useConfigRedirectIfAvailable,
 					});
 
-					if (isProgrammaticConfigPath(configPath)) {
+					if (configPath && isProgrammaticConfigPath(configPath)) {
 						// Programmatic config (.ts/.js) — load and convert to Config
 						const { workerConfig } = await loadProgrammaticConfig({
-							configPath: configPath!,
+							configPath,
 							env: "env" in args ? (args.env as string | undefined) : undefined,
 						});
 						config = workerConfigToConfig(workerConfig, { configPath });
