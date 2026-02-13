@@ -94,6 +94,7 @@
 		"http-cache-semantics": "^4.1.0",
 		"jsonc-parser": "catalog:default",
 		"kleur": "^4.1.5",
+		"mime": "^3.0.0",
 		"postal-mime": "^2.4.3",
 		"pretty-bytes": "^6.0.0",
 		"source-map": "^0.6.1",
