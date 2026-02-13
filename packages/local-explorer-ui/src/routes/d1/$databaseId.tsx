@@ -30,7 +30,6 @@ export const Route = createFileRoute("/d1/$databaseId")({
 });
 
 function DatabaseView(): JSX.Element {
-	const data = Route.useLoaderData();
 	const params = Route.useParams();
 
 	return (
