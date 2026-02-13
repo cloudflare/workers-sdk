@@ -44,13 +44,13 @@ export function memoizeGetPort(defaultPort: number, host: string) {
 						defaultPort,
 						defaultPort + NUM_CONSECUTIVE_PORTS_TO_PROBE
 					),
-					host,
+					host: forHost,
 				}));
 			return portValue;
 		} catch (e) {
 			if (isNetworkBindPermissionError(e)) {
 				throw new UserError(
-					`Failed to bind to ${host}:${defaultPort}: permission denied.\n` +
+					`Failed to bind to ${forHost}:${defaultPort}: permission denied.\n` +
 						`This usually means a sandbox or security policy is preventing network access.\n` +
 						`If you are running inside a restricted environment (container, VM, AI coding agent, etc.),\n` +
 						`configure it to allow binding to loopback addresses.`
