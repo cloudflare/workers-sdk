@@ -87,8 +87,12 @@ async function ensureBucketExists(
 		await getR2Bucket(config, accountId, bucketName);
 		logger.log(`  Using existing bucket "${bucketName}"`);
 		return false;
-	} catch {
-		// Bucket doesn't exist, create it
+	} catch (err) {
+		if (err instanceof APIError && err.code === 10006) {
+			// Bucket doesn't exist, create it
+		} else {
+			throw err;
+		}
 	}
 
 	process.stdout.write(`  Creating bucket "${bucketName}"...`);
@@ -125,8 +129,12 @@ async function ensureCatalogEnabled(
 	try {
 		const catalog = await getR2Catalog(config, accountId, bucketName);
 		catalogEnabled = catalog.status === "active";
-	} catch {
-		// Catalog not enabled yet
+	} catch (err) {
+		if (err instanceof APIError && err.code === 10006) {
+			// Catalog not enabled yet
+		} else {
+			throw err;
+		}
 	}
 
 	if (catalogEnabled) {
@@ -138,21 +146,27 @@ async function ensureCatalogEnabled(
 	}
 }
 
-function displayCatalogTokenInstructions(): void {
+function displayCatalogTokenInstructions(accountId: string): void {
 	logger.log(chalk.dim("\n  To create a Catalog API token:"));
-	logger.log(chalk.dim("  1. Go to dash.cloudflare.com → R2"));
-	logger.log(chalk.dim('  2. Click "Manage" next to API Tokens'));
 	logger.log(
-		chalk.dim('  3. Create token with "Admin Read & Write" permissions\n')
+		chalk.dim(
+			`  Visit https://dash.cloudflare.com/${accountId}/r2/api-tokens/create?type=account`
+		)
+	);
+	logger.log(
+		chalk.dim('  Create token with "Admin Read & Write" permissions\n')
 	);
 }
 
-function displayR2CredentialsInstructions(): void {
+function displayR2CredentialsInstructions(accountId: string): void {
 	logger.log(chalk.dim("\n  To create R2 API credentials:"));
-	logger.log(chalk.dim("  1. Go to dash.cloudflare.com → R2"));
-	logger.log(chalk.dim('  2. Click "Manage" next to API Tokens'));
 	logger.log(
-		chalk.dim('  3. Create token with "Object Read & Write" permissions\n')
+		chalk.dim(
+			`  Visit https://dash.cloudflare.com/${accountId}/r2/api-tokens/create?type=account`
+		)
+	);
+	logger.log(
+		chalk.dim('  Create token with "Object Read & Write" permissions\n')
 	);
 }
 
@@ -756,7 +770,7 @@ async function setupSimpleDataCatalogSink(
 		}
 	);
 
-	displayCatalogTokenInstructions();
+	displayCatalogTokenInstructions(accountId);
 	const token = await promptCatalogToken(config, accountId, bucket);
 
 	setupConfig.sinkConfig = {
@@ -838,7 +852,7 @@ async function setupR2Sink(
 			secret_access_key: auth.secretAccessKey,
 		};
 	} else {
-		displayR2CredentialsInstructions();
+		displayR2CredentialsInstructions(accountId);
 		credentials = await promptR2Credentials(accountId, bucket);
 	}
 
@@ -904,7 +918,7 @@ async function setupDataCatalogSink(
 		}
 	);
 
-	displayCatalogTokenInstructions();
+	displayCatalogTokenInstructions(accountId);
 	const token = await promptCatalogToken(config, accountId, bucket);
 
 	const compression = await promptCompression();

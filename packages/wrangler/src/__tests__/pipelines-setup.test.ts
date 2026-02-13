@@ -672,9 +672,8 @@ describe("wrangler pipelines setup", () => {
 				  Using existing bucket \\"valid-bucket-name\\"
 
 				  To create R2 API credentials:
-				  1. Go to dash.cloudflare.com → R2
-				  2. Click \\"Manage\\" next to API Tokens
-				  3. Create token with \\"Object Read & Write\\" permissions
+				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
+				  Create token with \\"Object Read & Write\\" permissions
 
 				 done
 
@@ -885,9 +884,8 @@ describe("wrangler pipelines setup", () => {
 				  Using existing bucket \\"test-bucket\\"
 
 				  To create R2 API credentials:
-				  1. Go to dash.cloudflare.com → R2
-				  2. Click \\"Manage\\" next to API Tokens
-				  3. Create token with \\"Object Read & Write\\" permissions
+				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
+				  Create token with \\"Object Read & Write\\" permissions
 
 				 done
 
@@ -970,9 +968,8 @@ describe("wrangler pipelines setup", () => {
 				  Using existing bucket \\"test-bucket\\"
 
 				  To create R2 API credentials:
-				  1. Go to dash.cloudflare.com → R2
-				  2. Click \\"Manage\\" next to API Tokens
-				  3. Create token with \\"Object Read & Write\\" permissions
+				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
+				  Create token with \\"Object Read & Write\\" permissions
 
 				 done
 
@@ -1332,9 +1329,8 @@ describe("wrangler pipelines setup", () => {
 				 done
 
 				  To create a Catalog API token:
-				  1. Go to dash.cloudflare.com → R2
-				  2. Click \\"Manage\\" next to API Tokens
-				  3. Create token with \\"Admin Read & Write\\" permissions
+				  Visit https://dash.cloudflare.com/some-account-id/r2/api-tokens/create?type=account
+				  Create token with \\"Admin Read & Write\\" permissions
 
 				 done
 
