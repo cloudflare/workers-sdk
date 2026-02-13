@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import module from "node:module";
 import {
@@ -11,7 +10,15 @@ import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines with .each */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";

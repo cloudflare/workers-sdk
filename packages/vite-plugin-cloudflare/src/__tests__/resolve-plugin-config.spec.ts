@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, test } from "vitest";
+import { afterEach, assert, beforeEach, describe, test } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
@@ -96,10 +96,10 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		expect(result.type).toBe("workers");
 		const auxWorker =
 			result.environmentNameToWorkerMap.get("inline_aux_worker");
-		expect(auxWorker).toBeDefined();
-		expect(auxWorker?.config.name).toBe("inline-aux-worker");
+		assert(auxWorker);
+		expect(auxWorker.config.name).toBe("inline-aux-worker");
 		// main should now be resolved to an absolute path
-		expect(auxWorker?.config.main).toBe(path.join(tempDir, "src/aux.ts"));
+		expect(auxWorker.config.main).toBe(path.join(tempDir, "src/aux.ts"));
 	});
 
 	test("should resolve inline auxiliary worker with config function", ({
@@ -128,8 +128,8 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
 		const auxWorker = result.environmentNameToWorkerMap.get("fn_aux_worker");
-		expect(auxWorker).toBeDefined();
-		expect(auxWorker?.config.name).toBe("fn-aux-worker");
+		assert(auxWorker);
+		expect(auxWorker.config.name).toBe("fn-aux-worker");
 	});
 
 	test("should auto-populate topLevelName from name if not set", ({
@@ -158,9 +158,9 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
 		const auxWorker = result.environmentNameToWorkerMap.get("my_aux_worker");
-		expect(auxWorker).toBeDefined();
-		expect(auxWorker?.config.name).toBe("my-aux-worker");
-		expect(auxWorker?.config.topLevelName).toBe("my-aux-worker");
+		assert(auxWorker);
+		expect(auxWorker.config.name).toBe("my-aux-worker");
+		expect(auxWorker.config.topLevelName).toBe("my-aux-worker");
 	});
 
 	test("should apply config to file-based auxiliary worker", ({ expect }) => {
@@ -199,11 +199,11 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
 		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
-		expect(auxWorker).toBeDefined();
+		assert(auxWorker);
 		// The config should override the file's compatibility_date
-		expect(auxWorker?.config.compatibility_date).toBe("2025-01-01");
+		expect(auxWorker.config.compatibility_date).toBe("2025-01-01");
 		// But preserve the name from file
-		expect(auxWorker?.config.name).toBe("aux-worker");
+		expect(auxWorker.config.name).toBe("aux-worker");
 	});
 
 	test("should pass entryWorkerConfig as second parameter to auxiliary worker config function", ({
@@ -242,10 +242,10 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
 		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
-		expect(auxWorker).toBeDefined();
-		expect(auxWorker?.config.name).toBe("aux-worker");
+		assert(auxWorker);
+		expect(auxWorker.config.name).toBe("aux-worker");
 		// Should have inherited entry worker's compatibility_date
-		expect(auxWorker?.config.compatibility_date).toBe("2024-01-01");
+		expect(auxWorker.config.compatibility_date).toBe("2024-01-01");
 	});
 
 	test("should allow auxiliary worker to inherit entry worker compatibility_flags", ({
@@ -288,8 +288,8 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
 		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
-		expect(auxWorker).toBeDefined();
-		expect(auxWorker?.config.compatibility_flags).toEqual(
+		assert(auxWorker);
+		expect(auxWorker.config.compatibility_flags).toEqual(
 			expect.arrayContaining(["nodejs_compat", "global_fetch_strictly_public"])
 		);
 	});
@@ -364,8 +364,8 @@ describe("resolvePluginConfig - entry worker config()", () => {
 		const entryWorker = result.environmentNameToWorkerMap.get(
 			result.entryWorkerEnvironmentName
 		);
-		expect(entryWorker).toBeDefined();
-		expect(entryWorker?.config.main).toMatch(/index\.ts$/);
+		assert(entryWorker);
+		expect(entryWorker.config.main).toMatch(/index\.ts$/);
 	});
 
 	test("should allow config() function to add main field", ({ expect }) => {
@@ -585,8 +585,8 @@ describe("resolvePluginConfig - zero-config mode", () => {
 		const entryWorker = result.environmentNameToWorkerMap.get(
 			result.entryWorkerEnvironmentName
 		);
-		expect(entryWorker).toBeDefined();
-		expect(entryWorker?.config.name).toBe("my-worker");
+		assert(entryWorker);
+		expect(entryWorker.config.name).toBe("my-worker");
 	});
 });
 
@@ -727,10 +727,10 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		const entryWorker = result.environmentNameToWorkerMap.get(
 			result.entryWorkerEnvironmentName
 		);
-		expect(entryWorker).toBeDefined();
-		expect(entryWorker?.config.name).toBe("configured-worker");
-		expect(entryWorker?.config.compatibility_date).toBe("2025-01-01");
-		expect(entryWorker?.config.compatibility_flags).toContain("nodejs_compat");
+		assert(entryWorker);
+		expect(entryWorker.config.name).toBe("configured-worker");
+		expect(entryWorker.config.compatibility_date).toBe("2025-01-01");
+		expect(entryWorker.config.compatibility_flags).toContain("nodejs_compat");
 	});
 
 	test("should accept auxiliary worker Wrangler config file missing fields when config() provides them", ({
@@ -781,10 +781,10 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
 		const auxWorker = result.environmentNameToWorkerMap.get("aux_from_config");
-		expect(auxWorker).toBeDefined();
-		expect(auxWorker?.config.name).toBe("aux-from-config");
+		assert(auxWorker);
+		expect(auxWorker.config.name).toBe("aux-from-config");
 		// compatibility_date should be filled from defaults
-		expect(auxWorker?.config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(auxWorker.config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 	});
 });
 

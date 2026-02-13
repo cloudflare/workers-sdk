@@ -1,12 +1,9 @@
-import assert from "node:assert";
 import childProcess from "node:child_process";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { setTimeout } from "node:timers/promises";
-import { fetch } from "undici";
-import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { afterAll, assert, beforeAll, describe, test, vi } from "vitest";
 import { unstable_startWorker } from "wrangler";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
