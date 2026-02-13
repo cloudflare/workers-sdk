@@ -11,7 +11,7 @@ import { ServiceContext } from "./QuickEditor";
 import type React from "react";
 
 type TailEvent = {
-	id?: string;
+	id: string;
 	eventTimestamp: number;
 	logs: {
 		message: unknown[];
@@ -316,8 +316,8 @@ export function DevtoolsIframe({ url }: { url: string }) {
 			{hasLogs ? (
 				<Div overflowY="auto" flex={1}>
 					<Div display="flex" flexDirection="column">
-						{logs.map((event, idx) => (
-							<TailRow key={event.id ?? idx} event={event} />
+						{logs.map((event) => (
+							<TailRow key={event.id} event={event} />
 						))}
 					</Div>
 				</Div>
