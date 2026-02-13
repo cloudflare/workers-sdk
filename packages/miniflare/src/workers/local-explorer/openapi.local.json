@@ -605,10 +605,395 @@
 				"summary": "Raw D1 Database query",
 				"tags": ["D1"]
 			}
+		},
+		"/workers/durable_objects/namespaces": {
+			"get": {
+				"description": "Returns the Durable Object namespaces owned by an account.",
+				"operationId": "durable-objects-namespace-list-namespaces",
+				"parameters": [
+					{
+						"description": "Current page.",
+						"in": "query",
+						"name": "page",
+						"schema": {
+							"default": 1,
+							"minimum": 1,
+							"type": "integer"
+						}
+					},
+					{
+						"description": "Items per-page.",
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"default": 20,
+							"maximum": 1000,
+							"minimum": 1,
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-collection"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/workers_namespace"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Namespaces response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"allOf": [
+												{
+													"$ref": "#/components/schemas/workers_api-response-collection"
+												},
+												{
+													"properties": {
+														"result": {
+															"items": {
+																"$ref": "#/components/schemas/workers_namespace"
+															},
+															"type": "array"
+														}
+													},
+													"type": "object"
+												}
+											]
+										},
+										{
+											"$ref": "#/components/schemas/workers_api-response-common-failure"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Namespaces response failure."
+					}
+				},
+				"summary": "List Namespaces",
+				"tags": ["Durable Objects Namespace"]
+			}
+		},
+		"/workers/durable_objects/namespaces/{id}/objects": {
+			"get": {
+				"description": "Returns the Durable Objects in a given namespace.",
+				"operationId": "durable-objects-namespace-list-objects",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers_schemas-id"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"schema": {
+							"default": 1000,
+							"description": "The number of objects to return. The cursor attribute may be used to iterate over the next batch of objects if there are more than the limit.",
+							"maximum": 10000,
+							"minimum": 10,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"schema": {
+							"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
+							"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-collection"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/workers_object"
+													},
+													"type": "array"
+												},
+												"result_info": {
+													"properties": {
+														"count": {
+															"description": "Total results returned based on your list parameters.",
+															"example": 1,
+															"type": "number"
+														},
+														"cursor": {
+															"$ref": "#/components/schemas/workers_cursor"
+														}
+													},
+													"type": "object"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Objects response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"allOf": [
+												{
+													"$ref": "#/components/schemas/workers_api-response-collection"
+												},
+												{
+													"properties": {
+														"result": {
+															"items": {
+																"$ref": "#/components/schemas/workers_object"
+															},
+															"type": "array"
+														},
+														"result_info": {
+															"properties": {
+																"count": {
+																	"description": "Total results returned based on your list parameters.",
+																	"example": 1,
+																	"type": "number"
+																},
+																"cursor": {
+																	"$ref": "#/components/schemas/workers_cursor"
+																}
+															},
+															"type": "object"
+														}
+													},
+													"type": "object"
+												}
+											]
+										},
+										{
+											"$ref": "#/components/schemas/workers_api-response-common-failure"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Objects response failure."
+					}
+				},
+				"summary": "List Objects",
+				"tags": ["Durable Objects Namespace"]
+			}
 		}
 	},
 	"components": {
 		"schemas": {
+			"workers_cursor": {
+				"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
+				"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
+				"type": "string"
+			},
+			"workers_object": {
+				"properties": {
+					"hasStoredData": {
+						"description": "Whether the Durable Object has stored data.",
+						"example": true,
+						"readOnly": true,
+						"type": "boolean"
+					},
+					"id": {
+						"description": "ID of the Durable Object.",
+						"example": "fe7803fc55b964e09d94666545aab688d360c6bda69ba349ced1e5f28d2fc2c8",
+						"readOnly": true,
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"workers_schemas-id": {
+				"description": "ID of the namespace.",
+				"example": "5fd1cafff895419c8bcc647fc64ab8f0",
+				"type": "string"
+			},
+			"workers_api-response-common-failure": {
+				"properties": {
+					"errors": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers_messages"
+							}
+						],
+						"example": [
+							{
+								"code": 7003,
+								"message": "No route for the URI"
+							}
+						],
+						"minLength": 1
+					},
+					"messages": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers_messages"
+							}
+						],
+						"example": []
+					},
+					"result": {
+						"enum": [null],
+						"nullable": true,
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [false],
+						"example": false,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"workers_messages": {
+				"example": [],
+				"items": {
+					"properties": {
+						"code": {
+							"minimum": 1000,
+							"type": "integer"
+						},
+						"documentation_url": {
+							"type": "string"
+						},
+						"message": {
+							"type": "string"
+						},
+						"source": {
+							"properties": {
+								"pointer": {
+									"type": "string"
+								}
+							},
+							"type": "object"
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object",
+					"uniqueItems": true
+				},
+				"type": "array"
+			},
+			"workers_namespace": {
+				"properties": {
+					"class": {
+						"type": "string"
+					},
+					"id": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"script": {
+						"type": "string"
+					},
+					"use_sqlite": {
+						"type": "boolean"
+					}
+				},
+				"type": "object"
+			},
+			"workers_api-response-collection": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers_api-response-common"
+					},
+					{
+						"properties": {
+							"result_info": {
+								"properties": {
+									"count": {
+										"description": "Total number of results for the requested service.",
+										"example": 1,
+										"type": "number"
+									},
+									"page": {
+										"description": "Current page within paginated list of results.",
+										"example": 1,
+										"type": "number"
+									},
+									"per_page": {
+										"description": "Number of results per page of results.",
+										"example": 20,
+										"type": "number"
+									},
+									"total_count": {
+										"description": "Total results available without any search parameters.",
+										"example": 2000,
+										"type": "number"
+									}
+								},
+								"type": "object"
+							}
+						},
+						"type": "object"
+					}
+				],
+				"type": "object"
+			},
+			"workers_api-response-common": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/workers_messages"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/workers_messages"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [true],
+						"example": true,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages"],
+				"type": "object"
+			},
 			"d1_raw-result-response": {
 				"properties": {
 					"meta": {

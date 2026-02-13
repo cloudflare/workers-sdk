@@ -33,6 +33,16 @@ const config = {
 			path: "/accounts/{account_id}/d1/database/{database_id}/raw",
 			methods: ["post"],
 		},
+
+		// Durable Objects endpoints
+		{
+			path: "/accounts/{account_id}/workers/durable_objects/namespaces",
+			methods: ["get"],
+		},
+		{
+			path: "/accounts/{account_id}/workers/durable_objects/namespaces/{id}/objects",
+			methods: ["get"],
+		},
 	],
 
 	// Ignored features (not implemented in local explorer)
