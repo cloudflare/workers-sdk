@@ -1186,6 +1186,12 @@ export class Miniflare {
 
 		const namespacePath = path.join(doPersistPath, namespaceId);
 
+		// Prevent escaping directory through dodgy namespaceId that encodes (`../` etc.)
+		// by ensuring the resolved path is still within the persistence directory
+		if (!namespacePath.startsWith(path.resolve(doPersistPath) + path.sep)) {
+			return new Response("Invalid namespace ID", { status: 400 });
+		}
+
 		try {
 			const dirEntries = await fs.promises.readdir(namespacePath, {
 				withFileTypes: true,
