@@ -3,7 +3,7 @@ import path from "node:path";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
-import { disposeWithRetry } from "../../test-shared";
+import { disposeWithRetry, useTmp } from "../../test-shared";
 
 interface DONamespace {
 	id: string;
@@ -97,18 +97,18 @@ describe("Durable Objects API", () => {
 			expect(data.result).toMatchInlineSnapshot(`
 				[
 				  {
-				    "class": "TestDO",
-				    "id": "my-worker-TestDO",
-				    "name": "my-worker_TestDO",
-				    "script": "my-worker",
-				    "use_sqlite": false,
-				  },
-				  {
 				    "class": "AnotherDO",
 				    "id": "my-worker-AnotherDO",
 				    "name": "my-worker_AnotherDO",
 				    "script": "my-worker",
 				    "use_sqlite": true,
+				  },
+				  {
+				    "class": "TestDO",
+				    "id": "my-worker-TestDO",
+				    "name": "my-worker_TestDO",
+				    "script": "my-worker",
+				    "use_sqlite": false,
 				  },
 				]
 			`);
@@ -264,6 +264,166 @@ describe("Durable Objects API", () => {
 				// The first result should not be the object we used as cursor
 				expect(data2.result[0].id).not.toBe(data1.result[0].id);
 			});
+		});
+	});
+
+	describe("external and unbound DOs", () => {
+		test("excludes external DOs (scriptName pointing to non-existent worker)", async ({
+			expect,
+		}) => {
+			// When dev registry is enabled, external DOs are rewritten to use a proxy service
+			// This test verifies they don't appear in the local explorer namespace list
+			const unsafeDevRegistryPath = await useTmp();
+			const mf = new Miniflare({
+				name: "my-worker",
+				inspectorPort: 0,
+				compatibilityDate: "2026-01-01",
+				modules: true,
+				script: `
+					export class LocalDO {}
+					export default { fetch() { return new Response("ok"); } }
+				`,
+				unsafeLocalExplorer: true,
+				unsafeDevRegistryPath,
+				durableObjects: {
+					LOCAL_DO: "LocalDO",
+					// This DO references a worker not in this miniflare instance
+					EXTERNAL_DO: { className: "ExternalDO", scriptName: "remote-worker" },
+				},
+			});
+
+			try {
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/workers/durable_objects/namespaces`
+				);
+
+				expect(response.status).toBe(200);
+				const data = (await response.json()) as ListNamespacesResponse;
+
+				expect(data.success).toBe(true);
+				// Should only include the local DO, not the external one
+				expect(data.result.length).toBe(1);
+				expect(data.result).toMatchInlineSnapshot(`
+					[
+					  {
+					    "class": "LocalDO",
+					    "id": "my-worker-LocalDO",
+					    "name": "my-worker_LocalDO",
+					    "script": "my-worker",
+					    "use_sqlite": false,
+					  },
+					]
+				`);
+			} finally {
+				await disposeWithRetry(mf);
+			}
+		});
+
+		test("includes cross-worker DOs (scriptName pointing to local worker)", async ({
+			expect,
+		}) => {
+			const mf = new Miniflare({
+				inspectorPort: 0,
+				unsafeLocalExplorer: true,
+				workers: [
+					{
+						name: "worker-a",
+						compatibilityDate: "2026-01-01",
+						modules: true,
+						script: `
+							export class SharedDO {}
+							export default { fetch() { return new Response("worker-a"); } }
+						`,
+						durableObjects: {
+							MY_DO: "SharedDO",
+						},
+					},
+					{
+						name: "worker-b",
+						compatibilityDate: "2026-01-01",
+						modules: true,
+						script: `
+							export default { fetch() { return new Response("worker-b"); } }
+						`,
+						durableObjects: {
+							// References the DO in worker-a
+							MY_DO: { className: "SharedDO", scriptName: "worker-a" },
+						},
+					},
+				],
+			});
+
+			try {
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/workers/durable_objects/namespaces`
+				);
+
+				expect(response.status).toBe(200);
+				const data = (await response.json()) as ListNamespacesResponse;
+
+				expect(data.success).toBe(true);
+				// The DO should appear once (belonging to worker-a where it's defined)
+				expect(data.result.length).toBe(1);
+				expect(data.result[0]).toMatchObject({
+					id: "worker-a-SharedDO",
+					class: "SharedDO",
+					script: "worker-a",
+				});
+			} finally {
+				await disposeWithRetry(mf);
+			}
+		});
+
+		test("includes unbound DOs (additionalUnboundDurableObjects)", async ({
+			expect,
+		}) => {
+			const mf = new Miniflare({
+				name: "my-worker",
+				inspectorPort: 0,
+				compatibilityDate: "2026-01-01",
+				modules: true,
+				script: `
+					export class BoundDO {}
+					export class UnboundDO {}
+					export default { fetch() { return new Response("ok"); } }
+				`,
+				unsafeLocalExplorer: true,
+				durableObjects: {
+					BOUND_DO: "BoundDO",
+				},
+				additionalUnboundDurableObjects: [
+					{ className: "UnboundDO" },
+					{ className: "UnboundSQLiteDO", useSQLite: true },
+				],
+			});
+
+			try {
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/workers/durable_objects/namespaces`
+				);
+
+				expect(response.status).toBe(200);
+				const data = (await response.json()) as ListNamespacesResponse;
+
+				expect(data.success).toBe(true);
+				// Should include both bound and unbound DOs
+				expect(data.result.length).toBe(3);
+
+				const ids = data.result.map((ns) => ns.id).sort();
+				expect(ids).toEqual([
+					"my-worker-BoundDO",
+					"my-worker-UnboundDO",
+					"my-worker-UnboundSQLiteDO",
+				]);
+
+				// Check SQLite flag is correctly set for unbound DO
+				const unboundSQLiteDO = data.result.find(
+					(ns) => ns.id === "my-worker-UnboundSQLiteDO"
+				);
+				expect(unboundSQLiteDO?.use_sqlite).toBe(true);
+			} finally {
+				await disposeWithRetry(mf);
+			}
 		});
 	});
 });

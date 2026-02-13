@@ -1,4 +1,3 @@
-import { sanitisePath } from "../../shared/data";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zDurableObjectsNamespaceListNamespacesData,
@@ -76,23 +75,23 @@ export async function listDOObjects(
 
 	if (
 		!c.env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId] ||
-		// No storage service means no DOs
-		c.env.MINIFLARE_EXPLORER_DO_STORAGE === undefined
+		// No loopback service means we can't list DOs
+		c.env.MINIFLARE_LOOPBACK === undefined
 	) {
 		return errorResponse(404, 10000, `Namespace not found: ${namespaceId}`);
 	}
 
 	// The DO storage structure is: <persistPath>/<uniqueKey>/<objectId>.sqlite
 	// namespaceId is the uniqueKey (e.g., "my-worker-TestDO")
-	// Fetch directory listing from disk service
-	// Sanitise and encode the namespace ID for safe filesystem and URL usage
-	const encodedNamespaceId = encodeURIComponent(sanitisePath(namespaceId));
-	const response = await c.env.MINIFLARE_EXPLORER_DO_STORAGE.fetch(
-		`http://placeholder/${encodedNamespaceId}/`
-	);
+	// Call the loopback service to list the directory using Node.js fs
+	// This bypasses workerd's disk service which has issues on Windows
+	const encodedNamespaceId = encodeURIComponent(namespaceId);
+	const loopbackUrl = `http://localhost/core/do-storage/${encodedNamespaceId}`;
+
+	const response = await c.env.MINIFLARE_LOOPBACK.fetch(loopbackUrl);
 
 	if (!response.ok) {
-		// Directory doesn't exist means no objects
+		// Directory doesn't exist means the DO doesn't exist
 		if (response.status === 404) {
 			return c.json({
 				...wrapResponse([]),

@@ -34,7 +34,8 @@ export type Env = {
 	[key: string]: unknown;
 	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
 	[CoreBindings.EXPLORER_DISK]: Fetcher;
-	[CoreBindings.EXPLORER_DO_STORAGE]?: Fetcher;
+	// Loopback service for calling Node.js endpoints (used for DO storage listing)
+	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
 };
 
 export type AppBindings = { Bindings: Env };

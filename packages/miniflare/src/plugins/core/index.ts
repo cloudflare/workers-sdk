@@ -9,7 +9,6 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
-import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -56,10 +55,10 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
-	LOCAL_EXPLORER_DISK,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
+import { constructExplorerBindingMap, getExplorerServices } from "./explorer";
 import {
 	buildStringScriptPath,
 	convertModuleDefinition,
@@ -1096,130 +1095,32 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		// Build binding ID map from proxyBindings and durableObjectClassNames
-		// Maps resource IDs to binding information for the local explorer
-		const IDToBindingName: BindingIdMap = {
-			d1: {},
-			kv: {},
-			do: {},
-		};
-
-		for (const binding of proxyBindings) {
-			// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING", wrapped.innerBindings[0].service.name = "d1:db:ID"
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
-				) &&
-				"wrapped" in binding
-			) {
-				const [innerBinding] = binding.wrapped?.innerBindings ?? [];
-				assert(innerBinding && "service" in innerBinding);
-
-				const databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
-				assert(databaseId);
-
-				IDToBindingName.d1[databaseId] = binding.name;
-			}
-
-			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
-				) &&
-				"kvNamespace" in binding &&
-				binding.kvNamespace?.name?.startsWith("kv:ns:")
-			) {
-				// Extract ID from service name "kv:ns:ID"
-				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
-				IDToBindingName.kv[namespaceId] = binding.name;
-			}
-
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:do:`
-				) &&
-				"durableObjectNamespace" in binding &&
-				binding.durableObjectNamespace
-			) {
-				const { className, serviceName } = binding.durableObjectNamespace;
-				if (className && serviceName) {
-					const scriptName = serviceName.replace(/^core:user:/, "");
-					const uniqueKey = `${scriptName}-${className}`;
-					// Look up enableSql from durableObjectClassNames
-					const classInfo = durableObjectClassNames
-						.get(serviceName)
-						?.get(className);
-					IDToBindingName.do[uniqueKey] = {
-						className,
-						scriptName,
-						useSQLite: classInfo?.enableSql ?? false,
-						binding: binding.name,
-					};
-				}
-			}
-		}
-
-		// Disk service for serving local-explorer-ui assets
+		// Local explorer UI assets path
 		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
 		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
-		const distPath = path.join(__dirname, "../local-explorer-ui");
-		if (existsSync(distPath)) {
-			services.push({
-				name: LOCAL_EXPLORER_DISK,
-				disk: {
-					path: distPath,
-					writable: false,
-				},
-			});
-		} else {
+		const localExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
+		if (!existsSync(localExplorerUiPath)) {
 			throw new MiniflareCoreError(
 				"ERR_MISSING_EXPLORER_UI",
-				`Local Explorer UI assets not found at expected path: ${distPath}`
+				`Local Explorer UI assets not found at expected path: ${localExplorerUiPath}`
 			);
 		}
-
-		// Check if any DOs are configured (DO storage service only exists when DOs are configured)
-		const hasDurableObjects = [...durableObjectClassNames.values()].some(
-			(classNames) => classNames.size > 0
+		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			proxyBindings,
+			durableObjectClassNames
 		);
-
-		const explorerBindings: Worker_Binding[] = [
-			// gives explorer access to all user resource bindings
-			...proxyBindings,
-			{
-				name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
-				json: JSON.stringify(IDToBindingName),
-			},
-			{
-				name: CoreBindings.EXPLORER_DISK,
-				service: { name: LOCAL_EXPLORER_DISK },
-			},
-		];
-
-		// Only add DO storage binding if DOs are configured
-		if (hasDurableObjects) {
-			explorerBindings.push({
-				name: CoreBindings.EXPLORER_DO_STORAGE,
-				// This is the underlying storage service used by all DOs
-				// We use this to list object ids based on the sqlite files
-				service: { name: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-			});
-		}
-
-		services.push({
-			name: SERVICE_LOCAL_EXPLORER,
-			worker: {
-				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: [
-					{
-						name: "explorer.worker.js",
-						esModule: SCRIPT_LOCAL_EXPLORER(),
-					},
-				],
-				bindings: explorerBindings,
-			},
-		});
+		// Add loopback service binding if DOs are configured
+		// The explorer worker uses this to call the /core/do-storage endpoint
+		// which reads the filesystem using Node.js (bypassing workerd disk service issues on Windows)
+		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
+		services.push(
+			...getExplorerServices({
+				localExplorerUiPath,
+				proxyBindings,
+				bindingIdMap: IDToBindingMap,
+				hasDurableObjects,
+			})
+		);
 	}
 
 	return services;
