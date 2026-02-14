@@ -10,6 +10,12 @@ export const getAgentsMd = (): string => `# Cloudflare Workers
 
 STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
 
+Before writing any code, fetch and understand the latest best practices:
+
+- https://developers.cloudflare.com/workers/best-practices/workers-best-practices/
+- https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/
+- https://developers.cloudflare.com/workflows/build/rules-of-workflows/
+
 ## Docs
 
 - https://developers.cloudflare.com/workers/
