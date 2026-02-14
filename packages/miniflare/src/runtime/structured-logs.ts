@@ -17,12 +17,6 @@ const ALARM_PATTERN =
 	/Durable Object\s*'?([^'\s]+)'?\s*(alarm|Alarm)\s*(starting|running|completed|failed|scheduled)/i;
 
 /**
- * Alternative pattern for alarm completion/result logs
- */
-const ALARM_RESULT_PATTERN =
-	/alarm\s*(handler|execution)?\s*(completed|finished|failed|error|ok|succeeded)/i;
-
-/**
  * Handles the structured logs emitted by a given stream
  *
  * @param stream The target stream
@@ -108,7 +102,7 @@ const messageClassifiers = {
 	},
 	// Is this chunk a Durable Object alarm log?
 	isAlarmLog(chunk: string) {
-		return ALARM_PATTERN.test(chunk) || ALARM_RESULT_PATTERN.test(chunk);
+		return ALARM_PATTERN.test(chunk);
 	},
 };
 
@@ -150,28 +144,6 @@ export function formatAlarmLog(message: string): string | null {
 		return reset(
 			[bold("DO Alarm"), ` ${className} - `, statusColor(statusText)].join("")
 		);
-	}
-
-	const resultMatch = ALARM_RESULT_PATTERN.exec(message);
-	if (resultMatch) {
-		const result = resultMatch[2].toLowerCase();
-		let statusColor: typeof green;
-		let statusText: string;
-
-		if (
-			result === "completed" ||
-			result === "finished" ||
-			result === "ok" ||
-			result === "succeeded"
-		) {
-			statusColor = green;
-			statusText = "Ok";
-		} else {
-			statusColor = red;
-			statusText = "Failed";
-		}
-
-		return reset([bold("DO Alarm"), " - ", statusColor(statusText)].join(""));
 	}
 
 	return null;
@@ -222,18 +194,6 @@ function wrapStructuredLogsHandler(
 				});
 			}
 
-			// Check for Durable Object alarm logs and format them nicely
-			if (messageClassifiers.isAlarmLog(structuredLog.message)) {
-				const formattedMessage = formatAlarmLog(structuredLog.message);
-				if (formattedMessage) {
-					return structuredLogsHandler({
-						timestamp: structuredLog.timestamp,
-						level: "info",
-						message: formattedMessage,
-					});
-				}
-			}
-
 			// IGNORABLE:
 			// anything else not handled above is considered ignorable
 			return;
@@ -249,6 +209,19 @@ function wrapStructuredLogsHandler(
 			// 	- https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L566
 			//  - https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L572
 			return;
+		}
+
+		// Check for Durable Object alarm logs and format them nicely
+		// The ALARM_PATTERN requires "Durable Object" prefix so it won't match user logs
+		if (messageClassifiers.isAlarmLog(structuredLog.message)) {
+			const formattedMessage = formatAlarmLog(structuredLog.message);
+			if (formattedMessage) {
+				return structuredLogsHandler({
+					timestamp: structuredLog.timestamp,
+					level: "info",
+					message: formattedMessage,
+				});
+			}
 		}
 
 		return structuredLogsHandler(structuredLog);

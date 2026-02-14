@@ -39,18 +39,14 @@ describe("formatAlarmLog", () => {
 		expect(result).toContain("Failed");
 	});
 
-	test("formats alarm handler completed log", ({ expect }) => {
-		const result = formatAlarmLog("alarm handler completed");
-		expect(result).not.toBeNull();
-		expect(result).toContain("DO Alarm");
-		expect(result).toContain("Ok");
-	});
-
-	test("formats alarm execution failed log", ({ expect }) => {
-		const result = formatAlarmLog("alarm execution failed");
-		expect(result).not.toBeNull();
-		expect(result).toContain("DO Alarm");
-		expect(result).toContain("Failed");
+	test("returns null for vague alarm messages without Durable Object prefix", ({
+		expect,
+	}) => {
+		// These messages should NOT be formatted as they could be user logs
+		expect(formatAlarmLog("alarm handler completed")).toBeNull();
+		expect(formatAlarmLog("alarm execution failed")).toBeNull();
+		expect(formatAlarmLog("alarm ok")).toBeNull();
+		expect(formatAlarmLog("fire alarm error detected")).toBeNull();
 	});
 
 	test("returns null for non-alarm log", ({ expect }) => {
@@ -82,9 +78,40 @@ describe("formatAlarmLog", () => {
 	});
 });
 
-describe("handleStructuredLogsFromStream - user log preservation", () => {
+describe("handleStructuredLogsFromStream - alarm log formatting", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	test("Durable Object alarm logs ARE formatted", ({ expect }) => {
+		const receivedLogs: { level: string; message: string }[] = [];
+		const handler = (log: { level: string; message: string }) => {
+			receivedLogs.push(log);
+		};
+
+		const stream = new Readable({ read() {} });
+		handleStructuredLogsFromStream(stream, handler);
+
+		// This is the format workerd uses for DO alarm logs
+		const workerdAlarmMessage =
+			"Durable Object 'MyDurableObject' alarm starting";
+		const structuredLog = JSON.stringify({
+			timestamp: Date.now().toString(),
+			level: "info",
+			message: workerdAlarmMessage,
+		});
+		stream.push(structuredLog + "\n");
+
+		return new Promise<void>((resolve) => {
+			setImmediate(() => {
+				expect(receivedLogs).toHaveLength(1);
+				// Should be formatted as "DO Alarm"
+				expect(receivedLogs[0].message).toContain("DO Alarm");
+				expect(receivedLogs[0].message).toContain("MyDurableObject");
+				expect(receivedLogs[0].message).toContain("Starting");
+				resolve();
+			});
+		});
 	});
 
 	test("user console.log messages containing 'alarm' are NOT reformatted", ({
