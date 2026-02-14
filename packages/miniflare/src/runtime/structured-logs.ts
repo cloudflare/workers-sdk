@@ -14,7 +14,7 @@ export type StructuredLogsHandler = (
  * This pattern captures the class name and any relevant timing/status info.
  */
 const ALARM_PATTERN =
-	/Durable Object\s*'?([^']+)'?\s*(alarm|Alarm)\s*(starting|running|completed|failed|scheduled)/i;
+	/Durable Object\s*'?([^'\s]+)'?\s*(alarm|Alarm)\s*(starting|running|completed|failed|scheduled)/i;
 
 /**
  * Alternative pattern for alarm completion/result logs
@@ -249,18 +249,6 @@ function wrapStructuredLogsHandler(
 			// 	- https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L566
 			//  - https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L572
 			return;
-		}
-
-		// Also check for alarm logs in non-internal messages
-		if (messageClassifiers.isAlarmLog(structuredLog.message)) {
-			const formattedMessage = formatAlarmLog(structuredLog.message);
-			if (formattedMessage) {
-				return structuredLogsHandler({
-					timestamp: structuredLog.timestamp,
-					level: "info",
-					message: formattedMessage,
-				});
-			}
 		}
 
 		return structuredLogsHandler(structuredLog);
