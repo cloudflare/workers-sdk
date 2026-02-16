@@ -116,7 +116,7 @@ export const logoutCommand = createCommand({
 			// If the config file is invalid then we default to not sending metrics.
 			// TODO: Clean this up as part of a general config refactor.
 			// See https://github.com/cloudflare/workers-sdk/issues/10682.
-			const config = readConfig({}, { hideWarnings: true });
+			const config = await readConfig({}, { hideWarnings: true });
 			metrics.sendMetricsEvent("logout user", {
 				sendMetrics: config.send_metrics,
 			});

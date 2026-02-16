@@ -348,7 +348,7 @@ export async function commonDeploymentCMDSetup(
 	yargs: ArgumentsCamelCase<CommonYargsOptions>
 ) {
 	await printWranglerBanner();
-	const config = readConfig(yargs);
+	const config = await readConfig(yargs);
 	const accountId = await requireAuth(config);
 	const scriptName = getScriptName(
 		{ name: yargs.name as string, env: undefined },

@@ -79,7 +79,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	let config: Config | undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const wranglerConfigObject = wranglerOrWorkerConfigObject;
-		config = readConfig({
+		config = await readConfig({
 			config: wranglerConfigObject.path,
 			env: wranglerConfigObject.environment,
 		});

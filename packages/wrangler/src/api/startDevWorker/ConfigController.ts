@@ -561,7 +561,7 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
+			const fileConfig = await readConfig(
 				{
 					script: input.entrypoint,
 					config: input.config,

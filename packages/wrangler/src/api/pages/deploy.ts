@@ -166,7 +166,7 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = readPagesConfig(
+		config = await readPagesConfig(
 			{ ...args, env },
 			{ useRedirectIfAvailable: true }
 		);

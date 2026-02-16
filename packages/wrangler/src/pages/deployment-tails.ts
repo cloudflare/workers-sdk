@@ -140,7 +140,7 @@ export const pagesDeploymentTailCommand = createCommand({
 			);
 		}
 
-		const config = readConfig(args);
+		const config = await readConfig(args);
 		const pagesConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);

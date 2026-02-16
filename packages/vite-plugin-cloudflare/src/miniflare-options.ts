@@ -293,7 +293,7 @@ export async function getDevMiniflareOptions(
 							}
 
 							const miniflareWorkerOptions =
-								wrangler.unstable_getMiniflareWorkerOptions(
+								await wrangler.unstable_getMiniflareWorkerOptions(
 									{
 										...worker.config,
 										assets: undefined,
@@ -584,12 +584,16 @@ export async function getPreviewMiniflareOptions(
 				}
 
 				const miniflareWorkerOptions =
-					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
-						remoteProxyConnectionString:
-							remoteProxySessionData?.session?.remoteProxyConnectionString,
+					await wrangler.unstable_getMiniflareWorkerOptions(
+						workerConfig,
+						undefined,
+						{
+							remoteProxyConnectionString:
+								remoteProxySessionData?.session?.remoteProxyConnectionString,
 
-						containerBuildId,
-					});
+							containerBuildId,
+						}
+					);
 
 				const { externalWorkers } = miniflareWorkerOptions;
 

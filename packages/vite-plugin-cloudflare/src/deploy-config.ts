@@ -18,25 +18,27 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigs(root: string, isPrerender: boolean) {
+export async function getWorkerConfigs(root: string, isPrerender: boolean) {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
 	) as DeployConfig;
 
-	return [
-		...(isPrerender && deployConfig.prerenderWorkerConfigPath
-			? [{ configPath: deployConfig.prerenderWorkerConfigPath }]
-			: []),
-		{ configPath: deployConfig.configPath },
-		...deployConfig.auxiliaryWorkers,
-	].map(({ configPath }) => {
-		const resolvedConfigPath = path.resolve(
-			path.dirname(deployConfigPath),
-			configPath
-		);
-		return wrangler.unstable_readConfig({ config: resolvedConfigPath });
-	});
+	return Promise.all(
+		[
+			...(isPrerender && deployConfig.prerenderWorkerConfigPath
+				? [{ configPath: deployConfig.prerenderWorkerConfigPath }]
+				: []),
+			{ configPath: deployConfig.configPath },
+			...deployConfig.auxiliaryWorkers,
+		].map(({ configPath }) => {
+			const resolvedConfigPath = path.resolve(
+				path.dirname(deployConfigPath),
+				configPath
+			);
+			return wrangler.unstable_readConfig({ config: resolvedConfigPath });
+		})
+	);
 }
 
 function getRelativePathToWorkerConfig(

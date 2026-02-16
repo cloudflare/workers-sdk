@@ -345,7 +345,7 @@ export const pagesDevCommand = createCommand({
 
 		// for `dev` we always use the top-level config, which means we need
 		// to read the config file with `env` set to `undefined`
-		const config = readConfig(
+		const config = await readConfig(
 			{ ...args, env: undefined, config: undefined },
 			{ useRedirectIfAvailable: true }
 		);

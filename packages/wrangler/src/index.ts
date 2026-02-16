@@ -1942,7 +1942,7 @@ export async function main(argv: string[]): Promise<void> {
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
 	// Register middleware to set logger level and capture fallback telemetry info
-	wrangler.middleware((args) => {
+	wrangler.middleware(async (args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
@@ -1953,7 +1953,7 @@ export async function main(argv: string[]): Promise<void> {
 		configArgs = args;
 
 		try {
-			const { rawConfig, configPath } = experimental_readRawConfig(args);
+			const { rawConfig, configPath } = await experimental_readRawConfig(args);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
 				hasAssets: !!rawConfig.assets?.directory,
