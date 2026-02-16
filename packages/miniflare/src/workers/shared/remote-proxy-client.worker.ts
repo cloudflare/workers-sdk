@@ -5,6 +5,7 @@ import { makeFetch } from "./remote-bindings-utils";
 type Env = {
 	remoteProxyConnectionString?: string;
 	binding: string;
+	bindingType?: string;
 };
 export default class Client extends WorkerEntrypoint<Env> {
 	async fetch(request: Request) {
@@ -20,6 +21,9 @@ export default class Client extends WorkerEntrypoint<Env> {
 			const url = new URL(env.remoteProxyConnectionString);
 			url.protocol = "ws:";
 			url.searchParams.set("MF-Binding", env.binding);
+			if (env.bindingType) {
+				url.searchParams.set("MF-Binding-Type", env.bindingType);
+			}
 			stub = newWebSocketRpcSession(url.href);
 		}
 

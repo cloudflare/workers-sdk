@@ -70,7 +70,8 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 				),
 				worker: remoteProxyClientWorker(
 					options.ai.remoteProxyConnectionString,
-					options.ai.binding
+					options.ai.binding,
+					"ai"
 				),
 			},
 		];
