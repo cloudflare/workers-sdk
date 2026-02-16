@@ -23,7 +23,7 @@ export function StudioTabContentWrapper({
 	const tabKey = tab.key;
 
 	/**
-	 * TODO: Add documentation
+	 * Registers a {@link BeforeTabClosingHandler} callback for this tab.
 	 */
 	const setBeforeTabClosingHandler = useCallback(
 		(handler: BeforeTabClosingHandler): void => {

@@ -173,7 +173,7 @@ export function Studio({
 	);
 
 	/**
-	 * TODO: Add documentation
+	 * Updates the status properties (e.g. `isDirty`, `isTemp`) of an existing studio tab.
 	 */
 	const updateStudioTabStatus = useCallback<
 		StudioContextValue["updateStudioTabStatus"]
@@ -236,7 +236,11 @@ export function Studio({
 	]);
 
 	/**
-	 * TODO: Add documentation
+	 * Replaces an existing studio tab with a new one built from the provided
+	 * `StudioTabDefinitionMetadata`.
+	 *
+	 * The target tab is located by its string `identifier`. If no matching tab
+	 * is found, the tab list is unchanged.
 	 */
 	const replaceStudioTab = useCallback<StudioContextValue["replaceStudioTab"]>(
 		(

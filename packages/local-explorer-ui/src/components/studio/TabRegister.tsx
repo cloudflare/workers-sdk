@@ -1,16 +1,10 @@
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
-// -------------------------------------------------------
-// Tab registry
-// --------------------------------------------------------
 const RegisteredTabDefinition = [
 	// TODO: Add query, table, edit table and new table tab definitions
 ] as Array<TabDefinition<{ id?: string; type: string }>>;
 
-// -----------------------------
-// Core tab definition interface
-// -----------------------------
 export interface TabDefinition<T extends { type: string }> {
 	icon: Icon;
 	makeComponent: (data: T) => ReactElement;
@@ -19,9 +13,6 @@ export interface TabDefinition<T extends { type: string }> {
 	type: T["type"];
 }
 
-// --------------------------------------
-// Utility types
-// --------------------------------------
 type ExtractGeneric<T> = T extends TabDefinition<infer U> ? U : never;
 
 export type StudioTabDefinitionMetadata = ExtractGeneric<
