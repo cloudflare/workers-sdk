@@ -53,6 +53,9 @@ export function Studio({
 		() => tabs[0]?.key ?? ""
 	);
 
+	const selectedTabKeyRef = useRef(selectedTabKey);
+	selectedTabKeyRef.current = selectedTabKey;
+
 	const refreshSchema = useCallback(async () => {
 		setLoadingSchema(true);
 
@@ -73,40 +76,40 @@ export function Studio({
 	/**
 	 * Utility to close a tab given its identifier
 	 */
-	const closeStudioTab = useCallback(
-		(tabIdentifier: string) => {
-			setTabs((previousTabs) => {
-				// Find the index of the tab matching the identifier
-				const matchedTabIndex = previousTabs.findIndex(
-					(tab) => tab.identifier === tabIdentifier
+	const closeStudioTab = useCallback((tabIdentifier: string) => {
+		setTabs((previousTabs) => {
+			// Find the index of the tab matching the identifier
+			const matchedTabIndex = previousTabs.findIndex(
+				(tab) => tab.identifier === tabIdentifier
+			);
+
+			const matchedTab = previousTabs[matchedTabIndex];
+			if (!matchedTab) {
+				return previousTabs;
+			}
+
+			// Remove the matched tab from the list
+			const filteredTabs = previousTabs.filter((tab) => tab !== matchedTab);
+
+			// If the closed tab was the selected one, update selection
+			if (
+				selectedTabKeyRef.current === matchedTab.key &&
+				filteredTabs.length > 0
+			) {
+				const newSelectedIndex = Math.min(
+					filteredTabs.length - 1,
+					matchedTabIndex
 				);
 
-				const matchedTab = previousTabs[matchedTabIndex];
-				if (!matchedTab) {
-					return previousTabs;
+				const newSelectedTab = filteredTabs[newSelectedIndex];
+				if (newSelectedTab) {
+					setSelectedTabKey(newSelectedTab.key);
 				}
+			}
 
-				// Remove the matched tab from the list
-				const filteredTabs = previousTabs.filter((tab) => tab !== matchedTab);
-
-				// If the closed tab was the selected one, update selection
-				if (selectedTabKey === matchedTab.key && filteredTabs.length > 0) {
-					const newSelectedIndex = Math.min(
-						filteredTabs.length - 1,
-						matchedTabIndex
-					);
-
-					const newSelectedTab = filteredTabs[newSelectedIndex];
-					if (newSelectedTab) {
-						setSelectedTabKey(newSelectedTab.key);
-					}
-				}
-
-				return filteredTabs;
-			});
-		},
-		[selectedTabKey]
-	);
+			return filteredTabs;
+		});
+	}, []);
 
 	/**
 	 * Utility to open a tab given its identifier
