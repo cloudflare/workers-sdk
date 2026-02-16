@@ -48,6 +48,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "framework": Static {
 				    "autoConfigSupported": true,
 				    "configurationDescription": undefined,
+				    "configurationWarning": undefined,
 				    "id": "static",
 				    "name": "Static",
 				  },
@@ -107,6 +108,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "framework": Static {
 				    "autoConfigSupported": true,
 				    "configurationDescription": undefined,
+				    "configurationWarning": undefined,
 				    "id": "static",
 				    "name": "Static",
 				  },
@@ -166,6 +168,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "framework": Astro {
 				    "autoConfigSupported": true,
 				    "configurationDescription": "Configuring project for Astro with "astro add cloudflare"",
+				    "configurationWarning": undefined,
 				    "id": "astro",
 				    "name": "Astro",
 				  },
@@ -247,6 +250,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "framework": Static {
 				    "autoConfigSupported": true,
 				    "configurationDescription": undefined,
+				    "configurationWarning": undefined,
 				    "id": "static",
 				    "name": "Static",
 				  },

@@ -1,5 +1,6 @@
 import { beforeEach, describe, test } from "vitest";
 import { Astro } from "../../autoconfig/frameworks/astro";
+import { NextJs } from "../../autoconfig/frameworks/next";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
 import { NpmPackageManager } from "../../package-manager";
@@ -28,8 +29,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async ({
 			expect,
 		}) => {
-			const summary = await buildOperationsSummary(
-				{
+			const summary = await buildOperationsSummary({
+				autoConfigDetails: {
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					configured: false,
@@ -37,13 +38,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
-				{
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 					version: "npx wrangler versions upload",
-				}
-			);
+				},
+				dryRun: true,
+			});
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -83,8 +85,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		test("shows that wrangler will be added as a devDependency when not already installed as such", async ({
 			expect,
 		}) => {
-			const summary = await buildOperationsSummary(
-				{
+			const summary = await buildOperationsSummary({
+				autoConfigDetails: {
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					packageJson: {
@@ -96,13 +98,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
-				{
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 					version: "npx wrangler versions upload",
-				}
-			);
+				},
+				dryRun: true,
+			});
 
 			expect(std.out).toContain(
 				dedent`
@@ -138,8 +141,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async ({
 			expect,
 		}) => {
-			const summary = await buildOperationsSummary(
-				{
+			const summary = await buildOperationsSummary({
+				autoConfigDetails: {
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					packageJson: {
@@ -153,13 +156,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
-				{
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
 					version: "npx wrangler versions upload",
-				}
-			);
+				},
+				dryRun: true,
+			});
 
 			expect(std.out).toContain(
 				dedent`
@@ -195,8 +199,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		test("shows that when needed a framework specific configuration will be run", async ({
 			expect,
 		}) => {
-			const summary = await buildOperationsSummary(
-				{
+			const summary = await buildOperationsSummary({
+				autoConfigDetails: {
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					framework: new Astro({ id: "astro", name: "Astro" }),
@@ -204,12 +208,13 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
-				{
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
-				}
-			);
+				},
+				dryRun: true,
+			});
 
 			expect(std.out).toContain(
 				'🛠️  Configuring project for Astro with "astro add cloudflare"'
@@ -225,8 +230,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		test("doesn't show the framework specific configuration step for the Static framework", async ({
 			expect,
 		}) => {
-			const summary = await buildOperationsSummary(
-				{
+			const summary = await buildOperationsSummary({
+				autoConfigDetails: {
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					framework: new Static({ id: "static", name: "Static" }),
@@ -234,15 +239,94 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					outputDir: "public",
 					packageManager: NpmPackageManager,
 				},
-				testRawConfig,
-				{
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
-				}
-			);
+				},
+				dryRun: true,
+			});
 
 			expect(std.out).not.toContain("🛠️  Configuring project for");
 			expect(summary.frameworkConfiguration).toBeUndefined();
+		});
+
+		test("shows configurationWarning when dryRun is false and framework has a warning", async ({
+			expect,
+		}) => {
+			await buildOperationsSummary({
+				autoConfigDetails: {
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					framework: new NextJs({ id: "next", name: "Next.js" }),
+					configured: false,
+					outputDir: ".open-next/assets",
+					packageManager: NpmPackageManager,
+				},
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
+					build: "npx opennextjs-cloudflare build",
+					deploy: "npx opennextjs-cloudflare deploy",
+				},
+				dryRun: false,
+			});
+
+			expect(std.warn).toContain(
+				"As part of this configuration some Cloudflare resources used for caching might need to be generated"
+			);
+		});
+
+		test("does NOT show configurationWarning when dryRun is true", async ({
+			expect,
+		}) => {
+			await buildOperationsSummary({
+				autoConfigDetails: {
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					framework: new NextJs({ id: "next", name: "Next.js" }),
+					configured: false,
+					outputDir: ".open-next/assets",
+					packageManager: NpmPackageManager,
+				},
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
+					build: "npx opennextjs-cloudflare build",
+					deploy: "npx opennextjs-cloudflare deploy",
+				},
+				dryRun: true,
+			});
+
+			expect(std.warn).not.toContain(
+				"As part of this configuration some Cloudflare resources used for caching might need to be generated"
+			);
+		});
+
+		test("does NOT show configurationWarning for frameworks without a warning (e.g., Astro)", async ({
+			expect,
+		}) => {
+			await buildOperationsSummary({
+				autoConfigDetails: {
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					framework: new Astro({ id: "astro", name: "Astro" }),
+					configured: false,
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				wranglerConfigToWrite: testRawConfig,
+				projectCommands: {
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				},
+				dryRun: false,
+			});
+
+			// Should show the framework configuration description
+			expect(std.out).toContain(
+				'🛠️  Configuring project for Astro with "astro add cloudflare"'
+			);
+			// But should NOT show any warning since Astro doesn't have configurationWarning
+			expect(std.warn).not.toContain("Cloudflare resources");
 		});
 	});
 });

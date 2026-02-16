@@ -117,13 +117,16 @@ export async function runAutoConfig(
 
 		const { npx } = packageManager;
 
-		autoConfigSummary = await buildOperationsSummary(
-			{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
-			{
+		autoConfigSummary = await buildOperationsSummary({
+			autoConfigDetails: {
+				...autoConfigDetails,
+				outputDir: autoConfigDetails.outputDir,
+			},
+			wranglerConfigToWrite: {
 				...wranglerConfig,
 				...dryRunConfigurationResults.wranglerConfig,
 			},
-			{
+			projectCommands: {
 				build:
 					dryRunConfigurationResults.buildCommandOverride ??
 					autoConfigDetails.buildCommand,
@@ -134,8 +137,10 @@ export async function runAutoConfig(
 					dryRunConfigurationResults?.versionCommandOverride ??
 					`${npx} wrangler versions upload`,
 			},
-			dryRunConfigurationResults.packageJsonScriptsOverrides
-		);
+			packageJsonScriptsOverrides:
+				dryRunConfigurationResults.packageJsonScriptsOverrides,
+			dryRun,
+		});
 
 		if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
 			throw new FatalError("Setup cancelled");
@@ -299,18 +304,25 @@ async function saveWranglerJsonc(
 	);
 }
 
-export async function buildOperationsSummary(
+export async function buildOperationsSummary({
+	autoConfigDetails,
+	wranglerConfigToWrite,
+	projectCommands,
+	packageJsonScriptsOverrides,
+	dryRun,
+}: {
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
-	},
-	wranglerConfigToWrite: RawConfig,
+	};
+	wranglerConfigToWrite: RawConfig;
 	projectCommands: {
 		build?: string;
 		deploy: string;
 		version?: string;
-	},
-	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
-): Promise<AutoConfigSummary> {
+	};
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
+	dryRun: boolean;
+}): Promise<AutoConfigSummary> {
 	logger.log("");
 
 	const summary: AutoConfigSummary = {
@@ -393,6 +405,10 @@ export async function buildOperationsSummary(
 
 		logger.log(`🛠️  ${summary.frameworkConfiguration}`);
 		logger.log("");
+
+		if (!dryRun && autoConfigDetails.framework.configurationWarning) {
+			logger.warn(`${autoConfigDetails.framework.configurationWarning}\n`);
+		}
 	}
 
 	return summary;

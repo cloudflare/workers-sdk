@@ -60,4 +60,7 @@ export class NextJs extends Framework {
 
 	configurationDescription =
 		"Configuring project for Next.js with OpenNext by running `@opennextjs/cloudflare migrate`";
+
+	configurationWarning =
+		"As part of this configuration some Cloudflare resources used for caching might need to be generated (your confirmation will be asked before creating anything on your behalf)";
 }

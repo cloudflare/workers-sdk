@@ -48,5 +48,7 @@ export abstract class Framework {
 
 	configurationDescription?: string;
 
+	configurationWarning?: string;
+
 	autoConfigSupported = true;
 }
