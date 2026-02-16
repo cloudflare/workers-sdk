@@ -82,6 +82,7 @@ export function getCloudflarePreset({
 	const processOverrides = getProcessOverrides(compat);
 	const v8Overrides = getV8Overrides(compat);
 	const ttyOverrides = getTtyOverrides(compat);
+	const childProcessOverrides = getChildProcessOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -105,6 +106,7 @@ export function getCloudflarePreset({
 		...processOverrides.nativeModules,
 		...v8Overrides.nativeModules,
 		...ttyOverrides.nativeModules,
+		...childProcessOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -128,6 +130,7 @@ export function getCloudflarePreset({
 		...processOverrides.hybridModules,
 		...v8Overrides.hybridModules,
 		...ttyOverrides.hybridModules,
+		...childProcessOverrides.hybridModules,
 	];
 
 	return {
@@ -971,6 +974,42 @@ function getTtyOverrides({
 	return enabled
 		? {
 				nativeModules: ["tty"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:child_process` (unenv or workerd)
+ *
+ * The native child_process implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_child_process_module" flag
+ * - can be disabled with the "disable_nodejs_child_process_module" flag
+ */
+function getChildProcessOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_child_process_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_child_process_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `child_process` module from workerd
+	return enabled
+		? {
+				nativeModules: ["child_process"],
 				hybridModules: [],
 			}
 		: {
