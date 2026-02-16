@@ -4,7 +4,7 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { quoteShellArgs, runCommand } from "helpers/command";
-import { removeFile, usesTypescript } from "helpers/files";
+import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
@@ -17,14 +17,17 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	// Add the pages integration
+	// Add the workers integration
 	// For some reason `pnpx qwik add` fails for qwik so we use `pnpm qwik add` instead.
-	const cmd = [name === "pnpm" ? npm : npx, "qwik", "add", "cloudflare-pages"];
+	const cmd = [
+		name === "pnpm" ? npm : npx,
+		"qwik",
+		"add",
+		"cloudflare-workers",
+		"--skipConfirmation=true",
+	];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
-
-	// Remove the extraneous Pages files
-	removeFile("./public/_routes.json");
 
 	addBindingsProxy(ctx);
 };

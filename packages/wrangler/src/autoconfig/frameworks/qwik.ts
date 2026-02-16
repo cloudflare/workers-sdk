@@ -1,4 +1,3 @@
-import { writeFile } from "node:fs/promises";
 import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -18,7 +17,7 @@ export class Qwik extends Framework {
 		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			// Add the pages integration
+			// Add the workers integration
 			const cmd = [
 				// For some reason `pnpx qwik add` fails for qwik so we use `pnpm qwik add` instead.
 				packageManager.type === "pnpm"
@@ -26,14 +25,13 @@ export class Qwik extends Framework {
 					: packageManager.npx,
 				"qwik",
 				"add",
-				"cloudflare-pages",
+				"cloudflare-workers",
+				"--skipConfirmation=true",
 			];
 			endSection(`Running ${quoteShellArgs(cmd)}`);
 			await runCommand(cmd);
 
 			addBindingsProxy(projectPath);
-
-			await addAssetsIgnoreFile(projectPath);
 		}
 		return {
 			wranglerConfig: {
@@ -52,7 +50,7 @@ export class Qwik extends Framework {
 	}
 
 	configurationDescription =
-		'Configuring project for Qwik with "qwik add cloudflare-pages"';
+		'Configuring project for Qwik with "qwik add cloudflare-workers"';
 }
 
 function addBindingsProxy(projectPath: string) {
@@ -128,13 +126,4 @@ function addBindingsProxy(projectPath: string) {
 	});
 
 	s.stop(`${brandColor("updated")} \`vite.config.ts\``);
-}
-
-async function addAssetsIgnoreFile(projectPath: string) {
-	const toAdd = ["_worker.js", "_routes.json", "_headers", "_redirects"];
-
-	await writeFile(
-		`${projectPath}/public/.assetsignore`,
-		`${toAdd.join("\n")}\n`
-	);
 }
