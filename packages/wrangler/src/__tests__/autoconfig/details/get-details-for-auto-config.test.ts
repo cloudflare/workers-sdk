@@ -119,7 +119,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the applications in the workspace and try again.]`
-
 		);
 	});
 
