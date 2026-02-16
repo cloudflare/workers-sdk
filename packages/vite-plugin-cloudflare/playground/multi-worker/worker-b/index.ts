@@ -43,4 +43,10 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 			},
 		};
 	}
+
+	override fetch() {
+		return Response.json({
+			name: "Worker B: Named entrypoint",
+		});
+	}
 }

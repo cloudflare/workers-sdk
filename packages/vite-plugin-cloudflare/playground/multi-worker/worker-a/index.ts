@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
 import type WorkerB from "../worker-b";
 import type { NamedEntrypoint } from "../worker-b";
 
@@ -5,6 +6,14 @@ interface Env {
 	WORKER_B: Fetcher<WorkerB>;
 	NAMED_ENTRYPOINT: Fetcher<NamedEntrypoint>;
 	CONFIGURED_VAR?: string;
+}
+
+export class Greet extends WorkerEntrypoint {
+	override fetch() {
+		return Response.json({
+			name: "Hello from Named entrypoint",
+		});
+	}
 }
 
 export default {
