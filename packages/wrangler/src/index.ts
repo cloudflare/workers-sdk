@@ -1942,7 +1942,7 @@ export async function main(argv: string[]): Promise<void> {
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
 	// Register middleware to set logger level and capture fallback telemetry info
-	wrangler.middleware(async (args) => {
+	wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
@@ -1951,20 +1951,6 @@ export async function main(argv: string[]): Promise<void> {
 		setLogLevel(logger.loggerLevel);
 
 		configArgs = args;
-
-		try {
-			const { rawConfig, configPath } = await experimental_readRawConfig(args);
-			dispatcher = getMetricsDispatcher({
-				sendMetrics: rawConfig.send_metrics,
-				hasAssets: !!rawConfig.assets?.directory,
-				configPath,
-				argv,
-			});
-		} catch (e) {
-			// If we can't parse the config, we can still send metrics with defaults
-			logger.debug("Failed to parse config for metrics. Using defaults.", e);
-			dispatcher = getMetricsDispatcher({ argv });
-		}
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
@@ -1978,16 +1964,9 @@ export async function main(argv: string[]): Promise<void> {
 			// and has already sent metrics and reported to the user.
 			// So we can just re-throw the original error.
 			throw e.originalError;
-		} else {
-			// The error occurred before Command handler ran
-			// (e.g., yargs validation errors like unknown commands or invalid arguments).
-			// So we need to handle telemetry and error reporting here.
-			if (dispatcher) {
-				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
-			}
-			await handleError(e, configArgs, argv);
-			throw e;
 		}
+
+		throw e;
 	} finally {
 		try {
 			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
@@ -2019,38 +1998,4 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
-}
-
-/**
- * Dispatches generic metrics events to indicate that a wrangler command errored
- * when we don't know the CommandDefinition and cannot be sure what is safe to send.
- */
-function dispatchGenericCommandErrorEvent(
-	dispatcher: ReturnType<typeof getMetricsDispatcher>,
-	startTime: number,
-	error: unknown
-) {
-	const durationMs = Date.now() - startTime;
-
-	// We cannot safely derive sanitized command or args from `args._` since it may contain
-	// sensitive user-supplied positional arguments. So we send empty values.
-	const sanitizedCommand = "";
-	const sanitizedArgs = {};
-
-	// Send "started" event since handler never got to send it.
-	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
-	dispatcher.sendCommandEvent("wrangler command started", {
-		sanitizedCommand,
-		sanitizedArgs,
-		argsUsed: [],
-	});
-
-	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
-	dispatcher.sendCommandEvent("wrangler command errored", {
-		sanitizedCommand,
-		sanitizedArgs,
-		argsUsed: [],
-		durationMs,
-		...sanitizeError(error),
-	});
 }
