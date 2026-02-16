@@ -6,6 +6,7 @@ import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type { Config } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 interface DeployConfig {
@@ -18,7 +19,10 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export async function getWorkerConfigs(root: string, isPrerender: boolean) {
+export async function getWorkerConfigs(
+	root: string,
+	isPrerender: boolean
+): Promise<Config[]> {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
