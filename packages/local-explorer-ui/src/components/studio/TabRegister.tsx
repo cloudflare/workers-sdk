@@ -6,7 +6,7 @@ import type { ReactElement } from "react";
 // --------------------------------------------------------
 const RegisteredTabDefinition = [
 	// TODO: Add query, table, edit table and new table tab definitions
-] as Array<TabDefinition<{ type: string }>>;
+] as Array<TabDefinition<{ id?: string; type: string }>>;
 
 // -----------------------------
 // Core tab definition interface
