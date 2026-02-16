@@ -1,6 +1,5 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { INTROSPECT_SQLITE_METHOD } from "../../../src/plugins/core/constants";
 import { disposeWithRetry } from "../../test-shared";
 
 const TEST_SCRIPT = `
@@ -59,8 +58,8 @@ export default TestEntrypoint;
 `;
 
 describe("Durable Object Wrapper", () => {
-	// Run the same tests with DO wrapper enabled and disabled
-	// to prove the wrapper doesn't change DO behavior
+	// Run the same tests with wrapper enabled and disabled
+	// to prove the wrapper doesn't change observable DO behavior
 	describe.each([
 		{ localExplorer: true, label: "enabled" },
 		{ localExplorer: false, label: "disabled" },
@@ -112,5 +111,4 @@ describe("Durable Object Wrapper", () => {
 			expect(data.result).toBe("TestDO");
 		});
 	});
-
 });
