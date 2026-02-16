@@ -1,6 +1,11 @@
 import { mkdirSync } from "node:fs";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import {
+	getCacheFolder,
+	getConfigCache,
+	saveToConfigCache,
+} from "../config-cache";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
@@ -20,22 +25,15 @@ describe("config cache", () => {
 			mkdirSync("node_modules");
 		});
 
-		it("should return an empty config if no file exists", async ({
-			expect,
-		}) => {
-			const { getConfigCache } = await import("../config-cache");
+		it("should return an empty config if no file exists", ({ expect }) => {
 			expect(
 				getConfigCache<PagesConfigCache>(pagesConfigCacheFilename)
 			).toMatchInlineSnapshot(`{}`);
 		});
 
-		it("should read and write values without overriding old ones", async ({
+		it("should read and write values without overriding old ones", ({
 			expect,
 		}) => {
-			const { getConfigCache, saveToConfigCache } = await import(
-				"../config-cache"
-			);
-
 			saveToConfigCache<PagesConfigCache>(pagesConfigCacheFilename, {
 				account_id: "some-account-id",
 				pages_project_name: "foo",
@@ -58,7 +56,6 @@ describe("config cache", () => {
 
 		beforeEach(() => {
 			delete process.env.WRANGLER_CACHE_DIR;
-			vi.resetModules();
 		});
 
 		afterEach(() => {
@@ -69,18 +66,12 @@ describe("config cache", () => {
 			}
 		});
 
-		it("should use .wrangler/cache when no node_modules exists", async ({
+		it("should use .wrangler/cache when no node_modules exists", ({
 			expect,
 		}) => {
 			// Don't create node_modules - this forces .wrangler/cache
 			// Note: findUpSync may find a parent node_modules, but we're testing
 			// the case where there's no existing cache in any found node_modules
-
-			const { getCacheFolder, purgeConfigCaches } = await import(
-				"../config-cache"
-			);
-			purgeConfigCaches();
-
 			const cacheFolder = getCacheFolder();
 			// In a clean temp directory with no node_modules, should use .wrangler/cache
 			// However, findUpSync may find a parent node_modules, so we just verify
@@ -89,23 +80,18 @@ describe("config cache", () => {
 			expect(typeof cacheFolder).toBe("string");
 		});
 
-		it("should respect WRANGLER_CACHE_DIR environment variable", async ({
+		it("should respect WRANGLER_CACHE_DIR environment variable", ({
 			expect,
 		}) => {
 			const customCacheDir = path.join(process.cwd(), "custom-cache");
 			mkdirSync(customCacheDir, { recursive: true });
-			process.env.WRANGLER_CACHE_DIR = customCacheDir;
-
-			const { getCacheFolder, purgeConfigCaches } = await import(
-				"../config-cache"
-			);
-			purgeConfigCaches();
+			vi.stubEnv("WRANGLER_CACHE_DIR", customCacheDir);
 
 			const cacheFolder = getCacheFolder();
 			expect(cacheFolder).toBe(customCacheDir);
 		});
 
-		it("should prioritize WRANGLER_CACHE_DIR over any other detection", async ({
+		it("should prioritize WRANGLER_CACHE_DIR over any other detection", ({
 			expect,
 		}) => {
 			// Create node_modules (which would normally be used)
@@ -114,24 +100,14 @@ describe("config cache", () => {
 			// But also set WRANGLER_CACHE_DIR which should take priority
 			const customCacheDir = path.join(process.cwd(), "custom-cache-priority");
 			mkdirSync(customCacheDir, { recursive: true });
-			process.env.WRANGLER_CACHE_DIR = customCacheDir;
-
-			const { getCacheFolder, purgeConfigCaches } = await import(
-				"../config-cache"
-			);
-			purgeConfigCaches();
+			vi.stubEnv("WRANGLER_CACHE_DIR", customCacheDir);
 
 			const cacheFolder = getCacheFolder();
 			expect(cacheFolder).toBe(customCacheDir);
 		});
 
-		it("should always return a string (never null)", async ({ expect }) => {
+		it("should always return a string (never null)", ({ expect }) => {
 			// Even with no node_modules, should return .wrangler/cache
-			const { getCacheFolder, purgeConfigCaches } = await import(
-				"../config-cache"
-			);
-			purgeConfigCaches();
-
 			const cacheFolder = getCacheFolder();
 			expect(cacheFolder).toBeTruthy();
 			expect(typeof cacheFolder).toBe("string");

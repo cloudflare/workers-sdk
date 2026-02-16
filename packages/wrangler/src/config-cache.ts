@@ -14,31 +14,18 @@ import { logger } from "./logger";
 let cacheMessageShown = false;
 
 /**
- * Cached cache folder path.
- * Undefined means not yet determined.
- */
-let __cacheFolder: string | undefined;
-
-/**
  * Determines the cache folder location using the following priority:
  * 1. WRANGLER_CACHE_DIR environment variable (explicit override)
  * 2. Existing node_modules/.cache/wrangler directory (backward compatibility)
  * 3. Existing .wrangler/cache directory
  * 4. node_modules/.cache/wrangler if node_modules exists
  * 5. .wrangler/cache as final fallback
- *
- * Result is cached for performance.
  */
 export function getCacheFolder(): string {
-	if (__cacheFolder !== undefined) {
-		return __cacheFolder;
-	}
-
 	// Priority 1: Explicit environment variable
 	const envCacheDir = getWranglerCacheDirFromEnv();
 	if (envCacheDir) {
-		__cacheFolder = envCacheDir;
-		return __cacheFolder;
+		return envCacheDir;
 	}
 
 	// Find node_modules using existing find-up logic
@@ -54,25 +41,21 @@ export function getCacheFolder(): string {
 
 	// Priority 2: Use existing node_modules cache if present
 	if (nodeModulesCache && existsSync(nodeModulesCache)) {
-		__cacheFolder = nodeModulesCache;
-		return __cacheFolder;
+		return nodeModulesCache;
 	}
 
 	// Priority 3: Use existing .wrangler/cache if present
 	if (existsSync(wranglerCache)) {
-		__cacheFolder = wranglerCache;
-		return __cacheFolder;
+		return wranglerCache;
 	}
 
 	// Priority 4: Create in node_modules if it exists
 	if (nodeModulesCache) {
-		__cacheFolder = nodeModulesCache;
-		return __cacheFolder;
+		return nodeModulesCache;
 	}
 
 	// Priority 5: Fall back to .wrangler/cache
-	__cacheFolder = wranglerCache;
-	return __cacheFolder;
+	return wranglerCache;
 }
 
 const arrayFormatter = new Intl.ListFormat("en-US", {
@@ -134,5 +117,4 @@ export function purgeConfigCaches() {
 	if (cacheFolder) {
 		rmSync(cacheFolder, { recursive: true, force: true });
 	}
-	__cacheFolder = undefined;
 }

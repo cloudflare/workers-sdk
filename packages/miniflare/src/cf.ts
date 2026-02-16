@@ -9,12 +9,6 @@ import { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 /**
- * Cached default cf.json path.
- * Undefined means not yet determined.
- */
-let __defaultCfPath: string | undefined;
-
-/**
  * Gets the default path for the cf.json cache file.
  * Determines the cache location using the following priority:
  * 1. MINIFLARE_CACHE_DIR environment variable (miniflare-specific override)
@@ -22,19 +16,12 @@ let __defaultCfPath: string | undefined;
  * 3. Existing .wrangler/cache directory
  * 4. node_modules/.mf if node_modules exists
  * 5. .wrangler/cache as final fallback
- *
- * Result is cached for performance.
  */
 function getDefaultCfPath(): string {
-	if (__defaultCfPath !== undefined) {
-		return __defaultCfPath;
-	}
-
 	// Priority 1: MINIFLARE_CACHE_DIR (miniflare-specific override)
 	const miniflareCacheDir = process.env.MINIFLARE_CACHE_DIR;
 	if (miniflareCacheDir) {
-		__defaultCfPath = path.resolve(miniflareCacheDir, "cf.json");
-		return __defaultCfPath;
+		return path.resolve(miniflareCacheDir, "cf.json");
 	}
 
 	// Define possible cache locations
@@ -43,25 +30,21 @@ function getDefaultCfPath(): string {
 
 	// Priority 2: Use existing node_modules/.mf if present (backward compatibility)
 	if (existsSync(nodeModulesMfPath)) {
-		__defaultCfPath = path.resolve(nodeModulesMfPath, "cf.json");
-		return __defaultCfPath;
+		return path.resolve(nodeModulesMfPath, "cf.json");
 	}
 
 	// Priority 3: Use existing .wrangler/cache if present
 	if (existsSync(wranglerCachePath)) {
-		__defaultCfPath = path.resolve(wranglerCachePath, "cf.json");
-		return __defaultCfPath;
+		return path.resolve(wranglerCachePath, "cf.json");
 	}
 
 	// Priority 4: Create in node_modules/.mf if node_modules exists
 	if (existsSync("node_modules")) {
-		__defaultCfPath = path.resolve(nodeModulesMfPath, "cf.json");
-		return __defaultCfPath;
+		return path.resolve(nodeModulesMfPath, "cf.json");
 	}
 
 	// Priority 5: Fall back to .wrangler/cache
-	__defaultCfPath = path.resolve(wranglerCachePath, "cf.json");
-	return __defaultCfPath;
+	return path.resolve(wranglerCachePath, "cf.json");
 }
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
 
