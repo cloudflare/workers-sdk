@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
+import dns from "node:dns/promises";
 import { Abortable } from "node:events";
 import fs from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -726,6 +727,86 @@ function getWorkerRoutes(
 	return allRoutes;
 }
 
+async function isLocalhostSubdomainSupported(): Promise<boolean> {
+	try {
+		const result = await dns.lookup("test.domain.localhost");
+		return result.address === "127.0.0.1" || result.address === "::1";
+	} catch {
+		return false;
+	}
+}
+
+type EntrypointEntry = {
+	export: string;
+	type: "DurableObject" | "WorkerEntrypoint" | "WorkflowEntrypoint";
+};
+
+function getEntrypointSubdomains(allWorkerOpts: PluginWorkerOptions[]) {
+	const result: Record<string, Record<string, EntrypointEntry>> = {};
+
+	for (const workerOpts of allWorkerOpts) {
+		const subdomains = workerOpts.core.unsafeEntrypointSubdomains;
+		if (!subdomains) {
+			continue;
+		}
+
+		const workerName = workerOpts.core.name ?? "";
+
+		const doClassNames = new Set(
+			Object.values(workerOpts.do.durableObjects ?? {}).map((v) =>
+				typeof v === "string" ? v : v.className
+			)
+		);
+		const workflowClassNames = new Set(
+			Object.values(workerOpts.workflows.workflows ?? {}).map(
+				(v) => v.className
+			)
+		);
+
+		// Check for collisions and invert to alias -> { export, type }
+		// for the entry worker's O(1) hostname lookup.
+		const aliasToEntry: Record<string, EntrypointEntry> = {};
+		const seenAliases = new Map<string, string>();
+
+		for (const [exportName, rawAlias] of Object.entries(subdomains)) {
+			const alias = rawAlias.toLowerCase();
+
+			const existing = seenAliases.get(alias);
+			if (existing !== undefined) {
+				throw new MiniflareCoreError(
+					"ERR_VALIDATION",
+					`Alias collision in worker "${workerName}": ` +
+						`entrypoints "${existing}" and "${exportName}" both map to alias "${alias}".`
+				);
+			}
+			seenAliases.set(alias, exportName);
+
+			let type: EntrypointEntry["type"];
+			if (doClassNames.has(exportName)) {
+				type = "DurableObject";
+			} else if (workflowClassNames.has(exportName)) {
+				type = "WorkflowEntrypoint";
+			} else {
+				type = "WorkerEntrypoint";
+			}
+
+			aliasToEntry[alias] = { export: exportName, type };
+		}
+
+		if (Object.keys(aliasToEntry).length === 0) {
+			continue;
+		}
+
+		result[workerName.toLowerCase()] = aliasToEntry;
+	}
+
+	if (Object.keys(result).length === 0) {
+		return undefined;
+	}
+
+	return result;
+}
+
 // Get the name of a binding in the `ProxyServer`'s `env`
 function getProxyBindingName(plugin: string, worker: string, binding: string) {
 	return [
@@ -922,6 +1003,7 @@ export class Miniflare {
 	#proxyClient?: ProxyClient;
 
 	#structuredWorkerdLogs: boolean;
+	#localhostSubdomainChecked = false;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1945,9 +2027,23 @@ export class Miniflare {
 			}
 		}
 
+		const allEntrypointSubdomains = getEntrypointSubdomains(allWorkerOpts);
+
+		if (allEntrypointSubdomains && !this.#localhostSubdomainChecked) {
+			this.#localhostSubdomainChecked = true;
+			if (!(await isLocalhostSubdomainSupported())) {
+				this.#log.warn(
+					"Your system's DNS resolver does not support *.localhost subdomains.\n" +
+						"Localhost entrypoint URLs like http://{entrypoint}.{worker}.localhost will work in\n" +
+						"some browsers (e.g. Chrome, Edge, Firefox) but might not resolve for other tools like curl."
+				);
+			}
+		}
+
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
+			allEntrypointSubdomains,
 			/*
 			 * - if Workers + Assets project but NOT Vitest, the fallback Worker (see
 			 *   `MINIFLARE_USER_FALLBACK`) should point to the (assets) RPC Proxy Worker
