@@ -6,9 +6,10 @@ import {
 	TableIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { LocalD1Driver } from "../../drivers/d1";
+import type { StudioResource } from "../../types/studio";
 
 export const Route = createFileRoute("/d1/$databaseId")({
 	component: DatabaseView,
@@ -32,6 +33,21 @@ export const Route = createFileRoute("/d1/$databaseId")({
 
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
+
+	const driver = useMemo<LocalD1Driver>(
+		() => new LocalD1Driver(params.databaseId),
+		[params.databaseId]
+	);
+
+	const resource = useMemo<StudioResource>(
+		() => ({
+			databaseId: params.databaseId,
+			type: "d1",
+		}),
+		[params.databaseId]
+	);
+
+	console.log({ driver, resource });
 
 	return (
 		<div className="flex flex-col h-full">
