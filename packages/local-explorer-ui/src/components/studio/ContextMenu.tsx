@@ -91,6 +91,7 @@ export function StudioContextMenuProvider({
 					side="bottom"
 					style={{ width: 250 }}
 				>
+					{/* TODO: Add stub implementation of this dropdown using the new Kumo components */}
 					{/* <DropdownMenuItemsBuilder items={menuItems} /> */}
 				</DropdownMenu.Content>
 			</DropdownMenu>
