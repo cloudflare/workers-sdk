@@ -25,21 +25,79 @@ type TailEvent = {
 			 * https://developers.cloudflare.com/workers/runtime-apis/request#incomingrequestcfproperties
 			 */
 			cf: {
+				/**
+				 * How long (in ms) it took for the client's TCP connection to make a
+				 * round trip to the worker and back. For all my gamers out there,
+				 * this is the request's ping
+				 */
 				clientTcpRtt?: number;
+
+				/**
+				 * Longitude and Latitude of where the request originated from
+				 */
 				longitude?: string;
 				latitude?: string;
+
+				/**
+				 * What cipher was used to establish the TLS connection
+				 */
 				tlsCipher: string;
+
+				/**
+				 * Which continent the request came from.
+				 */
 				continent?: "NA";
+
+				/**
+				 * ASN of the incoming request
+				 */
 				asn: number;
+
+				/**
+				 * The country the incoming request is coming from
+				 */
 				country?: string;
+
+				/**
+				 * The TLS version the connection used
+				 */
 				tlsVersion: string;
+
+				/**
+				 * The colo that processed the request (i.e. the airport code
+				 * of the closest city to the server that spun up the worker)
+				 */
 				colo: string;
+
+				/**
+				 * The timezone where the request came from
+				 */
 				timezone?: string;
+
+				/**
+				 * The city where the request came from
+				 */
 				city?: string;
+
+				/**
+				 * The browser-requested prioritization information in the request object
+				 */
 				requestPriority?: string;
+
+				/**
+				 * Which version of HTTP the request came over e.g. "HTTP/2"
+				 */
 				httpProtocol: string;
+
+				/**
+				 * The region where the request originated from
+				 */
 				region?: string;
 				regionCode?: string;
+
+				/**
+				 * The organization that owns the ASN of the incoming request
+				 */
 				asOrganization: string;
 				metroCode?: string;
 				postalCode?: string;
@@ -98,7 +156,11 @@ const TailRow = ({ event }: { event: TailEvent }) => {
 					</Span>
 				</Div>,
 				...event.logs.map((log, logIdx) => (
-					<Div key={`log-${logIdx}`} width="100%" justifyContent="flex-start">
+					<Div
+						key={`${log.timestamp}-${logIdx}`}
+						width="100%"
+						justifyContent="flex-start"
+					>
 						<Span
 							display="flex"
 							alignItems="flex-start"
@@ -159,7 +221,7 @@ function TailLogsConnector({
 			onConnected();
 		},
 		async onMessage(event) {
-			const messageEvent: TailEvent = JSON.parse(await event.data.text());
+			const messageEvent = JSON.parse(await event.data.text()) as TailEvent;
 			onData(messageEvent);
 		},
 		onError() {
@@ -168,6 +230,7 @@ function TailLogsConnector({
 				onError();
 			}
 		},
+		// The tail WebSocket is sometimes unexpectedly closed by the server, which means we need to try adn reconnect
 		onClose() {
 			if (!errorNotified.current) {
 				errorNotified.current = true;

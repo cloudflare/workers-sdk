@@ -75,9 +75,6 @@ function PrimitiveValue({ value }: { value: unknown }) {
  */
 function collapsedPreview(value: object): string {
 	if (Array.isArray(value)) {
-		if (value.length === 0) {
-			return "[]";
-		}
 		if (value.length <= 5) {
 			const items = value.map((v) => primitivePreview(v));
 			const preview = `[${items.join(", ")}]`;
@@ -85,13 +82,10 @@ function collapsedPreview(value: object): string {
 				return preview;
 			}
 		}
-		return `Array(${value.length})`;
+		return value.length === 0 ? "[]" : `Array(${value.length})`;
 	}
 
 	const entries = Object.entries(value);
-	if (entries.length === 0) {
-		return "{}";
-	}
 	if (entries.length <= 3) {
 		const items = entries.map(([k, v]) => `${k}: ${primitivePreview(v)}`);
 		const preview = `{${items.join(", ")}}`;
@@ -99,7 +93,7 @@ function collapsedPreview(value: object): string {
 			return preview;
 		}
 	}
-	return `{…}`;
+	return entries.length === 0 ? "{}" : `{…}`;
 }
 
 function primitivePreview(value: unknown): string {
