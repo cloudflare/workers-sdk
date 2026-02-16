@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
-import { Service, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
 import { CoreBindings } from "../../workers";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../shared";
 import {
 	getUserServiceName,
+	INTROSPECT_SQLITE_METHOD,
 	LOCAL_EXPLORER_DISK,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
@@ -157,4 +158,132 @@ export function constructExplorerBindingMap(
 	}
 
 	return IDToBindingName;
+}
+
+/**
+ * We need to wrap and extend user Durable Object classes to inject an
+ * internal sqlite introspection method for the local explorer to use.
+ *
+ * This generates a new entry module that replaces the original user entry
+ * module, which re-exports everything with DO classes wrapped.
+ */
+function generateWrapperEntry(
+	userEntryName: string,
+	classNames: string[]
+): string {
+	const lines = [
+		`import { createDurableObjectWrapper } from "./__mf_do_wrapper.js";`,
+		`import * as __mf_original__ from "./${userEntryName}";`,
+		// Re-export everything from original module
+		`export * from "./${userEntryName}";`,
+		`export default __mf_original__.default;`,
+	];
+
+	for (const className of classNames) {
+		lines.push(
+			`export const ${className} = createDurableObjectWrapper(__mf_original__.${className});`
+		);
+	}
+
+	return lines.join("\n");
+}
+
+/**
+ * Module for createDurableObjectWrapper - a helper
+ * function to wrap user Durable Object classes.
+ */
+const DO_WRAPPER_MODULE_CODE = `
+const INTROSPECT_SQLITE_METHOD = "${INTROSPECT_SQLITE_METHOD}";
+
+export function createDurableObjectWrapper(UserClass) {
+  class Wrapper extends UserClass {
+    constructor(ctx, env) {
+      super(ctx, env);
+    }
+
+    /**
+     * Execute SQL queries against the DO's SQLite storage.
+     * If multiple queries are provided, they run in a transaction.
+     *
+     * @param {Array<{sql: string, params?: any[]}>} queries
+     * @returns {Array<{columns: string[], rows: any[][], meta: {rows_read: number, rows_written: number}}>}
+     */
+    [INTROSPECT_SQLITE_METHOD](queries) {
+      const sql = this.ctx.storage.sql;
+
+      if (!sql) {
+        throw new Error("This Durable Object does not have SQLite storage enabled");
+      }
+
+      const executeQuery = (query) => {
+        const params = query.params || [];
+        const cursor = params.length > 0
+          ? sql.exec(query.sql, ...params)
+          : sql.exec(query.sql);
+
+        return {
+          columns: cursor.columnNames,
+          rows: Array.from(cursor.raw()),
+          meta: {
+            rows_read: cursor.rowsRead,
+            rows_written: cursor.rowsWritten,
+          },
+        };
+      };
+
+      if (queries.length === 0) {
+        return [];
+      }
+
+      const results = [];
+
+      if (queries.length > 1) {
+        this.ctx.storage.transactionSync(() => {
+          for (const query of queries) {
+            results.push(executeQuery(query));
+          }
+        });
+      } else {
+        results.push(executeQuery(queries[0]));
+      }
+
+      return results;
+    }
+  }
+
+  Object.defineProperty(Wrapper, "name", { value: UserClass.name });
+  return Wrapper;
+}
+`;
+
+/**
+ * Transforms worker modules to wrap Durable Object classes for the local explorer.
+ *
+ * This function modifies the modules array to:
+ * 1. Insert a new wrapper entry module at the front (workerd uses first module as entry)
+ * 2. Inject the wrapper helper module
+ * 3. Keep the original entry module with its original name (preserves source mapping)
+ */
+export function wrapDurableObjectModules(
+	modules: Worker_Module[],
+	durableObjectClassNames: string[]
+): Worker_Module[] {
+	const entryModule = modules[0];
+
+	const wrapperEntry = generateWrapperEntry(
+		entryModule.name,
+		durableObjectClassNames
+	);
+
+	// Build new modules array:
+	// 1. New wrapper entry module
+	// 2. Wrapper helper module with createDurableObjectWrapper
+	// 3. Original entry module (keeps its name for source mapping)
+	// 4. Rest of modules unchanged
+	return [
+		{ name: "__mf_do_wrapper_entry.js", esModule: wrapperEntry },
+		{ name: "__mf_do_wrapper.js", esModule: DO_WRAPPER_MODULE_CODE },
+		entryModule,
+		...modules.slice(1),
+	];
 }

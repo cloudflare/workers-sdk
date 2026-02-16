@@ -55,3 +55,9 @@ export function getCustomNodeServiceName(
 ) {
 	return `${SERVICE_CUSTOM_NODE_PREFIX}:${workerIndex}:${kind}${bindingName}`;
 }
+
+/**
+ * Used by the local explorer worker.
+ * The method name injected into wrapped Durable Objects for SQLite introspection.
+ */
+export const INTROSPECT_SQLITE_METHOD = "__miniflare_introspectSqlite";
