@@ -913,6 +913,45 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.doesNotThrow(() => new tty.ReadStream(0));
 		assert.doesNotThrow(() => new tty.WriteStream(1));
 	},
+
+	async testChildProcess() {
+		const childProcess = await import("node:child_process");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(childProcess, {
+			ChildProcess: "function",
+			exec: "function",
+			execFile: "function",
+			execFileSync: "function",
+			execSync: "function",
+			fork: "function",
+			spawn: "function",
+			spawnSync: "function",
+		});
+
+		assertTypeOfProperties(childProcess.default, {
+			ChildProcess: "function",
+			exec: "function",
+			execFile: "function",
+			execFileSync: "function",
+			execSync: "function",
+			fork: "function",
+			spawn: "function",
+			spawnSync: "function",
+		});
+
+		// Both implementations throw when calling spawn()
+		assert.throws(
+			() => childProcess.spawn("ls"),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+
+		// Both implementations throw when calling exec()
+		assert.throws(
+			() => childProcess.exec("ls"),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
 };
 
 /**

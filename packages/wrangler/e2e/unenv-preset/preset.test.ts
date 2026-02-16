@@ -676,6 +676,33 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:child_process (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "child_process enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_child_process_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: true,
+			},
+		},
+		{
+			name: "child_process disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"disable_nodejs_child_process_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(
