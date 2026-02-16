@@ -73,8 +73,9 @@ export const addWranglerToAssetsIgnore = (projectPath: string) => {
 	s.start("Adding Wrangler files to the .assetsignore file");
 
 	const linesToAppend = [
-		"",
-		...(!existingAssetsIgnoreContent.match(/\n\s*$/) ? [""] : []),
+		...(assetsIgnorePreExisted
+			? ["", ...(!existingAssetsIgnoreContent.match(/\n\s*$/) ? [""] : [])]
+			: []),
 	];
 
 	if (!hasDotWrangler && wranglerAssetsIgnoreFilesToAdd.length > 1) {

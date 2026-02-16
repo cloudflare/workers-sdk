@@ -6,29 +6,21 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
-import { convertCfWorkerInitBindingsToBindings } from "./api/startDevWorker/utils";
+import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { logger } from "./logger";
-import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
 import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
-	CfD1Database,
-	CfKvNamespace,
+	Binding,
 	CfModule,
-	CfQueue,
-	CfR2Bucket,
-	CfService,
-	CfWorkerInit,
 	Config,
 	Environment,
-	EnvironmentNonInheritable,
-	INHERIT_SYMBOL,
 	Route,
 	Rule,
 } from "@cloudflare/workers-utils";
@@ -311,10 +303,15 @@ export const dev = createCommand({
 });
 
 export type AdditionalDevProps = {
+	/**
+	 * Default vars that can be overridden by config vars.
+	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
+	 */
+	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id?: string | typeof INHERIT_SYMBOL;
+		id?: string;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -331,7 +328,7 @@ export type AdditionalDevProps = {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name?: string | typeof INHERIT_SYMBOL;
+		bucket_name?: string;
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
@@ -343,7 +340,7 @@ export type AdditionalDevProps = {
 	};
 	d1Databases?: Array<
 		Omit<Environment["d1_databases"][number], "database_id"> & {
-			database_id?: string | typeof INHERIT_SYMBOL;
+			database_id?: string;
 		}
 	>;
 	processEntrypoint?: boolean;
@@ -368,25 +365,6 @@ export type StartDevOptions = DevArguments &
 		dockerPath?: string;
 		containerEngine?: string;
 	};
-
-/**
- * mask anything that was overridden in .dev.vars
- * so that we don't log potential secrets into the terminal
- */
-export function maskVars(
-	bindings: CfWorkerInit["bindings"],
-	configParam: Config
-) {
-	const maskedVars = { ...bindings.vars };
-	for (const key of Object.keys(maskedVars)) {
-		if (maskedVars[key] !== configParam.vars[key]) {
-			// This means it was overridden in .dev.vars
-			// so let's mask it
-			maskedVars[key] = "(hidden)";
-		}
-	}
-	return maskedVars;
-}
 
 export async function getHostAndRoutes(
 	args:
@@ -460,15 +438,8 @@ export function getInferredHost(
  * Checks for CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_* env vars
  * and applies them to the config's hyperdrive bindings.
  */
-function applyHyperdriveEnvVars(
-	config: Config,
-	local: boolean
-): {
-	binding: string;
-	id: string;
-	localConnectionString?: string;
-}[] {
-	return config.hyperdrive.map((hyperdrive) => {
+function applyHyperdriveEnvVars(config: Config, local: boolean): void {
+	for (const hyperdrive of config.hyperdrive ?? []) {
 		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 
@@ -505,11 +476,8 @@ function applyHyperdriveEnvVars(
 			);
 			hyperdrive.localConnectionString = connectionStringFromEnv;
 		}
-
-		return hyperdrive;
-	});
+	}
 }
-
 /**
  * Gets the bindings for the Cloudflare Worker.
  *
@@ -518,7 +486,7 @@ function applyHyperdriveEnvVars(
  * @param envFiles An array of paths, relative to the project directory, of .env files to load.
  * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
  * @param local Whether the dev server should run locally.
- * @param args Additional arguments for the dev server.
+ * @param inputBindings Additional bindings to merge on top of config bindings
  * @returns The bindings for the Cloudflare Worker.
  */
 export function getBindings(
@@ -526,174 +494,38 @@ export function getBindings(
 	env: string | undefined,
 	envFiles: string[] | undefined,
 	local: boolean,
-	args: AdditionalDevProps
-): CfWorkerInit["bindings"] {
-	/**
-	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
-	 * args to the `pages dev` command. These args will always take precedence
-	 * over the configuration file, and therefore should override corresponding
-	 * config in `wrangler.toml`.
-	 */
-	// merge KV bindings
-	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, remote }) => {
-			return {
-				binding,
-				id: preview_id ?? id,
-				remote: remote,
-			} satisfies CfKvNamespace;
-		}
-	);
-	const kvArgs = args.kv || [];
-	const mergedKVBindings = mergeWithOverride(kvConfig, kvArgs, "binding");
-
-	// merge DO bindings
-	const doConfig = (configParam.durable_objects || { bindings: [] }).bindings;
-	const doArgs = args.durableObjects || [];
-	const mergedDOBindings = mergeWithOverride(doConfig, doArgs, "name");
-
-	// merge D1 bindings
-	const d1Config = (configParam.d1_databases ?? []).map((d1Db) => {
-		const database_id = d1Db.preview_database_id
-			? d1Db.preview_database_id
-			: d1Db.database_id;
-
-		if (local) {
-			return {
-				...d1Db,
-				remote: d1Db.remote,
-				database_id,
-			} satisfies CfD1Database;
-		}
-		return { ...d1Db, database_id };
-	});
-	const d1Args = args.d1Databases || [];
-	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
-
-	// merge R2 bindings
-	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
-		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
-				return {
-					binding,
-					bucket_name: preview_bucket_name ?? bucket_name,
-					jurisdiction,
-					remote: remote,
-				} satisfies CfR2Bucket;
-			}
-		) || [];
-	const r2Args = args.r2 || [];
-	const mergedR2Bindings = mergeWithOverride(r2Config, r2Args, "binding");
-
-	// merge service bindings
-	const servicesConfig = configParam.services || [];
-	const servicesArgs = args.services || [];
-	const mergedServiceBindings = mergeWithOverride(
-		servicesConfig,
-		servicesArgs,
-		"binding"
-	).map(
-		(service) =>
-			({
-				...service,
-				remote: "remote" in service && !!service.remote,
-			}) satisfies CfService
-	);
-
-	// Hyperdrive bindings
-	const hyperdriveBindings = applyHyperdriveEnvVars(configParam, local);
-
-	// Queues bindings
-	const queuesBindings = [
-		...(configParam.queues.producers || []).map((queue) => {
-			return {
-				binding: queue.binding,
-				queue_name: queue.queue,
-				delivery_delay: queue.delivery_delay,
-				remote: queue.remote,
-			} satisfies CfQueue;
-		}),
-	];
-
-	const bindings: CfWorkerInit["bindings"] = {
-		// top-level fields
-		wasm_modules: configParam.wasm_modules,
-		text_blobs: configParam.text_blobs,
-		data_blobs: configParam.data_blobs,
-
-		// inheritable fields
-		dispatch_namespaces: configParam.dispatch_namespaces,
-		logfwdr: configParam.logfwdr,
-
-		// non-inheritable fields
-		vars: {
-			// Use a copy of combinedVars since we're modifying it later
-			...getVarsForDev(
-				configParam.userConfigPath,
-				envFiles,
-				configParam.vars,
-				env
-			),
-			...args.vars,
-		},
-		durable_objects: {
-			bindings: mergedDOBindings,
-		},
-		workflows: configParam.workflows,
-		kv_namespaces: mergedKVBindings,
-		queues: queuesBindings,
-		r2_buckets: mergedR2Bindings,
-		d1_databases: mergedD1Bindings,
-		vectorize: configParam.vectorize,
-		hyperdrive: hyperdriveBindings,
-		secrets_store_secrets: configParam.secrets_store_secrets,
-		services: mergedServiceBindings,
-		vpc_services: configParam.vpc_services,
-		analytics_engine_datasets: configParam.analytics_engine_datasets,
-		browser: configParam.browser,
-		ai: args.ai || configParam.ai,
-		images: configParam.images,
-		version_metadata: args.version_metadata || configParam.version_metadata,
-		unsafe: {
-			bindings: configParam.unsafe.bindings,
-			metadata: configParam.unsafe.metadata,
-			capnp: configParam.unsafe.capnp,
-		},
-		mtls_certificates: configParam.mtls_certificates,
-		pipelines: configParam.pipelines,
-		send_email: configParam.send_email,
-		assets: configParam.assets?.binding
-			? { binding: configParam.assets?.binding }
-			: undefined,
-		unsafe_hello_world: configParam.unsafe_hello_world,
-		ratelimits: configParam.ratelimits,
-		worker_loaders: configParam.worker_loaders,
-		media: configParam.media,
-	};
-
-	return bindings;
-}
-
-/**
- * Resolve all bindings that should be accessible in a Worker during a dev session.
- *
- * @param configParam The loaded configuration.
- * @param env The environment to use, if any.
- * @param envFiles An array of paths, relative to the project directory, of .env files to load.
- * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
- * @param local Whether the dev server should run locally.
- * @param args Additional arguments for the dev server.
- * @returns The bindings for the Cloudflare Worker.
- */
-export function getFlatBindings(
-	configParam: Config,
-	env: string | undefined,
-	envFiles: string[] | undefined,
-	local: boolean,
-	args: AdditionalDevProps
+	inputBindings: StartDevWorkerInput["bindings"],
+	defaultBindings: StartDevWorkerInput["bindings"]
 ): StartDevWorkerInput["bindings"] {
-	const bindings = getBindings(configParam, env, envFiles, local, args);
-	return convertCfWorkerInitBindingsToBindings(bindings);
+	applyHyperdriveEnvVars(configParam, local);
+
+	const bindings = convertConfigToBindings(configParam, {
+		usePreviewIds: true,
+	});
+
+	// Override vars with .dev.vars (dev-specific)
+	// getVarsForDev returns typed bindings: config vars are plain_text/json,
+	// while .dev.vars/.env vars are secret_text
+	const vars = getVarsForDev(
+		configParam.userConfigPath,
+		envFiles,
+		configParam.vars,
+		env
+	);
+	for (const [name, binding] of Object.entries(vars)) {
+		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace
+		const existingBinding = bindings[name];
+		if (
+			!existingBinding ||
+			existingBinding.type === "plain_text" ||
+			existingBinding.type === "json" ||
+			existingBinding.type === "secret_text"
+		) {
+			bindings[name] = binding;
+		}
+	}
+
+	return { ...defaultBindings, ...bindings, ...inputBindings };
 }
 
 export function getAssetChangeMessage(

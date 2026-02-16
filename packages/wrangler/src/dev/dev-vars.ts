@@ -7,7 +7,18 @@ import {
 import dotenv from "dotenv";
 import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import { logger } from "../logger";
+import type { Binding } from "../api/startDevWorker/types";
 import type { Config } from "@cloudflare/workers-utils";
+import type { Json } from "miniflare";
+
+/**
+ * A binding type for vars - plain_text, json, or secret_text.
+ * Used as the return type for getVarsForDev.
+ */
+export type VarBinding = Extract<
+	Binding,
+	{ type: "plain_text" | "json" | "secret_text" }
+>;
 
 /**
  * Get the Worker `vars` bindings for a `wrangler dev` instance of a Worker.
@@ -35,7 +46,7 @@ import type { Config } from "@cloudflare/workers-utils";
  * @param vars - The existing `vars` bindings from the Wrangler configuration.
  * @param env - The specific environment name (e.g., "staging") or `undefined` if no specific environment is set.
  * @param silent - If true, will not log any messages about the loaded .dev.vars files or .env files.
- * @returns The merged `vars` bindings, including those loaded from `.dev.vars` or `.env` files.
+ * @returns The merged `vars` as typed bindings. Config vars are `plain_text`/`json`, while `.dev.vars`/`.env` vars are `secret_text`.
  */
 export function getVarsForDev(
 	configPath: string | undefined,
@@ -43,7 +54,13 @@ export function getVarsForDev(
 	vars: Config["vars"],
 	env: string | undefined,
 	silent = false
-): Config["vars"] {
+): Record<string, VarBinding> {
+	// Start with config vars (plain_text or json, not secret)
+	const result: Record<string, VarBinding> = {};
+	for (const [key, value] of Object.entries(vars)) {
+		result[key] = toVarBinding(value);
+	}
+
 	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
 
 	// If envFiles are not explicitly provided, try to load from .dev.vars first
@@ -55,7 +72,11 @@ export function getVarsForDev(
 			if (!silent) {
 				logger.log(`Using vars defined in ${devVarsRelativePath}`);
 			}
-			return { ...vars, ...loaded.parsed };
+			// Merge .dev.vars as secret_text
+			for (const [key, value] of Object.entries(loaded.parsed)) {
+				result[key] = { type: "secret_text", value };
+			}
+			return result;
 		}
 	}
 
@@ -69,11 +90,25 @@ export function getVarsForDev(
 			includeProcessEnv: getCloudflareIncludeProcessEnvFromEnv(),
 			silent,
 		});
-		return { ...vars, ...dotEnvVars };
+		// Merge .env vars as secret_text
+		for (const [key, value] of Object.entries(dotEnvVars)) {
+			result[key] = { type: "secret_text", value: String(value) };
+		}
+		return result;
 	}
 
 	// Just return the vars from the Wrangler configuration.
-	return vars;
+	return result;
+}
+
+/**
+ * Convert a raw config var value to a VarBinding (plain_text or json).
+ */
+function toVarBinding(value: string | Json): VarBinding {
+	if (typeof value === "string") {
+		return { type: "plain_text", value };
+	}
+	return { type: "json", value };
 }
 
 export interface DotDevDotVars {

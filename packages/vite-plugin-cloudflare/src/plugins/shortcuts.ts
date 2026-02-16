@@ -54,27 +54,13 @@ export function addBindingsShortcut(
 			viteServer.config.logger.info("");
 
 			for (const workerConfig of workerConfigs) {
+				const bindings =
+					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
+						workerConfig
+					);
+
 				wrangler.unstable_printBindings(
-					{
-						// The printBindings helper expects the deployment bundle format
-						// which is slightly different from the wrangler config
-						...workerConfig,
-						assets: workerConfig.assets?.binding
-							? {
-									...workerConfig.assets,
-									binding: workerConfig.assets.binding,
-								}
-							: undefined,
-						unsafe: {
-							bindings: workerConfig.unsafe.bindings,
-							metadata: workerConfig.unsafe.metadata,
-							capnp: workerConfig.unsafe.capnp,
-						},
-						queues: workerConfig.queues.producers?.map((queue) => ({
-							...queue,
-							queue_name: queue.queue,
-						})),
-					},
+					bindings,
 					workerConfig.tail_consumers,
 					workerConfig.streaming_tail_consumers,
 					workerConfig.containers,

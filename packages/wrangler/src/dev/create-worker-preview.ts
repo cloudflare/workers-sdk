@@ -281,7 +281,7 @@ async function createPreviewToken(
 			}
 		: { workers_dev: true, minimal_mode };
 
-	const formData = createWorkerUploadForm(worker);
+	const formData = createWorkerUploadForm(worker, worker.bindings);
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
 	const { preview_token, tail_url } = await fetchResult<{

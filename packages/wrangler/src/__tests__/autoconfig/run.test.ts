@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in helper function at module scope */
@@ -11,6 +11,7 @@ import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
+import { NpmPackageManager } from "../../package-manager";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -44,7 +45,13 @@ vi.mock("../../package-manager", () => ({
 		return {
 			type: "npm",
 			npx: "npx",
+			dlx: ["npx"],
 		};
+	},
+	NpmPackageManager: {
+		type: "npm",
+		npx: "npx",
+		dlx: ["npx"],
 	},
 }));
 
@@ -114,6 +121,7 @@ describe("autoconfig (deploy)", () => {
 					workerName: "my-worker",
 					framework: new Static({ id: "static", name: "Static" }),
 					outputDir: "./public",
+					packageManager: NpmPackageManager,
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -132,6 +140,7 @@ describe("autoconfig (deploy)", () => {
 					configured: true,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
+					packageManager: NpmPackageManager,
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -139,6 +148,43 @@ describe("autoconfig (deploy)", () => {
 		await runDeploy("--x-autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
+		expect(runSpy).not.toHaveBeenCalled();
+	});
+
+	it("should warn and prompt when Pages project is detected", async () => {
+		vi.spyOn(details, "getDetailsForAutoConfig").mockImplementationOnce(() =>
+			Promise.resolve({
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				framework: {
+					id: "cloudflare-pages",
+					name: "Cloudflare Pages",
+					autoConfigSupported: false,
+					configure: async () => ({ wranglerConfig: {} }),
+					isConfigured: () => false,
+				},
+				outputDir: "public",
+				packageManager: NpmPackageManager,
+			})
+		);
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		// User declines to proceed
+		mockConfirm({
+			text: "Are you sure that you want to proceed?",
+			result: false,
+		});
+
+		// Should not throw - just return early
+		await runWrangler("deploy --x-autoconfig");
+
+		// Should show warning about Pages project
+		expect(std.warn).toContain(
+			"It seems that you have run `wrangler deploy` on a Pages project"
+		);
+
+		// Should NOT run autoconfig since it's a Pages project
 		expect(runSpy).not.toHaveBeenCalled();
 	});
 
@@ -165,7 +211,7 @@ describe("autoconfig (deploy)", () => {
 				text: "Proceed with setup?",
 				result: true,
 			});
-			await writeFile(".gitignore", "");
+			await writeFile(".gitignore", "node_modules\n");
 			const configureSpy = vi.fn(
 				async ({ outputDir }) =>
 					({
@@ -193,6 +239,7 @@ describe("autoconfig (deploy)", () => {
 							astro: "5",
 						},
 					},
+					packageManager: NpmPackageManager,
 				},
 				{ enableWranglerInstallation: true }
 			);
@@ -210,19 +257,19 @@ describe("autoconfig (deploy)", () => {
 				 - wrangler (devDependency)
 
 				📝 Update package.json scripts:
-				 - \\"deploy\\": \\"echo 'built' > build.txt && wrangler deploy\\"
-				 - \\"preview\\": \\"echo 'built' > build.txt && wrangler dev\\"
+				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
+				 - "preview": "echo 'built' > build.txt && wrangler dev"
 
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"my-worker\\",
-				    \\"compatibility_date\\": \\"2000-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "my-worker",
+				    "compatibility_date": "2000-01-01",
+				    "observability": {
+				      "enabled": true
 				    },
-				    \\"assets\\": {
-				      \\"directory\\": \\"dist\\"
+				    "assets": {
+				      "directory": "dist"
 				    }
 				  }
 
@@ -233,20 +280,21 @@ describe("autoconfig (deploy)", () => {
 
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
-				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				  \\"name\\": \\"my-worker\\",
-				  \\"compatibility_date\\": \\"2000-01-01\\",
-				  \\"observability\\": {
-				    \\"enabled\\": true
+				  "$schema": "node_modules/wrangler/config-schema.json",
+				  "name": "my-worker",
+				  "compatibility_date": "2000-01-01",
+				  "observability": {
+				    "enabled": true
 				  },
-				  \\"assets\\": {
-				    \\"directory\\": \\"dist\\"
+				  "assets": {
+				    "directory": "dist"
 				  }
-				}"
+				}
+				"
 			`);
 
 			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
-				"
+				"node_modules
 
 				# wrangler files
 				.wrangler
@@ -268,6 +316,74 @@ describe("autoconfig (deploy)", () => {
 
 			// outputDir !== projectPath, so there's no need for an assets ignore file
 			expect(existsSync(".assetsignore")).toBeFalsy();
+		});
+
+		it("new gitignore should not have leading empty lines", async () => {
+			// Create a .git directory so gitignore will be created
+			await mkdir(".git");
+
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: "dist",
+				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
+			});
+
+			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
+				"# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
+				"
+			`);
+		});
+
+		it("pre-existing gitignore with trailing newline gets one empty separator line", async () => {
+			// Create gitignore with content ending in newline
+			await writeFile(".gitignore", "node_modules\n");
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: "dist",
+				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
+			});
+
+			// When gitignore pre-existed with trailing newline, one empty line is added as separator
+			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
+				"node_modules
+
+				# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
+				"
+			`);
 		});
 
 		it("allows users to edit the auto-detected settings", async () => {
@@ -297,6 +413,7 @@ describe("autoconfig (deploy)", () => {
 				framework: new Static({ id: "static", name: "Static" }),
 				workerName: "my-worker",
 				outputDir: "dist",
+				packageManager: NpmPackageManager,
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -315,14 +432,14 @@ describe("autoconfig (deploy)", () => {
 
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"edited-worker-name\\",
-				    \\"compatibility_date\\": \\"2000-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "edited-worker-name",
+				    "compatibility_date": "2000-01-01",
+				    "observability": {
+				      "enabled": true
 				    },
-				    \\"assets\\": {
-				      \\"directory\\": \\"dist\\"
+				    "assets": {
+				      "directory": "dist"
 				    }
 				  }
 				"
@@ -330,16 +447,17 @@ describe("autoconfig (deploy)", () => {
 
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
-				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				  \\"name\\": \\"edited-worker-name\\",
-				  \\"compatibility_date\\": \\"2000-01-01\\",
-				  \\"observability\\": {
-				    \\"enabled\\": true
+				  "$schema": "node_modules/wrangler/config-schema.json",
+				  "name": "edited-worker-name",
+				  "compatibility_date": "2000-01-01",
+				  "observability": {
+				    "enabled": true
 				  },
-				  \\"assets\\": {
-				    \\"directory\\": \\"dist\\"
+				  "assets": {
+				    "directory": "dist"
 				  }
-				}"
+				}
+				"
 			`);
 		});
 
@@ -359,10 +477,42 @@ describe("autoconfig (deploy)", () => {
 				configured: false,
 				outputDir: process.cwd(),
 				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
 			});
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
+				"# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
 				"
+			`);
+		});
+
+		it("pre-existing assetsignore with trailing newline gets one empty separator line", async () => {
+			await writeFile(".assetsignore", "*.bak\n");
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: process.cwd(),
+				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
+			});
+
+			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
+				"*.bak
 
 				# wrangler files
 				.wrangler
@@ -387,9 +537,62 @@ describe("autoconfig (deploy)", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					workerName: "my-worker",
 					outputDir: "",
+					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[AssertionError: The Output Directory is unexpectedly missing]`
+			);
+		});
+
+		it("errors with Pages-specific message when framework is cf-pages", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+
+			await expect(
+				run.runAutoConfig({
+					projectPath: process.cwd(),
+					configured: false,
+					framework: {
+						id: "cloudflare-pages",
+						name: "Cloudflare Pages",
+						autoConfigSupported: false,
+						configure: async () => ({ wranglerConfig: {} }),
+						isConfigured: () => false,
+					},
+					workerName: "my-worker",
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.]`
+			);
+		});
+
+		it("errors with generic message when unsupported framework is not cf-pages", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+
+			await expect(
+				run.runAutoConfig({
+					projectPath: process.cwd(),
+					configured: false,
+					framework: {
+						id: "some-unsupported",
+						name: "Some Unsupported Framework",
+						autoConfigSupported: false,
+						configure: async () => ({ wranglerConfig: {} }),
+						isConfigured: () => false,
+					},
+					workerName: "my-worker",
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The detected framework ("Some Unsupported Framework") cannot be automatically configured.]`
 			);
 		});
 	});

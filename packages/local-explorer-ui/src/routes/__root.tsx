@@ -4,9 +4,12 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { workersKvNamespaceListNamespaces } from "../api";
+import {
+	cloudflareD1ListDatabases,
+	workersKvNamespaceListNamespaces,
+} from "../api";
 import { Sidebar } from "../components/Sidebar";
-import type { WorkersKvNamespace } from "../api";
+import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 
 export const Route = createRootRoute({
 	component: RootLayout,
@@ -14,37 +17,53 @@ export const Route = createRootRoute({
 
 function RootLayout() {
 	const [namespaces, setNamespaces] = useState<WorkersKvNamespace[]>([]);
+	const [databases, setDatabases] = useState<D1DatabaseResponse[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const [kvError, setKvError] = useState<string | null>(null);
+	const [d1Error, setD1Error] = useState<string | null>(null);
 
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 
 	useEffect(() => {
-		async function fetchNamespaces() {
-			try {
-				const response = await workersKvNamespaceListNamespaces();
-				setNamespaces(response.data?.result ?? []);
-			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to fetch namespaces"
+		async function fetchData() {
+			const [kvResponse, d1Response] = await Promise.allSettled([
+				workersKvNamespaceListNamespaces(),
+				cloudflareD1ListDatabases(),
+			]);
+
+			if (kvResponse.status === "fulfilled") {
+				setNamespaces(kvResponse.value.data?.result ?? []);
+			} else {
+				setKvError(
+					`KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : JSON.stringify(kvResponse.reason)}`
 				);
-			} finally {
-				setLoading(false);
 			}
+
+			if (d1Response.status === "fulfilled") {
+				setDatabases(d1Response.value.data?.result ?? []);
+			} else {
+				setD1Error(
+					`D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : JSON.stringify(d1Response.reason)}`
+				);
+			}
+
+			setLoading(false);
 		}
-		void fetchNamespaces();
+		void fetchData();
 	}, []);
 
 	return (
 		<div className="flex min-h-screen">
 			<Sidebar
-				namespaces={namespaces}
-				loading={loading}
-				error={error}
 				currentPath={currentPath}
+				d1Error={d1Error}
+				databases={databases}
+				kvError={kvError}
+				loading={loading}
+				namespaces={namespaces}
 			/>
-			<main className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
+			<main className="flex-1 overflow-y-auto flex flex-col">
 				<Outlet />
 			</main>
 		</div>

@@ -1,10 +1,12 @@
 import { describe, it, vi } from "vitest";
 import { displayAutoConfigDetails } from "../../../autoconfig/details";
 import { Static } from "../../../autoconfig/frameworks/static";
+import { NpmPackageManager } from "../../../package-manager";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { Framework } from "../../../autoconfig/frameworks";
 
-vi.mock("../../../package-manager", () => ({
+vi.mock("../../../package-manager", async (importOriginal) => ({
+	...(await importOriginal()),
 	getPackageManager() {
 		return {
 			type: "npm",
@@ -25,6 +27,7 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			workerName: "my-project",
 			framework: new Static({ id: "static", name: "Static" }),
 			outputDir: "./public",
+			packageManager: NpmPackageManager,
 		});
 		expect(std.out).toMatchInlineSnapshot(
 			`
@@ -57,6 +60,7 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			},
 			buildCommand: "astro build",
 			outputDir: "dist",
+			packageManager: NpmPackageManager,
 		});
 		expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -78,6 +82,7 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			workerName: "my-site",
 			outputDir: "dist",
 			framework: new Static({ id: "static", name: "Static" }),
+			packageManager: NpmPackageManager,
 		});
 		expect(std.out).toMatchInlineSnapshot(`
 			"

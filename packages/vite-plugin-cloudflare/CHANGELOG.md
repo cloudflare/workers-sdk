@@ -1,5 +1,57 @@
 # @cloudflare/vite-plugin
 
+## 1.25.0
+
+### Minor Changes
+
+- [#12535](https://github.com/cloudflare/workers-sdk/pull/12535) [`bd06ad2`](https://github.com/cloudflare/workers-sdk/commit/bd06ad212a1d43980803f7741fe8de83aef55ffd) Thanks [@edmundhung](https://github.com/edmundhung)! - Set `{ serverHandler: false }` automatically when using `@vitejs/plugin-rsc`
+
+  By default, `@vitejs/plugin-rsc` adds dev and preview server middleware that imports the RSC entry in Node.js. This fails with `cloudflare:*` imports (`ERR_UNSUPPORTED_ESM_URL_SCHEME`) and is unnecessary since the Cloudflare plugin handles requests via workerd. Users no longer need to pass `rsc({ serverHandler: false })` manually.
+
+### Patch Changes
+
+- [#12521](https://github.com/cloudflare/workers-sdk/pull/12521) [`a8183db`](https://github.com/cloudflare/workers-sdk/commit/a8183dbd7a335b1880b37737fd5c3d4e39a42471) Thanks [@edmundhung](https://github.com/edmundhung)! - Avoid `The WebSocket is undefined` error when frameworks create a child Vite server during build
+
+  React Router creates a child Vite dev server during production builds to compile route files. This could previously cause an intermittent `The WebSocket is undefined` assertion error.
+
+- Updated dependencies [[`ad817dd`](https://github.com/cloudflare/workers-sdk/commit/ad817ddc475bac3d5e87108eacddb611a9f822f2), [`b900c5a`](https://github.com/cloudflare/workers-sdk/commit/b900c5adc18c12d500e0fb8c58c2295843518695), [`f7fa326`](https://github.com/cloudflare/workers-sdk/commit/f7fa3269c14bf50c8129de9d38276cd02189a39a), [`734792a`](https://github.com/cloudflare/workers-sdk/commit/734792ac064c323746eba5d72323287c2f226894), [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41), [`cc5ac22`](https://github.com/cloudflare/workers-sdk/commit/cc5ac22c1d5ea90ea07850a22d0aa515e3d5e517), [`62a8d48`](https://github.com/cloudflare/workers-sdk/commit/62a8d485bd16084bb7db58bdd16405a8b60c1835), [`84252b7`](https://github.com/cloudflare/workers-sdk/commit/84252b7ae2185e20dd8c5254e53dbcfed30cae64), [`e5efa5d`](https://github.com/cloudflare/workers-sdk/commit/e5efa5d00dc68c2862f0d4c931784f32ac29e84c), [`d06ad09`](https://github.com/cloudflare/workers-sdk/commit/d06ad0967a2636a9f7e43babf5209bcec1af81d5), [`10a1c4a`](https://github.com/cloudflare/workers-sdk/commit/10a1c4a9a92f57806e9314ba3ba558c9a0fdd5e2), [`be9745f`](https://github.com/cloudflare/workers-sdk/commit/be9745fc2a663f6da2addf2f784392a21dab9475), [`d7b492c`](https://github.com/cloudflare/workers-sdk/commit/d7b492c37838929d37901c628ecbdd718f5a1258), [`122791d`](https://github.com/cloudflare/workers-sdk/commit/122791dbc721a7f237dad89c7b5649bb8437fde0), [`8809411`](https://github.com/cloudflare/workers-sdk/commit/880941158c82e4d907538bfdede06ed0ce5d772d), [`1a9eddd`](https://github.com/cloudflare/workers-sdk/commit/1a9eddd1fc14c9f449dab05d000ef395d34fe096), [`41e18aa`](https://github.com/cloudflare/workers-sdk/commit/41e18aa51e14061a51cb2fae1fada1ea560838aa)]:
+  - wrangler@4.65.0
+  - miniflare@4.20260212.0
+
+## 1.24.0
+
+### Minor Changes
+
+- [#12446](https://github.com/cloudflare/workers-sdk/pull/12446) [`1231a2e`](https://github.com/cloudflare/workers-sdk/commit/1231a2ee8bf2d80dac419ecb6db0e053820748ea) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Infer `upload_source_maps` setting in the output Worker config from the `build.sourcemap` setting in the Vite config.
+
+  If [build.sourcemap](https://vite.dev/config/build-options#build-sourcemap) is enabled for a Worker environment, as in the following example, `"upload_source_maps": true` will now automatically be added to the output `wrangler.json` file.
+  This removes the need to additionally specify the `upload_source_maps` property in the input Worker config.
+
+  ```ts
+  export default defineConfig({
+  	environments: {
+  		my_worker: {
+  			build: {
+  				sourcemap: true,
+  			},
+  		},
+  	},
+  	plugins: [cloudflare()],
+  });
+  ```
+
+  Note that if `upload_source_maps` is set in the input Worker config, this value will take precedence.
+  This makes it possible to generate source maps without uploading them.
+
+### Patch Changes
+
+- [#12393](https://github.com/cloudflare/workers-sdk/pull/12393) [`fd8b3e5`](https://github.com/cloudflare/workers-sdk/commit/fd8b3e58a190b8f611ca1469d3aa092f2911a85d) Thanks [@BlankParticle](https://github.com/BlankParticle)! - Provide proxy shared secret to Miniflare so that the Worker receives the original Host header
+
+- Updated dependencies [[`5d56487`](https://github.com/cloudflare/workers-sdk/commit/5d564871108884b2c4d7568a9b40f8b3e2257124), [`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9), [`2acb277`](https://github.com/cloudflare/workers-sdk/commit/2acb27794b3c76432cf2227b6b6bf0fcdb1e1093), [`c8dda16`](https://github.com/cloudflare/workers-sdk/commit/c8dda162976720d02089579a50c6efdc5f1d8ced), [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27), [`8ba1d11`](https://github.com/cloudflare/workers-sdk/commit/8ba1d117064dea630c2802db1a70ed563855b4eb), [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697), [`d636d6a`](https://github.com/cloudflare/workers-sdk/commit/d636d6a2e419833a4a376a6b002da6dd5a85d369), [`bf8df0c`](https://github.com/cloudflare/workers-sdk/commit/bf8df0c1811ac82bec411a7e6aef1e431937c243), [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27), [`988dea9`](https://github.com/cloudflare/workers-sdk/commit/988dea906454ddb7df5f79976af0536c39008963), [`1f1c3ce`](https://github.com/cloudflare/workers-sdk/commit/1f1c3cef7e6871e9612cf7788ce9a800d9ef94e2), [`62635a0`](https://github.com/cloudflare/workers-sdk/commit/62635a0fd83a9466cc833a010dd141917f10dbd5), [`fd902aa`](https://github.com/cloudflare/workers-sdk/commit/fd902aa16c5b0b29d942522c5afb24431a023547), [`312b5eb`](https://github.com/cloudflare/workers-sdk/commit/312b5ebd3866d8280f61bbe2af3bb1002f6cf461), [`961705c`](https://github.com/cloudflare/workers-sdk/commit/961705c0d151785c645987fcdf5be8ed4b23381f), [`355c6da`](https://github.com/cloudflare/workers-sdk/commit/355c6da3bcf99c3ccd153f03bdfcd61dded00379), [`bfd17cd`](https://github.com/cloudflare/workers-sdk/commit/bfd17cd7aa6aee9a5d4e5c797888eed148b6f069), [`3388c84`](https://github.com/cloudflare/workers-sdk/commit/3388c847b8be1e2831ca0b1cdfcff676d04d9c83), [`ce9dc01`](https://github.com/cloudflare/workers-sdk/commit/ce9dc01a4696e28bd9f3a900dd2f5a7783252906), [`21ac7ab`](https://github.com/cloudflare/workers-sdk/commit/21ac7ab7403ed87d47be2cd3c58e6655168eaa6f), [`937425c`](https://github.com/cloudflare/workers-sdk/commit/937425cdfe80c0c7f16b5ad47ba905a98fdb5f2e)]:
+  - wrangler@4.64.0
+  - miniflare@4.20260210.0
+  - @cloudflare/unenv-preset@2.12.1
+
 ## 1.23.1
 
 ### Patch Changes

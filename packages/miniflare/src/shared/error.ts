@@ -58,3 +58,9 @@ export type MiniflareCoreErrorCode =
 	| KeyTypes<typeof SYSTEM_ERROR_CODES>;
 
 export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}
+
+export const isFileNotFoundError = (e: unknown): boolean => {
+	return (
+		typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT"
+	);
+};

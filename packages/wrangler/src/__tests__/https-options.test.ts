@@ -1,6 +1,5 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
-import { describe, it, vi } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import { validateHttpsOptions } from "../https-options";
 import { runInTempDir } from "./helpers/run-in-tmp";
 

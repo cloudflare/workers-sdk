@@ -1,5 +1,20 @@
 # @cloudflare/workers-shared
 
+## 0.19.0
+
+### Minor Changes
+
+- [#12467](https://github.com/cloudflare/workers-sdk/pull/12467) [`7036310`](https://github.com/cloudflare/workers-sdk/commit/7036310b2d30a0ef794f6bd1a77e92c7ca0774fb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for inline comments in `_redirects` files
+
+  You can now add inline comments to redirect rules using the `#` character:
+
+  ```
+  /old-page /new-page 301 # Moved during site redesign
+  /blog/* /articles/:splat # Blog URL migration
+  ```
+
+  This improves the maintainability of `_redirects` files by allowing documentation of complex redirect rules directly alongside the rules themselves. Full-line comments (lines starting with `#`) continue to work as before. URL fragments (e.g., `/page#section`) are preserved correctly.
+
 ## 0.18.11
 
 ### Patch Changes

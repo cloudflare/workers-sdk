@@ -12,6 +12,7 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
@@ -75,6 +76,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 		},
 		configPlugin(ctx),
+		rscPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),

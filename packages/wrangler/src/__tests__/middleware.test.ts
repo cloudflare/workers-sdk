@@ -873,7 +873,7 @@ describe("middleware", () => {
 					.trim()
 			).toMatchInlineSnapshot(`
 				"var __defProp = Object.defineProperty;
-				var __name = (target, value) => __defProp(target, \\"name\\", { value, configurable: true });
+				var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 				var __export = (target, all) => {
 				  for (var name in all)
 				    __defProp(target, name, { get: all[name], enumerable: true });
@@ -892,17 +892,17 @@ describe("middleware", () => {
 				};
 				var DurableObjectExample = class {
 				  static {
-				    __name(this, \\"DurableObjectExample\\");
+				    __name(this, "DurableObjectExample");
 				  }
 				  constructor(state, env) {
 				  }
 				  async fetch(request) {
-				    return new Response(\\"Hello World\\");
+				    return new Response("Hello World");
 				  }
 				};
 
 
-				var MIDDLEWARE_TEST_INJECT = \\"__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__\\";
+				var MIDDLEWARE_TEST_INJECT = "__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__";
 				var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
 				  ...src_exports[MIDDLEWARE_TEST_INJECT] ?? []
 				];
@@ -913,7 +913,7 @@ describe("middleware", () => {
 				function __facade_register__(...args) {
 				  __facade_middleware__.push(...args.flat());
 				}
-				__name(__facade_register__, \\"__facade_register__\\");
+				__name(__facade_register__, "__facade_register__");
 				function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
 				  const [head, ...tail] = middlewareChain;
 				  const middlewareCtx = {
@@ -924,14 +924,14 @@ describe("middleware", () => {
 				  };
 				  return head(request, env, ctx, middlewareCtx);
 				}
-				__name(__facade_invokeChain__, \\"__facade_invokeChain__\\");
+				__name(__facade_invokeChain__, "__facade_invokeChain__");
 				function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 				  return __facade_invokeChain__(request, env, ctx, dispatch, [
 				    ...__facade_middleware__,
 				    finalMiddleware
 				  ]);
 				}
-				__name(__facade_invoke__, \\"__facade_invoke__\\");
+				__name(__facade_invoke__, "__facade_invoke__");
 
 
 				var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
@@ -941,12 +941,12 @@ describe("middleware", () => {
 				    this.#noRetry = noRetry;
 				  }
 				  static {
-				    __name(this, \\"__Facade_ScheduledController__\\");
+				    __name(this, "__Facade_ScheduledController__");
 				  }
 				  #noRetry;
 				  noRetry() {
 				    if (!(this instanceof ___Facade_ScheduledController__)) {
-				      throw new TypeError(\\"Illegal invocation\\");
+				      throw new TypeError("Illegal invocation");
 				    }
 				    this.#noRetry();
 				  }
@@ -960,29 +960,29 @@ describe("middleware", () => {
 				  }
 				  const fetchDispatcher = /* @__PURE__ */ __name(function(request, env, ctx) {
 				    if (worker.fetch === void 0) {
-				      throw new Error(\\"Handler does not export a fetch() function.\\");
+				      throw new Error("Handler does not export a fetch() function.");
 				    }
 				    return worker.fetch(request, env, ctx);
-				  }, \\"fetchDispatcher\\");
+				  }, "fetchDispatcher");
 				  return {
 				    ...worker,
 				    fetch(request, env, ctx) {
 				      const dispatcher = /* @__PURE__ */ __name(function(type, init) {
-				        if (type === \\"scheduled\\" && worker.scheduled !== void 0) {
+				        if (type === "scheduled" && worker.scheduled !== void 0) {
 				          const controller = new __Facade_ScheduledController__(
 				            Date.now(),
-				            init.cron ?? \\"\\",
+				            init.cron ?? "",
 				            () => {
 				            }
 				          );
 				          return worker.scheduled(controller, env, ctx);
 				        }
-				      }, \\"dispatcher\\");
+				      }, "dispatcher");
 				      return __facade_invoke__(request, env, ctx, dispatcher, fetchDispatcher);
 				    }
 				  };
 				}
-				__name(wrapExportedHandler, \\"wrapExportedHandler\\");
+				__name(wrapExportedHandler, "wrapExportedHandler");
 				function wrapWorkerEntrypoint(klass) {
 				  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
 				    return klass;
@@ -995,21 +995,21 @@ describe("middleware", () => {
 				      this.env = env;
 				      this.ctx = ctx;
 				      if (super.fetch === void 0) {
-				        throw new Error(\\"Entrypoint class does not define a fetch() function.\\");
+				        throw new Error("Entrypoint class does not define a fetch() function.");
 				      }
 				      return super.fetch(request);
-				    }, \\"#fetchDispatcher\\");
+				    }, "#fetchDispatcher");
 				    #dispatcher = /* @__PURE__ */ __name((type, init) => {
-				      if (type === \\"scheduled\\" && super.scheduled !== void 0) {
+				      if (type === "scheduled" && super.scheduled !== void 0) {
 				        const controller = new __Facade_ScheduledController__(
 				          Date.now(),
-				          init.cron ?? \\"\\",
+				          init.cron ?? "",
 				          () => {
 				          }
 				        );
 				        return super.scheduled(controller);
 				      }
-				    }, \\"#dispatcher\\");
+				    }, "#dispatcher");
 				    fetch(request) {
 				      return __facade_invoke__(
 				        request,
@@ -1021,11 +1021,11 @@ describe("middleware", () => {
 				    }
 				  };
 				}
-				__name(wrapWorkerEntrypoint, \\"wrapWorkerEntrypoint\\");
+				__name(wrapWorkerEntrypoint, "wrapWorkerEntrypoint");
 				var WRAPPED_ENTRY;
-				if (typeof middleware_insertion_facade_default === \\"object\\") {
+				if (typeof middleware_insertion_facade_default === "object") {
 				  WRAPPED_ENTRY = wrapExportedHandler(middleware_insertion_facade_default);
-				} else if (typeof middleware_insertion_facade_default === \\"function\\") {
+				} else if (typeof middleware_insertion_facade_default === "function") {
 				  WRAPPED_ENTRY = wrapWorkerEntrypoint(middleware_insertion_facade_default);
 				}
 				var middleware_loader_entry_default = WRAPPED_ENTRY;

@@ -1,5 +1,4 @@
 import semiver from "semiver";
-import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
@@ -10,6 +9,7 @@ export class NextJs extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const firstNextVersionSupportedByOpenNext = "14.2.35";
 		const installedNextVersion = getInstalledPackageVersion(
@@ -26,7 +26,7 @@ export class NextJs extends Framework {
 			);
 		}
 
-		const { npx, dlx } = await getPackageManager();
+		const { npx, dlx } = packageManager;
 
 		if (!dryRun) {
 			await runCommand(
@@ -52,9 +52,9 @@ export class NextJs extends Framework {
 				preview: "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 			},
-			buildCommandOverride: `${npx} @opennextjs/cloudflare build`,
-			deployCommandOverride: `${npx} @opennextjs/cloudflare deploy`,
-			versionCommandOverride: `${npx} @opennextjs/cloudflare upload`,
+			buildCommandOverride: `${npx} opennextjs-cloudflare build`,
+			deployCommandOverride: `${npx} opennextjs-cloudflare deploy`,
+			versionCommandOverride: `${npx} opennextjs-cloudflare upload`,
 		};
 	}
 

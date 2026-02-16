@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.10.0
+
+### Minor Changes
+
+- [#12461](https://github.com/cloudflare/workers-sdk/pull/12461) [`8809411`](https://github.com/cloudflare/workers-sdk/commit/880941158c82e4d907538bfdede06ed0ce5d772d) Thanks [@penalosa](https://github.com/penalosa)! - Support `type: inherit` bindings when using startWorker()
+
+  This is an internal binding type that should not be used by external users of the API
+
 ## 0.9.1
 
 ### Patch Changes
