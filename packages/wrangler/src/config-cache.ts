@@ -6,10 +6,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import * as path from "node:path";
-import {
-	getWranglerCacheDirFromEnv,
-	getWranglerHomeFromEnv,
-} from "@cloudflare/workers-utils";
+import { getWranglerCacheDirFromEnv } from "@cloudflare/workers-utils";
 import { findUpSync } from "find-up";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
@@ -17,10 +14,20 @@ import { logger } from "./logger";
 let cacheMessageShown = false;
 
 /**
- * Detects if the project is using Yarn PnP by checking for .pnp.cjs or .pnp.js
+ * Cached result of Yarn PnP detection.
+ * Undefined means not yet checked.
+ */
+let __isYarnPnP: boolean | undefined;
+
+/**
+ * Detects if the project is using Yarn PnP by checking for .pnp.cjs or .pnp.js.
+ * Result is cached for performance.
  */
 function isYarnPnP(): boolean {
-	return existsSync(".pnp.cjs") || existsSync(".pnp.js");
+	if (__isYarnPnP === undefined) {
+		__isYarnPnP = existsSync(".pnp.cjs") || existsSync(".pnp.js");
+	}
+	return __isYarnPnP;
 }
 
 let __cacheFolder: string | null | undefined;
@@ -38,10 +45,7 @@ export function getCacheFolder() {
 
 	// Priority 2: Use .wrangler/cache for Yarn PnP projects
 	if (isYarnPnP()) {
-		const wranglerHome = getWranglerHomeFromEnv();
-		__cacheFolder = wranglerHome
-			? path.join(wranglerHome, "cache")
-			: path.join(process.cwd(), ".wrangler", "cache");
+		__cacheFolder = path.join(process.cwd(), ".wrangler", "cache");
 		return __cacheFolder;
 	}
 

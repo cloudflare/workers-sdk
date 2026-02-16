@@ -14,11 +14,9 @@ describe("config cache with Yarn PnP", () => {
 	mockConsoleMethods();
 
 	const originalCacheDir = process.env.WRANGLER_CACHE_DIR;
-	const originalHome = process.env.WRANGLER_HOME;
 
 	beforeEach(() => {
 		delete process.env.WRANGLER_CACHE_DIR;
-		delete process.env.WRANGLER_HOME;
 		vi.resetModules();
 	});
 
@@ -27,11 +25,6 @@ describe("config cache with Yarn PnP", () => {
 			process.env.WRANGLER_CACHE_DIR = originalCacheDir;
 		} else {
 			delete process.env.WRANGLER_CACHE_DIR;
-		}
-		if (originalHome !== undefined) {
-			process.env.WRANGLER_HOME = originalHome;
-		} else {
-			delete process.env.WRANGLER_HOME;
 		}
 	});
 

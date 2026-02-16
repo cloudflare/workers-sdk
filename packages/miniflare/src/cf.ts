@@ -9,30 +9,46 @@ import { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 /**
+ * Cached result of Yarn PnP detection.
+ * Undefined means not yet checked.
+ */
+let __isYarnPnP: boolean | undefined;
+
+/**
+ * Detects if the project is using Yarn PnP by checking for .pnp.cjs or .pnp.js.
+ * Result is cached for performance.
+ */
+function isYarnPnP(): boolean {
+	if (__isYarnPnP === undefined) {
+		__isYarnPnP = existsSync(".pnp.cjs") || existsSync(".pnp.js");
+	}
+	return __isYarnPnP;
+}
+
+/**
  * Gets the default path for the cf.json cache file.
- * Respects WRANGLER_CACHE_DIR and WRANGLER_HOME environment variables,
+ * Respects MINIFLARE_CACHE_DIR and WRANGLER_CACHE_DIR environment variables,
  * and automatically detects Yarn PnP projects.
  */
 function getDefaultCfPath(): string {
-	// Check for WRANGLER_CACHE_DIR environment variable
+	// Priority 1: MINIFLARE_CACHE_DIR (miniflare-specific override)
+	const miniflareCacheDir = process.env.MINIFLARE_CACHE_DIR;
+	if (miniflareCacheDir) {
+		return path.resolve(miniflareCacheDir, "cf.json");
+	}
+
+	// Priority 2: WRANGLER_CACHE_DIR (shared with wrangler)
 	const wranglerCacheDir = process.env.WRANGLER_CACHE_DIR;
 	if (wranglerCacheDir) {
 		return path.resolve(wranglerCacheDir, "cf.json");
 	}
 
-	// Check for WRANGLER_HOME environment variable
-	const wranglerHome = process.env.WRANGLER_HOME;
-	if (wranglerHome) {
-		return path.resolve(wranglerHome, "cache", "cf.json");
-	}
-
-	// Check for Yarn PnP
-	const pnpExists = existsSync(".pnp.cjs") || existsSync(".pnp.js");
-	if (pnpExists) {
+	// Priority 3: Yarn PnP auto-detection - use .wrangler/cache to avoid node_modules
+	if (isYarnPnP()) {
 		return path.resolve(".wrangler", "cache", "cf.json");
 	}
 
-	// Default to node_modules/.mf
+	// Default: node_modules/.mf
 	return path.resolve("node_modules", ".mf", "cf.json");
 }
 

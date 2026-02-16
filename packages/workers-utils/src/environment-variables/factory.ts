@@ -75,8 +75,6 @@ type VariableNames =
 
 	// ## Directory Configuration
 
-	/** Custom directory for Wrangler's local files (overrides `.wrangler` directory). */
-	| "WRANGLER_HOME"
 	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
 	| "WRANGLER_CACHE_DIR"
 
