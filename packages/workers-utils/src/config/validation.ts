@@ -705,6 +705,7 @@ function normalizeAndValidateDev(
 		enable_containers = enableContainersArg ?? true,
 		container_engine,
 		generate_types = generateTypesArg ?? false,
+		expose_entrypoints,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -766,6 +767,30 @@ function normalizeAndValidateDev(
 		"boolean"
 	);
 
+	if (
+		expose_entrypoints !== undefined &&
+		expose_entrypoints !== false &&
+		expose_entrypoints !== true
+	) {
+		if (
+			typeof expose_entrypoints !== "object" ||
+			expose_entrypoints === null ||
+			Array.isArray(expose_entrypoints)
+		) {
+			diagnostics.errors.push(
+				`Expected "dev.expose_entrypoints" to be a boolean or an object, but got ${JSON.stringify(expose_entrypoints)}`
+			);
+		} else {
+			for (const [key, val] of Object.entries(expose_entrypoints)) {
+				if (typeof val !== "boolean" && typeof val !== "string") {
+					diagnostics.errors.push(
+						`Expected "dev.expose_entrypoints.${key}" to be a boolean or a string alias, but got ${JSON.stringify(val)}`
+					);
+				}
+			}
+		}
+	}
+
 	return {
 		ip,
 		port,
@@ -777,6 +802,7 @@ function normalizeAndValidateDev(
 		enable_containers,
 		container_engine,
 		generate_types,
+		expose_entrypoints: expose_entrypoints ?? false,
 	};
 }
 
