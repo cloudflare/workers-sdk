@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Ensure the `nodejs_compat` flag is always applied in autoconfig
