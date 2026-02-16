@@ -4,9 +4,20 @@ type LeaveEvent = "navigation" | "unload";
 
 interface UseLeaveGuardOptions {
 	/**
+	 * List of reactive dependencies used inside `onBeforeLeave`.
+	 * Similar to a `useCallback` dependency array.
+	 */
+	dependencies?: React.DependencyList;
+
+	/**
 	 * Enable or disable the leave guard. When false, no blocking is applied.
 	 */
 	enabled: boolean;
+
+	/**
+	 * Optional fallback message when `onBeforeLeave` returns void.
+	 */
+	fallbackMessage?: string;
 
 	/**
 	 * Handle user attempting to leave.
@@ -16,17 +27,6 @@ interface UseLeaveGuardOptions {
 	 * - Return `false` or nothing to allow the leave.
 	 */
 	onBeforeLeave: (event: LeaveEvent) => string | boolean | void;
-
-	/**
-	 * List of reactive dependencies used inside `onBeforeLeave`.
-	 * Similar to a `useCallback` dependency array.
-	 */
-	dependencies?: React.DependencyList;
-
-	/**
-	 * Optional fallback message when `onBeforeLeave` returns void.
-	 */
-	fallbackMessage?: string;
 }
 
 /**
@@ -37,11 +37,11 @@ interface UseLeaveGuardOptions {
  * In-app navigation blocking requires integration with your router.
  */
 export function useLeaveGuard({
-	enabled,
-	onBeforeLeave,
-	fallbackMessage = "You have unsaved changes. Are you sure you want to leave?",
 	dependencies = [],
-}: UseLeaveGuardOptions) {
+	enabled,
+	fallbackMessage = "You have unsaved changes. Are you sure you want to leave?",
+	onBeforeLeave,
+}: UseLeaveGuardOptions): void {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const handlerCallback = useCallback(onBeforeLeave, dependencies);
 
@@ -57,7 +57,10 @@ export function useLeaveGuard({
 			if (typeof result === "string") {
 				e.preventDefault();
 				e.returnValue = result;
-			} else if (result === true || result === undefined) {
+				return;
+			}
+
+			if (result === true || result === undefined) {
 				e.preventDefault();
 				e.returnValue = fallbackMessage;
 			}
