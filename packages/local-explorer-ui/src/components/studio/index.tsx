@@ -11,7 +11,7 @@ import type {
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
-import type { StudioTabDefinitionMetadata } from "./TabRegister";
+import type { StudioTabDefinitionMetadata, TabDefinition } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab";
 
 /**
@@ -250,7 +250,10 @@ export function Studio({
 				}
 
 				// Getting tab setting
-				const tabTypeDefinition = StudioTabDefinitionList[data.type];
+				// TODO: Remove assertion once tab definitions are registered
+				const tabTypeDefinition = StudioTabDefinitionList[
+					data.type
+				] as TabDefinition<StudioTabDefinitionMetadata>;
 				const newIdentifier = tabTypeDefinition.makeIdentifier(data);
 				const newKey = window.crypto.randomUUID();
 

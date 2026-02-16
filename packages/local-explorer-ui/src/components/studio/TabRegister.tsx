@@ -11,7 +11,7 @@ const RegisteredTabDefinition = [
 // -----------------------------
 // Core tab definition interface
 // -----------------------------
-interface TabDefinition<T extends { type: string }> {
+export interface TabDefinition<T extends { type: string }> {
 	icon: Icon;
 	makeComponent: (data: T) => ReactElement;
 	makeIdentifier: (data: T) => string;
