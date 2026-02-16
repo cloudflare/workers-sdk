@@ -383,3 +383,12 @@ export const getCfFetchEnabledFromEnv = getBooleanEnvironmentVariableFactory({
 export const getCfFetchPathFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_CF_FETCH_PATH",
 });
+
+/**
+ * `WRANGLER_CACHE_DIR` specifies a custom directory for Wrangler's cache files.
+ * This overrides the default `node_modules/.cache/wrangler` location.
+ * Useful for Yarn PnP or projects without node_modules.
+ */
+export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CACHE_DIR",
+});
