@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { beforeEach, describe, it } from "vitest";
 import {
@@ -17,7 +18,26 @@ describe("vite-config utils", () => {
 	});
 
 	describe("checkIfViteConfigUsesCloudflarePlugin", () => {
-		it("should handle vite config with function-based defineConfig", async ({
+		it("should detect cloudflare plugin in function-based defineConfig", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+import { cloudflare } from '@cloudflare/vite-plugin';
+
+export default defineConfig(() => ({
+  plugins: [cloudflare()]
+}));
+`
+			);
+
+			const result = checkIfViteConfigUsesCloudflarePlugin(".");
+			expect(result).toBe(true);
+		});
+
+		it("should return false for function-based defineConfig without cloudflare plugin", async ({
 			expect,
 		}) => {
 			await writeFile(
@@ -33,7 +53,6 @@ export default defineConfig(() => ({
 
 			const result = checkIfViteConfigUsesCloudflarePlugin(".");
 			expect(result).toBe(false);
-			expect(std.debug).toContain("Vite config uses a non-object expression");
 		});
 
 		it("should handle vite config without plugins array", async ({
@@ -76,7 +95,7 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
-		it("should throw UserError for function-based defineConfig", async ({
+		it("should successfully transform function-based defineConfig with arrow expression body", async ({
 			expect,
 		}) => {
 			await writeFile(
@@ -90,9 +109,142 @@ export default defineConfig(() => ({
 `
 			);
 
-			expect(() => transformViteConfig(".")).toThrowError(
-				/Cannot modify Vite config: expected an object literal/
+			expect(() => transformViteConfig(".")).not.toThrow();
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result).toContain(
+				'import { cloudflare } from "@cloudflare/vite-plugin"'
 			);
+			expect(result).toContain("cloudflare()");
+		});
+
+		it("should successfully transform function-based defineConfig with destructured params", async ({
+			expect,
+		}) => {
+			// This is the exact pattern from the React Router node-postgres template
+			await writeFile(
+				"vite.config.ts",
+				`
+import { reactRouter } from "@react-router/dev/vite";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig(({ isSsrBuild }) => ({
+  build: {
+    rollupOptions: isSsrBuild
+      ? {
+          input: "./server/app.ts",
+        }
+      : undefined,
+  },
+  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+}));
+`
+			);
+
+			expect(() => transformViteConfig(".")).not.toThrow();
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result).toContain(
+				'import { cloudflare } from "@cloudflare/vite-plugin"'
+			);
+			expect(result).toContain("cloudflare()");
+			// The existing plugins should be preserved
+			expect(result).toContain("tailwindcss()");
+			expect(result).toContain("reactRouter()");
+			expect(result).toContain("tsconfigPaths()");
+			// The function structure should be preserved
+			expect(result).toContain("isSsrBuild");
+		});
+
+		it("should successfully transform function-based defineConfig with block body", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+
+export default defineConfig(() => {
+  return {
+    plugins: []
+  };
+});
+`
+			);
+
+			expect(() => transformViteConfig(".")).not.toThrow();
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result).toContain(
+				'import { cloudflare } from "@cloudflare/vite-plugin"'
+			);
+			expect(result).toContain("cloudflare()");
+		});
+
+		it("should successfully transform function expression defineConfig", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+
+export default defineConfig(function() {
+  return {
+    plugins: []
+  };
+});
+`
+			);
+
+			expect(() => transformViteConfig(".")).not.toThrow();
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result).toContain(
+				'import { cloudflare } from "@cloudflare/vite-plugin"'
+			);
+			expect(result).toContain("cloudflare()");
+		});
+
+		it("should pass viteEnvironmentName option with function-based config", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+
+export default defineConfig(() => ({
+  plugins: []
+}));
+`
+			);
+
+			expect(() =>
+				transformViteConfig(".", { viteEnvironmentName: "ssr" })
+			).not.toThrow();
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result).toContain("viteEnvironment");
+			expect(result).toContain('"ssr"');
+		});
+
+		it("should remove incompatible plugins from function-based config", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+
+export default defineConfig(() => ({
+  plugins: [nitro(), someOther()]
+}));
+`
+			);
+
+			expect(() => transformViteConfig(".")).not.toThrow();
+			const result = readFileSync("vite.config.ts", "utf-8");
+			expect(result).not.toContain("nitro()");
+			expect(result).toContain("someOther()");
+			expect(result).toContain("cloudflare()");
 		});
 
 		it("should throw UserError when plugins array is missing", async ({
@@ -106,6 +258,25 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   server: { port: 3000 }
 });
+`
+			);
+
+			expect(() => transformViteConfig(".")).toThrowError(
+				/Cannot modify Vite config: could not find a valid plugins array/
+			);
+		});
+
+		it("should throw UserError when plugins array is missing in function-based config", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`
+import { defineConfig } from 'vite';
+
+export default defineConfig(() => ({
+  server: { port: 3000 }
+}));
 `
 			);
 
