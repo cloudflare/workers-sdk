@@ -47,6 +47,12 @@ export const allKnownFrameworks = [
 	{ id: "cloudflare-pages", name: "Cloudflare Pages", class: CloudflarePages },
 ] as const satisfies FrameworkInfo[];
 
+export type KnownFrameworkId = (typeof allKnownFrameworks)[number]["id"];
+
+export const allKnownFrameworksIds = new Set(
+	allKnownFrameworks.map(({ id }) => id)
+);
+
 export function getFramework(frameworkId?: FrameworkInfo["id"]): Framework {
 	const targetedFramework = allKnownFrameworks.find(
 		(framework) => framework.id === frameworkId

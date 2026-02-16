@@ -8,13 +8,16 @@ import {
 	getCIOverrideName,
 	parsePackageJSON,
 	readFileSync,
+	UserError,
 } from "@cloudflare/workers-utils";
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import dedent from "ts-dedent";
 import { getCacheFolder } from "../config-cache";
 import { getErrorType } from "../core/handle-errors";
 import { confirm, prompt, select } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import {
@@ -24,17 +27,23 @@ import {
 	YarnPackageManager,
 } from "../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../pages/constants";
-import { allKnownFrameworks, getFramework } from "./frameworks/get-framework";
+import {
+	allKnownFrameworks,
+	allKnownFrameworksIds,
+	getFramework,
+} from "./frameworks/get-framework";
 import {
 	getAutoConfigId,
 	getAutoConfigTriggerCommand,
 } from "./telemetry-utils";
 import type { PackageManager } from "../package-manager";
+import type { KnownFrameworkId } from "./frameworks/get-framework";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 } from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
+import type { Settings } from "@netlify/build-info";
 
 /**
  * Converts the package manager detected by @netlify/build-info to our PackageManager type.
@@ -77,14 +86,29 @@ export function assertNonConfigured(
 	);
 }
 
-class MultipleFrameworksError extends FatalError {
+class MultipleFrameworksCIError extends FatalError {
 	constructor(frameworks: string[]) {
 		super(
-			`Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(", ")}`,
+			dedent`Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(", ")}.
+
+				To fix this issue either:
+				  - check your project's configuration to make sure that the target framework
+				    is the only configured one and try again
+				  - run \`wrangler setup\` locally to get an interactive user experience where
+				    you can specify what framework you want to target
+
+			`,
 			1,
 			{ telemetryMessage: true }
 		);
 	}
+}
+
+function throwMultipleFrameworksNonInteractiveError(
+	settings: Settings[]
+): never {
+	// assert(isNonInteractiveOrCI());
+	throw new MultipleFrameworksCIError(settings.map((b) => b.name));
 }
 
 async function hasIndexHtml(dir: string): Promise<boolean> {
@@ -185,6 +209,7 @@ async function detectFramework(
 	const fs = new NodeFS();
 
 	fs.logger = logger;
+
 	const project = new Project(fs, projectPath, projectPath)
 		.setEnvironment(process.env)
 		.setNodeVersion(process.version)
@@ -194,16 +219,17 @@ async function detectFramework(
 
 	const buildSettings = await project.getBuildSettings();
 
-	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
-	if (buildSettings && buildSettings?.length > 1) {
-		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
+	if (project.workspace?.isRoot) {
+		throw new UserError(
+			"The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the applications in the workspace and try again."
+		);
 	}
+
+	const detectedFramework = findDetectedFramework(buildSettings);
 
 	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
 	const packageManager = convertDetectedPackageManager(project.packageManager);
-
-	const detectedFramework: DetectedFramework | undefined = buildSettings[0];
 
 	if (await isPagesProject(projectPath, wranglerConfig, detectedFramework)) {
 		return {
@@ -218,6 +244,83 @@ async function detectFramework(
 	}
 
 	return { detectedFramework, packageManager };
+}
+
+/**
+ * Selects the most appropriate framework from a list of detected framework settings.
+ *
+ * When there is a good level of confidence that the selected framework is correct or
+ * the process is running locally (where the user can choose a different framework or
+ * abort the process) the framework is returned. If there is no such confidence and the
+ * process is running in non interactive mode (where the user doesn't have the option to
+ * change the detected framework) an error is instead thrown.
+ *
+ * @param settings The array of framework settings
+ * @returns The selected framework settings, or `undefined` if none provided
+ * @throws {MultipleFrameworksCIError} In CI environments when multiple known frameworks
+ *         are detected and no clear winner can be determined
+ */
+function findDetectedFramework(
+	settings: Settings[]
+): DetectedFramework | undefined {
+	if (settings.length === 0) {
+		return undefined;
+	}
+
+	if (settings.length === 1) {
+		return settings[0];
+	}
+
+	const settingsForOnlyKnownFrameworks = settings.filter(({ framework }) =>
+		allKnownFrameworksIds.has(framework.id as KnownFrameworkId)
+	);
+
+	if (settingsForOnlyKnownFrameworks.length === 0) {
+		if (isNonInteractiveOrCI()) {
+			// If we're in a non interactive session (e.g. CI) let's throw to be on the safe side
+			throwMultipleFrameworksNonInteractiveError(settings);
+		}
+		// Locally we can just return the first one since the user can anyways choose a different
+		// framework or abort the process anyways
+		return settings[0];
+	}
+
+	if (settingsForOnlyKnownFrameworks.length === 1) {
+		// If there is a single known framework it's quite safe to assume that that's the
+		// one we care about
+		return settingsForOnlyKnownFrameworks[0];
+	}
+
+	if (settingsForOnlyKnownFrameworks.length === 2) {
+		const frameworkIdsFound = new Set<KnownFrameworkId>(
+			settings.map(({ framework }) => framework.id as KnownFrameworkId)
+		);
+
+		const viteId = "vite";
+
+		if (frameworkIdsFound.has(viteId)) {
+			const knownNonViteSettings = settingsForOnlyKnownFrameworks.find(
+				({ framework }) => framework.id !== viteId
+			);
+
+			// Here knownNonViteSettings should always be defined, it only could be undefined if the detected frameworks are both Vite.
+			if (knownNonViteSettings) {
+				// If we've found a known framework and Vite, then most likely the Vite is there only either as an extra build tool
+				// or as part of a Vitest installation, so it's pretty safe to ignore it in this case
+				return knownNonViteSettings;
+			}
+		}
+	}
+
+	// If we've detected multiple frameworks, and we're in a non interactive session (e.g. CI) let's stay on the safe side and error
+	// (otherwise we just pick the first one as the user is always able to choose a different framework or terminate the process anyways)
+	if (isNonInteractiveOrCI()) {
+		throw new MultipleFrameworksCIError(
+			settingsForOnlyKnownFrameworks.map((b) => b.name)
+		);
+	}
+
+	return settingsForOnlyKnownFrameworks[0];
 }
 
 /**
