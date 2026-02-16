@@ -24,6 +24,16 @@ type Env = {
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
+	[CoreBindings.JSON_ENTRYPOINT_SUBDOMAINS]?: Record<
+		string,
+		Record<
+			string,
+			{
+				export: string;
+				type: "DurableObject" | "WorkerEntrypoint" | "WorkflowEntrypoint";
+			}
+		>
+	>;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
@@ -35,7 +45,11 @@ type Env = {
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
-		| undefined; // Won't have a `Fetcher` for every possible `string`
+		| undefined;
+} & {
+	[K in `${typeof CoreBindings.SERVICE_USER_ENTRYPOINT_PREFIX}${string}`]:
+		| Fetcher
+		| undefined;
 };
 
 const encoder = new TextEncoder();
@@ -139,13 +153,115 @@ function getUserRequest(
 	return request;
 }
 
+/**
+ * Resolves localhost entrypoint routing.
+ *
+ * - {worker}.localhost → default entrypoint (if exposed)
+ * - {alias}.{worker}.localhost → WorkerEntrypoint dispatch
+ * - 3+ subdomain levels → 404
+ *
+ * DurableObject and WorkflowEntrypoint exports return 400 with a helpful message.
+ *
+ * Returns the matched Fetcher, or undefined if the hostname has no subdomain
+ * (i.e. plain "localhost"). Throws HttpError for unmatched subdomains.
+ */
+function resolveHostnameRoute(
+	hostname: string,
+	config: NonNullable<Env[typeof CoreBindings.JSON_ENTRYPOINT_SUBDOMAINS]>,
+	env: Env
+): Fetcher | undefined {
+	const [tld, workerName, entrypointAlias, ...rest] = hostname
+		.split(".")
+		.reverse();
+
+	if (tld !== "localhost" || workerName === undefined) {
+		return undefined;
+	}
+
+	if (rest.length > 0) {
+		throw new HttpError(
+			404,
+			`Invalid subdomain: "${hostname}". ` +
+				`Use http://{worker}.localhost or http://{entrypoint}.{worker}.localhost if you want to route to a specific entrypoint`
+		);
+	}
+
+	const entrypoints = config[workerName];
+	if (entrypoints === undefined) {
+		const workerNames = Object.keys(config);
+		throw new HttpError(
+			404,
+			`Worker "${workerName}" not found. ` +
+				`Available workers: ${workerNames.join(", ")}`
+		);
+	}
+
+	if (entrypointAlias === undefined) {
+		const defaultEntry = Object.values(entrypoints).find(
+			(e) => e.export === "default"
+		);
+		if (defaultEntry === undefined) {
+			throw new HttpError(
+				404,
+				`Worker "${workerName}" does not expose its default entrypoint. ` +
+					`Available entrypoints: ${Object.keys(entrypoints).join(", ")}`
+			);
+		}
+
+		return env[
+			`${CoreBindings.SERVICE_USER_ENTRYPOINT_PREFIX}${workerName}:default`
+		];
+	}
+
+	const entry = entrypoints[entrypointAlias];
+	if (entry === undefined) {
+		throw new HttpError(
+			404,
+			`Entrypoint "${entrypointAlias}" not found on worker "${workerName}". ` +
+				`Available entrypoints: ${Object.keys(entrypoints).join(", ")}`
+		);
+	}
+
+	if (entry.type !== "WorkerEntrypoint") {
+		throw new HttpError(
+			400,
+			`"${entrypointAlias}" is a ${entry.type} and cannot be accessed via subdomain routing`
+		);
+	}
+
+	return env[
+		`${CoreBindings.SERVICE_USER_ENTRYPOINT_PREFIX}${workerName}:${entry.export}`
+	];
+}
+
 function getTargetService(request: Request, url: URL, env: Env) {
 	let service: Fetcher | undefined = env[CoreBindings.SERVICE_USER_FALLBACK];
 
+	// 1. Explicit override header takes priority
 	const override = request.headers.get(CoreHeaders.ROUTE_OVERRIDE);
 	request.headers.delete(CoreHeaders.ROUTE_OVERRIDE);
 
-	const route = override ?? matchRoutes(env[CoreBindings.JSON_ROUTES], url);
+	if (override !== null) {
+		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${override}`];
+		return service;
+	}
+
+	// 2. Hostname-based routing (opt-in)
+	// resolveHostnameRoute throws HttpError for unmatched subdomains
+	const entrypointSubdomains = env[CoreBindings.JSON_ENTRYPOINT_SUBDOMAINS];
+	if (entrypointSubdomains) {
+		const resolved = resolveHostnameRoute(
+			url.hostname,
+			entrypointSubdomains,
+			env
+		);
+		if (resolved) {
+			return resolved;
+		}
+	}
+
+	// 3. Standard route matching (existing behavior)
+	const route = matchRoutes(env[CoreBindings.JSON_ROUTES], url);
 	if (route !== null) {
 		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`];
 	}
@@ -404,7 +520,16 @@ export default <ExportedHandler<Env>>{
 			throw e;
 		}
 		const url = new URL(request.url);
-		const service = getTargetService(request, url, env);
+
+		let service: Fetcher | undefined;
+		try {
+			service = getTargetService(request, url, env);
+		} catch (e) {
+			if (e instanceof HttpError) {
+				return e.toResponse();
+			}
+			throw e;
+		}
 		if (service === undefined) {
 			return new Response("No entrypoint worker found", { status: 404 });
 		}

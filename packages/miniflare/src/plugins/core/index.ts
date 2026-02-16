@@ -165,6 +165,16 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		unsafeEntrypointSubdomains: z
+			.record(
+				z
+					.string()
+					.regex(
+						/^[a-zA-Z0-9_-]+$/,
+						"Aliases must contain only alphanumeric characters, hyphens, or underscores"
+					)
+			)
+			.optional(),
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
@@ -962,6 +972,18 @@ export const CORE_PLUGIN: Plugin<
 export interface GlobalServicesOptions {
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
+	allEntrypointSubdomains:
+		| Record<
+				string,
+				Record<
+					string,
+					{
+						export: string;
+						type: "DurableObject" | "WorkerEntrypoint" | "WorkflowEntrypoint";
+					}
+				>
+		  >
+		| undefined;
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
 	log: Log;
@@ -973,6 +995,7 @@ export interface GlobalServicesOptions {
 export function getGlobalServices({
 	sharedOptions,
 	allWorkerRoutes,
+	allEntrypointSubdomains,
 	fallbackWorkerName,
 	loopbackPort,
 	log,
@@ -1025,6 +1048,27 @@ export function getGlobalServices({
 			service: { name: getCacheServiceName(0) },
 		},
 	];
+	if (allEntrypointSubdomains) {
+		serviceEntryBindings.push({
+			name: CoreBindings.JSON_ENTRYPOINT_SUBDOMAINS,
+			json: JSON.stringify(allEntrypointSubdomains),
+		});
+		for (const [workerName, entrypoints] of Object.entries(
+			allEntrypointSubdomains
+		)) {
+			for (const entry of Object.values(entrypoints)) {
+				if (entry.type === "WorkerEntrypoint") {
+					serviceEntryBindings.push({
+						name: `${CoreBindings.SERVICE_USER_ENTRYPOINT_PREFIX}${workerName}:${entry.export}`,
+						service: {
+							name: getUserServiceName(workerName),
+							entrypoint: entry.export !== "default" ? entry.export : undefined,
+						},
+					});
+				}
+			}
+		}
+	}
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_LOCAL_EXPLORER,

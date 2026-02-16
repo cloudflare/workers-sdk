@@ -939,6 +939,314 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 	expect(rpcTarget.id).toEqual("test-id");
 });
 
+test("Miniflare: entrypointSubdomains ROUTE_OVERRIDE takes priority", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "main",
+				modules: true,
+				script: `export default { fetch() { return new Response("main"); } }`,
+			},
+			{
+				name: "my-api",
+				modules: true,
+				unsafeEntrypointSubdomains: { default: "default" },
+				script: `export default { fetch() { return new Response("my-api"); } }`,
+			},
+		],
+	});
+	useDispose(mf);
+
+	// ROUTE_OVERRIDE header should take priority over entrypoint routing.
+	// Without the override, default.my-api.localhost would route to my-api.
+	const res = await mf.dispatchFetch("http://default.my-api.localhost/", {
+		headers: { "MF-Route-Override": "main" },
+	});
+	expect(await res.text()).toBe("main");
+});
+
+test("Miniflare: entrypointSubdomains uses {entrypoint}.{worker}.localhost", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "main",
+				modules: true,
+				script: `export default { fetch() { return new Response("main"); } }`,
+			},
+			{
+				name: "api",
+				modules: true,
+				unsafeEntrypointSubdomains: {
+					default: "default",
+					UsersEntrypoint: "users",
+				},
+				script: `
+					import { WorkerEntrypoint } from "cloudflare:workers";
+					export class UsersEntrypoint extends WorkerEntrypoint {
+						fetch(request) { return new Response("api:users"); }
+					}
+					export default { fetch() { return new Response("api:default"); } }
+				`,
+			},
+			{
+				name: "admin",
+				modules: true,
+				unsafeEntrypointSubdomains: {
+					default: "default",
+				},
+				script: `export default { fetch() { return new Response("admin:default"); } }`,
+			},
+			{
+				// Worker that only exposes named entrypoints (no default)
+				name: "internal",
+				modules: true,
+				unsafeEntrypointSubdomains: {
+					HealthEntrypoint: "health",
+				},
+				script: `
+					import { WorkerEntrypoint } from "cloudflare:workers";
+					export class HealthEntrypoint extends WorkerEntrypoint {
+						fetch() { return new Response("internal:health"); }
+					}
+					export default { fetch() { return new Response("internal:default"); } }
+				`,
+			},
+		],
+	});
+	useDispose(mf);
+
+	// {entrypoint}.{worker}.localhost routes to entrypoint
+	let res = await mf.dispatchFetch("http://users.api.localhost/");
+	expect(await res.text()).toBe("api:users");
+
+	// Explicit default entrypoint mapping
+	res = await mf.dispatchFetch("http://default.api.localhost/");
+	expect(await res.text()).toBe("api:default");
+
+	res = await mf.dispatchFetch("http://default.admin.localhost/");
+	expect(await res.text()).toBe("admin:default");
+
+	// {worker}.localhost routes to default entrypoint when exposed
+	res = await mf.dispatchFetch("http://api.localhost/");
+	expect(await res.text()).toBe("api:default");
+
+	res = await mf.dispatchFetch("http://admin.localhost/");
+	expect(await res.text()).toBe("admin:default");
+
+	// {worker}.localhost returns 404 when default is not exposed
+	res = await mf.dispatchFetch("http://internal.localhost/");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toContain("does not expose its default entrypoint");
+
+	// default.{worker}.localhost returns 404 when default is not exposed
+	res = await mf.dispatchFetch("http://default.internal.localhost/");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toContain(
+		`Entrypoint "default" not found on worker "internal"`
+	);
+
+	// Named entrypoint on worker without default still works
+	res = await mf.dispatchFetch("http://health.internal.localhost/");
+	expect(await res.text()).toBe("internal:health");
+
+	// Plain localhost falls through to fallback (first worker)
+	res = await mf.dispatchFetch("http://localhost/");
+	expect(await res.text()).toBe("main");
+
+	// Unknown worker returns 404
+	res = await mf.dispatchFetch("http://users.unknown.localhost/");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toContain(`Worker "unknown" not found`);
+
+	// Unknown entrypoint on known worker returns 404
+	res = await mf.dispatchFetch("http://nonexistent.api.localhost/");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toContain(
+		`Entrypoint "nonexistent" not found on worker "api"`
+	);
+
+	// Three+ subdomain levels returns 404
+	res = await mf.dispatchFetch("http://a.b.c.localhost/");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toContain("Invalid subdomain");
+});
+
+test("Miniflare: entrypointSubdomains routes /cdn-cgi/handler/* to correct worker", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				name: "main",
+				modules: true,
+				script: `export default { fetch() { return new Response("main"); } }`,
+			},
+			{
+				name: "worker-a",
+				modules: true,
+				unsafeEntrypointSubdomains: {
+					default: "default",
+				},
+				script: `
+					let scheduledRan = false;
+					let emailReceived = false;
+					export default {
+						fetch() {
+							return Response.json({ worker: "a", scheduledRan, emailReceived });
+						},
+						scheduled() { scheduledRan = true; },
+						email() { emailReceived = true; }
+					}
+				`,
+			},
+			{
+				name: "worker-b",
+				modules: true,
+				unsafeEntrypointSubdomains: {
+					default: "default",
+				},
+				script: `
+					let scheduledRan = false;
+					let emailReceived = false;
+					export default {
+						fetch() {
+							return Response.json({ worker: "b", scheduledRan, emailReceived });
+						},
+						scheduled() { scheduledRan = true; },
+						email() { emailReceived = true; }
+					}
+				`,
+			},
+		],
+	});
+	useDispose(mf);
+
+	// Both workers start clean
+	let res = await mf.dispatchFetch("http://default.worker-a.localhost/");
+	expect(await res.json()).toEqual({
+		worker: "a",
+		scheduledRan: false,
+		emailReceived: false,
+	});
+	res = await mf.dispatchFetch("http://default.worker-b.localhost/");
+	expect(await res.json()).toEqual({
+		worker: "b",
+		scheduledRan: false,
+		emailReceived: false,
+	});
+
+	// Trigger worker-a's scheduled handler
+	res = await mf.dispatchFetch(
+		"http://default.worker-a.localhost/cdn-cgi/handler/scheduled"
+	);
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("ok");
+
+	// Only worker-a's scheduled ran
+	res = await mf.dispatchFetch("http://default.worker-a.localhost/");
+	expect(await res.json()).toEqual({
+		worker: "a",
+		scheduledRan: true,
+		emailReceived: false,
+	});
+	res = await mf.dispatchFetch("http://default.worker-b.localhost/");
+	expect(await res.json()).toEqual({
+		worker: "b",
+		scheduledRan: false,
+		emailReceived: false,
+	});
+
+	// Trigger worker-b's email handler
+	res = await mf.dispatchFetch(
+		"http://default.worker-b.localhost/cdn-cgi/handler/email?from=a@example.com&to=b@example.com",
+		{
+			method: "POST",
+			body: `From: a <a@example.com>\r\nTo: b <b@example.com>\r\nMessage-ID: <test@example.com>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain\r\n\r\ntest`,
+		}
+	);
+	expect(await res.text()).toBe("Worker successfully processed email");
+
+	// Only worker-b's email handler ran
+	res = await mf.dispatchFetch("http://default.worker-a.localhost/");
+	expect(await res.json()).toEqual({
+		worker: "a",
+		scheduledRan: true,
+		emailReceived: false,
+	});
+	res = await mf.dispatchFetch("http://default.worker-b.localhost/");
+	expect(await res.json()).toEqual({
+		worker: "b",
+		scheduledRan: false,
+		emailReceived: true,
+	});
+});
+
+test("Miniflare: entrypointSubdomains returns 400 for DurableObject and WorkflowEntrypoint", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "main",
+				modules: true,
+				script: `export default { fetch() { return new Response("main"); } }`,
+			},
+			{
+				name: "app",
+				modules: true,
+				durableObjects: { COUNTER: "Counter" },
+				workflows: {
+					WORKFLOW: {
+						name: "my-workflow",
+						className: "MyWorkflow",
+					},
+				},
+				unsafeEntrypointSubdomains: {
+					default: "default",
+					Counter: "counter",
+					MyWorkflow: "workflow",
+				},
+				script: `
+					import { DurableObject, WorkflowEntrypoint } from "cloudflare:workers";
+					export class Counter extends DurableObject {
+						async fetch(request) { return new Response("counter"); }
+					}
+					export class MyWorkflow extends WorkflowEntrypoint {
+						async run(event, step) { return "done"; }
+					}
+					export default { fetch() { return new Response("app:default"); } }
+				`,
+			},
+		],
+	});
+	useDispose(mf);
+
+	// DurableObject alias → 400
+	let res = await mf.dispatchFetch("http://counter.app.localhost/");
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain(
+		`"counter" is a DurableObject and cannot be accessed via subdomain routing`
+	);
+
+	// Workflow alias → 400
+	res = await mf.dispatchFetch("http://workflow.app.localhost/");
+	expect(res.status).toBe(400);
+	expect(await res.text()).toContain(
+		`"workflow" is a WorkflowEntrypoint and cannot be accessed via subdomain routing`
+	);
+
+	// WorkerEntrypoint default still works
+	res = await mf.dispatchFetch("http://app.localhost/");
+	expect(await res.text()).toBe("app:default");
+	res = await mf.dispatchFetch("http://default.app.localhost/");
+	expect(await res.text()).toBe("app:default");
+});
+
 test("Miniflare: tail consumer called", async ({ expect }) => {
 	const mf = new Miniflare({
 		handleRuntimeStdio: () => {},
