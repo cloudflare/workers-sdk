@@ -216,12 +216,11 @@ export function Studio({
 			(i) => i.type === "table" && i.name === initialTable
 		);
 		if (tableExists) {
-			// // eslint-disable-next-line react-hooks/set-state-in-effect -- One-time initialization to open initial table tab from URL params
-			// openStudioTab({
-			// 	schemaName: DEFAULT_SCHEMA_NAME,
-			// 	tableName: initialTable,
-			// 	type: "table",
-			// });
+			openStudioTab({
+				schemaName: DEFAULT_SCHEMA_NAME,
+				tableName: initialTable,
+				type: "table",
+			});
 			hasOpenedInitialTable.current = true;
 			return;
 		}
@@ -230,12 +229,7 @@ export function Studio({
 			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
 		);
 		hasOpenedInitialTable.current = true;
-	}, [
-		initialTable,
-		loadingSchema,
-		// openStudioTab,
-		schemas,
-	]);
+	}, [initialTable, loadingSchema, openStudioTab, schemas]);
 
 	/**
 	 * Replaces an existing studio tab with a new one built from the provided
