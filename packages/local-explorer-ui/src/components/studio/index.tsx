@@ -5,7 +5,7 @@ import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
 import { StudioTabDefinitionList } from "./TabRegister";
-import { StudioWindowTabPane } from "./WindowTabPane";
+import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
 	IStudioDriver,
 	StudioResource,
@@ -13,7 +13,7 @@ import type {
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
 import type { StudioTabDefinitionMetadata, TabDefinition } from "./TabRegister";
-import type { StudioWindowTabItem } from "./WindowTab";
+import type { StudioWindowTabItem } from "./WindowTab/types";
 
 /**
  * Default schema name for SQLite/D1 databases
