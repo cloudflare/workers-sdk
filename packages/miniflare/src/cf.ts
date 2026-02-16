@@ -9,50 +9,68 @@ import { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 /**
- * Cached result of Yarn PnP detection.
- * Undefined means not yet checked.
+ * Cached default cf.json path.
+ * Undefined means not yet determined.
  */
-let __isYarnPnP: boolean | undefined;
-
-/**
- * Detects if the project is using Yarn PnP by checking for .pnp.cjs or .pnp.js.
- * Result is cached for performance.
- */
-function isYarnPnP(): boolean {
-	if (__isYarnPnP === undefined) {
-		__isYarnPnP = existsSync(".pnp.cjs") || existsSync(".pnp.js");
-	}
-	return __isYarnPnP;
-}
+let __defaultCfPath: string | undefined;
 
 /**
  * Gets the default path for the cf.json cache file.
- * Respects MINIFLARE_CACHE_DIR and WRANGLER_CACHE_DIR environment variables,
- * and automatically detects Yarn PnP projects.
+ * Determines the cache location using the following priority:
+ * 1. MINIFLARE_CACHE_DIR environment variable (miniflare-specific override)
+ * 2. WRANGLER_CACHE_DIR environment variable (shared with wrangler)
+ * 3. Existing node_modules/.mf directory (backward compatibility)
+ * 4. Existing .wrangler/cache directory
+ * 5. node_modules/.mf if node_modules exists
+ * 6. .wrangler/cache as final fallback
+ *
+ * Result is cached for performance.
  */
 function getDefaultCfPath(): string {
+	if (__defaultCfPath !== undefined) {
+		return __defaultCfPath;
+	}
+
 	// Priority 1: MINIFLARE_CACHE_DIR (miniflare-specific override)
 	const miniflareCacheDir = process.env.MINIFLARE_CACHE_DIR;
 	if (miniflareCacheDir) {
-		return path.resolve(miniflareCacheDir, "cf.json");
+		__defaultCfPath = path.resolve(miniflareCacheDir, "cf.json");
+		return __defaultCfPath;
 	}
 
 	// Priority 2: WRANGLER_CACHE_DIR (shared with wrangler)
 	const wranglerCacheDir = process.env.WRANGLER_CACHE_DIR;
 	if (wranglerCacheDir) {
-		return path.resolve(wranglerCacheDir, "cf.json");
+		__defaultCfPath = path.resolve(wranglerCacheDir, "cf.json");
+		return __defaultCfPath;
 	}
 
-	// Priority 3: Yarn PnP auto-detection - use .wrangler/cache to avoid node_modules
-	if (isYarnPnP()) {
-		return path.resolve(".wrangler", "cache", "cf.json");
+	// Define possible cache locations
+	const nodeModulesMfPath = path.resolve("node_modules", ".mf");
+	const wranglerCachePath = path.resolve(".wrangler", "cache");
+
+	// Priority 3: Use existing node_modules/.mf if present (backward compatibility)
+	if (existsSync(nodeModulesMfPath)) {
+		__defaultCfPath = path.resolve(nodeModulesMfPath, "cf.json");
+		return __defaultCfPath;
 	}
 
-	// Default: node_modules/.mf
-	return path.resolve("node_modules", ".mf", "cf.json");
+	// Priority 4: Use existing .wrangler/cache if present
+	if (existsSync(wranglerCachePath)) {
+		__defaultCfPath = path.resolve(wranglerCachePath, "cf.json");
+		return __defaultCfPath;
+	}
+
+	// Priority 5: Create in node_modules/.mf if node_modules exists
+	if (existsSync("node_modules")) {
+		__defaultCfPath = path.resolve(nodeModulesMfPath, "cf.json");
+		return __defaultCfPath;
+	}
+
+	// Priority 6: Fall back to .wrangler/cache
+	__defaultCfPath = path.resolve(wranglerCachePath, "cf.json");
+	return __defaultCfPath;
 }
-
-const defaultCfPath = getDefaultCfPath();
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
 
 // Environment variable names for controlling cf fetch behavior
@@ -189,7 +207,7 @@ export async function setupCf(
 		return effectiveCf;
 	}
 
-	let cfPath = defaultCfPath;
+	let cfPath = getDefaultCfPath();
 	if (typeof effectiveCf === "string") {
 		cfPath = effectiveCf;
 	}

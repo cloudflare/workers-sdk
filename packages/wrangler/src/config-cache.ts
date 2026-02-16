@@ -14,25 +14,23 @@ import { logger } from "./logger";
 let cacheMessageShown = false;
 
 /**
- * Cached result of Yarn PnP detection.
- * Undefined means not yet checked.
+ * Cached cache folder path.
+ * Undefined means not yet determined.
  */
-let __isYarnPnP: boolean | undefined;
+let __cacheFolder: string | undefined;
 
 /**
- * Detects if the project is using Yarn PnP by checking for .pnp.cjs or .pnp.js.
+ * Determines the cache folder location using the following priority:
+ * 1. WRANGLER_CACHE_DIR environment variable (explicit override)
+ * 2. Existing node_modules/.cache/wrangler directory (backward compatibility)
+ * 3. Existing .wrangler/cache directory
+ * 4. node_modules/.cache/wrangler if node_modules exists
+ * 5. .wrangler/cache as final fallback
+ *
  * Result is cached for performance.
  */
-function isYarnPnP(): boolean {
-	if (__isYarnPnP === undefined) {
-		__isYarnPnP = existsSync(".pnp.cjs") || existsSync(".pnp.js");
-	}
-	return __isYarnPnP;
-}
-
-let __cacheFolder: string | null | undefined;
-export function getCacheFolder() {
-	if (__cacheFolder || __cacheFolder === null) {
+export function getCacheFolder(): string {
+	if (__cacheFolder !== undefined) {
 		return __cacheFolder;
 	}
 
@@ -43,23 +41,37 @@ export function getCacheFolder() {
 		return __cacheFolder;
 	}
 
-	// Priority 2: Use .wrangler/cache for Yarn PnP projects
-	if (isYarnPnP()) {
-		__cacheFolder = path.join(process.cwd(), ".wrangler", "cache");
-		return __cacheFolder;
-	}
-
-	// Priority 3: Traditional node_modules/.cache/wrangler
+	// Find node_modules using existing find-up logic
 	const closestNodeModulesDirectory = findUpSync("node_modules", {
 		type: "directory",
 	});
-	__cacheFolder = closestNodeModulesDirectory
-		? path.join(closestNodeModulesDirectory, ".cache/wrangler")
+
+	const nodeModulesCache = closestNodeModulesDirectory
+		? path.join(closestNodeModulesDirectory, ".cache", "wrangler")
 		: null;
 
-	if (!__cacheFolder) {
-		logger.debug("No folder available to cache configuration");
+	const wranglerCache = path.join(process.cwd(), ".wrangler", "cache");
+
+	// Priority 2: Use existing node_modules cache if present
+	if (nodeModulesCache && existsSync(nodeModulesCache)) {
+		__cacheFolder = nodeModulesCache;
+		return __cacheFolder;
 	}
+
+	// Priority 3: Use existing .wrangler/cache if present
+	if (existsSync(wranglerCache)) {
+		__cacheFolder = wranglerCache;
+		return __cacheFolder;
+	}
+
+	// Priority 4: Create in node_modules if it exists
+	if (nodeModulesCache) {
+		__cacheFolder = nodeModulesCache;
+		return __cacheFolder;
+	}
+
+	// Priority 5: Fall back to .wrangler/cache
+	__cacheFolder = wranglerCache;
 	return __cacheFolder;
 }
 
