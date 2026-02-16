@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
+import { Route as D1DatabaseIdRouteImport } from './routes/d1/$databaseId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,30 +23,39 @@ const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
   path: '/kv/$namespaceId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const D1DatabaseIdRoute = D1DatabaseIdRouteImport.update({
+  id: '/d1/$databaseId',
+  path: '/d1/$databaseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kv/$namespaceId'
+  fullPaths: '/' | '/d1/$databaseId' | '/kv/$namespaceId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kv/$namespaceId'
-  id: '__root__' | '/' | '/kv/$namespaceId'
+  to: '/' | '/d1/$databaseId' | '/kv/$namespaceId'
+  id: '__root__' | '/' | '/d1/$databaseId' | '/kv/$namespaceId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  D1DatabaseIdRoute: typeof D1DatabaseIdRoute
   KvNamespaceIdRoute: typeof KvNamespaceIdRoute
 }
 
@@ -65,11 +75,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KvNamespaceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/d1/$databaseId': {
+      id: '/d1/$databaseId'
+      path: '/d1/$databaseId'
+      fullPath: '/d1/$databaseId'
+      preLoaderRoute: typeof D1DatabaseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  D1DatabaseIdRoute: D1DatabaseIdRoute,
   KvNamespaceIdRoute: KvNamespaceIdRoute,
 }
 export const routeTree = rootRouteImport

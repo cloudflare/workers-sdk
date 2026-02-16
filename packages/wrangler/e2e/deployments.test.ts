@@ -1,10 +1,10 @@
-import assert from "node:assert";
 import ci from "ci-info";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	assert,
 	beforeAll,
 	beforeEach,
 	describe,

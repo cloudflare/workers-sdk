@@ -1,7 +1,6 @@
-import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, assert, beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,

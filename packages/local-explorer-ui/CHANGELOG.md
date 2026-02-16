@@ -1,5 +1,15 @@
 # @cloudflare/local-explorer-ui
 
+## 0.3.0
+
+### Minor Changes
+
+- [#12431](https://github.com/cloudflare/workers-sdk/pull/12431) [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41) Thanks [@emily-shen](https://github.com/emily-shen)! - Add ability to search KV keys by prefix
+
+  The UI and list keys API now lets you search KV keys by prefix.
+
+  This is an experimental WIP feature.
+
 ## 0.2.0
 
 ### Minor Changes

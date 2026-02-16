@@ -75,7 +75,8 @@ export function objectEntryWorker(
 
 export function remoteProxyClientWorker(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	binding: string
+	binding: string,
+	bindingType?: string
 ) {
 	return {
 		compatibilityDate: "2025-01-01",
@@ -98,6 +99,14 @@ export function remoteProxyClientWorker(
 				name: "binding",
 				text: binding,
 			},
+			...(bindingType
+				? [
+						{
+							name: "bindingType",
+							text: bindingType,
+						},
+					]
+				: []),
 		],
 	};
 }

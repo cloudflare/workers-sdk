@@ -1,5 +1,31 @@
 # miniflare
 
+## 4.20260212.0
+
+### Minor Changes
+
+- [#12431](https://github.com/cloudflare/workers-sdk/pull/12431) [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41) Thanks [@emily-shen](https://github.com/emily-shen)! - Add ability to search KV keys by prefix
+
+  The UI and list keys API now lets you search KV keys by prefix.
+
+  This is an experimental WIP feature.
+
+### Patch Changes
+
+- [#12541](https://github.com/cloudflare/workers-sdk/pull/12541) [`f7fa326`](https://github.com/cloudflare/workers-sdk/commit/f7fa3269c14bf50c8129de9d38276cd02189a39a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260210.0 | 1.20260212.0 |
+
+- [#12025](https://github.com/cloudflare/workers-sdk/pull/12025) [`d06ad09`](https://github.com/cloudflare/workers-sdk/commit/d06ad0967a2636a9f7e43babf5209bcec1af81d5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix potential EBADF error when restarting workerd process
+
+  Previously, when the workerd process was restarted (e.g., via `setOptions()` or Vite server restart), the stdio pipes from the previous process were not explicitly destroyed. This could lead to `EBADF` (Bad File Descriptor) errors during spawn on some systems.
+
+  The `Runtime#dispose()` method now explicitly destroys all stdio streams (stdin, stdout, stderr, and the control pipe) before killing the process to ensure file descriptors are properly released.
+
 ## 4.20260210.0
 
 ### Minor Changes
