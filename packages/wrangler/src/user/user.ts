@@ -207,16 +207,18 @@
 
 import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	findProjectRoot,
 	getCloudflareApiEnvironmentFromEnv,
 	getCloudflareComplianceRegion,
 	getGlobalWranglerConfigPath,
+	getLocalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
 	UserError,
@@ -306,6 +308,8 @@ interface State extends AuthTokens {
 	stateQueryParam?: string;
 	scopes?: Scope[];
 	account?: Account;
+	/** Track whether auth came from local or global config for refresh operations */
+	authSource?: "local" | "global";
 }
 
 /**
@@ -398,34 +402,61 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
+const initialAuth = getAuthTokens();
 let localState: State = {
-	...getAuthTokens(),
+	...initialAuth.tokens,
+	authSource: initialAuth.authSource,
 };
 
 /**
- * Compute the current auth tokens.
+ * Compute the current auth tokens and determine auth source.
  */
-function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
+function getAuthTokens(config?: UserAuthConfig): {
+	tokens: AuthTokens | undefined;
+	authSource?: "local" | "global";
+} {
 	// get refreshToken/accessToken from fs if exists
 	try {
 		// if the environment variable is available, we don't need to do anything here
 		if (getAuthFromEnv()) {
-			return;
+			return { tokens: undefined };
 		}
 
-		// otherwise try loading from the user auth config file.
+		// Determine the auth source when reading from file
+		let authSource: "local" | "global" | undefined;
+		let authConfig: UserAuthConfig;
+
+		if (config) {
+			authConfig = config;
+		} else {
+			const configPath = getAuthConfigFilePath();
+			authConfig = readAuthConfigFile();
+			// Detect if the config path is local or global
+			const globalConfigPath = path.resolve(getGlobalWranglerConfigPath());
+			const resolvedConfigPath = path.resolve(path.dirname(configPath));
+			const projectRoot = findProjectRoot();
+			const isLocal =
+				resolvedConfigPath !== globalConfigPath &&
+				projectRoot &&
+				configPath.includes(path.join(projectRoot, ".wrangler"));
+			authSource = isLocal ? "local" : "global";
+		}
+
 		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
-			config || readAuthConfigFile();
+			authConfig;
 
 		if (oauth_token) {
 			return {
-				accessToken: {
-					value: oauth_token,
-					// If there is no `expiration_time` field then set it to an old date, to cause it to expire immediately.
-					expiry: expiration_time ?? "2000-01-01:00:00:00+00:00",
+				tokens: {
+					accessToken: {
+						value: oauth_token,
+						// If there is no `expiration_time` field then set it to an old date, to cause it to expire immediately.
+						expiry: expiration_time ?? "2000-01-01:00:00:00+00:00",
+					},
+					refreshToken: { value: refresh_token ?? "" },
+					scopes: scopes as Scope[],
 				},
-				refreshToken: { value: refresh_token ?? "" },
-				scopes: scopes as Scope[],
+				authSource,
 			};
 		} else if (api_token) {
 			logger.warn(
@@ -434,11 +465,12 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
-			return { apiToken: api_token };
+			return { tokens: { apiToken: api_token }, authSource };
 		}
 	} catch {
-		return undefined;
+		return { tokens: undefined };
 	}
+	return { tokens: undefined };
 }
 
 /**
@@ -453,11 +485,19 @@ export function reinitialiseAuthTokens(): void;
  * Reinitialise auth state from an in-memory config, skipping
  * over the part where we write a file and then read it back into memory
  */
-export function reinitialiseAuthTokens(config: UserAuthConfig): void;
+export function reinitialiseAuthTokens(
+	config: UserAuthConfig,
+	authSource?: "local" | "global"
+): void;
 
-export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
+export function reinitialiseAuthTokens(
+	config?: UserAuthConfig,
+	authSource?: "local" | "global"
+): void {
+	const { tokens, authSource: detectedSource } = getAuthTokens(config);
 	localState = {
-		...getAuthTokens(config),
+		...tokens,
+		authSource: authSource ?? detectedSource,
 	};
 }
 
@@ -904,19 +944,71 @@ async function generatePKCECodes(): Promise<PKCECodes> {
 	return { codeChallenge, codeVerifier };
 }
 
-export function getAuthConfigFilePath() {
-	const environment = getCloudflareApiEnvironmentFromEnv();
-	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
+export interface GetAuthConfigFilePathOptions {
+	/** Explicitly force local auth path */
+	useLocal?: boolean;
+	/** Explicitly force global auth path */
+	useGlobal?: boolean;
+}
 
-	return path.join(getGlobalWranglerConfigPath(), filePath);
+export function getAuthConfigFilePath(
+	options?: GetAuthConfigFilePathOptions
+): string {
+	const environment = getCloudflareApiEnvironmentFromEnv();
+	const fileName =
+		environment === "production" ? "default.toml" : `${environment}.toml`;
+	const configSubPath = `${USER_AUTH_CONFIG_PATH}/${fileName}`; // "config/default.toml"
+
+	// Check for WRANGLER_AUTH_TYPE environment variable to force global auth
+	const authType = process.env.WRANGLER_AUTH_TYPE;
+	if (authType === "global" && !options?.useLocal) {
+		return path.join(getGlobalWranglerConfigPath(), configSubPath);
+	}
+
+	// Explicit flags take priority
+	if (options?.useGlobal) {
+		return path.join(getGlobalWranglerConfigPath(), configSubPath);
+	}
+
+	if (options?.useLocal) {
+		let localPath = getLocalWranglerConfigPath();
+		if (!localPath) {
+			// .wrangler directory doesn't exist yet, need to create it
+			const projectRoot = findProjectRoot();
+			if (!projectRoot) {
+				throw new UserError(
+					"Cannot use --directory: no project directory found.\n" +
+						"Run this command in a directory with wrangler.toml, package.json, or a .git directory."
+				);
+			}
+			// Create the .wrangler directory in the project root
+			localPath = path.join(projectRoot, ".wrangler");
+		}
+		return path.join(localPath, configSubPath);
+	}
+
+	// Auto-detect: check for local config first
+	const localPath = getLocalWranglerConfigPath();
+	if (localPath) {
+		const localConfigPath = path.join(localPath, configSubPath);
+		if (existsSync(localConfigPath)) {
+			return localConfigPath;
+		}
+	}
+
+	// Fall back to global
+	return path.join(getGlobalWranglerConfigPath(), configSubPath);
 }
 
 /**
  * Writes a a wrangler config file (auth credentials) to disk,
  * and updates the user auth state with the new credentials.
  */
-export function writeAuthConfigFile(config: UserAuthConfig) {
-	const configPath = getAuthConfigFilePath();
+export function writeAuthConfigFile(
+	config: UserAuthConfig,
+	options?: GetAuthConfigFilePathOptions
+) {
+	const configPath = getAuthConfigFilePath(options);
 
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
@@ -925,11 +1017,30 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 		encoding: "utf-8",
 	});
 
-	reinitialiseAuthTokens();
+	// Track whether this is local or global auth
+	const globalConfigPath = path.resolve(getGlobalWranglerConfigPath());
+	const resolvedConfigPath = path.resolve(path.dirname(configPath));
+	const projectRoot = findProjectRoot();
+	const isLocal =
+		resolvedConfigPath !== globalConfigPath &&
+		(configPath.includes(path.join(process.cwd(), ".wrangler")) ||
+			(projectRoot !== undefined &&
+				configPath.includes(path.join(projectRoot, ".wrangler"))));
+
+	// Reinitialise without passing config so warnings show correct file path
+	const { tokens } = getAuthTokens();
+	localState = {
+		...tokens,
+		authSource: isLocal ? "local" : "global",
+	};
 }
 
-export function readAuthConfigFile(): UserAuthConfig {
-	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
+export function readAuthConfigFile(
+	options?: GetAuthConfigFilePathOptions
+): UserAuthConfig {
+	return parseTOML(
+		readFileSync(getAuthConfigFilePath(options))
+	) as UserAuthConfig;
 }
 
 type LoginProps = {
@@ -937,6 +1048,7 @@ type LoginProps = {
 	browser: boolean;
 	callbackHost: string;
 	callbackPort: number;
+	project?: boolean;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -1149,14 +1261,26 @@ export async function login(
 		callbackPort: props.callbackPort,
 	});
 
-	writeAuthConfigFile({
-		oauth_token: oauth.token?.value ?? "",
-		expiration_time: oauth.token?.expiry,
-		refresh_token: oauth.refreshToken?.value,
-		scopes: oauth.scopes,
-	});
+	const authOptions = props.project ? { useLocal: true } : undefined;
+
+	writeAuthConfigFile(
+		{
+			oauth_token: oauth.token?.value ?? "",
+			expiration_time: oauth.token?.expiry,
+			refresh_token: oauth.refreshToken?.value,
+			scopes: oauth.scopes,
+		},
+		authOptions
+	);
+
+	const configPath = getAuthConfigFilePath(authOptions);
+	const isLocal = props.project;
 
 	logger.log(`Successfully logged in.`);
+	if (isLocal) {
+		const relativePath = path.relative(process.cwd(), configPath);
+		logger.log(`🔐 Authentication stored in: ${relativePath}`);
+	}
 
 	purgeConfigCaches();
 
@@ -1182,19 +1306,29 @@ async function refreshToken(): Promise<boolean> {
 			refreshToken: { value: refresh_token } = {},
 			scopes,
 		} = await exchangeRefreshTokenForAccessToken();
-		writeAuthConfigFile({
-			oauth_token,
-			expiration_time,
-			refresh_token,
-			scopes,
-		});
+
+		// Write to the same location where auth was originally read from
+		const authOptions =
+			localState.authSource === "local"
+				? { useLocal: true }
+				: { useGlobal: true };
+
+		writeAuthConfigFile(
+			{
+				oauth_token,
+				expiration_time,
+				refresh_token,
+				scopes,
+			},
+			authOptions
+		);
 		return true;
 	} catch {
 		return false;
 	}
 }
 
-export async function logout(): Promise<void> {
+export async function logout(options?: { project?: boolean }): Promise<void> {
 	const authFromEnv = getAuthFromEnv();
 	if (authFromEnv) {
 		// Auth from env overrides any login details, so we cannot log out.
@@ -1205,8 +1339,31 @@ export async function logout(): Promise<void> {
 		return;
 	}
 
-	if (!localState.accessToken) {
-		if (!localState.refreshToken) {
+	// Determine which auth file to remove
+	const authOptions = options?.project ? { useLocal: true } : undefined;
+	const configPath = getAuthConfigFilePath(authOptions);
+
+	// Check if the config file exists
+	if (!existsSync(configPath)) {
+		logger.log("Not logged in, exiting...");
+		return;
+	}
+
+	// Read tokens from the target auth file (not from localState)
+	// This ensures we revoke the correct tokens when using --project
+	let targetConfig: UserAuthConfig;
+	try {
+		targetConfig = parseTOML(readFileSync(configPath)) as UserAuthConfig;
+	} catch {
+		logger.log("Error reading auth config file, exiting...");
+		return;
+	}
+
+	const targetAccessToken = targetConfig.oauth_token;
+	const targetRefreshToken = targetConfig.refresh_token;
+
+	if (!targetAccessToken) {
+		if (!targetRefreshToken) {
 			logger.log("Not logged in, exiting...");
 			return;
 		}
@@ -1214,7 +1371,7 @@ export async function logout(): Promise<void> {
 		const body =
 			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 			`token_type_hint=refresh_token&` +
-			`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
+			`token=${encodeURIComponent(targetRefreshToken)}`;
 
 		const response = await fetch(getRevokeUrlFromEnv(), {
 			method: "POST",
@@ -1231,7 +1388,7 @@ export async function logout(): Promise<void> {
 	const body =
 		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
-		`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
+		`token=${encodeURIComponent(targetRefreshToken || "")}`;
 
 	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
@@ -1241,7 +1398,7 @@ export async function logout(): Promise<void> {
 		},
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
-	rmSync(getAuthConfigFilePath());
+	rmSync(configPath);
 	logger.log(`Successfully logged out.`);
 }
 

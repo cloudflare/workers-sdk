@@ -46,6 +46,12 @@ export const loginCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		project: {
+			type: "boolean",
+			describe:
+				"Store authentication in local .wrangler directory for this project",
+			alias: ["directory", "local"],
+		},
 		"callback-host": {
 			describe:
 				"Use the ip or host address for the temporary login callback server.",
@@ -81,6 +87,7 @@ export const loginCommand = createCommand({
 				browser: args.browser,
 				callbackHost: args.callbackHost,
 				callbackPort: args.callbackPort,
+				project: args.project,
 			});
 			return;
 		}
@@ -88,6 +95,7 @@ export const loginCommand = createCommand({
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
+			project: args.project,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
@@ -110,8 +118,15 @@ export const logoutCommand = createCommand({
 		printConfigWarnings: false,
 		provideConfig: false,
 	},
-	async handler() {
-		await logout();
+	args: {
+		project: {
+			type: "boolean",
+			describe: "Logout from local .wrangler directory authentication",
+			alias: ["directory", "local"],
+		},
+	},
+	async handler(args) {
+		await logout({ project: args.project });
 		try {
 			// If the config file is invalid then we default to not sending metrics.
 			// TODO: Clean this up as part of a general config refactor.

@@ -1,6 +1,9 @@
+import path from "node:path";
 import {
-	createFatalError,
+    createFatalError,
+	findProjectRoot,
 	getCloudflareComplianceRegion,
+	getGlobalWranglerConfigPath,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
@@ -9,7 +12,13 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
-import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
+import {
+	DefaultScopeKeys,
+	getAPIToken,
+	getAuthConfigFilePath,
+	getAuthFromEnv,
+	getScopes,
+} from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -72,12 +81,36 @@ export async function whoami(
 		logger.log(
 			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable."
 		);
+	} else if (user.authType === "OAuth Token") {
+		printAuthSource();
 	}
 	printComplianceRegion(complianceConfig);
 	printAccountList(user);
 	printAccountIdMismatchWarning(user, accountFilter, configAccountId);
 	printTokenPermissions(user);
 	await printMembershipInfo(complianceConfig, user, accountFilter);
+}
+
+function printAuthSource() {
+	try {
+		const configPath = getAuthConfigFilePath();
+		const globalConfigPath = path.resolve(getGlobalWranglerConfigPath());
+		const resolvedConfigPath = path.resolve(path.dirname(configPath));
+		const projectRoot = findProjectRoot();
+		const isLocal =
+			resolvedConfigPath !== globalConfigPath &&
+			projectRoot &&
+			configPath.includes(path.join(projectRoot, ".wrangler"));
+
+		if (isLocal) {
+			const relativePath = path.relative(process.cwd(), configPath);
+			logger.log(`🔐 Auth source: local (${chalk.blue(relativePath)})`);
+		} else {
+			logger.log(`🔐 Auth source: global (${chalk.blue(configPath)})`);
+		}
+	} catch {
+		// If we can't determine auth source, don't show anything
+	}
 }
 
 function printComplianceRegion(complianceConfig: ComplianceConfig) {

@@ -28,6 +28,20 @@ export const getCloudflareGlobalAuthEmailFromEnv =
 	});
 
 /**
+ * `WRANGLER_HOME` overrides the directory where Wrangler stores
+ * global configuration and authentication data.
+ *
+ * By default, Wrangler uses:
+ * - ~/.wrangler/ (legacy)
+ * - Or XDG-compliant paths (e.g., ~/Library/Application Support/.wrangler on macOS)
+ *
+ * Set this to use a custom directory for global config storage.
+ */
+export const getWranglerHomeFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_HOME",
+});
+
+/**
  * `WRANGLER_CLIENT_ID` is a UUID that is used to identify Wrangler
  * to the Cloudflare APIs.
  *
