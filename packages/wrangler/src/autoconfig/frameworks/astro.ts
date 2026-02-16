@@ -24,7 +24,7 @@ export class Astro extends Framework {
 		return {
 			wranglerConfig: {
 				main: `${outputDir}/_worker.js/index.js`,
-				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+				compatibility_flags: ["global_fetch_strictly_public"],
 				assets: {
 					binding: "ASSETS",
 					directory: outputDir,
