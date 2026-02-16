@@ -1,11 +1,6 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import type { ComponentType, PropsWithChildren } from "react";
 
-/**
- * Stub for Modal system
- * Simplified version without Redux dependency
- */
-
 export type ModalInjectedProps = {
 	closeModal: () => void;
 	isOpen?: boolean;
@@ -41,6 +36,7 @@ export function useModal() {
 	if (!context) {
 		throw new Error("useModal must be used within a ModalProvider");
 	}
+
 	return context;
 }
 
@@ -49,6 +45,7 @@ export function useModalContext() {
 	if (!context) {
 		throw new Error("useModalContext must be used within a ModalProvider");
 	}
+
 	return context;
 }
 
@@ -133,7 +130,13 @@ export function createOpenModalAction<Props = unknown>(
 	console.warn(
 		"openModal action called outside of ModalProvider context. Use useModal hook instead."
 	);
-	return { type: "MODAL_OPEN", payload: { ModalComponent, props } };
+	return {
+		payload: {
+			ModalComponent,
+			props,
+		},
+		type: "MODAL_OPEN",
+	};
 }
 
 export function createCloseModalAction<Props = unknown>(
@@ -142,5 +145,10 @@ export function createCloseModalAction<Props = unknown>(
 	console.warn(
 		"closeModal action called outside of ModalProvider context. Use useModal hook instead."
 	);
-	return { type: "MODAL_CLOSE", payload: { ModalComponent } };
+	return {
+		payload: {
+			ModalComponent,
+		},
+		type: "MODAL_CLOSE",
+	};
 }

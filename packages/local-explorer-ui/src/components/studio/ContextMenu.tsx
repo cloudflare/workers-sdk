@@ -11,16 +11,17 @@ import type { ComponentProps, PropsWithChildren } from "react";
 
 type DropdownItemBuilderProps = ComponentProps<typeof DropdownMenu.Content>;
 
-export const StudioContextMenu = createContext<
-	| {
-			openContextMenu: (
-				mouseEvent: React.MouseEvent<Element, MouseEvent>,
-				menuItems: DropdownItemBuilderProps[],
-				onOpenChange?: (open: boolean) => void
-			) => void;
-	  }
-	| undefined
->(undefined);
+type OnOpenChangeHandler = (open: boolean) => void;
+
+type OpenContextMenuHandler = (
+	mouseEvent: React.MouseEvent<Element, MouseEvent>,
+	menuItems: DropdownItemBuilderProps[],
+	onOpenChange?: OnOpenChangeHandler
+) => void;
+
+export const StudioContextMenu = createContext<{
+	openContextMenu: OpenContextMenuHandler;
+} | null>(null);
 
 export function useStudioContextMenu() {
 	const context = useContext(StudioContextMenu);
@@ -33,21 +34,26 @@ export function useStudioContextMenu() {
 	return context;
 }
 
+interface Position {
+	x: number;
+	y: number;
+}
+
 type StudioContextMenuProvider = PropsWithChildren;
 
 export function StudioContextMenuProvider({
 	children,
 }: StudioContextMenuProvider) {
-	const [position, setPosition] = useState({ x: 0, y: 0 });
-	const [open, setOpen] = useState(false);
+	const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
+	const [open, setOpen] = useState<boolean>(false);
 	const [_menuItems, setMenuItems] = useState<DropdownItemBuilderProps[]>([]);
-	const onOpenChange = useRef<((open: boolean) => void) | undefined>(undefined);
+	const onOpenChange = useRef<OnOpenChangeHandler | null>(null);
 
 	const openContextMenu = useCallback(
 		(
 			mouseEvent: React.MouseEvent<Element, MouseEvent>,
 			items: DropdownItemBuilderProps[],
-			_onOpenChange?: (open: boolean) => void
+			_onOpenChange?: OnOpenChangeHandler
 		) => {
 			setOpen(true);
 			setMenuItems(items);
@@ -55,7 +61,7 @@ export function StudioContextMenuProvider({
 				x: mouseEvent.clientX,
 				y: mouseEvent.clientY,
 			});
-			onOpenChange.current = _onOpenChange;
+			onOpenChange.current = _onOpenChange ?? null;
 		},
 		[]
 	);

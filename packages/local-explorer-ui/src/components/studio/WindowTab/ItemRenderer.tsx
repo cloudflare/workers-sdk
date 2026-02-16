@@ -1,6 +1,6 @@
 import { cn } from "@cloudflare/kumo";
 import { CircleIcon, XIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { StudioWindowTabItem } from "./types";
 
 interface StudioWindowTabItemRendererProps {
@@ -25,40 +25,23 @@ export function StudioWindowTabItemRenderer({
 	const [isHovered, setIsHovered] = useState<boolean>(false);
 	const [isCloseHovered, setIsCloseHovered] = useState<boolean>(false);
 
-	// TODO: Does this need to be memoized?
-	const className = useMemo<string>(
-		() =>
-			cn(
-				"flex gap-2 relative px-2", // display style
-				"border-b border-r border-border", // border style
-				"items-center text-left text-xs ", // text style
-				"cursor-pointer hover:text-text", // hover style
-				"select-none",
-				selected
-					? "border-b-transparent! bg-surface"
-					: "bg-surface-secondary text-muted", // selected style
-				isTemp && "italic",
-				isDirty && "not-italic"
-			),
-		[isDirty, selected, isTemp]
-	);
-
 	const shouldShowDirtyIcon = !isCloseHovered && isDirty;
 	const shouldShowCloseIcon = !shouldShowDirtyIcon && (selected || isHovered);
 
 	return (
 		<div
-			className={className}
+			className={cn(
+				"h-10 min-w-42.5 max-w-75  flex gap-2 relative px-2 border-b border-r border-border items-center text-left text-xs cursor-pointer hover:text-text select-none",
+				selected
+					? "border-b-transparent! bg-surface"
+					: "bg-surface-secondary text-muted",
+				isTemp && "italic",
+				isDirty && "not-italic"
+			)}
 			onClick={onClick}
 			onDoubleClick={onDoubleClick}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
-			// TODO: Refactor to use TailwindCSS classes
-			style={{
-				height: 40,
-				maxWidth: 300,
-				minWidth: 170,
-			}}
 		>
 			<tab.icon className="w-4 h-4" />
 
