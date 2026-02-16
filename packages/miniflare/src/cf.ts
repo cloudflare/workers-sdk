@@ -18,11 +18,10 @@ let __defaultCfPath: string | undefined;
  * Gets the default path for the cf.json cache file.
  * Determines the cache location using the following priority:
  * 1. MINIFLARE_CACHE_DIR environment variable (miniflare-specific override)
- * 2. WRANGLER_CACHE_DIR environment variable (shared with wrangler)
- * 3. Existing node_modules/.mf directory (backward compatibility)
- * 4. Existing .wrangler/cache directory
- * 5. node_modules/.mf if node_modules exists
- * 6. .wrangler/cache as final fallback
+ * 2. Existing node_modules/.mf directory (backward compatibility)
+ * 3. Existing .wrangler/cache directory
+ * 4. node_modules/.mf if node_modules exists
+ * 5. .wrangler/cache as final fallback
  *
  * Result is cached for performance.
  */
@@ -38,36 +37,29 @@ function getDefaultCfPath(): string {
 		return __defaultCfPath;
 	}
 
-	// Priority 2: WRANGLER_CACHE_DIR (shared with wrangler)
-	const wranglerCacheDir = process.env.WRANGLER_CACHE_DIR;
-	if (wranglerCacheDir) {
-		__defaultCfPath = path.resolve(wranglerCacheDir, "cf.json");
-		return __defaultCfPath;
-	}
-
 	// Define possible cache locations
 	const nodeModulesMfPath = path.resolve("node_modules", ".mf");
 	const wranglerCachePath = path.resolve(".wrangler", "cache");
 
-	// Priority 3: Use existing node_modules/.mf if present (backward compatibility)
+	// Priority 2: Use existing node_modules/.mf if present (backward compatibility)
 	if (existsSync(nodeModulesMfPath)) {
 		__defaultCfPath = path.resolve(nodeModulesMfPath, "cf.json");
 		return __defaultCfPath;
 	}
 
-	// Priority 4: Use existing .wrangler/cache if present
+	// Priority 3: Use existing .wrangler/cache if present
 	if (existsSync(wranglerCachePath)) {
 		__defaultCfPath = path.resolve(wranglerCachePath, "cf.json");
 		return __defaultCfPath;
 	}
 
-	// Priority 5: Create in node_modules/.mf if node_modules exists
+	// Priority 4: Create in node_modules/.mf if node_modules exists
 	if (existsSync("node_modules")) {
 		__defaultCfPath = path.resolve(nodeModulesMfPath, "cf.json");
 		return __defaultCfPath;
 	}
 
-	// Priority 6: Fall back to .wrangler/cache
+	// Priority 5: Fall back to .wrangler/cache
 	__defaultCfPath = path.resolve(wranglerCachePath, "cf.json");
 	return __defaultCfPath;
 }
