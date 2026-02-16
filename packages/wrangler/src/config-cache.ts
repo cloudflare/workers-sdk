@@ -1,28 +1,61 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import * as path from "node:path";
+import { getWranglerCacheDirFromEnv } from "@cloudflare/workers-utils";
 import { findUpSync } from "find-up";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 
 let cacheMessageShown = false;
 
-let __cacheFolder: string | null | undefined;
-export function getCacheFolder() {
-	if (__cacheFolder || __cacheFolder === null) {
-		return __cacheFolder;
+/**
+ * Determines the cache folder location using the following priority:
+ * 1. WRANGLER_CACHE_DIR environment variable (explicit override)
+ * 2. Existing node_modules/.cache/wrangler directory (backward compatibility)
+ * 3. Existing .wrangler/cache directory
+ * 4. node_modules/.cache/wrangler if node_modules exists
+ * 5. .wrangler/cache as final fallback
+ */
+export function getCacheFolder(): string {
+	// Priority 1: Explicit environment variable
+	const envCacheDir = getWranglerCacheDirFromEnv();
+	if (envCacheDir) {
+		return envCacheDir;
 	}
 
+	// Find node_modules using existing find-up logic
 	const closestNodeModulesDirectory = findUpSync("node_modules", {
 		type: "directory",
 	});
-	__cacheFolder = closestNodeModulesDirectory
-		? path.join(closestNodeModulesDirectory, ".cache/wrangler")
+
+	const nodeModulesCache = closestNodeModulesDirectory
+		? path.join(closestNodeModulesDirectory, ".cache", "wrangler")
 		: null;
 
-	if (!__cacheFolder) {
-		logger.debug("No folder available to cache configuration");
+	const wranglerCache = path.join(process.cwd(), ".wrangler", "cache");
+
+	// Priority 2: Use existing node_modules cache if present
+	if (nodeModulesCache && existsSync(nodeModulesCache)) {
+		return nodeModulesCache;
 	}
-	return __cacheFolder;
+
+	// Priority 3: Use existing .wrangler/cache if present
+	if (existsSync(wranglerCache)) {
+		return wranglerCache;
+	}
+
+	// Priority 4: Create in node_modules if it exists
+	if (nodeModulesCache) {
+		return nodeModulesCache;
+	}
+
+	// Priority 5: Fall back to .wrangler/cache
+	return wranglerCache;
 }
 
 const arrayFormatter = new Intl.ListFormat("en-US", {
@@ -46,16 +79,10 @@ function showCacheMessage(fields: string[], folder: string) {
 export function getConfigCache<T>(fileName: string): Partial<T> {
 	try {
 		const cacheFolder = getCacheFolder();
-		if (cacheFolder) {
-			const configCacheLocation = path.join(cacheFolder, fileName);
-			const configCache = JSON.parse(
-				readFileSync(configCacheLocation, "utf-8")
-			);
-			showCacheMessage(Object.keys(configCache), cacheFolder);
-			return configCache;
-		} else {
-			return {};
-		}
+		const configCacheLocation = path.join(cacheFolder, fileName);
+		const configCache = JSON.parse(readFileSync(configCacheLocation, "utf-8"));
+		showCacheMessage(Object.keys(configCache), cacheFolder);
+		return configCache;
 	} catch {
 		return {};
 	}
@@ -84,5 +111,4 @@ export function purgeConfigCaches() {
 	if (cacheFolder) {
 		rmSync(cacheFolder, { recursive: true, force: true });
 	}
-	__cacheFolder = undefined;
 }

@@ -134,6 +134,8 @@ type Props = {
 	metafile: string | boolean | undefined;
 	containersRollout: "immediate" | "gradual" | undefined;
 	strict: boolean | undefined;
+	tag: string | undefined;
+	message: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -858,6 +860,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			tail_consumers: config.tail_consumers,
 			streaming_tail_consumers: config.streaming_tail_consumers,
 			limits: config.limits,
+			annotations:
+				props.tag || props.message
+					? {
+							"workers/message": props.message,
+							"workers/tag": props.tag,
+						}
+					: undefined,
 			assets:
 				props.assetsOptions && assetsJwt
 					? {
@@ -1014,7 +1023,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						accountId,
 						scriptName,
 						versionMap,
-						undefined
+						props.message
 					);
 
 					// Update service and environment tags when using environments
