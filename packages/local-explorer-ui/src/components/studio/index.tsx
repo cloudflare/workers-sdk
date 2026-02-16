@@ -53,21 +53,21 @@ export function Studio({
 		() => tabs[0]?.key ?? ""
 	);
 
-	const refreshSchema = useCallback(() => {
+	const refreshSchema = useCallback(async () => {
 		setLoadingSchema(true);
 
-		driver
-			.schemas()
-			.then(setSchemas)
-			.catch(console.error)
-			.finally(() => {
-				setLoadingSchema(false);
-			});
+		try {
+			const driverSchemas = await driver.schemas();
+			setSchemas(driverSchemas);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setLoadingSchema(false);
+		}
 	}, [driver]);
 
 	useEffect((): void => {
-		// eslint-disable-next-line react-hooks/set-state-in-effect -- Triggers async schema fetch on mount; setState occurs inside async .then(), not synchronously
-		refreshSchema();
+		void refreshSchema();
 	}, [refreshSchema]);
 
 	/**
