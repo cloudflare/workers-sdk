@@ -1959,7 +1959,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --site")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Not enough arguments following: site]`
+				`[YError: Not enough arguments following: site]`
 			);
 		});
 

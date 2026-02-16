@@ -17,9 +17,7 @@
 		"assembly",
 		"webassembly",
 		"rust",
-		"emscripten",
 		"typescript",
-		"graphql",
 		"router",
 		"http",
 		"cli"
@@ -35,6 +33,18 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"exports": {
+		".": {
+			"types": "./wrangler-dist/cli.d.ts",
+			"require": "./wrangler-dist/cli.js",
+			"default": "./wrangler-dist/cli.js"
+		},
+		"./config": {
+			"types": "./wrangler-dist/config.d.mts",
+			"import": "./wrangler-dist/config.mjs"
+		},
+		"./*": "./*"
+	},
 	"main": "wrangler-dist/cli.js",
 	"types": "wrangler-dist/cli.d.ts",
 	"bin": {
@@ -43,7 +53,6 @@
 	},
 	"files": [
 		"bin",
-		"miniflare-dist",
 		"wrangler-dist",
 		"templates",
 		"kv-asset-handler.js",
@@ -54,7 +63,7 @@
 		"build": "pnpm run clean && pnpm tsup && pnpm run generate-json-schema",
 		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc -p ./tsconfig.json && tsc -p ./templates/tsconfig.json",
-		"clean": "node -r esbuild-register ../../tools/clean/clean.ts wrangler-dist miniflare-dist emitted-types",
+		"clean": "node -r esbuild-register ../../tools/clean/clean.ts wrangler-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src --watch ../cli\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"generate-json-schema": "node -r esbuild-register scripts/generate-json-schema.ts",
 		"start": "pnpm run build && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",

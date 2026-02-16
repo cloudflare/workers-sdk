@@ -110,4 +110,16 @@ export default defineConfig((options) => [
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 	},
+	{
+		treeshake: true,
+		keepNames: true,
+		entry: { config: "src/config/worker.ts" },
+		platform: "node",
+		format: ["esm"],
+		dts: true,
+		outDir: "wrangler-dist",
+		tsconfig: "tsconfig.json",
+		external: EXTERNAL_DEPENDENCIES,
+		sourcemap: process.env.SOURCEMAPS !== "false",
+	},
 ]);

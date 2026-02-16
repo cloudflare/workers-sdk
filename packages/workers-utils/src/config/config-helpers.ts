@@ -11,6 +11,24 @@ export type ResolveConfigPathOptions = {
 	useRedirectIfAvailable?: boolean;
 };
 
+/**
+ * Config file names in priority order (highest to lowest).
+ * Programmatic config files (.ts/.js) take precedence over static config files.
+ */
+const CONFIG_FILE_NAMES = [
+	// Programmatic config files (TypeScript first, then JavaScript)
+	"cf.config.ts",
+	"cf.config.js",
+	"cloudflare.config.ts",
+	"cloudflare.config.js",
+	"wrangler.config.ts",
+	"wrangler.config.js",
+	// Static config files
+	"wrangler.json",
+	"wrangler.jsonc",
+	"wrangler.toml",
+] as const;
+
 export type ConfigPaths = {
 	/** Absolute path to the actual configuration being used (possibly redirected from the user's config). */
 	configPath: string | undefined;
@@ -60,10 +78,13 @@ export function findWranglerConfig(
 	referencePath: string = process.cwd(),
 	{ useRedirectIfAvailable = false } = {}
 ): ConfigPaths {
-	const userConfigPath =
-		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.toml`, { cwd: referencePath });
+	let userConfigPath: string | undefined;
+	for (const fileName of CONFIG_FILE_NAMES) {
+		userConfigPath = findUpSync(fileName, { cwd: referencePath });
+		if (userConfigPath) {
+			break;
+		}
+	}
 
 	if (!useRedirectIfAvailable) {
 		return {

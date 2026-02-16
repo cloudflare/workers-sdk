@@ -1,9 +1,21 @@
+import path from "node:path";
 import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { resolveWranglerConfigPath } from "./config-helpers";
+import { loadProgrammaticConfig } from "./programmatic";
 import type { Config, RawConfig } from "./config";
 import type { ResolveConfigPathOptions } from "./config-helpers";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
+
+export {
+	loadProgrammaticConfig,
+	watchProgrammaticConfig,
+	defineConfig,
+	type WorkerConfig,
+	type WorkerConfigContext,
+	type WorkerConfigFn,
+	type LoadProgrammaticConfigOptions,
+} from "./programmatic";
 
 export type {
 	Config,
@@ -20,7 +32,10 @@ export type {
 
 export function configFormat(
 	configPath: string | undefined
-): "json" | "jsonc" | "toml" | "none" {
+): "json" | "jsonc" | "toml" | "programmatic" | "none" {
+	if (configPath?.endsWith(".ts") || configPath?.endsWith(".js")) {
+		return "programmatic";
+	}
 	if (configPath?.endsWith("toml")) {
 		return "toml";
 	}
@@ -33,6 +48,12 @@ export function configFormat(
 	return "none";
 }
 
+export function isProgrammaticConfigPath(
+	configPath: string | undefined
+): boolean {
+	return configFormat(configPath) === "programmatic";
+}
+
 export function configFileName(configPath: string | undefined) {
 	const format = configFormat(configPath);
 	switch (format) {
@@ -42,6 +63,8 @@ export function configFileName(configPath: string | undefined) {
 			return "wrangler.json";
 		case "jsonc":
 			return "wrangler.jsonc";
+		case "programmatic":
+			return configPath ? path.basename(configPath) : "config file";
 		default:
 			return "Wrangler configuration";
 	}
@@ -117,7 +140,15 @@ export const experimental_readRawConfig = async (
 	const { configPath, userConfigPath, deployConfigPath, redirected } =
 		resolveWranglerConfigPath(args, options);
 
-	const rawConfig = parseRawConfigFile(configPath ?? "");
+	let rawConfig;
+	if (configPath && isProgrammaticConfigPath(configPath)) {
+		rawConfig = await loadProgrammaticConfig({
+			configPath,
+			env: args.env,
+		});
+	} else {
+		rawConfig = parseRawConfigFile(configPath ?? "");
+	}
 
 	return {
 		rawConfig,

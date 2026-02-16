@@ -6,7 +6,10 @@ import {
 	getDisableConfigWatching,
 	getDockerPath,
 	getLocalWorkerdCompatibilityDate,
+	isProgrammaticConfigPath,
+	normalizeAndValidateConfig,
 	UserError,
+	watchProgrammaticConfig,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
@@ -45,7 +48,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
-import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
+import type { CfUnsafe, Config, RawConfig } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
@@ -495,12 +498,59 @@ export class ConfigController extends Controller {
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
-	#configWatcher?: ReturnType<typeof watch>;
+	#configWatcher?: { close: () => Promise<void>; closed: boolean };
+
 	#abortController?: AbortController;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
-		if (configPath) {
+
+		if (!configPath) {
+			return;
+		}
+
+		if (isProgrammaticConfigPath(configPath)) {
+			logger.debug(
+				`Setting up programmatic config watcher for ${path.basename(configPath)}`
+			);
+
+			this.#configWatcher = await watchProgrammaticConfig({
+				configPath,
+				env: this.latestInput?.env,
+				onChange: (result) => {
+					logger.debug(
+						`Programmatic config changed: ${path.basename(configPath)}`
+					);
+					assert(
+						this.latestInput,
+						"Cannot be watching config without having first set an input"
+					);
+					this.#updateConfig(this.latestInput, false, {
+						config: result,
+						path: configPath,
+					}).catch((err) => {
+						this.emitErrorEvent({
+							type: "error",
+							reason: "Error resolving config after change",
+							cause: castErrorCause(err),
+							source: "ConfigController",
+							data: undefined,
+						});
+					});
+				},
+				onError: (err: Error) => {
+					logger.error("Config rebuild failed:", err.message);
+					this.emitErrorEvent({
+						type: "error",
+						reason: "Config rebuild failed",
+						cause: castErrorCause(err),
+						source: "ConfigController",
+						data: undefined,
+					});
+				},
+			});
+		} else {
+			// Use chokidar for TOML/JSON configs (existing behavior)
 			this.#configWatcher = watch(configPath, {
 				persistent: true,
 				ignoreInitial: true,
@@ -550,7 +600,13 @@ export class ConfigController extends Controller {
 		);
 	}
 
-	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
+	async #updateConfig(
+		input: StartDevWorkerInput,
+		throwErrors = false,
+		// If this is being called from a config watcher, the config watcher may already know the new RawConfig value
+		// If that's the case, updateConfig() doesn't need to re-read it
+		override?: { config: RawConfig; path: string }
+	) {
 		logger.debug(
 			"Updating config...",
 			this.#abortController?.signal,
@@ -561,37 +617,54 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = await readConfig(
-				{
-					script: input.entrypoint,
-					config: input.config,
-					env: input.env,
-					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.useServiceEnvironments,
-					remote: !!input.dev?.remote,
-					upstreamProtocol:
-						input.dev?.origin?.secure === undefined
-							? undefined
-							: input.dev?.origin?.secure
-								? "https"
-								: "http",
-					localProtocol:
-						input.dev?.server?.secure === undefined
-							? undefined
-							: input.dev?.server?.secure
-								? "https"
-								: "http",
-					generateTypes: input.dev?.generateTypes,
-				},
-				{ useRedirectIfAvailable: true }
-			);
+			let config;
+			const args = {
+				script: input.entrypoint,
+				config: input.config,
+				env: input.env,
+				"dispatch-namespace": undefined,
+				"legacy-env": !input.legacy?.useServiceEnvironments,
+				remote: !!input.dev?.remote,
+				upstreamProtocol:
+					input.dev?.origin?.secure === undefined
+						? undefined
+						: input.dev?.origin?.secure
+							? "https"
+							: "http",
+				localProtocol:
+					input.dev?.server?.secure === undefined
+						? undefined
+						: input.dev?.server?.secure
+							? "https"
+							: "http",
+				generateTypes: input.dev?.generateTypes,
+			};
+			if (!override) {
+				config = await readConfig(args, { useRedirectIfAvailable: true });
+			} else {
+				const { config: validatedConfig, diagnostics } =
+					normalizeAndValidateConfig(
+						override.config,
+						override.path,
+						override.path,
+						args
+					);
+
+				if (diagnostics.hasWarnings()) {
+					logger.warn(diagnostics.renderWarnings());
+				}
+				if (diagnostics.hasErrors()) {
+					throw new UserError(diagnostics.renderErrors());
+				}
+				config = validatedConfig;
+			}
 
 			if (!getDisableConfigWatching()) {
-				await this.#ensureWatchingConfig(fileConfig.configPath);
+				await this.#ensureWatchingConfig(config.configPath);
 			}
 
 			const { config: resolvedConfig, printCurrentBindings } =
-				await resolveConfig(fileConfig, input);
+				await resolveConfig(config, input);
 
 			if (signal.aborted) {
 				return;
@@ -638,7 +711,7 @@ export class ConfigController extends Controller {
 		logger.debug("ConfigController teardown beginning...");
 		await super.teardown();
 		this.#abortController?.abort();
-		await this.#configWatcher?.close();
+		await Promise.all([this.#configWatcher?.close()]);
 		logger.debug("ConfigController teardown complete");
 	}
 

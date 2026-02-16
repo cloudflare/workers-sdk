@@ -19,6 +19,10 @@
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
 		},
+		"./programmatic": {
+			"import": "./dist/config/programmatic.mjs",
+			"types": "./dist/config/programmatic.d.mts"
+		},
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",
 			"types": "./dist/test-helpers/index.d.mts"
@@ -45,6 +49,7 @@
 		"@vitest/ui": "catalog:default",
 		"cloudflare": "^5.2.0",
 		"concurrently": "^8.2.2",
+		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
 		"find-up": "^6.3.0",
 		"jsonc-parser": "catalog:default",
