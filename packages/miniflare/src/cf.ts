@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dim } from "kleur/colors";
@@ -7,7 +8,44 @@ import { Plugins } from "./plugins";
 import { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
-const defaultCfPath = path.resolve("node_modules", ".mf", "cf.json");
+/**
+ * Gets the default path for the cf.json cache file.
+ * Determines the cache location using the following priority:
+ * 1. MINIFLARE_CACHE_DIR environment variable (miniflare-specific override)
+ * 2. Existing node_modules/.mf directory (backward compatibility)
+ * 3. Existing .wrangler/cache directory
+ * 4. node_modules/.mf if node_modules exists
+ * 5. .wrangler/cache as final fallback
+ */
+function getDefaultCfPath(): string {
+	// Priority 1: MINIFLARE_CACHE_DIR (miniflare-specific override)
+	const miniflareCacheDir = process.env.MINIFLARE_CACHE_DIR;
+	if (miniflareCacheDir) {
+		return path.resolve(miniflareCacheDir, "cf.json");
+	}
+
+	// Define possible cache locations
+	const nodeModulesMfPath = path.resolve("node_modules", ".mf");
+	const wranglerCachePath = path.resolve(".wrangler", "cache");
+
+	// Priority 2: Use existing node_modules/.mf if present (backward compatibility)
+	if (existsSync(nodeModulesMfPath)) {
+		return path.resolve(nodeModulesMfPath, "cf.json");
+	}
+
+	// Priority 3: Use existing .wrangler/cache if present
+	if (existsSync(wranglerCachePath)) {
+		return path.resolve(wranglerCachePath, "cf.json");
+	}
+
+	// Priority 4: Create in node_modules/.mf if node_modules exists
+	if (existsSync("node_modules")) {
+		return path.resolve(nodeModulesMfPath, "cf.json");
+	}
+
+	// Priority 5: Fall back to .wrangler/cache
+	return path.resolve(wranglerCachePath, "cf.json");
+}
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
 
 // Environment variable names for controlling cf fetch behavior
@@ -144,7 +182,7 @@ export async function setupCf(
 		return effectiveCf;
 	}
 
-	let cfPath = defaultCfPath;
+	let cfPath = getDefaultCfPath();
 	if (typeof effectiveCf === "string") {
 		cfPath = effectiveCf;
 	}
