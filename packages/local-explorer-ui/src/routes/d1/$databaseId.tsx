@@ -8,6 +8,7 @@ import {
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
+import { Studio } from "../../components/studio";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioResource } from "../../types/studio";
 
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/d1/$databaseId")({
 
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
+	const searchParams = Route.useSearch();
 
 	const driver = useMemo<LocalD1Driver>(
 		() => new LocalD1Driver(params.databaseId),
@@ -46,8 +48,6 @@ function DatabaseView(): JSX.Element {
 		}),
 		[params.databaseId]
 	);
-
-	console.log({ driver, resource });
 
 	return (
 		<div className="flex flex-col h-full">
@@ -69,7 +69,12 @@ function DatabaseView(): JSX.Element {
 			/>
 
 			<div className="flex-1 overflow-hidden">
-				{/* TODO: Add `<Studio />` component */}
+				<Studio
+					driver={driver}
+					initialTable={searchParams.table}
+					key={params.databaseId}
+					resource={resource}
+				/>
 			</div>
 		</div>
 	);
