@@ -5,6 +5,7 @@ import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
 import { StudioTabDefinitionList } from "./TabRegister";
+import { StudioWindowTabPane } from "./WindowTabPane";
 import type {
 	IStudioDriver,
 	StudioResource,
@@ -341,7 +342,7 @@ export function Studio({
 			<StudioContextMenuProvider>
 				<StudioContextProvider value={contextValues}>
 					<div className="relative w-full h-full overflow-hidden">
-						{/* TODO: Add `StudioWindowTabPane` component */}
+						<StudioWindowTabPane />
 					</div>
 				</StudioContextProvider>
 			</StudioContextMenuProvider>
