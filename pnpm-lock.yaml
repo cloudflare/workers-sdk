@@ -4032,6 +4032,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.0
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)

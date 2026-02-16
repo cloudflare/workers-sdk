@@ -172,7 +172,6 @@ dist
 # End of https://www.toptal.com/developers/gitignore/api/node,macos
 
 wrangler-dist/
-miniflare-dist
 packages/wrangler/wrangler.toml
 packages/wrangler/Dockerfile
 packages/wrangler/src/cloudchamber/internal

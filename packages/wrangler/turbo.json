@@ -4,12 +4,7 @@
 	"tasks": {
 		"build": {
 			"inputs": ["$TURBO_DEFAULT$", "!**/__tests__/**", "!e2e/**"],
-			"outputs": [
-				"miniflare-dist/**",
-				"emitted-types/**",
-				"wrangler-dist/**",
-				"config-schema.json"
-			],
+			"outputs": ["emitted-types/**", "wrangler-dist/**", "config-schema.json"],
 			"env": [
 				"ALGOLIA_APP_ID",
 				"ALGOLIA_PUBLIC_KEY",
