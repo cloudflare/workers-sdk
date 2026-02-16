@@ -8,7 +8,7 @@ Support function-based Vite configs in autoconfig setup
 
 ```ts
 export default defineConfig(({ isSsrBuild }) => ({
-  plugins: [reactRouter(), tsconfigPaths()],
+	plugins: [reactRouter(), tsconfigPaths()],
 }));
 ```
 
