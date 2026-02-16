@@ -79,16 +79,10 @@ function showCacheMessage(fields: string[], folder: string) {
 export function getConfigCache<T>(fileName: string): Partial<T> {
 	try {
 		const cacheFolder = getCacheFolder();
-		if (cacheFolder) {
-			const configCacheLocation = path.join(cacheFolder, fileName);
-			const configCache = JSON.parse(
-				readFileSync(configCacheLocation, "utf-8")
-			);
-			showCacheMessage(Object.keys(configCache), cacheFolder);
-			return configCache;
-		} else {
-			return {};
-		}
+		const configCacheLocation = path.join(cacheFolder, fileName);
+		const configCache = JSON.parse(readFileSync(configCacheLocation, "utf-8"));
+		showCacheMessage(Object.keys(configCache), cacheFolder);
+		return configCache;
 	} catch {
 		return {};
 	}
