@@ -198,7 +198,7 @@ export async function runAutoConfig(
 					} satisfies PackageJSON,
 					null,
 					2
-				)
+				) + "\n"
 			);
 		}
 
@@ -295,7 +295,7 @@ async function saveWranglerJsonc(
 			},
 			null,
 			2
-		)
+		) + "\n"
 	);
 }
 

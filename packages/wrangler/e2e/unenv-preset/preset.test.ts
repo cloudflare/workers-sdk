@@ -655,6 +655,27 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:tty (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "tty enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_tty_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: true,
+			},
+		},
+		{
+			name: "tty disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_tty_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

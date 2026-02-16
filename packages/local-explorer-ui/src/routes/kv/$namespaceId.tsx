@@ -310,7 +310,15 @@ function NamespaceView() {
 
 	return (
 		<>
-			<Breadcrumbs icon={KVIcon} title="KV" items={[namespaceId]} />
+			<Breadcrumbs
+				icon={KVIcon}
+				title="KV"
+				items={[
+					<span className="flex items-center gap-1.5" key="namespace-id">
+						{namespaceId}
+					</span>,
+				]}
+			/>
 
 			<div className="px-6 py-6">
 				{error && (

@@ -7,7 +7,7 @@
 	"dependencies": {
 		"create-astro": "4.13.2",
 		"create-analog": "2.2.3",
-		"@angular/create": "21.1.2",
+		"@angular/create": "21.1.4",
 		"create-docusaurus": "3.9.2",
 		"create-hono": "0.19.4",
 		"create-next-app": "15.5.6",
@@ -19,8 +19,8 @@
 		"create-vike": "0.0.575",
 		"create-vue": "3.21.0",
 		"create-waku": "0.12.5-1.0.0-alpha.3-0",
-		"@tanstack/create-start": "0.48.10",
-		"gatsby": "5.16.0",
+		"@tanstack/create-start": "0.59.3",
+		"gatsby": "5.16.1",
 		"sv": "0.12.1",
 		"nuxi": "3.33.1"
 	}
