@@ -42,7 +42,8 @@ describe("tunnel run", () => {
 			debug: vi.fn(),
 		};
 
-		await tunnelRunCommand.handler(
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		await (tunnelRunCommand as any).handler(
 			{
 				tunnel: undefined,
 				token,

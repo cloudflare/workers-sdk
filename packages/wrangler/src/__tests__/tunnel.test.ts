@@ -232,13 +232,19 @@ describe("tunnel commands", () => {
 
 // Mock helper functions
 
-function mockTunnelCreate(): Promise<{ name: string }> {
+function mockTunnelCreate(): Promise<{
+	name: string;
+	config_src: string;
+}> {
 	return new Promise((resolve) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/cfd_tunnel",
 				async ({ request }) => {
-					const body = (await request.json()) as { name: string };
+					const body = (await request.json()) as {
+						name: string;
+						config_src: string;
+					};
 					resolve(body);
 
 					return HttpResponse.json(
