@@ -1,5 +1,21 @@
 # @cloudflare/unenv-preset
 
+## 2.13.0
+
+### Minor Changes
+
+- [#12573](https://github.com/cloudflare/workers-sdk/pull/12573) [`9a565d5`](https://github.com/cloudflare/workers-sdk/commit/9a565d526224ac510a8d581e32db98545c1b3368) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:child_process` module from workerd when the `enable_nodejs_child_process_module` compatibility flag is enabled.
+
+  This feature is currently experimental and requires both the `enable_nodejs_child_process_module` and `experimental` compatibility flags to be set.
+
+- [#12023](https://github.com/cloudflare/workers-sdk/pull/12023) [`7f18183`](https://github.com/cloudflare/workers-sdk/commit/7f181839513a1cac441e0956a59130ba1f4ef6d4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:tty` module from workerd when the `enable_nodejs_tty_module` compatibility flag is enabled.
+
+  This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_tty_module` compatibility flags to be set.
+
+- [#12363](https://github.com/cloudflare/workers-sdk/pull/12363) [`39491f9`](https://github.com/cloudflare/workers-sdk/commit/39491f9d92153f679fd2f9e81a5d58122946a0af) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for the native `node:v8` module from workerd when the `enable_nodejs_v8_module` and `experimental` compatibility flags are enabled
+
+  This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_v8_module` compatibility flags to be set.
+
 ## 2.12.1
 
 ### Patch Changes

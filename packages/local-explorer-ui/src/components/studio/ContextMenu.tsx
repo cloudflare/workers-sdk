@@ -1,7 +1,4 @@
-import {
-	DropdownMenu,
-	// DropdownMenuItemsBuilder
-} from "@cloudflare/kumo";
+import { DropdownMenu } from "@cloudflare/kumo";
 import {
 	createContext,
 	useCallback,
@@ -10,20 +7,21 @@ import {
 	useRef,
 	useState,
 } from "react";
-import type { DropdownItemBuilderProps } from "../../types/studio";
-// import type { DropdownItemBuilderProps } from "@cloudflare/kumo";
-import type { PropsWithChildren } from "react";
+import type { ComponentProps, PropsWithChildren } from "react";
 
-export const StudioContextMenu = createContext<
-	| {
-			openContextMenu: (
-				mouseEvent: React.MouseEvent<Element, MouseEvent>,
-				menuItems: DropdownItemBuilderProps[],
-				onOpenChange?: (open: boolean) => void
-			) => void;
-	  }
-	| undefined
->(undefined);
+type DropdownItemBuilderProps = ComponentProps<typeof DropdownMenu.Content>;
+
+type OnOpenChangeHandler = (open: boolean) => void;
+
+type OpenContextMenuHandler = (
+	mouseEvent: React.MouseEvent<Element, MouseEvent>,
+	menuItems: DropdownItemBuilderProps[],
+	onOpenChange?: OnOpenChangeHandler
+) => void;
+
+export const StudioContextMenu = createContext<{
+	openContextMenu: OpenContextMenuHandler;
+} | null>(null);
 
 export function useStudioContextMenu() {
 	const context = useContext(StudioContextMenu);
@@ -36,24 +34,34 @@ export function useStudioContextMenu() {
 	return context;
 }
 
+interface Position {
+	x: number;
+	y: number;
+}
+
+type StudioContextMenuProvider = PropsWithChildren;
+
 export function StudioContextMenuProvider({
 	children,
-}: PropsWithChildren<unknown>) {
-	const [position, setPosition] = useState({ x: 0, y: 0 });
-	const [open, setOpen] = useState(false);
+}: StudioContextMenuProvider) {
+	const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
+	const [open, setOpen] = useState<boolean>(false);
 	const [_menuItems, setMenuItems] = useState<DropdownItemBuilderProps[]>([]);
-	const onOpenChange = useRef<((open: boolean) => void) | undefined>(undefined);
+	const onOpenChange = useRef<OnOpenChangeHandler | null>(null);
 
 	const openContextMenu = useCallback(
 		(
 			mouseEvent: React.MouseEvent<Element, MouseEvent>,
 			items: DropdownItemBuilderProps[],
-			_onOpenChange?: (open: boolean) => void
+			_onOpenChange?: OnOpenChangeHandler
 		) => {
 			setOpen(true);
 			setMenuItems(items);
-			setPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
-			onOpenChange.current = _onOpenChange;
+			setPosition({
+				x: mouseEvent.clientX,
+				y: mouseEvent.clientY,
+			});
+			onOpenChange.current = _onOpenChange ?? null;
 		},
 		[]
 	);
@@ -63,30 +71,27 @@ export function StudioContextMenuProvider({
 	return (
 		<StudioContextMenu.Provider value={value}>
 			<DropdownMenu
-				open={open}
 				onOpenChange={(isOpen) => {
 					setOpen(isOpen);
 					onOpenChange.current?.(isOpen);
 				}}
+				open={open}
 			>
 				<DropdownMenu.Trigger
 					render={
 						<button
-							style={{
-								left: `${position.x}px`,
-								position: "fixed",
-								top: `${position.y}px`,
-								visibility: "hidden",
-								zIndex: 200,
-							}}
+							className="fixed hidden z-200"
+							style={{ top: `${position.y}px`, left: `${position.x}px` }}
 						/>
 					}
 				/>
+
 				<DropdownMenu.Content
 					align="start"
 					side="bottom"
 					style={{ width: 250 }}
 				>
+					{/* TODO: Add stub implementation of this dropdown using the new Kumo components */}
 					{/* <DropdownMenuItemsBuilder items={menuItems} /> */}
 				</DropdownMenu.Content>
 			</DropdownMenu>

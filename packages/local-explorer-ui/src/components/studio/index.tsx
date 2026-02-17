@@ -1,125 +1,124 @@
-import { BinocularsIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ModalProvider } from "../../utils/studio/stubs/modal";
-import SplitPane from "../../utils/studio/stubs/SplitPane";
-import { useLeaveGuard } from "../../utils/studio/stubs/useLeaveGuard";
+import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
-import { StudioQueryTab } from "./QueryTab";
-import { StudioSidebarPane } from "./SidebarPane";
-import { StudioTabDefinitionList } from "./tab-register";
-import { StudioWindowTabPane } from "./WindowTabPane";
+import { ModalProvider } from "./Modal";
+import { StudioTabDefinitionList } from "./TabRegister";
+import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
 	IStudioDriver,
 	StudioResource,
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
-import type { StudioTabDefinitionMetadata } from "./tab-register";
-import type { StudioWindowTabItem } from "./WindowTab";
+import type { StudioTabDefinitionMetadata, TabDefinition } from "./TabRegister";
+import type { StudioWindowTabItem } from "./WindowTab/types";
 
-/** Default schema name for SQLite/D1 databases */
+/**
+ * Default schema name for SQLite/D1 databases
+ */
 const DEFAULT_SCHEMA_NAME = "main";
 
 interface StudioProps {
-	category?: string;
+	/**
+	 * The studio driver used to make requests to the database.
+	 */
 	driver: IStudioDriver;
-	/** Table name to open initially (assumes 'main' schema) */
+	/**
+	 * Table name to open initially (assumes 'main' schema)
+	 */
 	initialTable?: string;
-	/** Callback when the active table changes (for URL sync) */
-	onTableChange?: (tableName: string | null) => void;
+	/**
+	 * Metadata about the current studio resource.
+	 */
 	resource: StudioResource;
 }
 
 export function Studio({
-	// category,
 	driver,
 	initialTable,
-	onTableChange,
 	resource,
-}: StudioProps) {
+}: StudioProps): JSX.Element {
 	// Track whether we've already opened the initial table
-	const hasOpenedInitialTable = useRef(false);
-	const [schemas, setSchemas] = useState<StudioSchemas>();
-	const [loadingSchema, setLoadingSchema] = useState(true);
-	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => {
-		return [
-			{
-				component: <StudioQueryTab />,
-				icon: BinocularsIcon,
-				identifier: "query-1",
-				key: window.crypto.randomUUID(),
-				title: "Query",
-				type: "query",
-			},
-		];
-	});
+	const hasOpenedInitialTable = useRef<boolean>(false);
 
-	// Automatically select the first tab
-	const [selectedTabKey, setSelectedTabKey] = useState(
+	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
+	const [loadingSchema, setLoadingSchema] = useState(true);
+	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => [
+		// TODO: Re-add `StudioQueryTab` default tab
+	]);
+
+	const [selectedTabKey, setSelectedTabKey] = useState<string>(
+		// Automatically select the first tab
 		() => tabs[0]?.key ?? ""
 	);
 
-	const refreshSchema = useCallback(() => {
+	const selectedTabKeyRef = useRef(selectedTabKey);
+	selectedTabKeyRef.current = selectedTabKey;
+
+	const refreshSchema = useCallback(async () => {
 		setLoadingSchema(true);
 
-		driver
-			.schemas()
-			.then(setSchemas)
-			.catch(console.error)
-			.finally(() => {
-				setLoadingSchema(false);
-			});
+		try {
+			const driverSchemas = await driver.schemas();
+			setSchemas(driverSchemas);
+		} catch (error) {
+			console.error(error);
+		} finally {
+			setLoadingSchema(false);
+		}
 	}, [driver]);
 
-	useEffect(() => {
-		// eslint-disable-next-line react-hooks/set-state-in-effect -- Triggers async schema fetch on mount; setState occurs inside async .then(), not synchronously
-		refreshSchema();
+	useEffect((): void => {
+		void refreshSchema();
 	}, [refreshSchema]);
 
-	// Utility to close a tab given its identifier
-	const closeStudioTab = useCallback(
-		(tabIdentifier: string) => {
-			setTabs((previousTabs) => {
-				// Find the index of the tab matching the identifier
-				const matchedTabIndex = previousTabs.findIndex(
-					(tab) => tab.identifier === tabIdentifier
+	/**
+	 * Utility to close a tab given its identifier
+	 */
+	const closeStudioTab = useCallback((tabIdentifier: string) => {
+		setTabs((previousTabs) => {
+			// Find the index of the tab matching the identifier
+			const matchedTabIndex = previousTabs.findIndex(
+				(tab) => tab.identifier === tabIdentifier
+			);
+
+			const matchedTab = previousTabs[matchedTabIndex];
+			if (!matchedTab) {
+				return previousTabs;
+			}
+
+			// Remove the matched tab from the list
+			const filteredTabs = previousTabs.filter((tab) => tab !== matchedTab);
+
+			// If the closed tab was the selected one, update selection
+			if (
+				selectedTabKeyRef.current === matchedTab.key &&
+				filteredTabs.length > 0
+			) {
+				const newSelectedIndex = Math.min(
+					filteredTabs.length - 1,
+					matchedTabIndex
 				);
 
-				const matchedTab = previousTabs[matchedTabIndex];
-				if (!matchedTab) {
-					return previousTabs;
+				const newSelectedTab = filteredTabs[newSelectedIndex];
+				if (newSelectedTab) {
+					setSelectedTabKey(newSelectedTab.key);
 				}
+			}
 
-				// Remove the matched tab from the list
-				const filteredTabs = previousTabs.filter((tab) => tab !== matchedTab);
+			return filteredTabs;
+		});
+	}, []);
 
-				// If the closed tab was the selected one, update selection
-				if (selectedTabKey === matchedTab.key && filteredTabs.length > 0) {
-					const newSelectedIndex = Math.min(
-						filteredTabs.length - 1,
-						matchedTabIndex
-					);
-
-					const newSelectedTab = filteredTabs[newSelectedIndex];
-					if (newSelectedTab) {
-						setSelectedTabKey(newSelectedTab.key);
-					}
-				}
-
-				return filteredTabs;
-			});
-		},
-		[selectedTabKey]
-	);
-
-	// Utility to close a tab given tabs
+	/**
+	 * Utility to open a tab given its identifier
+	 */
 	const openStudioTab = useCallback<StudioContextValue["openStudioTab"]>(
 		(data: StudioTabDefinitionMetadata, isTemporary?: boolean) => {
 			setTabs((prevTabs) => {
 				// Getting tab setting
 				const tabTypeDefinition = StudioTabDefinitionList[data.type];
-
 				if (!tabTypeDefinition) {
 					console.error("Trying to open unknown tab type", data);
 					return prevTabs;
@@ -127,11 +126,10 @@ export function Studio({
 
 				const identifier = tabTypeDefinition.makeIdentifier(data);
 
+				// Open existing tab if exist
 				const foundMatchedTab = prevTabs.find(
 					(tab) => tab.identifier === identifier
 				);
-
-				// Open existing tab if exist
 				if (foundMatchedTab) {
 					setSelectedTabKey(foundMatchedTab.key);
 					return prevTabs;
@@ -142,7 +140,6 @@ export function Studio({
 
 				// Check if there is any temporary, we will replace instead of adding new tab
 				const tempTab = prevTabs.find((tab) => tab.isTemp && !tab.isDirty);
-
 				if (tempTab) {
 					return prevTabs.map((tab) => {
 						if (tab === tempTab) {
@@ -163,19 +160,22 @@ export function Studio({
 				return [
 					...prevTabs,
 					{
-						key: newTabKey,
-						identifier,
 						component: tabTypeDefinition.makeComponent(data),
 						icon: tabTypeDefinition.icon,
-						title: tabTypeDefinition.makeTitle(data),
+						identifier,
 						isTemp: isTemporary,
-					} as StudioWindowTabItem,
+						key: newTabKey,
+						title: tabTypeDefinition.makeTitle(data),
+					} satisfies StudioWindowTabItem,
 				];
 			});
 		},
 		[setSelectedTabKey]
 	);
 
+	/**
+	 * Updates the status properties (e.g. `isDirty`, `isTemp`) of an existing studio tab.
+	 */
 	const updateStudioTabStatus = useCallback<
 		StudioContextValue["updateStudioTabStatus"]
 	>((identifierParam, status) => {
@@ -199,7 +199,7 @@ export function Studio({
 	}, []);
 
 	// Open initial table from URL param after schemas load (only once)
-	useEffect(() => {
+	useEffect((): void => {
 		if (
 			hasOpenedInitialTable.current ||
 			!initialTable ||
@@ -212,48 +212,31 @@ export function Studio({
 		// Check if the table exists in the main schema
 		const mainSchema = schemas[DEFAULT_SCHEMA_NAME];
 		const tableExists = mainSchema?.some(
-			(item) => item.type === "table" && item.name === initialTable
+			(i) => i.type === "table" && i.name === initialTable
 		);
-
 		if (tableExists) {
-			// eslint-disable-next-line react-hooks/set-state-in-effect -- One-time initialization to open initial table tab from URL params
 			openStudioTab({
 				schemaName: DEFAULT_SCHEMA_NAME,
 				tableName: initialTable,
 				type: "table",
 			});
 			hasOpenedInitialTable.current = true;
-		} else {
-			console.warn(
-				`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
-			);
-			hasOpenedInitialTable.current = true;
-		}
-	}, [initialTable, schemas, loadingSchema, openStudioTab]);
-
-	// Sync selected tab to URL (call onTableChange when active table changes)
-	useEffect(() => {
-		if (!onTableChange) {
 			return;
 		}
 
-		// Find the currently selected tab
-		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
-		if (!selectedTab) {
-			return;
-		}
+		console.warn(
+			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
+		);
+		hasOpenedInitialTable.current = true;
+	}, [initialTable, loadingSchema, openStudioTab, schemas]);
 
-		// Check if the selected tab is a table tab
-		// Table tab identifiers have the format: "table/{schemaName}.{tableName}"
-		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
-		if (tableMatch) {
-			const tableName = tableMatch[1];
-			onTableChange(tableName ?? null);
-		} else {
-			onTableChange(null);
-		}
-	}, [selectedTabKey, tabs, onTableChange]);
-
+	/**
+	 * Replaces an existing studio tab with a new one built from the provided
+	 * `StudioTabDefinitionMetadata`.
+	 *
+	 * The target tab is located by its string `identifier`. If no matching tab
+	 * is found, the tab list is unchanged.
+	 */
 	const replaceStudioTab = useCallback<StudioContextValue["replaceStudioTab"]>(
 		(
 			identifier: string,
@@ -267,7 +250,10 @@ export function Studio({
 				}
 
 				// Getting tab setting
-				const tabTypeDefinition = StudioTabDefinitionList[data.type];
+				// TODO: Remove assertion once tab definitions are registered
+				const tabTypeDefinition = StudioTabDefinitionList[
+					data.type
+				] as TabDefinition<StudioTabDefinitionMetadata>;
 				const newIdentifier = tabTypeDefinition.makeIdentifier(data);
 				const newKey = window.crypto.randomUUID();
 
@@ -305,23 +291,23 @@ export function Studio({
 		[setSelectedTabKey]
 	);
 
-	// Prevent the user from accidentally leaving the page
-	// if there are any tabs with unsaved changes.
+	/**
+	 * Prevent the user from accidentally leaving the page if there
+	 * are any tabs with unsaved changes.
+	 */
 	const hasDirtyState = tabs.some((tab) => tab.isDirty);
 
 	useLeaveGuard({
 		enabled: hasDirtyState,
-		onBeforeLeave: () => {
-			return "You have unsaved changes. Are you sure you want to leave?";
-		},
+		onBeforeLeave: () =>
+			"You have unsaved changes. Are you sure you want to leave?",
 	});
 
-	const contextValues = useMemo(() => {
-		return {
+	const contextValues = useMemo(
+		() => ({
 			closeStudioTab,
 			driver,
 			loadingSchema,
-			onTableChange,
 			openStudioTab,
 			refreshSchema,
 			replaceStudioTab,
@@ -332,38 +318,30 @@ export function Studio({
 			setStudioTabs: setTabs,
 			tabs,
 			updateStudioTabStatus,
-		};
-	}, [
-		schemas,
-		refreshSchema,
-		loadingSchema,
-		tabs,
-		driver,
-		setTabs,
-		selectedTabKey,
-		setSelectedTabKey,
-		closeStudioTab,
-		resource,
-		openStudioTab,
-		replaceStudioTab,
-		updateStudioTabStatus,
-		onTableChange,
-	]);
+		}),
+		[
+			closeStudioTab,
+			driver,
+			loadingSchema,
+			openStudioTab,
+			refreshSchema,
+			replaceStudioTab,
+			resource,
+			schemas,
+			selectedTabKey,
+			setSelectedTabKey,
+			setTabs,
+			tabs,
+			updateStudioTabStatus,
+		]
+	);
 
 	return (
 		<ModalProvider>
 			<StudioContextMenuProvider>
 				<StudioContextProvider value={contextValues}>
 					<div className="relative w-full h-full overflow-hidden">
-						<SplitPane
-							defaultSize={300}
-							minSize={50}
-							resizerClassName="!bg-resizer border-transparent"
-							split="horizontal"
-						>
-							<StudioSidebarPane />
-							<StudioWindowTabPane />
-						</SplitPane>
+						<StudioWindowTabPane />
 					</div>
 				</StudioContextProvider>
 			</StudioContextMenuProvider>

@@ -613,6 +613,30 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:worker_threads (experimental - no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "worker_threads disabled by default",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: false,
+			},
+		},
+		{
+			name: "worker_threads enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_worker_threads_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: true,
+			},
+		},
+	],
 	// node:repl (experimental, no default enable date)
 	[
 		// TODO: add test for disabled by date (no date defined yet)
@@ -676,6 +700,33 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:child_process (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "child_process enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_child_process_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: true,
+			},
+		},
+		{
+			name: "child_process disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"disable_nodejs_child_process_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(
@@ -718,15 +769,18 @@ describe.each(localTestConfigs)(
 
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
-			{ timeout: 5_000 },
+			{ timeout: 20_000 },
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
@@ -777,11 +831,14 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
@@ -833,11 +890,14 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}

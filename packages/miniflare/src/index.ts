@@ -127,6 +127,7 @@ import {
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
+	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
 	LogLevel,
@@ -2634,6 +2635,45 @@ export class Miniflare {
 		const proxyClient = await this._getProxyClient();
 		return proxyClient.global
 			.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
+	}
+	/**
+	 * Purges all entries from the cache.
+	 *
+	 * This is useful during development when cached assets need to be cleared
+	 * without restarting the Miniflare instance.
+	 *
+	 * @param cacheName - Optional name of specific cache to purge. If not provided,
+	 *                    purges the default cache.
+	 * @returns A promise that resolves with the number of entries purged.
+	 */
+	async purgeCache(cacheName?: string): Promise<number> {
+		await this.ready;
+
+		const proxyClient = await this._getProxyClient();
+
+		// Get the cache service binding from proxy env. This is a Fetcher to
+		// the cache-entry worker which properly sets cf.miniflare.name before
+		// forwarding to the CacheObject Durable Object.
+		const cacheService = proxyClient.env[CoreBindings.SERVICE_CACHE] as Fetcher;
+
+		// Build the request with the cache namespace header if specified
+		const headers: Record<string, string> = {};
+		if (cacheName !== undefined) {
+			headers[CacheHeaders.NAMESPACE] = cacheName;
+		}
+
+		// Call the cache-entry worker's /purge-all endpoint
+		const response = await cacheService.fetch("http://localhost/purge-all", {
+			method: "DELETE",
+			headers,
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to purge cache: ${response.statusText}`);
+		}
+
+		const result = (await response.json()) as { deleted: number };
+		return result.deleted;
 	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
 		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);

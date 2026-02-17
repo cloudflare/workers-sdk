@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import CachePolicy from "http-cache-semantics";
 import {
 	DeferredPromise,
+	DELETE,
 	GET,
 	InclusiveRange,
 	KeyValueStorage,
@@ -390,5 +391,11 @@ export class CacheObject extends MiniflareDurableObject {
 		// This is an extremely vague error, but it fits with what the cache API in workerd expects
 		if (!deleted) throw new PurgeFailure();
 		return new Response(null);
+	};
+
+	@DELETE("/purge-all")
+	purgeAll: CacheRouteHandler = async () => {
+		const deletedCount = this.storage.deleteAll();
+		return Response.json({ deleted: deletedCount });
 	};
 }

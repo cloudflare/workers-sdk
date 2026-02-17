@@ -1,5 +1,20 @@
 # @cloudflare/workers-utils
 
+## 0.11.0
+
+### Minor Changes
+
+- [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `WRANGLER_CACHE_DIR` environment variable and smart cache directory detection
+
+  Wrangler now intelligently detects where to store cache files:
+
+  1. Use `WRANGLER_CACHE_DIR` env var if set
+  2. Use existing cache directory if found (`node_modules/.cache/wrangler` or `.wrangler/cache`)
+  3. Create cache in `node_modules/.cache/wrangler` if `node_modules` exists
+  4. Otherwise use `.wrangler/cache`
+
+  This improves compatibility with Yarn PnP, pnpm, and other package managers that don't use traditional `node_modules` directories, without requiring any configuration.
+
 ## 0.10.0
 
 ### Minor Changes

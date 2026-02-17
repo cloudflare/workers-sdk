@@ -10,16 +10,16 @@ import type { PropsWithChildren } from "react";
 
 export interface StudioContextValue {
 	driver: IStudioDriver;
-
-	schemas?: StudioSchemas;
 	loadingSchema: boolean;
 	refreshSchema: () => void;
+	resource: StudioResource;
+	schemas: StudioSchemas | null;
 
 	// Tab manipulation context
-	tabs: StudioWindowTabItem[];
 	selectedTabKey: string;
-	setStudioTabs: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
 	setSelectedTabKey: React.Dispatch<React.SetStateAction<string>>;
+	setStudioTabs: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
+	tabs: StudioWindowTabItem[];
 
 	// Tab management
 	closeStudioTab: (identifier: string) => void;
@@ -33,20 +33,12 @@ export interface StudioContextValue {
 		identifier: string | StudioTabDefinitionMetadata,
 		status: { isDirty?: boolean; isTemp?: boolean }
 	) => void;
-
-	resource: StudioResource;
-
-	/**
-	 * Callback for when the active table changes (for URL sync)
-	 */
-	onTableChange?: (tableName: string | null) => void;
 }
 
-const StudioContext = createContext<StudioContextValue | undefined>(undefined);
+const StudioContext = createContext<StudioContextValue | null>(null);
 
 export function useStudioContext() {
 	const context = useContext(StudioContext);
-
 	if (!context) {
 		throw new Error(
 			"useStudioContext must be used within a StudioContextProvider"
