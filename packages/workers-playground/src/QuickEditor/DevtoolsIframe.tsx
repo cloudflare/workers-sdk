@@ -2,7 +2,7 @@ import { Icon } from "@cloudflare/component-icon";
 import { Loading } from "@cloudflare/component-loading";
 import { Div, Span } from "@cloudflare/elements";
 import { isDarkMode, theme } from "@cloudflare/style-const";
-import { useCallback, useContext, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { ExpandableLogMessage, messageSummary } from "./ExpandableLogMessage";
 import FrameErrorBoundary from "./FrameErrorBoundary";
@@ -263,29 +263,52 @@ function TailLogsConnector({
 export function DevtoolsIframe({ url }: { url: string }) {
 	const [logs, setLogs] = useState<TailEvent[]>([]);
 	const [retryKey, setRetryKey] = useState(0);
-	const retryCountRef = useRef(0);
+	const [retryCount, setRetryCount] = useState(0);
 	const [retrying, setRetrying] = useState(false);
-	const [exhaustedRetries, setExhaustedRetries] = useState(false);
+	const timerRef = useRef<ReturnType<typeof setTimeout>>();
+	const mountedRef = useRef(true);
+
+	// Cleanup on unmount
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+			if (timerRef.current) {
+				clearTimeout(timerRef.current);
+			}
+		};
+	}, []);
+
+	// Reset retry state when URL changes (e.g. new preview deployment).
+	// This is React's documented "reset state on prop change" pattern.
+	/* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
+	useEffect(() => {
+		setRetryCount(0);
+		setRetrying(false);
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+		}
+	}, [url]);
+	/* eslint-enable react-hooks/set-state-in-effect */
 
 	const handleConnected = useCallback(() => {
-		retryCountRef.current = 0;
-		setExhaustedRetries(false);
+		setRetryCount(0);
 	}, []);
 
 	const handleError = useCallback(() => {
-		const count = retryCountRef.current;
-		if (count < MAX_RETRIES) {
+		if (retryCount < MAX_RETRIES) {
 			setRetrying(true);
-			const delay = RETRY_BASE_DELAY * Math.pow(2, count);
-			setTimeout(() => {
-				retryCountRef.current = count + 1;
+			const delay = RETRY_BASE_DELAY * Math.pow(2, retryCount);
+			timerRef.current = setTimeout(() => {
+				if (!mountedRef.current) {
+					return;
+				}
+				setRetryCount((c) => c + 1);
 				setRetryKey((k) => k + 1);
 				setRetrying(false);
 			}, delay);
-		} else {
-			setExhaustedRetries(true);
 		}
-	}, []);
+	}, [retryCount]);
 
 	const handleData = useCallback((event: TailEvent) => {
 		setLogs((prev) => {
@@ -304,6 +327,7 @@ export function DevtoolsIframe({ url }: { url: string }) {
 
 	const isDark = isDarkMode();
 	const hasLogs = logs.length > 0;
+	const exhaustedRetries = retryCount >= MAX_RETRIES;
 
 	return (
 		<Div display="flex" flexDirection="column" height="100%">
@@ -359,8 +383,10 @@ export function DevtoolsIframe({ url }: { url: string }) {
 								cursor="pointer"
 								style={{ textDecoration: "underline" }}
 								onClick={() => {
-									retryCountRef.current = 0;
-									setExhaustedRetries(false);
+									if (timerRef.current) {
+										clearTimeout(timerRef.current);
+									}
+									setRetryCount(0);
 									setRetrying(false);
 									setRetryKey((k) => k + 1);
 								}}
