@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, it } from "vitest";
 import {
 	getAssetFilename,
 	getCloudflaredBinPath,
@@ -10,7 +10,9 @@ import {
 
 describe("cloudflared binary management", () => {
 	describe("getCloudflaredBinPath", () => {
-		it("should return path in home directory cache including version", () => {
+		it("should return path in home directory cache including version", ({
+			expect,
+		}) => {
 			const version = "2026.1.0";
 			const binPath = getCloudflaredBinPath(version);
 			const expectedDir = path.join(
@@ -31,7 +33,7 @@ describe("cloudflared binary management", () => {
 	});
 
 	describe("getAssetFilename", () => {
-		it("returns .tgz for darwin", () => {
+		it("returns .tgz for darwin", ({ expect }) => {
 			expect(getAssetFilename("darwin", "amd64")).toBe(
 				"cloudflared-darwin-amd64.tgz"
 			);
@@ -40,13 +42,13 @@ describe("cloudflared binary management", () => {
 			);
 		});
 
-		it("returns .exe for windows", () => {
+		it("returns .exe for windows", ({ expect }) => {
 			expect(getAssetFilename("windows", "amd64")).toBe(
 				"cloudflared-windows-amd64.exe"
 			);
 		});
 
-		it("returns bare binary name for linux", () => {
+		it("returns bare binary name for linux", ({ expect }) => {
 			expect(getAssetFilename("linux", "amd64")).toBe(
 				"cloudflared-linux-amd64"
 			);
@@ -58,27 +60,27 @@ describe("cloudflared binary management", () => {
 	});
 
 	describe("isVersionOutdated", () => {
-		it("returns true when installed is older by year", () => {
+		it("returns true when installed is older by year", ({ expect }) => {
 			expect(isVersionOutdated("2024.1.0", "2025.1.0")).toBe(true);
 		});
 
-		it("returns true when installed is older by month", () => {
+		it("returns true when installed is older by month", ({ expect }) => {
 			expect(isVersionOutdated("2025.1.0", "2025.7.0")).toBe(true);
 		});
 
-		it("returns true when installed is older by patch", () => {
+		it("returns true when installed is older by patch", ({ expect }) => {
 			expect(isVersionOutdated("2025.7.0", "2025.7.1")).toBe(true);
 		});
 
-		it("returns false when versions are equal", () => {
+		it("returns false when versions are equal", ({ expect }) => {
 			expect(isVersionOutdated("2025.7.0", "2025.7.0")).toBe(false);
 		});
 
-		it("returns false when installed is newer", () => {
+		it("returns false when installed is newer", ({ expect }) => {
 			expect(isVersionOutdated("2026.1.0", "2025.12.0")).toBe(false);
 		});
 
-		it("handles double-digit months correctly", () => {
+		it("handles double-digit months correctly", ({ expect }) => {
 			expect(isVersionOutdated("2025.9.0", "2025.12.0")).toBe(true);
 			expect(isVersionOutdated("2025.12.0", "2025.9.0")).toBe(false);
 		});
@@ -86,17 +88,21 @@ describe("cloudflared binary management", () => {
 });
 
 describe("cloudflared error messages", () => {
-	it("should have helpful error message for unsupported platform", () => {
+	it("should have helpful error message for unsupported platform", ({
+		expect,
+	}) => {
 		const errorMessage = `Unsupported platform for cloudflared`;
 		expect(typeof errorMessage).toBe("string");
 	});
 
-	it("should have helpful error message for network failures", () => {
+	it("should have helpful error message for network failures", ({ expect }) => {
 		const errorMessage = `Failed to download cloudflared`;
 		expect(typeof errorMessage).toBe("string");
 	});
 
-	it("should have helpful error message for validation failures", () => {
+	it("should have helpful error message for validation failures", ({
+		expect,
+	}) => {
 		const errorMessage = `Failed to validate cloudflared binary`;
 		expect(typeof errorMessage).toBe("string");
 	});
@@ -113,7 +119,9 @@ describe("environment variable override", () => {
 		}
 	});
 
-	it("should respect WRANGLER_CLOUDFLARED_PATH when set to existing file", async () => {
+	it("should respect WRANGLER_CLOUDFLARED_PATH when set to existing file", async ({
+		expect,
+	}) => {
 		// Create a temporary file to use as the cloudflared path
 		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cloudflared-test-"));
 		const tempBin = path.join(tempDir, "cloudflared");
@@ -133,7 +141,9 @@ describe("environment variable override", () => {
 		fs.rmSync(tempDir, { recursive: true });
 	});
 
-	it("should throw error when WRANGLER_CLOUDFLARED_PATH points to non-existent file", async () => {
+	it("should throw error when WRANGLER_CLOUDFLARED_PATH points to non-existent file", async ({
+		expect,
+	}) => {
 		process.env.WRANGLER_CLOUDFLARED_PATH = "/nonexistent/path/to/cloudflared";
 
 		// Import fresh to pick up env change

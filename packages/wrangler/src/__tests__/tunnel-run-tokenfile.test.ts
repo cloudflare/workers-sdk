@@ -1,16 +1,21 @@
 import { EventEmitter } from "node:events";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { spawnCloudflared } from "../tunnel/cloudflared";
 import { tunnelRunCommand } from "../tunnel/run";
+import type * as CloudflaredModule from "../tunnel/cloudflared";
 
 vi.mock("../tunnel/cloudflared", async () => {
-	const actual = await vi.importActual<typeof import("../tunnel/cloudflared")>(
+	const actual = await vi.importActual<typeof CloudflaredModule>(
 		"../tunnel/cloudflared"
 	);
 	return {
 		...actual,
 		spawnCloudflared: vi.fn(async (_args: string[], _opts?: unknown) => {
-			const cp = new EventEmitter() as any;
+			const cp = new EventEmitter() as NodeJS.EventEmitter & {
+				stderr: null;
+				killed: boolean;
+				kill: () => void;
+			};
 			cp.stderr = null;
 			cp.killed = false;
 			cp.kill = () => {
@@ -26,7 +31,9 @@ describe("tunnel run", () => {
 		vi.clearAllMocks();
 	});
 
-	it("passes token via TUNNEL_TOKEN env var, not CLI args", async () => {
+	it("passes token via TUNNEL_TOKEN env var, not CLI args", async ({
+		expect,
+	}) => {
 		const token = "TEST_TOKEN";
 
 		const logger = {
@@ -42,11 +49,17 @@ describe("tunnel run", () => {
 				tokenFile: undefined,
 				url: undefined,
 				logLevel: "info",
-			} as any,
-			{ config: { send_metrics: false } as any, logger, sdk: {} as any } as any
+			},
+			{
+				config: { send_metrics: false },
+				logger,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				sdk: {} as any,
+			}
 		);
 
 		expect(spawnCloudflared).toHaveBeenCalledTimes(1);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const [calledArgs, calledOpts] = (spawnCloudflared as any).mock
 			.calls[0] as [string[], { env?: Record<string, string> }];
 

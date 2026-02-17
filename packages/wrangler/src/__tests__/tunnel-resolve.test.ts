@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import type Cloudflare from "cloudflare";
+import { describe, it } from "vitest";
 import { resolveTunnelId } from "../tunnel/client";
+import type Cloudflare from "cloudflare";
 
 function asyncIterableFromArray<T>(items: T[]): AsyncIterable<T> {
 	return {
@@ -13,7 +13,7 @@ function asyncIterableFromArray<T>(items: T[]): AsyncIterable<T> {
 }
 
 describe("resolveTunnelId", () => {
-	it("returns UUID input without calling API", async () => {
+	it("returns UUID input without calling API", async ({ expect }) => {
 		const sdk = {
 			zeroTrust: {
 				tunnels: {
@@ -31,7 +31,7 @@ describe("resolveTunnelId", () => {
 		).resolves.toBe("f70ff985-a4ef-4643-bbbc-4a0ed4fc8415");
 	});
 
-	it("resolves a unique tunnel name via SDK list", async () => {
+	it("resolves a unique tunnel name via SDK list", async ({ expect }) => {
 		const sdk = {
 			zeroTrust: {
 				tunnels: {
@@ -39,7 +39,10 @@ describe("resolveTunnelId", () => {
 						list({ name }: { name?: string }) {
 							expect(name).toBe("my-tunnel");
 							return asyncIterableFromArray([
-								{ id: "11111111-1111-4111-8111-111111111111", name: "my-tunnel" },
+								{
+									id: "11111111-1111-4111-8111-111111111111",
+									name: "my-tunnel",
+								},
 							]);
 						},
 					},

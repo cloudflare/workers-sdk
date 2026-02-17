@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { redactCloudflaredArgsForLogging } from "../tunnel/cloudflared";
 
 describe("cloudflared arg redaction", () => {
-	it("redacts --token and other sensitive values", () => {
+	it("redacts --token and other sensitive values", ({ expect }) => {
 		const args = ["tunnel", "run", "--token", "SECRET_TOKEN"];
 
 		expect(redactCloudflaredArgsForLogging(args)).toEqual([
@@ -13,7 +13,7 @@ describe("cloudflared arg redaction", () => {
 		]);
 	});
 
-	it("redacts --token=... style", () => {
+	it("redacts --token=... style", ({ expect }) => {
 		expect(redactCloudflaredArgsForLogging(["--token=SECRET"])).toEqual([
 			"--token=[REDACTED]",
 		]);

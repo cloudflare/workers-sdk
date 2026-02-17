@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -33,7 +33,7 @@ describe("tunnel help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help text when no arguments are passed", async () => {
+	it("should show help text when no arguments are passed", async ({ expect }) => {
 		await runWrangler("tunnel");
 		await endEventLoop();
 
@@ -61,7 +61,7 @@ describe("tunnel help", () => {
 		`);
 	});
 
-	it("should show help when an invalid argument is passed", async () => {
+	it("should show help when an invalid argument is passed", async ({ expect }) => {
 		await expect(() => runWrangler("tunnel invalid")).rejects.toThrow(
 			"Unknown argument: invalid"
 		);
@@ -94,7 +94,7 @@ describe("tunnel commands", () => {
 	});
 
 	describe("tunnel create", () => {
-		it("should create a tunnel", async () => {
+		it("should create a tunnel", async ({ expect }) => {
 			const reqPromise = mockTunnelCreate();
 
 			await runWrangler("tunnel create my-new-tunnel");
@@ -118,7 +118,7 @@ describe("tunnel commands", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should require a tunnel name", async () => {
+		it("should require a tunnel name", async ({ expect }) => {
 			await expect(() => runWrangler("tunnel create")).rejects.toThrow(
 				"Not enough non-option arguments"
 			);
@@ -126,7 +126,7 @@ describe("tunnel commands", () => {
 	});
 
 	describe("tunnel list", () => {
-		it("should list all tunnels", async () => {
+		it("should list all tunnels", async ({ expect }) => {
 			mockTunnelList([defaultTunnel, secondTunnel]);
 
 			await runWrangler("tunnel list");
@@ -139,7 +139,7 @@ describe("tunnel commands", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should show message when no tunnels exist", async () => {
+		it("should show message when no tunnels exist", async ({ expect }) => {
 			mockTunnelList([]);
 
 			await runWrangler("tunnel list");
@@ -150,7 +150,7 @@ describe("tunnel commands", () => {
 	});
 
 	describe("tunnel info", () => {
-		it("should get tunnel details", async () => {
+		it("should get tunnel details", async ({ expect }) => {
 			mockTunnelGet(defaultTunnel);
 
 			await runWrangler("tunnel info f70ff985-a4ef-4643-bbbc-4a0ed4fc8415");
@@ -162,13 +162,13 @@ describe("tunnel commands", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should require a tunnel ID", async () => {
+		it("should require a tunnel ID", async ({ expect }) => {
 			await expect(() => runWrangler("tunnel info")).rejects.toThrow(
 				"Not enough non-option arguments"
 			);
 		});
 
-		it("should handle non-existent tunnel", async () => {
+		it("should handle non-existent tunnel", async ({ expect }) => {
 			mockTunnelGetNotFound("nonexistent-id");
 
 			await expect(
@@ -180,7 +180,7 @@ describe("tunnel commands", () => {
 	});
 
 	describe("tunnel delete", () => {
-		it("should delete tunnel with confirmation", async () => {
+		it("should delete tunnel with confirmation", async ({ expect }) => {
 			mockConfirm({
 				text: 'Are you sure you want to delete tunnel "f70ff985-a4ef-4643-bbbc-4a0ed4fc8415"? This action cannot be undone.',
 				result: true,
@@ -194,7 +194,7 @@ describe("tunnel commands", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should cancel deletion when not confirmed", async () => {
+		it("should cancel deletion when not confirmed", async ({ expect }) => {
 			mockConfirm({
 				text: 'Are you sure you want to delete tunnel "f70ff985-a4ef-4643-bbbc-4a0ed4fc8415"? This action cannot be undone.',
 				result: false,
@@ -206,7 +206,7 @@ describe("tunnel commands", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should skip confirmation with --force", async () => {
+		it("should skip confirmation with --force", async ({ expect }) => {
 			mockTunnelDelete("f70ff985-a4ef-4643-bbbc-4a0ed4fc8415");
 
 			await runWrangler(
@@ -218,7 +218,7 @@ describe("tunnel commands", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should require a tunnel ID", async () => {
+		it("should require a tunnel ID", async ({ expect }) => {
 			await expect(() => runWrangler("tunnel delete")).rejects.toThrow(
 				"Not enough non-option arguments"
 			);
@@ -340,7 +340,7 @@ describe("tunnel permission errors", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should show helpful error message when permission is denied", async () => {
+	it("should show helpful error message when permission is denied", async ({ expect }) => {
 		mockTunnelPermissionError();
 
 		await expect(runWrangler("tunnel list")).rejects.toThrow(
