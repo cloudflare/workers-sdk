@@ -103,33 +103,16 @@ const parseRawConfigFile = (configPath: string): RawConfig => {
 	return {};
 };
 
-/**
- * Synchronously read the `send_metrics` value from a static config file.
- * Returns undefined for programmatic configs (.ts/.js) since those require
- * async import().
- *
- * Note: programmatic configs do not support setting `send_metrics`. It is
- * only respected in static config files.
- */
-export const experimental_readSendMetrics = (
+export const experimental_readRawConfig = (
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
-): { sendMetrics: boolean | undefined; configPath: string | undefined } => {
-	const { configPath } = resolveWranglerConfigPath(args, options);
-	const rawConfig = parseRawConfigFile(configPath ?? "");
-	return { sendMetrics: rawConfig.send_metrics, configPath };
-};
-
-export const experimental_readRawConfig = async (
-	args: ReadConfigCommandArgs,
-	options: ReadConfigOptions = {}
-): Promise<{
+): {
 	rawConfig: RawConfig;
 	configPath: string | undefined;
 	userConfigPath: string | undefined;
 	deployConfigPath: string | undefined;
 	redirected: boolean;
-}> => {
+} => {
 	// Load the configuration from disk if available
 	const { configPath, userConfigPath, deployConfigPath, redirected } =
 		resolveWranglerConfigPath(args, options);
@@ -143,4 +126,22 @@ export const experimental_readRawConfig = async (
 		deployConfigPath,
 		redirected,
 	};
+};
+
+/**
+ * Async version of `experimental_readRawConfig` that can support programmatic
+ * config files in future
+ */
+export const experimental_loadConfig = async (
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<{
+	rawConfig: RawConfig;
+	configPath: string | undefined;
+	userConfigPath: string | undefined;
+	deployConfigPath: string | undefined;
+	redirected: boolean;
+}> => {
+	// When programmatic config files are supported, this function will have another code path
+	return experimental_readRawConfig(args, options);
 };

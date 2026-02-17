@@ -14,8 +14,8 @@ export {
 	formatConfigSnippet,
 	configFormat,
 	configFileName,
+	experimental_loadConfig,
 	experimental_readRawConfig,
-	experimental_readSendMetrics,
 } from "./config";
 export {
 	experimental_patchConfig,

@@ -112,6 +112,7 @@ export const unstable_generateASSETSBinding: (
 
 export {
 	defaultWranglerConfig as unstable_defaultWranglerConfig,
+	experimental_loadConfig,
 	experimental_readRawConfig,
 } from "@cloudflare/workers-utils";
 

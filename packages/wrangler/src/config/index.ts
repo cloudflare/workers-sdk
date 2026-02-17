@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import {
 	configFileName,
-	experimental_readRawConfig,
+	experimental_loadConfig,
 	FatalError,
 	isPagesConfig,
 	normalizeAndValidateConfig,
@@ -44,7 +44,7 @@ export async function readConfig(
 		userConfigPath,
 		deployConfigPath,
 		redirected,
-	} = await experimental_readRawConfig(args, options);
+	} = await experimental_loadConfig(args, options);
 	if (redirected) {
 		assert(configPath, "Redirected config found without a configPath");
 		assert(
@@ -90,7 +90,7 @@ export async function readPagesConfig(
 	let deployConfigPath: string | undefined;
 	try {
 		({ rawConfig, configPath, userConfigPath, deployConfigPath, redirected } =
-			await experimental_readRawConfig(args, options));
+			await experimental_loadConfig(args, options));
 		if (redirected) {
 			assert(configPath, "Redirected config found without a configPath");
 			assert(

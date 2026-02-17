@@ -3,7 +3,7 @@ import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import {
 	CommandLineArgsError,
-	experimental_readSendMetrics,
+	experimental_readRawConfig,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
@@ -1939,11 +1939,8 @@ export async function main(argv: string[]): Promise<void> {
 
 	const startTime = Date.now();
 	let configArgs: ReadConfigCommandArgs = {};
-	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
-	// Register middleware to set logger level and capture fallback telemetry info.
-	// This middleware must remain synchronous — returning a Promise changes how
-	// yargs propagates validation errors, breaking error message formatting.
+	// Register middleware to set logger level and capture fallback telemetry info
 	wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
@@ -1953,22 +1950,6 @@ export async function main(argv: string[]): Promise<void> {
 		setLogLevel(logger.loggerLevel);
 
 		configArgs = args;
-
-		// Create a fallback metrics dispatcher for errors that occur before the
-		// command handler runs. Synchronously reads send_metrics from static
-		// config files (TOML/JSON) — programmatic configs are skipped since
-		// they require async import().
-		try {
-			const { sendMetrics, configPath } = experimental_readSendMetrics(args);
-			dispatcher = getMetricsDispatcher({
-				sendMetrics,
-				configPath,
-				argv,
-			});
-		} catch (e) {
-			logger.debug("Failed to read config for metrics. Using defaults.", e);
-			dispatcher = getMetricsDispatcher({ argv });
-		}
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
@@ -1986,9 +1967,27 @@ export async function main(argv: string[]): Promise<void> {
 			// The error occurred before Command handler ran
 			// (e.g., yargs validation errors like unknown commands or invalid arguments).
 			// So we need to handle telemetry and error reporting here.
-			if (dispatcher) {
-				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+			let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+
+			try {
+				const { rawConfig, configPath } =
+					experimental_readRawConfig(configArgs);
+				dispatcher = getMetricsDispatcher({
+					sendMetrics: rawConfig.send_metrics,
+					hasAssets: !!rawConfig.assets?.directory,
+					configPath,
+					argv,
+				});
+			} catch (err) {
+				// If we can't parse the config, we can still send metrics with defaults
+				logger.debug(
+					"Failed to parse config for metrics. Using defaults.",
+					err
+				);
+				dispatcher = getMetricsDispatcher({ argv });
 			}
+			dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+
 			await handleError(e, configArgs, argv);
 			throw e;
 		}
