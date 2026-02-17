@@ -39,7 +39,6 @@ import {
 	Response,
 } from "./http";
 import {
-	CACHE_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -128,6 +127,7 @@ import {
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
+	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
 	LogLevel,
@@ -2649,24 +2649,23 @@ export class Miniflare {
 	async purgeCache(cacheName?: string): Promise<number> {
 		await this.ready;
 
-		const objectNamespace = await this._getInternalDurableObjectNamespace(
-			CACHE_PLUGIN_NAME,
-			"cache:cache",
-			"CacheObject"
-		);
+		const proxyClient = await this._getProxyClient();
 
-		// The name used for the durable object ID follows the same convention as
-		// the cache-entry.worker.ts: "default" for the default cache, or
-		// "named:<cacheName>" for named caches.
-		const name = cacheName === undefined ? "default" : `named:${cacheName}`;
-		const objectId = objectNamespace.idFromName(name);
-		const objectStub = objectNamespace.get(objectId);
+		// Get the cache service binding from proxy env. This is a Fetcher to
+		// the cache-entry worker which properly sets cf.miniflare.name before
+		// forwarding to the CacheObject Durable Object.
+		const cacheService = proxyClient.env[CoreBindings.SERVICE_CACHE] as Fetcher;
 
-		const response = await objectStub.fetch("http://localhost/purge-all", {
+		// Build the request with the cache namespace header if specified
+		const headers: Record<string, string> = {};
+		if (cacheName !== undefined) {
+			headers[CacheHeaders.NAMESPACE] = cacheName;
+		}
+
+		// Call the cache-entry worker's /purge-all endpoint
+		const response = await cacheService.fetch("http://localhost/purge-all", {
 			method: "DELETE",
-			// The MiniflareDurableObject requires cf.miniflare.name to be set
-			// for all regular requests (non-control ops)
-			cf: { miniflare: { name } },
+			headers,
 		});
 
 		if (!response.ok) {
