@@ -17,6 +17,14 @@ export const additionalModulesPlugin = createPlugin(
 			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
+			configureServer(viteDevServer) {
+				additionalModulePaths.clear();
+				const cleanup = () => {
+					additionalModulePaths.clear();
+				};
+				viteDevServer.httpServer?.once("close", cleanup);
+				viteDevServer.watcher.on("close", cleanup);
+			},
 			applyToEnvironment(environment) {
 				return ctx.getWorkerConfig(environment.name) !== undefined;
 			},

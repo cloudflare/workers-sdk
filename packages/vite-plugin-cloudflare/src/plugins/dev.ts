@@ -17,7 +17,11 @@ import {
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
-import { getDevMiniflareOptions } from "../miniflare-options";
+import type { ExportTypes } from "../export-types";
+import {
+	disposeRemoteProxySessions,
+	getDevMiniflareOptions,
+} from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
@@ -35,6 +39,7 @@ process.on("exit", () => {
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
+	let hotListenerCleanup: (() => void) | undefined;
 
 	return {
 		async buildEnd() {
@@ -101,45 +106,64 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
+				hotListenerCleanup?.();
+				hotListenerCleanup = undefined;
+
+				const hotListeners: Array<{
+					environment: vite.DevEnvironment;
+					listener: (newExportTypes: ExportTypes) => Promise<void>;
+				}> = [];
+
 				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 					const environment = viteDevServer.environments[environmentName];
 					assert(
 						environment,
 						`Expected environment "${environmentName}" to be defined`
 					);
+					const listener = async (newExportTypes: ExportTypes) => {
+						const workerConfig = ctx.getWorkerConfig(environmentName);
+						assert(
+							workerConfig,
+							`Expected workerConfig for environment "${environmentName}" to be defined`
+						);
+						const oldExportTypes = ctx.workerNameToExportTypesMap.get(
+							workerConfig.name
+						);
+						assert(
+							oldExportTypes,
+							`Expected export types for Worker "${workerConfig.name}" to be defined`
+						);
+						const exportTypeHasChanged = compareExportTypes(
+							oldExportTypes,
+							newExportTypes
+						);
+
+						if (exportTypeHasChanged) {
+							viteDevServer.config.logger.info(
+								colors.dim(
+									colors.yellow(
+										"Worker exports have changed. Restarting dev server."
+									)
+								)
+							);
+							await viteDevServer.restart();
+						}
+					};
 					environment.hot.on(
 						"vite-plugin-cloudflare:worker-export-types",
-						async (newExportTypes) => {
-							const workerConfig = ctx.getWorkerConfig(environmentName);
-							assert(
-								workerConfig,
-								`Expected workerConfig for environment "${environmentName}" to be defined`
-							);
-							const oldExportTypes = ctx.workerNameToExportTypesMap.get(
-								workerConfig.name
-							);
-							assert(
-								oldExportTypes,
-								`Expected export types for Worker "${workerConfig.name}" to be defined`
-							);
-							const exportTypeHasChanged = compareExportTypes(
-								oldExportTypes,
-								newExportTypes
-							);
-
-							if (exportTypeHasChanged) {
-								viteDevServer.config.logger.info(
-									colors.dim(
-										colors.yellow(
-											"Worker exports have changed. Restarting dev server."
-										)
-									)
-								);
-								await viteDevServer.restart();
-							}
-						}
+						listener
 					);
+					hotListeners.push({ environment, listener });
 				}
+
+				hotListenerCleanup = () => {
+					for (const { environment, listener } of hotListeners) {
+						environment.hot.off(
+							"vite-plugin-cloudflare:worker-export-types",
+							listener
+						);
+					}
+				};
 
 				const entryWorkerConfig = ctx.entryWorkerConfig;
 				assert(entryWorkerConfig, `No entry Worker config`);
@@ -147,11 +171,17 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				// The HTTP server is not available in middleware mode
 				if (viteDevServer.httpServer) {
-					handleWebSocket(
+					const cleanupWebSocket = handleWebSocket(
 						viteDevServer.httpServer,
 						ctx.miniflare,
 						entryWorkerName
 					);
+					viteDevServer.httpServer.once("close", () => {
+						cleanupWebSocket();
+						hotListenerCleanup?.();
+						hotListenerCleanup = undefined;
+						void disposeRemoteProxySessions();
+					});
 				}
 
 				const staticRouting: StaticRouting | undefined =
@@ -243,6 +273,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					};
 				}
 			}
+
+			viteDevServer.watcher.on("close", () => {
+				hotListenerCleanup?.();
+				hotListenerCleanup = undefined;
+			});
 
 			return () => {
 				if (preMiddleware) {

@@ -103,6 +103,11 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		workerConfig: ResolvedWorkerConfig,
 		options: { isEntryWorker: boolean; isParentEnvironment: boolean }
 	): Promise<void> {
+		if (this.#webSocketContainer.webSocket) {
+			this.hot.close();
+			this.#webSocketContainer.webSocket.close();
+		}
+
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{

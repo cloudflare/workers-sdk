@@ -18,6 +18,8 @@ import type { EnvironmentOptions, UserConfig } from "vite";
  * Plugin to handle configuration and config file watching
  */
 export const configPlugin = createPlugin("config", (ctx) => {
+	let configChangedCleanup: (() => void) | undefined;
+
 	return {
 		config(userConfig, env) {
 			if (ctx.resolvedPluginConfig.type === "preview") {
@@ -70,6 +72,9 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			ctx.setHasShownWorkerConfigWarnings(false);
 		},
 		configureServer(viteDevServer) {
+			configChangedCleanup?.();
+			configChangedCleanup = undefined;
+
 			const configChangedHandler = async (changedFilePath: string) => {
 				assertIsNotPreview(ctx);
 
@@ -93,6 +98,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			};
 
 			viteDevServer.watcher.on("change", configChangedHandler);
+			viteDevServer.watcher.on("close", () => {
+				viteDevServer.watcher.off("change", configChangedHandler);
+			});
+			configChangedCleanup = () => {
+				viteDevServer.watcher.off("change", configChangedHandler);
+			};
 		},
 		// This hook is not supported in Vite 6
 		buildApp: {
