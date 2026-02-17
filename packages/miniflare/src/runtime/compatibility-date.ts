@@ -51,15 +51,6 @@ export function isCompatDate(str: string): str is CompatDate {
 }
 
 /**
- * Asserts that a string represents a compatibility date (`YYYY-MM-DD`)
- *
- * @param str The target string
- */
-export function assertCompatDate(str: string): asserts str is CompatDate {
-	assert(isCompatDate(str));
-}
-
-/**
  * Returns the date formatted as a compatibility date
  *
  * @param date The target date to convert

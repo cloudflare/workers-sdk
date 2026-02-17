@@ -1,6 +1,4 @@
-import assert from "node:assert";
 import {
-	assertCompatDate,
 	formatCompatibilityDate,
 	getLocalWorkerdCompatibilityDate,
 	isCompatDate,
@@ -38,21 +36,6 @@ describe("isCompatDate", () => {
 		expect(isCompatDate("2024-01-15T00:00:00")).toBe(false);
 		expect(isCompatDate(" 2024-01-15")).toBe(false);
 		expect(isCompatDate("2024-01-15 ")).toBe(false);
-	});
-});
-
-describe("assertCompatDate", () => {
-	test("does not throw for valid date strings", ({ expect }) => {
-		expect(() => assertCompatDate("2024-01-15")).not.toThrow();
-		expect(() => assertCompatDate("2023-12-31")).not.toThrow();
-		expect(() => assertCompatDate("2000-01-01")).not.toThrow();
-	});
-
-	test("throws AssertionError for invalid date formats", ({ expect }) => {
-		expect(() => assertCompatDate("2024-1-15")).toThrow(assert.AssertionError);
-		expect(() => assertCompatDate("not-a-date")).toThrow(assert.AssertionError);
-		expect(() => assertCompatDate("")).toThrow(assert.AssertionError);
-		expect(() => assertCompatDate("2024/01/15")).toThrow(assert.AssertionError);
 	});
 });
 
