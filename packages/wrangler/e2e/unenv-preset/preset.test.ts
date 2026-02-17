@@ -745,15 +745,18 @@ describe.each(localTestConfigs)(
 
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
-			{ timeout: 5_000 },
+			{ timeout: 20_000 },
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
@@ -804,11 +807,14 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
@@ -860,11 +866,14 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
