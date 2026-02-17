@@ -3,7 +3,7 @@ import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import {
 	CommandLineArgsError,
-	experimental_readRawConfig,
+	experimental_readSendMetrics,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
@@ -1941,7 +1941,9 @@ export async function main(argv: string[]): Promise<void> {
 	let configArgs: ReadConfigCommandArgs = {};
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
-	// Register middleware to set logger level and capture fallback telemetry info
+	// Register middleware to set logger level and capture fallback telemetry info.
+	// This middleware must remain synchronous — returning a Promise changes how
+	// yargs propagates validation errors, breaking error message formatting.
 	wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
@@ -1951,6 +1953,22 @@ export async function main(argv: string[]): Promise<void> {
 		setLogLevel(logger.loggerLevel);
 
 		configArgs = args;
+
+		// Create a fallback metrics dispatcher for errors that occur before the
+		// command handler runs. Synchronously reads send_metrics from static
+		// config files (TOML/JSON) — programmatic configs are skipped since
+		// they require async import().
+		try {
+			const { sendMetrics, configPath } = experimental_readSendMetrics(args);
+			dispatcher = getMetricsDispatcher({
+				sendMetrics,
+				configPath,
+				argv,
+			});
+		} catch (e) {
+			logger.debug("Failed to read config for metrics. Using defaults.", e);
+			dispatcher = getMetricsDispatcher({ argv });
+		}
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
@@ -1966,6 +1984,13 @@ export async function main(argv: string[]): Promise<void> {
 			throw e.originalError;
 		}
 
+		// The error occurred before the command handler ran
+		// (e.g., yargs validation errors like unknown commands or invalid arguments).
+		// So we need to handle telemetry and error reporting here.
+		if (dispatcher) {
+			dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+		}
+		await handleError(e, configArgs, argv);
 		throw e;
 	} finally {
 		try {
@@ -1998,4 +2023,36 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
+}
+
+/**
+ * Dispatches generic metrics events to indicate that a wrangler command errored
+ * when we don't know the CommandDefinition and cannot be sure what is safe to send.
+ */
+function dispatchGenericCommandErrorEvent(
+	dispatcher: ReturnType<typeof getMetricsDispatcher>,
+	startTime: number,
+	error: unknown
+) {
+	const durationMs = Date.now() - startTime;
+
+	// We cannot safely derive sanitized command or args from `args._` since it may contain
+	// sensitive user-supplied positional arguments. So we send empty values.
+	const sanitizedCommand = "";
+	const sanitizedArgs = {};
+
+	// Send "started" event since handler never got to send it.
+	dispatcher.sendCommandEvent("wrangler command started", {
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
+	});
+
+	dispatcher.sendCommandEvent("wrangler command errored", {
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
+		durationMs,
+		...sanitizeError(error),
+	});
 }

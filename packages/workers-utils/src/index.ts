@@ -15,6 +15,7 @@ export {
 	configFormat,
 	configFileName,
 	experimental_readRawConfig,
+	experimental_readSendMetrics,
 } from "./config";
 export {
 	experimental_patchConfig,

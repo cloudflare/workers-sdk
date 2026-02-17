@@ -103,6 +103,23 @@ const parseRawConfigFile = (configPath: string): RawConfig => {
 	return {};
 };
 
+/**
+ * Synchronously read the `send_metrics` value from a static config file.
+ * Returns undefined for programmatic configs (.ts/.js) since those require
+ * async import().
+ *
+ * Note: programmatic configs do not support setting `send_metrics`. It is
+ * only respected in static config files.
+ */
+export const experimental_readSendMetrics = (
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): { sendMetrics: boolean | undefined; configPath: string | undefined } => {
+	const { configPath } = resolveWranglerConfigPath(args, options);
+	const rawConfig = parseRawConfigFile(configPath ?? "");
+	return { sendMetrics: rawConfig.send_metrics, configPath };
+};
+
 export const experimental_readRawConfig = async (
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
