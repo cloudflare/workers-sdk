@@ -1,8 +1,10 @@
+import { BinocularsIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
+import { StudioQueryTab } from "./QueryTab";
 import { StudioTabDefinitionList } from "./TabRegister";
 import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
@@ -45,7 +47,14 @@ export function Studio({
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
 	const [loadingSchema, setLoadingSchema] = useState(true);
 	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => [
-		// TODO: Re-add `StudioQueryTab` default tab
+		{
+			component: <StudioQueryTab />,
+			icon: BinocularsIcon,
+			identifier: "query-1",
+			key: window.crypto.randomUUID(),
+			title: "Query",
+			type: "query",
+		},
 	]);
 
 	const [selectedTabKey, setSelectedTabKey] = useState<string>(
