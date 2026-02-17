@@ -83,6 +83,7 @@ export function getCloudflarePreset({
 	const v8Overrides = getV8Overrides(compat);
 	const ttyOverrides = getTtyOverrides(compat);
 	const childProcessOverrides = getChildProcessOverrides(compat);
+	const workerThreadsOverrides = getWorkerThreadsOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -107,6 +108,7 @@ export function getCloudflarePreset({
 		...v8Overrides.nativeModules,
 		...ttyOverrides.nativeModules,
 		...childProcessOverrides.nativeModules,
+		...workerThreadsOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -131,6 +133,7 @@ export function getCloudflarePreset({
 		...v8Overrides.hybridModules,
 		...ttyOverrides.hybridModules,
 		...childProcessOverrides.hybridModules,
+		...workerThreadsOverrides.hybridModules,
 	];
 
 	return {
@@ -1010,6 +1013,43 @@ function getChildProcessOverrides({
 	return enabled
 		? {
 				nativeModules: ["child_process"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:worker_threads` (unenv or workerd)
+ *
+ * The native worker_threads implementation:
+ * - can be enabled with the "enable_nodejs_worker_threads_module" flag
+ * - can be disabled with the "disable_nodejs_worker_threads_module" flag
+ * - is experimental (no default enable date)
+ */
+function getWorkerThreadsOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_worker_threads_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_worker_threads_module") &&
+		compatibilityFlags.includes("experimental");
+
+	// worker_threads is experimental, no default enable date
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `worker_threads` module from workerd
+	return enabled
+		? {
+				nativeModules: ["worker_threads"],
 				hybridModules: [],
 			}
 		: {
