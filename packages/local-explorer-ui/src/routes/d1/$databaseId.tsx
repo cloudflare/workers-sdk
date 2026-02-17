@@ -3,11 +3,14 @@ import {
 	CaretUpDownIcon,
 	CheckIcon,
 	DatabaseIcon,
+	TableIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
+import { Studio } from "../../components/studio";
 import { LocalD1Driver } from "../../drivers/d1";
+import type { StudioResource } from "../../types/studio";
 
 export const Route = createFileRoute("/d1/$databaseId")({
 	component: DatabaseView,
@@ -31,6 +34,20 @@ export const Route = createFileRoute("/d1/$databaseId")({
 
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
+	const searchParams = Route.useSearch();
+
+	const driver = useMemo<LocalD1Driver>(
+		() => new LocalD1Driver(params.databaseId),
+		[params.databaseId]
+	);
+
+	const resource = useMemo<StudioResource>(
+		() => ({
+			databaseId: params.databaseId,
+			type: "d1",
+		}),
+		[params.databaseId]
+	);
 
 	return (
 		<div className="flex flex-col h-full">
@@ -52,7 +69,12 @@ function DatabaseView(): JSX.Element {
 			/>
 
 			<div className="flex-1 overflow-hidden">
-				{/* TODO: Add `<Studio />` component */}
+				<Studio
+					driver={driver}
+					initialTable={searchParams.table}
+					key={params.databaseId}
+					resource={resource}
+				/>
 			</div>
 		</div>
 	);
@@ -107,18 +129,23 @@ function TableSelect(): JSX.Element {
 				>
 					<Select.Popup className="min-w-36 max-h-72 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-100 overflow-hidden transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:-translate-y-1">
 						<Select.List className="p-1">
-							{data.tables.map((table) => (
-								<Select.Item
-									className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
-									key={table.value}
-									value={table.value}
-								>
-									<Select.ItemIndicator className="flex items-center w-4">
-										<CheckIcon className="w-3.5 h-3.5" />
-									</Select.ItemIndicator>
-									<Select.ItemText>{table.label}</Select.ItemText>
-								</Select.Item>
-							))}
+							{data.tables.map((table) => {
+								const Icon =
+									searchParams.table === table.value ? CheckIcon : TableIcon;
+
+								return (
+									<Select.Item
+										className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
+										key={table.value}
+										value={table.value}
+									>
+										<span className="flex items-center w-4">
+											<Icon className="w-3.5 h-3.5" />
+										</span>
+										<Select.ItemText>{table.label}</Select.ItemText>
+									</Select.Item>
+								);
+							})}
 						</Select.List>
 					</Select.Popup>
 				</Select.Positioner>
