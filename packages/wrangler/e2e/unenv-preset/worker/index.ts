@@ -952,6 +952,87 @@ export const WorkerdTests: Record<string, () => void> = {
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
 		);
 	},
+
+	async testWorkerThreads() {
+		const workerThreads = await import("node:worker_threads");
+
+		// Common exports available in both unenv stub and native workerd
+		for (const target of [workerThreads, workerThreads.default]) {
+			assertTypeOfProperties(target, {
+				SHARE_ENV: "symbol",
+				getEnvironmentData: "function",
+				isMainThread: "boolean",
+				isMarkedAsUntransferable: "function",
+				markAsUntransferable: "function",
+				markAsUncloneable: "function",
+				moveMessagePortToContext: "function",
+				receiveMessageOnPort: "function",
+				setEnvironmentData: "function",
+				postMessageToThread: "function",
+				isInternalThread: "boolean",
+				BroadcastChannel: "function",
+				MessageChannel: "function",
+				Worker: "function",
+			});
+
+			// These are values, not functions
+			assert.strictEqual(target.parentPort, null, "parentPort should be null");
+			assert.strictEqual(target.threadId, 0, "threadId should be 0");
+			assert.strictEqual(target.workerData, null, "workerData should be null");
+			assert.deepStrictEqual(
+				target.resourceLimits,
+				{},
+				"resourceLimits should be empty object"
+			);
+			assert.strictEqual(
+				target.isMainThread,
+				true,
+				"isMainThread should be true"
+			);
+			assert.strictEqual(
+				(target as Record<string, unknown>).isInternalThread,
+				false,
+				"isInternalThread should be false"
+			);
+		}
+
+		// Test SHARE_ENV symbol value
+		assert.strictEqual(
+			workerThreads.SHARE_ENV,
+			Symbol.for("nodejs.worker_threads.SHARE_ENV"),
+			"SHARE_ENV should be the correct symbol"
+		);
+
+		// Test getEnvironmentData/setEnvironmentData
+		workerThreads.setEnvironmentData("test-key", "test-value");
+		assert.strictEqual(
+			workerThreads.getEnvironmentData("test-key"),
+			"test-value",
+			"getEnvironmentData should return the set value"
+		);
+
+		// Test MessageChannel creates ports
+		const channel = new workerThreads.MessageChannel();
+		assert.ok(channel.port1, "MessageChannel should have port1");
+		assert.ok(channel.port2, "MessageChannel should have port2");
+
+		// Test behavioral differences between native workerd and unenv stub
+		const isNative =
+			getRuntimeFlagValue("enable_nodejs_worker_threads_module") === true;
+		if (isNative) {
+			// Native workerd: Worker and BroadcastChannel constructors throw
+			assert.throws(
+				() => new workerThreads.Worker("test.js"),
+				/ERR_METHOD_NOT_IMPLEMENTED/,
+				"Worker constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
+			);
+			assert.throws(
+				() => new workerThreads.BroadcastChannel("test"),
+				/ERR_METHOD_NOT_IMPLEMENTED/,
+				"BroadcastChannel constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
+			);
+		}
+	},
 };
 
 /**
