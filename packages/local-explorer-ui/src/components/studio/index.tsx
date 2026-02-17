@@ -125,27 +125,26 @@ export function Studio({
 	 */
 	const openStudioTab = useCallback<StudioContextValue["openStudioTab"]>(
 		(data: StudioTabDefinitionMetadata, isTemporary?: boolean) => {
+			// Getting tab setting
+			const tabTypeDefinition = StudioTabDefinitionList[data.type];
+			if (!tabTypeDefinition) {
+				console.error("Trying to open unknown tab type", data);
+				return;
+			}
+
+			const identifier = tabTypeDefinition.makeIdentifier(data);
+
+			// Generate the key upfront so we can select it after updating tabs
+			const newTabKey = window.crypto.randomUUID();
+
 			setTabs((prevTabs) => {
-				// Getting tab setting
-				const tabTypeDefinition = StudioTabDefinitionList[data.type];
-				if (!tabTypeDefinition) {
-					console.error("Trying to open unknown tab type", data);
-					return prevTabs;
-				}
-
-				const identifier = tabTypeDefinition.makeIdentifier(data);
-
 				// Open existing tab if exist
 				const foundMatchedTab = prevTabs.find(
 					(tab) => tab.identifier === identifier
 				);
 				if (foundMatchedTab) {
-					setSelectedTabKey(foundMatchedTab.key);
 					return prevTabs;
 				}
-
-				const newTabKey = window.crypto.randomUUID();
-				setSelectedTabKey(newTabKey);
 
 				// Check if there is any temporary, we will replace instead of adding new tab
 				const tempTab = prevTabs.find((tab) => tab.isTemp && !tab.isDirty);
@@ -178,8 +177,13 @@ export function Studio({
 					} satisfies StudioWindowTabItem,
 				];
 			});
+
+			// Select the tab after updating tabs state
+			// Check if tab already exists and select it, otherwise select the new tab
+			const existingTab = tabs.find((tab) => tab.identifier === identifier);
+			setSelectedTabKey(existingTab ? existingTab.key : newTabKey);
 		},
-		[setSelectedTabKey]
+		[setSelectedTabKey, tabs]
 	);
 
 	/**
