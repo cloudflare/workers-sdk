@@ -43,7 +43,10 @@ import {
 	scheduleStorageReset,
 	waitForStorageReset,
 } from "./loopback";
-import { handleModuleFallbackRequest } from "./module-fallback";
+import {
+	enableCoverageInstrumentation,
+	handleModuleFallbackRequest,
+} from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
 	WorkersConfigPluginAPI,
@@ -1081,6 +1084,15 @@ async function executeMethod(
 	invalidates: string[] | undefined,
 	method: "run" | "collect"
 ) {
+	// Enable Istanbul coverage instrumentation for files loaded through the
+	// module fallback service. This is a no-op if already enabled or if
+	// istanbul-lib-instrument is not installed (it's a transitive dependency
+	// of @vitest/coverage-istanbul). Only instrument for Istanbul — V8 coverage
+	// uses its own mechanism and would be corrupted by Istanbul transforms.
+	if (ctx.config.coverage.enabled && ctx.config.coverage.provider === "istanbul") {
+		await enableCoverageInstrumentation();
+	}
+
 	// Vitest waits for the previous `runTests()` to complete before calling
 	// `runTests()` again:
 	// https://github.com/vitest-dev/vitest/blob/v1.0.4/packages/vitest/src/node/core.ts#L458-L459

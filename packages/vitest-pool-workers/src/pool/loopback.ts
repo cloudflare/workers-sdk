@@ -477,6 +477,74 @@ export async function handleDurableObjectsRequest(
 	return Response.json(ids);
 }
 
+// Istanbul coverage data bridging: receives `__coverage__` from the workerd
+// runtime and merges it into the Node.js process's `globalThis.__coverage__`
+// so Vitest's coverage provider can generate reports.
+function mergeCoverageData(
+	target: Record<string, unknown>,
+	source: Record<string, unknown>
+): void {
+	for (const [filePath, fileCov] of Object.entries(source)) {
+		if (!target[filePath]) {
+			target[filePath] = fileCov;
+			continue;
+		}
+		const existing = target[filePath] as Record<
+			string,
+			Record<string, number | number[]>
+		>;
+		const incoming = fileCov as Record<
+			string,
+			Record<string, number | number[]>
+		>;
+		// Merge statement and function counters
+		for (const key of ["s", "f"]) {
+			if (incoming[key]) {
+				for (const [id, count] of Object.entries(incoming[key])) {
+					(existing[key] as Record<string, number>)[id] =
+						((existing[key] as Record<string, number>)[id] || 0) +
+						(count as number);
+				}
+			}
+		}
+		// Merge branch counters (arrays of counts per branch path)
+		if (incoming.b) {
+			for (const [id, counts] of Object.entries(incoming.b)) {
+				const existingBranch = existing.b as Record<string, number[]>;
+				if (!existingBranch[id]) {
+					existingBranch[id] = counts as number[];
+				} else {
+					for (let i = 0; i < (counts as number[]).length; i++) {
+						existingBranch[id][i] =
+							(existingBranch[id][i] || 0) + (counts as number[])[i];
+					}
+				}
+			}
+		}
+	}
+}
+
+// Vitest's Istanbul provider uses "__VITEST_COVERAGE__" as the coverage key.
+const COVERAGE_STORE_KEY = "__VITEST_COVERAGE__";
+
+async function handleCoverageRequest(request: Request): Promise<Response> {
+	if (request.method !== "POST") {
+		return new Response(null, { status: 405 });
+	}
+	const coverageData = JSON.parse(
+		await request.text()
+	) as Record<string, unknown>;
+	const g = globalThis as Record<string, unknown>;
+	if (!g[COVERAGE_STORE_KEY]) {
+		g[COVERAGE_STORE_KEY] = {};
+	}
+	mergeCoverageData(
+		g[COVERAGE_STORE_KEY] as Record<string, unknown>,
+		coverageData
+	);
+	return new Response(null, { status: 204 });
+}
+
 export function handleLoopbackRequest(
 	request: Request,
 	mf: Miniflare
@@ -490,6 +558,9 @@ export function handleLoopbackRequest(
 	}
 	if (url.pathname === "/durable-objects") {
 		return handleDurableObjectsRequest(request, mf, url);
+	}
+	if (url.pathname === "/coverage") {
+		return handleCoverageRequest(request);
 	}
 	return new Response(null, { status: 404 });
 }
