@@ -86,7 +86,14 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 				description: "Skip confirmation prompt",
 				alias: "y",
 				default: false,
-				implies: ["secret-name"],
+			})
+			.check((args) => {
+				if (args.skipConfirmation && !args.secretName) {
+					throw new Error(
+						"--secret-name is required when using --skip-confirmation"
+					);
+				}
+				return true;
 			})
 	);
 }
@@ -507,10 +514,16 @@ export const containersRegistriesConfigureCommand = createCommand({
 			description: "skip confirmation prompts",
 			alias: "y",
 			default: false,
-			implies: ["secret-name"],
 		},
 	},
 	positionalArgs: ["DOMAIN"],
+	validateArgs(args) {
+		if (args.skipConfirmation && !args.secretName) {
+			throw new UserError(
+				"--secret-name is required when using --skip-confirmation"
+			);
+		}
+	},
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
 		await registryConfigureCommand(args, config);
