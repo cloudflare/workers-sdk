@@ -1,5 +1,116 @@
 # wrangler
 
+## 4.66.0
+
+### Minor Changes
+
+- [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `WRANGLER_CACHE_DIR` environment variable and smart cache directory detection
+
+  Wrangler now intelligently detects where to store cache files:
+
+  1. Use `WRANGLER_CACHE_DIR` env var if set
+  2. Use existing cache directory if found (`node_modules/.cache/wrangler` or `.wrangler/cache`)
+  3. Create cache in `node_modules/.cache/wrangler` if `node_modules` exists
+  4. Otherwise use `.wrangler/cache`
+
+  This improves compatibility with Yarn PnP, pnpm, and other package managers that don't use traditional `node_modules` directories, without requiring any configuration.
+
+- [#12572](https://github.com/cloudflare/workers-sdk/pull/12572) [`936187d`](https://github.com/cloudflare/workers-sdk/commit/936187d4be8686a7849278ff57f7f927062e2cce) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Ensure the `nodejs_compat` flag is always applied in autoconfig
+
+  Previously, the autoconfig feature relied on individual framework configurations to specify Node.js compatibility flags, some could set `nodejs_compat` while others `nodejs_als`.
+
+  Now instead `nodejs_compat` is always included as a compatibility flag, this is generally beneficial and the user can always remove the flag afterwards if they want to.
+
+- [#12560](https://github.com/cloudflare/workers-sdk/pull/12560) [`c4c86f8`](https://github.com/cloudflare/workers-sdk/commit/c4c86f813d9ce406d8b36da7148665b805d0676b) Thanks [@taylorlee](https://github.com/taylorlee)! - Support `--tag` and `--message` flags on `wrangler deploy`
+
+  They have the same behavior that they do as during `wrangler versions upload`, as both
+  are set on the version.
+
+  The message is also reused for the deployment as well, with the same behavior as used
+  during `wrangler versions deploy`.
+
+### Patch Changes
+
+- [#12543](https://github.com/cloudflare/workers-sdk/pull/12543) [`5a868a0`](https://github.com/cloudflare/workers-sdk/commit/5a868a0c0b305548e4ad60a50f20ab4cd8900741) Thanks [@G4brym](https://github.com/G4brym)! - Fix AI Search binding failing in local dev
+
+  Using AI Search bindings with `wrangler dev` would fail with "RPC stub points at a non-serializable type". AI Search bindings now work correctly in local development.
+
+- [#12552](https://github.com/cloudflare/workers-sdk/pull/12552) [`c58e81b`](https://github.com/cloudflare/workers-sdk/commit/c58e81b85e1ff1285ac024508739c997ec04984e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260212.0 | 1.20260213.0 |
+
+- [#12568](https://github.com/cloudflare/workers-sdk/pull/12568) [`33a9a8f`](https://github.com/cloudflare/workers-sdk/commit/33a9a8f97e61c45507865eb8c5c9cace7ab27e64) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260213.0 | 1.20260214.0 |
+
+- [#12576](https://github.com/cloudflare/workers-sdk/pull/12576) [`8077c14`](https://github.com/cloudflare/workers-sdk/commit/8077c14a84e4b50015d356349a330a970693533f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260214.0 | 1.20260217.0 |
+
+- [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: exclude `.wrangler` directory from Pages uploads
+
+  The `.wrangler` directory contains local cache and state files that should never be deployed. This aligns Pages upload behavior with Workers Assets, which already excludes `.wrangler` via `.assetsignore`.
+
+- [#12556](https://github.com/cloudflare/workers-sdk/pull/12556) [`7d2355e`](https://github.com/cloudflare/workers-sdk/commit/7d2355ea146365391f3cd8b0e5a80057e6013151) Thanks [@ascorbic](https://github.com/ascorbic)! - Fix port availability check probing the wrong host when host changes
+
+  `memoizeGetPort` correctly invalidated its cached port when called with a different host, but then still probed the original host for port availability. This could return a port that was free on the original host but already in use on the requested one, leading to bind failures at startup.
+
+- [#12562](https://github.com/cloudflare/workers-sdk/pull/12562) [`7ea69af`](https://github.com/cloudflare/workers-sdk/commit/7ea69af67f0427c621eb8fa0b31ebaa4c6537870) Thanks [@MattieTK](https://github.com/MattieTK)! - Support function-based Vite configs in autoconfig setup
+
+  `wrangler setup` and `wrangler deploy --x-autoconfig` can now automatically add the Cloudflare Vite plugin to projects that use function-based `defineConfig()` patterns. Previously, autoconfig would fail with "Cannot modify Vite config: expected an object literal but found ArrowFunctionExpression" for configs like:
+
+  ```ts
+  export default defineConfig(({ isSsrBuild }) => ({
+  	plugins: [reactRouter(), tsconfigPaths()],
+  }));
+  ```
+
+  This pattern is used by several official framework templates, including React Router's `node-postgres` and `node-custom-server` templates. The following `defineConfig()` patterns are now supported:
+
+  - `defineConfig({ ... })` (object literal, already worked)
+  - `defineConfig(() => ({ ... }))` (arrow function with expression body)
+  - `defineConfig(({ isSsrBuild }) => ({ ... }))` (arrow function with destructured params)
+  - `defineConfig(() => { return { ... }; })` (arrow function with block body)
+  - `defineConfig(function() { return { ... }; })` (function expression)
+
+- [#12548](https://github.com/cloudflare/workers-sdk/pull/12548) [`5cc7158`](https://github.com/cloudflare/workers-sdk/commit/5cc7158b39a247e3c33f158327a1cee99dd5e719) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `.assetsignore` formatting when autoconfig creates a new file
+
+  Previously, when `wrangler setup` or `wrangler deploy --x-autoconfig` created a new `.assetsignore` file via autoconfig, it would add unnecessary leading empty lines before the wrangler-specific entries. Empty separator lines should only be added when appending to an existing `.assetsignore` file. This fix ensures newly created `.assetsignore` files start cleanly without leading blank lines.
+
+- [#12556](https://github.com/cloudflare/workers-sdk/pull/12556) [`7d2355e`](https://github.com/cloudflare/workers-sdk/commit/7d2355ea146365391f3cd8b0e5a80057e6013151) Thanks [@ascorbic](https://github.com/ascorbic)! - Improve error message when port binding is blocked by a sandbox or security policy
+
+  When running `wrangler dev` inside a restricted environment (such as an AI coding agent sandbox or locked-down container), the port availability check would fail with a raw `EPERM` error. This now provides a clear message explaining that a sandbox or security policy is blocking network access, rather than the generic permission error that previously pointed at the file system.
+
+- [#12545](https://github.com/cloudflare/workers-sdk/pull/12545) [`c9d0f9d`](https://github.com/cloudflare/workers-sdk/commit/c9d0f9d6d5f2f3d322ac6ba9ccb0d05a5c96bbe6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve framework detection when multiple frameworks are found
+
+  When autoconfig detects multiple frameworks in a project, Wrangler now applies smarter logic to select the most appropriate one. Selecting the wrong one is acceptable locally where the user can change the detected framework, in CI an error is instead thrown.
+
+- [#12548](https://github.com/cloudflare/workers-sdk/pull/12548) [`5cc7158`](https://github.com/cloudflare/workers-sdk/commit/5cc7158b39a247e3c33f158327a1cee99dd5e719) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add trailing newline to generated `package.json` and `wrangler.jsonc` files
+
+- [#12548](https://github.com/cloudflare/workers-sdk/pull/12548) [`5cc7158`](https://github.com/cloudflare/workers-sdk/commit/5cc7158b39a247e3c33f158327a1cee99dd5e719) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `.gitignore` formatting when autoconfig creates a new file
+
+  Previously, when `wrangler setup` or `wrangler deploy` created a new `.gitignore` file via autoconfig, it would add unnecessary leading empty lines before the wrangler-specific entries. Empty separator lines should only be added when appending to an existing `.gitignore` file. This fix ensures newly created `.gitignore` files start cleanly without leading blank lines.
+
+- [#12545](https://github.com/cloudflare/workers-sdk/pull/12545) [`c9d0f9d`](https://github.com/cloudflare/workers-sdk/commit/c9d0f9d6d5f2f3d322ac6ba9ccb0d05a5c96bbe6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Throw actionable error when autoconfig is run in the root of a workspace
+
+  When running Wrangler commands that trigger auto-configuration (like `wrangler dev` or `wrangler deploy`) in the root directory of a monorepo workspace, a helpful error is now shown directing users to run the command in a specific project's directory instead.
+
+- Updated dependencies [[`5a868a0`](https://github.com/cloudflare/workers-sdk/commit/5a868a0c0b305548e4ad60a50f20ab4cd8900741), [`c58e81b`](https://github.com/cloudflare/workers-sdk/commit/c58e81b85e1ff1285ac024508739c997ec04984e), [`33a9a8f`](https://github.com/cloudflare/workers-sdk/commit/33a9a8f97e61c45507865eb8c5c9cace7ab27e64), [`8077c14`](https://github.com/cloudflare/workers-sdk/commit/8077c14a84e4b50015d356349a330a970693533f), [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e), [`9a565d5`](https://github.com/cloudflare/workers-sdk/commit/9a565d526224ac510a8d581e32db98545c1b3368), [`7f18183`](https://github.com/cloudflare/workers-sdk/commit/7f181839513a1cac441e0956a59130ba1f4ef6d4), [`39491f9`](https://github.com/cloudflare/workers-sdk/commit/39491f9d92153f679fd2f9e81a5d58122946a0af), [`43c462a`](https://github.com/cloudflare/workers-sdk/commit/43c462af9684980b8332a8e3a31a9bd9f08777f5)]:
+  - miniflare@4.20260217.0
+  - @cloudflare/unenv-preset@2.13.0
+
 ## 4.65.0
 
 ### Minor Changes
