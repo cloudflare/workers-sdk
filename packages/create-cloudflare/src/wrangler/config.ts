@@ -10,6 +10,8 @@ import {
 	writeJSONWithComments,
 } from "helpers/json";
 import TOML from "smol-toml";
+import { isCompatDate } from "../../../miniflare/dist/src";
+import type { CompatDate } from "../../../miniflare/dist/src";
 import type { CommentObject, Reviver } from "comment-json";
 import type { TomlTable } from "smol-toml";
 import type { C3Context } from "types";
@@ -209,11 +211,8 @@ export const addVscodeConfig = (ctx: C3Context) => {
 async function getCompatibilityDate(
 	tentativeDate: unknown,
 	projectPath: string,
-): Promise<string> {
-	if (
-		typeof tentativeDate === "string" &&
-		/^\d{4}-\d{2}-\d{2}$/.test(tentativeDate)
-	) {
+): Promise<CompatDate> {
+	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
 		// Use the tentative date when it is valid.
 		// It may be there for a specific compat reason
 		return tentativeDate;
