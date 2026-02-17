@@ -41,8 +41,8 @@ export function Studio({
 	initialTable,
 	resource,
 }: StudioProps): JSX.Element {
-	// Track whether we've already opened the initial table
-	const hasOpenedInitialTable = useRef<boolean>(false);
+	// Track the last table we opened to detect changes
+	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
 	const [loadingSchema, setLoadingSchema] = useState(true);
@@ -207,14 +207,14 @@ export function Studio({
 		});
 	}, []);
 
-	// Open initial table from URL param after schemas load (only once)
+	// Open table from URL param after schemas load, and when initialTable changes
 	useEffect((): void => {
-		if (
-			hasOpenedInitialTable.current ||
-			!initialTable ||
-			!schemas ||
-			loadingSchema
-		) {
+		if (!initialTable || !schemas || loadingSchema) {
+			return;
+		}
+
+		// Skip if we've already opened this specific table
+		if (lastOpenedTable.current === initialTable) {
 			return;
 		}
 
@@ -229,14 +229,14 @@ export function Studio({
 				tableName: initialTable,
 				type: "table",
 			});
-			hasOpenedInitialTable.current = true;
+			lastOpenedTable.current = initialTable;
 			return;
 		}
 
 		console.warn(
 			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
 		);
-		hasOpenedInitialTable.current = true;
+		lastOpenedTable.current = initialTable;
 	}, [initialTable, loadingSchema, openStudioTab, schemas]);
 
 	/**
