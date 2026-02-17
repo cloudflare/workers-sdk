@@ -1982,16 +1982,16 @@ export async function main(argv: string[]): Promise<void> {
 			// and has already sent metrics and reported to the user.
 			// So we can just re-throw the original error.
 			throw e.originalError;
+		} else {
+			// The error occurred before Command handler ran
+			// (e.g., yargs validation errors like unknown commands or invalid arguments).
+			// So we need to handle telemetry and error reporting here.
+			if (dispatcher) {
+				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+			}
+			await handleError(e, configArgs, argv);
+			throw e;
 		}
-
-		// The error occurred before the command handler ran
-		// (e.g., yargs validation errors like unknown commands or invalid arguments).
-		// So we need to handle telemetry and error reporting here.
-		if (dispatcher) {
-			dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
-		}
-		await handleError(e, configArgs, argv);
-		throw e;
 	} finally {
 		try {
 			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
@@ -2042,12 +2042,14 @@ function dispatchGenericCommandErrorEvent(
 	const sanitizedArgs = {};
 
 	// Send "started" event since handler never got to send it.
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command started", {
 		sanitizedCommand,
 		sanitizedArgs,
 		argsUsed: [],
 	});
 
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command errored", {
 		sanitizedCommand,
 		sanitizedArgs,
