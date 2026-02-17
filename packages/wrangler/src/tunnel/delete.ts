@@ -17,6 +17,7 @@ export const tunnelDeleteCommand = createCommand({
 			description: "The name or UUID of the tunnel",
 		},
 		force: {
+			alias: "y",
 			type: "boolean",
 			description: "Skip confirmation",
 		},

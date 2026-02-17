@@ -107,7 +107,7 @@ describe("tunnel commands", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Creating tunnel \\"my-new-tunnel\\"
+				Creating tunnel "my-new-tunnel"
 				Created tunnel.
 				ID: f70ff985-a4ef-4643-bbbc-4a0ed4fc8415
 				Name: my-new-tunnel
