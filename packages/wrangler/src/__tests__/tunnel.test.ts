@@ -33,7 +33,9 @@ describe("tunnel help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help text when no arguments are passed", async ({ expect }) => {
+	it("should show help text when no arguments are passed", async ({
+		expect,
+	}) => {
 		await runWrangler("tunnel");
 		await endEventLoop();
 
@@ -61,7 +63,9 @@ describe("tunnel help", () => {
 		`);
 	});
 
-	it("should show help when an invalid argument is passed", async ({ expect }) => {
+	it("should show help when an invalid argument is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("tunnel invalid")).rejects.toThrow(
 			"Unknown argument: invalid"
 		);
@@ -340,7 +344,9 @@ describe("tunnel permission errors", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should show helpful error message when permission is denied", async ({ expect }) => {
+	it("should show helpful error message when permission is denied", async ({
+		expect,
+	}) => {
 		mockTunnelPermissionError();
 
 		await expect(runWrangler("tunnel list")).rejects.toThrow(
