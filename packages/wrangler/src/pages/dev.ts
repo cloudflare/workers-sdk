@@ -11,7 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
@@ -345,7 +345,7 @@ export const pagesDevCommand = createCommand({
 
 		// for `dev` we always use the top-level config, which means we need
 		// to read the config file with `env` set to `undefined`
-		const config = await readConfig(
+		const config = await loadConfig(
 			{ ...args, env: undefined, config: undefined },
 			{ useRedirectIfAvailable: true }
 		);

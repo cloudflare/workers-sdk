@@ -5,7 +5,7 @@ import {
 } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
@@ -140,7 +140,7 @@ export const pagesDeploymentTailCommand = createCommand({
 			);
 		}
 
-		const config = await readConfig(args);
+		const config = await loadConfig(args);
 		const pagesConfig = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);

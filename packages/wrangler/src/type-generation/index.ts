@@ -12,7 +12,7 @@ import {
 import chalk from "chalk";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
@@ -138,12 +138,12 @@ export const typesCommand = createCommand({
 		let config: Config;
 		const secondaryConfigs: Config[] = [];
 		if (Array.isArray(args.config)) {
-			config = await readConfig({ ...args, config: args.config[0] });
+			config = await loadConfig({ ...args, config: args.config[0] });
 			for (const configPath of args.config.slice(1)) {
-				secondaryConfigs.push(await readConfig({ config: configPath }));
+				secondaryConfigs.push(await loadConfig({ config: configPath }));
 			}
 		} else {
-			config = await readConfig(args);
+			config = await loadConfig(args);
 		}
 
 		const { envInterface, path: outputPath } = args;

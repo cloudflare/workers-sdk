@@ -13,7 +13,7 @@ import { Cloudflare } from "cloudflare";
 import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,

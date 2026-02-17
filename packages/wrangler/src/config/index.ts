@@ -3,6 +3,7 @@ import path from "node:path";
 import {
 	configFileName,
 	experimental_loadConfig,
+	experimental_readRawConfig,
 	FatalError,
 	isPagesConfig,
 	normalizeAndValidateConfig,
@@ -31,20 +32,15 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	preserveOriginalMain?: boolean;
 };
 
-/**
- * Get the Wrangler configuration; read it from the give `configPath` if available.
- */
-export async function readConfig(
+function processConfig(
+	rawConfig: RawConfig,
+	configPath: string | undefined,
+	userConfigPath: string | undefined,
+	deployConfigPath: string | undefined,
+	redirected: boolean,
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
-): Promise<Config> {
-	const {
-		rawConfig,
-		configPath,
-		userConfigPath,
-		deployConfigPath,
-		redirected,
-	} = await experimental_loadConfig(args, options);
+): Config {
 	if (redirected) {
 		assert(configPath, "Redirected config found without a configPath");
 		assert(
@@ -77,39 +73,83 @@ export async function readConfig(
 	return config;
 }
 
-export async function readPagesConfig(
+/**
+ * Get the Wrangler configuration; read it from the given `configPath` if available.
+ */
+export function readConfig(
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
-): Promise<
-	Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string }
-> {
-	let rawConfig: RawConfig;
-	let configPath: string | undefined;
-	let userConfigPath: string | undefined;
-	let redirected: boolean;
-	let deployConfigPath: string | undefined;
-	try {
-		({ rawConfig, configPath, userConfigPath, deployConfigPath, redirected } =
-			await experimental_loadConfig(args, options));
-		if (redirected) {
-			assert(configPath, "Redirected config found without a configPath");
-			assert(
-				deployConfigPath,
-				"Redirected config found without a deployConfigPath"
-			);
-			logger.info(dedent`
+): Config {
+	const {
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+	} = experimental_readRawConfig(args, options);
+
+	return processConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+		args,
+		options
+	);
+}
+
+/**
+ * Async version of `readConfig` that supports programmatic config files (.ts/.js).
+ */
+export async function loadConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<Config> {
+	const {
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+	} = await experimental_loadConfig(args, options);
+
+	return processConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+		args,
+		options
+	);
+}
+
+type PagesConfig = Omit<Config, "pages_build_output_dir"> & {
+	pages_build_output_dir: string;
+};
+
+function processPagesConfig(
+	rawConfig: RawConfig,
+	configPath: string | undefined,
+	userConfigPath: string | undefined,
+	deployConfigPath: string | undefined,
+	redirected: boolean,
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): PagesConfig {
+	if (redirected) {
+		assert(configPath, "Redirected config found without a configPath");
+		assert(
+			deployConfigPath,
+			"Redirected config found without a deployConfigPath"
+		);
+		logger.info(dedent`
 				Using redirected Wrangler configuration.
 				 - Configuration being used: "${path.relative(".", configPath)}"
 				 - Original user's configuration: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
 				 - Deploy configuration file: "${path.relative(".", deployConfigPath)}"
 			`);
-		}
-	} catch (e) {
-		logger.error(e);
-		throw new FatalError(
-			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
-			EXIT_CODE_INVALID_PAGES_CONFIG
-		);
 	}
 
 	if (!isPagesConfig(rawConfig)) {
@@ -148,7 +188,70 @@ export async function readPagesConfig(
 		throw new UserError(pagesDiagnostics.renderErrors());
 	}
 
-	return config as Omit<Config, "pages_build_output_dir"> & {
-		pages_build_output_dir: string;
-	};
+	return config as PagesConfig;
+}
+
+export function readPagesConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): PagesConfig {
+	let rawConfig: RawConfig;
+	let configPath: string | undefined;
+	let userConfigPath: string | undefined;
+	let redirected: boolean;
+	let deployConfigPath: string | undefined;
+	try {
+		({ rawConfig, configPath, userConfigPath, deployConfigPath, redirected } =
+			experimental_readRawConfig(args, options));
+	} catch (e) {
+		logger.error(e);
+		throw new FatalError(
+			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
+
+	return processPagesConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+		args,
+		options
+	);
+}
+
+/**
+ * Async version of `readPagesConfig` that supports programmatic config files (.ts/.js).
+ */
+export async function loadPagesConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<PagesConfig> {
+	let rawConfig: RawConfig;
+	let configPath: string | undefined;
+	let userConfigPath: string | undefined;
+	let redirected: boolean;
+	let deployConfigPath: string | undefined;
+	try {
+		({ rawConfig, configPath, userConfigPath, deployConfigPath, redirected } =
+			await experimental_loadConfig(args, options));
+	} catch (e) {
+		logger.error(e);
+		throw new FatalError(
+			`Your ${configFileName(configPath)} file is not a valid Pages configuration file`,
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
+
+	return processPagesConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+		args,
+		options
+	);
 }

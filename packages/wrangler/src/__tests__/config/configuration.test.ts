@@ -2,10 +2,43 @@ import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { readConfig } from "../../config";
+import { loadConfig, readConfig } from "../../config";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("readConfig()", () => {
+	runInTempDir();
+	it("should not error if a python entrypoint is used with the right compatibility_flag", ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.py",
+			compatibility_flags: ["python_workers"],
+		});
+		const config = readConfig({ config: "wrangler.toml" });
+		expect(config.rules).toMatchInlineSnapshot(`
+			[
+			  {
+			    "globs": [
+			      "**/*.py",
+			    ],
+			    "type": "PythonModule",
+			  },
+			]
+		`);
+	});
+	it("should error if a python entrypoint is used without the right compatibility_flag", ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			main: "index.py",
+		});
+		expect(() => readConfig({ config: "wrangler.toml" })).toThrow(
+			"The `python_workers` compatibility flag is required to use Python."
+		);
+	});
+});
+
+describe("loadConfig()", () => {
 	runInTempDir();
 	it("should not error if a python entrypoint is used with the right compatibility_flag", async ({
 		expect,
@@ -14,7 +47,7 @@ describe("readConfig()", () => {
 			main: "index.py",
 			compatibility_flags: ["python_workers"],
 		});
-		const config = await readConfig({ config: "wrangler.toml" });
+		const config = await loadConfig({ config: "wrangler.toml" });
 		expect(config.rules).toMatchInlineSnapshot(`
 			[
 			  {
@@ -32,14 +65,9 @@ describe("readConfig()", () => {
 		writeWranglerConfig({
 			main: "index.py",
 		});
-		try {
-			await readConfig({ config: "wrangler.toml" });
-			expect.fail();
-		} catch (e) {
-			expect(e).toMatchInlineSnapshot(
-				`[Error: The \`python_workers\` compatibility flag is required to use Python.]`
-			);
-		}
+		await expect(loadConfig({ config: "wrangler.toml" })).rejects.toThrow(
+			"The `python_workers` compatibility flag is required to use Python."
+		);
 	});
 });
 
@@ -107,7 +135,7 @@ describe("experimental_readRawConfig()", () => {
 describe("BOM (Byte Order Marker) handling", () => {
 	runInTempDir();
 
-	it("should remove UTF-8 BOM from TOML config files", async ({ expect }) => {
+	it("should remove UTF-8 BOM from TOML config files", ({ expect }) => {
 		const configContent = `name = "test-worker"
 compatibility_date = "2022-01-12"`;
 
@@ -119,12 +147,12 @@ compatibility_date = "2022-01-12"`;
 			])
 		);
 
-		const config = await readConfig({ config: "wrangler.toml" });
+		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.name).toBe("test-worker");
 		expect(config.compatibility_date).toBe("2022-01-12");
 	});
 
-	it("should remove UTF-8 BOM from JSON config files", async ({ expect }) => {
+	it("should remove UTF-8 BOM from JSON config files", ({ expect }) => {
 		const configContent = `{
 	"name": "test-worker",
 	"compatibility_date": "2022-01-12"
@@ -138,55 +166,55 @@ compatibility_date = "2022-01-12"`;
 			])
 		);
 
-		const config = await readConfig({ config: "wrangler.json" });
+		const config = readConfig({ config: "wrangler.json" });
 		expect(config.name).toBe("test-worker");
 		expect(config.compatibility_date).toBe("2022-01-12");
 	});
 
-	it("should error on UTF-16 BE BOM", async ({ expect }) => {
+	it("should error on UTF-16 BE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xfe, 0xff]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
 
-		await expect(readConfig({ config: "wrangler.json" })).rejects.toThrow(
+		expect(() => readConfig({ config: "wrangler.json" })).toThrow(
 			"Configuration file contains UTF-16 BE byte order marker"
 		);
 	});
 
-	it("should error on UTF-16 LE BOM", async ({ expect }) => {
+	it("should error on UTF-16 LE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xff, 0xfe]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
 
-		await expect(readConfig({ config: "wrangler.json" })).rejects.toThrow(
+		expect(() => readConfig({ config: "wrangler.json" })).toThrow(
 			"Configuration file contains UTF-16 LE byte order marker"
 		);
 	});
 
-	it("should error on UTF-32 BE BOM", async ({ expect }) => {
+	it("should error on UTF-32 BE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0x00, 0x00, 0xfe, 0xff]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
 
-		await expect(readConfig({ config: "wrangler.json" })).rejects.toThrow(
+		expect(() => readConfig({ config: "wrangler.json" })).toThrow(
 			"Configuration file contains UTF-32 BE byte order marker"
 		);
 	});
 
-	it("should error on UTF-32 LE BOM", async ({ expect }) => {
+	it("should error on UTF-32 LE BOM", ({ expect }) => {
 		const bomBytes = Buffer.from([0xff, 0xfe, 0x00, 0x00]);
 		const configContent = Buffer.from('{"name": "test"}', "utf-8");
 		fs.writeFileSync("wrangler.json", Buffer.concat([bomBytes, configContent]));
 
-		await expect(readConfig({ config: "wrangler.json" })).rejects.toThrow(
+		expect(() => readConfig({ config: "wrangler.json" })).toThrow(
 			"Configuration file contains UTF-32 LE byte order marker"
 		);
 	});
 
-	it("should handle files without BOM normally", async ({ expect }) => {
+	it("should handle files without BOM normally", ({ expect }) => {
 		writeWranglerConfig({ name: "no-bom-test" });
 
-		const config = await readConfig({ config: "wrangler.toml" });
+		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.name).toBe("no-bom-test");
 	});
 });

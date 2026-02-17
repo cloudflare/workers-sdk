@@ -1,5 +1,5 @@
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -116,7 +116,7 @@ export const logoutCommand = createCommand({
 			// If the config file is invalid then we default to not sending metrics.
 			// TODO: Clean this up as part of a general config refactor.
 			// See https://github.com/cloudflare/workers-sdk/issues/10682.
-			const config = await readConfig({}, { hideWarnings: true });
+			const config = await loadConfig({}, { hideWarnings: true });
 			metrics.sendMetricsEvent("logout user", {
 				sendMetrics: config.send_metrics,
 			});

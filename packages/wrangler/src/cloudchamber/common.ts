@@ -12,7 +12,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -114,7 +114,7 @@ export function handleFailure<
 				: "open beta";
 			logger.warn(constructStatusMessage(command, commandStatus));
 		}
-		const config = await readConfig(args);
+		const config = await loadConfig(args);
 		await fillOpenAPIConfiguration(config, scope);
 		await cb(args, config);
 	};
