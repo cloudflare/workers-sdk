@@ -211,9 +211,23 @@ export function Studio({
 		});
 	}, []);
 
-	// Open table from URL param after schemas load, and when initialTable changes
+	// Open table from URL param after schemas load, and when initialTable changes.
+	// When no table is specified, select the first Query tab.
 	useEffect((): void => {
-		if (!initialTable || !schemas || loadingSchema) {
+		if (!schemas || loadingSchema) {
+			return;
+		}
+
+		// When no table is specified, select the first Query tab
+		if (!initialTable) {
+			// Only switch if we were previously viewing a table
+			if (lastOpenedTable.current !== null) {
+				const queryTab = tabs.find((tab) => tab.type === "query");
+				if (queryTab) {
+					setSelectedTabKey(queryTab.key);
+				}
+				lastOpenedTable.current = null;
+			}
 			return;
 		}
 
@@ -241,7 +255,14 @@ export function Studio({
 			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
 		);
 		lastOpenedTable.current = initialTable;
-	}, [initialTable, loadingSchema, openStudioTab, schemas]);
+	}, [
+		initialTable,
+		loadingSchema,
+		openStudioTab,
+		schemas,
+		tabs,
+		setSelectedTabKey,
+	]);
 
 	/**
 	 * Replaces an existing studio tab with a new one built from the provided
