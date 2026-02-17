@@ -621,6 +621,9 @@ const localTestConfigs: TestConfig[] = [
 			name: "worker_threads disabled by default",
 			compatibilityDate: "2024-09-23",
 			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: false,
+			},
 		},
 		{
 			name: "worker_threads enabled by flag",
@@ -629,6 +632,9 @@ const localTestConfigs: TestConfig[] = [
 				"enable_nodejs_worker_threads_module",
 				"experimental",
 			],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: true,
+			},
 		},
 	],
 	// node:repl (experimental, no default enable date)
