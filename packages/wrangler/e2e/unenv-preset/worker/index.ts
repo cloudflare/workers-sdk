@@ -173,46 +173,6 @@ export const WorkerdTests: Record<string, () => void> = {
 		});
 	},
 
-	async testNodeCompatModules() {
-		const module = await import("node:module");
-		const require = module.createRequire("/");
-		const modules = [
-			"_tls_common",
-			"_tls_wrap",
-			"assert",
-			"assert/strict",
-			"async_hooks",
-			"buffer",
-			"constants",
-			"crypto",
-			"diagnostics_channel",
-			"dns",
-			"dns/promises",
-			"events",
-			"net",
-			"path",
-			"path/posix",
-			"path/win32",
-			"querystring",
-			"module",
-			"stream",
-			"stream/consumers",
-			"stream/promises",
-			"stream/web",
-			"string_decoder",
-			"sys",
-			"timers",
-			"timers/promises",
-			"url",
-			"util",
-			"util/types",
-			"zlib",
-		];
-		for (const m of modules) {
-			assert.strictEqual(await import(m), require(m));
-		}
-	},
-
 	async testUtilImplements() {
 		const util = await import("node:util");
 		const { types } = util;
@@ -897,6 +857,98 @@ export const WorkerdTests: Record<string, () => void> = {
 		// Both implementations throw when calling start()
 		assert.throws(
 			() => repl.start(),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
+
+	async testV8() {
+		const v8 = await import("node:v8");
+
+		for (const target of [v8, v8.default]) {
+			assertTypeOfProperties(target, {
+				getHeapSnapshot: "function",
+				getHeapStatistics: "function",
+				getHeapSpaceStatistics: "function",
+				getHeapCodeStatistics: "function",
+				setFlagsFromString: "function",
+				Serializer: "function",
+				Deserializer: "function",
+				DefaultSerializer: "function",
+				DefaultDeserializer: "function",
+				deserialize: "function",
+				takeCoverage: "function",
+				stopCoverage: "function",
+				serialize: "function",
+				writeHeapSnapshot: "function",
+				promiseHooks: "object",
+				startupSnapshot: "object",
+				setHeapSnapshotNearHeapLimit: "function",
+				GCProfiler: "function",
+				cachedDataVersionTag: "function",
+			});
+		}
+	},
+
+	async testTty() {
+		const tty = await import("node:tty");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(tty, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		assertTypeOfProperties(tty.default, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		// isatty should return false (both unenv and workerd)
+		assert.strictEqual(tty.isatty(0), false);
+		assert.strictEqual(tty.isatty(1), false);
+		assert.strictEqual(tty.isatty(2), false);
+
+		assert.doesNotThrow(() => new tty.ReadStream(0));
+		assert.doesNotThrow(() => new tty.WriteStream(1));
+	},
+
+	async testChildProcess() {
+		const childProcess = await import("node:child_process");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(childProcess, {
+			ChildProcess: "function",
+			exec: "function",
+			execFile: "function",
+			execFileSync: "function",
+			execSync: "function",
+			fork: "function",
+			spawn: "function",
+			spawnSync: "function",
+		});
+
+		assertTypeOfProperties(childProcess.default, {
+			ChildProcess: "function",
+			exec: "function",
+			execFile: "function",
+			execFileSync: "function",
+			execSync: "function",
+			fork: "function",
+			spawn: "function",
+			spawnSync: "function",
+		});
+
+		// Both implementations throw when calling spawn()
+		assert.throws(
+			() => childProcess.spawn("ls"),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+
+		// Both implementations throw when calling exec()
+		assert.throws(
+			() => childProcess.exec("ls"),
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
 		);
 	},

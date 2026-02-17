@@ -3546,6 +3546,48 @@ test("Miniflare: custom Node outbound service", async ({ expect }) => {
 	);
 });
 
+test("Miniflare: setOptions: can restart workerd multiple times in succession", async ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/11675
+	// EBADF errors can occur when spawning a new workerd process if the stdio
+	// pipes from the previous process are not properly cleaned up. This is
+	// especially relevant when other parts of the system (like worker_threads
+	// used by Miniflare or other Vite plugins) are also managing file descriptors.
+	// While this test doesn't reliably reproduce the race condition, it validates
+	// that the restart mechanism works correctly after the fix.
+	const mf = new Miniflare({
+		port: 0,
+		modules: true,
+		script: `export default {
+			fetch() {
+				return new Response("version 1");
+			}
+		}`,
+	});
+	useDispose(mf);
+
+	// First request to ensure initial startup is complete
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("version 1");
+
+	// Perform multiple rapid setOptions calls to trigger workerd restarts.
+	// This tests that the stdio pipe cleanup in dispose() works correctly.
+	for (let i = 2; i <= 5; i++) {
+		await mf.setOptions({
+			port: 0,
+			modules: true,
+			script: `export default {
+				fetch() {
+					return new Response("version ${i}");
+				}
+			}`,
+		});
+		res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).toBe(`version ${i}`);
+	}
+});
+
 test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async ({
 	expect,
 }) => {

@@ -121,14 +121,28 @@ describe.sequential("wrangler pages dev", () => {
 		);
 		const bindings = Array.from(
 			(bindingMessages[1] ?? "").matchAll(/env\.[^\n]+/g)
-		).flat();
+		)
+			.flat()
+			.map((line) =>
+				// Normalize the CF_PAGES_URL which contains a generated project name
+				line
+					.replace(
+						/https:\/\/[a-f0-9]+\.wrangler-smoke-[^.]+/,
+						"https://<HASH>.<PROJECT_NAME>"
+					)
+					.replaceAll(/\s+/g, " ")
+			);
 		expect(bindings).toMatchInlineSnapshot(`
 			[
-			  "env.TEST_DO (TestDurableObject, defined in a)           Durable Object      local [not connected]",
-			  "env.TEST_KV (TEST_KV)                                   KV Namespace        local",
-			  "env.TEST_D1 (local-TEST_D1)                             D1 Database         local",
-			  "env.TEST_R2 (TEST_R2)                                   R2 Bucket           local",
-			  "env.TEST_SERVICE (test-worker)                          Worker              local [not connected]",
+			  "env.TEST_DO (TestDurableObject, defined in a) Durable Object local [not connected]",
+			  "env.TEST_KV (TEST_KV) KV Namespace local",
+			  "env.TEST_D1 (local-TEST_D1) D1 Database local",
+			  "env.TEST_R2 (TEST_R2) R2 Bucket local",
+			  "env.TEST_SERVICE (test-worker) Worker local [not connected]",
+			  "env.CF_PAGES ("1") Environment Variable local",
+			  "env.CF_PAGES_BRANCH ("local") Environment Variable local",
+			  "env.CF_PAGES_COMMIT_SHA ("0000000000000000000000000000000000000...") Environment Variable local",
+			  "env.CF_PAGES_URL ("https://<HASH>.<PROJECT_NAME>...") Environment Variable local",
 			]
 		`);
 	});
@@ -325,9 +339,13 @@ describe.sequential("wrangler pages dev", () => {
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 			"✨ Compiled Worker successfully
 			Your Worker has access to the following bindings:
-			Binding                                  Resource                  Mode
-			env.KV_BINDING_TOML (KV_ID_TOML)         KV Namespace              local
-			env.PAGES ("⚡️ Pages ⚡️")                Environment Variable      local
+			Binding                                                                   Resource                  Mode
+			env.KV_BINDING_TOML (KV_ID_TOML)                                          KV Namespace              local
+			env.CF_PAGES ("1")                                                        Environment Variable      local
+			env.CF_PAGES_BRANCH ("local")                                             Environment Variable      local
+			env.CF_PAGES_COMMIT_SHA ("0000000000000000000000000000000000000...")      Environment Variable      local
+			env.CF_PAGES_URL ("https://00000000.pages-project.pages....")             Environment Variable      local
+			env.PAGES ("⚡️ Pages ⚡️")                                                 Environment Variable      local
 			⎔ Starting local server...
 			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)"
@@ -429,25 +447,29 @@ describe.sequential("wrangler pages dev", () => {
 		expect(prestartOutput).toMatchInlineSnapshot(`
 			"✨ Compiled Worker successfully
 			Your Worker has access to the following bindings:
-			Binding                                                                  Resource                  Mode
-			env.DO_BINDING_1_TOML (NEW_DO_1, defined in NEW_DO_SCRIPT_1)             Durable Object            local [not connected]
-			env.DO_BINDING_2_TOML (DO_2_TOML, defined in DO_SCRIPT_2_TOML)           Durable Object            local [not connected]
-			env.DO_BINDING_3_ARGS (DO_3_ARGS, defined in DO_SCRIPT_3_ARGS)           Durable Object            local [not connected]
-			env.KV_BINDING_1_TOML (NEW_KV_ID_1)                                      KV Namespace              local
-			env.KV_BINDING_2_TOML (KV_ID_2_TOML)                                     KV Namespace              local
-			env.KV_BINDING_3_ARGS (KV_ID_3_ARGS)                                     KV Namespace              local
-			env.D1_BINDING_1_TOML (local-D1_BINDING_1_TOML=NEW_D1_NAME_1)            D1 Database               local
-			env.D1_BINDING_2_TOML (D1_NAME_2_TOML)                                   D1 Database               local
-			env.D1_BINDING_3_ARGS (local-D1_BINDING_3_ARGS=D1_NAME_3_ARGS)           D1 Database               local
-			env.R2_BINDING_1_TOML (new-r2-bucket-1)                                  R2 Bucket                 local
-			env.R2_BINDING_2_TOML (r2-bucket-2-toml)                                 R2 Bucket                 local
-			env.R2_BINDING_3_TOML (r2-bucket-3-args)                                 R2 Bucket                 local
-			env.SERVICE_BINDING_1_TOML (NEW_SERVICE_NAME_1)                          Worker                    local [not connected]
-			env.SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)                         Worker                    local [not connected]
-			env.SERVICE_BINDING_3_TOML (SERVICE_NAME_3_ARGS)                         Worker                    local [not connected]
-			env.VAR1 ("(hidden)")                                                    Environment Variable      local
-			env.VAR2 ("VAR_2_TOML")                                                  Environment Variable      local
-			env.VAR3 ("(hidden)")                                                    Environment Variable      local
+			Binding                                                                      Resource                  Mode
+			env.DO_BINDING_1_TOML (NEW_DO_1, defined in NEW_DO_SCRIPT_1)                 Durable Object            local [not connected]
+			env.DO_BINDING_2_TOML (DO_2_TOML, defined in DO_SCRIPT_2_TOML)               Durable Object            local [not connected]
+			env.DO_BINDING_3_ARGS (DO_3_ARGS, defined in DO_SCRIPT_3_ARGS)               Durable Object            local [not connected]
+			env.KV_BINDING_1_TOML (NEW_KV_ID_1)                                          KV Namespace              local
+			env.KV_BINDING_2_TOML (KV_ID_2_TOML)                                         KV Namespace              local
+			env.KV_BINDING_3_ARGS (KV_ID_3_ARGS)                                         KV Namespace              local
+			env.D1_BINDING_1_TOML (local-D1_BINDING_1_TOML=NEW_D1_NAME_1)                D1 Database               local
+			env.D1_BINDING_2_TOML (D1_NAME_2_TOML)                                       D1 Database               local
+			env.D1_BINDING_3_ARGS (local-D1_BINDING_3_ARGS=D1_NAME_3_ARGS)               D1 Database               local
+			env.R2_BINDING_1_TOML (new-r2-bucket-1)                                      R2 Bucket                 local
+			env.R2_BINDING_2_TOML (r2-bucket-2-toml)                                     R2 Bucket                 local
+			env.R2_BINDING_3_TOML (r2-bucket-3-args)                                     R2 Bucket                 local
+			env.SERVICE_BINDING_1_TOML (NEW_SERVICE_NAME_1)                              Worker                    local [not connected]
+			env.SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)                             Worker                    local [not connected]
+			env.SERVICE_BINDING_3_TOML (SERVICE_NAME_3_ARGS)                             Worker                    local [not connected]
+			env.CF_PAGES ("1")                                                           Environment Variable      local
+			env.CF_PAGES_BRANCH ("local")                                                Environment Variable      local
+			env.CF_PAGES_COMMIT_SHA ("0000000000000000000000000000000000000...")         Environment Variable      local
+			env.CF_PAGES_URL ("https://00000000.pages-project.pages....")                Environment Variable      local
+			env.VAR1 ("(hidden)")                                                        Environment Variable      local
+			env.VAR2 ("VAR_2_TOML")                                                      Environment Variable      local
+			env.VAR3 ("(hidden)")                                                        Environment Variable      local
 			Service bindings, Durable Object bindings, and Tail consumers connect to other Wrangler or Vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 			"
 		`);
@@ -479,6 +501,67 @@ describe.sequential("wrangler pages dev", () => {
 		await expect(fetchText(url)).resolves.toBe(
 			"⚡️ Pages supports wrangler.toml ⚡️"
 		);
+	});
+
+	it("should inject CF_PAGES environment variables", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"_worker.js": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json({
+							CF_PAGES: env.CF_PAGES,
+							CF_PAGES_BRANCH: env.CF_PAGES_BRANCH,
+							CF_PAGES_COMMIT_SHA: env.CF_PAGES_COMMIT_SHA,
+							CF_PAGES_URL: env.CF_PAGES_URL,
+						});
+					}
+				}`,
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+		);
+		const { url } = await worker.waitForReady();
+
+		const response = await fetch(url);
+		const data = (await response.json()) as Record<string, string>;
+
+		expect(data).toEqual({
+			CF_PAGES: "1",
+			CF_PAGES_BRANCH: expect.any(String),
+			CF_PAGES_COMMIT_SHA: expect.any(String),
+			CF_PAGES_URL: expect.stringMatching(
+				/^https:\/\/[a-f0-9]{8}\..*\.pages\.dev$/
+			),
+		});
+	});
+
+	it("should allow user to override CF_PAGES... environment variables", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"_worker.js": dedent`
+				export default {
+					fetch(request, env) {
+						return new Response(env.CF_PAGES_BRANCH + " " + env.CF_PAGES_COMMIT_SHA);
+					}
+				}`,
+			"wrangler.toml": dedent`
+				name = "test-pages"
+				pages_build_output_dir = "."
+				compatibility_date = "2024-01-01"
+
+				[vars]
+				CF_PAGES_BRANCH = "custom-branch"
+				CF_PAGES_COMMIT_SHA = "custom-sha"
+			`,
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+
+		const text = await fetchText(url);
+		expect(text).toBe("custom-branch custom-sha");
 	});
 
 	describe("watch mode", () => {

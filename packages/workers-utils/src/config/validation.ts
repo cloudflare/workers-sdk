@@ -37,7 +37,6 @@ import {
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
 import type { Binding } from "../types";
-import type { CfWorkerInit } from "../worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
@@ -68,12 +67,46 @@ export function isValidR2BucketName(name: string | undefined): name is string {
 export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
 /**
+ * Config field names for bindings (e.g., "kv_namespaces", "d1_databases").
+ * These are the keys used in Wrangler's config file
+ */
+export type ConfigBindingFieldName =
+	| "data_blobs"
+	| "durable_objects"
+	| "kv_namespaces"
+	| "send_email"
+	| "queues"
+	| "d1_databases"
+	| "vectorize"
+	| "hyperdrive"
+	| "r2_buckets"
+	| "logfwdr"
+	| "services"
+	| "analytics_engine_datasets"
+	| "text_blobs"
+	| "browser"
+	| "ai"
+	| "images"
+	| "media"
+	| "version_metadata"
+	| "unsafe"
+	| "vars"
+	| "wasm_modules"
+	| "dispatch_namespaces"
+	| "mtls_certificates"
+	| "workflows"
+	| "pipelines"
+	| "secrets_store_secrets"
+	| "ratelimits"
+	| "assets"
+	| "unsafe_hello_world"
+	| "worker_loaders"
+	| "vpc_services";
+
+/**
  * @deprecated new code should use getBindingTypeFriendlyName() instead
  */
-export const friendlyBindingNames: Record<
-	keyof CfWorkerInit["bindings"],
-	string
-> = {
+export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
 	durable_objects: "Durable Object",
 	kv_namespaces: "KV Namespace",
@@ -3864,7 +3897,7 @@ const validateBindingsHaveUniqueNames = (
 	let hasDuplicates = false;
 
 	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
-		keyof CfWorkerInit["bindings"],
+		ConfigBindingFieldName,
 		string,
 	][];
 

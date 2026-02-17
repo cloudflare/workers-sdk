@@ -73,6 +73,11 @@ type VariableNames =
 	/** The Workers environment to target (equivalent to the `--env` CLI param) */
 	| "CLOUDFLARE_ENV"
 
+	// ## Directory Configuration
+
+	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
+	| "WRANGLER_CACHE_DIR"
+
 	// ## Advanced Configuration
 
 	/** Set to "staging" to use staging APIs instead of production. */

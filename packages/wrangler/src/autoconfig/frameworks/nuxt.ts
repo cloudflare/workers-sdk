@@ -55,9 +55,10 @@ export class Nuxt extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(["nitro-cloudflare-dev"], {
+			await installPackages(packageManager, ["nitro-cloudflare-dev"], {
 				dev: true,
 				startText: "Installing the Cloudflare dev module",
 				doneText: `${brandColor(`installed`)} ${dim("nitro-cloudflare-dev")}`,

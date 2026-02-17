@@ -4,6 +4,7 @@ import { Astro } from "./astro";
 import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
+import { CloudflarePages } from "./pages";
 import { Qwik } from "./qwik";
 import { ReactRouter } from "./react-router";
 import { SolidStart } from "./solid-start";
@@ -43,7 +44,14 @@ export const allKnownFrameworks = [
 	{ id: "vite", name: "Vite", class: Vite },
 	{ id: "vike", name: "Vike", class: Vike },
 	{ id: "waku", name: "Waku", class: Waku },
+	{ id: "cloudflare-pages", name: "Cloudflare Pages", class: CloudflarePages },
 ] as const satisfies FrameworkInfo[];
+
+export type KnownFrameworkId = (typeof allKnownFrameworks)[number]["id"];
+
+export const allKnownFrameworksIds = new Set(
+	allKnownFrameworks.map(({ id }) => id)
+);
 
 export function getFramework(frameworkId?: FrameworkInfo["id"]): Framework {
 	const targetedFramework = allKnownFrameworks.find(

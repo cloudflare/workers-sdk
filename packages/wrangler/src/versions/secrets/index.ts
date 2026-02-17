@@ -3,7 +3,7 @@ import { fetchResult } from "../../cfetch";
 import { performApiFetch } from "../../cfetch/internal";
 import { createNamespace } from "../../core/create-command";
 import {
-	createFlatWorkerUploadForm,
+	createWorkerUploadForm,
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { getMetricsUsageHeaders } from "../../metrics";
@@ -193,7 +193,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		observability: scriptSettings.observability,
 	};
 
-	const body = createFlatWorkerUploadForm(worker, bindings, {
+	const body = createWorkerUploadForm(worker, bindings, {
 		unsafe: { metadata: unsafeMetadata },
 	});
 	const result = await fetchResult<{

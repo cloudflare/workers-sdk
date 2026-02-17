@@ -85,6 +85,10 @@ export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
 		bindings: StartDevWorkerInput["bindings"];
 	};
 
+/**
+ * Create remote worker init from StartDevWorkerInput["bindings"] format
+ * (flat Record<string, Binding>).
+ */
 export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];

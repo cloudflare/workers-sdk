@@ -31,14 +31,12 @@ export const queuesCreateCommand = createCommand({
 		"delivery-delay-secs": {
 			type: "number",
 			describe:
-				"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
-			default: 0,
+				"How long a published message should be delayed for, in seconds. Must be between 0 and 43200",
 		},
 		"message-retention-period-secs": {
 			type: "number",
 			describe:
-				"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
-			default: 345600,
+				"How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600",
 		},
 	},
 	positionalArgs: ["name"],

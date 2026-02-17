@@ -17,6 +17,7 @@ export class Vike extends Framework {
 	async configure({
 		projectPath,
 		dryRun,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const vikeServerIsInstalled = isPackageInstalled(
 			"vike-server",
@@ -34,11 +35,15 @@ export class Vike extends Framework {
 		if (!dryRun) {
 			// note: the following installation steps follow the guide in: https://vike.dev/cloudflare#get-started
 
-			await installPackages(["vike-photon", "@photonjs/cloudflare"], {
-				startText: "Installing vike-photon and @photonjs/cloudflare",
-				doneText: `${brandColor(`installed`)} photon packages`,
-			});
-			await installPackages(["@cloudflare/vite-plugin"], {
+			await installPackages(
+				packageManager,
+				["vike-photon", "@photonjs/cloudflare"],
+				{
+					startText: "Installing vike-photon and @photonjs/cloudflare",
+					doneText: `${brandColor(`installed`)} photon packages`,
+				}
+			);
+			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
 				dev: true,
 			});
 

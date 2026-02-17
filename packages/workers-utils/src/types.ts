@@ -279,7 +279,16 @@ export type Trigger =
 type BindingOmit<T> = Omit<T, "binding">;
 type NameOmit<T> = Omit<T, "name">;
 export type Binding =
-	| { type: "plain_text"; value: string }
+	| {
+			type: "plain_text";
+			value: string;
+			/**
+			 * Hide this environment variable in output as it may be sensitive
+			 * This is a @deprecated feature to support current Wrangler behaviour, and sensitive
+			 * variables should be marked as `type: secret_text` in future
+			 */
+			hidden?: boolean;
+	  }
 	| { type: "secret_text"; value: string }
 	| { type: "json"; value: Json }
 	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)

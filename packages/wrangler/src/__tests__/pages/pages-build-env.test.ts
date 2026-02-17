@@ -41,7 +41,7 @@ describe("pages build env", () => {
 			Build environment variables: (none found)"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
@@ -141,7 +141,7 @@ describe("pages build env", () => {
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: incomplete key-value: cannot find end of key[0m
 
 			    <cwd>/wrangler.toml:1:0:
-			[37m      1 │ [32m[37mINVALID \\"FILE
+			[37m      1 │ [32m[37mINVALID "FILE
 			        ╵ [32m^[0m
 
 			"
@@ -297,7 +297,7 @@ describe("pages build env", () => {
 			  - VAR2: VALUE2"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"VALUE1","VAR2":"VALUE2"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
@@ -346,7 +346,7 @@ describe("pages build env", () => {
 			  - VAR2: VALUE2"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"VALUE1","VAR2":"VALUE2"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
@@ -393,7 +393,7 @@ describe("pages build env", () => {
 			  - PROD_VAR3: PROD_VALUE3"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"PROD_VALUE1\\",\\"VAR2\\":\\"PROD_VALUE2\\",\\"PROD_VAR3\\":\\"PROD_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"PROD_VALUE1","VAR2":"PROD_VALUE2","PROD_VAR3":"PROD_VALUE3"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 
@@ -440,7 +440,7 @@ describe("pages build env", () => {
 			  - PREVIEW_VAR3: PREVIEW_VALUE3"
 		`);
 		expect(readFileSync("data.json", "utf8")).toMatchInlineSnapshot(
-			`"{\\"vars\\":{\\"VAR1\\":\\"PREVIEW_VALUE1\\",\\"VAR2\\":\\"PREVIEW_VALUE2\\",\\"PREVIEW_VAR3\\":\\"PREVIEW_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
+			`"{"vars":{"VAR1":"PREVIEW_VALUE1","VAR2":"PREVIEW_VALUE2","PREVIEW_VAR3":"PREVIEW_VALUE3"},"pages_build_output_dir":"dist"}"`
 		);
 	});
 

@@ -81,6 +81,7 @@ export class ProxyController extends Controller {
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,
 			stripDisablePrettyError: false,
+			unsafeLocalExplorer: false,
 			workers: [
 				{
 					name: "ProxyWorker",

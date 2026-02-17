@@ -32,6 +32,8 @@
 				"HTTP_PROXY",
 				"https_proxy",
 				"HTTPS_PROXY",
+				"no_proxy",
+				"NO_PROXY",
 				"HYPERDRIVE_DATABASE_URL",
 				"HYPERDRIVE_MYSQL_DATABASE_URL",
 				"WRANGLER_DOCKER_BIN",

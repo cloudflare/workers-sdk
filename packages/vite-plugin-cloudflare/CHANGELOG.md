@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 1.25.0
+
+### Minor Changes
+
+- [#12535](https://github.com/cloudflare/workers-sdk/pull/12535) [`bd06ad2`](https://github.com/cloudflare/workers-sdk/commit/bd06ad212a1d43980803f7741fe8de83aef55ffd) Thanks [@edmundhung](https://github.com/edmundhung)! - Set `{ serverHandler: false }` automatically when using `@vitejs/plugin-rsc`
+
+  By default, `@vitejs/plugin-rsc` adds dev and preview server middleware that imports the RSC entry in Node.js. This fails with `cloudflare:*` imports (`ERR_UNSUPPORTED_ESM_URL_SCHEME`) and is unnecessary since the Cloudflare plugin handles requests via workerd. Users no longer need to pass `rsc({ serverHandler: false })` manually.
+
+### Patch Changes
+
+- [#12521](https://github.com/cloudflare/workers-sdk/pull/12521) [`a8183db`](https://github.com/cloudflare/workers-sdk/commit/a8183dbd7a335b1880b37737fd5c3d4e39a42471) Thanks [@edmundhung](https://github.com/edmundhung)! - Avoid `The WebSocket is undefined` error when frameworks create a child Vite server during build
+
+  React Router creates a child Vite dev server during production builds to compile route files. This could previously cause an intermittent `The WebSocket is undefined` assertion error.
+
+- Updated dependencies [[`ad817dd`](https://github.com/cloudflare/workers-sdk/commit/ad817ddc475bac3d5e87108eacddb611a9f822f2), [`b900c5a`](https://github.com/cloudflare/workers-sdk/commit/b900c5adc18c12d500e0fb8c58c2295843518695), [`f7fa326`](https://github.com/cloudflare/workers-sdk/commit/f7fa3269c14bf50c8129de9d38276cd02189a39a), [`734792a`](https://github.com/cloudflare/workers-sdk/commit/734792ac064c323746eba5d72323287c2f226894), [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41), [`cc5ac22`](https://github.com/cloudflare/workers-sdk/commit/cc5ac22c1d5ea90ea07850a22d0aa515e3d5e517), [`62a8d48`](https://github.com/cloudflare/workers-sdk/commit/62a8d485bd16084bb7db58bdd16405a8b60c1835), [`84252b7`](https://github.com/cloudflare/workers-sdk/commit/84252b7ae2185e20dd8c5254e53dbcfed30cae64), [`e5efa5d`](https://github.com/cloudflare/workers-sdk/commit/e5efa5d00dc68c2862f0d4c931784f32ac29e84c), [`d06ad09`](https://github.com/cloudflare/workers-sdk/commit/d06ad0967a2636a9f7e43babf5209bcec1af81d5), [`10a1c4a`](https://github.com/cloudflare/workers-sdk/commit/10a1c4a9a92f57806e9314ba3ba558c9a0fdd5e2), [`be9745f`](https://github.com/cloudflare/workers-sdk/commit/be9745fc2a663f6da2addf2f784392a21dab9475), [`d7b492c`](https://github.com/cloudflare/workers-sdk/commit/d7b492c37838929d37901c628ecbdd718f5a1258), [`122791d`](https://github.com/cloudflare/workers-sdk/commit/122791dbc721a7f237dad89c7b5649bb8437fde0), [`8809411`](https://github.com/cloudflare/workers-sdk/commit/880941158c82e4d907538bfdede06ed0ce5d772d), [`1a9eddd`](https://github.com/cloudflare/workers-sdk/commit/1a9eddd1fc14c9f449dab05d000ef395d34fe096), [`41e18aa`](https://github.com/cloudflare/workers-sdk/commit/41e18aa51e14061a51cb2fae1fada1ea560838aa)]:
+  - wrangler@4.65.0
+  - miniflare@4.20260212.0
+
 ## 1.24.0
 
 ### Minor Changes

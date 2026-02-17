@@ -175,7 +175,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret secret-name"
 				`);
 			});
@@ -194,7 +194,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -220,7 +220,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name-some-env\\"
+					🌀 Creating the secret for the Worker "script-name-some-env"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -246,7 +246,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
+					🌀 Creating the secret for the Worker "script-name" (some-env)
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -293,7 +293,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					🌀 Creating the secret for the Worker "non-existent-worker"
 					Aborting. No secrets added."
 				`);
 			});
@@ -320,7 +320,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -337,7 +337,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"script-name\\"
+					🌀 Creating the secret for the Worker "script-name"
 					✨ Success! Uploaded secret the-key"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -390,7 +390,7 @@ describe("wrangler secret", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
-					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					🌀 Creating the secret for the Worker "non-existent-worker"
 					✨ Success! Uploaded secret the-key"
 				`);
 			});
@@ -431,7 +431,7 @@ describe("wrangler secret", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						🌀 Creating the secret for the Worker \\"script-name\\"
+						🌀 Creating the secret for the Worker "script-name"
 						✨ Success! Uploaded secret the-key"
 					`);
 					expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -482,7 +482,7 @@ describe("wrangler secret", () => {
 						  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 						  the target environment using the \`-e|--env\` flag.
 						  If your intention is to use the top-level environment of your configuration simply pass an empty
-						  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+						  string to the flag to target such environment. For example \`--env=""\`.
 
 						"
 					`);
@@ -737,7 +737,7 @@ describe("wrangler secret", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+					  string to the flag to target such environment. For example \`--env=""\`.
 
 					"
 				`);
@@ -841,8 +841,8 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"the-secret-name\\",
-				    \\"type\\": \\"secret_text\\"
+				    "name": "the-secret-name",
+				    "type": "secret_text"
 				  }
 				]"
 			`);
@@ -857,8 +857,8 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"the-secret-name\\",
-				    \\"type\\": \\"secret_text\\"
+				    "name": "the-secret-name",
+				    "type": "secret_text"
 				  }
 				]"
 			`);
@@ -873,8 +873,8 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"[
 				  {
-				    \\"name\\": \\"the-secret-name\\",
-				    \\"type\\": \\"secret_text\\"
+				    "name": "the-secret-name",
+				    "type": "secret_text"
 				  }
 				]"
 			`);
@@ -946,8 +946,8 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"[
 					  {
-					    \\"name\\": \\"the-secret-name\\",
-					    \\"type\\": \\"secret_text\\"
+					    "name": "the-secret-name",
+					    "type": "secret_text"
 					  }
 					]"
 				`);
@@ -1007,7 +1007,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\" "
+				🌀 Creating the secrets for the Worker "script-name" "
 			`
 			);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1034,7 +1034,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
 
@@ -1062,7 +1062,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
@@ -1087,7 +1087,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: SECRET_NAME_1
 				✨ Successfully created secret for key: SECRET_NAME_2
 
@@ -1148,7 +1148,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 
@@ -1182,7 +1182,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 
@@ -1237,7 +1237,7 @@ describe("wrangler secret", () => {
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
 
@@ -1251,7 +1251,7 @@ describe("wrangler secret", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload
 				",
@@ -1340,7 +1340,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-2
 				✨ Successfully created secret for key: secret-name-3
 				✨ Successfully created secret for key: secret-name-4
@@ -1372,7 +1372,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
+				🌀 Creating the secrets for the Worker "non-existent-worker"
 				Aborting. No secrets added."
 			`);
 		});
@@ -1403,7 +1403,7 @@ describe("wrangler secret", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Creating the secrets for the Worker \\"script-name\\"
+				🌀 Creating the secrets for the Worker "script-name"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
@@ -1432,7 +1432,7 @@ describe("wrangler secret", () => {
 					  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 					  the target environment using the \`-e|--env\` flag.
 					  If your intention is to use the top-level environment of your configuration simply pass an empty
-					  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+					  string to the flag to target such environment. For example \`--env=""\`.
 
 					"
 				`);
