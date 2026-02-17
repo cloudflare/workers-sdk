@@ -10,10 +10,10 @@ import {
 	buildStudioMutationPlans,
 	commitStudioTableChanges,
 } from "../../utils/studio/commit";
-import { useModal } from "../../utils/studio/stubs/modal";
 import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
 import { StudioCommitConfirmation } from "./CommitConfirmation";
 import { useStudioContext } from "./Context";
+import { useModal } from "./Modal";
 import StudioQueryResultStats from "./QueryResultStats";
 import { StudioResultTable } from "./ResultTable";
 import { createStudioTableStateFromResult } from "./Table/StateHelpers";
