@@ -1,17 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getTunnelToken, resolveTunnelId } from "./client";
-import { CLOUDFLARED_VERSION, spawnCloudflared } from "./cloudflared";
+import { spawnCloudflared } from "./cloudflared";
 
 export const tunnelRunCommand = createCommand({
 	metadata: {
 		description: "Run a Cloudflare Tunnel using cloudflared",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: Tunnels",
 	},
 	args: {
@@ -98,30 +96,16 @@ export const tunnelRunCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 
-		// Write token to a temporary file to avoid leaking it via process args.
-		const tokenDir = fs.mkdtempSync(
-			path.join(os.tmpdir(), "wrangler-cloudflared-token-")
-		);
-		const tokenFilePath = path.join(tokenDir, "token");
-		fs.writeFileSync(tokenFilePath, tokenStr, { mode: 0o600 });
-		const cleanupTokenFile = () => {
-			try {
-				fs.rmSync(tokenDir, { recursive: true, force: true });
-			} catch {
-				// ignore
-			}
-		};
-		process.on("exit", cleanupTokenFile);
-
-		// Build cloudflared command
+		// Build cloudflared command.
+		// The token is passed via TUNNEL_TOKEN env var rather than CLI args
+		// to avoid leaking it in process listings (ps) and to maintain
+		// compatibility with all cloudflared versions.
 		const cloudflaredArgs = [
 			"tunnel",
 			"--no-autoupdate",
 			"--loglevel",
 			args.logLevel || "info",
 			"run",
-			"--token-file",
-			tokenFilePath,
 		];
 
 		// Add URL if provided
@@ -129,7 +113,7 @@ export const tunnelRunCommand = createCommand({
 			cloudflaredArgs.push("--url", args.url);
 		}
 
-		logger.log(`\nStarting cloudflared ${CLOUDFLARED_VERSION}...`);
+		logger.log(`\nStarting cloudflared...`);
 		if (tunnelId) {
 			logger.log(`   Tunnel ID: ${tunnelId}`);
 		}
@@ -138,8 +122,11 @@ export const tunnelRunCommand = createCommand({
 		}
 		logger.log(`\nPress Ctrl+C to stop the tunnel.\n`);
 
-		// Spawn cloudflared process with automatic binary management
-		const cloudflared = await spawnCloudflared(cloudflaredArgs);
+		// Spawn cloudflared process with automatic binary management.
+		// Token is passed via env var to avoid leaking in `ps` output.
+		const cloudflared = await spawnCloudflared(cloudflaredArgs, {
+			env: { TUNNEL_TOKEN: tokenStr },
+		});
 
 		// Track if we've already started shutting down
 		let isShuttingDown = false;
@@ -167,7 +154,6 @@ export const tunnelRunCommand = createCommand({
 
 		// Handle process exit
 		cloudflared.on("exit", (code, signal) => {
-			cleanupTokenFile();
 			if (isShuttingDown) {
 				// Expected shutdown
 				logger.log("Tunnel stopped.");
@@ -213,7 +199,6 @@ export const tunnelRunCommand = createCommand({
 				return;
 			}
 			isShuttingDown = true;
-			cleanupTokenFile();
 
 			logger.log("\n\nShutting down tunnel...");
 

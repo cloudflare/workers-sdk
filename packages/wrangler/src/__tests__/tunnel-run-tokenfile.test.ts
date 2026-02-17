@@ -1,8 +1,7 @@
 import { EventEmitter } from "node:events";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { spawnCloudflared } from "../tunnel/cloudflared";
+import { tunnelRunCommand } from "../tunnel/run";
 
 vi.mock("../tunnel/cloudflared", async () => {
 	const actual = await vi.importActual<typeof import("../tunnel/cloudflared")>(
@@ -10,7 +9,7 @@ vi.mock("../tunnel/cloudflared", async () => {
 	);
 	return {
 		...actual,
-		spawnCloudflared: vi.fn(async (_args: string[]) => {
+		spawnCloudflared: vi.fn(async (_args: string[], _opts?: unknown) => {
 			const cp = new EventEmitter() as any;
 			cp.stderr = null;
 			cp.killed = false;
@@ -22,24 +21,13 @@ vi.mock("../tunnel/cloudflared", async () => {
 	};
 });
 
-import { tunnelRunCommand } from "../tunnel/run";
-import { spawnCloudflared } from "../tunnel/cloudflared";
-
 describe("tunnel run", () => {
-	let tempDir: string | undefined;
-
 	afterEach(() => {
-		if (tempDir) {
-			fs.rmSync(tempDir, { recursive: true, force: true });
-			tempDir = undefined;
-		}
 		vi.clearAllMocks();
 	});
 
-	it("uses --token-file when token is provided", async () => {
+	it("passes token via TUNNEL_TOKEN env var, not CLI args", async () => {
 		const token = "TEST_TOKEN";
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wrangler-test-"));
-		vi.spyOn(os, "tmpdir").mockReturnValue(tempDir!);
 
 		const logger = {
 			log: vi.fn(),
@@ -59,16 +47,15 @@ describe("tunnel run", () => {
 		);
 
 		expect(spawnCloudflared).toHaveBeenCalledTimes(1);
-		const calledArgs = (spawnCloudflared as any).mock.calls[0][0] as string[];
-		expect(calledArgs).toContain("--token-file");
-		expect(calledArgs).not.toContain("--token");
+		const [calledArgs, calledOpts] = (spawnCloudflared as any).mock
+			.calls[0] as [string[], { env?: Record<string, string> }];
 
-		const tokenFileIndex = calledArgs.indexOf("--token-file");
-		const tokenPath = calledArgs[tokenFileIndex + 1];
-		expect(fs.readFileSync(tokenPath, "utf8").trim()).toBe(token);
-		if (process.platform !== "win32") {
-			const mode = fs.statSync(tokenPath).mode & 0o777;
-			expect(mode).toBe(0o600);
-		}
+		// Token must NOT appear in CLI args (would leak via `ps`)
+		expect(calledArgs).not.toContain("--token");
+		expect(calledArgs).not.toContain("--token-file");
+		expect(calledArgs).not.toContain(token);
+
+		// Token must be passed via env var
+		expect(calledOpts?.env?.TUNNEL_TOKEN).toBe(token);
 	});
 });

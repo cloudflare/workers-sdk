@@ -6,7 +6,7 @@ import { listTunnels } from "./client";
 export const tunnelListCommand = createCommand({
 	metadata: {
 		description: "List all Cloudflare Tunnels in your account",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: Tunnels",
 	},
 	args: {},

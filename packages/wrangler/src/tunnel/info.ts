@@ -6,7 +6,7 @@ import { getTunnel, resolveTunnelId } from "./client";
 export const tunnelInfoCommand = createCommand({
 	metadata: {
 		description: "Display details about a Cloudflare Tunnel",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: Tunnels",
 	},
 	args: {

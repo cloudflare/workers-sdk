@@ -6,7 +6,7 @@ import { createTunnel } from "./client";
 export const tunnelCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new Cloudflare Tunnel",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: Tunnels",
 	},
 	args: {

@@ -2,7 +2,8 @@
  * cloudflared binary management for Wrangler tunnel commands.
  *
  * This module handles downloading, caching, and running the cloudflared binary.
- * It follows the same patterns as the workerd npm package for binary management.
+ * It uses the Cloudflare update worker (update.argotunnel.com) to resolve
+ * the latest version and download URL, matching cloudflared's own update mechanism.
  */
 
 import { execFileSync, spawn } from "node:child_process";
@@ -18,158 +19,213 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { arch, endianness, homedir } from "node:os";
+import { arch, homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 import { sync as commandExistsSync } from "command-exists";
 import { fetch } from "undici";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import type { ChildProcess } from "node:child_process";
 
-// cloudflared version to download
-export const CLOUDFLARED_VERSION = "2026.1.2";
+/**
+ * Cloudflare update worker URL.
+ * This is the same endpoint cloudflared itself uses for self-update.
+ * It takes os, arch, and version query parameters and returns JSON with
+ * the download URL, version, checksum, and whether compression is used.
+ * The worker uses KV for caching.
+ */
+const UPDATE_SERVICE_URL = "https://update.argotunnel.com";
 
-type GithubReleaseAsset = {
-	name: string;
-	digest?: string;
-};
-
-type GithubRelease = {
-	assets: GithubReleaseAsset[];
-};
-
-let cachedReleaseByVersion: Map<string, GithubRelease> | undefined;
+/**
+ * Response shape from the Cloudflare update worker.
+ */
+interface VersionResponse {
+	url: string;
+	version: string;
+	checksum: string;
+	compressed: boolean;
+	shouldUpdate: boolean;
+	userMessage: string;
+	error: string;
+}
 
 function sha256Hex(buffer: Buffer): string {
 	return createHash("sha256").update(buffer).digest("hex");
 }
 
-async function getGithubRelease(version: string): Promise<GithubRelease> {
-	if (!cachedReleaseByVersion) {
-		cachedReleaseByVersion = new Map();
+/**
+ * Map Node.js arch() values to Go runtime.GOARCH values
+ * used by the update worker.
+ */
+function getGoArch(): string {
+	const nodeArch = arch();
+	switch (nodeArch) {
+		case "x64":
+			return "amd64";
+		case "arm64":
+			return "arm64";
+		case "arm":
+			return "arm";
+		default:
+			throw new UserError(
+				`Unsupported architecture for cloudflared: ${nodeArch}\n\n` +
+					`cloudflared supports: x64 (amd64), arm64, arm\n\n` +
+					`You can manually install cloudflared and set the WRANGLER_CLOUDFLARED_PATH environment variable.\n` +
+					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+			);
 	}
-	const cached = cachedReleaseByVersion.get(version);
-	if (cached) {
-		return cached;
+}
+
+/**
+ * Map Node.js process.platform to Go runtime.GOOS values
+ * used by the update worker.
+ */
+function getGoOS(): string {
+	switch (process.platform) {
+		case "darwin":
+			return "darwin";
+		case "linux":
+			return "linux";
+		case "win32":
+			return "windows";
+		default:
+			throw new UserError(
+				`Unsupported platform for cloudflared: ${process.platform}\n\n` +
+					`cloudflared supports: darwin (macOS), linux, win32 (Windows)\n\n` +
+					`You can manually install cloudflared and set the WRANGLER_CLOUDFLARED_PATH environment variable.\n` +
+					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+			);
+	}
+}
+
+/** GitHub release URL pattern for cloudflared binaries. */
+const GITHUB_RELEASE_BASE =
+	"https://github.com/cloudflare/cloudflared/releases/download";
+
+/**
+ * Build the expected GitHub release asset filename for this platform.
+ */
+export function getAssetFilename(goOS: string, goArch: string): string {
+	if (goOS === "windows") {
+		return `cloudflared-${goOS}-${goArch}.exe`;
+	}
+	if (goOS === "darwin") {
+		return `cloudflared-${goOS}-${goArch}.tgz`;
+	}
+	return `cloudflared-${goOS}-${goArch}`;
+}
+
+/**
+ * Query the update worker for a specific os/arch combination.
+ * Returns the parsed response, or null if the request failed or the
+ * worker returned an error (e.g. "no release found").
+ */
+async function queryUpdateService(
+	goOS: string,
+	goArch: string
+): Promise<VersionResponse | null> {
+	const url = new URL(UPDATE_SERVICE_URL);
+	url.searchParams.set("os", goOS);
+	url.searchParams.set("arch", goArch);
+
+	logger.debug(`Checking for latest cloudflared: ${url.toString()}`);
+
+	let response: Response;
+	try {
+		response = await fetch(url.toString(), {
+			headers: { "User-Agent": "wrangler" },
+		});
+	} catch {
+		return null;
 	}
 
-	const url = `https://api.github.com/repos/cloudflare/cloudflared/releases/tags/${version}`;
-	const response = await fetch(url, {
-		headers: {
-			"User-Agent": "wrangler",
-			Accept: "application/vnd.github+json",
-		},
-	});
 	if (!response.ok) {
-		throw new UserError(
-			`[cloudflared] Failed to fetch cloudflared release metadata from ${url}\n\n` +
-				`HTTP ${response.status}: ${response.statusText}`
-		);
+		return null;
 	}
 
-	const release = (await response.json()) as GithubRelease;
-	cachedReleaseByVersion.set(version, release);
-	return release;
-}
+	const data = (await response.json()) as VersionResponse;
 
-async function getExpectedAssetSha256(assetName: string): Promise<string> {
-	const release = await getGithubRelease(CLOUDFLARED_VERSION);
-	const asset = release.assets?.find((a) => a.name === assetName);
-	const digest = asset?.digest;
-	if (!digest) {
-		throw new UserError(
-			`[cloudflared] Could not find SHA256 digest for release asset "${assetName}" (version ${CLOUDFLARED_VERSION}).\n\n` +
-				`This is required to verify the downloaded binary.`
-		);
+	if (data.error || !data.url || !data.version) {
+		return data.version ? data : null;
 	}
-	if (!digest.startsWith("sha256:")) {
-		throw new UserError(
-			`[cloudflared] Unexpected digest format for "${assetName}": ${digest}`
-		);
-	}
-	return digest.slice("sha256:".length);
-}
 
-// Platform and architecture mappings for cloudflared releases
-// Format: "platform arch endianness" -> { url suffix, is tarball }
-interface BinarySpec {
-	/** URL path suffix for the GitHub release asset */
-	urlSuffix: string;
-	/** Whether the download is a tarball that needs extraction */
-	isTarball: boolean;
+	return data;
 }
-
-const knownPlatforms: Record<string, BinarySpec> = {
-	"darwin arm64 LE": {
-		urlSuffix: "cloudflared-darwin-arm64.tgz",
-		isTarball: true,
-	},
-	"darwin x64 LE": {
-		urlSuffix: "cloudflared-darwin-amd64.tgz",
-		isTarball: true,
-	},
-	"linux arm64 LE": {
-		urlSuffix: "cloudflared-linux-arm64",
-		isTarball: false,
-	},
-	"linux x64 LE": {
-		urlSuffix: "cloudflared-linux-amd64",
-		isTarball: false,
-	},
-	"linux arm LE": {
-		urlSuffix: "cloudflared-linux-arm",
-		isTarball: false,
-	},
-	"win32 x64 LE": {
-		urlSuffix: "cloudflared-windows-amd64.exe",
-		isTarball: false,
-	},
-};
 
 /**
- * Get the binary specification for the current platform
+ * Query the Cloudflare update worker to get the latest cloudflared version info.
+ *
+ * The update worker doesn't have entries for every os/arch combination
+ * (e.g. darwin/arm64 is missing even though the GitHub release exists).
+ * When the primary query fails, we fall back to querying a known-working
+ * combination (linux/amd64) to discover the latest version, then construct
+ * the GitHub release URL directly.
  */
-function getBinarySpecForCurrentPlatform(): BinarySpec {
-	const platformKey = `${process.platform} ${arch()} ${endianness()}`;
+async function getLatestVersionInfo(): Promise<VersionResponse> {
+	const goOS = getGoOS();
+	const goArch = getGoArch();
 
-	if (platformKey in knownPlatforms) {
-		return knownPlatforms[platformKey];
+	// Try the update worker for our exact platform first
+	const primary = await queryUpdateService(goOS, goArch);
+	if (primary && primary.url && primary.version) {
+		return primary;
 	}
 
-	throw new UserError(
-		`Unsupported platform for cloudflared: ${platformKey}\n\n` +
-			`cloudflared is available for the following platforms:\n` +
-			Object.keys(knownPlatforms)
-				.map((k) => `  - ${k}`)
-				.join("\n") +
-			`\n\nYou can manually install cloudflared and set the WRANGLER_CLOUDFLARED_PATH environment variable.\n` +
-			`Download instructions: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/`
+	// Fallback: query a known-working combination to get the latest version,
+	// then construct the GitHub download URL for our actual platform.
+	logger.debug(
+		`Update worker had no result for ${goOS}/${goArch}, falling back to GitHub release URL`
 	);
+
+	const fallback = await queryUpdateService("linux", "amd64");
+	if (!fallback || !fallback.version) {
+		throw new UserError(
+			`[cloudflared] Failed to determine the latest cloudflared version.\n\n` +
+				`The update service did not return results for ${goOS}/${goArch},\n` +
+				`and the fallback query also failed.\n\n` +
+				`You can manually install cloudflared from:\n` +
+				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+		);
+	}
+
+	const version = fallback.version;
+	const filename = getAssetFilename(goOS, goArch);
+	const url = `${GITHUB_RELEASE_BASE}/${version}/${filename}`;
+	const compressed = filename.endsWith(".tgz");
+
+	return {
+		url,
+		version,
+		checksum: "", // no checksum available for fallback URLs
+		compressed,
+		shouldUpdate: true,
+		userMessage: "",
+		error: "",
+	};
 }
 
 /**
- * Get the directory where cloudflared binary should be cached
+ * Get the directory where cloudflared binary should be cached.
+ * Uses the resolved version so the cache is per-version.
  */
-function getCacheDir(): string {
-	// Use a cache directory in the user's home directory to persist across projects
-	// Similar to how other tools cache binaries
-	return join(homedir(), ".wrangler", "cloudflared", CLOUDFLARED_VERSION);
+function getCacheDir(version: string): string {
+	return join(homedir(), ".wrangler", "cloudflared", version);
 }
 
 /**
- * Get the expected path for the cloudflared binary
+ * Get the expected path for the cloudflared binary within a version cache dir.
  */
-export function getCloudflaredBinPath(): string {
+export function getCloudflaredBinPath(version: string): string {
 	const binName =
 		process.platform === "win32" ? "cloudflared.exe" : "cloudflared";
-	return join(getCacheDir(), binName);
+	return join(getCacheDir(version), binName);
 }
 
 /**
- * Check if cloudflared binary exists and is executable
+ * Check if cloudflared binary exists and is executable at a given path.
  */
-export function isCloudflaredInstalled(): boolean {
-	const binPath = getCloudflaredBinPath();
+function isBinaryExecutable(binPath: string): boolean {
 	try {
 		accessSync(binPath, constants.X_OK);
 		return true;
@@ -179,7 +235,7 @@ export function isCloudflaredInstalled(): boolean {
 }
 
 /**
- * Validate that the installed binary works correctly
+ * Validate that a binary works correctly by running --version.
  */
 function validateBinary(binPath: string): void {
 	try {
@@ -202,9 +258,9 @@ function validateBinary(binPath: string): void {
 		}
 
 		errorMessage += `\nYou can try:\n`;
-		errorMessage += `  1. Deleting the cache directory: rm -rf ${getCacheDir()}\n`;
+		errorMessage += `  1. Deleting the cache directory: rm -rf ~/.wrangler/cloudflared/\n`;
 		errorMessage += `  2. Running the command again to re-download\n`;
-		errorMessage += `  3. Manually installing cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\n`;
+		errorMessage += `  3. Manually installing cloudflared: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n`;
 		errorMessage += `  4. Setting WRANGLER_CLOUDFLARED_PATH to point to your cloudflared binary`;
 
 		throw new UserError(errorMessage);
@@ -213,21 +269,13 @@ function validateBinary(binPath: string): void {
 
 export function redactCloudflaredArgsForLogging(args: string[]): string[] {
 	const redacted = [...args];
-	const redactNextFor = new Set([
-		"--token",
-		"--origincert",
-		"--credentials-contents",
-	]);
 	for (let i = 0; i < redacted.length; i++) {
 		const arg = redacted[i];
-		if (redactNextFor.has(arg) && i + 1 < redacted.length) {
+		if (arg === "--token" && i + 1 < redacted.length) {
 			redacted[i + 1] = "[REDACTED]";
 		}
 		if (arg.startsWith("--token=")) {
 			redacted[i] = "--token=[REDACTED]";
-		}
-		if (arg.startsWith("--credentials-contents=")) {
-			redacted[i] = "--credentials-contents=[REDACTED]";
 		}
 	}
 	return redacted;
@@ -243,6 +291,74 @@ function tryGetCloudflaredFromPath(): string | null {
 	} catch (e) {
 		logger.debug("cloudflared found in PATH but failed validation", e);
 		return null;
+	}
+}
+
+/**
+ * Extract the version string from `cloudflared --version` output.
+ * Output format: "cloudflared version 2025.7.0 (built 2025-07-03-1703 UTC)"
+ * Returns null if the version cannot be parsed.
+ */
+function getInstalledVersion(binPath: string): string | null {
+	try {
+		const output = execFileSync(binPath, ["--version"], {
+			stdio: ["pipe", "pipe", "pipe"],
+			timeout: 10000,
+		}).toString();
+		const match = output.match(/(\d+\.\d+\.\d+)/);
+		return match ? match[1] : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Compare two cloudflared version strings (e.g. "2025.7.0" vs "2026.2.0").
+ * Returns true if `installed` is older than `latest`.
+ */
+export function isVersionOutdated(installed: string, latest: string): boolean {
+	const parse = (v: string) => v.split(".").map(Number);
+	const [iYear, iMonth, iPatch] = parse(installed);
+	const [lYear, lMonth, lPatch] = parse(latest);
+
+	if (iYear !== lYear) {
+		return iYear < lYear;
+	}
+	if (iMonth !== lMonth) {
+		return iMonth < lMonth;
+	}
+	return iPatch < lPatch;
+}
+
+/**
+ * Check if a PATH-installed cloudflared is outdated compared to the latest
+ * version from the update worker. Logs a warning if outdated.
+ * This runs asynchronously and never throws — it's purely advisory.
+ */
+async function warnIfOutdated(binPath: string): Promise<void> {
+	try {
+		const installed = getInstalledVersion(binPath);
+		if (!installed) {
+			return;
+		}
+
+		// Try our platform first, fall back to linux/amd64 (always available)
+		const latest =
+			(await queryUpdateService(getGoOS(), getGoArch())) ??
+			(await queryUpdateService("linux", "amd64"));
+		const latestVersion = latest?.version;
+		if (!latestVersion) {
+			return;
+		}
+
+		if (isVersionOutdated(installed, latestVersion)) {
+			logger.warn(
+				`Your cloudflared (${installed}) is outdated. Latest version is ${latestVersion}.\n` +
+					`Update: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
+			);
+		}
+	} catch (e) {
+		logger.debug("Failed to check cloudflared version", e);
 	}
 }
 
@@ -267,26 +383,24 @@ function writeFileAtomic(filePath: string, contents: Buffer): void {
 }
 
 /**
- * Download cloudflared binary from GitHub releases
+ * Download cloudflared binary using the version info from the update worker.
  */
-async function downloadCloudflared(binPath: string): Promise<void> {
-	const spec = getBinarySpecForCurrentPlatform();
-	const url = `https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/${spec.urlSuffix}`;
-	const expectedSha256 = await getExpectedAssetSha256(spec.urlSuffix);
+async function downloadCloudflared(
+	versionInfo: VersionResponse,
+	binPath: string
+): Promise<void> {
+	const { url, version, checksum, compressed } = versionInfo;
 
-	logger.log(`Downloading cloudflared ${CLOUDFLARED_VERSION}...`);
+	logger.log(`Downloading cloudflared ${version}...`);
 	logger.debug(`Download URL: ${url}`);
 
-	// Create cache directory
 	const cacheDir = dirname(binPath);
 	mkdirSync(cacheDir, { recursive: true });
 
 	let response: Response;
 	try {
 		response = await fetch(url, {
-			headers: {
-				"User-Agent": "wrangler",
-			},
+			headers: { "User-Agent": "wrangler" },
 		});
 	} catch (e) {
 		throw new UserError(
@@ -301,22 +415,16 @@ async function downloadCloudflared(binPath: string): Promise<void> {
 		throw new UserError(
 			`[cloudflared] Failed to download cloudflared from ${url}\n\n` +
 				`HTTP ${response.status}: ${response.statusText}\n\n` +
-				`This could mean:\n` +
-				`  - The version ${CLOUDFLARED_VERSION} doesn't exist\n` +
-				`  - GitHub is temporarily unavailable\n` +
-				`  - You're being rate limited\n\n` +
 				`You can manually download cloudflared from:\n` +
-				`https://github.com/cloudflare/cloudflared/releases`
+				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
 		);
 	}
 
 	try {
-		if (spec.isTarball) {
-			// For macOS tarballs, download and extract
-			await downloadAndExtractTarball(response, expectedSha256, binPath, cacheDir);
+		if (compressed) {
+			await downloadAndExtractTarball(response, checksum, binPath, cacheDir);
 		} else {
-			// For Linux/Windows, download directly
-			await downloadBinary(response, expectedSha256, binPath);
+			await downloadBinary(response, checksum, binPath);
 		}
 	} catch (e) {
 		// Clean up partial downloads
@@ -344,7 +452,7 @@ async function downloadCloudflared(binPath: string): Promise<void> {
 		chmodSync(binPath, 0o755);
 	}
 
-	logger.log(`cloudflared ${CLOUDFLARED_VERSION} installed`);
+	logger.log(`cloudflared ${version} installed`);
 }
 
 /**
@@ -352,37 +460,35 @@ async function downloadCloudflared(binPath: string): Promise<void> {
  */
 async function downloadAndExtractTarball(
 	response: Response,
-	expectedSha256: string,
+	expectedChecksum: string,
 	binPath: string,
 	cacheDir: string
 ): Promise<void> {
 	const tempTarPath = join(cacheDir, "cloudflared.tgz");
 
-	// Download to temp file first
 	const buffer = Buffer.from(await response.arrayBuffer());
-	const actualSha256 = sha256Hex(buffer);
-	if (actualSha256 !== expectedSha256) {
-		throw new UserError(
-			`[cloudflared] SHA256 mismatch for downloaded cloudflared tarball.\n\n` +
-				`Expected: ${expectedSha256}\n` +
-				`Actual:   ${actualSha256}`
-		);
+	if (expectedChecksum) {
+		const actualSha256 = sha256Hex(buffer);
+		if (actualSha256 !== expectedChecksum) {
+			throw new UserError(
+				`[cloudflared] SHA256 mismatch for downloaded cloudflared tarball.\n\n` +
+					`Expected: ${expectedChecksum}\n` +
+					`Actual:   ${actualSha256}`
+			);
+		}
 	}
 	writeFileSync(tempTarPath, buffer);
 
 	try {
-		// Extract using native tar command
 		execFileSync("tar", ["-xzf", tempTarPath, "-C", cacheDir], {
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 
-		// The tarball extracts to 'cloudflared', rename if needed
 		const extractedPath = join(cacheDir, "cloudflared");
 		if (extractedPath !== binPath && existsSync(extractedPath)) {
 			renameSync(extractedPath, binPath);
 		}
 	} finally {
-		// Cleanup temp tarball
 		try {
 			if (existsSync(tempTarPath)) {
 				unlinkSync(tempTarPath);
@@ -398,28 +504,31 @@ async function downloadAndExtractTarball(
  */
 async function downloadBinary(
 	response: Response,
-	expectedSha256: string,
+	expectedChecksum: string,
 	binPath: string
 ): Promise<void> {
 	const buffer = Buffer.from(await response.arrayBuffer());
-	const actualSha256 = sha256Hex(buffer);
-	if (actualSha256 !== expectedSha256) {
-		throw new UserError(
-			`[cloudflared] SHA256 mismatch for downloaded cloudflared binary.\n\n` +
-				`Expected: ${expectedSha256}\n` +
-				`Actual:   ${actualSha256}`
-		);
+	if (expectedChecksum) {
+		const actualSha256 = sha256Hex(buffer);
+		if (actualSha256 !== expectedChecksum) {
+			throw new UserError(
+				`[cloudflared] SHA256 mismatch for downloaded cloudflared binary.\n\n` +
+					`Expected: ${expectedChecksum}\n` +
+					`Actual:   ${actualSha256}`
+			);
+		}
 	}
 	writeFileAtomic(binPath, buffer);
 }
 
 /**
- * Get cloudflared binary path, installing if necessary
+ * Get cloudflared binary path, installing if necessary.
  *
  * Resolution order:
  * 1. WRANGLER_CLOUDFLARED_PATH environment variable (user override)
- * 2. Cached binary in ~/.wrangler/cloudflared/{version}/
- * 3. Download from GitHub releases
+ * 2. cloudflared in system PATH
+ * 3. Cached binary in ~/.wrangler/cloudflared/{version}/
+ * 4. Download latest from Cloudflare update worker
  */
 export async function getCloudflaredPath(): Promise<string> {
 	// Check for environment variable override first
@@ -442,25 +551,44 @@ export async function getCloudflaredPath(): Promise<string> {
 	const pathBin = tryGetCloudflaredFromPath();
 	if (pathBin) {
 		logger.debug("Using cloudflared from PATH");
+		await warnIfOutdated(pathBin);
 		return pathBin;
 	}
 
-	const binPath = getCloudflaredBinPath();
+	// Query the update worker for the latest version
+	const versionInfo = await getLatestVersionInfo();
+	const binPath = getCloudflaredBinPath(versionInfo.version);
 
-	// Check if already installed and valid
-	if (isCloudflaredInstalled()) {
+	// Check if this version is already cached and valid
+	if (isBinaryExecutable(binPath)) {
 		try {
 			validateBinary(binPath);
-			logger.debug(`Using cached cloudflared: ${binPath}`);
+			logger.debug(
+				`Using cached cloudflared ${versionInfo.version}: ${binPath}`
+			);
 			return binPath;
 		} catch (e) {
 			logger.debug("Cached cloudflared failed validation; re-downloading", e);
-			removeCloudflaredCache();
+			removeCloudflaredCache(versionInfo.version);
 		}
 	}
 
+	// Prompt user before downloading
+	const shouldDownload = await confirm(
+		`cloudflared (${versionInfo.version}) is needed but not installed. Download to ${binPath}?`,
+		{ defaultValue: true, fallbackValue: true }
+	);
+	if (!shouldDownload) {
+		throw new UserError(
+			`cloudflared is required to run this command.\n\n` +
+				`You can install it manually from:\n` +
+				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n\n` +
+				`Then either add it to your PATH or set WRANGLER_CLOUDFLARED_PATH.`
+		);
+	}
+
 	// Download cloudflared
-	await downloadCloudflared(binPath);
+	await downloadCloudflared(versionInfo, binPath);
 
 	// Validate the downloaded binary
 	validateBinary(binPath);
@@ -473,7 +601,7 @@ export async function getCloudflaredPath(): Promise<string> {
  */
 export async function spawnCloudflared(
 	args: string[],
-	options?: { stdio?: "inherit" | "pipe" }
+	options?: { stdio?: "inherit" | "pipe"; env?: Record<string, string> }
 ): Promise<ChildProcess> {
 	const binPath = await getCloudflaredPath();
 
@@ -483,34 +611,19 @@ export async function spawnCloudflared(
 
 	const cloudflared = spawn(binPath, args, {
 		stdio: options?.stdio ?? "inherit",
+		env: options?.env ? { ...process.env, ...options.env } : undefined,
 	});
 
 	return cloudflared;
 }
 
 /**
- * Get the installed cloudflared version
+ * Remove cached cloudflared binary for a specific version, or all versions.
  */
-export async function getInstalledCloudflaredVersion(): Promise<string | null> {
-	try {
-		const binPath = await getCloudflaredPath();
-		const output = execFileSync(binPath, ["--version"], {
-			encoding: "utf8",
-			stdio: ["pipe", "pipe", "pipe"],
-		});
-		// Output format: "cloudflared version 2024.12.2 (built 2024-12-17-1234)"
-		const match = output.match(/cloudflared version (\S+)/);
-		return match ? match[1] : null;
-	} catch {
-		return null;
-	}
-}
-
-/**
- * Remove cached cloudflared binary
- */
-export function removeCloudflaredCache(): void {
-	const cacheDir = getCacheDir();
+export function removeCloudflaredCache(version?: string): void {
+	const cacheDir = version
+		? getCacheDir(version)
+		: join(homedir(), ".wrangler", "cloudflared");
 	if (existsSync(cacheDir)) {
 		rmSync(cacheDir, { recursive: true, force: true });
 		logger.log(`Removed cloudflared cache: ${cacheDir}`);

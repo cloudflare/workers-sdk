@@ -3,20 +3,21 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-	CLOUDFLARED_VERSION,
+	getAssetFilename,
 	getCloudflaredBinPath,
-	isCloudflaredInstalled,
+	isVersionOutdated,
 } from "../tunnel/cloudflared";
 
 describe("cloudflared binary management", () => {
 	describe("getCloudflaredBinPath", () => {
-		it("should return path in home directory cache", () => {
-			const binPath = getCloudflaredBinPath();
+		it("should return path in home directory cache including version", () => {
+			const version = "2026.1.0";
+			const binPath = getCloudflaredBinPath(version);
 			const expectedDir = path.join(
 				os.homedir(),
 				".wrangler",
 				"cloudflared",
-				CLOUDFLARED_VERSION
+				version
 			);
 
 			expect(binPath).toContain(expectedDir);
@@ -27,44 +28,65 @@ describe("cloudflared binary management", () => {
 				expect(binPath.endsWith("cloudflared")).toBe(true);
 			}
 		});
+	});
 
-		it("should include version in path", () => {
-			const binPath = getCloudflaredBinPath();
-			expect(binPath).toContain(CLOUDFLARED_VERSION);
+	describe("getAssetFilename", () => {
+		it("returns .tgz for darwin", () => {
+			expect(getAssetFilename("darwin", "amd64")).toBe(
+				"cloudflared-darwin-amd64.tgz"
+			);
+			expect(getAssetFilename("darwin", "arm64")).toBe(
+				"cloudflared-darwin-arm64.tgz"
+			);
+		});
+
+		it("returns .exe for windows", () => {
+			expect(getAssetFilename("windows", "amd64")).toBe(
+				"cloudflared-windows-amd64.exe"
+			);
+		});
+
+		it("returns bare binary name for linux", () => {
+			expect(getAssetFilename("linux", "amd64")).toBe(
+				"cloudflared-linux-amd64"
+			);
+			expect(getAssetFilename("linux", "arm64")).toBe(
+				"cloudflared-linux-arm64"
+			);
+			expect(getAssetFilename("linux", "arm")).toBe("cloudflared-linux-arm");
 		});
 	});
 
-	describe("isCloudflaredInstalled", () => {
-		it("should return false when binary does not exist", () => {
-			// Since we haven't installed cloudflared in tests, it should return false
-			// unless it happens to be installed on the test machine
-			const result = isCloudflaredInstalled();
-			expect(typeof result).toBe("boolean");
+	describe("isVersionOutdated", () => {
+		it("returns true when installed is older by year", () => {
+			expect(isVersionOutdated("2024.1.0", "2025.1.0")).toBe(true);
 		});
-	});
 
-	describe("CLOUDFLARED_VERSION", () => {
-		it("should be a valid version string or 'latest'", () => {
-			// Version can be "latest" or a semver-like version (e.g., "2024.12.2")
-			expect(CLOUDFLARED_VERSION).toMatch(/^(latest|\d{4}\.\d+\.\d+)$/);
+		it("returns true when installed is older by month", () => {
+			expect(isVersionOutdated("2025.1.0", "2025.7.0")).toBe(true);
 		});
-	});
 
-	describe("platform detection", () => {
-		it("should detect current platform without error", () => {
-			// This test just ensures that the current platform is supported
-			// If running on an unsupported platform, getCloudflaredBinPath would throw
-			expect(() => getCloudflaredBinPath()).not.toThrow();
+		it("returns true when installed is older by patch", () => {
+			expect(isVersionOutdated("2025.7.0", "2025.7.1")).toBe(true);
+		});
+
+		it("returns false when versions are equal", () => {
+			expect(isVersionOutdated("2025.7.0", "2025.7.0")).toBe(false);
+		});
+
+		it("returns false when installed is newer", () => {
+			expect(isVersionOutdated("2026.1.0", "2025.12.0")).toBe(false);
+		});
+
+		it("handles double-digit months correctly", () => {
+			expect(isVersionOutdated("2025.9.0", "2025.12.0")).toBe(true);
+			expect(isVersionOutdated("2025.12.0", "2025.9.0")).toBe(false);
 		});
 	});
 });
 
 describe("cloudflared error messages", () => {
-	// These tests verify the error message format without actually triggering errors
-
 	it("should have helpful error message for unsupported platform", () => {
-		// We can't easily test this without mocking os.platform/arch
-		// but we can verify the error handling code path exists
 		const errorMessage = `Unsupported platform for cloudflared`;
 		expect(typeof errorMessage).toBe("string");
 	});

@@ -26,7 +26,7 @@ Then run your tunnel command again.
 /**
  * Check if an error is a tunnel permission/authentication error
  */
-export function isTunnelPermissionError(error: unknown): boolean {
+function isTunnelPermissionError(error: unknown): boolean {
 	if (error instanceof CloudflareSDK.APIError) {
 		// 403 Forbidden or 401 Unauthorized typically indicate permission issues
 		if (error.status === 403 || error.status === 401) {
@@ -49,7 +49,7 @@ export function isTunnelPermissionError(error: unknown): boolean {
 /**
  * Wrap a tunnel API call with permission error handling
  */
-export async function withTunnelPermissionCheck<T>(
+async function withTunnelPermissionCheck<T>(
 	operation: () => Promise<T>
 ): Promise<T> {
 	try {
@@ -74,21 +74,7 @@ export type CloudflareTunnelResource = {
 	deleted_at?: string;
 	conns_active_at?: string;
 	conns_inactive_at?: string;
-	tun_type?:
-		| "cfd_tunnel"
-		| "warp_connector"
-		| "warp"
-		| "magic"
-		| "ip_sec"
-		| "gre"
-		| "cni";
-	connections?: Array<{
-		id?: string;
-		client_id?: string;
-		client_version?: string;
-		colo_name?: string;
-		origin_ip?: string;
-	}>;
+	tun_type?: "cfd_tunnel";
 };
 
 /**
@@ -103,6 +89,7 @@ export async function createTunnel(
 		const response = (await sdk.zeroTrust.tunnels.cloudflared.create({
 			account_id: accountId,
 			name,
+			config_src: "cloudflare",
 		})) as CloudflaredCreateResponse;
 
 		// Handle both standard tunnel and WARP connector responses
@@ -147,25 +134,6 @@ export async function listTunnels(
 }
 
 /**
- * Update a tunnel's name
- */
-export async function updateTunnel(
-	sdk: Cloudflare,
-	accountId: string,
-	tunnelId: string,
-	name: string
-): Promise<CloudflareTunnelResource> {
-	return withTunnelPermissionCheck(async () => {
-		const response = await sdk.zeroTrust.tunnels.cloudflared.edit(tunnelId, {
-			account_id: accountId,
-			name,
-		});
-
-		return normalizeTunnelResponse(response);
-	});
-}
-
-/**
  * Delete a tunnel
  */
 export async function deleteTunnel(
@@ -205,52 +173,6 @@ export async function getTunnelToken(
 }
 
 /**
- * Connection information for a tunnel
- */
-export type TunnelConnection = {
-	id?: string;
-	client_id?: string;
-	client_version?: string;
-	colo_name?: string;
-	origin_ip?: string;
-};
-
-/**
- * Get tunnel connections
- */
-export async function getTunnelConnections(
-	sdk: Cloudflare,
-	accountId: string,
-	tunnelId: string
-): Promise<TunnelConnection[]> {
-	return withTunnelPermissionCheck(async () => {
-		const connections: TunnelConnection[] = [];
-
-		for await (const client of sdk.zeroTrust.tunnels.cloudflared.connections.get(
-			tunnelId,
-			{
-				account_id: accountId,
-			}
-		)) {
-			// Each client may have multiple connections
-			if (client.conns) {
-				for (const conn of client.conns) {
-					connections.push({
-						id: conn.id,
-						client_id: conn.client_id,
-						client_version: conn.client_version,
-						colo_name: conn.colo_name,
-						origin_ip: conn.origin_ip,
-					});
-				}
-			}
-		}
-
-		return connections;
-	});
-}
-
-/**
  * Normalize tunnel response from SDK to consistent format
  */
 function normalizeTunnelResponse(response: unknown): CloudflareTunnelResource {
@@ -265,7 +187,6 @@ function normalizeTunnelResponse(response: unknown): CloudflareTunnelResource {
 		conns_active_at: tunnel.conns_active_at as string | undefined,
 		conns_inactive_at: tunnel.conns_inactive_at as string | undefined,
 		tun_type: tunnel.tun_type as CloudflareTunnelResource["tun_type"],
-		connections: tunnel.connections as CloudflareTunnelResource["connections"],
 	};
 }
 
@@ -326,19 +247,4 @@ export async function resolveTunnelId(
 	}
 
 	return tunnels[0].id;
-}
-
-/**
- * Resolve multiple tunnel refs (name or UUID) to tunnel IDs.
- */
-export async function resolveTunnelIds(
-	sdk: Cloudflare,
-	accountId: string,
-	inputs: string[]
-): Promise<string[]> {
-	const ids: string[] = [];
-	for (const input of inputs) {
-		ids.push(await resolveTunnelId(sdk, accountId, input));
-	}
-	return ids;
 }

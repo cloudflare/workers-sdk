@@ -41,20 +41,15 @@ describe("tunnel help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler tunnel
 
-			Manage Cloudflare Tunnels
+			🚇 Manage Cloudflare Tunnels [experimental]
 
 			COMMANDS
-			  wrangler tunnel create <name>        Create a new Cloudflare Tunnel
-			  wrangler tunnel delete <tunnel>      Delete a Cloudflare Tunnel
-			  wrangler tunnel info <tunnel>        Display details about a Cloudflare Tunnel
-			  wrangler tunnel list                 List all Cloudflare Tunnels in your account
-			  wrangler tunnel update <tunnel>      Update a Cloudflare Tunnel
-			  wrangler tunnel run [tunnel]         Run a Cloudflare Tunnel using cloudflared
-			  wrangler tunnel quick-start <url>    Start a free, temporary tunnel without an account (https://try.cloudflare.com)
-			  wrangler tunnel route                Configure routing for a Cloudflare Tunnel (DNS hostnames or private IP networks)
-			  wrangler tunnel service              Manage cloudflared as a system service
-			  wrangler tunnel cleanup <tunnels..>  Remove stale tunnel connections
-			  wrangler tunnel token <tunnel>       Fetch the credentials token for an existing tunnel (by name or UUID) that allows to run it
+			  wrangler tunnel create <name>      Create a new Cloudflare Tunnel [experimental]
+			  wrangler tunnel delete <tunnel>    Delete a Cloudflare Tunnel [experimental]
+			  wrangler tunnel info <tunnel>      Display details about a Cloudflare Tunnel [experimental]
+			  wrangler tunnel list               List all Cloudflare Tunnels in your account [experimental]
+			  wrangler tunnel run [tunnel]       Run a Cloudflare Tunnel using cloudflared [experimental]
+			  wrangler tunnel quick-start <url>  Start a free, temporary tunnel without an account (https://try.cloudflare.com) [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -106,12 +101,13 @@ describe("tunnel commands", () => {
 
 			const req = await reqPromise;
 			expect(req.name).toBe("my-new-tunnel");
+			expect(req.config_src).toBe("cloudflare");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Creating tunnel "my-new-tunnel"
+				Creating tunnel \\"my-new-tunnel\\"
 				Created tunnel.
 				ID: f70ff985-a4ef-4643-bbbc-4a0ed4fc8415
 				Name: my-new-tunnel
@@ -180,38 +176,6 @@ describe("tunnel commands", () => {
 			).rejects.toThrowError();
 
 			expect(std.err).toContain("ERROR");
-		});
-	});
-
-	describe("tunnel update", () => {
-		it("should update tunnel name", async () => {
-			const reqPromise = mockTunnelUpdate();
-
-			await runWrangler(
-				"tunnel update f70ff985-a4ef-4643-bbbc-4a0ed4fc8415 --name new-tunnel-name"
-			);
-
-			const req = await reqPromise;
-			expect(req.name).toBe("new-tunnel-name");
-
-			expect(std.out).toContain("Updating tunnel");
-			expect(std.out).toContain("Updated tunnel.");
-			expect(std.out).toContain("Name: new-tunnel-name");
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should require --name flag", async () => {
-			await expect(
-				runWrangler("tunnel update f70ff985-a4ef-4643-bbbc-4a0ed4fc8415")
-			).rejects.toThrow(
-				"Please provide a new name for the tunnel using --name"
-			);
-		});
-
-		it("should require a tunnel ID", async () => {
-			await expect(() => runWrangler("tunnel update")).rejects.toThrow(
-				"Not enough non-option arguments"
-			);
 		});
 	});
 
@@ -320,14 +284,6 @@ function mockTunnelGet(tunnel: CloudflareTunnelResource) {
 				return HttpResponse.json(createFetchResult(tunnel));
 			},
 			{ once: true }
-		),
-		// Also mock connections endpoint
-		http.get(
-			"*/accounts/:accountId/cfd_tunnel/:tunnelId/connections",
-			() => {
-				return HttpResponse.json(createFetchResult([]));
-			},
-			{ once: true }
 		)
 	);
 }
@@ -347,28 +303,6 @@ function mockTunnelGetNotFound(tunnelId: string) {
 			{ once: true }
 		)
 	);
-}
-
-function mockTunnelUpdate(): Promise<{ name: string }> {
-	return new Promise((resolve) => {
-		msw.use(
-			http.patch(
-				"*/accounts/:accountId/cfd_tunnel/:tunnelId",
-				async ({ request }) => {
-					const body = (await request.json()) as { name: string };
-					resolve(body);
-
-					return HttpResponse.json(
-						createFetchResult({
-							...defaultTunnel,
-							name: body.name,
-						})
-					);
-				},
-				{ once: true }
-			)
-		);
-	});
 }
 
 function mockTunnelDelete(tunnelId: string) {

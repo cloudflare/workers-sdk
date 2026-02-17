@@ -3,25 +3,12 @@ import { redactCloudflaredArgsForLogging } from "../tunnel/cloudflared";
 
 describe("cloudflared arg redaction", () => {
 	it("redacts --token and other sensitive values", () => {
-		const args = [
-			"tunnel",
-			"run",
-			"--token",
-			"SECRET_TOKEN",
-			"--credentials-contents",
-			"SECRET_CREDS",
-			"--origincert",
-			"/path/to/cert.pem",
-		];
+		const args = ["tunnel", "run", "--token", "SECRET_TOKEN"];
 
 		expect(redactCloudflaredArgsForLogging(args)).toEqual([
 			"tunnel",
 			"run",
 			"--token",
-			"[REDACTED]",
-			"--credentials-contents",
-			"[REDACTED]",
-			"--origincert",
 			"[REDACTED]",
 		]);
 	});

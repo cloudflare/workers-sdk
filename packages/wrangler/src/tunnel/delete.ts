@@ -7,7 +7,7 @@ import { deleteTunnel, resolveTunnelId } from "./client";
 export const tunnelDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a Cloudflare Tunnel",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: Tunnels",
 	},
 	args: {

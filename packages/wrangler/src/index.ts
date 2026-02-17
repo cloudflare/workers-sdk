@@ -329,30 +329,13 @@ import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
-import { tunnelCleanupCommand } from "./tunnel/cleanup";
 import { tunnelCreateCommand } from "./tunnel/create";
 import { tunnelDeleteCommand } from "./tunnel/delete";
 import { tunnelNamespace } from "./tunnel/index";
 import { tunnelInfoCommand } from "./tunnel/info";
 import { tunnelListCommand } from "./tunnel/list";
 import { tunnelQuickStartCommand } from "./tunnel/quick-start";
-import { tunnelRouteDnsCommand } from "./tunnel/route/dns";
-import { tunnelRouteNamespace } from "./tunnel/route/index";
-import {
-	tunnelRouteIpAddCommand,
-	tunnelRouteIpDeleteCommand,
-	tunnelRouteIpGetCommand,
-	tunnelRouteIpListCommand,
-	tunnelRouteIpNamespace,
-} from "./tunnel/route/ip";
 import { tunnelRunCommand } from "./tunnel/run";
-import {
-	tunnelServiceInstallCommand,
-	tunnelServiceNamespace,
-	tunnelServiceUninstallCommand,
-} from "./tunnel/service";
-import { tunnelTokenCommand } from "./tunnel/token";
-import { tunnelUpdateCommand } from "./tunnel/update";
 import { typesCommand } from "./type-generation";
 import {
 	authNamespace,
@@ -1336,65 +1319,12 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler tunnel info", definition: tunnelInfoCommand },
 		{ command: "wrangler tunnel list", definition: tunnelListCommand },
 		{
-			command: "wrangler tunnel update",
-			definition: tunnelUpdateCommand,
-		},
-		{
 			command: "wrangler tunnel run",
 			definition: tunnelRunCommand,
 		},
 		{
 			command: "wrangler tunnel quick-start",
 			definition: tunnelQuickStartCommand,
-		},
-		{ command: "wrangler tunnel route", definition: tunnelRouteNamespace },
-		{
-			command: "wrangler tunnel route dns",
-			definition: tunnelRouteDnsCommand,
-		},
-		{
-			command: "wrangler tunnel route ip",
-			definition: tunnelRouteIpNamespace,
-		},
-		{
-			command: "wrangler tunnel route ip add",
-			definition: tunnelRouteIpAddCommand,
-		},
-		{
-			command: "wrangler tunnel route ip show",
-			definition: tunnelRouteIpListCommand,
-		},
-		{
-			command: "wrangler tunnel route ip list",
-			definition: tunnelRouteIpListCommand,
-		},
-		{
-			command: "wrangler tunnel route ip delete",
-			definition: tunnelRouteIpDeleteCommand,
-		},
-		{
-			command: "wrangler tunnel route ip get",
-			definition: tunnelRouteIpGetCommand,
-		},
-		{
-			command: "wrangler tunnel service",
-			definition: tunnelServiceNamespace,
-		},
-		{
-			command: "wrangler tunnel service install",
-			definition: tunnelServiceInstallCommand,
-		},
-		{
-			command: "wrangler tunnel service uninstall",
-			definition: tunnelServiceUninstallCommand,
-		},
-		{
-			command: "wrangler tunnel cleanup",
-			definition: tunnelCleanupCommand,
-		},
-		{
-			command: "wrangler tunnel token",
-			definition: tunnelTokenCommand,
 		},
 	]);
 	registry.registerNamespace("tunnel");

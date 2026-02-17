@@ -22,7 +22,7 @@ export const tunnelQuickStartCommand = createCommand({
 	metadata: {
 		description:
 			"Start a free, temporary tunnel without an account (https://try.cloudflare.com)",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: Tunnels",
 	},
 	args: {
