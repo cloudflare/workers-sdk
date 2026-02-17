@@ -315,7 +315,7 @@ export interface StudioTableColumnConstraint {
 	uniqueConflict?: StudioColumnConflict;
 }
 
-interface StudioTableConstraintChange {
+export interface StudioTableConstraintChange {
 	key: string;
 	new: StudioTableColumnConstraint | null;
 	old: StudioTableColumnConstraint | null;
