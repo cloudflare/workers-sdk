@@ -81,6 +81,13 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 				demandOption: false,
 				conflicts: ["secret-store-id", "secret-name"],
 			})
+			.option("skip-confirmation", {
+				type: "boolean",
+				description: "Skip confirmation prompt",
+				alias: "y",
+				default: false,
+				implies: ["secret-name"],
+			})
 	);
 }
 
@@ -137,12 +144,15 @@ async function registryConfigureCommand(
 			const stores = await listStores(config, accountId);
 			if (stores.length === 0) {
 				const defaultStoreName = "default_secret_store";
-				const yes = await confirm(
-					`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
-				);
-				if (!yes) {
-					endSection("Cancelled.");
-					return;
+				if (!configureArgs.skipConfirmation) {
+					const yes = await confirm(
+						`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
+					);
+
+					if (!yes) {
+						endSection("Cancelled.");
+						return;
+					}
 				}
 				const res = await promiseSpinner(
 					createStore(config, accountId, { name: defaultStoreName })
@@ -191,6 +201,13 @@ async function registryConfigureCommand(
 			);
 
 			if (existingSecretId) {
+				if (configureArgs.skipConfirmation) {
+					secretExists = false;
+					makeSecret = false;
+
+					continue;
+				}
+
 				startSection(
 					`The provided secret name (${secretName}) is already in-use within the secret store. (Store ID: ${secretStoreId})`
 				);
@@ -230,13 +247,14 @@ async function registryConfigureCommand(
 					comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
 				})
 			);
+
+			log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
 		}
 
 		private_credential = {
 			store_id: secretStoreId,
 			secret_name: secretName,
 		};
-		log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
 	} else {
 		// If we are not using the secret store, we will be passing in the secret directly
 		private_credential = secret;
@@ -484,6 +502,13 @@ export const containersRegistriesConfigureCommand = createCommand({
 			demandOption: false,
 			conflicts: ["secret-store-id", "secret-name"],
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "skip confirmation prompts",
+			alias: "y",
+			default: false,
+			implies: ["secret-name"],
+		},
 	},
 	positionalArgs: ["DOMAIN"],
 	async handler(args, { config }) {
@@ -530,7 +555,7 @@ export const containersRegistriesDeleteCommand = createCommand({
 		},
 		"skip-confirmation": {
 			type: "boolean",
-			description: "Skip confirmation prompts for registry and secret deletion",
+			description: "skip confirmation prompts for registry and secret deletion",
 			alias: "y",
 			default: false,
 		},
