@@ -96,10 +96,18 @@ type TailEvent = {
 				regionCode?: string;
 
 				/**
-				 * The organization that owns the ASN of the incoming request
+				 * The organization which owns the ASN of the incoming request, for example, Google Cloud.
 				 */
 				asOrganization: string;
+
+				/**
+				 * Metro code (DMA) of the incoming request, for example, "635".
+				 */
 				metroCode?: string;
+
+				/**
+				 * Postal code of the incoming request, for example, "78701".
+				 */
 				postalCode?: string;
 			};
 		};
@@ -131,14 +139,19 @@ const TailRow = ({ event }: { event: TailEvent }) => {
 						py="8px"
 						px="8px"
 						backgroundColor={
-							isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)"
+							isDark
+								? `${theme.colors.white}0A` // 4% opacity
+								: `${theme.colors.black}08` // 3% opacity
 						}
 					>
 						<Span display="flex" alignItems="center" flexShrink={0}>
 							<InvocationIcon size={14} color={theme.colors.cfOrange} />
 						</Span>
 						{requestTimestamp && (
-							<Span color={isDark ? "#666" : "#999"} flexShrink={0}>
+							<Span
+								color={isDark ? theme.colors.gray[4] : theme.colors.gray[6]}
+								flexShrink={0}
+							>
 								{new Date(requestTimestamp).toISOString().slice(11, 19)}
 							</Span>
 						)}
@@ -148,7 +161,7 @@ const TailRow = ({ event }: { event: TailEvent }) => {
 							overflow="hidden"
 							whiteSpace="nowrap"
 							textOverflow="ellipsis"
-							color={isDark ? "#999" : "#666"}
+							color={isDark ? theme.colors.gray[6] : theme.colors.gray[4]}
 							title={event.event.request?.url}
 						>
 							{event.event.request?.url}
@@ -176,8 +189,8 @@ const TailRow = ({ event }: { event: TailEvent }) => {
 							backgroundColor={
 								log.level === "error"
 									? isDark
-										? "rgba(255, 50, 50, 0.1)"
-										: "rgba(255, 0, 0, 0.05)"
+										? `${theme.colors.red[4]}1A` // 10% opacity
+										: `${theme.colors.red[4]}0D` // 5% opacity
 									: undefined
 							}
 						>
@@ -230,7 +243,7 @@ function TailLogsConnector({
 				onError();
 			}
 		},
-		// The tail WebSocket is sometimes unexpectedly closed by the server, which means we need to try adn reconnect
+		// The tail WebSocket is sometimes unexpectedly closed by the server, which means we need to try and reconnect
 		onClose() {
 			if (!errorNotified.current) {
 				errorNotified.current = true;
@@ -313,12 +326,12 @@ export function DevtoolsIframe({ url }: { url: string }) {
 				px={2}
 				flexShrink={0}
 				borderBottom="1px solid"
-				borderColor={isDark ? "#313131" : "#D9D9D9"}
+				borderColor={isDark ? theme.colors.gray[1] : theme.colors.gray[8]}
 			>
 				<Span
 					fontSize="11px"
 					fontWeight={500}
-					color={isDark ? "#999" : "#6e6e6e"}
+					color={isDark ? theme.colors.gray[6] : theme.colors.gray[5]}
 					textTransform="uppercase"
 					letterSpacing="0.5px"
 					py="6px"
@@ -360,7 +373,7 @@ export function DevtoolsIframe({ url }: { url: string }) {
 				{hasLogs && (
 					<Span
 						fontSize="11px"
-						color={isDark ? "#999" : "#6e6e6e"}
+						color={isDark ? theme.colors.gray[6] : theme.colors.gray[5]}
 						cursor="pointer"
 						onClick={() => setLogs([])}
 						display="flex"
@@ -393,12 +406,15 @@ export function DevtoolsIframe({ url }: { url: string }) {
 					flex={1}
 					gap={2}
 					cursor="default"
-					color={isDark ? "#999" : "#6e6e6e"}
+					color={isDark ? theme.colors.gray[6] : theme.colors.gray[5]}
 				>
 					<Span fontSize="13px" fontWeight={400}>
 						{url ? "Waiting for logs…" : "Connecting…"}
 					</Span>
-					<Span fontSize="11px" color={isDark ? "#666" : "#999"}>
+					<Span
+						fontSize="11px"
+						color={isDark ? theme.colors.gray[4] : theme.colors.gray[6]}
+					>
 						Send a request to see console output
 					</Span>
 				</Div>
@@ -418,7 +434,9 @@ const DevtoolsIframeWithErrorHandling: React.FC = () => {
 				height="100%"
 				display="flex"
 				gap={2}
-				backgroundColor={isDarkMode() ? "#313131" : "white"}
+				backgroundColor={
+					isDarkMode() ? theme.colors.gray[1] : theme.colors.white
+				}
 				justifyContent={"center"}
 				alignItems={"center"}
 			>
