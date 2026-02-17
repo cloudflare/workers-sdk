@@ -11,9 +11,9 @@ export type DD = `${number}${number}`;
 export type CompatDate = `${YYYY}-${MM}-${DD}`;
 
 /**
- * Gets the compatibility date of the locally installed workerd package.
+ * Gets the compatibility date of the locally installed workerd package, it also ensures that the date is not in the future.
  *
- * @returns The latest compatibility date supported by the local workerd package
+ * @returns The latest compatibility date supported by the local workerd package, or today's date if the workerd date is in the future.
  */
 export function getLocalWorkerdCompatibilityDate(): CompatDate {
 	return toSafeCompatibilityDate(new Date(supportedCompatibilityDate));
