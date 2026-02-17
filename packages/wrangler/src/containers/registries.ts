@@ -178,14 +178,60 @@ async function registryConfigureCommand(
 			}
 		}
 
-		await promiseSpinner(
-			createSecret(config, accountId, secretStoreId, {
-				name: secretName,
-				value: secret,
-				scopes: ["containers"],
-				comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
-			})
-		);
+		// check if secret name already used within secret store.
+		let makeSecret = true;
+		let secretExists = true;
+
+		while (secretExists) {
+			const existingSecretId = await getSecretByName(
+				config,
+				accountId,
+				secretStoreId,
+				secretName
+			);
+
+			if (existingSecretId) {
+				startSection(
+					`The provided secret name (${secretName}) is already in-use within the secret store. (Store ID: ${secretStoreId})`
+				);
+				const reuseExisting = await confirm(
+					`Do you want to reuse the existing secret? If not, then you'll be prompted to pick a new name.`
+				);
+
+				if (reuseExisting) {
+					makeSecret = false;
+					secretExists = false;
+				} else {
+					secretName = undefined;
+					while (!secretName) {
+						try {
+							const res = await prompt(`Secret name:`, {
+								defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
+							});
+							validateSecretName(res);
+							secretName = res;
+						} catch (e) {
+							log((e as Error).message);
+							continue;
+						}
+					}
+				}
+			} else {
+				secretExists = false;
+			}
+		}
+
+		if (makeSecret) {
+			await promiseSpinner(
+				createSecret(config, accountId, secretStoreId, {
+					name: secretName,
+					value: secret,
+					scopes: ["containers"],
+					comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
+				})
+			);
+		}
+
 		private_credential = {
 			store_id: secretStoreId,
 			secret_name: secretName,
