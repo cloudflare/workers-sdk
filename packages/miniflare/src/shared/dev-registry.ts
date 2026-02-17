@@ -9,23 +9,22 @@ import {
 	writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { Worker } from "node:worker_threads";
 import { FSWatcher, watch } from "chokidar";
-import { SocketPorts } from "../runtime";
-import { getProxyFallbackServiceSocketName } from "./external-service";
 import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
 export type WorkerDefinition = {
-	protocol: "http" | "https";
-	host: string;
-	port: number;
-	entrypointAddresses: Record<
-		"default" | string,
-		{ host: string; port: number } | undefined
-	>;
+	/** Address of the workerd debug port for this worker's process (e.g. "127.0.0.1:12345").
+	 * The debug port provides native Cap'n Proto RPC access to all services/entrypoints. */
+	debugPortAddress: string;
+	/** HTTP entry address for this worker (e.g. "http://127.0.0.1:8787").
+	 * Used as a fallback for WebSocket upgrades since the debug port RPC doesn't support them. */
+	entryAddress: string;
+	/** Whether this worker has static assets configured. When true, the default entrypoint
+	 * should be accessed via the assets:rpc-proxy service for correct asset routing. */
+	hasAssets: boolean;
 	durableObjects: { name: string; className: string }[];
 };
 
@@ -41,12 +40,9 @@ export class DevRegistry {
 		}
 	> = new Map();
 	private watcher: FSWatcher | undefined;
-	private proxyWorker: Worker | undefined;
-	private proxyAddress: string | undefined;
 
 	constructor(
 		private registryPath: string | undefined,
-		private enableDurableObjectProxy: boolean,
 		private onUpdate: ((registry: WorkerRegistry) => void) | undefined,
 		private log: Log
 	) {}
@@ -67,50 +63,13 @@ export class DevRegistry {
 			return;
 		}
 
-		// Keep track of external services we are depending on
-		// To pre-populate the proxy server with the fallback service addresses
+		// Track external services we depend on to detect relevant registry changes
 		this.externalServices = new Map(services);
 
 		if (!this.watcher) {
 			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
 			this.refresh();
 		}
-	}
-
-	/**
-	 * Initialize the worker thread proxy server
-	 */
-	public async initializeProxyWorker(): Promise<string | null> {
-		if (!this.isEnabled()) {
-			return null;
-		}
-
-		if (this.proxyAddress !== undefined) {
-			this.log.debug("Dev registry proxy is already running");
-			return this.proxyAddress;
-		}
-
-		const worker = new Worker(
-			path.join(__dirname, "shared", "dev-registry.worker.js")
-		);
-
-		// Wait for the worker to signal it's ready and provide the port
-		const address = await new Promise<string>((resolve, reject) => {
-			worker.once("message", (message) => {
-				if (message.type === "ready") {
-					resolve(message.address);
-				} else if (message.type === "error") {
-					reject(new Error(message.error));
-				}
-			});
-			worker.once("error", reject);
-		});
-
-		this.proxyWorker = worker;
-		this.proxyAddress = address;
-		this.log.debug(`Dev registry proxy started on http://${address}`);
-
-		return address;
 	}
 
 	/**
@@ -123,7 +82,8 @@ export class DevRegistry {
 		this.registry = {};
 
 		// Only this step is async and could be awaited
-		return Promise.all([this.watcher?.close(), this.proxyWorker?.terminate()])
+		return this.watcher
+			?.close()
 			.then(() => {
 				// Typescript complains that the return type is
 				// not compatible with `Promise<void>` without this.
@@ -131,8 +91,6 @@ export class DevRegistry {
 			})
 			.finally(() => {
 				this.watcher = undefined;
-				this.proxyWorker = undefined;
-				this.proxyAddress = undefined;
 			});
 	}
 
@@ -169,18 +127,17 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
-	public isDurableObjectProxyEnabled(): boolean {
-		return this.isEnabled() && this.enableDurableObjectProxy;
+	/** Returns the filesystem path for the dev registry directory, or undefined if disabled. */
+	public getRegistryPath(): string | undefined {
+		return this.registryPath;
 	}
 
 	public async updateRegistryPath(
 		registryPath: string | undefined,
-		enableDurableObjectProxy: boolean,
 		onUpdate?: (registry: WorkerRegistry) => void
 	): Promise<void> {
 		// Unregister all registered workers
 		this.unregisterWorkers();
-		this.enableDurableObjectProxy = enableDurableObjectProxy;
 		this.onUpdate = onUpdate;
 
 		if (registryPath !== this.registryPath) {
@@ -191,42 +148,6 @@ export class DevRegistry {
 			this.watcher = undefined;
 			this.registryPath = registryPath;
 		}
-	}
-
-	public configureProxyWorker(
-		runtimeEntryURL: string,
-		socketPorts: SocketPorts
-	) {
-		if (!this.proxyWorker) {
-			return;
-		}
-
-		const fallbackServicePorts: Record<string, Record<string, number>> = {};
-
-		for (const [service, { entrypoints }] of this.externalServices) {
-			for (const entrypoint of entrypoints) {
-				const port = socketPorts.get(
-					getProxyFallbackServiceSocketName(service, entrypoint)
-				);
-
-				if (!port) {
-					throw new Error(
-						`There is no socket opened for "${service}" with the "${entrypoint ?? "default"}" entrypoint`
-					);
-				}
-
-				fallbackServicePorts[service] ??= {};
-				fallbackServicePorts[service][entrypoint ?? "default"] = port;
-			}
-		}
-
-		// Send updated config to the proxy worker
-		this.proxyWorker.postMessage({
-			type: "setup",
-			runtimeEntryURL,
-			fallbackServicePorts,
-			logLevel: this.log.level,
-		});
 	}
 
 	public register(workers: Record<string, WorkerDefinition>) {
@@ -242,11 +163,6 @@ export class DevRegistry {
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
 				clearInterval(existingHeartbeat);
-			}
-
-			// Skip the durable objects in the definition if the proxy is not enabled
-			if (!this.enableDurableObjectProxy) {
-				definition.durableObjects = [];
 			}
 
 			writeFileSync(definitionPath, JSON.stringify(definition, null, 2));
@@ -286,14 +202,6 @@ export class DevRegistry {
 					break;
 				}
 			}
-		}
-
-		// Send updated workers to the proxy worker
-		if (this.proxyWorker) {
-			this.proxyWorker.postMessage({
-				type: "update",
-				workers: registry,
-			});
 		}
 
 		// Update our cached registry state
