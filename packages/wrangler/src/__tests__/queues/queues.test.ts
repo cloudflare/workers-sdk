@@ -245,7 +245,7 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 86400  [number]
 					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
@@ -288,7 +288,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("queues create testQueue --delivery-delay-secs=99999")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 43200]`
+					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 86400]`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -469,7 +469,7 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 86400  [number]
 					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
@@ -556,7 +556,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("queues update testQueue --delivery-delay-secs=99999")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 43200]`
+					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 86400]`
 				);
 
 				expect(requests.count).toEqual(0);
