@@ -2104,16 +2104,13 @@ importers:
         version: 1.1.0(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@cloudflare/kumo':
         specifier: ^1.5.0
-        version: 1.5.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        version: 1.6.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@cloudflare/workers-editor-shared':
         specifier: ^0.1.1
         version: 0.1.1(@cloudflare/style-const@5.7.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@codemirror/autocomplete':
         specifier: ^6.20.0
         version: 6.20.0
-      '@codemirror/commands':
-        specifier: ^6.10.2
-        version: 6.10.2
       '@codemirror/lang-sql':
         specifier: ^6.10.0
         version: 6.10.0
@@ -2126,12 +2123,6 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.14
         version: 6.39.14
-      '@lezer/common':
-        specifier: ^1.5.1
-        version: 1.5.1
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -5161,8 +5152,8 @@ packages:
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/kumo@1.5.0':
-    resolution: {integrity: sha512-Y2fE72C3KwniG94SYROVtMwD5wNx/IXQ3CPbZv+ayD37nEXx1He3D5qFwh5PgPGtBQCrHiAL4J2b9v2FkgEvkQ==}
+  '@cloudflare/kumo@1.6.0':
+    resolution: {integrity: sha512-1Sy8kgfHNkze+NEfu/6cNzwOb0hemGm1mUNGU9GVmAnHemLOaXixosslM/o38TbUTEEs48yTRrDy0WFGgSTFWg==}
     hasBin: true
     peerDependencies:
       '@phosphor-icons/react': ^2.1.10
@@ -5346,9 +5337,6 @@ packages:
   '@codemirror/autocomplete@6.20.0':
     resolution: {integrity: sha512-bOwvTOIJcG5FVo5gUUupiwYh8MioPLQ4UcqbcRf7UQ98X90tCa9E1kZ3Z7tqwpZxYyOvh1YTYbmZE9RTfTp5hg==}
 
-  '@codemirror/commands@6.10.2':
-    resolution: {integrity: sha512-vvX1fsih9HledO1c9zdotZYUZnE4xV0m6i3m25s5DIfXofuprk6cRcLUZvSk3CASUbwjQX21tOGbkY2BH8TpnQ==}
-
   '@codemirror/lang-sql@6.10.0':
     resolution: {integrity: sha512-6ayPkEd/yRw0XKBx5uAiToSgGECo/GY2NoJIHXIIQh1EVwLuKoU8BP/qK0qH5NLXAbtJRLuT73hx7P9X34iO4w==}
 
@@ -5372,6 +5360,9 @@ packages:
   '@cypress/request@3.0.7':
     resolution: {integrity: sha512-LzxlLEMbBOPYB85uXrDqvD4MgcenjRBLIns3zyhx7vTPj/0u2eQhzXvPiGcaJrV38Q9dbkExWp6cOHPJ+EtFYg==}
     engines: {node: '>= 6'}
+
+  '@date-fns/tz@1.4.1':
+    resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
 
   '@electric-sql/pglite-socket@0.0.6':
     resolution: {integrity: sha512-6RjmgzphIHIBA4NrMGJsjNWK4pu+bCWJlEWlwcxFTVY3WT86dFpKwbZaGWZV6C5Rd7sCk1Z0CI76QEfukLAUXw==}
@@ -9932,6 +9923,9 @@ packages:
   dataloader@1.4.0:
     resolution: {integrity: sha512-68s5jYdlvasItOJnCuI2Q9s4q98g0pCyL3HrcKJu8KNugUl8ahgmZYg38ysLTgQjjXX3H8CJLkAvWrclWfcalw==}
 
+  date-fns-jalali@4.1.0-0:
+    resolution: {integrity: sha512-hTIP/z+t+qKwBDcmmsnmjWTduxCg+5KfdqWQvb2X/8C9+knYY6epN/pfxdDuyVlSVeFz0sM5eEfwIUQ70U4ckg==}
+
   date-fns@2.30.0:
     resolution: {integrity: sha512-fnULvOpxnC5/Vg3NCiWelDsLiUc9bRwAPs/+LfTLNvetFCtCTN+yQz15C/fs4AwX1R9K5GLtLfn8QW+dWisaAw==}
     engines: {node: '>=0.11'}
@@ -13190,6 +13184,12 @@ packages:
   react-addons-shallow-compare@15.6.3:
     resolution: {integrity: sha512-EDJbgKTtGRLhr3wiGDXK/+AEJ59yqGS+tKE6mue0aNXT6ZMR7VJbbzIiT6akotmHg1BLj46ElJSb+NBMp80XBg==}
 
+  react-day-picker@9.13.2:
+    resolution: {integrity: sha512-IMPiXfXVIAuR5Yk58DDPBC8QKClrhdXV+Tr/alBrwrHUw0qDDYB1m5zPNuTnnPIr/gmJ4ChMxmtqPdxm8+R4Eg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=16.8.0'
+
   react-display-name@0.2.5:
     resolution: {integrity: sha512-I+vcaK9t4+kypiSgaiVWAipqHRXYmZIuAiS8vzFvXHHXVigg/sMKwlRgLy6LH2i3rmP+0Vzfl5lFsFRwF1r3pg==}
 
@@ -16281,12 +16281,13 @@ snapshots:
     dependencies:
       react: 19.2.1
 
-  '@cloudflare/kumo@1.5.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+  '@cloudflare/kumo@1.6.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@base-ui/react': 1.1.0(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@phosphor-icons/react': 2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       clsx: 2.1.1
       react: 19.2.1
+      react-day-picker: 9.13.2(react@19.2.1)
       react-dom: 19.2.1(react@19.2.1)
       tailwind-merge: 3.4.0
     transitivePeerDependencies:
@@ -16504,13 +16505,6 @@ snapshots:
       '@codemirror/view': 6.39.14
       '@lezer/common': 1.5.1
 
-  '@codemirror/commands@6.10.2':
-    dependencies:
-      '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.4
-      '@codemirror/view': 6.39.14
-      '@lezer/common': 1.5.1
-
   '@codemirror/lang-sql@6.10.0':
     dependencies:
       '@codemirror/autocomplete': 6.20.0
@@ -16567,6 +16561,8 @@ snapshots:
       tough-cookie: 5.1.0
       tunnel-agent: 0.6.0
       uuid: 8.3.2
+
+  '@date-fns/tz@1.4.1': {}
 
   '@electric-sql/pglite-socket@0.0.6(@electric-sql/pglite@0.3.2)':
     dependencies:
@@ -21072,6 +21068,8 @@ snapshots:
 
   dataloader@1.4.0: {}
 
+  date-fns-jalali@4.1.0-0: {}
+
   date-fns@2.30.0:
     dependencies:
       '@babel/runtime': 7.22.5
@@ -24661,6 +24659,13 @@ snapshots:
   react-addons-shallow-compare@15.6.3:
     dependencies:
       object-assign: 4.1.1
+
+  react-day-picker@9.13.2(react@19.2.1):
+    dependencies:
+      '@date-fns/tz': 1.4.1
+      date-fns: 4.1.0
+      date-fns-jalali: 4.1.0-0
+      react: 19.2.1
 
   react-display-name@0.2.5: {}
 
