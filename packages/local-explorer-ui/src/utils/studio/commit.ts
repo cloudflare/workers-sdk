@@ -2,7 +2,6 @@ import type {
 	StudioTableState,
 	StudioTableStateRow,
 } from "../../components/studio/Table/State";
-import type { StudioResultHeaderMetadata } from "../../components/studio/Table/StateHelpers";
 import type {
 	IStudioDriver,
 	StudioTableRowMutationRequest,
@@ -13,6 +12,9 @@ interface StudioExecutePlan {
 	row: StudioTableStateRow;
 	plan: StudioTableRowMutationRequest;
 }
+
+// TODO: Re-add in a later PR from `components/studio/Table/StateHelpers`
+type StudioResultHeaderMetadata = object;
 
 export async function commitStudioTableChanges({
 	data,

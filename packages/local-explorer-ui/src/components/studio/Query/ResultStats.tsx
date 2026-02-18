@@ -23,8 +23,8 @@ interface StudioQueryResultStatsProps {
 export function StudioQueryResultStats({
 	stats,
 }: StudioQueryResultStatsProps): JSX.Element {
-	const statsComponents = useMemo(() => {
-		const content: ReactElement[] = [];
+	const statsComponents = useMemo((): ReactElement[] => {
+		const content = new Array<ReactElement>();
 
 		if (stats.queryDurationMs !== null) {
 			content.push(

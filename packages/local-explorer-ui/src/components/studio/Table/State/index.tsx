@@ -841,7 +841,7 @@ export interface StudioTableStateRow {
 
 type TableStateChangeListener = (state: StudioTableState) => void;
 
-export interface TableSelectionRange {
+interface TableSelectionRange {
 	x1: number;
 	x2: number;
 	y1: number;
