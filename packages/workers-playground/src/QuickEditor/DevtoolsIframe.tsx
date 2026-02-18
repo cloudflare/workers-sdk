@@ -307,6 +307,9 @@ export function DevtoolsIframe({ url }: { url: string }) {
 				setRetryKey((k) => k + 1);
 				setRetrying(false);
 			}, delay);
+		} else {
+			// All retries exhausted, increment to trigger exhaustedRetries
+			setRetryCount((c) => c + 1);
 		}
 	}, [retryCount]);
 
@@ -327,7 +330,7 @@ export function DevtoolsIframe({ url }: { url: string }) {
 
 	const isDark = isDarkMode();
 	const hasLogs = logs.length > 0;
-	const exhaustedRetries = retryCount >= MAX_RETRIES;
+	const exhaustedRetries = retryCount > MAX_RETRIES;
 
 	return (
 		<Div display="flex" flexDirection="column" height="100%">
