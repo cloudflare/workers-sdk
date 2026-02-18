@@ -276,7 +276,7 @@ describe("getPlatformProxy - env", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
 					  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
 					  				These will not work in local development, but they should work in production.
-
+					  
 					  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
 					  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
 					"
