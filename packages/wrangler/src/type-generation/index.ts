@@ -149,11 +149,14 @@ export const typesCommand = createCommand({
 
 		const { envInterface, path: outputPath } = args;
 
-		if (
-			!config.configPath ||
-			!fs.existsSync(config.configPath) ||
-			fs.statSync(config.configPath).isDirectory()
-		) {
+		const shouldThrowError =
+			config.configPath == null
+				? true
+				: fs
+						.statSync(config.configPath, { throwIfNoEntry: false })
+						?.isDirectory() ?? true;
+
+		if (shouldThrowError) {
 			throw new UserError(
 				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
 				{ telemetryMessage: "No config file detected" }
