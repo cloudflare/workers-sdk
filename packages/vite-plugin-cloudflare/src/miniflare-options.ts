@@ -349,22 +349,6 @@ export async function getDevMiniflareOptions(
 									],
 									unsafeUseModuleFallbackService: true,
 									unsafeInspectorProxy: inputInspectorPort !== false,
-									unsafeDirectSockets:
-										environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName
-											? [
-													{
-														serviceName: VITE_PROXY_WORKER_NAME,
-														proxy: true,
-													},
-													...Object.entries(exportTypes)
-														.filter(([_, type]) => type === "WorkerEntrypoint")
-														.map(([entrypoint]) => ({
-															entrypoint,
-															proxy: true,
-														})),
-												]
-											: [],
 									// Route dev registry requests through the vite proxy worker,
 									// which handles both HMR module resolution and asset serving.
 									...(environmentName ===
@@ -539,7 +523,7 @@ export async function getPreviewMiniflareOptions(
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
+			resolvedPluginConfig.workers.map(async (workerConfig) => {
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 						workerConfig
@@ -605,10 +589,6 @@ export async function getPreviewMiniflareOptions(
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inputInspectorPort !== false,
-						unsafeDirectSockets:
-							// This exposes the default entrypoint of the entry worker on the dev registry
-							// Assuming that the first worker config to be the entry worker.
-							i === 0 ? [{ entrypoint: undefined, proxy: true }] : [],
 						...(miniflareWorkerOptions.main
 							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 							: { modules: true, script: "" }),

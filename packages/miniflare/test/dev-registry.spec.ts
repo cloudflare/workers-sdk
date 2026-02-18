@@ -12,12 +12,6 @@ describe.sequential("DevRegistry", () => {
 			script: `addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello from service worker!"));
 			})`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -110,12 +104,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -206,12 +194,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -271,12 +253,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -348,12 +324,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: "TestEntrypoint",
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -431,12 +401,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -516,12 +480,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -863,12 +821,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				};
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -981,12 +933,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		};
 
 		const local = new Miniflare({
@@ -1244,12 +1190,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(unrelated);
 
@@ -1271,12 +1211,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		onTestFinished(async () => {
 			try {
