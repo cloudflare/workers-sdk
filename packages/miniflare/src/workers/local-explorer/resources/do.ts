@@ -163,20 +163,25 @@ type QueryBody = z.output<
 	typeof zDurableObjectsNamespaceQuerySqliteData
 >["body"];
 
+interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
+	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
+}
+
 function getDOBinding(
 	env: Env,
 	namespaceId: string
-): { binding: DurableObjectNamespace; useSQLite: boolean } | null {
+): {
+	binding: DurableObjectNamespace<IntrospectableDurableObject>;
+	useSQLite: boolean;
+} | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
 	if (!info) return null;
 	return {
-		binding: env[info.binding] as DurableObjectNamespace,
+		binding: env[
+			info.binding
+		] as DurableObjectNamespace<IntrospectableDurableObject>,
 		useSQLite: info.useSQLite,
 	};
-}
-
-interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
-	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
 }
 
 /**
@@ -226,7 +231,7 @@ export async function queryDOSqlite(
 		return errorResponse(400, 10001, "No queries provided");
 	}
 
-	const stub = binding.get(doId) as unknown as IntrospectableDurableObject;
+	const stub = binding.get(doId);
 
 	try {
 		const results = await stub[INTROSPECT_SQLITE_METHOD](body.queries);
