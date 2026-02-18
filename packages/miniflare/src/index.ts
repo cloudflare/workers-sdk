@@ -2269,22 +2269,17 @@ export class Miniflare {
 			// dispatch to for this worker's default entrypoint. This is stored
 			// in the dev registry so that proxy workers in other miniflare
 			// instances can route requests to the correct service.
-			//
-			// - Workers with assets go through the assets RPC proxy
-			// - Vite workers go through __vite_proxy_worker__ (set via
-			//   unsafeDirectSockets[].serviceName by the vite plugin)
-			// - Plain workers go directly to the user service
-			const defaultDirectSocket = workerOpts.core.unsafeDirectSockets?.find(
-				(s) => (s.entrypoint ?? "default") === "default"
-			);
 			let defaultEntrypointService: string;
-			if (workerOpts.assets.assets) {
-				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`;
-			} else if (defaultDirectSocket?.serviceName) {
+			if (workerOpts.core.unsafeOverrideDefaultEntrypoint) {
+				// Explicit override (e.g. vite plugin routing through its proxy worker)
 				defaultEntrypointService = getUserServiceName(
-					defaultDirectSocket.serviceName
+					workerOpts.core.unsafeOverrideDefaultEntrypoint
 				);
+			} else if (workerOpts.assets.assets) {
+				// Workers with assets go through the assets RPC proxy
+				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`;
 			} else {
+				// Plain workers go directly to the user service
 				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
 			}
 

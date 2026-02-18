@@ -354,8 +354,6 @@ export async function getDevMiniflareOptions(
 										resolvedPluginConfig.entryWorkerEnvironmentName
 											? [
 													{
-														// This exposes the default entrypoint of the asset proxy worker
-														// on the dev registry with the name of the entry worker
 														serviceName: VITE_PROXY_WORKER_NAME,
 														proxy: true,
 													},
@@ -367,6 +365,12 @@ export async function getDevMiniflareOptions(
 														})),
 												]
 											: [],
+									// Route dev registry requests through the vite proxy worker,
+									// which handles both HMR module resolution and asset serving.
+									...(environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName && {
+										unsafeOverrideDefaultEntrypoint: VITE_PROXY_WORKER_NAME,
+									}),
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
 										...workerOptions.serviceBindings,
