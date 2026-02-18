@@ -26,8 +26,8 @@ it("logs startup errors", async ({ expect }) => {
 	let caughtError: unknown;
 	try {
 		const worker = await unstable_startWorker({
-			entrypoint: path.resolve(__dirname, "..", "src", "nodejs-compat.ts"),
-			config: path.resolve(__dirname, "..", "wrangler.logging.jsonc"),
+			entrypoint: path.resolve(__dirname, "../src/nodejs-compat.ts"),
+			config: path.resolve(__dirname, "../wrangler.logging.jsonc"),
 			// Intentionally omitting `compatibilityFlags: ["nodejs_compat"]`
 			dev: {
 				server: { hostname: "127.0.0.1", port: 0 },

@@ -69,17 +69,17 @@ function createMockFetchImplementation() {
 	};
 }
 
+beforeEach(() => {
+	vi.spyOn(globalThis, "fetch").mockImplementation(
+		createMockFetchImplementation()
+	);
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
 describe("Preview Worker", () => {
-	beforeEach(() => {
-		vi.spyOn(globalThis, "fetch").mockImplementation(
-			createMockFetchImplementation()
-		);
-	});
-
-	afterEach(() => {
-		vi.restoreAllMocks();
-	});
-
 	let tokenId: string | null = null;
 
 	it("should obtain token from exchange_url", async ({ expect }) => {
@@ -123,7 +123,7 @@ describe("Preview Worker", () => {
 			)}&prewarm=${encodeURIComponent(
 				`${MOCK_REMOTE_URL}/prewarm`
 			)}&remote=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}`
+				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -165,7 +165,7 @@ describe("Preview Worker", () => {
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
 				`${MOCK_REMOTE_URL}/prewarm`
 			)}&remote=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}`
+				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -188,7 +188,7 @@ describe("Preview Worker", () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}`
+				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`
 		);
 		expect(resp.status).toBe(400);
@@ -292,16 +292,6 @@ describe("Preview Worker", () => {
 });
 
 describe("Raw HTTP preview", () => {
-	beforeEach(() => {
-		vi.spyOn(globalThis, "fetch").mockImplementation(
-			createMockFetchImplementation()
-		);
-	});
-
-	afterEach(() => {
-		vi.restoreAllMocks();
-	});
-
 	it("should allow arbitrary headers in cross-origin requests", async ({
 		expect,
 	}) => {

@@ -1079,7 +1079,7 @@ describe("middleware", () => {
 			try {
 				await worker.ready;
 				const url = await worker.url;
-				// TODO(startWorker): worker.fetch() doesn't work correctly with paths when
+				// TODO(#12596): worker.fetch() doesn't work correctly with paths when
 				// EXPERIMENTAL_MIDDLEWARE=true is set. The request URL pathname gets
 				// lost, causing the worker to not match routes like "/setup".
 				// We use native fetch() with the worker URL as a workaround.

@@ -22,8 +22,8 @@ describe("specific port", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_startWorker({
-			entrypoint: path.resolve(__dirname, "..", "src", "module.ts"),
-			config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
+			entrypoint: path.resolve(__dirname, "../src/module.ts"),
+			config: path.resolve(__dirname, "../wrangler.module.jsonc"),
 			dev: {
 				server: { hostname: "127.0.0.1", port: await getPort() },
 				inspector: false,

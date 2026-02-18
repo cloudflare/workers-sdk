@@ -10,21 +10,21 @@ describe("multiple workers", () => {
 
 		workers = await Promise.all([
 			unstable_startWorker({
-				entrypoint: path.resolve(__dirname, "..", "src", "module.ts"),
+				entrypoint: path.resolve(__dirname, "../src/module.ts"),
 				dev: {
 					server: { hostname: "127.0.0.1", port: 0 },
 					inspector: false,
 				},
 			}),
 			unstable_startWorker({
-				entrypoint: path.resolve(__dirname, "..", "src", "module.ts"),
+				entrypoint: path.resolve(__dirname, "../src/module.ts"),
 				dev: {
 					server: { hostname: "127.0.0.1", port: 0 },
 					inspector: false,
 				},
 			}),
 			unstable_startWorker({
-				entrypoint: path.resolve(__dirname, "..", "src", "module.ts"),
+				entrypoint: path.resolve(__dirname, "../src/module.ts"),
 				dev: {
 					server: { hostname: "127.0.0.1", port: 0 },
 					inspector: false,

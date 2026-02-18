@@ -14,8 +14,8 @@ describe("service worker", () => {
 
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_startWorker({
-			entrypoint: path.resolve(__dirname, "..", "src", "sw.ts"),
-			config: path.resolve(__dirname, "..", "wrangler.sw.jsonc"),
+			entrypoint: path.resolve(__dirname, "../src/sw.ts"),
+			config: path.resolve(__dirname, "../wrangler.sw.jsonc"),
 			dev: {
 				server: { hostname: "127.0.0.1", port: 0 },
 				inspector: false,

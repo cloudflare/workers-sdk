@@ -14,8 +14,8 @@ describe("module worker", () => {
 		process.env.NODE_ENV = "local-testing";
 
 		worker = await unstable_startWorker({
-			entrypoint: path.resolve(__dirname, "..", "src", "module.ts"),
-			config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
+			entrypoint: path.resolve(__dirname, "../src/module.ts"),
+			config: path.resolve(__dirname, "../wrangler.module.jsonc"),
 			bindings: {
 				VAR4: { type: "plain_text", value: "https://google.com" },
 			},
