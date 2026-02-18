@@ -1,8 +1,7 @@
 import nodeNet from "node:net";
 import path from "path";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { Unstable_DevWorker } from "wrangler";
+import { unstable_startWorker } from "wrangler";
 
 function getPort() {
 	return new Promise<number>((resolve, reject) => {
@@ -19,30 +18,25 @@ function getPort() {
 }
 
 describe("specific port", () => {
-	let worker: Unstable_DevWorker;
+	let worker: Awaited<ReturnType<typeof unstable_startWorker>>;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(
-			path.resolve(__dirname, "..", "src", "module.ts"),
-			{
-				config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
-				port: await getPort(),
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-					devEnv: true,
-				},
-			}
-		);
+		worker = await unstable_startWorker({
+			entrypoint: path.resolve(__dirname, "../src/module.ts"),
+			config: path.resolve(__dirname, "../wrangler.module.jsonc"),
+			dev: {
+				server: { hostname: "127.0.0.1", port: await getPort() },
+				inspector: false,
+			},
+		});
 	});
 
 	afterAll(async () => {
-		await worker?.stop();
+		await worker?.dispose();
 	});
 
 	it("fetches worker", async ({ expect }) => {
-		const resp = await worker.fetch("/");
+		const resp = await worker.fetch("http://example.com/");
 		expect(resp.status).toBe(200);
 	});
 });
