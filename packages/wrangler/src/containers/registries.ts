@@ -208,7 +208,7 @@ async function registryConfigureCommand(
 					secretExists = false;
 					makeSecret = false;
 
-					continue;
+					break;
 				}
 
 				startSection(
