@@ -2265,12 +2265,35 @@ export class Miniflare {
 				[]
 			);
 
+			// Determine the workerd service name that the debug port should
+			// dispatch to for this worker's default entrypoint. This is stored
+			// in the dev registry so that proxy workers in other miniflare
+			// instances can route requests to the correct service.
+			//
+			// - Workers with assets go through the assets RPC proxy
+			// - Vite workers go through __vite_proxy_worker__ (set via
+			//   unsafeDirectSockets[].serviceName by the vite plugin)
+			// - Plain workers go directly to the user service
+			const defaultDirectSocket = workerOpts.core.unsafeDirectSockets?.find(
+				(s) => (s.entrypoint ?? "default") === "default"
+			);
+			let defaultEntrypointService: string;
+			if (workerOpts.assets.assets) {
+				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`;
+			} else if (defaultDirectSocket?.serviceName) {
+				defaultEntrypointService = getUserServiceName(
+					defaultDirectSocket.serviceName
+				);
+			} else {
+				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
+			}
+
 			entries.push([
 				workerOpts.core.name,
 				{
 					debugPortAddress,
-					entryAddress: this.#runtimeEntryURL?.toString() ?? "",
-					hasAssets: workerOpts.assets.assets !== undefined,
+					defaultEntrypointService,
+					userWorkerService: getUserServiceName(workerOpts.core.name),
 					durableObjects: internalObjects,
 				},
 			]);

@@ -31,9 +31,10 @@ export interface WorkerdDebugPortClient {
 
 export interface RegistryEntry {
 	debugPortAddress: string;
-	/** HTTP entry address for WebSocket upgrade fallback (e.g. "http://127.0.0.1:8787"). */
-	entryAddress: string;
-	hasAssets: boolean;
+	/** Service name for the default entrypoint (may route through assets/vite proxy). */
+	defaultEntrypointService: string;
+	/** Service name for the user worker directly (for named entrypoints and DOs). */
+	userWorkerService: string;
 }
 
 /** Minimal env shape required by the shared functions. */
@@ -57,25 +58,17 @@ export async function resolveTarget(
 	if (!resp.ok) {
 		return null;
 	}
-	return resp.json();
-}
-
-/**
- * Compute the workerd service name for a given worker.
- *
- * Workers with static assets have their default entrypoint routed through
- * the assets:rpc-proxy service for correct asset routing. Named entrypoints
- * always go directly to the core:user service.
- */
-export function getWorkerdServiceName(
-	service: string,
-	entrypoint: string | null,
-	hasAssets: boolean
-): string {
-	if (hasAssets && (entrypoint === null || entrypoint === "default")) {
-		return `assets:rpc-proxy:${service}`;
+	const entry: RegistryEntry = await resp.json();
+	// Validate required fields — the JSON comes from disk and may be stale
+	// or from an older version that doesn't include all fields.
+	if (
+		!entry.debugPortAddress ||
+		!entry.defaultEntrypointService ||
+		!entry.userWorkerService
+	) {
+		return null;
 	}
-	return `core:user:${service}`;
+	return entry;
 }
 
 /**
@@ -95,11 +88,8 @@ export async function connectToActor(
 	const client = await env.DEV_REGISTRY_DEBUG_PORT.connect(
 		target.debugPortAddress
 	);
-	return client.getActor(
-		getWorkerdServiceName(scriptName, null, target.hasAssets),
-		className,
-		actorId
-	);
+	// DOs are defined on the user worker, not behind the assets/vite proxy.
+	return client.getActor(target.userWorkerService, className, actorId);
 }
 
 /** Handler event methods that should NOT be forwarded as RPC. */
@@ -168,21 +158,6 @@ export function createProxyDurableObjectClass({
 		}
 
 		async fetch(request: Request): Promise<Response> {
-			// WebSocket upgrades don't work through the debug port RPC.
-			// For DOs, we'd need to route via HTTP with the actor ID, which is complex.
-			// For now, return an error for WebSocket upgrades to DOs.
-			const isWebSocketUpgrade =
-				request.headers.get("Upgrade")?.toLowerCase() === "websocket";
-			if (isWebSocketUpgrade) {
-				// TODO: Implement HTTP fallback for DO WebSocket upgrades
-				// This would require knowing the DO HTTP routing path
-				return new Response(
-					`WebSocket upgrades to remote Durable Objects are not yet supported in local dev. ` +
-						`Durable Object "${className}" of service "${scriptName}" cannot accept WebSocket connections through the dev registry proxy.`,
-					{ status: 501 }
-				);
-			}
-
 			const fetcher = await connectToActor(
 				this.env as ProxyEnv,
 				scriptName,
@@ -196,23 +171,7 @@ export function createProxyDurableObjectClass({
 				);
 			}
 			try {
-				const response = await fetcher.fetch(request);
-
-				// Handle WebSocket responses (shouldn't happen due to check above,
-				// but included for completeness)
-				if (response.webSocket) {
-					return new Response(null, {
-						status: 101,
-						webSocket: response.webSocket,
-					});
-				}
-
-				const body = await response.arrayBuffer();
-				return new Response(body, {
-					status: response.status,
-					statusText: response.statusText,
-					headers: response.headers,
-				});
+				return fetcher.fetch(request);
 			} catch (e) {
 				return new Response(
 					`Error connecting to Durable Object "${className}" of "${scriptName}": ${e instanceof Error ? e.message : String(e)}`,

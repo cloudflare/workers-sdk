@@ -1,6 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import {
-	getWorkerdServiceName,
 	HANDLER_RESERVED_KEYS,
 	resolveTarget,
 	tailEventsReplacer,
@@ -29,66 +28,19 @@ async function connectToEntrypoint(
 	env: Env,
 	props: Props,
 	target: RegistryEntry
-) {
-	const workerdServiceName = getWorkerdServiceName(
-		props.service,
-		props.entrypoint,
-		target.hasAssets
-	);
+): Promise<Fetcher> {
+	const { service, entrypoint } = props;
+	// Named entrypoints route directly to the user worker service, bypassing
+	// any assets/vite proxy layer. The default entrypoint uses the registry's
+	// configured service name, which accounts for those proxies.
+	const serviceName =
+		entrypoint === null || entrypoint === "default"
+			? target.defaultEntrypointService
+			: target.userWorkerService;
 	const client = await env.DEV_REGISTRY_DEBUG_PORT.connect(
 		target.debugPortAddress
 	);
-	const fetcher = await client.getEntrypoint(
-		workerdServiceName,
-		props.entrypoint ?? undefined
-	);
-	// Return both client and fetcher — the caller must keep a reference to
-	// the client for the duration of the RPC call, otherwise the debug port
-	// connection may be garbage collected and pending promises will fail
-	// with "Promise will never complete."
-	return { client, fetcher };
-}
-
-/**
- * Fetch via HTTP to the worker's entry address.
- * Used for WebSocket upgrades since the debug port RPC doesn't support them.
- *
- * This is a standalone function rather than a method because the class returns
- * a Proxy from its constructor, and private/method calls don't work correctly
- * through Proxies.
- */
-async function fetchViaHttp(
-	request: Request,
-	target: RegistryEntry,
-	props: Props
-): Promise<Response> {
-	const { service, entrypoint } = props;
-	try {
-		// Rewrite the request URL to target the remote worker's entry address
-		const targetUrl = new URL(request.url);
-		const entryUrl = new URL(target.entryAddress);
-		targetUrl.protocol = entryUrl.protocol;
-		targetUrl.host = entryUrl.host;
-
-		const proxyRequest = new Request(targetUrl.toString(), request);
-		const response = await fetch(proxyRequest);
-
-		// WebSocket upgrade responses carry a webSocket property and no body.
-		if (response.webSocket) {
-			return new Response(null, {
-				status: 101,
-				webSocket: response.webSocket,
-			});
-		}
-
-		// For non-WebSocket responses, return as-is
-		return response;
-	} catch (e) {
-		return new Response(
-			`Error connecting to service "${service}" (${entrypoint ?? "default"}) via HTTP: ${e instanceof Error ? e.message : String(e)}`,
-			{ status: 502 }
-		);
-	}
+	return client.getEntrypoint(serviceName, entrypoint ?? undefined);
 }
 
 /**
@@ -142,12 +94,11 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 							);
 						}
 						try {
-							const { client: _client, fetcher } = await connectToEntrypoint(
+							const fetcher = await connectToEntrypoint(
 								target.env,
 								target._props,
 								registryEntry
 							);
-							void _client; // prevent GC of the debug port connection
 							const method = (
 								fetcher as unknown as Record<
 									string,
@@ -183,41 +134,9 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		// WebSocket upgrades don't work through the debug port RPC because the
-		// kj::HttpClient→HttpService adapter doesn't properly signal allowWebSocket.
-		// Fall back to HTTP for WebSocket upgrade requests.
-		const isWebSocketUpgrade =
-			request.headers.get("Upgrade")?.toLowerCase() === "websocket";
-		if (isWebSocketUpgrade && target.entryAddress) {
-			return fetchViaHttp(request, target, this._props);
-		}
-
 		try {
-			const { client: _client, fetcher } = await connectToEntrypoint(
-				this.env,
-				this._props,
-				target
-			);
-			void _client; // prevent GC of the debug port connection
-			const response = await fetcher.fetch(request);
-
-			// WebSocket upgrade responses carry a webSocket property and no body.
-			// Forward them directly without buffering.
-			if (response.webSocket) {
-				return new Response(null, {
-					status: 101,
-					webSocket: response.webSocket,
-				});
-			}
-
-			// Read the body eagerly to prevent it from being dropped when
-			// the debug port RPC connection goes out of scope.
-			const body = await response.arrayBuffer();
-			return new Response(body, {
-				status: response.status,
-				statusText: response.statusText,
-				headers: response.headers,
-			});
+			const fetcher = await connectToEntrypoint(this.env, this._props, target);
+			return fetcher.fetch(request);
 		} catch (e) {
 			return new Response(
 				`Error connecting to service "${service}": ${e instanceof Error ? e.message : String(e)}`,
@@ -234,12 +153,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		}
 
 		try {
-			const { client: _client, fetcher } = await connectToEntrypoint(
-				this.env,
-				this._props,
-				target
-			);
-			void _client; // prevent GC of the debug port connection
+			const fetcher = await connectToEntrypoint(this.env, this._props, target);
 			// Tail events are not directly serializable over capnp yet.
 			// JSON round-trip makes them transferable (same workaround as
 			// assets/rpc-proxy.worker.ts).
