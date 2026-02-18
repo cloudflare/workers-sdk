@@ -144,9 +144,9 @@ export async function deploy({
 		_routesCustom = readFileSync(join(directory, "_routes.json"), "utf-8");
 	} catch {}
 
-	const workerJS = lstatSync(_workerPath, { throwIfNoEntry: false });
-	_workerJSIsDirectory = workerJS?.isDirectory() ?? false;
-	if (workerJS != null && !_workerJSIsDirectory) {
+	const workerJSStats = lstatSync(_workerPath, { throwIfNoEntry: false });
+	_workerJSIsDirectory = workerJSStats?.isDirectory() ?? false;
+	if (workerJSStats !== undefined && !_workerJSIsDirectory) {
 		_workerJS = readFileSync(_workerPath, "utf-8");
 	}
 

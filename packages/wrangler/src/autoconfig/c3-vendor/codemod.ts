@@ -91,8 +91,7 @@ export const loadSnippets = (parentFolder: string) => {
 			// don't try loading directories
 			.filter(
 				(fileName) =>
-					lstatSync(join(snippetsPath, fileName), { throwIfNoEntry: false })
-						?.isFile
+					lstatSync(join(snippetsPath, fileName)).isFile()
 			)
 			// only load js or ts files
 			.filter((fileName) => [".js", ".ts"].includes(extname(fileName)))
