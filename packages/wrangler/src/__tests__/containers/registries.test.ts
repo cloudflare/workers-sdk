@@ -48,7 +48,7 @@ describe("containers registries configure", () => {
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --public-credential=test-id --disableSecretsStore`
+				`containers registries configure ${domain} --public-credential=test-id --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Secrets Store can only be disabled in FedRAMP compliance regions.]`
@@ -61,23 +61,23 @@ describe("containers registries configure", () => {
 				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.]`
+			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store.]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disableSecretsStore`
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Arguments secret-store-id and disableSecretsStore are mutually exclusive]`
+			`[Error: Arguments secret-store-id and disable-secrets-store are mutually exclusive]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disableSecretsStore`
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Arguments secret-name and disableSecretsStore are mutually exclusive]`
+			`[Error: Arguments secret-name and disable-secrets-store are mutually exclusive]`
 		);
 	});
 
@@ -123,7 +123,7 @@ describe("containers registries configure", () => {
 			});
 
 			await runWrangler(
-				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disableSecretsStore`
+				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disable-secrets-store`
 			);
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -161,7 +161,7 @@ describe("containers registries configure", () => {
 				});
 
 				await runWrangler(
-					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disableSecretsStore`
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disable-secrets-store`
 				);
 			});
 		});

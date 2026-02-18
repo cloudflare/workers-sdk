@@ -62,16 +62,16 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 			description:
 				"The ID of the secret store to use to store the registry credentials.",
 			demandOption: false,
-			conflicts: ["disableSecretsStore"],
+			conflicts: ["disable-secrets-store"],
 		})
 		.option("secret-name", {
 			type: "string",
 			description:
 				"The name for the secret the private registry credentials should be stored under.",
 			demandOption: false,
-			conflicts: ["disableSecretsStore"],
+			conflicts: ["disable-secrets-store"],
 		})
-		.option("disableSecretsStore", {
+		.option("disable-secrets-store", {
 			type: "boolean",
 			description:
 				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
@@ -121,7 +121,7 @@ async function registryConfigureCommand(
 	if (isFedRAMPHigh) {
 		if (!configureArgs.disableSecretsStore) {
 			throw new UserError(
-				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore."
+				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store."
 			);
 		}
 	} else {
@@ -493,16 +493,16 @@ export const containersRegistriesConfigureCommand = createCommand({
 			description:
 				"The ID of the secret store to use to store the registry credentials.",
 			demandOption: false,
-			conflicts: "disableSecretsStore",
+			conflicts: "disable-secrets-store",
 		},
 		"secret-name": {
 			type: "string",
 			description:
 				"The name for the secret the private registry credentials should be stored under.",
 			demandOption: false,
-			conflicts: "disableSecretsStore",
+			conflicts: "disable-secrets-store",
 		},
-		disableSecretsStore: {
+		"disable-secrets-store": {
 			type: "boolean",
 			description:
 				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
