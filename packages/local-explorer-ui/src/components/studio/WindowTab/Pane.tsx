@@ -5,9 +5,9 @@ import type { StudioWindowTabItem } from "./types";
 
 export function StudioWindowTabPane(): JSX.Element {
 	const {
+		handleUserTabChange,
 		openStudioTab,
 		selectedTabKey,
-		setSelectedTabKey,
 		setStudioTabs,
 		tabs,
 		updateStudioTabStatus,
@@ -33,7 +33,7 @@ export function StudioWindowTabPane(): JSX.Element {
 		<StudioWindowTab
 			onDoubleClick={onDoubleClick}
 			onNewClicked={onNewQuery}
-			onSelectedTabChange={setSelectedTabKey}
+			onSelectedTabChange={handleUserTabChange}
 			onTabsChange={setStudioTabs}
 			selectedTabKey={selectedTabKey}
 			tabs={tabs}

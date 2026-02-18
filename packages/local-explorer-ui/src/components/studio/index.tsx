@@ -31,6 +31,11 @@ interface StudioProps {
 	 */
 	initialTable?: string;
 	/**
+	 * Callback when the selected table changes (e.g., when a table tab is selected or closed).
+	 * Called with the table name, or `null` when no table is selected.
+	 */
+	onTableChange?: (tableName: string | null) => void;
+	/**
 	 * Metadata about the current studio resource.
 	 */
 	resource: StudioResource;
@@ -39,6 +44,7 @@ interface StudioProps {
 export function Studio({
 	driver,
 	initialTable,
+	onTableChange,
 	resource,
 }: StudioProps): JSX.Element {
 	// Track the last table we opened to detect changes
@@ -265,6 +271,37 @@ export function Studio({
 	]);
 
 	/**
+	 * Extracts the table name from a tab, if it's a table tab.
+	 * Table tab identifiers have the format: "table/{schemaName}.{tableName}"
+	 */
+	const getTableNameFromTab = useCallback(
+		(tab: StudioWindowTabItem): string | null => {
+			const tableMatch = tab.identifier.match(/^table\/[^.]+\.(.+)$/);
+			return tableMatch?.[1] ?? null;
+		},
+		[]
+	);
+
+	/**
+	 * Wrapper around `setSelectedTabKey` that also notifies the parent
+	 * when the user changes tabs (for syncing URL state).
+	 */
+	const handleUserTabChange = useCallback(
+		(newKey: string) => {
+			setSelectedTabKey(newKey);
+
+			if (onTableChange) {
+				const newTab = tabs.find((tab) => tab.key === newKey);
+				if (newTab) {
+					const tableName = getTableNameFromTab(newTab);
+					onTableChange(tableName);
+				}
+			}
+		},
+		[tabs, onTableChange, getTableNameFromTab]
+	);
+
+	/**
 	 * Replaces an existing studio tab with a new one built from the provided
 	 * `StudioTabDefinitionMetadata`.
 	 *
@@ -341,6 +378,7 @@ export function Studio({
 		() => ({
 			closeStudioTab,
 			driver,
+			handleUserTabChange,
 			loadingSchema,
 			openStudioTab,
 			refreshSchema,
@@ -356,6 +394,7 @@ export function Studio({
 		[
 			closeStudioTab,
 			driver,
+			handleUserTabChange,
 			loadingSchema,
 			openStudioTab,
 			refreshSchema,
