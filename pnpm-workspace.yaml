@@ -51,7 +51,8 @@ catalogs:
   vitest-3:
     "vitest": 3.2.4
     "@vitest/ui": 3.2.4
-    # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this mono repo should use workspace:* instead of this catalog version
+    "vite": "^5.4.14"
+    # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
     # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
     # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
     "@cloudflare/vitest-pool-workers": "^0.10.0"

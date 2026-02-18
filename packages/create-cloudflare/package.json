@@ -83,7 +83,7 @@
 		"tree-kill": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"vite": "catalog:default",
+		"vite": "catalog:vitest-3",
 		"vite-tsconfig-paths": "^4.0.8",
 		"vitest": "catalog:vitest-3",
 		"which-pm-runs": "^1.1.0",
