@@ -1,9 +1,4 @@
-import type {
-	StudioDialect,
-	StudioResultHeader,
-	StudioResultSet,
-	StudioSQLToken,
-} from "../../types/studio";
+import type { StudioResultHeader, StudioResultSet } from "../../types/studio";
 
 function escapeSqlString(str: string): string {
 	return `'${str.replace(/'/g, `''`)}'`;
