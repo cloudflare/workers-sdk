@@ -10,4 +10,7 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// Native binary - cannot be bundled, used to bundle test files at runtime
 	"esbuild",
+
+	// Used for config validation at runtime - must be available when package is installed
+	"zod",
 ];
