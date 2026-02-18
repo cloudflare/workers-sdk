@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { findUpSync } from "find-up";
+import { up as findUpSync } from "empathic/find";
 
 const currentFile = process.argv[2];
 const currentDirectory = path.dirname(currentFile);

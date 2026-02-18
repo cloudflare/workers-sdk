@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { findUpSync } from "find-up";
+import { up as findUpSync } from "empathic/find";
 import dedent from "ts-dedent";
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";

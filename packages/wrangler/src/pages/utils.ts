@@ -1,5 +1,5 @@
 import path from "node:path";
-import { findUpSync } from "find-up";
+import { up as findUpSync } from "empathic/find";
 import { getWranglerTmpDir } from "../paths";
 import type { BundleResult } from "../deployment-bundle/bundle";
 

@@ -10,7 +10,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { findUpSync } from "find-up";
+import { up as findUpSync } from "empathic/find";
 import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
