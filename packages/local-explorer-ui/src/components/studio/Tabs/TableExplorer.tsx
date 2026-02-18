@@ -60,6 +60,7 @@ export function StudioTableExplorerTab({
 
 	const { openModal } = useModal();
 
+	// @ts-expect-error TODO: Re-enable in a later PR
 	const _filterAutoCompleteColumns = useMemo<string[]>(() => {
 		if (!schema) {
 			return [];
@@ -183,6 +184,7 @@ export function StudioTableExplorerTab({
 		return state.getHeaders().every((header) => header.setting.readonly);
 	}, [state]);
 
+	// @ts-expect-error TODO: Re-enable in a later PR
 	const _headerIndexList = useMemo((): number[] => {
 		if (!schema) {
 			return [];
@@ -297,6 +299,7 @@ export function StudioTableExplorerTab({
 		});
 	}, [pageOffset, pageLimit, guardUnsavedChanges]);
 
+	// @ts-expect-error TODO: Re-enable in a later PR
 	const _onWhereRawApplied = useCallback(
 		(newWhereRaw: string): void => {
 			guardUnsavedChanges(() => {
@@ -371,6 +374,7 @@ export function StudioTableExplorerTab({
 		}
 	}, [driver, tableName, schema, state, openModal]);
 
+	// @ts-expect-error TODO: Re-enable in a later PR
 	const _onOrderByColumnChange = useCallback(
 		(columName: string, direction: StudioSortDirection) => {
 			guardUnsavedChanges(() => {
