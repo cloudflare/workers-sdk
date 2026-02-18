@@ -1,14 +1,12 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
-	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
@@ -25,12 +23,49 @@ import {
 	certUploadNamespace,
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
-import { cloudchamber } from "./cloudchamber";
+import {
+	cloudchamberApplyCommand,
+	cloudchamberBuildCommand,
+	cloudchamberCreateCommand,
+	cloudchamberCurlCommand,
+	cloudchamberDeleteCommand,
+	cloudchamberImagesDeleteCommand,
+	cloudchamberImagesListCommand,
+	cloudchamberImagesNamespace,
+	cloudchamberListCommand,
+	cloudchamberModifyCommand,
+	cloudchamberNamespace,
+	cloudchamberPushCommand,
+	cloudchamberRegistriesConfigureCommand,
+	cloudchamberRegistriesCredentialsCommand,
+	cloudchamberRegistriesListCommand,
+	cloudchamberRegistriesNamespace,
+	cloudchamberRegistriesRemoveCommand,
+	cloudchamberSshCreateCommand,
+	cloudchamberSshListCommand,
+	cloudchamberSshNamespace,
+} from "./cloudchamber";
 import { codemodCommand } from "./codemod";
 import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
-import { containers } from "./containers";
+import {
+	containersBuildCommand,
+	containersDeleteCommand,
+	containersImagesDeleteCommand,
+	containersImagesListCommand,
+	containersImagesNamespace,
+	containersInfoCommand,
+	containersListCommand,
+	containersNamespace,
+	containersPushCommand,
+	containersRegistriesConfigureCommand,
+	containersRegistriesDeleteCommand,
+	containersRegistriesListCommand,
+	containersRegistriesNamespace,
+	containersSshCommand,
+} from "./containers";
 import { demandSingleValue } from "./core";
+import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -91,7 +126,7 @@ import {
 	kvNamespaceRenameCommand,
 } from "./kv";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { getMetricsDispatcher } from "./metrics";
+import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
 import {
 	metricsAlias,
 	telemetryDisableCommand,
@@ -99,6 +134,7 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
+import { sanitizeError } from "./metrics/sanitization";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -121,7 +157,10 @@ import {
 	pagesPublishCommand,
 } from "./pages/deploy";
 import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
+import {
+	pagesDeploymentDeleteCommand,
+	pagesDeploymentListCommand,
+} from "./pages/deployments";
 import { pagesDevCommand } from "./pages/dev";
 import { pagesDownloadConfigCommand } from "./pages/download-config";
 import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
@@ -156,7 +195,6 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -225,6 +263,12 @@ import {
 	r2BucketLifecycleSetCommand,
 } from "./r2/lifecycle";
 import {
+	r2BucketLocalUploadsDisableCommand,
+	r2BucketLocalUploadsEnableCommand,
+	r2BucketLocalUploadsGetConfigCommand,
+	r2BucketLocalUploadsNamespace,
+} from "./r2/local-uploads";
+import {
 	r2BucketLockAddCommand,
 	r2BucketLockListCommand,
 	r2BucketLockNamespace,
@@ -282,7 +326,7 @@ import {
 	secretsStoreStoreDeleteCommand,
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
-import { addBreadcrumb, closeSentry, setupSentry } from "./sentry";
+import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
@@ -294,7 +338,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { betaCmdColor, proxy } from "./utils/constants";
+import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -346,11 +390,14 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
+import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
 if (proxy) {
-	setGlobalDispatcher(new ProxyAgent(proxy));
+	setGlobalDispatcher(
+		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
+	);
 	logger.log(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
@@ -493,7 +540,7 @@ export function createCLIParser(argv: string[]) {
 		},
 	};
 
-	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
+	const registerCommand = createRegisterYargsCommand(wrangler, subHelp, argv);
 	const registry = new CommandRegistry(registerCommand);
 
 	// Helper to show help with command categories
@@ -1065,6 +1112,22 @@ export function createCLIParser(argv: string[]) {
 			definition: r2BucketDevUrlDisableCommand,
 		},
 		{
+			command: "wrangler r2 bucket local-uploads",
+			definition: r2BucketLocalUploadsNamespace,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads get",
+			definition: r2BucketLocalUploadsGetConfigCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads enable",
+			definition: r2BucketLocalUploadsEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads disable",
+			definition: r2BucketLocalUploadsDisableCommand,
+		},
+		{
 			command: "wrangler r2 bucket lifecycle",
 			definition: r2BucketLifecycleNamespace,
 		},
@@ -1318,6 +1381,10 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler pages deployment tail",
 			definition: pagesDeploymentTailCommand,
 		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
+		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
 		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
@@ -1364,27 +1431,133 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("mtls-certificate");
 
 	// cloudchamber
-	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
-		return cloudchamber(cloudchamberArgs.command(subHelp), subHelp);
-	});
+	registry.define([
+		{ command: "wrangler cloudchamber", definition: cloudchamberNamespace },
+		{
+			command: "wrangler cloudchamber list",
+			definition: cloudchamberListCommand,
+		},
+		{
+			command: "wrangler cloudchamber create",
+			definition: cloudchamberCreateCommand,
+		},
+		{
+			command: "wrangler cloudchamber delete",
+			definition: cloudchamberDeleteCommand,
+		},
+		{
+			command: "wrangler cloudchamber modify",
+			definition: cloudchamberModifyCommand,
+		},
+		{
+			command: "wrangler cloudchamber apply",
+			definition: cloudchamberApplyCommand,
+		},
+		{
+			command: "wrangler cloudchamber curl",
+			definition: cloudchamberCurlCommand,
+		},
+		{
+			command: "wrangler cloudchamber build",
+			definition: cloudchamberBuildCommand,
+		},
+		{
+			command: "wrangler cloudchamber push",
+			definition: cloudchamberPushCommand,
+		},
+		{
+			command: "wrangler cloudchamber ssh",
+			definition: cloudchamberSshNamespace,
+		},
+		{
+			command: "wrangler cloudchamber ssh list",
+			definition: cloudchamberSshListCommand,
+		},
+		{
+			command: "wrangler cloudchamber ssh create",
+			definition: cloudchamberSshCreateCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries",
+			definition: cloudchamberRegistriesNamespace,
+		},
+		{
+			command: "wrangler cloudchamber registries configure",
+			definition: cloudchamberRegistriesConfigureCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries credentials",
+			definition: cloudchamberRegistriesCredentialsCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries remove",
+			definition: cloudchamberRegistriesRemoveCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries list",
+			definition: cloudchamberRegistriesListCommand,
+		},
+		{
+			command: "wrangler cloudchamber images",
+			definition: cloudchamberImagesNamespace,
+		},
+		{
+			command: "wrangler cloudchamber images list",
+			definition: cloudchamberImagesListCommand,
+		},
+		{
+			command: "wrangler cloudchamber images delete",
+			definition: cloudchamberImagesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("cloudchamber");
 
 	// containers
-	wrangler.command(
-		"containers",
-		`📦 Manage Containers ${chalk.hex(betaCmdColor)("[open beta]")}`,
-		(containersArgs) => {
-			return containers(containersArgs.command(subHelp), subHelp);
-		}
-	);
-
-	// [PRIVATE BETA] pubsub
-	wrangler.command(
-		"pubsub",
-		`📮 Manage Pub/Sub brokers ${chalk.hex(betaCmdColor)("[private beta]")}`,
-		(pubsubYargs) => {
-			return pubSubCommands(pubsubYargs, subHelp);
-		}
-	);
+	registry.define([
+		{ command: "wrangler containers", definition: containersNamespace },
+		{ command: "wrangler containers list", definition: containersListCommand },
+		{ command: "wrangler containers info", definition: containersInfoCommand },
+		{
+			command: "wrangler containers delete",
+			definition: containersDeleteCommand,
+		},
+		{ command: "wrangler containers ssh", definition: containersSshCommand },
+		{
+			command: "wrangler containers build",
+			definition: containersBuildCommand,
+		},
+		{ command: "wrangler containers push", definition: containersPushCommand },
+		{
+			command: "wrangler containers registries",
+			definition: containersRegistriesNamespace,
+		},
+		{
+			command: "wrangler containers registries configure",
+			definition: containersRegistriesConfigureCommand,
+		},
+		{
+			command: "wrangler containers registries list",
+			definition: containersRegistriesListCommand,
+		},
+		{
+			command: "wrangler containers registries delete",
+			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers images",
+			definition: containersImagesNamespace,
+		},
+		{
+			command: "wrangler containers images list",
+			definition: containersImagesListCommand,
+		},
+		{
+			command: "wrangler containers images delete",
+			definition: containersImagesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("containers");
+	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 
 	registry.define([
 		{
@@ -1734,9 +1907,6 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
-	registry.registerLegacyCommandCategory("containers", "Compute & AI");
-	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
-
 	registry.registerAll();
 
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -1751,26 +1921,37 @@ export async function main(argv: string[]): Promise<void> {
 
 	checkMacOSVersion({ shouldThrow: false });
 
-	const startTime = Date.now();
-
 	// Check if this is a root-level help request (--help or -h with no subcommand)
 	// In this case, we use our custom help formatter to show command categories
-	const isRootHelpRequest =
-		(argv.includes("--help") || argv.includes("-h")) &&
-		argv.filter((arg) => !arg.startsWith("-")).length === 0;
+	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
+	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
+	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
 
-	const { wrangler, showHelpWithCategories } = createCLIParser(argv);
+	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
 	if (isRootHelpRequest) {
 		await showHelpWithCategories();
 		return;
 	}
-	let command: string | undefined;
-	let metricsArgs: Record<string, unknown> | undefined;
+
+	// Check for unknown command with a `--help` flag
+	const [subCommand] = nonFlagArgs;
+	if (hasHelpFlag && subCommand) {
+		const knownCommands = registry.topLevelCommands;
+		if (!knownCommands.has(subCommand)) {
+			logger.info("");
+			logger.error(`Unknown argument: ${subCommand}`);
+			await showHelpWithCategories();
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
+		}
+	}
+
+	const startTime = Date.now();
+	let configArgs: ReadConfigCommandArgs = {};
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-	// Register Yargs middleware to record command as Sentry breadcrumb
-	let recordedCommand = false;
-	const wranglerWithMiddleware = wrangler.middleware((args) => {
+
+	// Register middleware to set logger level and capture fallback telemetry info
+	wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
@@ -1778,13 +1959,7 @@ export async function main(argv: string[]): Promise<void> {
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 
-		// Middleware called for each sub-command, but only want to record once
-		if (recordedCommand) {
-			return;
-		}
-		recordedCommand = true;
-		// `args._` doesn't include any positional arguments (e.g. script name,
-		// key to fetch) or flags
+		configArgs = args;
 
 		try {
 			const { rawConfig, configPath } = experimental_readRawConfig(args);
@@ -1792,66 +1967,36 @@ export async function main(argv: string[]): Promise<void> {
 				sendMetrics: rawConfig.send_metrics,
 				hasAssets: !!rawConfig.assets?.directory,
 				configPath,
+				argv,
 			});
 		} catch (e) {
-			// If we can't parse the config, we can't send metrics
-			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
+			// If we can't parse the config, we can still send metrics with defaults
+			logger.debug("Failed to parse config for metrics. Using defaults.", e);
+			dispatcher = getMetricsDispatcher({ argv });
 		}
-
-		command = `wrangler ${args._.join(" ")}`;
-		metricsArgs = args;
-		addBreadcrumb(command);
-		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
-		// e.g. if a required arg is missing, yargs will error out before we send any events :/
-		dispatcher?.sendCommandEvent(
-			"wrangler command started",
-			{
-				command,
-				args,
-			},
-			argv
-		);
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
 	try {
-		await wranglerWithMiddleware.parse();
-
-		const durationMs = Date.now() - startTime;
-
-		dispatcher?.sendCommandEvent(
-			"wrangler command completed",
-			{
-				command,
-				args: metricsArgs,
-				durationMs,
-				durationSeconds: durationMs / 1000,
-				durationMinutes: durationMs / 1000 / 60,
-			},
-			argv
-		);
+		await wrangler.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
-		const errorType = await handleError(e, wrangler.arguments, argv);
-		const durationMs = Date.now() - startTime;
-		dispatcher?.sendCommandEvent(
-			"wrangler command errored",
-			{
-				command,
-				args: metricsArgs,
-				durationMs,
-				durationSeconds: durationMs / 1000,
-				durationMinutes: durationMs / 1000 / 60,
-				errorType:
-					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
-				errorMessage:
-					e instanceof UserError || e instanceof ContainersUserError
-						? e.telemetryMessage
-						: undefined,
-			},
-			argv
-		);
-		throw e;
+
+		if (e instanceof CommandHandledError) {
+			// This error occurred during Command handler execution,
+			// and has already sent metrics and reported to the user.
+			// So we can just re-throw the original error.
+			throw e.originalError;
+		} else {
+			// The error occurred before Command handler ran
+			// (e.g., yargs validation errors like unknown commands or invalid arguments).
+			// So we need to handle telemetry and error reporting here.
+			if (dispatcher) {
+				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+			}
+			await handleError(e, configArgs, argv);
+			throw e;
+		}
 	} finally {
 		try {
 			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
@@ -1868,8 +2013,9 @@ export async function main(argv: string[]): Promise<void> {
 
 			await closeSentry();
 
+			// Wait for any pending telemetry requests to complete (with timeout)
 			await Promise.race([
-				Promise.allSettled(dispatcher?.requests ?? []),
+				allMetricsDispatchesCompleted(),
 				setTimeout(1000, undefined, { ref: false }),
 			]);
 		} catch (e) {
@@ -1882,4 +2028,38 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
+}
+
+/**
+ * Dispatches generic metrics events to indicate that a wrangler command errored
+ * when we don't know the CommandDefinition and cannot be sure what is safe to send.
+ */
+function dispatchGenericCommandErrorEvent(
+	dispatcher: ReturnType<typeof getMetricsDispatcher>,
+	startTime: number,
+	error: unknown
+) {
+	const durationMs = Date.now() - startTime;
+
+	// We cannot safely derive sanitized command or args from `args._` since it may contain
+	// sensitive user-supplied positional arguments. So we send empty values.
+	const sanitizedCommand = "";
+	const sanitizedArgs = {};
+
+	// Send "started" event since handler never got to send it.
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
+	dispatcher.sendCommandEvent("wrangler command started", {
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
+	});
+
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
+	dispatcher.sendCommandEvent("wrangler command errored", {
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
+		durationMs,
+		...sanitizeError(error),
+	});
 }

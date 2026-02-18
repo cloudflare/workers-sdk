@@ -1,5 +1,50 @@
 # @cloudflare/unenv-preset
 
+## 2.13.0
+
+### Minor Changes
+
+- [#12573](https://github.com/cloudflare/workers-sdk/pull/12573) [`9a565d5`](https://github.com/cloudflare/workers-sdk/commit/9a565d526224ac510a8d581e32db98545c1b3368) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:child_process` module from workerd when the `enable_nodejs_child_process_module` compatibility flag is enabled.
+
+  This feature is currently experimental and requires both the `enable_nodejs_child_process_module` and `experimental` compatibility flags to be set.
+
+- [#12023](https://github.com/cloudflare/workers-sdk/pull/12023) [`7f18183`](https://github.com/cloudflare/workers-sdk/commit/7f181839513a1cac441e0956a59130ba1f4ef6d4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:tty` module from workerd when the `enable_nodejs_tty_module` compatibility flag is enabled.
+
+  This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_tty_module` compatibility flags to be set.
+
+- [#12363](https://github.com/cloudflare/workers-sdk/pull/12363) [`39491f9`](https://github.com/cloudflare/workers-sdk/commit/39491f9d92153f679fd2f9e81a5d58122946a0af) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for the native `node:v8` module from workerd when the `enable_nodejs_v8_module` and `experimental` compatibility flags are enabled
+
+  This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_v8_module` compatibility flags to be set.
+
+## 2.12.1
+
+### Patch Changes
+
+- [#12377](https://github.com/cloudflare/workers-sdk/pull/12377) [`312b5eb`](https://github.com/cloudflare/workers-sdk/commit/312b5ebd3866d8280f61bbe2af3bb1002f6cf461) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:process` v2 when it is available
+
+  Note that we only enable this if all of the following conditions are met:
+
+  - compatibility_date >= 2025-09-15 or process v2 enabled by flag (enable_nodejs_process_v2)
+  - `fetch_iterable_type_support` and `fetch_iterable_type_support_override_adjustment` are active (explicitly specified or implied by date or other flags).
+
+  Note that EventEmitters (`on`, `off`, `addListener`, `removeListener`, ...) used to be available on the imported process module while they should not have been. They are now only available on the global process:
+
+  ```ts
+  import p from "node:process";
+
+  // Working before this PR, not working after this PR
+  p.on("exit", exitHandler);
+
+  // Use the global process instead (works before and after the PR)
+  process.on("exit", exitHandler);
+  ```
+
+## 2.12.0
+
+### Minor Changes
+
+- [#12007](https://github.com/cloudflare/workers-sdk/pull/12007) [`5f060c9`](https://github.com/cloudflare/workers-sdk/commit/5f060c9c27b9f5d2a00df374ed92f5055f24ea3c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:repl` module when the `enable_nodejs_repl_module` and `experimental` compatibility flags are enabled.
+
 ## 2.11.0
 
 ### Minor Changes

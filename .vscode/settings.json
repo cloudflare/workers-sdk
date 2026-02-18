@@ -45,6 +45,7 @@
 		"reinitialise",
 		"scandir",
 		"selfsigned",
+		"subrequests",
 		"textfile",
 		"tsbuildinfo",
 		"turborepo",
@@ -75,6 +76,7 @@
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"files.associations": {
+		"turbo.json": "jsonc",
 		"api-extractor.json": "jsonc",
 		"CODEOWNERS": "plaintext",
 		"*.template": "javascript",

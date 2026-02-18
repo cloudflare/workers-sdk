@@ -1,5 +1,98 @@
 # @cloudflare/workers-utils
 
+## 0.11.0
+
+### Minor Changes
+
+- [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `WRANGLER_CACHE_DIR` environment variable and smart cache directory detection
+
+  Wrangler now intelligently detects where to store cache files:
+
+  1. Use `WRANGLER_CACHE_DIR` env var if set
+  2. Use existing cache directory if found (`node_modules/.cache/wrangler` or `.wrangler/cache`)
+  3. Create cache in `node_modules/.cache/wrangler` if `node_modules` exists
+  4. Otherwise use `.wrangler/cache`
+
+  This improves compatibility with Yarn PnP, pnpm, and other package managers that don't use traditional `node_modules` directories, without requiring any configuration.
+
+## 0.10.0
+
+### Minor Changes
+
+- [#12461](https://github.com/cloudflare/workers-sdk/pull/12461) [`8809411`](https://github.com/cloudflare/workers-sdk/commit/880941158c82e4d907538bfdede06ed0ce5d772d) Thanks [@penalosa](https://github.com/penalosa)! - Support `type: inherit` bindings when using startWorker()
+
+  This is an internal binding type that should not be used by external users of the API
+
+## 0.9.1
+
+### Patch Changes
+
+- [#12368](https://github.com/cloudflare/workers-sdk/pull/12368) [`bd4bb98`](https://github.com/cloudflare/workers-sdk/commit/bd4bb98677f065f19872bbf05024b6ad13284a89) Thanks [@KianNH](https://github.com/KianNH)! - Preserve Containers configuration when using `versions` commands
+
+  Previously, commands like `wrangler versions upload` would inadvertently disable Containers on associated Durable Object namespaces because the `containers` property was being omitted from the API request body.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#11803](https://github.com/cloudflare/workers-sdk/pull/11803) [`1bd1488`](https://github.com/cloudflare/workers-sdk/commit/1bd1488b1eb1d88aa854e8938acc88cdc0ce7f29) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add a new `subrequests` limit to the `limits` field of the Wrangler configuration file
+
+  Before only the `cpu_ms` limit was supported in the `limits` field of the Wrangler configuration file, now a `subrequests` limit can be specified as well which enables the user to limit the number of fetch requests that a Worker's invocation can make.
+
+  Example:
+
+  ```json
+  {
+  	"$schema": "./node_modules/wrangler/config-schema.json",
+  	"limits": {
+  		"cpu_ms": 1000,
+  		"subrequests": 150 // newly added field
+  	}
+  }
+  ```
+
+## 0.8.1
+
+### Patch Changes
+
+- [#12156](https://github.com/cloudflare/workers-sdk/pull/12156) [`abd2b71`](https://github.com/cloudflare/workers-sdk/commit/abd2b716a526d2ae33b3dfab478f3ab4bdea840d) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Fix compatibility date detection failing when creating new projects
+
+  Previously, `getLocalWorkerdCompatibilityDate()` would fail to find the locally installed `miniflare` and `workerd` packages, causing `npm create cloudflare@latest` to fall back to a hardcoded date (2025-09-27) instead of using the current workerd compatibility date.
+
+  The issue was that `module.createRequire()` was called with a directory path. Node.js treats this as a filename at that location and looks for `node_modules` in the parent directory rather than the intended directory. This is now fixed by appending `package.json` to the path, which ensures module resolution starts from the correct location.
+
+  Fixes #12155
+
+- [#11969](https://github.com/cloudflare/workers-sdk/pull/11969) [`9acb24b`](https://github.com/cloudflare/workers-sdk/commit/9acb24b27470ab741bb181bb0e7c21947449507b) Thanks [@emily-shen](https://github.com/emily-shen)! - Validate environments for unexpected fields in Wrangler config
+
+  Previously, this check only applied to the top-level environment.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#12008](https://github.com/cloudflare/workers-sdk/pull/12008) [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489) Thanks [@penalosa](https://github.com/penalosa)! - Add support for customising the inspector IP address
+
+  Adds a new `--inspector-ip` CLI flag and `dev.inspector_ip` configuration option to allow customising the IP address that the inspector server listens on. Previously, the inspector was hardcoded to listen only on `127.0.0.1`.
+
+  Example usage:
+
+  ```bash
+  # CLI flag
+  wrangler dev --inspector-ip 0.0.0.0
+  ```
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"dev": {
+  		"inspector_ip": "0.0.0.0",
+  	},
+  }
+  ```
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
 ## 0.7.1
 
 ### Patch Changes

@@ -109,7 +109,7 @@ describe("generateCommitMessage()", () => {
 	it("should return a commit message about a single changed package", () => {
 		const message = generateCommitMessage(["@namespace/package"], new Map());
 		expect(message).toMatchInlineSnapshot(`
-			"chore: update dependencies of "@namespace/package"
+			"Update dependencies of "@namespace/package"
 
 			The following dependency versions have been updated:
 
@@ -124,7 +124,7 @@ describe("generateCommitMessage()", () => {
 			new Map()
 		);
 		expect(message).toMatchInlineSnapshot(`
-			"chore: update dependencies of "@namespace/package", "another-package"
+			"Update dependencies of "@namespace/package", "another-package"
 
 			The following dependency versions have been updated:
 
@@ -143,7 +143,7 @@ describe("generateCommitMessage()", () => {
 		);
 
 		expect(message).toMatchInlineSnapshot(`
-			"chore: update dependencies of "package-name"
+			"Update dependencies of "package-name"
 
 			The following dependency versions have been updated:
 

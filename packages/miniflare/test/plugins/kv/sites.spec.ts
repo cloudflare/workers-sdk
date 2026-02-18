@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { beforeAll, expect, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 

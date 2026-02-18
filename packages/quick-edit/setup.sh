@@ -1,5 +1,14 @@
 set -eu
 
+# Quick Edit requires Node 22 because it builds native modules (tree-sitter)
+# that are not compatible with Node 24's C++20 requirement for V8 headers.
+NODE_MAJOR_VERSION=$(node -v | cut -d'.' -f1 | tr -d 'v')
+if [ "$NODE_MAJOR_VERSION" != "22" ]; then
+    echo "Error: Quick Edit requires Node.js 22, but found $(node -v)"
+    echo "Please switch to Node 22 before running this script."
+    exit 1
+fi
+
 # The upstream VSCode version (tag) to build from
 VERSION="1.102.1"
 

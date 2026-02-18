@@ -1,5 +1,5 @@
 import path from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { Unstable_DevWorker } from "wrangler";
 
@@ -30,7 +30,7 @@ describe("service worker", () => {
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
-	it("renders", async () => {
+	it("renders", async ({ expect }) => {
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 

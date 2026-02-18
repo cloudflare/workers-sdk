@@ -37,4 +37,12 @@ export default defineConfig([
 			],
 		},
 	},
+
+	// Enforce using expect from test context for concurrency safety
+	{
+		files: ["src/__tests__/**/*.test.ts"],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
 ]);

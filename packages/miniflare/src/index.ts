@@ -44,6 +44,7 @@ import {
 	DurableObjectClassNames,
 	getDirectSocketName,
 	getGlobalServices,
+	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
@@ -102,6 +103,7 @@ import {
 } from "./runtime";
 import {
 	_isCyclic,
+	isFileNotFoundError,
 	Log,
 	MiniflareCoreError,
 	NoOpLog,
@@ -125,6 +127,7 @@ import {
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
+	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
 	LogLevel,
@@ -1160,6 +1163,54 @@ export class Miniflare {
 		}
 	}
 
+	/**
+	 * Gets DO object IDs by checking filenames in the DO persistence directory.
+	 *
+	 * @param url in format: /core/do-storage/<namespaceId>
+	 * @returns [{ name: string, type: "file" | "directory" }, ...]
+	 */
+	async #handleLoopbackDOStorageRequest(url: URL): Promise<Response> {
+		// Extract namespace ID from path (e.g., "/core/do-storage/worker-TestDO" -> "worker-TestDO")
+		const namespaceId = decodeURIComponent(
+			url.pathname.slice("/core/do-storage/".length)
+		);
+		assert(namespaceId, "Namespace ID is required");
+
+		const doSharedOpts = this.#sharedOpts.do;
+		const coreSharedOpts = this.#sharedOpts.core;
+		const doPersistPath = getPersistPath(
+			DURABLE_OBJECTS_PLUGIN_NAME,
+			this.#tmpPath,
+			coreSharedOpts.defaultPersistRoot,
+			doSharedOpts.durableObjectsPersist
+		);
+
+		const namespacePath = path.join(doPersistPath, namespaceId);
+
+		// Prevent escaping directory through dodgy namespaceId that encodes (`../` etc.)
+		// by ensuring the resolved path is still within the persistence directory
+		if (!namespacePath.startsWith(path.resolve(doPersistPath) + path.sep)) {
+			return new Response("Invalid namespace ID", { status: 400 });
+		}
+
+		try {
+			const dirEntries = await fs.promises.readdir(namespacePath, {
+				withFileTypes: true,
+			});
+			return Response.json(
+				dirEntries.map((entry) => ({
+					name: entry.name,
+					type: entry.isDirectory() ? "directory" : "file",
+				}))
+			);
+		} catch (e) {
+			if (isFileNotFoundError(e)) {
+				return new Response("Not Found", { status: 404 });
+			}
+			throw e;
+		}
+	}
+
 	get #workerSrcOpts(): NameSourceOptions[] {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
@@ -1286,6 +1337,8 @@ export class Miniflare {
 				);
 				await writeFile(filePath, await request.text());
 				response = new Response(filePath, { status: 200 });
+			} else if (url.pathname.startsWith("/core/do-storage/")) {
+				response = await this.#handleLoopbackDOStorageRequest(url);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -1913,6 +1966,7 @@ export class Miniflare {
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,
+			durableObjectClassNames,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2581,6 +2635,45 @@ export class Miniflare {
 		const proxyClient = await this._getProxyClient();
 		return proxyClient.global
 			.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
+	}
+	/**
+	 * Purges all entries from the cache.
+	 *
+	 * This is useful during development when cached assets need to be cleared
+	 * without restarting the Miniflare instance.
+	 *
+	 * @param cacheName - Optional name of specific cache to purge. If not provided,
+	 *                    purges the default cache.
+	 * @returns A promise that resolves with the number of entries purged.
+	 */
+	async purgeCache(cacheName?: string): Promise<number> {
+		await this.ready;
+
+		const proxyClient = await this._getProxyClient();
+
+		// Get the cache service binding from proxy env. This is a Fetcher to
+		// the cache-entry worker which properly sets cf.miniflare.name before
+		// forwarding to the CacheObject Durable Object.
+		const cacheService = proxyClient.env[CoreBindings.SERVICE_CACHE] as Fetcher;
+
+		// Build the request with the cache namespace header if specified
+		const headers: Record<string, string> = {};
+		if (cacheName !== undefined) {
+			headers[CacheHeaders.NAMESPACE] = cacheName;
+		}
+
+		// Call the cache-entry worker's /purge-all endpoint
+		const response = await cacheService.fetch("http://localhost/purge-all", {
+			method: "DELETE",
+			headers,
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to purge cache: ${response.statusText}`);
+		}
+
+		const result = (await response.json()) as { deleted: number };
+		return result.deleted;
 	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
 		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);

@@ -4,10 +4,12 @@ import {
 	runInDurableObject,
 	SELF,
 } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import { Counter } from "../src/";
 
-it("increments count and allows direct access to instance/storage", async () => {
+it("increments count and allows direct access to instance/storage", async ({
+	expect,
+}) => {
 	// Check access through `fetch()` handler
 	let response = await SELF.fetch("https://example.com/path");
 	expect(await response.text()).toBe("1");

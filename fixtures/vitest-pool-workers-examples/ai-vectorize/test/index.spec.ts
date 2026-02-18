@@ -4,7 +4,7 @@ import {
 	SELF,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import worker from "../src/index";
 
 // For now, you'll need to do something like this to get a correctly-typed
@@ -13,7 +13,7 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 describe("Tests that do hit the AI binding", () => {
 	describe("unit style", () => {
-		it("lets you mock the ai binding", async () => {
+		it("lets you mock the ai binding", async ({ expect }) => {
 			const request = new IncomingRequest("http://example.com/ai");
 
 			const ctx = createExecutionContext();
@@ -31,7 +31,7 @@ describe("Tests that do hit the AI binding", () => {
 			);
 		});
 
-		it("lets you mock the vectorize binding", async () => {
+		it("lets you mock the vectorize binding", async ({ expect }) => {
 			const request = new IncomingRequest("http://example.com/vectorize");
 			const ctx = createExecutionContext();
 
@@ -64,7 +64,7 @@ describe("Tests that do hit the AI binding", () => {
 });
 
 describe("Tests that do not hit the AI binding", () => {
-	it("responds with Hello World! (unit style)", async () => {
+	it("responds with Hello World! (unit style)", async ({ expect }) => {
 		const request = new IncomingRequest("http://example.com");
 		// Create an empty context to pass to `worker.fetch()`.
 		const ctx = createExecutionContext();
@@ -74,7 +74,7 @@ describe("Tests that do not hit the AI binding", () => {
 		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
 	});
 
-	it("responds with Hello World! (integration style)", async () => {
+	it("responds with Hello World! (integration style)", async ({ expect }) => {
 		const response = await SELF.fetch("https://example.com");
 		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
 	});

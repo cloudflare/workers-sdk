@@ -1,6 +1,8 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
 import { beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockPrompt } from "../helpers/mock-dialogs";
@@ -184,19 +186,12 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(
 				queueName: string,
-				queueSettings: {
+				queueSettings?: {
 					delivery_delay?: number;
 					message_retention_period?: number;
-				} = {}
+				}
 			) {
 				const requests = { count: 0 };
-
-				if (queueSettings?.delivery_delay === undefined) {
-					queueSettings.delivery_delay = 0;
-				}
-				if (queueSettings?.message_retention_period === undefined) {
-					queueSettings.message_retention_period = 345600;
-				}
 
 				msw.use(
 					http.post(
@@ -206,9 +201,9 @@ describe("wrangler", () => {
 
 							const body = (await request.json()) as {
 								queue_name: string;
-								settings: {
-									delivery_delay: number;
-									message_retention_period: number;
+								settings?: {
+									delivery_delay?: number;
+									message_retention_period?: number;
 								};
 							};
 							expect(body.queue_name).toEqual(queueName);
@@ -250,8 +245,8 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number] [default: 0]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number] [default: 345600]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
@@ -316,11 +311,11 @@ describe("wrangler", () => {
 					Configure your Worker to send messages to this queue:
 
 					{
-					  \\"queues\\": {
-					    \\"producers\\": [
+					  "queues": {
+					    "producers": [
 					      {
-					        \\"queue\\": \\"testQueue\\",
-					        \\"binding\\": \\"testQueue\\"
+					        "queue": "testQueue",
+					        "binding": "testQueue"
 					      }
 					    ]
 					  }
@@ -328,10 +323,10 @@ describe("wrangler", () => {
 					Configure your Worker to consume messages from this queue:
 
 					{
-					  \\"queues\\": {
-					    \\"consumers\\": [
+					  "queues": {
+					    "consumers": [
 					      {
-					        \\"queue\\": \\"testQueue\\"
+					        "queue": "testQueue"
 					      }
 					    ]
 					  }
@@ -474,8 +469,8 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
 
@@ -1805,10 +1800,10 @@ describe("wrangler", () => {
 					Number of Consumers: 1
 					Consumers: HTTP Pull Consumer.
 					Pull messages using:
-					curl \\"https://api.cloudflare.com/client/v4/accounts/some-account-id/queues/1234567/messages/pull\\" /
-						--header \\"Authorization: Bearer <add your api key here>\\" /
-						--header \\"Content-Type: application/json\\" /
-						--data '{ \\"visibility_timeout\\": 10000, \\"batch_size\\": 2 }'"
+					curl "https://api.cloudflare.com/client/v4/accounts/some-account-id/queues/1234567/messages/pull" /
+						--header "Authorization: Bearer <add your api key here>" /
+						--header "Content-Type: application/json" /
+						--data '{ "visibility_timeout": 10000, "batch_size": 2 }'"
 				`);
 			});
 			it("should return the list of r2 bucket producers when the queue is used in an r2 event notification", async () => {

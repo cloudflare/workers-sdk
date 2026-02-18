@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
-it("stores in KV namespace", async () => {
+it("stores in KV namespace", async ({ expect }) => {
 	let response = await SELF.fetch("https://example.com/kv/key", {
 		method: "PUT",
 		body: "value",

@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it, test } from "vitest";
+import { afterAll, beforeAll, describe, it, test } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("nodejs compat", () => {
@@ -16,7 +16,9 @@ describe("nodejs compat", () => {
 	afterAll(async () => {
 		await wrangler.stop();
 	});
-	it("should work when running code requiring polyfills", async () => {
+	it("should work when running code requiring polyfills", async ({
+		expect,
+	}) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-process`);
 		const body = await response.text();
@@ -31,7 +33,9 @@ describe("nodejs compat", () => {
 		// expect(result.id).toEqual("1");
 	});
 
-	it("should be able to call `getRandomValues()` bound to any object", async () => {
+	it("should be able to call `getRandomValues()` bound to any object", async ({
+		expect,
+	}) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-random`);
 		const body = await response.json();
@@ -43,49 +47,49 @@ describe("nodejs compat", () => {
 		]);
 	});
 
-	test("crypto.X509Certificate is implemented", async () => {
+	test("crypto.X509Certificate is implemented", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-x509-certificate`);
 		await expect(response.text()).resolves.toBe(`"OK!"`);
 	});
 
-	test("import unenv aliased packages", async () => {
+	test("import unenv aliased packages", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-require-alias`);
 		await expect(response.text()).resolves.toBe(`"OK!"`);
 	});
 
-	test("set/clearImmediate", async () => {
+	test("set/clearImmediate", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-immediate`);
 		await expect(response.text()).resolves.toBe("OK");
 	});
 
-	test("node:tls", async () => {
+	test("node:tls", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-tls`);
 		await expect(response.text()).resolves.toBe("OK");
 	});
 
-	test("node:crypto", async () => {
+	test("node:crypto", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-crypto`);
 		await expect(response.text()).resolves.toBe("OK");
 	});
 
-	test("node:sqlite", async () => {
+	test("node:sqlite", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-sqlite`);
 		await expect(response.text()).resolves.toBe("OK");
 	});
 
-	test("node:http", async () => {
+	test("node:http", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-http`);
 		await expect(response.text()).resolves.toBe("OK");
 	});
 
-	test("debug import", async () => {
+	test("debug import", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-debug-import`);
 		await expect(response.json()).resolves.toEqual([
@@ -95,7 +99,7 @@ describe("nodejs compat", () => {
 		]);
 	});
 
-	test("debug require", async () => {
+	test("debug require", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/test-debug-require`);
 		await expect(response.json()).resolves.toEqual([
@@ -105,7 +109,7 @@ describe("nodejs compat", () => {
 		]);
 	});
 
-	test("process.env contains vars", async () => {
+	test("process.env contains vars", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/process-env`);
 		await expect(response.json()).resolves.toMatchObject({
@@ -114,7 +118,7 @@ describe("nodejs compat", () => {
 		});
 	});
 
-	test("env contains vars", async () => {
+	test("env contains vars", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/env`);
 		await expect(response.json()).resolves.toMatchObject({
@@ -123,7 +127,7 @@ describe("nodejs compat", () => {
 		});
 	});
 
-	test("Postgres", async () => {
+	test("Postgres", async ({ expect }) => {
 		const { ip, port } = wrangler;
 		const response = await fetch(`http://${ip}:${port}/query`);
 		expect(response.status).toBe(200);

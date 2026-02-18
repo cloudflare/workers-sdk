@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import module from "node:module";
+import path from "node:path";
 
 type YYYY = `${number}${number}${number}${number}`;
 type MM = `${number}${number}`;
@@ -33,7 +34,12 @@ export function getLocalWorkerdCompatibilityDate({
 	projectPath = process.cwd(),
 }: GetCompatDateOptions = {}): GetCompatDateResult {
 	try {
-		const projectRequire = module.createRequire(projectPath);
+		// Note: createRequire expects a filename, not a directory. When given a directory,
+		// Node.js looks for node_modules in the parent directory instead of the given directory.
+		// Appending package.json ensures resolution starts from the correct location.
+		const projectRequire = module.createRequire(
+			path.join(projectPath, "package.json")
+		);
 		const miniflareEntry = projectRequire.resolve("miniflare");
 		const miniflareRequire = module.createRequire(miniflareEntry);
 		const miniflareWorkerd = miniflareRequire("workerd") as {

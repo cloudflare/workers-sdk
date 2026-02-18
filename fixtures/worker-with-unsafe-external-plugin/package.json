@@ -8,6 +8,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@fixture/unsafe-external-plugin": "workspace:*",

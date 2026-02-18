@@ -7,6 +7,7 @@ import unusedImports from "eslint-plugin-unused-imports";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 import noUnsafeCommandExecution from "./rules/no-unsafe-command-execution.mjs";
+import noVitestImportExpect from "./rules/no-vitest-import-expect.mjs";
 
 export default defineConfig(
 	globalIgnores([
@@ -34,6 +35,7 @@ export default defineConfig(
 			"workers-sdk": {
 				rules: {
 					"no-unsafe-command-execution": noUnsafeCommandExecution,
+					"no-vitest-import-expect": noVitestImportExpect,
 				},
 			},
 		},
@@ -86,6 +88,29 @@ export default defineConfig(
 				},
 			],
 			"workers-sdk/no-unsafe-command-execution": "error",
+
+			// Enforce default import for ci-info so that test mocks work correctly.
+			// Named imports (e.g. `import { isCI } from "ci-info"`) bind to the mock
+			// factory return value and cannot be reassigned via `vi.mocked()`.
+			"no-restricted-imports": [
+				"error",
+				{
+					paths: [
+						{
+							name: "ci-info",
+							importNames: [
+								"isCI",
+								"CLOUDFLARE_PAGES",
+								"CLOUDFLARE_WORKERS",
+								"isPR",
+								"name",
+							],
+							message:
+								'Use default import (`import ci from "ci-info"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks.',
+						},
+					],
+				},
+			],
 		},
 	},
 	{

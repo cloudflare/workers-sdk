@@ -1,7 +1,7 @@
 import { createExecutionContext, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
 import type {
 	DatabaseInstance,
@@ -77,7 +77,9 @@ async function runWorkflowDefer(
 }
 
 describe("Engine", () => {
-	it("should not retry after NonRetryableError is thrown", async () => {
+	it("should not retry after NonRetryableError is thrown", async ({
+		expect,
+	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
 			async (event, step) => {
@@ -97,7 +99,9 @@ describe("Engine", () => {
 		).toHaveLength(1);
 	});
 
-	it("should not error out if step fails but is try-catched", async () => {
+	it("should not error out if step fails but is try-catched", async ({
+		expect,
+	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
 			async (event, step) => {
@@ -201,7 +205,9 @@ describe("Engine", () => {
 		}, 500);
 	});
 
-	it("should restore state from storage when accountId is undefined", async () => {
+	it("should restore state from storage when accountId is undefined", async ({
+		expect,
+	}) => {
 		const instanceId = "RESTORE-TEST-INSTANCE";
 		const accountId = 12345;
 		const workflow: DatabaseWorkflow = {

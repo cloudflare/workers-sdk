@@ -1,6 +1,6 @@
 import { mockPackageManager } from "helpers/__tests__/mocks";
 import { runCommand } from "helpers/command";
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import { getFrameworkCli, runFrameworkGenerator } from "..";
 import { createTestContext } from "../../__tests__/helpers";
 
@@ -40,7 +40,7 @@ describe("frameworks", () => {
 			},
 		];
 
-		test.each(cases)("$pm", async ({ pm, pmCmd, env }) => {
+		test.for(cases)("$pm", async ({ pm, pmCmd, env }, { expect }) => {
 			mockPackageManager(pm);
 
 			await runFrameworkGenerator(ctx, ["-p", "my-project"]);

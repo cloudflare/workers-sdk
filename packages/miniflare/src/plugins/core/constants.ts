@@ -2,8 +2,14 @@ export const CORE_PLUGIN_NAME = "core";
 
 // Service for HTTP socket entrypoint (for checking runtime ready, routing, etc)
 export const SERVICE_ENTRY = `${CORE_PLUGIN_NAME}:entry`;
-// Service for local explorer API
+// Service for local explorer (API + UI)
 export const SERVICE_LOCAL_EXPLORER = `${CORE_PLUGIN_NAME}:local-explorer`;
+// Disk service for local explorer UI assets
+export const LOCAL_EXPLORER_DISK = `${CORE_PLUGIN_NAME}:local-explorer-disk`;
+// URL path prefix where the local explorer UI is served
+export const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer";
+// URL path prefix for the local explorer API endpoints
+export const LOCAL_EXPLORER_API_PATH = `${LOCAL_EXPLORER_BASE_PATH}/api`;
 // Service prefix for all regular user workers
 const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for `workerd`'s builtin services (network, external, disk)

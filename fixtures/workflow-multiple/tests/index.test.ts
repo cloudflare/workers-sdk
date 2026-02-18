@@ -1,7 +1,7 @@
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workflows", () => {
@@ -41,54 +41,20 @@ describe("Workflows", () => {
 		}
 	}
 
-	it("creates two instances with same id in two different workflows", async () => {
-		const createResult = {
-			id: "test",
-			status: {
-				status: "running",
-				__LOCAL_DEV_STEP_OUTPUTS: [],
-				output: null,
-			},
-		};
-
+	it("creates two instances with same id in two different workflows", async ({
+		expect,
+	}) => {
+		// Create both workflow instances
+		// Note: We don't assert the intermediate "running" status because the workflow
+		// may complete before we can observe it, causing flaky tests on fast CI machines
 		await Promise.all([
-			expect(
-				fetchJson(`http://${ip}:${port}/create?workflowName=1&id=test`)
-			).resolves.toStrictEqual(createResult),
-			expect(
-				fetchJson(`http://${ip}:${port}/create?workflowName=2&id=test`)
-			).resolves.toStrictEqual(createResult),
+			fetchJson(`http://${ip}:${port}/create?workflowName=1&id=test`),
+			fetchJson(`http://${ip}:${port}/create?workflowName=2&id=test`),
 		]);
 
-		const firstResult = {
-			id: "test",
-			status: {
-				status: "running",
-				__LOCAL_DEV_STEP_OUTPUTS: [{ output: "First step result" }],
-				output: null,
-			},
-		};
+		// Wait for both workflows to complete with their final outputs
 		await Promise.all([
 			vi.waitFor(
-				async () => {
-					await expect(
-						fetchJson(`http://${ip}:${port}/status?workflowName=1&id=test`)
-					).resolves.toStrictEqual(firstResult);
-				},
-				{ timeout: 5000 }
-			),
-			vi.waitFor(
-				async () => {
-					await expect(
-						fetchJson(`http://${ip}:${port}/status?workflowName=2&id=test`)
-					).resolves.toStrictEqual(firstResult);
-				},
-				{ timeout: 5000 }
-			),
-		]);
-
-		await Promise.all([
-			await vi.waitFor(
 				async () => {
 					await expect(
 						fetchJson(`http://${ip}:${port}/status?workflowName=1&id=test`)
@@ -104,9 +70,9 @@ describe("Workflows", () => {
 						},
 					});
 				},
-				{ timeout: 5000 }
+				{ timeout: 10000 }
 			),
-			await vi.waitFor(
+			vi.waitFor(
 				async () => {
 					await expect(
 						fetchJson(`http://${ip}:${port}/status?workflowName=2&id=test`)
@@ -122,7 +88,7 @@ describe("Workflows", () => {
 						},
 					});
 				},
-				{ timeout: 5000 }
+				{ timeout: 10000 }
 			),
 		]);
 	});

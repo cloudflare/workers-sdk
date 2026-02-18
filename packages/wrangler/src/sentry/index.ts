@@ -135,6 +135,14 @@ export function setupSentry() {
 	}
 }
 
+/**
+ * Adds a breadcrumb to any message that may be posted to Sentry.
+ *
+ * This provides more context to any error that is captured.
+ *
+ * @param message The breadcrumb message to add. This must have been sanitized of any sensitive information.
+ * @param level The severity level of the breadcrumb. Defaults to "log".
+ */
 export function addBreadcrumb(
 	message: string,
 	level: Sentry.SeverityLevel = "log"

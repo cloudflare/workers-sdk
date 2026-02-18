@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { unstable_dev } from "../api";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -11,7 +11,7 @@ vi.unmock("undici");
 describe("unstable_dev", () => {
 	runInTempDir();
 	mockConsoleMethods();
-	it("should return Hello World", async () => {
+	it("should return Hello World", async ({ expect }) => {
 		writeHelloWorldWorker();
 		const worker = await unstable_dev("index.js", {
 			ip: "127.0.0.1",
@@ -28,7 +28,9 @@ describe("unstable_dev", () => {
 		await worker.stop();
 	});
 
-	it("should return the port that the server started on (1)", async () => {
+	it("should return the port that the server started on (1)", async ({
+		expect,
+	}) => {
 		writeHelloWorldWorker();
 		const worker = await unstable_dev("index.js", {
 			ip: "127.0.0.1",
@@ -41,7 +43,9 @@ describe("unstable_dev", () => {
 		await worker.stop();
 	});
 
-	it("should return the port that the server started on (2)", async () => {
+	it("should return the port that the server started on (2)", async ({
+		expect,
+	}) => {
 		writeHelloWorldWorker();
 		const worker = await unstable_dev("index.js", {
 			ip: "127.0.0.1",
@@ -58,7 +62,7 @@ describe("unstable_dev", () => {
 describe("unstable dev fetch input protocol", () => {
 	runInTempDir();
 
-	it("should use http localProtocol", async () => {
+	it("should use http localProtocol", async ({ expect }) => {
 		writeHelloWorldWorker();
 		const worker = await unstable_dev("index.js", {
 			localProtocol: "http",
@@ -76,7 +80,7 @@ describe("unstable dev fetch input protocol", () => {
 		await worker.stop();
 	});
 
-	it("should use undefined localProtocol", async () => {
+	it("should use undefined localProtocol", async ({ expect }) => {
 		writeHelloWorldWorker();
 		const worker = await unstable_dev("index.js", {
 			localProtocol: undefined,
@@ -98,7 +102,7 @@ describe("unstable dev fetch input protocol", () => {
 describe("unstable dev fetch input parsing", () => {
 	runInTempDir();
 
-	it("should pass in a request object unchanged", async () => {
+	it("should pass in a request object unchanged", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -133,7 +137,7 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should strip back to pathname for URL objects", async () => {
+	it("should strip back to pathname for URL objects", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -163,7 +167,9 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow full url passed in string, and stripped back to pathname", async () => {
+	it("should allow full url passed in string, and stripped back to pathname", async ({
+		expect,
+	}) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -192,7 +198,7 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow pathname to be passed in", async () => {
+	it("should allow pathname to be passed in", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -221,7 +227,7 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow no input be passed in", async () => {
+	it("should allow no input be passed in", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {

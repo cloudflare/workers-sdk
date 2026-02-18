@@ -1,0 +1,1600 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Local Explorer API",
+		"description": "Local subset of Cloudflare API for exploring resources during local development.",
+		"version": "0.0.1"
+	},
+	"servers": [
+		{
+			"description": "Local Explorer",
+			"url": "/cdn-cgi/explorer/api"
+		}
+	],
+	"paths": {
+		"/storage/kv/namespaces": {
+			"get": {
+				"description": "Returns the namespaces owned by an account.",
+				"operationId": "workers-kv-namespace-list-namespaces",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "page",
+						"schema": {
+							"default": 1,
+							"description": "Page number of paginated results.",
+							"minimum": 1,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"default": 20,
+							"description": "Maximum number of results per page.",
+							"maximum": 1000,
+							"minimum": 1,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "order",
+						"schema": {
+							"description": "Field to order results by.",
+							"enum": ["id", "title"],
+							"example": "id",
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "direction",
+						"schema": {
+							"description": "Direction to order namespaces.",
+							"enum": ["asc", "desc"],
+							"example": "asc",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-collection"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/workers-kv_namespace"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Namespaces response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List Namespaces response failure."
+					}
+				},
+				"summary": "List Namespaces",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
+		"/storage/kv/namespaces/{namespace_id}/keys": {
+			"get": {
+				"description": "Lists a namespace's keys.",
+				"operationId": "workers-kv-namespace-list-a-namespace'-s-keys",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"schema": {
+							"default": 1000,
+							"description": "Limits the number of keys returned in the response. The cursor attribute may be used to iterate over the next batch of keys if there are more than the limit.",
+							"maximum": 1000,
+							"minimum": 10,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "prefix",
+						"schema": {
+							"description": "Filters returned keys by a name prefix. Exact matches and any key names that begin with the prefix will be returned.",
+							"example": "My-Prefix",
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"schema": {
+							"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the `cursors` object in the `result_info` structure.",
+							"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/workers-kv_key"
+													},
+													"type": "array"
+												},
+												"result_info": {
+													"$ref": "#/components/schemas/workers-kv_cursor_result_info"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List a Namespace's Keys response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List a Namespace's Keys response failure."
+					}
+				},
+				"summary": "List a Namespace's Keys",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
+		"/storage/kv/namespaces/{namespace_id}/values/{key_name}": {
+			"get": {
+				"description": "Returns the value associated with the given key in the given namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. If the KV-pair is set to expire at some point, the expiration time as measured in seconds since the UNIX epoch will be returned in the `expiration` response header.",
+				"operationId": "workers-kv-namespace-read-key-value-pair",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "key_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_key_name"
+						}
+					},
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/octet-stream": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_value"
+								}
+							}
+						},
+						"description": "Read key-value pair response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Read key-value pair response failure."
+					}
+				},
+				"summary": "Read key-value pair",
+				"tags": ["Workers KV Namespace"]
+			},
+			"put": {
+				"description": "Write a value identified by a key. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. Body should be the value to be stored. If JSON metadata to be associated with the key/value pair is needed, use `multipart/form-data` content type for your PUT request (see dropdown below in `REQUEST BODY SCHEMA`). Existing values, expirations, and metadata will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored.",
+				"operationId": "workers-kv-namespace-write-key-value-pair-with-metadata",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "key_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_key_name"
+						}
+					},
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/octet-stream": {
+							"schema": {
+								"$ref": "#/components/schemas/workers-kv_value"
+							}
+						},
+						"multipart/form-data": {
+							"encoding": {
+								"metadata": {
+									"contentType": "application/json"
+								}
+							},
+							"schema": {
+								"properties": {
+									"metadata": {
+										"$ref": "#/components/schemas/workers-kv_metadata"
+									},
+									"value": {
+										"$ref": "#/components/schemas/workers-kv_value"
+									}
+								},
+								"required": ["value"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+								}
+							}
+						},
+						"description": "Write key-value pair with metadata response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Write key-value pair with metadata response failure."
+					}
+				},
+				"summary": "Write key-value pair with optional metadata",
+				"tags": ["Workers KV Namespace"]
+			},
+			"delete": {
+				"description": "Remove a KV pair from the namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name.",
+				"operationId": "workers-kv-namespace-delete-key-value-pair",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "key_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_key_name"
+						}
+					},
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+								}
+							}
+						},
+						"description": "Delete key-value pair response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Delete key-value pair response failure."
+					}
+				},
+				"summary": "Delete key-value pair",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
+		"/storage/kv/namespaces/{namespace_id}/bulk/get": {
+			"post": {
+				"description": "Retrieve up to 100 KV pairs from the namespace. Keys must contain text-based values. JSON values can optionally be parsed instead of being returned as a string value. Metadata can be included if `withMetadata` is true.",
+				"operationId": "workers-kv-namespace-get-multiple-key-value-pairs",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"keys": {
+										"description": "Array of keys to retrieve (maximum of 100).",
+										"items": {
+											"$ref": "#/components/schemas/workers-kv_key_name_bulk"
+										},
+										"maxItems": 100,
+										"type": "array"
+									}
+								},
+								"required": ["keys"],
+								"type": "object"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_api-response-common-no-result"
+										},
+										{
+											"properties": {
+												"result": {
+													"oneOf": [
+														{
+															"$ref": "#/components/schemas/workers-kv_bulk-get-result"
+														},
+														{
+															"$ref": "#/components/schemas/workers-kv_bulk-get-result-with-metadata"
+														}
+													]
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Get multiple key-value pairs response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers-kv_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Get multiple key-value pairs response failure."
+					}
+				},
+				"summary": "Get multiple key-value pairs",
+				"tags": ["Workers KV Namespace"]
+			}
+		},
+		"/d1/database": {
+			"get": {
+				"description": "Returns a list of D1 databases.",
+				"operationId": "cloudflare-d1-list-databases",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "name",
+						"schema": {
+							"description": "a database name to search for.",
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "page",
+						"schema": {
+							"default": 1,
+							"description": "Page number of paginated results.",
+							"minimum": 1,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"default": 1000,
+							"description": "Number of items per page.",
+							"maximum": 10000,
+							"minimum": 10,
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/d1_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/d1_database-response"
+													},
+													"type": "array"
+												},
+												"result_info": {
+													"properties": {
+														"count": {
+															"description": "Total number of results for the requested service",
+															"example": 1,
+															"type": "number"
+														},
+														"page": {
+															"description": "Current page within paginated list of results",
+															"example": 1,
+															"type": "number"
+														},
+														"per_page": {
+															"description": "Number of results per page of results",
+															"example": 20,
+															"type": "number"
+														},
+														"total_count": {
+															"description": "Total results available without any search parameters",
+															"example": 2000,
+															"type": "number"
+														}
+													},
+													"type": "object"
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						"description": "List D1 databases response"
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/d1_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List D1 databases response failure"
+					}
+				},
+				"summary": "List D1 Databases",
+				"tags": ["D1"]
+			}
+		},
+		"/d1/database/{database_id}/raw": {
+			"post": {
+				"description": "Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
+				"operationId": "cloudflare-d1-raw-database-query",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "database_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/d1_database-identifier"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/d1_batch-query"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/d1_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/d1_raw-result-response"
+													},
+													"type": "array"
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						"description": "Raw query response"
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/d1_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Query response failure"
+					}
+				},
+				"summary": "Raw D1 Database query",
+				"tags": ["D1"]
+			}
+		},
+		"/workers/durable_objects/namespaces": {
+			"get": {
+				"description": "Returns the Durable Object namespaces owned by an account.",
+				"operationId": "durable-objects-namespace-list-namespaces",
+				"parameters": [
+					{
+						"description": "Current page.",
+						"in": "query",
+						"name": "page",
+						"schema": {
+							"default": 1,
+							"minimum": 1,
+							"type": "integer"
+						}
+					},
+					{
+						"description": "Items per-page.",
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"default": 20,
+							"maximum": 1000,
+							"minimum": 1,
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-collection"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/workers_namespace"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Namespaces response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"allOf": [
+												{
+													"$ref": "#/components/schemas/workers_api-response-collection"
+												},
+												{
+													"properties": {
+														"result": {
+															"items": {
+																"$ref": "#/components/schemas/workers_namespace"
+															},
+															"type": "array"
+														}
+													},
+													"type": "object"
+												}
+											]
+										},
+										{
+											"$ref": "#/components/schemas/workers_api-response-common-failure"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Namespaces response failure."
+					}
+				},
+				"summary": "List Namespaces",
+				"tags": ["Durable Objects Namespace"]
+			}
+		},
+		"/workers/durable_objects/namespaces/{id}/objects": {
+			"get": {
+				"description": "Returns the Durable Objects in a given namespace.",
+				"operationId": "durable-objects-namespace-list-objects",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers_schemas-id"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"schema": {
+							"default": 1000,
+							"description": "The number of objects to return. The cursor attribute may be used to iterate over the next batch of objects if there are more than the limit.",
+							"maximum": 10000,
+							"minimum": 10,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"schema": {
+							"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
+							"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-collection"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/workers_object"
+													},
+													"type": "array"
+												},
+												"result_info": {
+													"properties": {
+														"count": {
+															"description": "Total results returned based on your list parameters.",
+															"example": 1,
+															"type": "number"
+														},
+														"cursor": {
+															"$ref": "#/components/schemas/workers_cursor"
+														}
+													},
+													"type": "object"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Objects response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"allOf": [
+												{
+													"$ref": "#/components/schemas/workers_api-response-collection"
+												},
+												{
+													"properties": {
+														"result": {
+															"items": {
+																"$ref": "#/components/schemas/workers_object"
+															},
+															"type": "array"
+														},
+														"result_info": {
+															"properties": {
+																"count": {
+																	"description": "Total results returned based on your list parameters.",
+																	"example": 1,
+																	"type": "number"
+																},
+																"cursor": {
+																	"$ref": "#/components/schemas/workers_cursor"
+																}
+															},
+															"type": "object"
+														}
+													},
+													"type": "object"
+												}
+											]
+										},
+										{
+											"$ref": "#/components/schemas/workers_api-response-common-failure"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Objects response failure."
+					}
+				},
+				"summary": "List Objects",
+				"tags": ["Durable Objects Namespace"]
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"workers_cursor": {
+				"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
+				"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
+				"type": "string"
+			},
+			"workers_object": {
+				"properties": {
+					"hasStoredData": {
+						"description": "Whether the Durable Object has stored data.",
+						"example": true,
+						"readOnly": true,
+						"type": "boolean"
+					},
+					"id": {
+						"description": "ID of the Durable Object.",
+						"example": "fe7803fc55b964e09d94666545aab688d360c6bda69ba349ced1e5f28d2fc2c8",
+						"readOnly": true,
+						"type": "string"
+					}
+				},
+				"type": "object"
+			},
+			"workers_schemas-id": {
+				"description": "ID of the namespace.",
+				"example": "5fd1cafff895419c8bcc647fc64ab8f0",
+				"type": "string"
+			},
+			"workers_api-response-common-failure": {
+				"properties": {
+					"errors": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers_messages"
+							}
+						],
+						"example": [
+							{
+								"code": 7003,
+								"message": "No route for the URI"
+							}
+						],
+						"minLength": 1
+					},
+					"messages": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers_messages"
+							}
+						],
+						"example": []
+					},
+					"result": {
+						"enum": [null],
+						"nullable": true,
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [false],
+						"example": false,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"workers_messages": {
+				"example": [],
+				"items": {
+					"properties": {
+						"code": {
+							"minimum": 1000,
+							"type": "integer"
+						},
+						"documentation_url": {
+							"type": "string"
+						},
+						"message": {
+							"type": "string"
+						},
+						"source": {
+							"properties": {
+								"pointer": {
+									"type": "string"
+								}
+							},
+							"type": "object"
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object",
+					"uniqueItems": true
+				},
+				"type": "array"
+			},
+			"workers_namespace": {
+				"properties": {
+					"class": {
+						"type": "string"
+					},
+					"id": {
+						"readOnly": true,
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"script": {
+						"type": "string"
+					},
+					"use_sqlite": {
+						"type": "boolean"
+					}
+				},
+				"type": "object"
+			},
+			"workers_api-response-collection": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers_api-response-common"
+					},
+					{
+						"properties": {
+							"result_info": {
+								"properties": {
+									"count": {
+										"description": "Total number of results for the requested service.",
+										"example": 1,
+										"type": "number"
+									},
+									"page": {
+										"description": "Current page within paginated list of results.",
+										"example": 1,
+										"type": "number"
+									},
+									"per_page": {
+										"description": "Number of results per page of results.",
+										"example": 20,
+										"type": "number"
+									},
+									"total_count": {
+										"description": "Total results available without any search parameters.",
+										"example": 2000,
+										"type": "number"
+									}
+								},
+								"type": "object"
+							}
+						},
+						"type": "object"
+					}
+				],
+				"type": "object"
+			},
+			"workers_api-response-common": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/workers_messages"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/workers_messages"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [true],
+						"example": true,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages"],
+				"type": "object"
+			},
+			"d1_raw-result-response": {
+				"properties": {
+					"meta": {
+						"$ref": "#/components/schemas/d1_query-meta"
+					},
+					"results": {
+						"properties": {
+							"columns": {
+								"items": {
+									"type": "string"
+								},
+								"type": "array"
+							},
+							"rows": {
+								"items": {
+									"items": {
+										"anyOf": [
+											{
+												"type": "number"
+											},
+											{
+												"type": "string"
+											},
+											{
+												"type": "object"
+											}
+										]
+									},
+									"type": "array"
+								},
+								"type": "array"
+							}
+						},
+						"type": "object"
+					},
+					"success": {
+						"type": "boolean"
+					}
+				},
+				"type": "object"
+			},
+			"d1_query-meta": {
+				"properties": {
+					"changed_db": {
+						"description": "Denotes if the database has been altered in some way, like deleting rows.",
+						"type": "boolean"
+					},
+					"changes": {
+						"description": "Rough indication of how many rows were modified by the query, as provided by SQLite's `sqlite3_total_changes()`.",
+						"type": "number"
+					},
+					"duration": {
+						"description": "The duration of the SQL query execution inside the database. Does not include any network communication.",
+						"type": "number"
+					},
+					"last_row_id": {
+						"description": "The row ID of the last inserted row in a table with an `INTEGER PRIMARY KEY` as provided by SQLite. Tables created with `WITHOUT ROWID` do not populate this.",
+						"type": "number"
+					},
+					"rows_read": {
+						"description": "Number of rows read during the SQL query execution, including indices (not all rows are necessarily returned).",
+						"type": "number"
+					},
+					"rows_written": {
+						"description": "Number of rows written during the SQL query execution, including indices.",
+						"type": "number"
+					},
+					"size_after": {
+						"description": "Size of the database after the query committed, in bytes.",
+						"type": "number"
+					},
+					"timings": {
+						"description": "Various durations for the query.",
+						"properties": {
+							"sql_duration_ms": {
+								"description": "The duration of the SQL query execution inside the database. Does not include any network communication.",
+								"type": "number"
+							}
+						},
+						"type": "object"
+					}
+				},
+				"type": "object"
+			},
+			"d1_batch-query": {
+				"description": "A single query object or a batch query object",
+				"oneOf": [
+					{
+						"$ref": "#/components/schemas/d1_single-query"
+					},
+					{
+						"properties": {
+							"batch": {
+								"items": {
+									"$ref": "#/components/schemas/d1_single-query"
+								},
+								"type": "array"
+							}
+						},
+						"required": ["batch"],
+						"title": "multiple queries",
+						"type": "object"
+					}
+				]
+			},
+			"d1_single-query": {
+				"description": "A single query with or without parameters",
+				"properties": {
+					"params": {
+						"$ref": "#/components/schemas/d1_params"
+					},
+					"sql": {
+						"$ref": "#/components/schemas/d1_sql"
+					}
+				},
+				"required": ["sql"],
+				"title": "single query",
+				"type": "object"
+			},
+			"d1_sql": {
+				"description": "Your SQL query. Supports multiple statements, joined by semicolons, which will be executed as a batch.",
+				"example": "SELECT * FROM myTable WHERE field = ? OR field = ?;",
+				"type": "string"
+			},
+			"d1_params": {
+				"example": ["firstParam", "secondParam"],
+				"items": {
+					"type": "string"
+				},
+				"type": "array"
+			},
+			"d1_database-identifier": {
+				"description": "D1 database identifier (UUID).",
+				"example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+				"readOnly": true,
+				"type": "string"
+			},
+			"d1_api-response-common-failure": {
+				"properties": {
+					"errors": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/d1_messages"
+							}
+						],
+						"example": [
+							{
+								"code": 7003,
+								"message": "No route for the URI"
+							}
+						],
+						"minLength": 1
+					},
+					"messages": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/d1_messages"
+							}
+						],
+						"example": []
+					},
+					"result": {
+						"enum": [null],
+						"nullable": true,
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful",
+						"enum": [false],
+						"example": false,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"d1_messages": {
+				"example": [],
+				"items": {
+					"properties": {
+						"code": {
+							"minimum": 1000,
+							"type": "integer"
+						},
+						"message": {
+							"type": "string"
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object",
+					"uniqueItems": true
+				},
+				"type": "array"
+			},
+			"d1_database-response": {
+				"properties": {
+					"name": {
+						"$ref": "#/components/schemas/d1_database-name"
+					},
+					"uuid": {
+						"$ref": "#/components/schemas/d1_database-identifier"
+					},
+					"version": {
+						"$ref": "#/components/schemas/d1_database-version"
+					}
+				},
+				"type": "object"
+			},
+			"d1_database-version": {
+				"example": "production",
+				"pattern": "^(alpha|beta|production)$",
+				"type": "string"
+			},
+			"d1_database-name": {
+				"description": "D1 database name.",
+				"example": "my-database",
+				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+				"type": "string"
+			},
+			"d1_api-response-common": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/d1_messages"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/d1_messages"
+					},
+					"result": {
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful",
+						"enum": [true],
+						"example": true,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"workers-kv_bulk-get-result-with-metadata": {
+				"properties": {
+					"values": {
+						"additionalProperties": {
+							"nullable": true,
+							"properties": {
+								"expiration": {
+									"$ref": "#/components/schemas/workers-kv_expiration"
+								},
+								"metadata": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_any"
+										},
+										{
+											"description": "The metadata associated with the key."
+										}
+									]
+								},
+								"value": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers-kv_any"
+										},
+										{
+											"description": "The value associated with the key."
+										}
+									]
+								}
+							},
+							"required": ["value", "metadata"],
+							"type": "object"
+						},
+						"description": "Requested keys are paired with their values and metadata in an object.",
+						"example": {
+							"key1": {
+								"expiration": 1577836800,
+								"metadata": {
+									"someMetadataKey": "someMetadataValue"
+								},
+								"value": "value1"
+							},
+							"key2": {
+								"metadata": {
+									"anotherKey": "anotherValue"
+								},
+								"value": "value2"
+							}
+						},
+						"type": "object"
+					}
+				},
+				"type": "object"
+			},
+			"workers-kv_any": {
+				"anyOf": [
+					{
+						"type": "string"
+					},
+					{
+						"type": "number"
+					},
+					{
+						"type": "integer"
+					},
+					{
+						"type": "boolean"
+					},
+					{
+						"additionalProperties": true,
+						"nullable": true,
+						"type": "object"
+					},
+					{
+						"items": {
+							"$ref": "#/components/schemas/workers-kv_any"
+						},
+						"type": "array"
+					}
+				]
+			},
+			"workers-kv_expiration": {
+				"description": "Expires the key at a certain time, measured in number of seconds since the UNIX epoch.",
+				"example": 1578435000,
+				"type": "number"
+			},
+			"workers-kv_bulk-get-result": {
+				"properties": {
+					"values": {
+						"additionalProperties": {
+							"description": "The value associated with the key.",
+							"oneOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "number"
+								},
+								{
+									"type": "boolean"
+								},
+								{
+									"additionalProperties": true,
+									"type": "object"
+								}
+							],
+							"nullable": true
+						},
+						"description": "Requested keys are paired with their values in an object.",
+						"example": {
+							"key1": "value1",
+							"key2": "value2"
+						},
+						"type": "object"
+					}
+				},
+				"type": "object"
+			},
+			"workers-kv_key_name_bulk": {
+				"description": "A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid.",
+				"example": "My-Key",
+				"maxLength": 512,
+				"type": "string"
+			},
+			"workers-kv_api-response-common-no-result": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers-kv_api-response-common"
+					},
+					{
+						"properties": {
+							"result": {
+								"nullable": true,
+								"type": "object"
+							}
+						},
+						"type": "object"
+					}
+				]
+			},
+			"workers-kv_api-response-common": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/workers-kv_messages"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/workers-kv_messages"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [true],
+						"example": true,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages"],
+				"type": "object"
+			},
+			"workers-kv_messages": {
+				"example": [],
+				"items": {
+					"properties": {
+						"code": {
+							"minimum": 1000,
+							"type": "integer"
+						},
+						"message": {
+							"type": "string"
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object"
+				},
+				"type": "array",
+				"uniqueItems": true
+			},
+			"workers-kv_metadata": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers-kv_any"
+					},
+					{
+						"description": "Associates arbitrary JSON data with a key/value pair.",
+						"example": {
+							"someMetadataKey": "someMetadataValue"
+						}
+					}
+				]
+			},
+			"workers-kv_value": {
+				"anyOf": [
+					{
+						"type": "string"
+					},
+					{
+						"format": "binary",
+						"type": "string"
+					}
+				],
+				"description": "A byte sequence to be stored, up to 25 MiB in length.",
+				"example": "Some Value"
+			},
+			"workers-kv_key_name": {
+				"description": "A key's name. The name may be at most 512 bytes. All printable, non-whitespace characters are valid. Use percent-encoding to define key names as part of a URL.",
+				"example": "My-Key",
+				"maxLength": 512,
+				"type": "string"
+			},
+			"workers-kv_cursor_result_info": {
+				"properties": {
+					"count": {
+						"description": "Total results returned based on your list parameters.",
+						"example": 1,
+						"type": "number"
+					},
+					"cursor": {
+						"$ref": "#/components/schemas/workers-kv_cursor"
+					}
+				},
+				"type": "object"
+			},
+			"workers-kv_cursor": {
+				"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
+				"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw",
+				"type": "string"
+			},
+			"workers-kv_key": {
+				"description": "A name for a value. A value stored under a given key may be retrieved via the same key.",
+				"properties": {
+					"expiration": {
+						"description": "The time, measured in number of seconds since the UNIX epoch, at which the key will expire. This property is omitted for keys that will not expire.",
+						"example": 1577836800,
+						"type": "number"
+					},
+					"metadata": {
+						"$ref": "#/components/schemas/workers-kv_list_metadata"
+					},
+					"name": {
+						"$ref": "#/components/schemas/workers-kv_key_name"
+					}
+				},
+				"required": ["name"],
+				"type": "object"
+			},
+			"workers-kv_list_metadata": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers-kv_any"
+					},
+					{
+						"description": "Arbitrary JSON that is associated with a key.",
+						"example": {
+							"someMetadataKey": "someMetadataValue"
+						}
+					}
+				]
+			},
+			"workers-kv_namespace_identifier": {
+				"description": "Namespace identifier tag.",
+				"example": "0f2ac74b498b48028cb68387c421e279",
+				"maxLength": 32,
+				"readOnly": true,
+				"type": "string"
+			},
+			"workers-kv_api-response-common-failure": {
+				"properties": {
+					"errors": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers-kv_messages"
+							}
+						],
+						"example": [
+							{
+								"code": 7003,
+								"message": "No route for the URI"
+							}
+						],
+						"minLength": 1
+					},
+					"messages": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/workers-kv_messages"
+							}
+						],
+						"example": []
+					},
+					"result": {
+						"nullable": true,
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [false],
+						"example": false,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"workers-kv_namespace": {
+				"properties": {
+					"id": {
+						"$ref": "#/components/schemas/workers-kv_namespace_identifier"
+					},
+					"title": {
+						"$ref": "#/components/schemas/workers-kv_namespace_title"
+					}
+				},
+				"required": ["id", "title"],
+				"type": "object"
+			},
+			"workers-kv_namespace_title": {
+				"description": "A human-readable string name for a Namespace.",
+				"example": "My Own Namespace",
+				"maxLength": 512,
+				"type": "string"
+			},
+			"workers-kv_api-response-collection": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/workers-kv_api-response-common"
+					},
+					{
+						"properties": {
+							"result_info": {
+								"$ref": "#/components/schemas/workers-kv_result_info"
+							}
+						},
+						"type": "object"
+					}
+				],
+				"type": "object"
+			},
+			"workers-kv_result_info": {
+				"properties": {
+					"count": {
+						"description": "Total number of results for the requested service.",
+						"example": 1,
+						"type": "number"
+					},
+					"page": {
+						"description": "Current page within paginated list of results.",
+						"example": 1,
+						"type": "number"
+					},
+					"per_page": {
+						"description": "Number of results per page of results.",
+						"example": 20,
+						"type": "number"
+					},
+					"total_count": {
+						"description": "Total results available without any search parameters.",
+						"example": 2000,
+						"type": "number"
+					}
+				},
+				"type": "object"
+			}
+		}
+	}
+}

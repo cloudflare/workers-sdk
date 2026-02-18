@@ -32,6 +32,10 @@ import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
+import {
+	VERSION_METADATA_PLUGIN,
+	VERSION_METADATA_PLUGIN_NAME,
+} from "./version-metadata";
 import { VPC_SERVICES_PLUGIN, VPC_SERVICES_PLUGIN_NAME } from "./vpc-services";
 import {
 	WORKER_LOADER_PLUGIN,
@@ -65,6 +69,7 @@ export const PLUGINS = {
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
+	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -127,7 +132,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options> &
-	z.input<typeof MEDIA_PLUGIN.options>;
+	z.input<typeof MEDIA_PLUGIN.options> &
+	z.input<typeof VERSION_METADATA_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -153,6 +159,8 @@ export {
 	CORE_PLUGIN,
 	CORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
+	LOCAL_EXPLORER_BASE_PATH,
+	LOCAL_EXPLORER_API_PATH,
 	CoreOptionsSchema,
 	CoreSharedOptionsSchema,
 	compileModuleRules,
@@ -202,3 +210,4 @@ export * from "./mtls";
 export * from "./hello-world";
 export * from "./worker-loader";
 export * from "./media";
+export * from "./version-metadata";

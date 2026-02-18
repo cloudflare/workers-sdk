@@ -55,6 +55,8 @@ export function mockUploadWorkerRequest(
 		expectedObservability?: CfWorkerInit["observability"];
 		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
 		expectedContainers?: { class_name: string }[];
+		expectedAnnotations?: Record<string, string | undefined>;
+		expectedDeploymentMessage?: string;
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -105,7 +107,13 @@ export function mockUploadWorkerRequest(
 		}
 
 		if ("expectedBindings" in options) {
-			expect(metadata.bindings).toEqual(expectedBindings);
+			// Compare the provided bindings with the expected bindings, without requireing the order to match
+			expect(metadata.bindings).toEqual(
+				expect.arrayContaining(expectedBindings as unknown[])
+			);
+			expect(metadata.bindings?.length).toEqual(
+				(expectedBindings as unknown[])?.length
+			);
 		}
 		if ("expectedCompatibilityDate" in options) {
 			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
@@ -135,6 +143,9 @@ export function mockUploadWorkerRequest(
 		}
 		if ("expectedContainers" in options) {
 			expect(metadata.containers).toEqual(expectedContainers);
+		}
+		if ("expectedAnnotations" in options) {
+			expect(metadata.annotations).toEqual(expectedAnnotations);
 		}
 
 		if (expectedUnsafeMetaData !== undefined) {
@@ -197,12 +208,14 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema,
 		expectedLimits,
 		expectedContainers,
+		expectedAnnotations,
 		keepVars,
 		keepSecrets,
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
 		expectedSettingsPatch,
+		expectedDeploymentMessage,
 	} = options;
 
 	const expectedScriptName =
@@ -238,7 +251,17 @@ export function mockUploadWorkerRequest(
 			),
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
-				() => HttpResponse.json(createFetchResult({ id: "Deployment-ID" }))
+				async ({ request }) => {
+					if ("expectedDeploymentMessage" in options) {
+						const body = (await request.json()) as {
+							annotations?: { "workers/message"?: string };
+						};
+						expect(body.annotations?.["workers/message"]).toEqual(
+							expectedDeploymentMessage
+						);
+					}
+					return HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
+				}
 			),
 			http.patch(
 				"*/accounts/:accountId/workers/scripts/:scriptName/script-settings",

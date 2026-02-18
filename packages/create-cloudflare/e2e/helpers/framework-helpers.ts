@@ -15,6 +15,7 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import * as jsonc from "jsonc-parser";
 import { fetch } from "undici";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
 import { expect } from "vitest";
 import { version } from "../../package.json";
 import { getFrameworkMap } from "../../src/templates";
@@ -338,8 +339,15 @@ export async function verifyTypes(
 	}
 
 	const tsconfigPath = join(projectPath, "tsconfig.json");
-	const tsconfigTypes = jsonc.parse(readFile(tsconfigPath)).compilerOptions
-		?.types;
+	const tsconfig = jsonc.parse(readFile(tsconfigPath));
+
+	// Skip tsconfig verification if project uses TypeScript project references
+	// C3 doesn't modify the root tsconfig in this case - types are defined in child tsconfigs
+	if (Array.isArray(tsconfig.references) && tsconfig.references.length > 0) {
+		return;
+	}
+
+	const tsconfigTypes = tsconfig.compilerOptions?.types;
 	if (workersTypes === "generated") {
 		expect(tsconfigTypes).toContain(typesPath);
 	}

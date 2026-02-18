@@ -1,7 +1,10 @@
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
+import ci from "ci-info";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { maxFileCountAllowedFromClaims } from "../../pages/upload";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -24,7 +27,7 @@ describe("pages project upload", () => {
 	mockSetTimeout();
 
 	beforeEach(() => {
-		vi.stubEnv("CI", "true");
+		vi.mocked(ci).isCI = true;
 		vi.stubEnv("CF_PAGES_UPLOAD_JWT", "<<funfetti-auth-jwt>>");
 	});
 
@@ -123,6 +126,9 @@ describe("pages project upload", () => {
 		writeFileSync("some_dir/node_modules/some_package", "nodefile");
 		mkdirSync("functions");
 		writeFileSync("functions/foo.js", "func");
+		// .wrangler directory should be ignored (contains local cache/state)
+		mkdirSync(".wrangler/cache", { recursive: true });
+		writeFileSync(".wrangler/cache/some-cache-file", "cachefile");
 
 		// Accumulate multiple requests then assert afterwards
 		const requests: StrictRequest<UploadPayloadFile[]>[] = [];

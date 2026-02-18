@@ -1,4 +1,4 @@
-import { assert, describe, expect, it, vi } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import { checkRemoteSecretsOverride } from "../../deploy/check-remote-secrets-override";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import type { Config } from "@cloudflare/workers-utils";
@@ -16,7 +16,9 @@ async function runMockedCheckRemoteSecretsOverride(
 }
 
 describe("checkRemoteSecretsOverride", () => {
-	it("should return { override: false } when there are no possible overrides", async () => {
+	it("should return { override: false } when there are no possible overrides", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -34,7 +36,9 @@ describe("checkRemoteSecretsOverride", () => {
 		expect(checkResult.override).toBe(false);
 	});
 
-	it("should detect and provide a valid deploy error message when a variable name overrides a secret", async () => {
+	it("should detect and provide a valid deploy error message when a variable name overrides a secret", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -51,14 +55,15 @@ describe("checkRemoteSecretsOverride", () => {
 			["MY_SECRET"]
 		);
 
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Environment variable `MY_SECRET` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable."
 		);
 	});
 
-	it("should detect and provide a valid deploy error message when multiple (2) variable names override secrets", async () => {
+	it("should detect and provide a valid deploy error message when multiple (2) variable names override secrets", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -75,14 +80,15 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Environment variables `MY_SECRET_1` and `MY_SECRET_2` conflict with existing remote secrets. This deployment will replace these remote secrets with your environment variables."
 		);
 	});
 
-	it("should detect and provide a valid deploy error message when multiple (3) variable names override secrets", async () => {
+	it("should detect and provide a valid deploy error message when multiple (3) variable names override secrets", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -100,14 +106,15 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2", "MY_SECRET_3"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Environment variables `MY_SECRET_1`, `MY_SECRET_2`, and `MY_SECRET_3` conflict with existing remote secrets. This deployment will replace these remote secrets with your environment variables."
 		);
 	});
 
-	it("should detect and provide a valid deploy error message when a binding name overrides a secret", async () => {
+	it("should detect and provide a valid deploy error message when a binding name overrides a secret", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -126,14 +133,15 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Binding `MY_SECRET` conflicts with an existing remote secret. This deployment will replace the remote secret with your binding."
 		);
 	});
 
-	it("should detect and provide a valid deploy error message when multiple binding names override secrets", async () => {
+	it("should detect and provide a valid deploy error message when multiple binding names override secrets", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -156,14 +164,15 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2", "MY_SECRET_3"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Bindings `MY_SECRET_1`, `MY_SECRET_2`, and `MY_SECRET_3` conflict with existing remote secrets. This deployment will replace these remote secrets with your bindings."
 		);
 	});
 
-	it("should detect and provide a valid deploy error message when a combination of variables and binding names override secrets", async () => {
+	it("should detect and provide a valid deploy error message when a combination of variables and binding names override secrets", async ({
+		expect,
+	}) => {
 		const checkResult = await runMockedCheckRemoteSecretsOverride(
 			{
 				vars: {
@@ -179,14 +188,15 @@ describe("checkRemoteSecretsOverride", () => {
 			},
 			["MY_SECRET_1", "MY_SECRET_2", "MY_SECRET_3"]
 		);
-		expect(checkResult.override).toBe(true);
 		assert(checkResult.override);
 		expect(checkResult.deployErrorMessage).toBe(
 			"Configuration values (`MY_SECRET_1`, `MY_SECRET_2`, and `MY_SECRET_3`) conflict with existing remote secrets. This deployment will replace these remote secrets with the configuration values."
 		);
 	});
 
-	it("should not unnecessarily fetch secrets when there are no env vars nor bindings in the config file", async () => {
+	it("should not unnecessarily fetch secrets when there are no env vars nor bindings in the config file", async ({
+		expect,
+	}) => {
 		const result = await runMockedCheckRemoteSecretsOverride({}, ["MY_SECRET"]);
 		expect(result.override).toBeFalsy();
 		expect(fetchSecrets).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
@@ -36,9 +37,11 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#proxySharedSecret: string;
 
 	constructor(sharedContext: SharedContext) {
 		this.#sharedContext = sharedContext;
+		this.#proxySharedSecret = randomUUID();
 	}
 
 	/** Creates a new Miniflare instance or updates the existing instance */
@@ -143,7 +146,7 @@ export class PluginContext {
 	}
 
 	isChildEnvironment(environmentName: string): boolean {
-		if (this.resolvedPluginConfig.type !== "workers") {
+		if (this.resolvedPluginConfig.type === "preview") {
 			return false;
 		}
 
@@ -157,8 +160,8 @@ export class PluginContext {
 	}
 
 	#getWorker(environmentName: string): Worker | undefined {
-		if (this.resolvedPluginConfig.type !== "workers") {
-			return undefined;
+		if (this.resolvedPluginConfig.type === "preview") {
+			return;
 		}
 
 		const worker =
@@ -186,16 +189,13 @@ export class PluginContext {
 	}
 
 	get allWorkerConfigs(): Unstable_Config[] {
-		switch (this.resolvedPluginConfig.type) {
-			case "workers":
-				return Array.from(
-					this.resolvedPluginConfig.environmentNameToWorkerMap.values()
-				).map((worker) => worker.config);
-			case "preview":
-				return this.resolvedPluginConfig.workers;
-			default:
-				return [];
+		if (this.resolvedPluginConfig.type === "preview") {
+			return this.resolvedPluginConfig.workers;
 		}
+
+		return Array.from(
+			this.resolvedPluginConfig.environmentNameToWorkerMap.values()
+		).map((worker) => worker.config);
 	}
 
 	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
@@ -210,6 +210,10 @@ export class PluginContext {
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.#getWorker(environmentName)?.nodeJsCompat;
+	}
+
+	get proxySharedSecret(): string {
+		return this.#proxySharedSecret;
 	}
 }
 

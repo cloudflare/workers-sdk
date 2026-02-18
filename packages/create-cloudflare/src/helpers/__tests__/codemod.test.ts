@@ -1,7 +1,8 @@
 import { mergeObjectProperties } from "helpers/codemod";
 import * as recast from "recast";
 import parser from "recast/parsers/babel";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
+import type { ExpectStatic } from "vitest";
 
 describe("mergeObjectProperties", () => {
 	const tests = [
@@ -93,19 +94,24 @@ describe("mergeObjectProperties", () => {
 	}[];
 
 	tests.forEach(({ testName, ...testObjects }) =>
-		test(testName, () => testMergeObjectProperties(testObjects)),
+		test(testName, ({ expect }) =>
+			testMergeObjectProperties(testObjects, expect),
+		),
 	);
 });
 
-const testMergeObjectProperties = ({
-	sourcePropertiesObject,
-	newPropertiesObject,
-	expectedPropertiesObject,
-}: {
-	sourcePropertiesObject: Record<string, unknown>;
-	newPropertiesObject: Record<string, unknown>;
-	expectedPropertiesObject: Record<string, unknown>;
-}) => {
+const testMergeObjectProperties = (
+	{
+		sourcePropertiesObject,
+		newPropertiesObject,
+		expectedPropertiesObject,
+	}: {
+		sourcePropertiesObject: Record<string, unknown>;
+		newPropertiesObject: Record<string, unknown>;
+		expectedPropertiesObject: Record<string, unknown>;
+	},
+	expect: ExpectStatic,
+) => {
 	const sourceObj = createObjectExpression(sourcePropertiesObject);
 	const newProperties = createObjectExpression(newPropertiesObject)
 		.properties as recast.types.namedTypes.ObjectProperty[];

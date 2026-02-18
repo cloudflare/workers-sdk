@@ -11,6 +11,7 @@
 		"type:tests": "tsc -p ./tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

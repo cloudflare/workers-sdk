@@ -3,7 +3,7 @@ import {
 	getCloudflareContainerRegistry,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -32,16 +32,16 @@ describe("containers push", () => {
 		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers push --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers push TAG
+			"wrangler containers push <TAG>
 
-			Push a tagged image to a Cloudflare managed registry
+			Push a local image to the Cloudflare managed registry [open beta]
 
 			POSITIONALS
-			  TAG  [string] [required]
+			  TAG  The tag of the local image to push  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -52,11 +52,11 @@ describe("containers push", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string] [default: \\"docker\\"]"
+			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string] [default: "docker"]"
 		`);
 	});
 
-	it("should push image with valid platform", async () => {
+	it("should push image with valid platform", async ({ expect }) => {
 		await runWrangler("containers push test-app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -71,14 +71,18 @@ describe("containers push", () => {
 		]);
 	});
 
-	it("should reject pushing image if platform is not linux/amd64", async () => {
+	it("should reject pushing image if platform is not linux/amd64", async ({
+		expect,
+	}) => {
 		vi.mocked(dockerImageInspect).mockResolvedValue("linux/arm64");
 		await expect(runWrangler("containers push test-app:tag")).rejects.toThrow(
 			"Unsupported platform"
 		);
 	});
 
-	it("should tag image with the correct uri if given an <image>:<tag> argument", async () => {
+	it("should tag image with the correct uri if given an <image>:<tag> argument", async ({
+		expect,
+	}) => {
 		await runWrangler("containers push test-app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -93,7 +97,9 @@ describe("containers push", () => {
 		]);
 	});
 
-	it("should tag image with the correct uri if given an <namespace>/<image>:<tag> argument", async () => {
+	it("should tag image with the correct uri if given an <namespace>/<image>:<tag> argument", async ({
+		expect,
+	}) => {
 		await runWrangler("containers push test-namespace/app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -108,7 +114,9 @@ describe("containers push", () => {
 		]);
 	});
 
-	it("should tag image with the correct uri if given an registry.cloudflare.com/<image>:<tag> argument", async () => {
+	it("should tag image with the correct uri if given an registry.cloudflare.com/<image>:<tag> argument", async ({
+		expect,
+	}) => {
 		await runWrangler("containers push registry.cloudflare.com/test-app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -123,7 +131,9 @@ describe("containers push", () => {
 		]);
 	});
 
-	it("should tag image with the correct uri if given an registry.cloudflare.com/some-account-id/<image>:<tag> argument", async () => {
+	it("should tag image with the correct uri if given an registry.cloudflare.com/some-account-id/<image>:<tag> argument", async ({
+		expect,
+	}) => {
 		await runWrangler(
 			"containers push registry.cloudflare.com/some-account-id/test-app:tag"
 		);

@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
+import treeKill from "tree-kill";
 import dedent from "ts-dedent";
 import { test as baseTest, inject, vi } from "vitest";
 
@@ -137,7 +138,20 @@ export const test = baseTest.extend<{
 	// Fixture for a starting long-running `vitest dev` process
 	async vitestDev({ tmpPath }, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
-		const processes: childProcess.ChildProcess[] = [];
+
+		// In case this process stops unexpectedly, kill all child processes
+		const processes = new Set<childProcess.ChildProcess>();
+		const killAllProcesses = () => {
+			for (const proc of processes) {
+				if (proc.pid) {
+					proc.stdout?.destroy();
+					proc.stderr?.destroy();
+					proc.stdin?.destroy();
+					treeKill(proc.pid, "SIGKILL");
+				}
+			}
+		};
+		process.on("exit", killAllProcesses);
 
 		await use(({ flags = [], maxBuffer } = {}) => {
 			const proc = childProcess.exec(
@@ -148,14 +162,17 @@ export const test = baseTest.extend<{
 					maxBuffer,
 				}
 			);
-			processes.push(proc);
+			processes.add(proc);
+			proc.on("exit", () => {
+				if (proc) {
+					processes.delete(proc);
+				}
+			});
 			return wrap(proc);
 		});
 
-		// Kill all processes after the test
-		for (const proc of processes) {
-			proc.kill();
-		}
+		killAllProcesses();
+		process.off("exit", killAllProcesses);
 	},
 });
 

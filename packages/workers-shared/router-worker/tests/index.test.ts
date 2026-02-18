@@ -1,10 +1,12 @@
 import { createExecutionContext } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import worker from "../src/worker";
 import type { Env } from "../src/worker";
 
 describe("unit tests", async () => {
-	it("fails if specify running user worker ahead of assets, without user worker", async () => {
+	it("fails if specify running user worker ahead of assets, without user worker", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com");
 		const ctx = createExecutionContext();
 
@@ -22,7 +24,9 @@ describe("unit tests", async () => {
 		);
 	});
 
-	it("it returns fetch from user worker when invoke_user_worker_ahead_of_assets true", async () => {
+	it("it returns fetch from user worker when invoke_user_worker_ahead_of_assets true", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com");
 		const ctx = createExecutionContext();
 
@@ -50,7 +54,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
-	it("it returns fetch from asset worker when matching existing asset path", async () => {
+	it("it returns fetch from asset worker when matching existing asset path", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com");
 		const ctx = createExecutionContext();
 
@@ -73,7 +79,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from asset worker when matching existing asset path and invoke_user_worker_ahead_of_assets is not provided", async () => {
+	it("it returns fetch from asset worker when matching existing asset path and invoke_user_worker_ahead_of_assets is not provided", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com");
 		const ctx = createExecutionContext();
 
@@ -95,7 +103,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from user worker when static_routing user_worker rule matches", async () => {
+	it("it returns fetch from user worker when static_routing user_worker rule matches", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com/api/includeme");
 		const ctx = createExecutionContext();
 
@@ -125,7 +135,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
-	it("it returns fetch from asset worker when static_routing asset_worker rule matches", async () => {
+	it("it returns fetch from asset worker when static_routing asset_worker rule matches", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com/api/excludeme");
 		const ctx = createExecutionContext();
 
@@ -156,7 +168,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from asset worker when static_routing asset_worker and user_worker rule matches", async () => {
+	it("it returns fetch from asset worker when static_routing asset_worker and user_worker rule matches", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com/api/excludeme");
 		const ctx = createExecutionContext();
 
@@ -187,7 +201,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from asset worker when no static_routing rule matches but asset exists", async () => {
+	it("it returns fetch from asset worker when no static_routing rule matches but asset exists", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com/someasset");
 		const ctx = createExecutionContext();
 
@@ -217,7 +233,9 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from user worker when no static_routing rule matches and no asset exists", async () => {
+	it("it returns fetch from user worker when no static_routing rule matches and no asset exists", async ({
+		expect,
+	}) => {
 		const request = new Request("https://example.com/somemissingasset");
 		const ctx = createExecutionContext();
 
@@ -250,7 +268,9 @@ describe("unit tests", async () => {
 	describe.each(["/some/subpath/", "/"])(
 		"blocking /_next/image requests hosted at %s with remote URLs",
 		(subpath) => {
-			it("blocks /_next/image requests with remote URLs when not fetched as image", async () => {
+			it("blocks /_next/image requests with remote URLs when not fetched as image", async ({
+				expect,
+			}) => {
 				const request = new Request(
 					`https://example.com${subpath}_next/image?url=https://evil.com/ssrf`
 				);
@@ -286,7 +306,7 @@ describe("unit tests", async () => {
 				}
 			});
 
-			it.each([
+			it.for([
 				{
 					description:
 						"allows /_next/image requests with remote URLs when fetched as image",
@@ -375,13 +395,10 @@ describe("unit tests", async () => {
 				},
 			])(
 				"$description",
-				async ({
-					url,
-					headers,
-					userWorkerResponse,
-					expectedStatus,
-					expectedBody,
-				}) => {
+				async (
+					{ url, headers, userWorkerResponse, expectedStatus, expectedBody },
+					{ expect }
+				) => {
 					const request = new Request(url, { headers });
 					const ctx = createExecutionContext();
 
@@ -411,7 +428,9 @@ describe("unit tests", async () => {
 	);
 
 	describe("blocking /_image requests with protocol relative URLs as the image source", () => {
-		it("blocks protocol relative URLs with a different hostname when not fetched as an image", async () => {
+		it("blocks protocol relative URLs with a different hostname when not fetched as an image", async ({
+			expect,
+		}) => {
 			const request = new Request(
 				"https://example.com/_image?href=//evil.com/ssrf"
 			);
@@ -435,7 +454,7 @@ describe("unit tests", async () => {
 			expect(await response.text()).toBe("Blocked");
 		});
 
-		it.each([
+		it.for([
 			{
 				description: "allows protocol relative URLs with the same hostname",
 				url: "https://example.com/_image?href=//example.com/image.jpg",
@@ -462,13 +481,10 @@ describe("unit tests", async () => {
 			},
 		])(
 			"$description",
-			async ({
-				url,
-				headers,
-				userWorkerResponse,
-				expectedStatus,
-				expectedBody,
-			}) => {
+			async (
+				{ url, headers, userWorkerResponse, expectedStatus, expectedBody },
+				{ expect }
+			) => {
 				const request = new Request(url, { headers });
 				const env = {
 					CONFIG: {
@@ -494,7 +510,7 @@ describe("unit tests", async () => {
 	});
 
 	describe("free tier limiting", () => {
-		it("returns fetch from asset worker for assets", async () => {
+		it("returns fetch from asset worker for assets", async ({ expect }) => {
 			const request = new Request("https://example.com/asset");
 			const ctx = createExecutionContext();
 
@@ -522,7 +538,9 @@ describe("unit tests", async () => {
 			expect(await response.text()).toEqual("hello from asset worker");
 		});
 
-		it("returns error page instead of user worker when no asset found", async () => {
+		it("returns error page instead of user worker when no asset found", async ({
+			expect,
+		}) => {
 			const request = new Request("https://example.com/asset");
 			const ctx = createExecutionContext();
 
@@ -553,7 +571,9 @@ describe("unit tests", async () => {
 			expect(text).toContain("This website has been temporarily rate limited");
 		});
 
-		it("returns error page instead of user worker for invoke_user_worker_ahead_of_assets", async () => {
+		it("returns error page instead of user worker for invoke_user_worker_ahead_of_assets", async ({
+			expect,
+		}) => {
 			const request = new Request("https://example.com/asset");
 			const ctx = createExecutionContext();
 
@@ -585,7 +605,9 @@ describe("unit tests", async () => {
 			expect(text).toContain("This website has been temporarily rate limited");
 		});
 
-		it("returns error page instead of user worker for user_worker rules", async () => {
+		it("returns error page instead of user worker for user_worker rules", async ({
+			expect,
+		}) => {
 			const request = new Request("https://example.com/api/asset");
 			const ctx = createExecutionContext();
 
@@ -619,7 +641,9 @@ describe("unit tests", async () => {
 			expect(text).toContain("This website has been temporarily rate limited");
 		});
 
-		it("returns fetch from asset worker for asset_worker rules", async () => {
+		it("returns fetch from asset worker for asset_worker rules", async ({
+			expect,
+		}) => {
 			const request = new Request("https://example.com/api/asset");
 			const ctx = createExecutionContext();
 

@@ -1,4 +1,4 @@
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
@@ -17,7 +17,9 @@ function normalizeDiff(log: string): string {
 }
 
 describe("getRemoteConfigsDiff", () => {
-	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
+	it("should handle a very simple diffing scenario (no diffs, random order)", ({
+		expect,
+	}) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -48,7 +50,9 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(true);
 	});
 
-	it("should handle a very simple diffing scenario where there is only an addition to an array (specifically in `kv_namespaces`)", () => {
+	it("should handle a very simple diffing scenario where there is only an addition to an array (specifically in `kv_namespaces`)", ({
+		expect,
+	}) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -71,8 +75,8 @@ describe("getRemoteConfigsDiff", () => {
 			" {
 			   kv_namespaces: [
 			-    {
-			-      binding: \\"MY_KV\\"
-			-      id: \\"<kv-id>\\"
+			-      binding: "MY_KV"
+			-      id: "<kv-id>"
 			-    }
 			   ]
 			 }
@@ -81,7 +85,9 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(false);
 	});
 
-	it("should handle a very simple diffing scenario (some diffs, random order)", () => {
+	it("should handle a very simple diffing scenario (some diffs, random order)", ({
+		expect,
+	}) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -111,15 +117,15 @@ describe("getRemoteConfigsDiff", () => {
 		assert(diff);
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
-			-  compatibility_date: \\"2025-07-08\\"
-			+  compatibility_date: \\"2025-07-09\\"
+			-  compatibility_date: "2025-07-08"
+			+  compatibility_date: "2025-07-09"
 			 }
 			"
 		`);
 		expect(nonDestructive).toBe(false);
 	});
 
-	it("should handle a diffing scenario with only additions", () => {
+	it("should handle a diffing scenario with only additions", ({ expect }) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -151,8 +157,8 @@ describe("getRemoteConfigsDiff", () => {
 			   kv_namespaces: [
 			     ...
 			+    {
-			+      binding: \\"MY_KV_2\\"
-			+      id: \\"my-kv-456\\"
+			+      binding: "MY_KV_2"
+			+      id: "my-kv-456"
 			+    }
 			   ]
 			 }
@@ -161,7 +167,7 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(true);
 	});
 
-	it("should handle a diffing scenario with only deletions", () => {
+	it("should handle a diffing scenario with only deletions", ({ expect }) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -194,8 +200,8 @@ describe("getRemoteConfigsDiff", () => {
 			" {
 			-  kv_namespaces: [
 			-    {
-			-      binding: \\"MY_KV\\"
-			-      id: \\"my-kv-123\\"
+			-      binding: "MY_KV"
+			-      id: "my-kv-123"
 			-    }
 			-  ]
 			 }
@@ -204,7 +210,9 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(false);
 	});
 
-	it("should handle a diffing scenario with modifications and removals", () => {
+	it("should handle a diffing scenario with modifications and removals", ({
+		expect,
+	}) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -234,12 +242,12 @@ describe("getRemoteConfigsDiff", () => {
 			" {
 			-  kv_namespaces: [
 			-    {
-			-      binding: \\"MY_KV\\"
-			-      id: \\"my-kv-123\\"
+			-      binding: "MY_KV"
+			-      id: "my-kv-123"
 			-    }
 			-  ]
-			-  compatibility_date: \\"2025-07-08\\"
-			+  compatibility_date: \\"2025-07-09\\"
+			-  compatibility_date: "2025-07-08"
+			+  compatibility_date: "2025-07-09"
 			   observability: {
 			-    enabled: true
 			+    enabled: false
@@ -254,7 +262,9 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(false);
 	});
 
-	it("should ignore local-only configs such as `dev` and `build`", () => {
+	it("should ignore local-only configs such as `dev` and `build`", ({
+		expect,
+	}) => {
 		const { diff } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -283,7 +293,9 @@ describe("getRemoteConfigsDiff", () => {
 		expect(diff).toBeNull();
 	});
 
-	it("should ignore the `remote` field of bindings during the diffing process (since remote bindings are a local-only concept)", () => {
+	it("should ignore the `remote` field of bindings during the diffing process (since remote bindings are a local-only concept)", ({
+		expect,
+	}) => {
 		const { diff } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -481,7 +493,9 @@ describe("getRemoteConfigsDiff", () => {
 		expect(diff).toBeNull();
 	});
 
-	it("should ignore all fields from an assets binding besides the binding name (since remotely only that information is stored)", () => {
+	it("should ignore all fields from an assets binding besides the binding name (since remotely only that information is stored)", ({
+		expect,
+	}) => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
 				name: "my-worker-id",
@@ -513,8 +527,8 @@ describe("getRemoteConfigsDiff", () => {
 		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
 			" {
 			   assets: {
-			-    binding: \\"ASSETS\\"
-			+    binding: \\"MY_ASSETS\\"
+			-    binding: "ASSETS"
+			+    binding: "MY_ASSETS"
 			   }
 			 }
 			"
@@ -544,7 +558,9 @@ describe("getRemoteConfigsDiff", () => {
 			);
 		}
 
-		it("shouldn't present any diff when the local config is just { enabled: true } and the remote observability is enabled with its default values", () => {
+		it("shouldn't present any diff when the local config is just { enabled: true } and the remote observability is enabled with its default values", ({
+			expect,
+		}) => {
 			const { diff, nonDestructive } = getObservabilityDiff(
 				{
 					enabled: true,
@@ -563,7 +579,9 @@ describe("getRemoteConfigsDiff", () => {
 			expect(nonDestructive).toBe(true);
 		});
 
-		it("should treat a remote undefined equal to a remote { enabled: false }", () => {
+		it("should treat a remote undefined equal to a remote { enabled: false }", ({
+			expect,
+		}) => {
 			const { diff } = getObservabilityDiff(
 				// remotely the observability field is undefined when observability is disabled
 				undefined,
@@ -572,7 +590,9 @@ describe("getRemoteConfigsDiff", () => {
 			expect(diff).toBe(null);
 		});
 
-		it("should treat a remote undefined equal to a remote { enabled: false, logs: { enabled: false } }", () => {
+		it("should treat a remote undefined equal to a remote { enabled: false, logs: { enabled: false } }", ({
+			expect,
+		}) => {
 			const { diff } = getObservabilityDiff(
 				// remotely the observability field is undefined when observability is disabled
 				undefined,
@@ -581,7 +601,9 @@ describe("getRemoteConfigsDiff", () => {
 			expect(diff).toBe(null);
 		});
 
-		it("should correctly show the diff of boolean when the remote is undefined and the local is { enabled: true }", () => {
+		it("should correctly show the diff of boolean when the remote is undefined and the local is { enabled: true }", ({
+			expect,
+		}) => {
 			const { diff } = getObservabilityDiff(
 				// remotely the observability field is undefined when observability is disabled
 				undefined,
@@ -603,7 +625,9 @@ describe("getRemoteConfigsDiff", () => {
 			`);
 		});
 
-		it("should correctly show the diff of boolean when the remote is undefined and the local is { logs: { enabled: false } }", () => {
+		it("should correctly show the diff of boolean when the remote is undefined and the local is { logs: { enabled: false } }", ({
+			expect,
+		}) => {
 			const { diff } = getObservabilityDiff(
 				// remotely the observability field is undefined when observability is disabled
 				undefined,
@@ -623,7 +647,9 @@ describe("getRemoteConfigsDiff", () => {
 			`);
 		});
 
-		it("should correctly not show head_sampling_rate being added remotely", () => {
+		it("should correctly not show head_sampling_rate being added remotely", ({
+			expect,
+		}) => {
 			const { diff } = getObservabilityDiff(
 				// remotely head_sampling_rate is set to 1 even if enabled is false
 				{ enabled: false, head_sampling_rate: 1, logs: { enabled: true } },
@@ -632,7 +658,9 @@ describe("getRemoteConfigsDiff", () => {
 			expect(diff).toBe(null);
 		});
 
-		it("should correctly not show logs.invocation_logs being added remotely", () => {
+		it("should correctly not show logs.invocation_logs being added remotely", ({
+			expect,
+		}) => {
 			const { diff } = getObservabilityDiff(
 				// remotely head_sampling_rate is set to 1 even if enabled is false
 				{
@@ -653,5 +681,100 @@ describe("getRemoteConfigsDiff", () => {
 				"
 			`);
 		});
+	});
+
+	it("should not show spurious diffs when binding arrays have same elements in different order", ({
+		expect,
+	}) => {
+		// This test verifies that:
+		// - Same bindings with different array/property order produce no diff
+		// - Actual binding differences are still shown correctly
+		// - Both non-nested (kv_namespaces) and nested (durable_objects.bindings) arrays work
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				// Non-nested binding with different array/property order AND actual difference
+				// KV_A and KV_B are same (different order), KV_C is remote-only
+				kv_namespaces: [
+					{ id: "id-1", binding: "KV_A" },
+					{ id: "id-2", binding: "KV_B" },
+					{ id: "id-3", binding: "KV_C" },
+				],
+				// Same elements, different order - should not appear in diff
+				queues: {
+					producers: [
+						{ binding: "QUEUE_A", queue: "queue-a" },
+						{ binding: "QUEUE_B", queue: "queue-b" },
+					],
+				},
+				// Nested binding with actual difference - DO_C is remote-only
+				durable_objects: {
+					bindings: [
+						{ name: "DO_A", class_name: "DurableObjectA" },
+						{ name: "DO_C", class_name: "DurableObjectC" },
+					],
+				},
+			},
+			{
+				name: "my-worker",
+				main: "/tmp/src/index.js",
+				// Local has different array order and { binding, id } property order
+				// KV_A and KV_B are same (different order), KV_D is local-only
+				kv_namespaces: [
+					{ binding: "KV_B", id: "id-2" },
+					{ binding: "KV_A", id: "id-1" },
+					{ binding: "KV_D", id: "id-4" },
+				],
+				queues: {
+					producers: [
+						{ binding: "QUEUE_B", queue: "queue-b" },
+						{ binding: "QUEUE_A", queue: "queue-a" },
+					],
+				},
+				// DO_B is local-only
+				durable_objects: {
+					bindings: [
+						{ name: "DO_B", class_name: "DurableObjectB" },
+						{ name: "DO_A", class_name: "DurableObjectA" },
+					],
+				},
+			} as unknown as Config
+		);
+
+		// kv_namespaces and durable_objects show actual diffs
+		// queues.producers has no diff (same elements, different order)
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			   kv_namespaces: [
+			     ...
+			     ...
+			     {
+			-      id: "id-3"
+			+      id: "id-4"
+			-      binding: "KV_C"
+			+      binding: "KV_D"
+			     }
+			   ]
+			   durable_objects: {
+			     bindings: [
+			+      {
+			+        name: "DO_B"
+			+        class_name: "DurableObjectB"
+			+      }
+			       ...
+			-      {
+			-        name: "DO_C"
+			-        class_name: "DurableObjectC"
+			-      }
+			     ]
+			   }
+			 }
+			"
+		`);
+		expect(nonDestructive).toBe(false);
 	});
 });

@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import childProcess from "node:child_process";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -6,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, assert, beforeAll, describe, test } from "vitest";
 import {
 	runWranglerDev,
 	wranglerEntryPath,
@@ -73,28 +72,28 @@ describe("wildcard imports: dev", () => {
 		}
 	});
 
-	test("supports bundled modules", async () => {
+	test("supports bundled modules", async ({ expect }) => {
 		const res = await get(worker, "/dep");
 		expect(await res.text()).toBe("bundled");
 	});
-	test("supports text modules", async () => {
+	test("supports text modules", async ({ expect }) => {
 		const res = await get(worker, "/text");
 		expect(await res.text()).toBe("test\n");
 	});
-	test("supports dynamic imports", async () => {
+	test("supports dynamic imports", async ({ expect }) => {
 		const res = await get(worker, "/dynamic");
 		expect(await res.text()).toBe("dynamic");
 	});
-	test("supports commonjs lazy imports", async () => {
+	test("supports commonjs lazy imports", async ({ expect }) => {
 		const res = await get(worker, "/common");
 		expect(await res.text()).toBe("common");
 	});
-	test("supports variable dynamic imports", async () => {
+	test("supports variable dynamic imports", async ({ expect }) => {
 		const res = await get(worker, "/lang/en");
 		expect(await res.text()).toBe("hello");
 	});
 
-	test("watches wildcard modules", async () => {
+	test("watches wildcard modules", async ({ expect }) => {
 		const srcDir = path.join(tmpDir, "src");
 
 		// Update dynamically imported file
@@ -157,7 +156,7 @@ describe("wildcard imports: deploy", () => {
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
-	test("bundles wildcard modules", async () => {
+	test("bundles wildcard modules", async ({ expect }) => {
 		const outDir = path.join(tmpDir, "out");
 		const result = build(path.resolve(__dirname, ".."), outDir);
 		expect(result.status).toBe(0);
@@ -185,7 +184,7 @@ describe("wildcard imports: deploy", () => {
 		).toBe(true);
 	});
 
-	test("fails with service worker entrypoint", async () => {
+	test("fails with service worker entrypoint", async ({ expect }) => {
 		const serviceWorkerDir = path.join(tmpDir, "service-worker");
 		await fs.mkdir(serviceWorkerDir, { recursive: true });
 		await fs.writeFile(

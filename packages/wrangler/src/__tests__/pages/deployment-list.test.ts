@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -92,13 +94,13 @@ describe("pages deployment list", () => {
 		expect(JSON.stringify(output, null, 2)).toMatchInlineSnapshot(`
 			"[
 			  {
-			    \\"Id\\": \\"87bbc8fe-16be-45cd-81e0-63d722e82cdf\\",
-			    \\"Environment\\": \\"Preview\\",
-			    \\"Branch\\": \\"main\\",
-			    \\"Source\\": \\"c764936\\",
-			    \\"Deployment\\": \\"https://87bbc8fe.images.pages.dev\\",
-			    \\"Status\\": \\"SNAPSHOT_VALUE\\",
-			    \\"Build\\": \\"https://dash.cloudflare.com/some-account-id/pages/view/images/87bbc8fe-16be-45cd-81e0-63d722e82cdf\\"
+			    "Id": "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
+			    "Environment": "Preview",
+			    "Branch": "main",
+			    "Source": "c764936",
+			    "Deployment": "https://87bbc8fe.images.pages.dev",
+			    "Status": "SNAPSHOT_VALUE",
+			    "Build": "https://dash.cloudflare.com/some-account-id/pages/view/images/87bbc8fe-16be-45cd-81e0-63d722e82cdf"
 			  }
 			]"
 		`);

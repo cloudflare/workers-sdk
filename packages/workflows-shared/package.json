@@ -25,9 +25,9 @@
 	],
 	"scripts": {
 		"build": "esbuild ./src/local-binding-worker.ts --format=esm --bundle --outfile=dist/local-binding-worker.mjs --sourcemap=external --external:cloudflare:*",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
-		"clean": "rimraf dist",
+		"clean": "node -r esbuild-register ../../tools/clean/clean.ts dist",
 		"deploy": "echo 'no deploy'",
 		"dev": "pnpm run bundle:local-binding --watch",
 		"test:ci": "vitest run",
@@ -47,7 +47,6 @@
 		"@types/mime": "^3.0.4",
 		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
-		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:vitest-3"
 	},

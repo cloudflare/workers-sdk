@@ -7,10 +7,18 @@
 		{
 			"binding": "KV",
 		},
+		{
+			"binding": "KV_WITH_ID",
+			"id": "some-kv-id",
+		},
 	],
 	"d1_databases": [
 		{
 			"binding": "DB",
+		},
+		{
+			"binding": "BACKUP_DB",
+			"database_id": "some-db-id",
 		},
 	],
 	"durable_objects": {
@@ -21,4 +29,10 @@
 			},
 		],
 	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MyDurableObject"],
+			"tag": "v1",
+		},
+	],
 }

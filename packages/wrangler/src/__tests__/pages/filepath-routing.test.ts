@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { describe, expect, it, test } from "vitest";
+import { describe, it, test } from "vitest";
 import {
 	compareRoutes,
 	generateConfigFromFileTree,
@@ -11,7 +11,7 @@ import type { UrlPath } from "../../paths";
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
-		test("routes / last", () => {
+		test("routes / last", ({ expect }) => {
 			expect(
 				compareRoutes(routeConfig("/"), routeConfig("/foo"))
 			).toBeGreaterThanOrEqual(1);
@@ -23,7 +23,9 @@ describe("filepath-routing", () => {
 			).toBeGreaterThanOrEqual(1);
 		});
 
-		test("routes with fewer segments come after those with more segments", () => {
+		test("routes with fewer segments come after those with more segments", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo"), routeConfig("/foo/bar"))
 			).toBeGreaterThanOrEqual(1);
@@ -32,36 +34,48 @@ describe("filepath-routing", () => {
 			).toBeGreaterThanOrEqual(1);
 		});
 
-		test("routes with wildcard segments come after those without", () => {
+		test("routes with wildcard segments come after those without", ({
+			expect,
+		}) => {
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/foo"))).toBe(1);
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/:foo"))).toBe(
 				1
 			);
 		});
 
-		test("routes with dynamic segments come after those without", () => {
+		test("routes with dynamic segments come after those without", ({
+			expect,
+		}) => {
 			expect(compareRoutes(routeConfig("/:foo"), routeConfig("/foo"))).toBe(1);
 		});
 
-		test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", () => {
+		test("routes with dynamic segments occurring earlier come after those with dynamic segments in later positions", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo/:id/bar"), routeConfig("/foo/bar/:id"))
 			).toBe(1);
 		});
 
-		test("routes with no HTTP method come after those specifying a method", () => {
+		test("routes with no HTTP method come after those specifying a method", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo"), routeConfig("/foo", "GET"))
 			).toBe(1);
 		});
 
-		test("two equal routes are sorted according to their original position in the list", () => {
+		test("two equal routes are sorted according to their original position in the list", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo", "GET"), routeConfig("/foo", "GET"))
 			).toBe(0);
 		});
 
-		test("it returns -1 if the first argument should appear first in the list", () => {
+		test("it returns -1 if the first argument should appear first in the list", ({
+			expect,
+		}) => {
 			expect(
 				compareRoutes(routeConfig("/foo", "GET"), routeConfig("/foo"))
 			).toBe(-1);
@@ -71,7 +85,9 @@ describe("filepath-routing", () => {
 	describe("generateConfigFromFileTree", () => {
 		runInTempDir();
 
-		it("should generate a route entry for each file in the tree", async () => {
+		it("should generate a route entry for each file in the tree", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"foo.ts",
 				`
@@ -140,94 +156,96 @@ describe("filepath-routing", () => {
 				baseURL: "/base" as UrlPath,
 			});
 			expect(entries).toMatchInlineSnapshot(`
-        Object {
-          "routes": Array [
-            Object {
-              "method": "POST",
-              "module": Array [
-                "authors/[authorId]/todos/[todoId].ts:onRequestPost",
-              ],
-              "mountPath": "/base/authors/:authorId/todos",
-              "routePath": "/base/authors/:authorId/todos/:todoId",
-            },
-            Object {
-              "method": "POST",
-              "module": Array [
-                "cats/[[breed]]/blah.ts:onRequestPost",
-              ],
-              "mountPath": "/base/cats/:breed*",
-              "routePath": "/base/cats/:breed*/blah",
-            },
-            Object {
-              "method": "POST",
-              "module": Array [
-                "cats/[[breed]]/[[name]].ts:onRequestPost",
-              ],
-              "mountPath": "/base/cats/:breed*",
-              "routePath": "/base/cats/:breed*/:name*",
-            },
-            Object {
-              "method": "DELETE",
-              "module": Array [
-                "todos/[id].ts:onRequestDelete",
-              ],
-              "mountPath": "/base/todos",
-              "routePath": "/base/todos/:id",
-            },
-            Object {
-              "method": "POST",
-              "module": Array [
-                "todos/[id].ts:onRequestPost",
-              ],
-              "mountPath": "/base/todos",
-              "routePath": "/base/todos/:id",
-            },
-            Object {
-              "method": "POST",
-              "module": Array [
-                "books/[[title]].ts:onRequestPost",
-              ],
-              "mountPath": "/base/books",
-              "routePath": "/base/books/:title*",
-            },
-            Object {
-              "method": "DELETE",
-              "module": Array [
-                "bar.ts:onRequestDelete",
-              ],
-              "mountPath": "/base/",
-              "routePath": "/base/bar",
-            },
-            Object {
-              "method": "PUT",
-              "module": Array [
-                "bar.ts:onRequestPut",
-              ],
-              "mountPath": "/base/",
-              "routePath": "/base/bar",
-            },
-            Object {
-              "method": "GET",
-              "module": Array [
-                "foo.ts:onRequestGet",
-              ],
-              "mountPath": "/base/",
-              "routePath": "/base/foo",
-            },
-            Object {
-              "method": "POST",
-              "module": Array [
-                "foo.ts:onRequestPost",
-              ],
-              "mountPath": "/base/",
-              "routePath": "/base/foo",
-            },
-          ],
-        }
-      `);
+				{
+				  "routes": [
+				    {
+				      "method": "POST",
+				      "module": [
+				        "authors/[authorId]/todos/[todoId].ts:onRequestPost",
+				      ],
+				      "mountPath": "/base/authors/:authorId/todos",
+				      "routePath": "/base/authors/:authorId/todos/:todoId",
+				    },
+				    {
+				      "method": "POST",
+				      "module": [
+				        "cats/[[breed]]/blah.ts:onRequestPost",
+				      ],
+				      "mountPath": "/base/cats/:breed*",
+				      "routePath": "/base/cats/:breed*/blah",
+				    },
+				    {
+				      "method": "POST",
+				      "module": [
+				        "cats/[[breed]]/[[name]].ts:onRequestPost",
+				      ],
+				      "mountPath": "/base/cats/:breed*",
+				      "routePath": "/base/cats/:breed*/:name*",
+				    },
+				    {
+				      "method": "DELETE",
+				      "module": [
+				        "todos/[id].ts:onRequestDelete",
+				      ],
+				      "mountPath": "/base/todos",
+				      "routePath": "/base/todos/:id",
+				    },
+				    {
+				      "method": "POST",
+				      "module": [
+				        "todos/[id].ts:onRequestPost",
+				      ],
+				      "mountPath": "/base/todos",
+				      "routePath": "/base/todos/:id",
+				    },
+				    {
+				      "method": "POST",
+				      "module": [
+				        "books/[[title]].ts:onRequestPost",
+				      ],
+				      "mountPath": "/base/books",
+				      "routePath": "/base/books/:title*",
+				    },
+				    {
+				      "method": "DELETE",
+				      "module": [
+				        "bar.ts:onRequestDelete",
+				      ],
+				      "mountPath": "/base/",
+				      "routePath": "/base/bar",
+				    },
+				    {
+				      "method": "PUT",
+				      "module": [
+				        "bar.ts:onRequestPut",
+				      ],
+				      "mountPath": "/base/",
+				      "routePath": "/base/bar",
+				    },
+				    {
+				      "method": "GET",
+				      "module": [
+				        "foo.ts:onRequestGet",
+				      ],
+				      "mountPath": "/base/",
+				      "routePath": "/base/foo",
+				    },
+				    {
+				      "method": "POST",
+				      "module": [
+				        "foo.ts:onRequestPost",
+				      ],
+				      "mountPath": "/base/",
+				      "routePath": "/base/foo",
+				    },
+				  ],
+				}
+			`);
 		});
 
-		it("should display an error if a simple route param name is invalid", async () => {
+		it("should display an error if a simple route param name is invalid", async ({
+			expect,
+		}) => {
 			mkdirSync("foo");
 			writeFileSync(
 				"foo/[hyphen-not-allowed].ts",
@@ -243,7 +261,9 @@ describe("filepath-routing", () => {
 			);
 		});
 
-		it("should display an error if a catch-all route param name is invalid", async () => {
+		it("should display an error if a catch-all route param name is invalid", async ({
+			expect,
+		}) => {
 			mkdirSync("foo");
 			writeFileSync(
 				"foo/[[hyphen-not-allowed]].ts",

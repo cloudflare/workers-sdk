@@ -7,7 +7,9 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
 import { afterEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -522,7 +524,7 @@ describe("wrangler workflows", () => {
 				"workflows instances send-event some-workflow bar --type my-event"
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event with type \\"my-event\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type "my-event" was sent to the instance "bar" from some-workflow"`
 			);
 		});
 
@@ -535,7 +537,7 @@ describe("wrangler workflows", () => {
 				`workflows instances send-event some-workflow bar --type my-event --payload '{"key": "value"}'`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event with type \\"my-event\\" and payload \\"{\\"key\\": \\"value\\"}\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type "my-event" and payload "{"key": "value"}" was sent to the instance "bar" from some-workflow"`
 			);
 		});
 	});
@@ -567,7 +569,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances pause some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"⏸️ The instance \\"bar\\" from some-workflow was paused successfully"`
+				`"⏸️ The instance "bar" from some-workflow was paused successfully"`
 			);
 		});
 	});
@@ -599,7 +601,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances resume some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🔄 The instance \\"bar\\" from some-workflow was resumed successfully"`
+				`"🔄 The instance "bar" from some-workflow was resumed successfully"`
 			);
 		});
 	});
@@ -631,7 +633,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 The instance \\"bar\\" from some-workflow was terminated successfully"`
+				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
 			);
 		});
 	});
@@ -663,7 +665,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances restart some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 The instance \\"bar\\" from some-workflow was restarted successfully"`
+				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
 			);
 		});
 	});
@@ -675,7 +677,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate-all some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\"  has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -685,7 +687,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate-all some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\"  has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -697,7 +699,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate-all some-workflow --status queued`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\" with status \\"queued\\" has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow" with status "queued" has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -713,7 +715,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate-all some-workflow --status queued`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\" with status \\"queued\\" is already running. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow" with status "queued" is already running. It might take a few minutes to complete."`
 			);
 		});
 
@@ -728,7 +730,7 @@ describe("wrangler workflows", () => {
 			);
 			expect(std.err).toMatchInlineSnapshot(
 				`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProvided status \\"not-a-status\\" is not valid, it must be one of the following: queued, running, paused, waitingForPause, waiting.[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProvided status "not-a-status" is not valid, it must be one of the following: queued, running, paused, waitingForPause, waiting.[0m
 
 				"
 			`
@@ -766,7 +768,7 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows trigger some-workflow`);
 			expect(std);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🚀 Workflow instance \\"3c70754a-8435-4498-92ad-22e2e2c90853\\" has been queued successfully"`
+				`"🚀 Workflow instance "3c70754a-8435-4498-92ad-22e2e2c90853" has been queued successfully"`
 			);
 		});
 	});
@@ -783,7 +785,7 @@ describe("wrangler workflows", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				✅ Workflow \\"some-workflow\\" removed successfully.
+				✅ Workflow "some-workflow" removed successfully.
 				 Note that running instances might take a few minutes to be properly terminated."
 			`
 			);
@@ -825,7 +827,7 @@ describe("wrangler workflows", () => {
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - \\"workflows[0]\\" binding \\"name\\" field is invalid. Workflow names must be 1-64 characters long,
+				    - "workflows[0]" binding "name" field is invalid. Workflow names must be 1-64 characters long,
 				  start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or
 				  hyphens.
 
@@ -969,8 +971,8 @@ describe("wrangler workflows", () => {
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - \\"workflows\\" bindings must have unique \\"name\\" values; duplicate(s) found:
-				  \\"duplicate-workflow-name\\", \\"duplicate-workflow-name-2\\"
+				    - "workflows" bindings must have unique "name" values; duplicate(s) found:
+				  "duplicate-workflow-name", "duplicate-workflow-name-2"
 
 				"
 			`);

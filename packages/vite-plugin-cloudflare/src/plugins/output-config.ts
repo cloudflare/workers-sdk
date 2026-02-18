@@ -23,13 +23,9 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 
 			let outputConfig: Unstable_RawConfig | undefined;
 
-			if (ctx.resolvedPluginConfig.type === "workers") {
-				const inputConfig = ctx.getWorkerConfig(this.environment.name);
+			const inputWorkerConfig = ctx.getWorkerConfig(this.environment.name);
 
-				if (!inputConfig) {
-					return;
-				}
-
+			if (inputWorkerConfig) {
 				const entryChunk = Object.values(bundle).find(
 					(chunk) =>
 						chunk.type === "chunk" &&
@@ -42,29 +38,42 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					`Expected entry chunk with name "${MAIN_ENTRY_NAME}"`
 				);
 
-				const isEntryWorker =
+				const isPrerenderWorker =
 					this.environment.name ===
-					ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
+					ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName;
+				const isEntryWorker =
+					ctx.resolvedPluginConfig.type === "workers" &&
+					this.environment.name ===
+						ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
 
 				outputConfig = {
-					...inputConfig,
+					...inputWorkerConfig,
 					main: entryChunk.fileName,
 					no_bundle: true,
 					rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-					assets: isEntryWorker
-						? {
-								...inputConfig.assets,
-								directory: getAssetsDirectory(
-									this.environment.config.build.outDir,
-									ctx.resolvedViteConfig
-								),
-							}
-						: undefined,
+					assets:
+						isEntryWorker || isPrerenderWorker
+							? {
+									...inputWorkerConfig.assets,
+									directory: getAssetsDirectory(
+										this.environment.config.build.outDir,
+										ctx.resolvedViteConfig
+									),
+								}
+							: undefined,
 				};
 
-				if (inputConfig.configPath) {
+				// Infer `upload_source_maps` from Vite's `build.sourcemap` if not explicitly set
+				if (
+					inputWorkerConfig.upload_source_maps === undefined &&
+					this.environment.config.build.sourcemap
+				) {
+					outputConfig.upload_source_maps = true;
+				}
+
+				if (inputWorkerConfig.configPath) {
 					const localDevVars = getLocalDevVarsForPreview(
-						inputConfig.configPath,
+						inputWorkerConfig.configPath,
 						ctx.resolvedPluginConfig.cloudflareEnv
 					);
 					// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
@@ -77,16 +86,6 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					}
 				}
 			} else if (this.environment.name === "client") {
-				const inputConfig = ctx.resolvedPluginConfig.config;
-
-				outputConfig = {
-					...inputConfig,
-					assets: {
-						...inputConfig.assets,
-						directory: ".",
-					},
-				};
-
 				const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
 
 				this.emitFile({
@@ -94,6 +93,19 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					fileName: ".assetsignore",
 					source: `${filesToAssetsIgnore.join("\n")}\n`,
 				});
+
+				// For assets only projects the `wrangler.json` file is emitted in the client output directory
+				if (ctx.resolvedPluginConfig.type === "assets-only") {
+					const inputAssetsOnlyConfig = ctx.resolvedPluginConfig.config;
+
+					outputConfig = {
+						...inputAssetsOnlyConfig,
+						assets: {
+							...inputAssetsOnlyConfig.assets,
+							directory: ".",
+						},
+					};
+				}
 			}
 
 			if (!outputConfig) {

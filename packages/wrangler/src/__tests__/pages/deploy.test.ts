@@ -1,12 +1,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import ci from "ci-info";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { version } from "../../../package.json";
+import { logger } from "../../logger";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
@@ -43,7 +47,7 @@ describe("pages deploy", () => {
 
 	//TODO Abstract MSW handlers that repeat to this level - JACOB
 	beforeEach(() => {
-		vi.stubEnv("CI", "true");
+		vi.mocked(ci).isCI = true;
 		setIsTTY(false);
 	});
 
@@ -180,10 +184,10 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							    "value": "{"/logo.png":"2082190357cfd3617ccfe04f340c6247"}",
 							  },
 							]
 						`);
@@ -350,10 +354,10 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							    "value": "{"/logo.txt":"1a98fb08af91aca4a7df1764a2c4ddb0"}",
 							  },
 							]
 						`);
@@ -502,10 +506,10 @@ describe("pages deploy", () => {
 					if (requests.length === 1) {
 						expect(await formDataToObject(await request.formData()))
 							.toMatchInlineSnapshot(`
-								Array [
-								  Object {
+								[
+								  {
 								    "name": "manifest",
-								    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+								    "value": "{"/logo.txt":"1a98fb08af91aca4a7df1764a2c4ddb0"}",
 								  },
 								]
 							`);
@@ -722,10 +726,10 @@ describe("pages deploy", () => {
 					]);
 
 					expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+						{
+						  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -828,13 +832,34 @@ describe("pages deploy", () => {
 
 	it("should refetch a JWT if it expires while uploading", async () => {
 		writeFileSync("logo.txt", "foobar");
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
 
+		// JWT is fetched 3 times:
+		// 1. For validation (before upload)
+		// 2. For upload's initial fetch
+		// 3. For upload's refresh after UNAUTHORIZED
+		let jwtFetchCount = 0;
 		msw.use(
+			http.get(
+				`*/accounts/:accountId/pages/projects/foo/upload-token`,
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					jwtFetchCount++;
+					// First two fetches return jwt1, third fetch (refresh) returns jwt2
+					const jwt =
+						jwtFetchCount <= 2
+							? "<<funfetti-auth-jwt>>"
+							: "<<funfetti-auth-jwt2>>";
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { jwt },
+						},
+						{ status: 200 }
+					);
+				}
+			),
 			http.post<never, { hashes: string[] }>(
 				"*/pages/assets/check-missing",
 				async ({ request }) => {
@@ -876,21 +901,6 @@ describe("pages deploy", () => {
 							],
 							messages: [],
 							result: null,
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			),
-			http.get(
-				`*/accounts/:accountId/pages/projects/foo/upload-token`,
-				() => {
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: { jwt: "<<funfetti-auth-jwt2>>" },
 						},
 						{ status: 200 }
 					);
@@ -955,10 +965,10 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							    "value": "{"/logo.txt":"1a98fb08af91aca4a7df1764a2c4ddb0"}",
 							  },
 							]
 						`);
@@ -1111,13 +1121,13 @@ describe("pages deploy", () => {
 					const manifest = JSON.parse(await toString(body.get("manifest")));
 
 					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                                  "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                                  "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                                  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                                }
-			                          `);
+						{
+						  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						  "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						  "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -1308,13 +1318,13 @@ describe("pages deploy", () => {
 					const body = await request.formData();
 					const manifest = JSON.parse(await toString(body.get("manifest")));
 					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                                  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                                  "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                                  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                                }
-			                          `);
+						{
+						  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						  "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -1505,13 +1515,13 @@ describe("pages deploy", () => {
 					const body = await request.formData();
 					const manifest = JSON.parse(await toString(body.get("manifest")));
 					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                                  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                                  "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                                  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                                }
-			                          `);
+						{
+						  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						  "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -1767,7 +1777,7 @@ describe("pages deploy", () => {
 
 	// regression test for issue #3629
 	it("should not error when deploying a new project with a new repo", async () => {
-		vi.stubEnv("CI", "false");
+		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
 		await execa("git", ["init"]);
 		writeFileSync("logo.png", "foobar");
@@ -1832,12 +1842,12 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							    "value": "{"/logo.png":"2082190357cfd3617ccfe04f340c6247"}",
 							  },
-							  Object {
+							  {
 							    "name": "commit_dirty",
 							    "value": "true",
 							  },
@@ -2101,10 +2111,10 @@ describe("pages deploy", () => {
 						]);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// the contents of the generated `_worker.bundle` file is pretty massive, so I don't
 						// think snapshot testing makes much sense here. Plus, calling
@@ -2333,10 +2343,10 @@ describe("pages deploy", () => {
 							].sort()
 						);
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
@@ -2630,10 +2640,10 @@ async function onRequest() {
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// file content of generated `_worker.bundle` is too massive to snapshot test
 						expect(generatedWorkerBundle).not.toBeNull();
@@ -2999,10 +3009,10 @@ and that at least one include rule is provided.
 						]);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						return HttpResponse.json(
 							{
@@ -3192,10 +3202,10 @@ and that at least one include rule is provided.
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
 						expect(await toString(workerBundle)).toContain(
@@ -3404,10 +3414,10 @@ and that at least one include rule is provided.
 							["manifest", "_worker.bundle"].sort()
 						);
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
 						// dynamic values with static ones so we can properly test the
@@ -3437,25 +3447,25 @@ and that at least one include rule is provided.
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 							"------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"metadata\\"
+							Content-Disposition: form-data; name="metadata"
 
-							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							{"main_module":"bundledWorker-0.test.mjs"}
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 							Content-Type: application/javascript+module
 
 							// _worker.js
-							import wasm from \\"./test-hello.wasm\\";
-							import html from \\"./test-hello.html\\";
+							import wasm from "./test-hello.wasm";
+							import html from "./test-hello.html";
 							var worker_default = {
 							  async fetch(request, env) {
 							    const url = new URL(request.url);
 							    const helloModule = await WebAssembly.instantiate(wasm);
 							    const wasmGreeting = helloModule.exports.hello;
-							    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
+							    if (url.pathname.startsWith("/hello-wasm")) {
 							      return new Response(wasmGreeting);
 							    }
-							    if (url.pathname.startsWith(\\"/hello-text\\")) {
+							    if (url.pathname.startsWith("/hello-text")) {
 							      return new Response(html);
 							    }
 							    return env.ASSETS.fetch(request);
@@ -3467,12 +3477,12 @@ and that at least one include rule is provided.
 							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
+							Content-Disposition: form-data; name="./test-hello.wasm"; filename="./test-hello.wasm"
 							Content-Type: application/wasm
 
 							Hello wasm modules
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
+							Content-Disposition: form-data; name="./test-hello.html"; filename="./test-hello.html"
 							Content-Type: text/plain
 
 							<html><body>Hello text modules</body></html>
@@ -3696,10 +3706,10 @@ and that at least one include rule is provided.
 						]);
 						expect(params.accountId).toEqual("some-account-id");
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
@@ -3722,18 +3732,18 @@ and that at least one include rule is provided.
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 							"------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"metadata\\"
+							Content-Disposition: form-data; name="metadata"
 
-							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							{"main_module":"bundledWorker-0.test.mjs"}
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 							Content-Type: application/javascript+module
 
 							// _worker.js
 							var worker_default = {
 							  async fetch(request, env) {
 							    const url = new URL(request.url);
-							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							    return url.pathname.startsWith("/api/") ? new Response("Ok") : env.ASSETS.fetch(request);
 							  }
 							};
 							export {
@@ -4069,10 +4079,10 @@ and that at least one include rule is provided.
 							["manifest", "_worker.bundle"].sort()
 						);
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
@@ -4095,18 +4105,18 @@ and that at least one include rule is provided.
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 							"------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"metadata\\"
+							Content-Disposition: form-data; name="metadata"
 
-							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							{"main_module":"bundledWorker-0.test.mjs"}
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 							Content-Type: application/javascript+module
 
 							// _worker.js
 							var worker_default = {
 							  async fetch(request, env) {
 							    const url = new URL(request.url);
-							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							    return url.pathname.startsWith("/api/") ? new Response("Ok") : env.ASSETS.fetch(request);
 							  }
 							};
 							export {
@@ -4278,66 +4288,6 @@ and that at least one include rule is provided.
 					},
 					{ once: true }
 				),
-				http.post(
-					"*/accounts/:accountId/pages/projects/foo/deployments",
-					async ({ request, params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						const body = await request.formData();
-						const manifest = JSON.parse(await toString(body.get("manifest")));
-						const workerBundle = body.get("_worker.bundle");
-
-						// make sure this is all we uploaded
-						expect([...body.keys()].sort()).toEqual(
-							["manifest", "_worker.bundle"].sort()
-						);
-
-						expect(manifest).toMatchInlineSnapshot(`
-																								Object {
-																									"/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-																								}
-																				`);
-
-						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
-						expect(await toString(workerBundle)).toContain(`some-module`);
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									id: "123-456-789",
-									url: "https://abcxyz.foo.pages.dev/",
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
-				http.get(
-					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
-					async ({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						expect(params.deploymentId).toEqual("123-456-789");
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									latest_stage: {
-										name: "deploy",
-										status: "success",
-									},
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
 				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async ({ params }) => {
@@ -4474,10 +4424,10 @@ and that at least one include rule is provided.
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
 						expect(await toString(workerBundle)).toContain(`some-module`);
@@ -4661,10 +4611,10 @@ and that at least one include rule is provided.
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
 						expect(await toString(workerBundle)).toContain(
@@ -5826,6 +5776,207 @@ and that at least one include rule is provided.
 		});
 	});
 
+	describe("git detection debug logging", () => {
+		afterEach(() => {
+			logger.resetLoggerLevel();
+		});
+
+		it("should output debug logs for git detection when WRANGLER_LOG=debug", async () => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			// Verify debug logs contain git detection messages
+			expect(std.debug).toContain(
+				"pages deploy: Detecting git repository information..."
+			);
+			expect(std.debug).toContain("pages deploy: Git information summary");
+		});
+
+		it("should log git summary even when flags are provided outside a git repo", async () => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --branch=main --commit-hash=abc123"
+			);
+
+			// Verify debug logs indicate not a git repo but show the provided values in summary
+			expect(std.debug).toContain(
+				"pages deploy: Not a git repository or git not available"
+			);
+			// Summary should show the provided flag values
+			expect(std.debug).toContain("pages deploy: Git information summary");
+			expect(std.debug).toContain("branch: main");
+			expect(std.debug).toContain("commitHash: abc123");
+		});
+	});
+
 	describe("deploys using redirected configs", () => {
 		let fooProjectDetailsChecked = false;
 
@@ -5901,6 +6052,119 @@ and that at least one include rule is provided.
 		it("should work with any branch (i.e. the preview environment)", async () => {
 			await runWrangler("pages deploy --branch my-branch");
 			expect(std.info).toContain(expectedInfo);
+		});
+	});
+
+	describe("max file count limit from JWT", () => {
+		beforeEach(() => {
+			// Create 6 files for testing
+			for (let i = 0; i < 6; i++) {
+				writeFileSync(`file${i}.txt`, `content${i}`);
+			}
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as { hashes: string[] };
+						return HttpResponse.json(
+							{ success: true, errors: [], messages: [], result: body.hashes },
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: null },
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { latest_stage: { name: "deploy", status: "success" } },
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { deployment_configs: { production: {}, preview: {} } },
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+		});
+
+		it("should error when file count exceeds limit from JWT", async () => {
+			// JWT with max_file_count_allowed: 5 (less than the 6 files we created)
+			const jwt =
+				"header." +
+				Buffer.from(JSON.stringify({ max_file_count_allowed: 5 })).toString(
+					"base64"
+				) +
+				".signature";
+			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+
+			await expect(
+				runWrangler("pages deploy . --project-name=foo")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Error: Pages only supports up to 5 files in a deployment for your current plan. Ensure you have specified your build output directory correctly.]`
+			);
+		});
+
+		it("should respect higher file count limit from JWT", async () => {
+			// JWT with max_file_count_allowed: 10 (more than the 6 files we created)
+			const jwt =
+				"header." +
+				Buffer.from(JSON.stringify({ max_file_count_allowed: 10 })).toString(
+					"base64"
+				) +
+				".signature";
+			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+
+			await runWrangler("pages deploy . --project-name=foo");
+
+			expect(std.out).toContain("Success! Uploaded 6 files");
+			expect(std.out).toContain("Deployment complete!");
 		});
 	});
 });

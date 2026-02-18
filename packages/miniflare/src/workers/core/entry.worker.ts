@@ -9,6 +9,7 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { LOCAL_EXPLORER_BASE_PATH } from "../../plugins/core/constants";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { handleEmail } from "./email";
@@ -410,11 +411,8 @@ export default <ExportedHandler<Env>>{
 
 		try {
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
-				if (url.pathname.startsWith("/cdn-cgi/explorer/api")) {
+				if (url.pathname.startsWith(LOCAL_EXPLORER_BASE_PATH)) {
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
-				} else if (url.pathname.startsWith("/cdn-cgi/explorer")) {
-					return new Response("Pretend this is an asset");
-					// TODO: serve assets using disk service
 				}
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {

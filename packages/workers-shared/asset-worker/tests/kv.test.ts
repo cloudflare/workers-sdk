@@ -1,4 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- see #12346 */
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import type { AssetMetadata } from "../src/utils/kv";
 import type { MockInstance } from "vitest";
@@ -33,9 +43,9 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			);
 
 			const asset = await getAssetWithMetadataFromKV(mockKVNamespace, "abcd");
-			expect(asset).toBeDefined();
-			expect(asset?.value).toEqual("<html>Hello world</html>");
-			expect(asset?.metadata).toEqual({
+			assert(asset);
+			expect(asset.value).toEqual("<html>Hello world</html>");
+			expect(asset.metadata).toEqual({
 				contentType: "text/html",
 			});
 			expect(spy).toHaveBeenCalledOnce();
@@ -78,7 +88,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
-		it("should retry on 404 and cache with 30s ttl", async () => {
+		it("should retry on 404 and cache with shorter ttl", async () => {
 			let attempts = 0;
 			spy.mockImplementation(() => {
 				if (attempts++ === 0) {

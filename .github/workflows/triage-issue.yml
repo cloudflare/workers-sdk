@@ -1,0 +1,151 @@
+name: Triage New Issue
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue-number:
+        description: "Issue number to triage"
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  issues: read
+
+# Cancel in-progress runs for the same issue
+concurrency:
+  group: triage-${{ github.event.issue.number || inputs.issue-number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    # For issue events: skip PRs and bot-created issues. Always run for workflow_dispatch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (!github.event.issue.pull_request &&
+      github.event.issue.user.type != 'Bot')
+    timeout-minutes: 15
+    steps:
+      - name: Resolve issue number
+        id: issue
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "number=${{ inputs.issue-number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout (sparse — just the skill and opencode config)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/skills
+            .github/opencode.json
+
+      - name: Install OpenCode
+        run: |
+          npm install -g opencode-ai
+          cp .github/opencode.json ./opencode.json
+
+      - name: Fetch issue data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE=${{ steps.issue.outputs.number }}
+          mkdir -p data/${ISSUE}
+
+          gh issue view ${ISSUE} \
+            --repo ${{ github.repository }} \
+            --json number,title,body,comments,createdAt,updatedAt,labels,state,author \
+            > data/${ISSUE}/context.json
+
+      - name: Analyze issue with OpenCode
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
+          CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
+        run: |
+          ISSUE=${{ steps.issue.outputs.number }}
+          REPO=${{ github.repository }}
+
+          opencode run \
+            --print-logs \
+            "Analyze GitHub issue ${REPO}#${ISSUE} using the skill at .github/skills/issue-review.md.
+
+          The issue data has been pre-fetched to data/${ISSUE}/context.json.
+          Read it with the read tool and follow the triage process.
+
+          Create:
+          - data/${ISSUE}/report.md (full report)
+          - data/${ISSUE}/summary.md (single tab-separated summary line)
+          "
+
+      - name: Upload report to dashboard
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF1_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF1_ACCESS_CLIENT_SECRET }}
+          DASHBOARD_URL: ${{ secrets.REPORTS_DASHBOARD_URL }}
+        run: |
+          ISSUE=${{ steps.issue.outputs.number }}
+
+          # Check files were created
+          if [ ! -f "data/${ISSUE}/report.md" ]; then
+            echo "::error::report.md was not generated"
+            exit 1
+          fi
+          if [ ! -f "data/${ISSUE}/summary.md" ]; then
+            echo "::error::summary.md was not generated"
+            exit 1
+          fi
+
+          # Parse the tab-separated summary.md into variables
+          SUMMARY=$(cat "data/${ISSUE}/summary.md")
+          TITLE=$(echo "$SUMMARY" | cut -f2)
+          RECOMMENDATION=$(echo "$SUMMARY" | cut -f3)
+          DIFFICULTY=$(echo "$SUMMARY" | cut -f4)
+          REASONING=$(echo "$SUMMARY" | cut -f5)
+          SUGGESTED_ACTION=$(echo "$SUMMARY" | cut -f6)
+          SUGGESTED_COMMENT=$(echo "$SUMMARY" | cut -f7)
+          REPORT=$(cat "data/${ISSUE}/report.md")
+
+          # Build JSON payload
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg githubUrl "https://github.com/${{ github.repository }}/issues/${ISSUE}" \
+            --arg recommendation "$RECOMMENDATION" \
+            --arg difficulty "$DIFFICULTY" \
+            --arg reasoning "$REASONING" \
+            --arg suggestedAction "$SUGGESTED_ACTION" \
+            --arg suggestedComment "$SUGGESTED_COMMENT" \
+            --arg reportMarkdown "$REPORT" \
+            '{
+              title: $title,
+              githubUrl: $githubUrl,
+              recommendation: $recommendation,
+              difficulty: $difficulty,
+              reasoning: $reasoning,
+              suggestedAction: $suggestedAction,
+              suggestedComment: $suggestedComment,
+              reportMarkdown: $reportMarkdown
+            }')
+
+          # POST to dashboard API
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X POST "${DASHBOARD_URL}/api/report/${ISSUE}" \
+            -H "Content-Type: application/json" \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            -d "$PAYLOAD")
+
+          echo "Dashboard API response: HTTP ${HTTP_STATUS}"
+          cat response.json
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::Failed to upload report (HTTP ${HTTP_STATUS})"
+            exit 1
+          fi
+
+          echo "Report uploaded for issue #${ISSUE}"

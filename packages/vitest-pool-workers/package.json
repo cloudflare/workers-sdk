@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
-	"version": "0.12.6",
+	"version": "0.12.13",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -44,7 +44,7 @@
 	"scripts": {
 		"build": "tsdown",
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",
-		"check:lint": "eslint .  --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
@@ -54,8 +54,7 @@
 		"cjs-module-lexer": "^1.2.3",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
-		"wrangler": "workspace:*",
-		"zod": "^3.25.76"
+		"wrangler": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -73,11 +72,13 @@
 		"eslint": "catalog:default",
 		"get-port": "^7.1.0",
 		"semver": "^7.7.1",
+		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"zod": "^3.25.76"
 	},
 	"peerDependencies": {
 		"@vitest/runner": "4.1.0-beta.1",

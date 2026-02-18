@@ -21,7 +21,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import splitSqlQuery from "./splitter";
+import { splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -278,7 +278,9 @@ async function executeLocally({
 	input: ExecuteInput;
 	persistTo: string | undefined;
 }) {
-	const localDB = getDatabaseInfoFromConfig(config, name);
+	const localDB = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`

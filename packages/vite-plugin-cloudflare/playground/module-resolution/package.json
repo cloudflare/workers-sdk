@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build:default": "vite build --app",
 		"build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
 		"check:type": "tsc --build",
 		"dev": "vite dev",

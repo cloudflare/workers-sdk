@@ -11,6 +11,10 @@ import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";
+import {
+	sendAutoConfigProcessEndedMetricsEvent,
+	sendAutoConfigProcessStartedMetricsEvent,
+} from "../autoconfig/telemetry-utils";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
@@ -28,7 +32,6 @@ import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
-import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -232,6 +235,16 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
 			choices: ["immediate", "gradual"] as const,
 		},
+		tag: {
+			describe: "A tag for this Worker Version",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe: "A descriptive message for this Worker Version and Deployment",
+			type: "string",
+			requiresArg: true,
+		},
 		strict: {
 			describe:
 				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
@@ -254,6 +267,7 @@ export const deployCommand = createCommand({
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		printMetricsBanner: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {
@@ -264,14 +278,6 @@ export const deployCommand = createCommand({
 		}
 	},
 	async handler(args, { config }) {
-		if (config.pages_build_output_dir) {
-			throw new UserError(
-				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: true }
-			);
-		}
-
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
 			// If there is a positional parameter or an assets directory specified via --assets then
@@ -280,23 +286,82 @@ export const deployCommand = createCommand({
 			!args.script &&
 			!args.assets;
 
-		let autoConfigSummary: AutoConfigSummary | undefined;
+		if (
+			config.pages_build_output_dir &&
+			// Note: autoconfig handle Pages projects on its own, so we don't want to hard fail here if autoconfig run
+			!shouldRunAutoConfig
+		) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages deploy` instead.",
+				{ telemetryMessage: true }
+			);
+		}
 
 		if (shouldRunAutoConfig) {
-			const details = await getDetailsForAutoConfig({
-				wranglerConfig: config,
+			sendAutoConfigProcessStartedMetricsEvent({
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
 			});
 
-			// Only run auto config if the project is not already configured
-			if (!details.configured) {
-				autoConfigSummary = await runAutoConfig(details);
-
-				// If autoconfig worked, there should now be a new config file, and so we need to read config again
-				config = readConfig(args, {
-					hideWarnings: false,
-					useRedirectIfAvailable: true,
+			try {
+				const details = await getDetailsForAutoConfig({
+					wranglerConfig: config,
 				});
+
+				if (details.framework?.id === "cloudflare-pages") {
+					// If the project is a Pages project then warn the user but allow them to proceed if they wish so
+					logger.warn(
+						"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead. Proceeding will likely produce unwanted results."
+					);
+					const proceedWithPagesProject = await confirm(
+						"Are you sure that you want to proceed?",
+						{
+							defaultValue: false,
+							fallbackValue: true,
+						}
+					);
+
+					if (!proceedWithPagesProject) {
+						sendAutoConfigProcessEndedMetricsEvent({
+							success: false,
+							command: "wrangler deploy",
+							dryRun: !!args.dryRun,
+						});
+						return;
+					}
+				} else if (!details.configured) {
+					// Only run auto config if the project is not already configured
+					const autoConfigSummary = await runAutoConfig(details);
+
+					writeOutput({
+						type: "autoconfig",
+						version: 1,
+						command: "deploy",
+						summary: autoConfigSummary,
+					});
+
+					// If autoconfig worked, there should now be a new config file, and so we need to read config again
+					config = readConfig(args, {
+						hideWarnings: false,
+						useRedirectIfAvailable: true,
+					});
+				}
+			} catch (error) {
+				sendAutoConfigProcessEndedMetricsEvent({
+					command: "wrangler deploy",
+					dryRun: !!args.dryRun,
+					success: false,
+					error,
+				});
+				throw error;
 			}
+
+			sendAutoConfigProcessEndedMetricsEvent({
+				success: true,
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
+			});
 		}
 
 		// Note: the open-next delegation should happen after we run the auto-config logic so that we
@@ -437,6 +502,8 @@ export const deployCommand = createCommand({
 			experimentalAutoCreate: args.experimentalAutoCreate,
 			containersRollout: args.containersRollout,
 			strict: args.strict,
+			tag: args.tag,
+			message: args.message,
 		});
 
 		writeOutput({
@@ -448,7 +515,6 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
-			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(

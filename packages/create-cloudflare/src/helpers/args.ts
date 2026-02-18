@@ -170,6 +170,12 @@ export const cliDefinition: ArgumentsDefinition = {
 			description: "Initialize a local git repository for your application",
 		},
 		{
+			name: "agents",
+			type: "boolean",
+			description:
+				"Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform",
+		},
+		{
 			name: "open",
 			type: "boolean",
 			default: true,

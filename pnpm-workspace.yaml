@@ -22,8 +22,6 @@ catalog:
   "@vitest/runner": 4.1.0-beta.1
   "@vitest/snapshot": 4.1.0-beta.1
   "@vitest/ui": 4.1.0-beta.1
-  # rimraf@6 requires node 20 or >=22
-  rimraf: "^6.0.1"
   typescript: "~5.8.3"
   undici: "7.18.2"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
@@ -32,14 +30,17 @@ catalog:
   vitest: "4.1.0-beta.1"
   vite: "^5.4.14"
   "ws": "8.18.0"
-  esbuild: "0.27.0"
+  esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260122.0"
-  workerd: "1.20260122.0"
+  "@cloudflare/workers-types": "^4.20260217.0"
+  workerd: "1.20260217.0"
   eslint: "^9.39.1"
+  jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
   msw: "2.12.4"
+  "tree-kill": "^1.2.2"
   "capnp-es": "^0.0.14"
+  "ci-info": "^4.4.0"
 
 catalogs:
   vite-plugin:

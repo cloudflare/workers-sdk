@@ -6,28 +6,21 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
+import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { logger } from "./logger";
-import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import type { Trigger } from "./api";
+import type { StartDevWorkerInput, Trigger } from "./api";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
-	CfD1Database,
-	CfKvNamespace,
+	Binding,
 	CfModule,
-	CfQueue,
-	CfR2Bucket,
-	CfService,
-	CfWorkerInit,
 	Config,
 	Environment,
-	EnvironmentNonInheritable,
-	INHERIT_SYMBOL,
 	Route,
 	Rule,
 } from "@cloudflare/workers-utils";
@@ -42,6 +35,7 @@ export const dev = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
+		printMetricsBanner: true,
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",
@@ -309,10 +303,15 @@ export const dev = createCommand({
 });
 
 export type AdditionalDevProps = {
+	/**
+	 * Default vars that can be overridden by config vars.
+	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
+	 */
+	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
-		id?: string | typeof INHERIT_SYMBOL;
+		id?: string;
 		preview_id?: string;
 	}[];
 	durableObjects?: {
@@ -329,7 +328,7 @@ export type AdditionalDevProps = {
 	}[];
 	r2?: {
 		binding: string;
-		bucket_name?: string | typeof INHERIT_SYMBOL;
+		bucket_name?: string;
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
@@ -341,7 +340,7 @@ export type AdditionalDevProps = {
 	};
 	d1Databases?: Array<
 		Omit<Environment["d1_databases"][number], "database_id"> & {
-			database_id?: string | typeof INHERIT_SYMBOL;
+			database_id?: string;
 		}
 	>;
 	processEntrypoint?: boolean;
@@ -366,25 +365,6 @@ export type StartDevOptions = DevArguments &
 		dockerPath?: string;
 		containerEngine?: string;
 	};
-
-/**
- * mask anything that was overridden in .dev.vars
- * so that we don't log potential secrets into the terminal
- */
-export function maskVars(
-	bindings: CfWorkerInit["bindings"],
-	configParam: Config
-) {
-	const maskedVars = { ...bindings.vars };
-	for (const key of Object.keys(maskedVars)) {
-		if (maskedVars[key] !== configParam.vars[key]) {
-			// This means it was overridden in .dev.vars
-			// so let's mask it
-			maskedVars[key] = "(hidden)";
-		}
-	}
-	return maskedVars;
-}
 
 export async function getHostAndRoutes(
 	args:
@@ -454,130 +434,12 @@ export function getInferredHost(
 }
 
 /**
- * Gets the bindings for the Cloudflare Worker.
- *
- * @param configParam The loaded configuration.
- * @param env The environment to use, if any.
- * @param envFiles An array of paths, relative to the project directory, of .env files to load.
- * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
- * @param local Whether the dev server should run locally.
- * @param args Additional arguments for the dev server.
- * @returns The bindings for the Cloudflare Worker.
+ * Apply Hyperdrive connection string environment variables to config.
+ * Checks for CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_* env vars
+ * and applies them to the config's hyperdrive bindings.
  */
-export function getBindings(
-	configParam: Config,
-	env: string | undefined,
-	envFiles: string[] | undefined,
-	local: boolean,
-	args: AdditionalDevProps
-): CfWorkerInit["bindings"] {
-	/**
-	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
-	 * args to the `pages dev` command. These args will always take precedence
-	 * over the configuration file, and therefore should override corresponding
-	 * config in `wrangler.toml`.
-	 */
-	// merge KV bindings
-	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, remote }) => {
-			// In remote `dev`, we make folks use a separate kv namespace called
-			// `preview_id` instead of `id` so that they don't
-			// break production data. So here we check that a `preview_id`
-			// has actually been configured.
-			// This whole block of code will be obsoleted in the future
-			// when we have copy-on-write for previews on edge workers.
-			if (!preview_id && !local) {
-				// TODO: This error has to be a _lot_ better, ideally just asking
-				// to create a preview namespace for the user automatically
-				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`,
-					{
-						telemetryMessage:
-							"no preview kv namespace configured in remote dev",
-					}
-				); // Ugh, I really don't like this message very much
-			}
-			return {
-				binding,
-				id: preview_id ?? id,
-				remote: remote,
-			} satisfies CfKvNamespace;
-		}
-	);
-	const kvArgs = args.kv || [];
-	const mergedKVBindings = mergeWithOverride(kvConfig, kvArgs, "binding");
-
-	// merge DO bindings
-	const doConfig = (configParam.durable_objects || { bindings: [] }).bindings;
-	const doArgs = args.durableObjects || [];
-	const mergedDOBindings = mergeWithOverride(doConfig, doArgs, "name");
-
-	// merge D1 bindings
-	const d1Config = (configParam.d1_databases ?? []).map((d1Db) => {
-		const database_id = d1Db.preview_database_id
-			? d1Db.preview_database_id
-			: d1Db.database_id;
-
-		if (local) {
-			return {
-				...d1Db,
-				remote: d1Db.remote,
-				database_id,
-			} satisfies CfD1Database;
-		}
-		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
-		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
-			logger.log(
-				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your ${configFileName(configParam.configPath)} file\n--------------------\n`
-			);
-		}
-		return { ...d1Db, database_id };
-	});
-	const d1Args = args.d1Databases || [];
-	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
-
-	// merge R2 bindings
-	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
-		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
-				// same idea as kv namespace preview id,
-				// same copy-on-write TODO
-				if (!preview_bucket_name && !local) {
-					throw new UserError(
-						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your ${configFileName(configParam.configPath)} file`,
-						{
-							telemetryMessage: "no preview r2 bucket configured in remote dev",
-						}
-					);
-				}
-				return {
-					binding,
-					bucket_name: preview_bucket_name ?? bucket_name,
-					jurisdiction,
-					remote: remote,
-				} satisfies CfR2Bucket;
-			}
-		) || [];
-	const r2Args = args.r2 || [];
-	const mergedR2Bindings = mergeWithOverride(r2Config, r2Args, "binding");
-
-	// merge service bindings
-	const servicesConfig = configParam.services || [];
-	const servicesArgs = args.services || [];
-	const mergedServiceBindings = mergeWithOverride(
-		servicesConfig,
-		servicesArgs,
-		"binding"
-	).map(
-		(service) =>
-			({
-				...service,
-				remote: "remote" in service && !!service.remote,
-			}) satisfies CfService
-	);
-
-	// Hyperdrive bindings
-	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
+function applyHyperdriveEnvVars(config: Config, local: boolean): void {
+	for (const hyperdrive of config.hyperdrive ?? []) {
 		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 
@@ -614,79 +476,56 @@ export function getBindings(
 			);
 			hyperdrive.localConnectionString = connectionStringFromEnv;
 		}
+	}
+}
+/**
+ * Gets the bindings for the Cloudflare Worker.
+ *
+ * @param configParam The loaded configuration.
+ * @param env The environment to use, if any.
+ * @param envFiles An array of paths, relative to the project directory, of .env files to load.
+ * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
+ * @param local Whether the dev server should run locally.
+ * @param inputBindings Additional bindings to merge on top of config bindings
+ * @returns The bindings for the Cloudflare Worker.
+ */
+export function getBindings(
+	configParam: Config,
+	env: string | undefined,
+	envFiles: string[] | undefined,
+	local: boolean,
+	inputBindings: StartDevWorkerInput["bindings"],
+	defaultBindings: StartDevWorkerInput["bindings"]
+): StartDevWorkerInput["bindings"] {
+	applyHyperdriveEnvVars(configParam, local);
 
-		return hyperdrive;
+	const bindings = convertConfigToBindings(configParam, {
+		usePreviewIds: true,
 	});
 
-	// Queues bindings
-	const queuesBindings = [
-		...(configParam.queues.producers || []).map((queue) => {
-			return {
-				binding: queue.binding,
-				queue_name: queue.queue,
-				delivery_delay: queue.delivery_delay,
-				remote: queue.remote,
-			} satisfies CfQueue;
-		}),
-	];
+	// Override vars with .dev.vars (dev-specific)
+	// getVarsForDev returns typed bindings: config vars are plain_text/json,
+	// while .dev.vars/.env vars are secret_text
+	const vars = getVarsForDev(
+		configParam.userConfigPath,
+		envFiles,
+		configParam.vars,
+		env
+	);
+	for (const [name, binding] of Object.entries(vars)) {
+		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace
+		const existingBinding = bindings[name];
+		if (
+			!existingBinding ||
+			existingBinding.type === "plain_text" ||
+			existingBinding.type === "json" ||
+			existingBinding.type === "secret_text"
+		) {
+			bindings[name] = binding;
+		}
+	}
 
-	const bindings: CfWorkerInit["bindings"] = {
-		// top-level fields
-		wasm_modules: configParam.wasm_modules,
-		text_blobs: configParam.text_blobs,
-		data_blobs: configParam.data_blobs,
-
-		// inheritable fields
-		dispatch_namespaces: configParam.dispatch_namespaces,
-		logfwdr: configParam.logfwdr,
-
-		// non-inheritable fields
-		vars: {
-			// Use a copy of combinedVars since we're modifying it later
-			...getVarsForDev(
-				configParam.userConfigPath,
-				envFiles,
-				configParam.vars,
-				env
-			),
-			...args.vars,
-		},
-		durable_objects: {
-			bindings: mergedDOBindings,
-		},
-		workflows: configParam.workflows,
-		kv_namespaces: mergedKVBindings,
-		queues: queuesBindings,
-		r2_buckets: mergedR2Bindings,
-		d1_databases: mergedD1Bindings,
-		vectorize: configParam.vectorize,
-		hyperdrive: hyperdriveBindings,
-		secrets_store_secrets: configParam.secrets_store_secrets,
-		services: mergedServiceBindings,
-		vpc_services: configParam.vpc_services,
-		analytics_engine_datasets: configParam.analytics_engine_datasets,
-		browser: configParam.browser,
-		ai: args.ai || configParam.ai,
-		images: configParam.images,
-		version_metadata: args.version_metadata || configParam.version_metadata,
-		unsafe: {
-			bindings: configParam.unsafe.bindings,
-			metadata: configParam.unsafe.metadata,
-			capnp: configParam.unsafe.capnp,
-		},
-		mtls_certificates: configParam.mtls_certificates,
-		pipelines: configParam.pipelines,
-		send_email: configParam.send_email,
-		assets: configParam.assets?.binding
-			? { binding: configParam.assets?.binding }
-			: undefined,
-		unsafe_hello_world: configParam.unsafe_hello_world,
-		ratelimits: configParam.ratelimits,
-		worker_loaders: configParam.worker_loaders,
-		media: configParam.media,
-	};
-
-	return bindings;
+	return { ...defaultBindings, ...bindings, ...inputBindings };
 }
 
 export function getAssetChangeMessage(

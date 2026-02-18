@@ -7,7 +7,7 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
-import { getLocalExplorerFromEnv } from "@cloudflare/workers-utils";
+import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
 import {
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
@@ -426,12 +426,13 @@ export async function getDevMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: ctx.proxySharedSecret,
 			logRequests: false,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			unsafeLocalExplorer: getLocalExplorerFromEnv(),
+			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
@@ -619,11 +620,12 @@ export async function getPreviewMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: ctx.proxySharedSecret,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
-			unsafeLocalExplorer: getLocalExplorerFromEnv(),
+			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,

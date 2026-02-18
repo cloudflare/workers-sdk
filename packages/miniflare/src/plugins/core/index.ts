@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -9,7 +9,6 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
-import SCRIPT_LOCAL_EXPLORER_API from "worker:local-explorer/api";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -40,6 +39,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	DurableObjectClassNames,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	Plugin,
@@ -58,6 +58,7 @@ import {
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
+import { constructExplorerBindingMap, getExplorerServices } from "./explorer";
 import {
 	buildStringScriptPath,
 	convertModuleDefinition,
@@ -73,6 +74,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -177,6 +179,10 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		// Strip the CF-Connecting-IP header from outbound fetches
 		stripCfConnectingIp: z.boolean().default(true),
+
+		// Zone to use for the CF-Worker header in outbound fetches
+		// If not specified, defaults to `${worker-name}.example.com`
+		zone: z.string().optional(),
 
 		/** Configuration used to connect to the container engine */
 		containerEngine: z
@@ -924,6 +930,9 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		if (options.stripCfConnectingIp) {
+			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
+			const workerName = options.name ?? "worker";
+			const cfWorkerValue = options.zone ?? `${workerName}.example.com`;
 			services.push({
 				name: getStripCfConnectingIpName(workerIndex),
 				worker: {
@@ -935,6 +944,12 @@ export const CORE_PLUGIN: Plugin<
 					],
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["connect_pass_through", "experimental"],
+					bindings: [
+						{
+							name: "CF_WORKER_ZONE",
+							text: cfWorkerValue,
+						},
+					],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
 			});
@@ -952,6 +967,8 @@ export interface GlobalServicesOptions {
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
+	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
+	durableObjectClassNames: DurableObjectClassNames;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -960,6 +977,7 @@ export function getGlobalServices({
 	loopbackPort,
 	log,
 	proxyBindings,
+	durableObjectClassNames,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1001,6 +1019,11 @@ export function getGlobalServices({
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
+		// Add cache service binding for purgeCache() API
+		{
+			name: CoreBindings.SERVICE_CACHE,
+			service: { name: getCacheServiceName(0) },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -1077,20 +1100,32 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		services.push({
-			name: SERVICE_LOCAL_EXPLORER,
-			worker: {
-				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: [
-					{
-						name: "api.worker.js",
-						esModule: SCRIPT_LOCAL_EXPLORER_API(),
-					},
-				],
-				bindings: [...proxyBindings],
-			},
-		});
+		// Local explorer UI assets path
+		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
+		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
+		const localExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
+		if (!existsSync(localExplorerUiPath)) {
+			throw new MiniflareCoreError(
+				"ERR_MISSING_EXPLORER_UI",
+				`Local Explorer UI assets not found at expected path: ${localExplorerUiPath}`
+			);
+		}
+		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			proxyBindings,
+			durableObjectClassNames
+		);
+		// Add loopback service binding if DOs are configured
+		// The explorer worker uses this to call the /core/do-storage endpoint
+		// which reads the filesystem using Node.js (bypassing workerd disk service issues on Windows)
+		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
+		services.push(
+			...getExplorerServices({
+				localExplorerUiPath,
+				proxyBindings,
+				bindingIdMap: IDToBindingMap,
+				hasDurableObjects,
+			})
+		);
 	}
 
 	return services;

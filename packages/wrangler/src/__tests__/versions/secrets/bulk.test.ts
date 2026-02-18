@@ -1,7 +1,9 @@
 import { writeFile } from "node:fs/promises";
 import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in mockPostVersion callback */
 import { afterEach, describe, expect, it, test, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
@@ -29,7 +31,7 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\" "
+			🌀 Creating the secrets for the Worker "script-name" "
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
@@ -72,12 +74,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -96,12 +98,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -149,12 +151,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -198,7 +200,7 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\" "
+			🌀 Creating the secrets for the Worker "script-name" "
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
@@ -246,12 +248,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -294,12 +296,12 @@ describe("versions secret bulk", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\"
+			🌀 Creating the secrets for the Worker "script-name"
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version to production traffic use the command "wrangler versions deploy"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -326,7 +328,7 @@ describe("versions secret bulk", () => {
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 				  the target environment using the \`-e|--env\` flag.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
-				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+				  string to the flag to target such environment. For example \`--env=""\`.
 
 				"
 			`);

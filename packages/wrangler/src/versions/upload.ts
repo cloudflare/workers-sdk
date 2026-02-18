@@ -579,6 +579,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
+		const bindings = getBindings(config);
+
+		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
+		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
+			bindings[bindingName] = {
+				type: "plain_text",
+				value,
+				hidden: true,
+			};
+		}
+
 		const {
 			modules,
 			dependencies,
@@ -676,11 +687,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
-
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -693,9 +699,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
-			bindings,
 			migrations,
 			modules,
+			containers: config.containers,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -726,30 +732,30 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			observability: undefined,
 		};
 
+		if (config.containers && config.containers.length > 0) {
+			logger.warn(
+				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+			);
+		}
+
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
 
-		// mask anything that was overridden in cli args
-		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...bindings.vars };
-		for (const key of Object.keys(maskedVars)) {
-			if (maskedVars[key] !== config.vars[key]) {
-				// This means it was overridden in cli args
-				// so let's mask it
-				maskedVars[key] = "(hidden)";
-			}
-		}
-
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				dryRun: true,
+				unsafe: config.unsafe,
+			});
 			printBindings(
-				{ ...bindings, vars: maskedVars },
+				bindings,
 				config.tail_consumers,
-				config.streaming_tail_consumers
+				config.streaming_tail_consumers,
+				undefined,
+				{ unsafeMetadata: config.unsafe?.metadata }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
@@ -762,7 +768,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				unsafe: config.unsafe,
+			});
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -786,18 +794,22 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings(
-					{ ...bindings, vars: maskedVars },
+					bindings,
 					config.tail_consumers,
-					config.streaming_tail_consumers
+					config.streaming_tail_consumers,
+					undefined,
+					{ unsafeMetadata: config.unsafe?.metadata }
 				);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
-						{ ...bindings, vars: maskedVars },
+						bindings,
 						config.tail_consumers,
-						config.streaming_tail_consumers
+						config.streaming_tail_consumers,
+						undefined,
+						{ unsafeMetadata: config.unsafe?.metadata }
 					);
 				}
 

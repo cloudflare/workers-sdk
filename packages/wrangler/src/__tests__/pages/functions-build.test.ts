@@ -6,7 +6,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -23,12 +23,14 @@ describe("pages functions build", () => {
 		await endEventLoop();
 	});
 
-	it("should throw an error if no worker script and no Functions directory was found", async () => {
+	it("should throw an error if no worker script and no Functions directory was found", async ({
+		expect,
+	}) => {
 		await expect(runWrangler("pages functions build")).rejects.toThrowError();
 		expect(std.err).toContain("Could not find anything to build.");
 	});
 
-	it("should build functions", async () => {
+	it("should build functions", async ({ expect }) => {
 		/* ---------------------------- */
 		/*       Set up Functions       */
 		/* ---------------------------- */
@@ -57,7 +59,9 @@ describe("pages functions build", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should include any external modules imported by functions in the output bundle", async () => {
+	it("should include any external modules imported by functions in the output bundle", async ({
+		expect,
+	}) => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -136,7 +140,7 @@ describe("pages functions build", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should output a directory with --outdir", async () => {
+	it("should output a directory with --outdir", async ({ expect }) => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -176,15 +180,15 @@ describe("pages functions build", () => {
 		`);
 
 		expect(readdirSync("dist").sort()).toMatchInlineSnapshot(`
-		Array [
-		  "e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm",
-		  "f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm",
-		  "index.js",
-		]
-	`);
+			[
+			  "e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm",
+			  "f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm",
+			  "index.js",
+			]
+		`);
 	});
 
-	it("should output a metafile when --metafile is set", async () => {
+	it("should output a metafile when --metafile is set", async ({ expect }) => {
 		// Setup a basic pages function
 		mkdirSync("functions");
 		writeFileSync(
@@ -207,7 +211,7 @@ describe("pages functions build", () => {
 		expect(meta.outputs).toBeDefined();
 	});
 
-	it("should build _worker.js", async () => {
+	it("should build _worker.js", async ({ expect }) => {
 		/* ---------------------------- */
 		/*       Set up js files        */
 		/* ---------------------------- */
@@ -263,11 +267,11 @@ export default {
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+			{"main_module":"functionsWorker-0.test.js"}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+			Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"
 			Content-Type: application/javascript+module
 
 			// ../utils/meaning-of-life.js
@@ -276,7 +280,7 @@ export default {
 			// _worker.js
 			var worker_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
 			  }
 			};
 			export {
@@ -289,7 +293,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should include all external modules imported by _worker.js in the output bundle, when bundling _worker.js", async () => {
+	it("should include all external modules imported by _worker.js in the output bundle, when bundling _worker.js", async ({
+		expect,
+	}) => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -365,7 +371,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should build _worker.js over /functions, if both are present", async () => {
+	it("should build _worker.js over /functions, if both are present", async ({
+		expect,
+	}) => {
 		/* ---------------------------- */
 		/*       Set up _worker.js      */
 		/* ---------------------------- */
@@ -420,17 +428,17 @@ export default {
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+			{"main_module":"functionsWorker-0.test.js"}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+			Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"
 			Content-Type: application/javascript+module
 
 			// _worker.js
 			var worker_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js\\");
+			    return new Response("Hello from _worker.js");
 			  }
 			};
 			export {
@@ -444,7 +452,9 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should leave Node.js imports when the `nodejs_compat` compatibility flag is set", async () => {
+	it("should leave Node.js imports when the `nodejs_compat` compatibility flag is set", async ({
+		expect,
+	}) => {
 		mkdirSync("functions");
 		writeFileSync(
 			"functions/hello.js",
@@ -475,7 +485,9 @@ export default {
 		);
 	});
 
-	it("should warn at Node.js imports when the `nodejs_compat` compatibility flag is not set", async () => {
+	it("should warn at Node.js imports when the `nodejs_compat` compatibility flag is not set", async ({
+		expect,
+	}) => {
 		mkdirSync("functions");
 		writeFileSync(
 			"functions/hello.js",
@@ -493,9 +505,9 @@ export default {
 			await runWrangler(`pages functions build --outfile=public/_worker.bundle`)
 		);
 		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package \\"node:async_hooks\\" wasn't found on the file system but is built into node.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package "node:async_hooks" wasn't found on the file system but is built into node.[0m
 
-			  Your Worker may throw errors at runtime unless you enable the \\"nodejs_compat\\" compatibility flag.
+			  Your Worker may throw errors at runtime unless you enable the "nodejs_compat" compatibility flag.
 			  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
 			  from:
 			   - hello.js
@@ -504,7 +516,7 @@ export default {
 		`);
 	});
 
-	it("should compile a _worker.js/ directory", async () => {
+	it("should compile a _worker.js/ directory", async ({ expect }) => {
 		mkdirSync("public");
 		mkdirSync("public/_worker.js");
 		writeFileSync(
@@ -561,19 +573,19 @@ export const cat = "dog";`
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+			{"main_module":"bundledWorker-0.test.mjs"}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+			Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 			Content-Type: application/javascript+module
 
 			// _worker.js/index.js
-			import { cat } from \\"./cat.js\\";
-			import { dog } from \\"./dog.mjs\\";
+			import { cat } from "./cat.js";
+			import { dog } from "./dog.mjs";
 			var index_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
+			    return new Response("Hello from _worker.js/index.js" + cat + dog);
 			  }
 			};
 			export {
@@ -582,17 +594,17 @@ export const cat = "dog";`
 			//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
+			Content-Disposition: form-data; name="cat.js"; filename="cat.js"
 			Content-Type: application/javascript+module
 
 
-			export const cat = \\"cat\\";
+			export const cat = "cat";
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
+			Content-Disposition: form-data; name="dog.mjs"; filename="dog.mjs"
 			Content-Type: application/javascript+module
 
 
-			export const cat = \\"dog\\";
+			export const cat = "dog";
 			------formdata-undici-0.test--
 			"
 		`);
@@ -614,7 +626,9 @@ describe("functions build w/ config", () => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 	});
 
-	it("should include all config in the _worker.bundle metadata", async () => {
+	it("should include all config in the _worker.bundle metadata", async ({
+		expect,
+	}) => {
 		// Write an example wrangler.toml file with a _lot_ of config
 		writeFileSync(
 			"wrangler.toml",
@@ -761,11 +775,11 @@ export default {
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"functionsWorker-0.test.js\\",\\"bindings\\":[{\\"name\\":\\"TEST_JSON_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"{\\\\njson: \\\\\\"value\\\\\\"\\\\n}\\"},{\\"name\\":\\"TEST_PLAINTEXT_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"PLAINTEXT\\"},{\\"name\\":\\"KV_PREVIEW\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"KV_PREVIEW2\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"DO_PREVIEW\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW2\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW3\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"do-class\\",\\"script_name\\":\\"do-s\\",\\"environment\\":\\"do-e\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW\\",\\"queue_name\\":\\"q-id\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW2\\",\\"queue_name\\":\\"q-id\\"},{\\"name\\":\\"R2_PREVIEW\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"R2_PREVIEW2\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"D1_PREVIEW\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"D1_PREVIEW2\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"SERVICE_PREVIEW\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"SERVICE_PREVIEW2\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"AE_PREVIEW\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AE_PREVIEW2\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AI_PREVIEW\\",\\"type\\":\\"ai\\"}],\\"compatibility_date\\":\\"2023-02-14\\",\\"compatibility_flags\\":[],\\"placement\\":{\\"mode\\":\\"smart\\"},\\"limits\\":{\\"cpu_ms\\":50}}
+			{"main_module":"functionsWorker-0.test.js","bindings":[{"name":"TEST_JSON_PREVIEW","type":"plain_text","text":"{\\njson: \\"value\\"\\n}"},{"name":"TEST_PLAINTEXT_PREVIEW","type":"plain_text","text":"PLAINTEXT"},{"name":"KV_PREVIEW","type":"kv_namespace","namespace_id":"kv-id"},{"name":"KV_PREVIEW2","type":"kv_namespace","namespace_id":"kv-id"},{"name":"DO_PREVIEW","type":"durable_object_namespace","class_name":"some-class-do-id","script_name":"some-script-do-id","environment":"some-environment-do-id"},{"name":"DO_PREVIEW2","type":"durable_object_namespace","class_name":"some-class-do-id","script_name":"some-script-do-id","environment":"some-environment-do-id"},{"name":"DO_PREVIEW3","type":"durable_object_namespace","class_name":"do-class","script_name":"do-s","environment":"do-e"},{"type":"queue","name":"QUEUE_PREVIEW","queue_name":"q-id"},{"type":"queue","name":"QUEUE_PREVIEW2","queue_name":"q-id"},{"name":"R2_PREVIEW","type":"r2_bucket","bucket_name":"r2-name"},{"name":"R2_PREVIEW2","type":"r2_bucket","bucket_name":"r2-name"},{"name":"D1_PREVIEW","type":"d1","id":"d1-id"},{"name":"D1_PREVIEW2","type":"d1","id":"d1-id"},{"name":"SERVICE_PREVIEW","type":"service","service":"service","environment":"production"},{"name":"SERVICE_PREVIEW2","type":"service","service":"service","environment":"production"},{"name":"AE_PREVIEW","type":"analytics_engine","dataset":"data"},{"name":"AE_PREVIEW2","type":"analytics_engine","dataset":"data"},{"name":"AI_PREVIEW","type":"ai"}],"compatibility_date":"2023-02-14","compatibility_flags":[],"placement":{"mode":"smart"},"limits":{"cpu_ms":50}}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+			Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"
 			Content-Type: application/javascript+module
 
 			// ../utils/meaning-of-life.js
@@ -774,7 +788,7 @@ export default {
 			// _worker.js
 			var worker_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
 			  }
 			};
 			export {
@@ -786,13 +800,15 @@ export default {
 		`);
 		const buildMetadataContents = readFileSync("build-metadata.json", "utf-8");
 		expect(buildMetadataContents).toMatchInlineSnapshot(
-			`"{\\"wrangler_config_hash\\":\\"75b267c678474945699c162b6d75e5e4a88fb8b491fc0650a390e097186031ab\\",\\"build_output_directory\\":\\"dist-test\\"}"`
+			`"{"wrangler_config_hash":"75b267c678474945699c162b6d75e5e4a88fb8b491fc0650a390e097186031ab","build_output_directory":"dist-test"}"`
 		);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should ignore config with a non-pages config file", async () => {
+	it("should ignore config with a non-pages config file", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
@@ -936,11 +952,11 @@ export default {
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+			{"main_module":"functionsWorker-0.test.js"}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+			Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"
 			Content-Type: application/javascript+module
 
 			// ../utils/meaning-of-life.js
@@ -949,7 +965,7 @@ export default {
 			// _worker.js
 			var worker_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
 			  }
 			};
 			export {
@@ -965,7 +981,9 @@ export default {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
-	it("should ignore config with a non-pages config file w/ invalid environment", async () => {
+	it("should ignore config with a non-pages config file w/ invalid environment", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
@@ -1109,11 +1127,11 @@ export default {
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+			{"main_module":"functionsWorker-0.test.js"}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+			Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"
 			Content-Type: application/javascript+module
 
 			// ../utils/meaning-of-life.js
@@ -1122,7 +1140,7 @@ export default {
 			// _worker.js
 			var worker_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
 			  }
 			};
 			export {
@@ -1138,7 +1156,7 @@ export default {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
-	it("should ignore unparseable config file", async () => {
+	it("should ignore unparseable config file", async ({ expect }) => {
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
@@ -1203,11 +1221,11 @@ export default {
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 			"------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"metadata\\"
+			Content-Disposition: form-data; name="metadata"
 
-			{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+			{"main_module":"functionsWorker-0.test.js"}
 			------formdata-undici-0.test
-			Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+			Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"
 			Content-Type: application/javascript+module
 
 			// ../utils/meaning-of-life.js
@@ -1216,7 +1234,7 @@ export default {
 			// _worker.js
 			var worker_default = {
 			  async fetch(request, env) {
-			    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+			    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
 			  }
 			};
 			export {
@@ -1235,7 +1253,7 @@ export default {
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: each key-value declaration must be followed by an end-of-line[0m
 
 			    <cwd>/wrangler.toml:5:24:
-			[37m      5 │ limits = { cpu_ms = 50 }[32m[37m\\"
+			[37m      5 │ limits = { cpu_ms = 50 }[32m[37m"
 			        ╵                         [32m^[0m
 
 			"

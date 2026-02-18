@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { beforeEach, describe, expect, test } from "vitest";
+import { assert, beforeEach, describe, test } from "vitest";
 import { CommandRegistry } from "../../core/CommandRegistry";
 import {
 	createAlias,
@@ -30,7 +29,7 @@ describe("CommandRegistry", () => {
 		);
 	});
 
-	test("can define a command", () => {
+	test("can define a command", ({ expect }) => {
 		registry.define([
 			{
 				command: "wrangler my-test-command",
@@ -58,7 +57,7 @@ describe("CommandRegistry", () => {
 		expect(node?.definition?.command).toBe("wrangler my-test-command");
 	});
 
-	test("throws on duplicate command definition", () => {
+	test("throws on duplicate command definition", ({ expect }) => {
 		// @ts-expect-error missing command definition
 		const definition = createCommand({});
 
@@ -81,7 +80,7 @@ describe("CommandRegistry", () => {
 		);
 	});
 
-	test("can define a namespace", () => {
+	test("can define a namespace", ({ expect }) => {
 		const definition = createNamespace({
 			// @ts-expect-error missing metadata
 			metadata: {
@@ -102,7 +101,7 @@ describe("CommandRegistry", () => {
 		expect(node?.definition?.command).toBe("wrangler one");
 	});
 
-	test("can alias a command", () => {
+	test("can alias a command", ({ expect }) => {
 		const definition = createCommand({
 			// @ts-expect-error missing metadata
 			metadata: {
@@ -138,7 +137,7 @@ describe("CommandRegistry", () => {
 		expect(def.aliasOf).toBe("wrangler my-test-command");
 	});
 
-	test("throws on alias to undefined command", () => {
+	test("throws on alias to undefined command", ({ expect }) => {
 		registry.define([
 			{
 				command: "wrangler my-alias-command",
@@ -153,7 +152,7 @@ describe("CommandRegistry", () => {
 		);
 	});
 
-	test("throws on missing namespace definition", () => {
+	test("throws on missing namespace definition", ({ expect }) => {
 		registry.define([
 			{
 				command: "wrangler known-namespace",
@@ -174,7 +173,7 @@ describe("CommandRegistry", () => {
 		);
 	});
 
-	test("correctly resolves definition chain for alias", () => {
+	test("correctly resolves definition chain for alias", ({ expect }) => {
 		registry.define([
 			{
 				command: "wrangler original-command",
@@ -198,7 +197,7 @@ describe("CommandRegistry", () => {
 		expect(def.aliasOf).toBe("wrangler original-command");
 	});
 
-	test("can resolve a command definition with its metadata", () => {
+	test("can resolve a command definition with its metadata", ({ expect }) => {
 		const commandMetadata: Metadata = {
 			description: "Test command",
 			status: "stable",
@@ -222,7 +221,7 @@ describe("CommandRegistry", () => {
 		expect(node.definition?.metadata).toEqual(commandMetadata);
 	});
 
-	test("correctly resolves multiple alias chains", () => {
+	test("correctly resolves multiple alias chains", ({ expect }) => {
 		registry.define([
 			{
 				command: "wrangler original-command",
@@ -259,7 +258,9 @@ describe("CommandRegistry", () => {
 		expect(def.aliasOf).toBe("wrangler alias-command-1");
 	});
 
-	test("throws on invalid namespace resolution (namespace not defined)", () => {
+	test("throws on invalid namespace resolution (namespace not defined)", ({
+		expect,
+	}) => {
 		registry.define([
 			{
 				command: "wrangler invalid-namespace subcommand",

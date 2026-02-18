@@ -1,6 +1,7 @@
 import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect throughout tests */
 import {
 	afterEach,
 	beforeEach,
@@ -10,6 +11,7 @@ import {
 	MockInstance,
 	vi,
 } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getPlatformProxy } from "./shared";
 import type {
 	Fetcher,

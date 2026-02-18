@@ -3,7 +3,7 @@ import {
 	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { expect, it, onTestFinished } from "vitest";
+import { it, onTestFinished } from "vitest";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
 // but for now you'll need to do something like this to get a correctly-typed
@@ -12,7 +12,7 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 type BareFunction = PagesFunction<Cloudflare.Env, never, Record<string, never>>;
 
-it("can consume body in middleware and in next request", async () => {
+it("can consume body in middleware and in next request", async ({ expect }) => {
 	const fn: BareFunction = async (ctx) => {
 		const requestText = await ctx.request.text();
 		const nextResponse = await ctx.next();
@@ -38,7 +38,7 @@ it("can consume body in middleware and in next request", async () => {
 	});
 });
 
-it("can rewrite to absolute and relative urls in next", async () => {
+it("can rewrite to absolute and relative urls in next", async ({ expect }) => {
 	const fn: BareFunction = async (ctx) => {
 		const { pathname } = new URL(ctx.request.url);
 		if (pathname === "/absolute") {
@@ -79,7 +79,7 @@ it("can rewrite to absolute and relative urls in next", async () => {
 	);
 });
 
-it("requires next property to call next()", async () => {
+it("requires next property to call next()", async ({ expect }) => {
 	const fn: BareFunction = (ctx) => ctx.next();
 	const request = new IncomingRequest("https://example.com");
 	const ctx = createPagesEventContext<typeof fn>({ request });
@@ -88,7 +88,7 @@ it("requires next property to call next()", async () => {
 	);
 });
 
-it("requires ASSETS service binding", async () => {
+it("requires ASSETS service binding", async ({ expect }) => {
 	let originalASSETS = env.ASSETS;
 	onTestFinished(() => {
 		env.ASSETS = originalASSETS;
@@ -106,7 +106,7 @@ it("requires ASSETS service binding", async () => {
 	);
 });
 
-it("waits for waitUntil()ed promises", async () => {
+it("waits for waitUntil()ed promises", async ({ expect }) => {
 	const fn: BareFunction = (ctx) => {
 		ctx.waitUntil(ctx.env.KV_NAMESPACE.put("key", "value"));
 		return new Response();
@@ -118,7 +118,7 @@ it("waits for waitUntil()ed promises", async () => {
 	expect(await env.KV_NAMESPACE.get("key")).toBe("value");
 });
 
-it("correctly types parameters", async () => {
+it("correctly types parameters", async ({ expect }) => {
 	const request = new IncomingRequest("https://example.com");
 
 	// Check no params and no data required

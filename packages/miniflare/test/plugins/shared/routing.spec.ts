@@ -2,12 +2,12 @@
 
 import { URL } from "node:url";
 import { matchRoutes, parseRoutes, RouterError } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
 // See https://developers.cloudflare.com/workers/platform/routes#matching-behavior and
 // https://developers.cloudflare.com/workers/platform/known-issues#route-specificity
 
-test("throws if route contains query string", () => {
+test("throws if route contains query string", ({ expect }) => {
 	expect(() => parseRoutes(new Map([["a", ["example.com/?foo=*"]]]))).toThrow(
 		new RouterError(
 			"ERR_QUERY_STRING",
@@ -15,7 +15,7 @@ test("throws if route contains query string", () => {
 		)
 	);
 });
-test("throws if route contains infix wildcards", () => {
+test("throws if route contains infix wildcards", ({ expect }) => {
 	expect(() => parseRoutes(new Map([["a", ["example.com/*.jpg"]]]))).toThrow(
 		new RouterError(
 			"ERR_INFIX_WILDCARD",
@@ -23,7 +23,7 @@ test("throws if route contains infix wildcards", () => {
 		)
 	);
 });
-test("routes may begin with http:// or https://", () => {
+test("routes may begin with http:// or https://", ({ expect }) => {
 	let routes = parseRoutes(new Map([["a", ["example.com/*"]]]));
 	expect(matchRoutes(routes, new URL("http://example.com/foo.jpg"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://example.com/foo.jpg"))).toBe("a");
@@ -39,12 +39,12 @@ test("routes may begin with http:// or https://", () => {
 	expect(matchRoutes(routes, new URL("https://example.com/foo.jpg"))).toBe("b");
 	expect(matchRoutes(routes, new URL("ftp://example.com/foo.jpg"))).toBe(null);
 });
-test("trailing slash automatically implied", () => {
+test("trailing slash automatically implied", ({ expect }) => {
 	const routes = parseRoutes(new Map([["a", ["example.com"]]]));
 	expect(matchRoutes(routes, new URL("http://example.com/"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://example.com/"))).toBe("a");
 });
-test("route hostnames may begin with *", () => {
+test("route hostnames may begin with *", ({ expect }) => {
 	let routes = parseRoutes(new Map([["a", ["*example.com/"]]]));
 	expect(matchRoutes(routes, new URL("https://example.com/"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://www.example.com/"))).toBe("a");
@@ -53,7 +53,9 @@ test("route hostnames may begin with *", () => {
 	expect(matchRoutes(routes, new URL("https://example.com/"))).toBe(null);
 	expect(matchRoutes(routes, new URL("https://www.example.com/"))).toBe("a");
 });
-test("correctly handles internationalised domain names beginning with *", () => {
+test("correctly handles internationalised domain names beginning with *", ({
+	expect,
+}) => {
 	// https://github.com/cloudflare/miniflare/issues/186
 	let routes = parseRoutes(new Map([["a", ["*glöd.se/*"]]]));
 	expect(matchRoutes(routes, new URL("https://glöd.se/*"))).toBe("a");
@@ -63,7 +65,7 @@ test("correctly handles internationalised domain names beginning with *", () => 
 	expect(matchRoutes(routes, new URL("https://glöd.se/*"))).toBe(null);
 	expect(matchRoutes(routes, new URL("https://www.glöd.se/*"))).toBe("a");
 });
-test("route paths may end with *", () => {
+test("route paths may end with *", ({ expect }) => {
 	const routes = parseRoutes(new Map([["a", ["https://example.com/path*"]]]));
 	expect(matchRoutes(routes, new URL("https://example.com/path"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://example.com/path2"))).toBe("a");
@@ -74,7 +76,7 @@ test("route paths may end with *", () => {
 		null
 	);
 });
-test("matches most specific route", () => {
+test("matches most specific route", ({ expect }) => {
 	let routes = parseRoutes(
 		new Map([
 			["a", ["www.example.com/*"]],
@@ -112,13 +114,13 @@ test("matches most specific route", () => {
 	expect(matchRoutes(routes, new URL("https://example.com/pat"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://example.com/path"))).toBe("b");
 });
-test("matches query params", () => {
+test("matches query params", ({ expect }) => {
 	const routes = parseRoutes(new Map([["a", ["example.com/hello/*"]]]));
 	expect(
 		matchRoutes(routes, new URL("https://example.com/hello/world?foo=bar"))
 	).toBe("a");
 });
-test("routes are case-sensitive", () => {
+test("routes are case-sensitive", ({ expect }) => {
 	const routes = parseRoutes(
 		new Map([
 			["a", ["example.com/images/*"]],
@@ -132,12 +134,12 @@ test("routes are case-sensitive", () => {
 		matchRoutes(routes, new URL("https://example.com/Images/foo.jpg"))
 	).toBe("b");
 });
-test("escapes regexp control characters", () => {
+test("escapes regexp control characters", ({ expect }) => {
 	const routes = parseRoutes(new Map([["a", ["example.com/*"]]]));
 	expect(matchRoutes(routes, new URL("https://example.com/"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://example2com/"))).toBe(null);
 });
-test('"correctly" handles routes with trailing /*', () => {
+test('"correctly" handles routes with trailing /*', ({ expect }) => {
 	const routes = parseRoutes(
 		new Map([
 			["a", ["example.com/images/*"]],
@@ -152,11 +154,11 @@ test('"correctly" handles routes with trailing /*', () => {
 		"b"
 	); // unexpected
 });
-test("returns null if no routes match", () => {
+test("returns null if no routes match", ({ expect }) => {
 	const routes = parseRoutes(new Map([["a", ["example.com/*"]]]));
 	expect(matchRoutes(routes, new URL("https://miniflare.dev/"))).toBe(null);
 });
-test("matches everything route", () => {
+test("matches everything route", ({ expect }) => {
 	const routes = parseRoutes(new Map([["a", ["*/*"]]]));
 	expect(matchRoutes(routes, new URL("http://example.com/"))).toBe("a");
 	expect(matchRoutes(routes, new URL("https://example.com/"))).toBe("a");

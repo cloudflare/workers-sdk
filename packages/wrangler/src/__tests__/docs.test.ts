@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import openInBrowser from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -33,7 +33,7 @@ describe("wrangler docs", () => {
 		);
 	});
 
-	test("--help", async () => {
+	test("--help", async ({ expect }) => {
 		const result = runWrangler("docs --help");
 
 		await expect(result).resolves.toBeUndefined();
@@ -58,10 +58,12 @@ describe("wrangler docs", () => {
 		`);
 	});
 
-	test("opens a browser to Cloudflare docs when given no search term", async () => {
+	test("opens a browser to Cloudflare docs when given no search term", async ({
+		expect,
+	}) => {
 		await runWrangler("docs");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -77,17 +79,19 @@ describe("wrangler docs", () => {
 		);
 	});
 
-	test("opens a browser to Cloudflare docs when given a single search term", async () => {
+	test("opens a browser to Cloudflare docs when given a single search term", async ({
+		expect,
+	}) => {
 		await runWrangler("docs dev");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=dev&hitsPerPage=1&getRankingInfo=0\\"}",
+			Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=dev&hitsPerPage=1&getRankingInfo=0"}",
 			  "warn": "",
 			}
 		`);
@@ -96,17 +100,19 @@ describe("wrangler docs", () => {
 		);
 	});
 
-	test("opens a browser to Cloudflare docs when given multiple search terms", async () => {
+	test("opens a browser to Cloudflare docs when given multiple search terms", async ({
+		expect,
+	}) => {
 		await runWrangler("docs foo bar");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=foo+bar&hitsPerPage=1&getRankingInfo=0\\"}",
+			Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=foo+bar&hitsPerPage=1&getRankingInfo=0"}",
 			  "warn": "",
 			}
 		`);

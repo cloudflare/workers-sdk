@@ -2,7 +2,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses custom matchers (expect.extend) */
 import { afterEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { clearOutputFilePath, writeOutput } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -94,7 +96,6 @@ describe("writeOutput()", () => {
 			targets: undefined,
 			worker_name_overridden: false,
 			wrangler_environment: undefined,
-			autoconfig_summary: undefined,
 		});
 
 		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
@@ -114,7 +115,6 @@ describe("writeOutput()", () => {
 				version_id: "1234",
 				targets: undefined,
 				worker_name_overridden: false,
-				autoconfig_summary: undefined,
 				wrangler_environment: undefined,
 			},
 		]);
@@ -165,7 +165,6 @@ describe("writeOutput()", () => {
 			targets: undefined,
 			worker_name_overridden: false,
 			wrangler_environment: undefined,
-			autoconfig_summary: undefined,
 		});
 
 		const outputFilePaths = readdirSync("output");
@@ -189,7 +188,6 @@ describe("writeOutput()", () => {
 				targets: undefined,
 				worker_name_overridden: false,
 				wrangler_environment: undefined,
-				autoconfig_summary: undefined,
 			},
 		]);
 	});

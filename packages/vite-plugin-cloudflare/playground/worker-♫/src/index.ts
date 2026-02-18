@@ -13,6 +13,10 @@ export default {
 			return new Response(request.headers.get("X-Forwarded-Host"));
 		}
 
+		if (url.pathname.endsWith("/host-header")) {
+			return new Response(request.headers.get("Host"));
+		}
+
 		// return the pathname if the path parameter is present to test the base path
 		if (url.searchParams.has("path")) {
 			return new Response(url.pathname);

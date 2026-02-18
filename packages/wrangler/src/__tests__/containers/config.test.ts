@@ -2,7 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large test file with 30+ tests */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";

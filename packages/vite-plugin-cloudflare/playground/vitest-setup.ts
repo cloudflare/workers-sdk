@@ -309,6 +309,11 @@ export async function startDefaultServe(): Promise<
 		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
 
+		// This environment variable is used to indicate to the preview server that it is being run during a build
+		// We need to delete it here as, during testing, preview also runs in the same process after the build completes
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		delete process.env.CLOUDFLARE_VITE_BUILD;
+
 		const previewConfig = await loadConfig({
 			command: "serve",
 			mode: "development",

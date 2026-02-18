@@ -1,12 +1,13 @@
 {
 	"name": "@cloudflare/eslint-config-shared",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"private": true,
 	"description": "ESLint config for workers-sdk",
 	"type": "module",
 	"exports": {
 		".": "./index.js",
-		"./react": "./react.js"
+		"./react": "./react.js",
+		"./rules/no-vitest-import-expect": "./rules/no-vitest-import-expect.mjs"
 	},
 	"scripts": {
 		"deploy": "echo 'no deploy'",

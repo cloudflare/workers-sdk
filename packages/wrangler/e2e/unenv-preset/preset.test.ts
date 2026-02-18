@@ -244,26 +244,41 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 		{
-			name: "process v2 by date",
-			compatibilityDate: "2025-09-15",
-			expectRuntimeFlags: {
-				enable_nodejs_process_v2: true,
-			},
-		},
-		{
-			name: "process v2 by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_process_v2"],
-			expectRuntimeFlags: {
-				enable_nodejs_process_v2: true,
-			},
-		},
-		{
 			name: "process v1 by flag",
 			compatibilityDate: "2025-09-15",
 			compatibilityFlags: ["disable_nodejs_process_v2"],
 			expectRuntimeFlags: {
 				enable_nodejs_process_v2: false,
+			},
+		},
+		{
+			name: "process v2 by date",
+			// TODO:
+			// - adjust the date to when `fetch_iterable_type_support` is enabled by default
+			// - remove setting `fetch_iterable_type_support*` flags from this test case
+			compatibilityDate: "2025-09-15",
+			compatibilityFlags: [
+				"fetch_iterable_type_support",
+				"fetch_iterable_type_support_override_adjustment",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: true,
+				fetch_iterable_type_support: true,
+				fetch_iterable_type_support_override_adjustment: true,
+			},
+		},
+		{
+			name: "process v2 by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_process_v2",
+				"fetch_iterable_type_support",
+				"fetch_iterable_type_support_override_adjustment",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: true,
+				fetch_iterable_type_support: true,
+				fetch_iterable_type_support_override_adjustment: true,
 			},
 		},
 	],
@@ -468,13 +483,13 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// node:inspector and node:inspector/promises
 	[
-		// {
-		// 	name: "inspector enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_inspector_module: true,
-		// 	},
-		// },
+		{
+			name: "inspector enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: true,
+			},
+		},
 		{
 			name: "inspector disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -490,24 +505,24 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_inspector_module: true,
 			},
 		},
-		// {
-		// 	name: "inspector disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_inspector_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_inspector_module: false,
-		// 	},
-		// },
+		{
+			name: "inspector disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_inspector_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: false,
+			},
+		},
 	],
 	// node:sqlite
 	[
-		// {
-		// 	name: "sqlite enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_sqlite_module: true,
-		// 	},
-		// },
+		{
+			name: "sqlite enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_sqlite_module: true,
+			},
+		},
 		{
 			name: "sqlite disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -523,24 +538,24 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_sqlite_module: true,
 			},
 		},
-		// {
-		// 	name: "sqlite disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_sqlite_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_sqlite_module: false,
-		// 	},
-		// },
+		{
+			name: "sqlite disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_sqlite_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_sqlite_module: false,
+			},
+		},
 	],
 	// node:dgram
 	[
-		// {
-		// 	name: "dgram enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_dgram_module: true,
-		// 	},
-		// },
+		{
+			name: "dgram enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: true,
+			},
+		},
 		{
 			name: "dgram disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -556,24 +571,24 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_dgram_module: true,
 			},
 		},
-		// {
-		// 	name: "dgram disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_dgram_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_dgram_module: false,
-		// 	},
-		// },
+		{
+			name: "dgram disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_dgram_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: false,
+			},
+		},
 	],
 	// node:_stream_wrap
 	[
-		// {
-		// 	name: "_stream_wrap enabled by date",
-		// 	compatibilityDate: "2026-01-29",
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_stream_wrap_module: true,
-		// 	},
-		// },
+		{
+			name: "_stream_wrap enabled by date",
+			compatibilityDate: "2026-01-29",
+			expectRuntimeFlags: {
+				enable_nodejs_stream_wrap_module: true,
+			},
+		},
 		{
 			name: "_stream_wrap disabled by date",
 			compatibilityDate: "2024-09-23",
@@ -589,14 +604,128 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_stream_wrap_module: true,
 			},
 		},
-		// {
-		// 	name: "_stream_wrap disabled by flag",
-		// 	compatibilityDate: "2026-01-29",
-		// 	compatibilityFlags: ["disable_nodejs_stream_wrap_module"],
-		// 	expectRuntimeFlags: {
-		// 		enable_nodejs_stream_wrap_module: false,
-		// 	},
-		// },
+		{
+			name: "_stream_wrap disabled by flag",
+			compatibilityDate: "2026-01-29",
+			compatibilityFlags: ["disable_nodejs_stream_wrap_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_stream_wrap_module: false,
+			},
+		},
+	],
+	// node:worker_threads (experimental - no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "worker_threads disabled by default",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: false,
+			},
+		},
+		{
+			name: "worker_threads enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_worker_threads_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: true,
+			},
+		},
+	],
+	// node:repl (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "repl enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_repl_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: true,
+			},
+		},
+		{
+			name: "repl disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_repl_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: false,
+			},
+		},
+	],
+	// node:v8 (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "v8 enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_v8_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: true,
+			},
+		},
+		{
+			name: "v8 disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_v8_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: false,
+			},
+		},
+	],
+	// node:tty (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "tty enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_tty_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: true,
+			},
+		},
+		{
+			name: "tty disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_tty_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: false,
+			},
+		},
+	],
+	// node:child_process (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "child_process enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_child_process_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: true,
+			},
+		},
+		{
+			name: "child_process disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"disable_nodejs_child_process_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: false,
+			},
+		},
 	],
 ].flat() as TestConfig[];
 
@@ -636,19 +765,22 @@ describe.each(localTestConfigs)(
 			}
 
 			return async () => await wrangler.stop();
-		}, 5_000);
+		}, 10_000);
 
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
-			{ timeout: 5_000 },
+			{ timeout: 20_000 },
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
@@ -684,7 +816,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			await expect(readyResp.text()).resolves.toEqual("pong");
 
 			// Assert runtime flag values
-			for await (const flag of collectEnableFlags(localTestConfigs)) {
+			for await (const flag of collectEnabledFlags(localTestConfigs)) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
 				expect(flagResp.ok).toEqual(true);
 				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(false);
@@ -699,11 +831,14 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
@@ -717,7 +852,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 
 		beforeAll(async () => {
 			const helper = new WranglerE2ETestHelper();
-			const flags = collectEnableFlags(localTestConfigs);
+			const flags = collectEnabledFlags(localTestConfigs);
 			await helper.seed({
 				"wrangler.jsonc": JSON.stringify({
 					name: generateResourceName(),
@@ -755,23 +890,30 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(async () => {
-					const response = await fetch(`${url}/${testName}`);
-					const body = await response.text();
-					expect(body).toMatch("passed");
-				});
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/${testName}`);
+						const body = await response.text();
+						expect(body).toMatch("passed");
+					},
+					{ timeout: 19_000, interval: 200 }
+				);
 			}
 		);
 	}
 );
 
 /**
- * Collects all the `enable_...` flags
+ * Collects enabled flags:
+ * - skips "experimental" flag
+ * - `enable_...` flags
+ * - `fetch_iterable_type_support`
+ * - `fetch_iterable_type_support_override_adjustment`
  *
  * @param configs Test configs
- * @returns The list of `enabled_...` flags found in the configs
+ * @returns The list of enabled flags found in the configs
  */
-function collectEnableFlags(configs: TestConfig[]): string[] {
+function collectEnabledFlags(configs: TestConfig[]): string[] {
 	const enableFlags = new Set<string>();
 
 	for (const config of configs) {
@@ -787,6 +929,12 @@ function collectEnableFlags(configs: TestConfig[]): string[] {
 		}
 
 		for (const flag of flags) {
+			// `fetch_iterable_type_support` and `fetch_iterable_type_support_override_adjustment`
+			if (flag.startsWith("fetch_iterable_type_support")) {
+				enableFlags.add(flag);
+				continue;
+			}
+
 			if (flag.startsWith("enable_")) {
 				enableFlags.add(flag);
 			} else if (!flag.startsWith("disable_")) {

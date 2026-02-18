@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in helper function at module scope */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 

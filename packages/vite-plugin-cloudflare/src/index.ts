@@ -12,6 +12,7 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
@@ -54,6 +55,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				ctx.setResolvedPluginConfig(
 					resolvePluginConfig(pluginConfig, userConfig, env)
 				);
+
+				if (env.command === "build") {
+					process.env.CLOUDFLARE_VITE_BUILD = "true";
+				}
 			},
 			async configureServer(viteDevServer) {
 				// Patch the `server.restart` method to track whether the server is restarting or not.
@@ -71,6 +76,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 		},
 		configPlugin(ctx),
+		rscPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),

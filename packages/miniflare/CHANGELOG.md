@@ -1,5 +1,304 @@
 # miniflare
 
+## 4.20260217.0
+
+### Minor Changes
+
+- [#12546](https://github.com/cloudflare/workers-sdk/pull/12546) [`43c462a`](https://github.com/cloudflare/workers-sdk/commit/43c462af9684980b8332a8e3a31a9bd9f08777f5) Thanks [@emily-shen](https://github.com/emily-shen)! - Local explorer: add endpoints to list DO namespaces and objects
+
+  This is part of an experimental, WIP feature.
+
+### Patch Changes
+
+- [#12543](https://github.com/cloudflare/workers-sdk/pull/12543) [`5a868a0`](https://github.com/cloudflare/workers-sdk/commit/5a868a0c0b305548e4ad60a50f20ab4cd8900741) Thanks [@G4brym](https://github.com/G4brym)! - Fix AI Search binding failing in local dev
+
+  Using AI Search bindings with `wrangler dev` would fail with "RPC stub points at a non-serializable type". AI Search bindings now work correctly in local development.
+
+- [#12552](https://github.com/cloudflare/workers-sdk/pull/12552) [`c58e81b`](https://github.com/cloudflare/workers-sdk/commit/c58e81b85e1ff1285ac024508739c997ec04984e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260212.0 | 1.20260213.0 |
+
+- [#12568](https://github.com/cloudflare/workers-sdk/pull/12568) [`33a9a8f`](https://github.com/cloudflare/workers-sdk/commit/33a9a8f97e61c45507865eb8c5c9cace7ab27e64) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260213.0 | 1.20260214.0 |
+
+- [#12576](https://github.com/cloudflare/workers-sdk/pull/12576) [`8077c14`](https://github.com/cloudflare/workers-sdk/commit/8077c14a84e4b50015d356349a330a970693533f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260214.0 | 1.20260217.0 |
+
+- [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `MINIFLARE_CACHE_DIR` environment variable and smart cache directory detection
+
+  Miniflare now intelligently detects where to store its cf.json cache file:
+
+  1. Use `MINIFLARE_CACHE_DIR` env var if set
+  2. Use existing cache directory if found (`node_modules/.mf` or `.wrangler/cache`)
+  3. Create cache in `node_modules/.mf` if `node_modules` exists
+  4. Otherwise use `.wrangler/cache`
+
+  This improves compatibility with Yarn PnP, pnpm, and other package managers that don't use traditional `node_modules` directories, without requiring any configuration.
+
+## 4.20260212.0
+
+### Minor Changes
+
+- [#12431](https://github.com/cloudflare/workers-sdk/pull/12431) [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41) Thanks [@emily-shen](https://github.com/emily-shen)! - Add ability to search KV keys by prefix
+
+  The UI and list keys API now lets you search KV keys by prefix.
+
+  This is an experimental WIP feature.
+
+### Patch Changes
+
+- [#12541](https://github.com/cloudflare/workers-sdk/pull/12541) [`f7fa326`](https://github.com/cloudflare/workers-sdk/commit/f7fa3269c14bf50c8129de9d38276cd02189a39a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260210.0 | 1.20260212.0 |
+
+- [#12025](https://github.com/cloudflare/workers-sdk/pull/12025) [`d06ad09`](https://github.com/cloudflare/workers-sdk/commit/d06ad0967a2636a9f7e43babf5209bcec1af81d5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix potential EBADF error when restarting workerd process
+
+  Previously, when the workerd process was restarted (e.g., via `setOptions()` or Vite server restart), the stdio pipes from the previous process were not explicitly destroyed. This could lead to `EBADF` (Bad File Descriptor) errors during spawn on some systems.
+
+  The `Runtime#dispose()` method now explicitly destroys all stdio streams (stdin, stdout, stderr, and the control pipe) before killing the process to ensure file descriptors are properly released.
+
+## 4.20260210.0
+
+### Minor Changes
+
+- [#12469](https://github.com/cloudflare/workers-sdk/pull/12469) [`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add environment variables to control cf.json fetching behavior
+
+  You can now use environment variables to control how Miniflare handles the `Request.cf` object caching:
+
+  - `CLOUDFLARE_CF_FETCH_ENABLED` - Set to "false" to disable fetching entirely and use fallback data. No `node_modules/.mf/cf.json` file will be created. Defaults to "true".
+  - `CLOUDFLARE_CF_FETCH_PATH` - Set to a custom path to use a different location for caching the cf.json file instead of the default `node_modules/.mf/cf.json`.
+
+  This is particularly useful for non-JavaScript projects (like Rust or Go Workers) that don't want a `node_modules` directory created automatically.
+
+  Example:
+
+  ```sh
+  # Disable cf fetching for all projects
+  export CLOUDFLARE_CF_FETCH_ENABLED=false
+  npx wrangler dev
+
+  # Or use a custom cache location
+  export CLOUDFLARE_CF_FETCH_PATH=/tmp/.cf-cache.json
+  npx wrangler dev
+  ```
+
+- [#12391](https://github.com/cloudflare/workers-sdk/pull/12391) [`ce9dc01`](https://github.com/cloudflare/workers-sdk/commit/ce9dc01a4696e28bd9f3a900dd2f5a7783252906) Thanks [@emily-shen](https://github.com/emily-shen)! - Serve the local explorer UI from Miniflare
+
+  This bundles the local explorer UI into Miniflare, and if enabled, Miniflare serves the UI at `/cdn-cgi/explorer`.
+
+  This is an experimental, WIP feature.
+
+### Patch Changes
+
+- [#12440](https://github.com/cloudflare/workers-sdk/pull/12440) [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260205.0 | 1.20260206.0 |
+
+- [#12485](https://github.com/cloudflare/workers-sdk/pull/12485) [`d636d6a`](https://github.com/cloudflare/workers-sdk/commit/d636d6a2e419833a4a376a6b002da6dd5a85d369) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260206.0 | 1.20260207.0 |
+
+- [#12502](https://github.com/cloudflare/workers-sdk/pull/12502) [`bf8df0c`](https://github.com/cloudflare/workers-sdk/commit/bf8df0c1811ac82bec411a7e6aef1e431937c243) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260207.0 | 1.20260210.0 |
+
+## 4.20260205.0
+
+### Minor Changes
+
+- [#12267](https://github.com/cloudflare/workers-sdk/pull/12267) [`83adb2c`](https://github.com/cloudflare/workers-sdk/commit/83adb2cb7f909857d79208474b78cdb7ac4e0638) Thanks [@NuroDev](https://github.com/NuroDev)! - Implement local D1 API for experimental/WIP local resource explorer
+
+  The following APIs have been implemented:
+
+  - `GET /d1/database` - Returns a list of D1 databases.
+  - `POST /d1/database/{database_id}/raw` - Returns the query result rows as arrays rather than objects.
+
+### Patch Changes
+
+- [#12402](https://github.com/cloudflare/workers-sdk/pull/12402) [`63f1adb`](https://github.com/cloudflare/workers-sdk/commit/63f1adbef0dde3cc6fced41b2aa973eedcb8356f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260131.0 | 1.20260203.0 |
+
+- [#12418](https://github.com/cloudflare/workers-sdk/pull/12418) [`ba13de9`](https://github.com/cloudflare/workers-sdk/commit/ba13de92c9b9f1b51ff6085234cb9b7ced6def34) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260203.0 | 1.20260205.0 |
+
+## 4.20260131.0
+
+### Minor Changes
+
+- [#12186](https://github.com/cloudflare/workers-sdk/pull/12186) [`0c9625a`](https://github.com/cloudflare/workers-sdk/commit/0c9625a422895925b7ae89f3f371043e96ee5e87) Thanks [@penalosa](https://github.com/penalosa)! - Add `CF-Worker` header to outgoing fetch requests in local development to match production behavior. A new optional `zone` option allows specifying the zone value for the header. When not specified, the header defaults to `${worker-name}.example.com`.
+
+- [#12185](https://github.com/cloudflare/workers-sdk/pull/12185) [`f7aa8c7`](https://github.com/cloudflare/workers-sdk/commit/f7aa8c78c3245c5e277d07398fa9d8a8b16c9280) Thanks [@penalosa](https://github.com/penalosa)! - Add `timestamp` field to the version metadata binding in local development. The version metadata binding now includes `id`, `tag`, and `timestamp` fields, making it easier to test version-aware logic locally.
+
+### Patch Changes
+
+- [#12289](https://github.com/cloudflare/workers-sdk/pull/12289) [`0aaf080`](https://github.com/cloudflare/workers-sdk/commit/0aaf080e993dfbba7e49408df5c4afc39bed3c0f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260128.0 | 1.20260129.0 |
+
+- [#12295](https://github.com/cloudflare/workers-sdk/pull/12295) [`b981db5`](https://github.com/cloudflare/workers-sdk/commit/b981db579ed438e2ebbad18dd6a58e6989d2188b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260129.0 | 1.20260130.0 |
+
+- [#12355](https://github.com/cloudflare/workers-sdk/pull/12355) [`a113c0d`](https://github.com/cloudflare/workers-sdk/commit/a113c0dca6c475baac3897f9c310aed851fdfa38) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260130.0 | 1.20260131.0 |
+
+## 4.20260128.0
+
+### Minor Changes
+
+- [#12152](https://github.com/cloudflare/workers-sdk/pull/12152) [`8a210af`](https://github.com/cloudflare/workers-sdk/commit/8a210afbfe6d960098ac3f280071a5282a4dd87b) Thanks [@emily-shen](https://github.com/emily-shen)! - Implement local KV API for experimental/WIP local resource explorer
+
+  The following APIs have been (mostly) implemented:
+  GET /storage/kv/namespaces - List namespaces
+  GET /storage/kv/namespaces/:id/keys - List keys
+  GET /storage/kv/namespaces/:id/values/:key - Get value
+  PUT /storage/kv/namespaces/:id/values/:key - Write value
+  DELETE /storage/kv/namespaces/:id/values/:key - Delete key
+  POST /storage/kv/namespaces/:id/bulk/get - Bulk get values
+
+### Patch Changes
+
+- [#12183](https://github.com/cloudflare/workers-sdk/pull/12183) [`17961bb`](https://github.com/cloudflare/workers-sdk/commit/17961bb6a7cadcad7e1c7f86804267f3a04da2fa) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260124.0 | 1.20260127.0 |
+
+- [#12196](https://github.com/cloudflare/workers-sdk/pull/12196) [`52fdfe7`](https://github.com/cloudflare/workers-sdk/commit/52fdfe7d9427dd65d4d8bca8f37c0c753e25bee7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260127.0 | 1.20260128.0 |
+
+## 4.20260124.0
+
+### Minor Changes
+
+- [#12008](https://github.com/cloudflare/workers-sdk/pull/12008) [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489) Thanks [@penalosa](https://github.com/penalosa)! - Add support for customising the inspector IP address
+
+  Adds a new `--inspector-ip` CLI flag and `dev.inspector_ip` configuration option to allow customising the IP address that the inspector server listens on. Previously, the inspector was hardcoded to listen only on `127.0.0.1`.
+
+  Example usage:
+
+  ```bash
+  # CLI flag
+  wrangler dev --inspector-ip 0.0.0.0
+  ```
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"dev": {
+  		"inspector_ip": "0.0.0.0",
+  	},
+  }
+  ```
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
+### Patch Changes
+
+- [#11853](https://github.com/cloudflare/workers-sdk/pull/11853) [`014e7aa`](https://github.com/cloudflare/workers-sdk/commit/014e7aa2074d3464e012876b70e22af44fa26e5d) Thanks [@43081j](https://github.com/43081j)! - Use built-in stripVTControlCharacters utility rather than the `strip-ansi` package.
+
+- [#12040](https://github.com/cloudflare/workers-sdk/pull/12040) [`77e82d2`](https://github.com/cloudflare/workers-sdk/commit/77e82d25e13800d34426ba6774def3fcc2c7de21) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260120.0 | 1.20260122.0 |
+
+- [#12061](https://github.com/cloudflare/workers-sdk/pull/12061) [`f08ef21`](https://github.com/cloudflare/workers-sdk/commit/f08ef210b7215921e00e8aa890d25df334a08bbe) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260122.0 | 1.20260123.0 |
+
+- [#12088](https://github.com/cloudflare/workers-sdk/pull/12088) [`0641e6c`](https://github.com/cloudflare/workers-sdk/commit/0641e6ca0708d7bc73d04c0a619676cc5fde7a4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260123.0 | 1.20260124.0 |
+
+- [#11897](https://github.com/cloudflare/workers-sdk/pull/11897) [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bundle the `zod` dependency to reduce supply chain attack surface
+
+  In order to prevent possible npm vulnerability attacks, the team's policy is to bundle
+  dependencies in our packages where possible. This helps ensure that only trusted code
+  runs on the user's system, even if compromised packages are later published to npm.
+
+  This change bundles `zod` (a pure JavaScript validation library with no native dependencies)
+  into miniflare and @cloudflare/vitest-pool-workers.
+
+  Other dependencies remain external for technical reasons:
+
+  - `sharp`: Native binary with platform-specific builds
+  - `undici`: Dynamically required at runtime in worker threads
+  - `ws`: Has optional native bindings for performance
+  - `workerd`: Native binary (Cloudflare's JavaScript runtime)
+  - `@cspotcode/source-map-support`: Uses require.cache manipulation at runtime
+  - `youch`: Dynamically required for lazy loading
+
 ## 4.20260120.0
 
 ### Patch Changes

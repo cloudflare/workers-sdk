@@ -8,7 +8,9 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- tests use vi.mock patterns */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";

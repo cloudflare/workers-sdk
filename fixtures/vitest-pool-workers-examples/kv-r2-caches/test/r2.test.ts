@@ -4,10 +4,10 @@ import {
 	SELF,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import { handleR2Request } from "../src"; // Note we can import any function
 
-it("stores in R2 bucket", async () => {
+it("stores in R2 bucket", async ({ expect }) => {
 	let response = await SELF.fetch("https://example.com/r2/key", {
 		method: "PUT",
 		headers: { "Cache-Control": "max-age=3600" },

@@ -15,11 +15,21 @@ import {
 	getCloudflareComplianceRegion,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { handleFailure, promiseSpinner } from "../cloudchamber/common";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { createSecret, createStore, listStores } from "../secrets-store/client";
+import {
+	createSecret,
+	createStore,
+	deleteSecret,
+	getSecretByName,
+	listStores,
+} from "../secrets-store/client";
 import { validateSecretName } from "../secrets-store/commands";
 import { getAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
@@ -29,46 +39,11 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
 import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
 import type { Config } from "@cloudflare/workers-utils";
 
-export const registryCommands = (yargs: CommonYargsArgv) => {
-	return yargs
-		.command(
-			"configure <DOMAIN>",
-			"Configure credentials for a non-Cloudflare container registry",
-			(args) => registryConfigureYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler containers registries configure`,
-					registryConfigureCommand,
-					containersScope
-				)(args)
-		)
-		.command(
-			"list",
-			"List all configured container registries",
-			(args) => registryListYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler containers registries list`,
-					registryListCommand,
-					containersScope
-				)(args)
-		)
-		.command(
-			"delete <DOMAIN>",
-			"Delete a configured container registry",
-			(args) => registryDeleteYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler containers registries delete`,
-					registryDeleteCommand,
-					containersScope
-				)(args)
-		);
-};
-function registryConfigureYargs(args: CommonYargsArgv) {
+function _registryConfigureYargs(args: CommonYargsArgv) {
 	return (
 		args
 			.positional("DOMAIN", {
@@ -110,7 +85,7 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 }
 
 async function registryConfigureCommand(
-	configureArgs: StrictYargsOptionsToInterface<typeof registryConfigureYargs>,
+	configureArgs: StrictYargsOptionsToInterface<typeof _registryConfigureYargs>,
 	config: Config
 ) {
 	startSection("Configure a container registry");
@@ -272,7 +247,7 @@ async function getSecret(secretType?: string): Promise<string> {
 	return secret;
 }
 
-function registryListYargs(args: CommonYargsArgv) {
+function _registryListYargs(args: CommonYargsArgv) {
 	return args.option("json", {
 		type: "boolean",
 		description: "Format output as JSON",
@@ -281,7 +256,7 @@ function registryListYargs(args: CommonYargsArgv) {
 }
 
 async function registryListCommand(
-	listArgs: StrictYargsOptionsToInterface<typeof registryListYargs>
+	listArgs: StrictYargsOptionsToInterface<typeof _registryListYargs>
 ) {
 	if (!listArgs.json && !isNonInteractiveOrCI()) {
 		startSection("List configured container registries");
@@ -313,7 +288,8 @@ async function registryListCommand(
 	}
 }
 
-const registryDeleteYargs = (yargs: CommonYargsArgv) => {
+// Only used for its type. The underscore prefix prevents unused variable linting errors.
+const _registryDeleteYargs = (yargs: CommonYargsArgv) => {
 	return yargs
 		.positional("DOMAIN", {
 			describe: "domain of the registry to delete",
@@ -328,7 +304,8 @@ const registryDeleteYargs = (yargs: CommonYargsArgv) => {
 		});
 };
 async function registryDeleteCommand(
-	deleteArgs: StrictYargsOptionsToInterface<typeof registryDeleteYargs>
+	deleteArgs: StrictYargsOptionsToInterface<typeof _registryDeleteYargs>,
+	config: Config
 ) {
 	startSection(`Delete registry ${deleteArgs.DOMAIN}`);
 
@@ -342,8 +319,10 @@ async function registryDeleteCommand(
 		}
 	}
 
+	let res: DeleteImageRegistryResponse;
+
 	try {
-		await promiseSpinner(
+		res = await promiseSpinner(
 			ImageRegistriesService.deleteImageRegistry(deleteArgs.DOMAIN)
 		);
 	} catch (e) {
@@ -363,4 +342,156 @@ async function registryDeleteCommand(
 	}
 
 	endSection(`Deleted registry ${deleteArgs.DOMAIN}\n`);
+
+	if (res.secrets_store_ref) {
+		// returned as "store-id:secret-name"
+		const [storeId, secretName] = res.secrets_store_ref.split(":");
+
+		startSection("Warning: A dangling secret was left behind.");
+		if (!deleteArgs.skipConfirmation) {
+			const yes = await confirm(
+				`Do you want to delete the secret "${secretName}"? (Store ID: ${storeId})`
+			);
+
+			if (!yes) {
+				endSection("The secret was not deleted.");
+				return;
+			}
+		}
+
+		const accountId = await getAccountId(config);
+
+		try {
+			const secretId = await promiseSpinner(
+				getSecretByName(config, accountId, storeId, secretName)
+			);
+
+			if (!secretId) {
+				endSection(
+					`Secret "${secretName}" not found in store. It may have already been deleted.`
+				);
+				return;
+			}
+
+			await promiseSpinner(deleteSecret(config, accountId, storeId, secretId));
+		} catch (e) {
+			if (e instanceof ApiError) {
+				throw new APIError({
+					status: e.status,
+					text: `Error deleting secret:\n` + formatError(e),
+				});
+			} else {
+				throw e;
+			}
+		}
+
+		endSection(`Deleted secret ${res.secrets_store_ref}`);
+	}
 }
+
+export const containersRegistriesNamespace = createNamespace({
+	metadata: {
+		description: "Configure and manage non-Cloudflare registries",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+});
+
+export const containersRegistriesConfigureCommand = createCommand({
+	metadata: {
+		description:
+			"Configure credentials for a non-Cloudflare container registry",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	args: {
+		DOMAIN: {
+			describe: "Domain to configure for the registry",
+			type: "string",
+			demandOption: true,
+		},
+		"public-credential": {
+			type: "string",
+			description:
+				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
+			demandOption: true,
+			alias: "aws-access-key-id",
+		},
+		"secret-store-id": {
+			type: "string",
+			description:
+				"The ID of the secret store to use to store the registry credentials.",
+			demandOption: false,
+			conflicts: "disableSecretsStore",
+		},
+		"secret-name": {
+			type: "string",
+			description:
+				"The name for the secret the private registry credentials should be stored under.",
+			demandOption: false,
+			conflicts: "disableSecretsStore",
+		},
+		disableSecretsStore: {
+			type: "boolean",
+			description:
+				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
+			demandOption: false,
+			conflicts: ["secret-store-id", "secret-name"],
+		},
+	},
+	positionalArgs: ["DOMAIN"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await registryConfigureCommand(args, config);
+	},
+});
+
+export const containersRegistriesListCommand = createCommand({
+	metadata: {
+		description: "List all configured container registries",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+		hidden: true,
+	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
+	},
+	args: {
+		json: {
+			type: "boolean",
+			description: "Format output as JSON",
+			default: false,
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await registryListCommand(args);
+	},
+});
+
+export const containersRegistriesDeleteCommand = createCommand({
+	metadata: {
+		description: "Delete a configured container registry",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+		hidden: true,
+	},
+	args: {
+		DOMAIN: {
+			describe: "Domain of the registry to delete",
+			type: "string",
+			demandOption: true,
+		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation prompts for registry and secret deletion",
+			alias: "y",
+			default: false,
+		},
+	},
+	positionalArgs: ["DOMAIN"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await registryDeleteCommand(args, config);
+	},
+});

@@ -1,9 +1,9 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { globsToRegExps, testRegExps } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test("globsToRegExps/testRegExps: matches glob patterns", () => {
+test("globsToRegExps/testRegExps: matches glob patterns", ({ expect }) => {
 	const globs = ["**/*.txt", "src/**/*.js", "!src/bad.js", "thing/*/*.jpg"];
 	const matcherRegExps = globsToRegExps(globs);
 

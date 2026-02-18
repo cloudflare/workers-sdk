@@ -1,8 +1,8 @@
 import { env } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import { listPosts, readPost, upsertPost } from "../src/";
 
-it("should create and read post", async () => {
+it("should create and read post", async ({ expect }) => {
 	await upsertPost(env, "/hello", "👋");
 
 	const post = await readPost(env, "/hello");
@@ -19,7 +19,7 @@ it("should create and read post", async () => {
 	`);
 });
 
-it("should list posts", async () => {
+it("should list posts", async ({ expect }) => {
 	await upsertPost(env, "/one", "1");
 	await upsertPost(env, "/two", "2");
 	await upsertPost(env, "/three", "3");
