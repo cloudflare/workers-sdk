@@ -1,5 +1,5 @@
 ---
-"workers-playground": minor
+"@cloudflare/workers-playground": minor
 ---
 
 Add expandable object logging and improved console UI
