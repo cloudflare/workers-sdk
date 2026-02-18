@@ -222,6 +222,10 @@ export async function queryDOSqlite(
 		return errorResponse(400, 10001, message);
 	}
 
+	if (body.queries.length === 0) {
+		return errorResponse(400, 10001, "No queries provided");
+	}
+
 	const stub = binding.get(doId) as unknown as IntrospectableDurableObject;
 
 	try {
