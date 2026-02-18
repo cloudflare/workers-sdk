@@ -15,7 +15,6 @@ import { useModal } from "../Modal";
 import { StudioCommitConfirmation } from "../Modal/CommitConfirmation";
 import { StudioDeleteConfirmationModal } from "../Modal/DeleteConfirmation";
 import { StudioQueryResultStats } from "../Query/ResultStats";
-import { StudioResultTable } from "../Table/Result";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
 import { useStudioCurrentWindowTab } from "../WindowTab/Context";
 import type {
@@ -184,7 +183,7 @@ export function StudioTableExplorerTab({
 		return state.getHeaders().every((header) => header.setting.readonly);
 	}, [state]);
 
-	const headerIndexList = useMemo((): number[] => {
+	const _headerIndexList = useMemo((): number[] => {
 		if (!schema) {
 			return [];
 		}
@@ -372,7 +371,7 @@ export function StudioTableExplorerTab({
 		}
 	}, [driver, tableName, schema, state, openModal]);
 
-	const onOrderByColumnChange = useCallback(
+	const _onOrderByColumnChange = useCallback(
 		(columName: string, direction: StudioSortDirection) => {
 			guardUnsavedChanges(() => {
 				setOrderBy({ columName, direction });
@@ -438,7 +437,8 @@ export function StudioTableExplorerTab({
 				)}
 			</div>
 			<div className="grow overflow-hidden relative">
-				{schema && state && !error && (
+				{/* TODO: Re-add in a later PR */}
+				{/* {schema && state && !error && (
 					<StudioResultTable
 						arrangeHeaderIndex={headerIndexList}
 						onOrderByColumnChange={onOrderByColumnChange}
@@ -446,7 +446,7 @@ export function StudioTableExplorerTab({
 						orderByDirection={orderBy?.direction}
 						state={state}
 					/>
-				)}
+				)} */}
 
 				{error && <div className="p-4 text-red-500 text-base">{error}</div>}
 
