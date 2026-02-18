@@ -122,7 +122,7 @@ async function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		await wrangler.unstable_readConfig(
+		await wrangler.experimental_loadConfig(
 			{ config: configPath, env },
 			// Preserve the original `main` value so that Vite can resolve it
 			{ preserveOriginalMain: true }

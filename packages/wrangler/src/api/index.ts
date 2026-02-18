@@ -56,13 +56,14 @@ export type { DevToolsEvent } from "./startDevWorker/devtools";
 // Exports from ./integrations
 export {
 	unstable_getVarsForDev,
+	experimental_loadConfig,
 	unstable_readConfig,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getDevCompatibilityDate,
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
-	unstable_loadMiniflareWorkerOptions,
+	experimental_loadMiniflareWorkerOptions,
 } from "./integrations";
 export type {
 	Unstable_Config,

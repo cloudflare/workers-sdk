@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import {
 	APIError,
-	experimental_loadConfig,
+	experimental_loadRawConfig,
 	experimental_patchConfig,
 	INHERIT_SYMBOL,
 	PatchConfigError,
@@ -574,10 +574,11 @@ export async function provisionBindings(
 		// bindings that weren't originally in the user config. These can be provisioned, but we
 		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
 		if (isUsingRedirectedConfig) {
-			const { rawConfig: unredirectedConfig } = await experimental_loadConfig(
-				{ config: config.userConfigPath },
-				{ useRedirectIfAvailable: false }
-			);
+			const { rawConfig: unredirectedConfig } =
+				await experimental_loadRawConfig(
+					{ config: config.userConfigPath },
+					{ useRedirectIfAvailable: false }
+				);
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {

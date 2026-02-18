@@ -43,6 +43,7 @@ import type {
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
+export { loadConfig as experimental_loadConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
@@ -401,7 +402,7 @@ export function unstable_getMiniflareWorkerOptions(
  * Async version of `unstable_getMiniflareWorkerOptions` that supports
  * programmatic config files (.ts/.js).
  */
-export async function unstable_loadMiniflareWorkerOptions(
+export async function experimental_loadMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
 	options?: {
@@ -413,7 +414,7 @@ export async function unstable_loadMiniflareWorkerOptions(
 		containerBuildId?: string;
 	}
 ): Promise<Unstable_MiniflareWorkerOptions>;
-export async function unstable_loadMiniflareWorkerOptions(
+export async function experimental_loadMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
 	options?: {
@@ -425,7 +426,7 @@ export async function unstable_loadMiniflareWorkerOptions(
 		containerBuildId?: string;
 	}
 ): Promise<Unstable_MiniflareWorkerOptions>;
-export async function unstable_loadMiniflareWorkerOptions(
+export async function experimental_loadMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: {

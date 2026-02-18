@@ -25,7 +25,7 @@ import {
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
-import { experimental_readRawConfig } from "wrangler";
+import { experimental_loadRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
@@ -308,7 +308,7 @@ async function getWranglerWorkerName(
 	if (!relativeWranglerConfigPath) {
 		return undefined;
 	}
-	const wranglerConfigObject = await experimental_readRawConfig({
+	const wranglerConfigObject = await experimental_loadRawConfig({
 		config: relativeWranglerConfigPath,
 	});
 	return wranglerConfigObject.rawConfig.name;

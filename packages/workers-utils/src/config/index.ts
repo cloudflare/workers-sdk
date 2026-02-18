@@ -132,7 +132,7 @@ export const experimental_readRawConfig = (
  * Async version of `experimental_readRawConfig` that can support programmatic
  * config files in future
  */
-export const experimental_loadConfig = async (
+export const experimental_loadRawConfig = async (
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
 ): Promise<{

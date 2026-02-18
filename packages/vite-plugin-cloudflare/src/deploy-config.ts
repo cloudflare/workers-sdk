@@ -40,7 +40,7 @@ export async function getWorkerConfigs(
 				path.dirname(deployConfigPath),
 				configPath
 			);
-			return wrangler.unstable_readConfig({ config: resolvedConfigPath });
+			return wrangler.experimental_loadConfig({ config: resolvedConfigPath });
 		})
 	);
 }

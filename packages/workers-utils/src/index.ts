@@ -14,7 +14,7 @@ export {
 	formatConfigSnippet,
 	configFormat,
 	configFileName,
-	experimental_loadConfig,
+	experimental_loadRawConfig,
 	experimental_readRawConfig,
 } from "./config";
 export {

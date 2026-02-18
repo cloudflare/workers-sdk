@@ -5,7 +5,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { experimental_loadConfig } from "../../../workers-utils/src";
+import { experimental_loadRawConfig } from "../../../workers-utils/src";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { loadConfig } from "../config";
@@ -200,7 +200,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
 					if (!("env" in args) && config.configPath) {
-						const { rawConfig } = await experimental_loadConfig(
+						const { rawConfig } = await experimental_loadRawConfig(
 							{
 								config: config.configPath,
 							},

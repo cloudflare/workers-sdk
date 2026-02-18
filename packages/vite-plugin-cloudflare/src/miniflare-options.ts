@@ -293,7 +293,7 @@ export async function getDevMiniflareOptions(
 							}
 
 							const miniflareWorkerOptions =
-								await wrangler.unstable_loadMiniflareWorkerOptions(
+								await wrangler.experimental_loadMiniflareWorkerOptions(
 									{
 										...worker.config,
 										assets: undefined,
@@ -584,7 +584,7 @@ export async function getPreviewMiniflareOptions(
 				}
 
 				const miniflareWorkerOptions =
-					await wrangler.unstable_loadMiniflareWorkerOptions(
+					await wrangler.experimental_loadMiniflareWorkerOptions(
 						workerConfig,
 						undefined,
 						{

@@ -2,4 +2,4 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-Use async `unstable_loadMiniflareWorkerOptions` for config reading
+Use async `experimental_loadMiniflareWorkerOptions` and `experimental_loadRawConfig` for config reading

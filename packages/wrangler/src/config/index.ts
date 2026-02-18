@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import {
 	configFileName,
-	experimental_loadConfig,
+	experimental_loadRawConfig,
 	experimental_readRawConfig,
 	FatalError,
 	isPagesConfig,
@@ -112,7 +112,7 @@ export async function loadConfig(
 		userConfigPath,
 		deployConfigPath,
 		redirected,
-	} = await experimental_loadConfig(args, options);
+	} = await experimental_loadRawConfig(args, options);
 
 	return processConfig(
 		rawConfig,
