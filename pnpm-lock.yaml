@@ -2105,6 +2105,9 @@ importers:
       '@cloudflare/kumo':
         specifier: ^1.5.0
         version: 1.5.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@cloudflare/workers-editor-shared':
+        specifier: ^0.1.1
+        version: 0.1.1(@cloudflare/style-const@5.7.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -5304,6 +5307,14 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-editor-shared@0.1.1':
+    resolution: {integrity: sha512-tk7dZ3rj61o8oPL2JIfJbjAldBOJZNHHIWlkfY5X5ftw7QhAIccACz4zW7LFcMyw6HHexmHhIPlcdENqqnp28w==}
+    peerDependencies:
+      '@cloudflare/style-const': ^5.7.2
+      '@cloudflare/style-container': ^7.12.1
+      react: ^17.0.2 || ^18.2.21
+      react-dom: ^17.0.2 || ^18.2.21
 
   '@cloudflare/workers-types@4.20260218.0':
     resolution: {integrity: sha512-E28uJNJb9J9pca3RaxjXm1JxAjp8td9/cudkY+IT8rio71NlshN7NKMe2Cr/6GN+RufbSnp+N3ZKP74xgUaL0A==}
@@ -10878,12 +10889,12 @@ packages:
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+    deprecated: Glob versions prior to v9 are no longer supported
 
   glob@8.1.0:
     resolution: {integrity: sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==}
     engines: {node: '>=12'}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+    deprecated: Glob versions prior to v9 are no longer supported
 
   globals@11.12.0:
     resolution: {integrity: sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA==}
@@ -16246,6 +16257,12 @@ snapshots:
       polished: 4.2.2
       react: 18.3.1
 
+  '@cloudflare/style-const@5.7.3(react@19.2.1)':
+    dependencies:
+      '@cloudflare/types': 6.23.6(react@19.2.1)
+      polished: 4.2.2
+      react: 19.2.1
+
   '@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
@@ -16257,6 +16274,18 @@ snapshots:
       react: 18.3.1
       react-display-name: 0.2.5
       react-fela: 11.7.0(fela@11.7.0)(react@18.3.1)
+
+  '@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@cloudflare/style-const': 5.7.3(react@19.2.1)
+      '@cloudflare/types': 6.23.6(react@19.2.1)
+      fela: 11.7.0
+      fela-tools: 11.7.0(fela@11.7.0)
+      lodash: 4.17.21
+      prop-types: 15.8.1
+      react: 19.2.1
+      react-display-name: 0.2.5
+      react-fela: 11.7.0(fela@11.7.0)(react@19.2.1)
 
   '@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -16288,6 +16317,12 @@ snapshots:
       '@cloudflare/intl-types': 1.5.1(react@18.3.1)
       '@cloudflare/util-en-garde': 8.0.10
       react: 18.3.1
+
+  '@cloudflare/types@6.23.6(react@19.2.1)':
+    dependencies:
+      '@cloudflare/intl-types': 1.5.1(react@19.2.1)
+      '@cloudflare/util-en-garde': 8.0.10
+      react: 19.2.1
 
   '@cloudflare/unenv-preset@2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)':
     dependencies:
@@ -16388,6 +16423,14 @@ snapshots:
 
   '@cloudflare/workerd-windows-64@1.20260218.0':
     optional: true
+
+  '@cloudflare/workers-editor-shared@0.1.1(@cloudflare/style-const@5.7.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@cloudflare/style-const': 5.7.3(react@19.2.1)
+      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@19.2.1))(react@19.2.1)
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+      react-split-pane: 0.1.92(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
 
   '@cloudflare/workers-types@4.20260218.0': {}
 
@@ -24520,6 +24563,14 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
+  react-fela@11.7.0(fela@11.7.0)(react@19.2.1):
+    dependencies:
+      fela: 11.7.0
+      fela-bindings: 11.7.0(fela@11.7.0)
+      fela-dom: 11.7.0
+      prop-types: 15.8.1
+      react: 19.2.1
+
   react-is@16.13.1: {}
 
   react-is@17.0.2: {}
@@ -24545,6 +24596,14 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+      react-lifecycles-compat: 3.0.4
+      react-style-proptype: 3.2.2
+
+  react-split-pane@0.1.92(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+    dependencies:
+      prop-types: 15.8.1
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
       react-lifecycles-compat: 3.0.4
       react-style-proptype: 3.2.2
 
