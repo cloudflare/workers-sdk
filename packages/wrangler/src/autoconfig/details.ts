@@ -239,8 +239,8 @@ async function detectFramework(
 	if (!lockFixExists) {
 		logger.warn(
 			"No lock file has been detected in the current working directory." +
-				" This might indicate that the project is part of a workspace, auto-configuration of " +
-				`projects inside workspaces is limited, if you encounter an issue please report it to ${chalk.hex(
+				" This might indicate that the project is part of a workspace. Auto-configuration of " +
+				`projects inside workspaces is limited. If you encounter an issue please report it to ${chalk.hex(
 					"#3B818D"
 				)("https://github.com/cloudflare/workers-sdk/issues/new/choose")}`
 		);
