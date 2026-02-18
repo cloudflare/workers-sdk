@@ -170,6 +170,15 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		/** Override the workerd service name used as the default entrypoint in the
+		 * dev registry. When set, the dev registry will route requests for this
+		 * worker's default entrypoint to the specified worker name (wrapped with
+		 * getUserServiceName) instead of the worker's own service or assets proxy.
+		 *
+		 * Used by the vite plugin to route through the vite proxy worker, which
+		 * handles both HMR and asset serving in vite dev mode. */
+		unsafeOverrideDefaultEntrypoint: z.string().optional(),
+
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
