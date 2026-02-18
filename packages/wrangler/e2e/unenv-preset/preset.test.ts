@@ -729,6 +729,8 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// node:readline (experimental, no default enable date)
 	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
 		{
 			name: "readline enabled by flag",
 			compatibilityDate: "2024-09-23",
