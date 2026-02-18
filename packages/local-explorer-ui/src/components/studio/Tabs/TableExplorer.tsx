@@ -14,10 +14,9 @@ import { useStudioContext } from "../Context";
 import { useModal } from "../Modal";
 import { StudioCommitConfirmation } from "../Modal/CommitConfirmation";
 import { StudioDeleteConfirmationModal } from "../Modal/DeleteConfirmation";
-import StudioQueryResultStats from "../Query/ResultStats";
+import { StudioQueryResultStats } from "../Query/ResultStats";
 import { StudioResultTable } from "../Table/Result";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
-import { StudioWhereFilterInput } from "../Where/FilterInput";
 import { useStudioCurrentWindowTab } from "../WindowTab/Context";
 import type {
 	StudioResultStat,
@@ -62,7 +61,7 @@ export function StudioTableExplorerTab({
 
 	const { openModal } = useModal();
 
-	const filterAutoCompleteColumns = useMemo<string[]>(() => {
+	const _filterAutoCompleteColumns = useMemo<string[]>(() => {
 		if (!schema) {
 			return [];
 		}
@@ -299,7 +298,7 @@ export function StudioTableExplorerTab({
 		});
 	}, [pageOffset, pageLimit, guardUnsavedChanges]);
 
-	const onWhereRawApplied = useCallback(
+	const _onWhereRawApplied = useCallback(
 		(newWhereRaw: string): void => {
 			guardUnsavedChanges(() => {
 				setWhereRaw(newWhereRaw);
@@ -401,13 +400,14 @@ export function StudioTableExplorerTab({
 				)}
 
 				<div className="grow text-xs">
-					<StudioWhereFilterInput
+					{/* TODO: Re-add in a later PR */}
+					{/* <StudioWhereFilterInput
 						columnNameList={filterAutoCompleteColumns}
 						driver={driver}
 						loading={loading}
 						onApply={onWhereRawApplied}
 						value={whereRaw}
-					/>
+					/> */}
 				</div>
 
 				{changeNumber > 0 && (

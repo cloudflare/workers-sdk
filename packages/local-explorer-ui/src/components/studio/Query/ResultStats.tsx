@@ -20,7 +20,7 @@ interface StudioQueryResultStatsProps {
 	stats: StudioResultStat;
 }
 
-export default function StudioQueryResultStats({
+export function StudioQueryResultStats({
 	stats,
 }: StudioQueryResultStatsProps): JSX.Element {
 	const statsComponents = useMemo(() => {
