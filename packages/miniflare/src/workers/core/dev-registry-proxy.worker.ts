@@ -1,6 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import {
-	HANDLER_RESERVED_KEYS,
 	resolveTarget,
 	tailEventsReplacer,
 	tailEventsReviver,
@@ -72,11 +71,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 				// If the property exists on ExternalServiceProxy, use it
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
-				}
-
-				// Skip handler-reserved keys
-				if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
-					return undefined;
 				}
 
 				// For arbitrary RPC methods, connect to the debug port and

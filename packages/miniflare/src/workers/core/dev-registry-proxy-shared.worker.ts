@@ -92,21 +92,6 @@ export async function connectToActor(
 	return client.getActor(target.userWorkerService, className, actorId);
 }
 
-/** Handler event methods that should NOT be forwarded as RPC. */
-export const HANDLER_RESERVED_KEYS = new Set([
-	"alarm",
-	"fetch",
-	"scheduled",
-	"self",
-	"tail",
-	"tailStream",
-	"test",
-	"trace",
-	"webSocketClose",
-	"webSocketError",
-	"webSocketMessage",
-]);
-
 /**
  * Create a DurableObject proxy class that forwards fetch and RPC calls
  * to a remote Durable Object via the workerd debug port.
@@ -125,9 +110,6 @@ export function createProxyDurableObjectClass({
 				get(obj, prop) {
 					if (Reflect.has(obj, prop)) {
 						return Reflect.get(obj, prop);
-					}
-					if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
-						return undefined;
 					}
 					if (typeof prop === "string") {
 						const methodName = prop;
