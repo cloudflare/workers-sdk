@@ -80,7 +80,6 @@ export interface Unstable_DevOptions {
 		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
-		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
 		enableIpc?: boolean;
 		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.

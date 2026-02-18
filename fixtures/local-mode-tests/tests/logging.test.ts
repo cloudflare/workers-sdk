@@ -2,7 +2,7 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import util from "node:util";
 import { afterEach, beforeEach, it, Mock, vi } from "vitest";
-import { unstable_dev } from "wrangler";
+import { unstable_startWorker } from "wrangler";
 
 let output = "";
 function spyOnConsoleMethod(name: keyof typeof console) {
@@ -25,21 +25,17 @@ afterEach(() => {
 it("logs startup errors", async ({ expect }) => {
 	let caughtError: unknown;
 	try {
-		const worker = await unstable_dev(
-			path.resolve(__dirname, "..", "src", "nodejs-compat.ts"),
-			{
-				config: path.resolve(__dirname, "..", "wrangler.logging.jsonc"),
-				// Intentionally omitting `compatibilityFlags: ["nodejs_compat"]`
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-					devEnv: true,
-				},
-			}
-		);
-		await worker.stop();
-		expect.fail("Expected unstable_dev() to fail");
+		const worker = await unstable_startWorker({
+			entrypoint: path.resolve(__dirname, "../src/nodejs-compat.ts"),
+			config: path.resolve(__dirname, "../wrangler.logging.jsonc"),
+			// Intentionally omitting `compatibilityFlags: ["nodejs_compat"]`
+			dev: {
+				server: { hostname: "127.0.0.1", port: 0 },
+				inspector: false,
+			},
+		});
+		await worker.dispose();
+		expect.fail("Expected unstable_startWorker() to fail");
 	} catch (e) {
 		caughtError = e;
 	}
