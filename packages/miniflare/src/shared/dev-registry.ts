@@ -19,12 +19,15 @@ export type WorkerDefinition = {
 	/** Address of the workerd debug port for this worker's process (e.g. "127.0.0.1:12345").
 	 * The debug port provides native Cap'n Proto RPC access to all services/entrypoints. */
 	debugPortAddress: string;
-	/** HTTP entry address for this worker (e.g. "http://127.0.0.1:8787").
-	 * Used as a fallback for WebSocket upgrades since the debug port RPC doesn't support them. */
-	entryAddress: string;
-	/** Whether this worker has static assets configured. When true, the default entrypoint
-	 * should be accessed via the assets:rpc-proxy service for correct asset routing. */
-	hasAssets: boolean;
+	/** The workerd service name for the default entrypoint. This varies by worker type:
+	 * - Workers with assets: routes through the assets RPC proxy
+	 * - Vite workers: routes through the vite proxy worker
+	 * - Plain workers: routes directly to the user worker service */
+	defaultEntrypointService: string;
+	/** The workerd service name for the user worker directly (always "core:user:${name}").
+	 * Used for named entrypoints and Durable Object access, which must bypass
+	 * any assets/vite proxy layer. */
+	userWorkerService: string;
 	durableObjects: { name: string; className: string }[];
 };
 
