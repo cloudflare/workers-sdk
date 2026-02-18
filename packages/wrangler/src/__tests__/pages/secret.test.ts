@@ -287,9 +287,9 @@ describe("wrangler pages secret", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`(redacted)\`: \`account-id-1\`
-						  \`(redacted)\`: \`account-id-2\`
-						  \`(redacted)\`: \`account-id-3\`]
+						  \`account-name-1\`: \`account-id-1\`
+						  \`account-name-2\`: \`account-id-2\`
+						  \`account-name-3\`: \`account-id-3\`]
 					`);
 				});
 			});

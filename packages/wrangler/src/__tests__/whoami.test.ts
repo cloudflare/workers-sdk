@@ -351,7 +351,7 @@ describe("whoami", () => {
 		`);
 	});
 
-	it("should redact email and account names in non-interactive mode", async ({
+	it("should redact email but not account names in non-interactive mode", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -378,11 +378,11 @@ describe("whoami", () => {
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
-			│ (redacted) │ account-1 │
+			│ Account One │ account-1 │
 			├─┼─┤
-			│ (redacted) │ account-2 │
+			│ Account Two │ account-2 │
 			├─┼─┤
-			│ (redacted) │ account-3 │
+			│ Account Three │ account-3 │
 			└─┴─┘
 			🔓 Token Permissions:
 			Scope (Access)
@@ -411,7 +411,7 @@ describe("whoami", () => {
 			  - connectivity:admin
 
 
-			🎢 Membership roles in "(redacted)": Contact account super admin to change your permissions.
+			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
 			- Test role"
 		`);
 	});
