@@ -666,7 +666,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
-		});
+		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
 			// Trigger tail handler of exported-handler via worker-entrypoint
