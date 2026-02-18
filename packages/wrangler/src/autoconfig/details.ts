@@ -13,6 +13,7 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import chalk from "chalk";
 import dedent from "ts-dedent";
 import { getCacheFolder } from "../config-cache";
 import { getErrorType } from "../core/handle-errors";
@@ -230,6 +231,20 @@ async function detectFramework(
 	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
 	const packageManager = convertDetectedPackageManager(project.packageManager);
+
+	const lockFixExists = packageManager.lockFiles.some((lockFile) =>
+		existsSync(join(projectPath, lockFile))
+	);
+
+	if (!lockFixExists) {
+		logger.warn(
+			"No lock file has been detected in the current working directory." +
+				" This might indicate that the project is part of a workspace, auto-configuration of " +
+				`projects inside workspaces is limited, if you encounter an issue please report it to ${chalk.hex(
+					"#3B818D"
+				)("https://github.com/cloudflare/workers-sdk/issues/new/choose")}`
+		);
+	}
 
 	if (await isPagesProject(projectPath, wranglerConfig, detectedFramework)) {
 		return {
