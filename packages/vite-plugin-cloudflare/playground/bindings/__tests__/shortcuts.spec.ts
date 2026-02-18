@@ -28,14 +28,14 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		process.stdin.isTTY = false;
 	});
 
-	test("display binding shortcut hint", ({ expect }) => {
+	test("display binding shortcut hint", async ({ expect }) => {
 		// Set up the shortcut wrapper (after stubs are in place from beforeAll)
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
 			isRestartingDevServer: false,
 		});
 		mockContext.setResolvedPluginConfig(
-			resolvePluginConfig(
+			await resolvePluginConfig(
 				{
 					configPath: path.resolve(__dirname, "../wrangler.jsonc"),
 				},
@@ -63,7 +63,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			"press b + enter to list configured Cloudflare bindings"
 		);
 	});
-	test("prints bindings with a single Worker", ({ expect }) => {
+	test("prints bindings with a single Worker", async ({ expect }) => {
 		// Create a test server with a spy on bindCLIShortcuts
 		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 		// Create mock plugin context
@@ -73,7 +73,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		});
 
 		mockContext.setResolvedPluginConfig(
-			resolvePluginConfig(
+			await resolvePluginConfig(
 				{
 					configPath: path.resolve(__dirname, "../wrangler.jsonc"),
 				},
@@ -119,7 +119,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		`);
 	});
 
-	test("prints bindings with multi Workers", ({ expect }) => {
+	test("prints bindings with multi Workers", async ({ expect }) => {
 		// Create a test server with a spy on bindCLIShortcuts
 		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 		// Create mock plugin context
@@ -129,7 +129,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		});
 
 		mockContext.setResolvedPluginConfig(
-			resolvePluginConfig(
+			await resolvePluginConfig(
 				{
 					configPath: path.resolve(__dirname, "../wrangler.jsonc"),
 					auxiliaryWorkers: [
