@@ -727,6 +727,27 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:readline (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "readline enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_readline_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_readline_module: true,
+			},
+		},
+		{
+			name: "readline disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_readline_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_readline_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(
