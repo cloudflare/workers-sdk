@@ -1,3 +1,8 @@
+import type {
+	DoRawQueryResult,
+	DoSqlWithParams,
+} from "../../workers/local-explorer/generated";
+
 export const CORE_PLUGIN_NAME = "core";
 
 // Service for HTTP socket entrypoint (for checking runtime ready, routing, etc)
@@ -55,3 +60,13 @@ export function getCustomNodeServiceName(
 ) {
 	return `${SERVICE_CUSTOM_NODE_PREFIX}:${workerIndex}:${kind}${bindingName}`;
 }
+
+/**
+ * Used by the local explorer worker.
+ * The method name injected into wrapped Durable Objects for SQLite introspection.
+ */
+export const INTROSPECT_SQLITE_METHOD = "__miniflare_introspectSqlite";
+
+export type IntrospectSqliteMethod = (
+	queries: DoSqlWithParams[]
+) => Promise<DoRawQueryResult[]>;

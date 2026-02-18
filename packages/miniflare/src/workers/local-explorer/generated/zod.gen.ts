@@ -295,6 +295,32 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 	})
 );
 
+export const zDoSqlWithParams = z.object({
+	sql: z.string().min(1),
+	params: z.array(z.unknown()).optional(),
+});
+
+export const zDoQueryById = z.object({
+	durable_object_id: z.string().min(1),
+	queries: z.array(zDoSqlWithParams),
+});
+
+export const zDoQueryByName = z.object({
+	durable_object_name: z.string().min(1),
+	queries: z.array(zDoSqlWithParams),
+});
+
+export const zDoRawQueryResult = z.object({
+	columns: z.array(z.string()).optional(),
+	rows: z.array(z.array(z.unknown())).optional(),
+	meta: z
+		.object({
+			rows_read: z.number().optional(),
+			rows_written: z.number().optional(),
+		})
+		.optional(),
+});
+
 export const zWorkersNamespaceWritable = z.object({
 	class: z.string().optional(),
 	name: z.string().optional(),
@@ -535,5 +561,23 @@ export const zDurableObjectsNamespaceListObjectsResponse =
 					cursor: zWorkersCursor.optional(),
 				})
 				.optional(),
+		})
+	);
+
+export const zDurableObjectsNamespaceQuerySqliteData = z.object({
+	body: z.union([zDoQueryById, zDoQueryByName]),
+	path: z.object({
+		namespace_id: zWorkersSchemasId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Query response.
+ */
+export const zDurableObjectsNamespaceQuerySqliteResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z.array(zDoRawQueryResult).optional(),
 		})
 	);
