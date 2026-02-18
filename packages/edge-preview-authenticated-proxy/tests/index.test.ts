@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 
 // Mock URL for the remote worker - all outbound fetches will be intercepted
 const MOCK_REMOTE_URL = "http://mock-remote.test";
