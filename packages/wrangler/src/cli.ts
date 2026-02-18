@@ -12,6 +12,8 @@ import { hideBin } from "yargs/helpers";
 import {
 	convertConfigBindingsToStartWorkerBindings,
 	DevEnv,
+	experimental_loadConfig,
+	experimental_loadMiniflareWorkerOptions,
 	getPlatformProxy,
 	maybeStartOrUpdateRemoteProxySession,
 	startRemoteProxySession,
@@ -68,11 +70,13 @@ export {
 	startWorker as unstable_startWorker,
 	unstable_getVarsForDev,
 	unstable_readConfig,
+	experimental_loadConfig,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getDevCompatibilityDate,
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
+	experimental_loadMiniflareWorkerOptions,
 };
 
 export type {
@@ -112,6 +116,7 @@ export const unstable_generateASSETSBinding: (
 
 export {
 	defaultWranglerConfig as unstable_defaultWranglerConfig,
+	experimental_loadRawConfig,
 	experimental_readRawConfig,
 } from "@cloudflare/workers-utils";
 

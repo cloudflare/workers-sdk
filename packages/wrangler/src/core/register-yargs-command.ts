@@ -5,10 +5,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { experimental_readRawConfig } from "../../../workers-utils/src";
+import { experimental_loadRawConfig } from "../../../workers-utils/src";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
@@ -184,7 +184,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 			await run(experimentalFlags, async () => {
 				const config =
 					def.behaviour?.provideConfig ?? true
-						? readConfig(args, {
+						? await loadConfig(args, {
 								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
 								useRedirectIfAvailable:
 									def.behaviour?.useConfigRedirectIfAvailable,
@@ -200,7 +200,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
 					if (!("env" in args) && config.configPath) {
-						const { rawConfig } = experimental_readRawConfig(
+						const { rawConfig } = await experimental_loadRawConfig(
 							{
 								config: config.configPath,
 							},

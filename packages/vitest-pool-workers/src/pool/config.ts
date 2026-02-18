@@ -294,7 +294,7 @@ async function parseCustomPoolOptions(
 		}
 
 		const { workerOptions, externalWorkers, define, main } =
-			wrangler.unstable_getMiniflareWorkerOptions(
+			await wrangler.experimental_loadMiniflareWorkerOptions(
 				configPath,
 				options.wrangler.environment,
 				{

@@ -6,6 +6,7 @@ import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type { Config } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 interface DeployConfig {
@@ -18,25 +19,30 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigs(root: string, isPrerender: boolean) {
+export async function getWorkerConfigs(
+	root: string,
+	isPrerender: boolean
+): Promise<Config[]> {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
 	) as DeployConfig;
 
-	return [
-		...(isPrerender && deployConfig.prerenderWorkerConfigPath
-			? [{ configPath: deployConfig.prerenderWorkerConfigPath }]
-			: []),
-		{ configPath: deployConfig.configPath },
-		...deployConfig.auxiliaryWorkers,
-	].map(({ configPath }) => {
-		const resolvedConfigPath = path.resolve(
-			path.dirname(deployConfigPath),
-			configPath
-		);
-		return wrangler.unstable_readConfig({ config: resolvedConfigPath });
-	});
+	return Promise.all(
+		[
+			...(isPrerender && deployConfig.prerenderWorkerConfigPath
+				? [{ configPath: deployConfig.prerenderWorkerConfigPath }]
+				: []),
+			{ configPath: deployConfig.configPath },
+			...deployConfig.auxiliaryWorkers,
+		].map(({ configPath }) => {
+			const resolvedConfigPath = path.resolve(
+				path.dirname(deployConfigPath),
+				configPath
+			);
+			return wrangler.experimental_loadConfig({ config: resolvedConfigPath });
+		})
+	);
 }
 
 function getRelativePathToWorkerConfig(

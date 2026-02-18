@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
-import { readConfig } from "../../config";
+import { loadConfig } from "../../config";
 import { requireApiToken, requireAuth } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
@@ -79,7 +79,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	let config: Config | undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const wranglerConfigObject = wranglerOrWorkerConfigObject;
-		config = readConfig({
+		config = await loadConfig({
 			config: wranglerConfigObject.path,
 			env: wranglerConfigObject.environment,
 		});

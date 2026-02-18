@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import {
 	configFileName,
+	experimental_loadRawConfig,
 	experimental_readRawConfig,
 	FatalError,
 	isPagesConfig,
@@ -31,20 +32,15 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	preserveOriginalMain?: boolean;
 };
 
-/**
- * Get the Wrangler configuration; read it from the give `configPath` if available.
- */
-export function readConfig(
+function processConfig(
+	rawConfig: RawConfig,
+	configPath: string | undefined,
+	userConfigPath: string | undefined,
+	deployConfigPath: string | undefined,
+	redirected: boolean,
 	args: ReadConfigCommandArgs,
 	options: ReadConfigOptions = {}
 ): Config {
-	const {
-		rawConfig,
-		configPath,
-		userConfigPath,
-		deployConfigPath,
-		redirected,
-	} = experimental_readRawConfig(args, options);
 	if (redirected) {
 		assert(configPath, "Redirected config found without a configPath");
 		assert(
@@ -75,6 +71,58 @@ export function readConfig(
 	}
 
 	return config;
+}
+
+/**
+ * Get the Wrangler configuration; read it from the given `configPath` if available.
+ */
+export function readConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Config {
+	const {
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+	} = experimental_readRawConfig(args, options);
+
+	return processConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+		args,
+		options
+	);
+}
+
+/**
+ * Async version of `readConfig` that supports programmatic config files (.ts/.js).
+ */
+export async function loadConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<Config> {
+	const {
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+	} = await experimental_loadRawConfig(args, options);
+
+	return processConfig(
+		rawConfig,
+		configPath,
+		userConfigPath,
+		deployConfigPath,
+		redirected,
+		args,
+		options
+	);
 }
 
 export function readPagesConfig(

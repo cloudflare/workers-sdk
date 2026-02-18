@@ -109,20 +109,20 @@ const nullableNonApplicable = [
 	"tsconfig",
 ] as const;
 
-function readWorkerConfig(
+async function readWorkerConfig(
 	configPath: string,
 	env: string | undefined
-): {
+): Promise<{
 	raw: RawWorkerConfig;
 	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
-} {
+}> {
 	const nonApplicable: NonApplicableConfigMap = {
 		replacedByVite: new Set(),
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		wrangler.unstable_readConfig(
+		await wrangler.experimental_loadConfig(
 			{ config: configPath, env },
 			// Preserve the original `main` value so that Vite can resolve it
 			{ preserveOriginalMain: true }
@@ -281,22 +281,22 @@ function missingFieldErrorMessage(
 /**
  * Reads and sanitizes a worker config from a wrangler config file.
  */
-export function readWorkerConfigFromFile(
+export async function readWorkerConfigFromFile(
 	configPath: string,
 	env: string | undefined,
 	opts?: {
 		visitedConfigPaths?: Set<string>;
 	}
-): {
+): Promise<{
 	raw: RawWorkerConfig;
 	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
-} {
+}> {
 	if (opts?.visitedConfigPaths?.has(configPath)) {
 		throw new Error(`Duplicate Wrangler config path found: ${configPath}`);
 	}
 
-	const result = readWorkerConfig(configPath, env);
+	const result = await readWorkerConfig(configPath, env);
 
 	opts?.visitedConfigPaths?.add(configPath);
 

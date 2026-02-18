@@ -1939,7 +1939,6 @@ export async function main(argv: string[]): Promise<void> {
 
 	const startTime = Date.now();
 	let configArgs: ReadConfigCommandArgs = {};
-	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
 	// Register middleware to set logger level and capture fallback telemetry info
 	wrangler.middleware((args) => {
@@ -1951,20 +1950,6 @@ export async function main(argv: string[]): Promise<void> {
 		setLogLevel(logger.loggerLevel);
 
 		configArgs = args;
-
-		try {
-			const { rawConfig, configPath } = experimental_readRawConfig(args);
-			dispatcher = getMetricsDispatcher({
-				sendMetrics: rawConfig.send_metrics,
-				hasAssets: !!rawConfig.assets?.directory,
-				configPath,
-				argv,
-			});
-		} catch (e) {
-			// If we can't parse the config, we can still send metrics with defaults
-			logger.debug("Failed to parse config for metrics. Using defaults.", e);
-			dispatcher = getMetricsDispatcher({ argv });
-		}
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
@@ -1982,9 +1967,27 @@ export async function main(argv: string[]): Promise<void> {
 			// The error occurred before Command handler ran
 			// (e.g., yargs validation errors like unknown commands or invalid arguments).
 			// So we need to handle telemetry and error reporting here.
-			if (dispatcher) {
-				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+			let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+
+			try {
+				const { rawConfig, configPath } =
+					experimental_readRawConfig(configArgs);
+				dispatcher = getMetricsDispatcher({
+					sendMetrics: rawConfig.send_metrics,
+					hasAssets: !!rawConfig.assets?.directory,
+					configPath,
+					argv,
+				});
+			} catch (err) {
+				// If we can't parse the config, we can still send metrics with defaults
+				logger.debug(
+					"Failed to parse config for metrics. Using defaults.",
+					err
+				);
+				dispatcher = getMetricsDispatcher({ argv });
 			}
+			dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
+
 			await handleError(e, configArgs, argv);
 			throw e;
 		}

@@ -25,7 +25,7 @@ import {
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
-import { experimental_readRawConfig } from "wrangler";
+import { experimental_loadRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
@@ -302,13 +302,13 @@ function getDurableObjectClasses(worker: SourcelessWorkerOptions): Set<string> {
 	return result;
 }
 
-function getWranglerWorkerName(
+async function getWranglerWorkerName(
 	relativeWranglerConfigPath?: string
-): string | undefined {
+): Promise<string | undefined> {
 	if (!relativeWranglerConfigPath) {
 		return undefined;
 	}
-	const wranglerConfigObject = experimental_readRawConfig({
+	const wranglerConfigObject = await experimental_loadRawConfig({
 		config: relativeWranglerConfigPath,
 	});
 	return wranglerConfigObject.rawConfig.name;
@@ -332,10 +332,10 @@ function updateWorkflowsScriptNames(
 /**
  * Gets a set of class names for Workflows defined in the SELF Worker.
  */
-function getWorkflowClasses(
+async function getWorkflowClasses(
 	worker: SourcelessWorkerOptions,
 	relativeWranglerConfigPath: string | undefined
-): Set<string> {
+): Promise<Set<string>> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
@@ -349,7 +349,7 @@ function getWorkflowClasses(
 		let workerName: string | undefined;
 		// If the designator's scriptName matches its own Worker name,
 		// use that as the worker name, otherwise use the vitest worker's name
-		const wranglerWorkerName = getWranglerWorkerName(
+		const wranglerWorkerName = await getWranglerWorkerName(
 			relativeWranglerConfigPath
 		);
 		if (wranglerWorkerName && designator.scriptName === wranglerWorkerName) {
@@ -472,7 +472,7 @@ async function buildProjectWorkerOptions(
 	runnerWorker.durableObjects ??= {};
 	const durableObjectClassNames = getDurableObjectClasses(runnerWorker);
 
-	const workflowClassNames = getWorkflowClasses(
+	const workflowClassNames = await getWorkflowClasses(
 		runnerWorker,
 		relativeWranglerConfigPath
 	);
@@ -728,7 +728,7 @@ async function buildProjectMiniflareOptions(
 		//  --> multiple instances each with single runner worker
 
 		// Set Workflows scriptName to the runner worker name if it matches the Wrangler worker name
-		const wranglerWorkerName = getWranglerWorkerName(
+		const wranglerWorkerName = await getWranglerWorkerName(
 			project.options.wrangler?.configPath
 		);
 		updateWorkflowsScriptNames(runnerWorker, wranglerWorkerName);
@@ -753,7 +753,7 @@ async function buildProjectMiniflareOptions(
 			testWorker.bindings[SELF_NAME_BINDING] = testWorker.name;
 
 			// Set Workflows scriptName to the test worker name if it matches the Wrangler worker name
-			const wranglerWorkerName = getWranglerWorkerName(
+			const wranglerWorkerName = await getWranglerWorkerName(
 				project.options.wrangler?.configPath
 			);
 			updateWorkflowsScriptNames(testWorker, wranglerWorkerName);

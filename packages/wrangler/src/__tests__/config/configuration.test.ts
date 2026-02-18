@@ -32,14 +32,9 @@ describe("readConfig()", () => {
 		writeWranglerConfig({
 			main: "index.py",
 		});
-		try {
-			readConfig({ config: "wrangler.toml" });
-			expect.fail();
-		} catch (e) {
-			expect(e).toMatchInlineSnapshot(
-				`[Error: The \`python_workers\` compatibility flag is required to use Python.]`
-			);
-		}
+		expect(() => readConfig({ config: "wrangler.toml" })).toThrow(
+			"The `python_workers` compatibility flag is required to use Python."
+		);
 	});
 });
 
@@ -48,7 +43,7 @@ describe("experimental_readRawConfig()", () => {
 		`with %s config files`,
 		(configType) => {
 			runInTempDir();
-			it(`should find a ${configType} config file given a specific path`, ({
+			it(`should find a ${configType} config file given a specific path`, async ({
 				expect,
 			}) => {
 				fs.mkdirSync("../folder", { recursive: true });
@@ -57,7 +52,7 @@ describe("experimental_readRawConfig()", () => {
 					`../folder/config.${configType}`
 				);
 
-				const result = experimental_readRawConfig({
+				const result = await experimental_readRawConfig({
 					config: `../folder/config.${configType}`,
 				});
 				expect(result.rawConfig).toEqual(
@@ -67,7 +62,9 @@ describe("experimental_readRawConfig()", () => {
 				);
 			});
 
-			it("should find a config file given a specific script", ({ expect }) => {
+			it("should find a config file given a specific script", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to", { recursive: true });
 				writeWranglerConfig(
 					{ name: "config-one" },
@@ -80,7 +77,7 @@ describe("experimental_readRawConfig()", () => {
 					`../folder/wrangler.${configType}`
 				);
 
-				let result = experimental_readRawConfig({
+				let result = await experimental_readRawConfig({
 					script: "./path/to/index.js",
 				});
 				expect(result.rawConfig).toEqual(
@@ -89,7 +86,7 @@ describe("experimental_readRawConfig()", () => {
 					})
 				);
 
-				result = experimental_readRawConfig({
+				result = await experimental_readRawConfig({
 					script: "../folder/index.js",
 				});
 				expect(result.rawConfig).toEqual(

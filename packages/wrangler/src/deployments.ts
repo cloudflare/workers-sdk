@@ -8,7 +8,7 @@ import chalk from "chalk";
 import TOML from "smol-toml";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
+import { loadConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -348,7 +348,7 @@ export async function commonDeploymentCMDSetup(
 	yargs: ArgumentsCamelCase<CommonYargsOptions>
 ) {
 	await printWranglerBanner();
-	const config = readConfig(yargs);
+	const config = await loadConfig(yargs);
 	const accountId = await requireAuth(config);
 	const scriptName = getScriptName(
 		{ name: yargs.name as string, env: undefined },

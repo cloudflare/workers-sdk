@@ -51,9 +51,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare",
 			sharedDuringBuild: true,
-			config(userConfig, env) {
+			async config(userConfig, env) {
 				ctx.setResolvedPluginConfig(
-					resolvePluginConfig(pluginConfig, userConfig, env)
+					await resolvePluginConfig(pluginConfig, userConfig, env)
 				);
 
 				if (env.command === "build") {

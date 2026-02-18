@@ -13,7 +13,7 @@ import { Cloudflare } from "cloudflare";
 import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
-import { readConfig } from "../config";
+import { loadConfig } from "../config";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,
@@ -519,7 +519,7 @@ export async function handleError(
 		let complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
 		let configAccountId: string | undefined;
 		try {
-			const config = await readConfig(args, {
+			const config = await loadConfig(args, {
 				hideWarnings: true,
 			});
 			complianceConfig = config;

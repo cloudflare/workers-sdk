@@ -6,7 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
-import { readConfig } from "../../../config";
+import { loadConfig, readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -43,6 +43,7 @@ import type {
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
+export { loadConfig as experimental_loadConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
@@ -152,7 +153,7 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const env = options.environment;
 
-	const config = readConfig({
+	const config = await loadConfig({
 		config: options.configPath,
 		env,
 	});
@@ -394,6 +395,71 @@ export function unstable_getMiniflareWorkerOptions(
 			? readConfig({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
+	return buildMiniflareWorkerOptions(config, env, options);
+}
+
+/**
+ * Async version of `unstable_getMiniflareWorkerOptions` that supports
+ * programmatic config files (.ts/.js).
+ */
+export async function experimental_loadMiniflareWorkerOptions(
+	configPath: string,
+	env?: string,
+	options?: {
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function experimental_loadMiniflareWorkerOptions(
+	config: Config,
+	env?: string,
+	options?: {
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function experimental_loadMiniflareWorkerOptions(
+	configOrConfigPath: string | Config,
+	env?: string,
+	options?: {
+		envFiles?: string[];
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Promise<Unstable_MiniflareWorkerOptions> {
+	const config =
+		typeof configOrConfigPath === "string"
+			? await loadConfig({ config: configOrConfigPath, env })
+			: configOrConfigPath;
+
+	return buildMiniflareWorkerOptions(config, env, options);
+}
+
+function buildMiniflareWorkerOptions(
+	config: Config,
+	env?: string,
+	options?: {
+		envFiles?: string[];
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Unstable_MiniflareWorkerOptions {
 	const modulesRules: ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
 		.map((rule) => ({

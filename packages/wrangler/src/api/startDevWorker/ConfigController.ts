@@ -12,7 +12,7 @@ import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
-import { readConfig } from "../../config";
+import { loadConfig } from "../../config";
 import { containersScope } from "../../containers";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
@@ -561,7 +561,7 @@ export class ConfigController extends Controller {
 		const signal = this.#abortController.signal;
 		this.latestInput = input;
 		try {
-			const fileConfig = readConfig(
+			const fileConfig = await loadConfig(
 				{
 					script: input.entrypoint,
 					config: input.config,

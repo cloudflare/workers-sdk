@@ -127,3 +127,21 @@ export const experimental_readRawConfig = (
 		redirected,
 	};
 };
+
+/**
+ * Async version of `experimental_readRawConfig` that can support programmatic
+ * config files in future
+ */
+export const experimental_loadRawConfig = async (
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<{
+	rawConfig: RawConfig;
+	configPath: string | undefined;
+	userConfigPath: string | undefined;
+	deployConfigPath: string | undefined;
+	redirected: boolean;
+}> => {
+	// When programmatic config files are supported, this function will have another code path
+	return experimental_readRawConfig(args, options);
+};

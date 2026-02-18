@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import {
 	APIError,
+	experimental_loadRawConfig,
 	experimental_patchConfig,
-	experimental_readRawConfig,
 	INHERIT_SYMBOL,
 	PatchConfigError,
 	UserError,
@@ -575,7 +575,7 @@ export async function provisionBindings(
 		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
 		if (isUsingRedirectedConfig) {
 			const { rawConfig: unredirectedConfig } =
-				await experimental_readRawConfig(
+				await experimental_loadRawConfig(
 					{ config: config.userConfigPath },
 					{ useRedirectIfAvailable: false }
 				);
