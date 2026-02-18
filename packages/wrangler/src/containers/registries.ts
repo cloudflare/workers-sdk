@@ -44,58 +44,54 @@ import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client
 import type { Config } from "@cloudflare/workers-utils";
 
 function _registryConfigureYargs(args: CommonYargsArgv) {
-	return (
-		args
-			.positional("DOMAIN", {
-				describe: "Domain to configure for the registry",
-				type: "string",
-				demandOption: true,
-			})
-			.option("public-credential", {
-				type: "string",
-				description:
-					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-				demandOption: true,
-				alias: ["aws-access-key-id"],
-			})
-			.option("secret-store-id", {
-				type: "string",
-				description:
-					"The ID of the secret store to use to store the registry credentials.",
-				demandOption: false,
-				conflicts: ["disableSecretsStore"],
-			})
-			// TODO: allow users to provide an existing secret name
-			// but then we can't get secrets by name, only id, so we would need to list all secrets and find the right one
-			.option("secret-name", {
-				type: "string",
-				description:
-					"The name for the secret the private registry credentials should be stored under.",
-				demandOption: false,
-				conflicts: ["disableSecretsStore"],
-			})
-			.option("disableSecretsStore", {
-				type: "boolean",
-				description:
-					"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
-				demandOption: false,
-				conflicts: ["secret-store-id", "secret-name"],
-			})
-			.option("skip-confirmation", {
-				type: "boolean",
-				description: "Skip confirmation prompt",
-				alias: "y",
-				default: false,
-			})
-			.check((yargs) => {
-				if (yargs.skipConfirmation && !yargs.secretName) {
-					throw new Error(
-						"--secret-name is required when using --skip-confirmation"
-					);
-				}
-				return true;
-			})
-	);
+	return args
+		.positional("DOMAIN", {
+			describe: "Domain to configure for the registry",
+			type: "string",
+			demandOption: true,
+		})
+		.option("public-credential", {
+			type: "string",
+			description:
+				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
+			demandOption: true,
+			alias: ["aws-access-key-id"],
+		})
+		.option("secret-store-id", {
+			type: "string",
+			description:
+				"The ID of the secret store to use to store the registry credentials.",
+			demandOption: false,
+			conflicts: ["disableSecretsStore"],
+		})
+		.option("secret-name", {
+			type: "string",
+			description:
+				"The name for the secret the private registry credentials should be stored under.",
+			demandOption: false,
+			conflicts: ["disableSecretsStore"],
+		})
+		.option("disableSecretsStore", {
+			type: "boolean",
+			description:
+				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
+			demandOption: false,
+			conflicts: ["secret-store-id", "secret-name"],
+		})
+		.option("skip-confirmation", {
+			type: "boolean",
+			description: "Skip confirmation prompt",
+			alias: "y",
+			default: false,
+		})
+		.check((yargs) => {
+			if (yargs.skipConfirmation && !yargs.secretName) {
+				throw new Error(
+					"--secret-name is required when using --skip-confirmation"
+				);
+			}
+			return true;
+		});
 }
 
 async function registryConfigureCommand(
