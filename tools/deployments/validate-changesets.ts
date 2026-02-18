@@ -35,6 +35,7 @@ export function validateChangesets(
 					"@cloudflare/workers-shared",
 					"@cloudflare/quick-edit",
 					"@cloudflare/devprod-status-bot",
+					"@cloudflare/workers-playground",
 				];
 				if (
 					packages.get(release.name)?.["workers-sdk"]?.deploy &&
