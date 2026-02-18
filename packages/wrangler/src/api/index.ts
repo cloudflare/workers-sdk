@@ -62,6 +62,7 @@ export {
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
+	unstable_loadMiniflareWorkerOptions,
 } from "./integrations";
 export type {
 	Unstable_Config,

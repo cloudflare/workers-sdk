@@ -22,6 +22,7 @@ import {
 	unstable_getMiniflareWorkerOptions,
 	unstable_getVarsForDev,
 	unstable_getWorkerNameFromProject,
+	unstable_loadMiniflareWorkerOptions,
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
@@ -73,6 +74,7 @@ export {
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
+	unstable_loadMiniflareWorkerOptions,
 };
 
 export type {

@@ -352,7 +352,56 @@ export interface Unstable_MiniflareWorkerOptions {
 	externalWorkers: WorkerOptions[];
 }
 
-export async function unstable_getMiniflareWorkerOptions(
+export function unstable_getMiniflareWorkerOptions(
+	configPath: string,
+	env?: string,
+	options?: {
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Unstable_MiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	config: Config,
+	env?: string,
+	options?: {
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Unstable_MiniflareWorkerOptions;
+export function unstable_getMiniflareWorkerOptions(
+	configOrConfigPath: string | Config,
+	env?: string,
+	options?: {
+		envFiles?: string[];
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Unstable_MiniflareWorkerOptions {
+	const config =
+		typeof configOrConfigPath === "string"
+			? readConfig({ config: configOrConfigPath, env })
+			: configOrConfigPath;
+
+	return buildMiniflareWorkerOptions(config, env, options);
+}
+
+/**
+ * Async version of `unstable_getMiniflareWorkerOptions` that supports
+ * programmatic config files (.ts/.js).
+ */
+export async function unstable_loadMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
 	options?: {
@@ -364,7 +413,7 @@ export async function unstable_getMiniflareWorkerOptions(
 		containerBuildId?: string;
 	}
 ): Promise<Unstable_MiniflareWorkerOptions>;
-export async function unstable_getMiniflareWorkerOptions(
+export async function unstable_loadMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
 	options?: {
@@ -376,7 +425,7 @@ export async function unstable_getMiniflareWorkerOptions(
 		containerBuildId?: string;
 	}
 ): Promise<Unstable_MiniflareWorkerOptions>;
-export async function unstable_getMiniflareWorkerOptions(
+export async function unstable_loadMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: {
@@ -394,6 +443,22 @@ export async function unstable_getMiniflareWorkerOptions(
 			? await loadConfig({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
+	return buildMiniflareWorkerOptions(config, env, options);
+}
+
+function buildMiniflareWorkerOptions(
+	config: Config,
+	env?: string,
+	options?: {
+		envFiles?: string[];
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+			enableContainers?: boolean;
+		};
+		containerBuildId?: string;
+	}
+): Unstable_MiniflareWorkerOptions {
 	const modulesRules: ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
 		.map((rule) => ({
