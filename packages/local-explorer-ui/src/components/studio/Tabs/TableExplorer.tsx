@@ -387,16 +387,27 @@ export function StudioTableExplorerTab({
 	return (
 		<div className="w-full h-full flex flex-col bg-surface">
 			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
-				<Button aria-label="Refresh" shape="square" onClick={onRefreshClicked}>
+				<Button
+					aria-label="Refresh"
+					className="hover:bg-border! transition"
+					onClick={onRefreshClicked}
+					shape="square"
+				>
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
 				{!readOnlyMode && (
 					<>
-						<Button onClick={onAddRowClick}>
+						<Button
+							className="hover:bg-border! transition"
+							onClick={onAddRowClick}
+						>
 							<span className="text-xs">Add row</span>
 						</Button>
-						<Button onClick={onDeleteRowClick}>
+						<Button
+							className="hover:bg-border! transition"
+							onClick={onDeleteRowClick}
+						>
 							<span className="text-xs">Delete row</span>
 						</Button>
 					</>
@@ -466,7 +477,7 @@ export function StudioTableExplorerTab({
 					</>
 				)}
 			</div>
-			<div className="shrink-0 border-t border-border gap-2 py-1 px-2 flex items-center">
+			<div className="shrink-0 border-t border-border gap-2 p-2 flex items-center">
 				<div className="grow">
 					{queryStats && <StudioQueryResultStats stats={queryStats} />}
 				</div>
@@ -481,17 +492,17 @@ export function StudioTableExplorerTab({
 						>
 							<CaretLeftIcon size={14} weight="bold" />
 						</InputGroup.Button>
-						<div className="divide-x divide-border">
+						<div className="flex divide-x divide-border">
 							<input
 								aria-label="Limit"
-								className="text-center bg-transparent text-sm outline-none w-[50px]"
+								className="text-center bg-transparent text-sm outline-none w-12.5"
 								onBlur={onLimitBlur}
 								onChange={(e) => setPageLimitInput(e.currentTarget.value)}
 								value={pageLimitInput}
 							/>
 							<input
 								aria-label="Offset"
-								className="text-center bg-transparent text-sm outline-none w-[50px]"
+								className="text-center bg-transparent text-sm outline-none w-12.5"
 								onBlur={onOffsetBlur}
 								onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
 								value={pageOffsetInput}
