@@ -1,3 +1,6 @@
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 
 @custom-variant dark (@media (prefers-color-scheme: dark));
@@ -46,6 +49,30 @@
 
 	/* Custom sizing */
 	--width-sidebar: 240px;
+
+	/*
+	 * Kumo component library tokens.
+	 * These must be in @theme for Tailwind v4 to generate utility classes
+	 * (e.g., bg-kumo-control, text-kumo-default, ring-kumo-line).
+	 * The values reference CSS custom properties defined in :root below.
+	 */
+	/* --color-kumo-base: var(--color-background);
+	--color-kumo-brand: var(--color-primary);
+	--color-kumo-brand-hover: var(--color-primary-hover);
+	--color-kumo-control: var(--color-surface);
+	--color-kumo-danger: var(--color-danger);
+	--color-kumo-default: var(--color-text);
+	--color-kumo-elevated: var(--color-surface-secondary);
+	--color-kumo-fill: var(--color-border);
+	--color-kumo-inactive: var(--color-muted);
+	--color-kumo-interact: var(--color-surface-tertiary);
+	--color-kumo-line: var(--color-border);
+	--color-kumo-link: var(--color-primary);
+	--color-kumo-overlay: var(--color-accent);
+	--color-kumo-recessed: var(--color-surface-tertiary);
+	--color-kumo-ring: var(--color-muted);
+	--color-kumo-subtle: var(--color-muted);
+	--color-kumo-tint: var(--color-surface-secondary); */
 }
 
 /*
