@@ -228,7 +228,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 
 	return (
 		<SplitPane
-			defaultSize={250}
+			defaultSize={207}
 			minSize={150}
 			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
