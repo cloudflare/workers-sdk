@@ -202,10 +202,16 @@ export interface StudioMultipleQueryResult {
 	sql: string;
 }
 
-export type StudioResource = {
-	databaseId?: string;
-	type: "d1";
-};
+export type StudioResource =
+	| {
+			databaseId?: string;
+			type: "d1";
+	  }
+	| {
+			namespaceId: string;
+			objectId: string;
+			type: "do";
+	  };
 
 export interface StudioResultHeader {
 	columnType?: string;

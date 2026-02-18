@@ -1,10 +1,14 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { cn } from "@cloudflare/kumo";
-import { CaretRightIcon, DatabaseIcon } from "@phosphor-icons/react";
+import { CaretRightIcon, CubeIcon, DatabaseIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
-import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
+import type {
+	D1DatabaseResponse,
+	WorkersKvNamespace,
+	WorkersNamespace,
+} from "../api";
 import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
 
@@ -92,18 +96,22 @@ interface SidebarProps {
 	currentPath: string;
 	d1Error: string | null;
 	databases: D1DatabaseResponse[];
+	doError: string | null;
+	doNamespaces: WorkersNamespace[];
 	kvError: string | null;
+	kvNamespaces: WorkersKvNamespace[];
 	loading: boolean;
-	namespaces: WorkersKvNamespace[];
 }
 
 export function Sidebar({
 	currentPath,
 	d1Error,
 	databases,
+	doError,
+	doNamespaces,
 	kvError,
+	kvNamespaces,
 	loading,
-	namespaces,
 }: SidebarProps) {
 	return (
 		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
@@ -126,7 +134,7 @@ export function Sidebar({
 				emptyLabel="No namespaces"
 				error={kvError}
 				icon={KVIcon}
-				items={namespaces.map((ns) => ({
+				items={kvNamespaces.map((ns) => ({
 					id: ns.id,
 					isActive: currentPath === `/kv/${ns.id}`,
 					label: ns.title,
@@ -155,6 +163,26 @@ export function Sidebar({
 				}))}
 				loading={loading}
 				title="D1 Databases"
+			/>
+
+			<SidebarItemGroup
+				emptyLabel="No namespaces"
+				error={doError}
+				icon={CubeIcon}
+				items={doNamespaces.map((ns) => {
+					const className = ns.class ?? ns.name ?? ns.id ?? "Unknown";
+					return {
+						id: ns.id as string,
+						isActive: currentPath.startsWith(`/do/${className}`),
+						label: className,
+						link: {
+							params: { className },
+							to: "/do/$className",
+						},
+					};
+				})}
+				loading={loading}
+				title="Durable Objects"
 			/>
 		</aside>
 	);
