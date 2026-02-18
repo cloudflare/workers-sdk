@@ -351,7 +351,7 @@ describe("whoami", () => {
 		`);
 	});
 
-	it("should redact email but not account names in non-interactive mode", async ({
+	it("should not redact in non-interactive mode", async ({
 		expect,
 	}) => {
 		setIsTTY(false);
@@ -374,7 +374,7 @@ describe("whoami", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Getting User settings...
-			👋 You are logged in with an OAuth Token, associated with the email (redacted).
+			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤

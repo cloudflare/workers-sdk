@@ -5,7 +5,6 @@ import {
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
@@ -93,8 +92,6 @@ function printComplianceRegion(complianceConfig: ComplianceConfig) {
 }
 
 function printUserEmail(user: UserInfo) {
-	const redactEmail = isNonInteractiveOrCI();
-
 	if (user.authType === "Account API Token") {
 		// Account API Tokens only have access to a single account
 		const accountName = user.accounts[0].name;
@@ -107,9 +104,8 @@ function printUserEmail(user: UserInfo) {
 			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
 		);
 	}
-	const email = redactEmail ? "(redacted)" : user.email;
 	logger.log(
-		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(email)}.`
+		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(user.email)}.`
 	);
 }
 
