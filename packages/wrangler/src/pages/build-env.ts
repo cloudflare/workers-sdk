@@ -5,7 +5,7 @@ import {
 	FatalError,
 	findWranglerConfig,
 } from "@cloudflare/workers-utils";
-import { readPagesConfig } from "../config";
+import { loadPagesConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import {
@@ -64,7 +64,7 @@ export const pagesFunctionsBuildEnvCommand = createCommand({
 			pages_build_output_dir: string;
 		};
 		try {
-			config = await readPagesConfig({
+			config = await loadPagesConfig({
 				...args,
 				config: configPath,
 				// eslint-disable-next-line turbo/no-undeclared-env-vars

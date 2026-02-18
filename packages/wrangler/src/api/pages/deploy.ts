@@ -9,7 +9,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
-import { readPagesConfig } from "../../config";
+import { loadPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
 import { logger } from "../../logger";
@@ -166,7 +166,7 @@ export async function deploy({
 	let config: Config | undefined;
 
 	try {
-		config = await readPagesConfig(
+		config = await loadPagesConfig(
 			{ ...args, env },
 			{ useRedirectIfAvailable: true }
 		);

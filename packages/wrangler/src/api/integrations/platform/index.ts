@@ -152,7 +152,7 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const env = options.environment;
 
-	const config = await readConfig({
+	const config = await loadConfig({
 		config: options.configPath,
 		env,
 	});
@@ -391,7 +391,7 @@ export async function unstable_getMiniflareWorkerOptions(
 ): Promise<Unstable_MiniflareWorkerOptions> {
 	const config =
 		typeof configOrConfigPath === "string"
-			? await readConfig({ config: configOrConfigPath, env })
+			? await loadConfig({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
 	const modulesRules: ModuleRule[] = config.rules

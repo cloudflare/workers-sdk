@@ -6,7 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
-import { readPagesConfig } from "../../config";
+import { loadPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
@@ -51,7 +51,7 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = await readPagesConfig({ config: configPath, env: undefined });
+		config = await loadPagesConfig({ config: configPath, env: undefined });
 	} catch (err) {
 		if (
 			!(
