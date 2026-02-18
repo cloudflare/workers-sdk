@@ -85,7 +85,7 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 			default: false,
 		})
 		.check((yargs) => {
-			if (yargs.skipConfirmation && !yargs.secretName) {
+			if (yargs.skipConfirmation && !yargs.secretName && !yargs.disableSecretsStore) {
 				throw new Error(
 					"--secret-name is required when using --skip-confirmation"
 				);
