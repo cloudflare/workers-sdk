@@ -1,7 +1,7 @@
-import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
+import DISPATCH_NAMESPACE_WORKER from "worker:dispatch-namespace/dispatch-namespace";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
 	RemoteProxyConnectionString,
@@ -31,31 +31,18 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			return [];
 		}
 
-		const bindings = Object.entries(
-			options.dispatchNamespaces
-		).map<Worker_Binding>(([name, config]) => {
-			return {
-				name,
-				wrapped: {
-					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
-					innerBindings: [
-						...(config.remoteProxyConnectionString?.href
-							? [
-									{
-										name: "remoteProxyConnectionString",
-										text: config.remoteProxyConnectionString.href,
-									},
-								]
-							: []),
-						{
-							name: "binding",
-							text: name,
-						},
-					],
-				},
-			};
-		});
-		return bindings;
+		// Use service bindings - the worker has a custom .get() that creates
+		// local stubs with dispatch options baked in
+		return Object.entries(options.dispatchNamespaces).map(([name, config]) => ({
+			name,
+			service: {
+				name: getUserBindingServiceName(
+					DISPATCH_NAMESPACE_PLUGIN_NAME,
+					name,
+					config.remoteProxyConnectionString
+				),
+			},
+		}));
 	},
 	getNodeBindings(options: z.infer<typeof DispatchNamespaceOptionsSchema>) {
 		if (!options.dispatchNamespaces) {
@@ -68,24 +55,43 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices() {
-		return [];
-	},
-	getExtensions({ options }) {
-		if (!options.some((o) => o.dispatchNamespaces)) {
+	async getServices({ options }) {
+		if (!options.dispatchNamespaces) {
 			return [];
 		}
 
-		return [
-			{
+		// Use dedicated worker with custom .get() - can't use remoteProxyClientWorker
+		// because dispatch namespaces need .get() to return a local stub with
+		// dispatch options embedded, not an RPC call to the server
+		return Object.entries(options.dispatchNamespaces).map(([name, config]) => ({
+			name: getUserBindingServiceName(
+				DISPATCH_NAMESPACE_PLUGIN_NAME,
+				name,
+				config.remoteProxyConnectionString
+			),
+			worker: {
+				compatibilityDate: "2025-01-01",
 				modules: [
 					{
-						name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
-						esModule: LOCAL_DISPATCH_NAMESPACE(),
-						internal: true,
+						name: "index.worker.js",
+						esModule: DISPATCH_NAMESPACE_WORKER(),
+					},
+				],
+				bindings: [
+					...(config.remoteProxyConnectionString?.href
+						? [
+								{
+									name: "remoteProxyConnectionString",
+									text: config.remoteProxyConnectionString.href,
+								},
+							]
+						: []),
+					{
+						name: "binding",
+						text: name,
 					},
 				],
 			},
-		];
+		}));
 	},
 };

@@ -1,4 +1,3 @@
-import BINDING from "worker:media/binding";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
@@ -58,34 +57,6 @@ export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
 			{
 				name: getUserBindingServiceName(
 					MEDIA_PLUGIN_NAME,
-					options.media.binding,
-					options.media.remoteProxyConnectionString
-				),
-				worker: {
-					compatibilityDate: "2025-01-01",
-					modules: [
-						{
-							name: "index.worker.js",
-							esModule: BINDING(),
-						},
-					],
-					bindings: [
-						{
-							name: "remote",
-							service: {
-								name: getUserBindingServiceName(
-									`${MEDIA_PLUGIN_NAME}:remote`,
-									options.media.binding,
-									options.media.remoteProxyConnectionString
-								),
-							},
-						},
-					],
-				},
-			},
-			{
-				name: getUserBindingServiceName(
-					`${MEDIA_PLUGIN_NAME}:remote`,
 					options.media.binding,
 					options.media.remoteProxyConnectionString
 				),

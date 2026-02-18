@@ -1,44 +1,50 @@
-import { newWebSocketRpcSession } from "capnweb";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { makeFetch } from "./remote-bindings-utils";
+import {
+	makeFetch,
+	makeRemoteProxyStub,
+	RemoteBindingEnv,
+	throwRemoteRequired,
+} from "./remote-bindings-utils";
 
-type Env = {
-	remoteProxyConnectionString?: string;
-	binding: string;
-	bindingType?: string;
-};
-export default class Client extends WorkerEntrypoint<Env> {
-	async fetch(request: Request) {
+/**
+ * Generic remote proxy client for bindings like Media.
+ *
+ * - `.fetch()` is a native method that sends requests as plain HTTP (for streaming)
+ * - All other methods are proxied via capnweb RPC to the remote server
+ *
+ * Note: Dispatch namespaces use a dedicated worker because they need a custom
+ * `.get()` method, and adding it here would shadow user RPC methods named "get".
+ */
+export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
+	#stub: Fetcher | undefined;
+
+	fetch(request: Request): Promise<Response> {
 		return makeFetch(
 			this.env.remoteProxyConnectionString,
 			this.env.binding
 		)(request);
 	}
 
-	constructor(ctx: ExecutionContext, env: Env) {
-		let stub: unknown;
-		if (env.remoteProxyConnectionString) {
-			const url = new URL(env.remoteProxyConnectionString);
-			url.protocol = "ws:";
-			url.searchParams.set("MF-Binding", env.binding);
-			if (env.bindingType) {
-				url.searchParams.set("MF-Binding-Type", env.bindingType);
-			}
-			stub = newWebSocketRpcSession(url.href);
-		}
-
+	constructor(ctx: ExecutionContext, env: RemoteBindingEnv) {
 		super(ctx, env);
 
+		if (env.remoteProxyConnectionString) {
+			this.#stub = makeRemoteProxyStub(
+				env.remoteProxyConnectionString,
+				env.binding
+			);
+		}
+
+		// Proxy unknown property accesses to the RPC stub
 		return new Proxy(this, {
-			get(target, prop) {
+			get: (target, prop) => {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
-				if (!stub) {
-					throw new Error(`Binding ${env.binding} needs to be run remotely`);
+				if (!this.#stub) {
+					throwRemoteRequired(env.binding);
 				}
-
-				return Reflect.get(stub, prop);
+				return Reflect.get(this.#stub, prop);
 			},
 		});
 	}
