@@ -11,7 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { loadPagesConfig } from "../config";
+import { readPagesConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createAlias, createCommand } from "../core/create-command";
 import { prompt, select } from "../dialogs";
@@ -149,11 +149,7 @@ export const pagesDeployCommand = createCommand({
 			 * need for now. We will perform a second config file read later
 			 * in `/api/pages/deploy`, that will get the environment specific config
 			 */
-			config = await loadPagesConfig({
-				...args,
-				config: configPath,
-				env: undefined,
-			});
+			config = readPagesConfig({ ...args, config: configPath, env: undefined });
 		} catch (err) {
 			if (
 				!(

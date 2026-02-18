@@ -13,7 +13,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
-import { loadPagesConfig } from "../config";
+import { readPagesConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
@@ -382,7 +382,7 @@ async function maybeReadPagesConfig(
 		return undefined;
 	}
 	try {
-		const config = await loadPagesConfig({
+		const config = readPagesConfig({
 			...args,
 			config: configPath,
 			// eslint-disable-next-line turbo/no-undeclared-env-vars

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { loadConfig, readConfig } from "../../config";
+import { readConfig } from "../../config";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("readConfig()", () => {
@@ -33,39 +33,6 @@ describe("readConfig()", () => {
 			main: "index.py",
 		});
 		expect(() => readConfig({ config: "wrangler.toml" })).toThrow(
-			"The `python_workers` compatibility flag is required to use Python."
-		);
-	});
-});
-
-describe("loadConfig()", () => {
-	runInTempDir();
-	it("should not error if a python entrypoint is used with the right compatibility_flag", async ({
-		expect,
-	}) => {
-		writeWranglerConfig({
-			main: "index.py",
-			compatibility_flags: ["python_workers"],
-		});
-		const config = await loadConfig({ config: "wrangler.toml" });
-		expect(config.rules).toMatchInlineSnapshot(`
-			[
-			  {
-			    "globs": [
-			      "**/*.py",
-			    ],
-			    "type": "PythonModule",
-			  },
-			]
-		`);
-	});
-	it("should error if a python entrypoint is used without the right compatibility_flag", async ({
-		expect,
-	}) => {
-		writeWranglerConfig({
-			main: "index.py",
-		});
-		await expect(loadConfig({ config: "wrangler.toml" })).rejects.toThrow(
 			"The `python_workers` compatibility flag is required to use Python."
 		);
 	});
