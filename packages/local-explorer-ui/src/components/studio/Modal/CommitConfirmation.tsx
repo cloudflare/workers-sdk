@@ -34,6 +34,7 @@ export function StudioCommitConfirmation(props: Props) {
 			}}
 		>
 			<Dialog>
+				{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
 				<Dialog.Title>Review and Confirm Changes</Dialog.Title>
 
 				<div className="flex flex-col gap-4 text-sm">
