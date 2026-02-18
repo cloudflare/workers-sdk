@@ -1356,9 +1356,6 @@ importers:
       nunjucks:
         specifier: ^3.2.4
         version: 3.2.4(chokidar@3.6.0)
-      run-script-os:
-        specifier: ^1.1.6
-        version: 1.1.6
       stripe:
         specifier: ^20.0.0
         version: 20.3.1(@types/node@20.19.9)

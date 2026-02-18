@@ -6,9 +6,7 @@
 		"check:type": "node tsc-all.mjs",
 		"list": "vitest list",
 		"test": "vitest",
-		"test:ci": "run-script-os",
-		"test:ci:default": "vitest run",
-		"test:ci:win32": "vitest run --exclude test/sqlite-in-do.test.ts"
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@better-auth/stripe": "^1.4.6",
@@ -28,7 +26,6 @@
 		"miniflare": "workspace:*",
 		"msw": "catalog:default",
 		"nunjucks": "^3.2.4",
-		"run-script-os": "^1.1.6",
 		"stripe": "^20.0.0",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",

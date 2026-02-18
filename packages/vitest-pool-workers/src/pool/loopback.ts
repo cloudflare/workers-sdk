@@ -23,7 +23,7 @@ async function handleSnapshotRequest(
 
 	if (request.method === "PUT" /* saveSnapshotFile */) {
 		const snapshot = await request.arrayBuffer();
-		await fs.mkdir(path.posix.dirname(filePath), { recursive: true });
+		await fs.mkdir(path.dirname(filePath), { recursive: true });
 		await fs.writeFile(filePath, new Uint8Array(snapshot));
 		return new Response(null, { status: 204 });
 	}
