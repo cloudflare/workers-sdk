@@ -351,9 +351,7 @@ describe("whoami", () => {
 		`);
 	});
 
-	it("should not redact in non-interactive mode", async ({
-		expect,
-	}) => {
+	it("should not redact in non-interactive mode", async ({ expect }) => {
 		setIsTTY(false);
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
