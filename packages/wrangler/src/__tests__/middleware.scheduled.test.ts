@@ -37,7 +37,9 @@ describe("run scheduled events with middleware", () => {
 			fs.writeFileSync("only-scheduled.js", scheduledScriptContent);
 		});
 
-		it("should not intercept when middleware is not enabled", async ({ expect }) => {
+		it("should not intercept when middleware is not enabled", async ({
+			expect,
+		}) => {
 			const worker = await startWorker({
 				entrypoint: "index.js",
 				dev: {
@@ -74,7 +76,9 @@ describe("run scheduled events with middleware", () => {
 			await worker.dispose();
 		});
 
-		it("should not trigger scheduled event on wrong route", async ({ expect }) => {
+		it("should not trigger scheduled event on wrong route", async ({
+			expect,
+		}) => {
 			const worker = await startWorker({
 				entrypoint: "index.js",
 				dev: {
@@ -112,7 +116,9 @@ describe("run scheduled events with middleware", () => {
 			expect(resp.status).toEqual(404);
 			await worker.dispose();
 		});
-		it("should not respond with 404 for favicons if user-worker has a response", async ({ expect }) => {
+		it("should not respond with 404 for favicons if user-worker has a response", async ({
+			expect,
+		}) => {
 			const worker = await startWorker({
 				entrypoint: "index.js",
 				dev: {
@@ -161,7 +167,9 @@ describe("run scheduled events with middleware", () => {
 			fs.writeFileSync("only-scheduled.js", scheduledScriptContent);
 		});
 
-		it("should not intercept when middleware is not enabled", async ({ expect }) => {
+		it("should not intercept when middleware is not enabled", async ({
+			expect,
+		}) => {
 			const worker = await startWorker({
 				entrypoint: "index.js",
 				dev: {
@@ -198,7 +206,9 @@ describe("run scheduled events with middleware", () => {
 			await worker.dispose();
 		});
 
-		it("should not trigger scheduled event on wrong route", async ({ expect }) => {
+		it("should not trigger scheduled event on wrong route", async ({
+			expect,
+		}) => {
 			const worker = await startWorker({
 				entrypoint: "index.js",
 				dev: {
@@ -236,7 +246,9 @@ describe("run scheduled events with middleware", () => {
 			expect(resp.status).toEqual(404);
 			await worker.dispose();
 		});
-		it("should not respond with 404 for favicons if user-worker has a response", async ({ expect }) => {
+		it("should not respond with 404 for favicons if user-worker has a response", async ({
+			expect,
+		}) => {
 			const worker = await startWorker({
 				entrypoint: "index.js",
 				dev: {
