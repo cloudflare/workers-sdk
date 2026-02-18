@@ -166,13 +166,17 @@ type QueryBody = z.output<
 function getDOBinding(
 	env: Env,
 	namespaceId: string
-): { ns: DurableObjectNamespace; useSQLite: boolean } | null {
+): { binding: DurableObjectNamespace; useSQLite: boolean } | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
 	if (!info) return null;
 	return {
-		ns: env[info.binding] as DurableObjectNamespace,
+		binding: env[info.binding] as DurableObjectNamespace,
 		useSQLite: info.useSQLite,
 	};
+}
+
+interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
+	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
 }
 
 /**
@@ -189,13 +193,13 @@ export async function queryDOSqlite(
 	body: QueryBody
 ): Promise<Response> {
 	// Look up namespace in binding map
-	const binding = getDOBinding(c.env, namespaceId);
+	const ns = getDOBinding(c.env, namespaceId);
 
-	if (!binding) {
+	if (!ns) {
 		return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
 	}
 
-	if (!binding.useSQLite) {
+	if (!ns.useSQLite) {
 		return errorResponse(
 			400,
 			10001,
@@ -203,13 +207,14 @@ export async function queryDOSqlite(
 		);
 	}
 
+	const binding = ns.binding;
 	// Get DO ID - either from hex string or from name
 	let doId: DurableObjectId;
 	try {
 		if ("durable_object_id" in body) {
-			doId = binding.ns.idFromString(body.durable_object_id);
+			doId = binding.idFromString(body.durable_object_id);
 		} else {
-			doId = binding.ns.idFromName(body.durable_object_name);
+			doId = binding.idFromName(body.durable_object_name);
 		}
 	} catch (error) {
 		const message =
@@ -217,20 +222,13 @@ export async function queryDOSqlite(
 		return errorResponse(400, 10001, message);
 	}
 
-	const stub = binding.ns.get(doId);
+	const stub = binding.get(doId) as unknown as IntrospectableDurableObject;
 
 	try {
-		const introspect = (
-			stub as unknown as Record<
-				typeof INTROSPECT_SQLITE_METHOD,
-				IntrospectSqliteMethod
-			>
-		)[INTROSPECT_SQLITE_METHOD];
-		const results = await introspect(body.queries);
-
+		const results = await stub[INTROSPECT_SQLITE_METHOD](body.queries);
 		return c.json(wrapResponse(results));
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Query failed";
-		return errorResponse(500, 10001, message);
+		return errorResponse(400, 10001, message);
 	}
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
@@ -9,7 +10,6 @@ import {
 } from "../shared";
 import {
 	getUserServiceName,
-	INTROSPECT_SQLITE_METHOD,
 	LOCAL_EXPLORER_DISK,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
@@ -169,7 +169,7 @@ export function constructExplorerBindingMap(
  */
 function generateWrapperEntry(
 	userEntryName: string,
-	classNames: string[]
+	durableObjectClassNames: string[]
 ): string {
 	const lines = [
 		`import { createDurableObjectWrapper } from "./__mf_do_wrapper.js";`,
@@ -179,7 +179,7 @@ function generateWrapperEntry(
 		`export default __mf_original__.default;`,
 	];
 
-	for (const className of classNames) {
+	for (const className of durableObjectClassNames) {
 		lines.push(
 			`export const ${className} = createDurableObjectWrapper(__mf_original__.${className});`
 		);
@@ -187,74 +187,6 @@ function generateWrapperEntry(
 
 	return lines.join("\n");
 }
-
-/**
- * Module for createDurableObjectWrapper - a helper
- * function to wrap user Durable Object classes.
- */
-const DO_WRAPPER_MODULE_CODE = `
-const INTROSPECT_SQLITE_METHOD = "${INTROSPECT_SQLITE_METHOD}";
-
-export function createDurableObjectWrapper(UserClass) {
-  class Wrapper extends UserClass {
-    constructor(ctx, env) {
-      super(ctx, env);
-    }
-
-    /**
-     * Execute SQL queries against the DO's SQLite storage.
-     * If multiple queries are provided, they run in a transaction.
-     *
-     * @param {Array<{sql: string, params?: any[]}>} queries
-     * @returns {Array<{columns: string[], rows: any[][], meta: {rows_read: number, rows_written: number}}>}
-     */
-    [INTROSPECT_SQLITE_METHOD](queries) {
-      const sql = this.ctx.storage.sql;
-
-      if (!sql) {
-        throw new Error("This Durable Object does not have SQLite storage enabled");
-      }
-
-      const executeQuery = (query) => {
-        const params = query.params || [];
-        const cursor = params.length > 0
-          ? sql.exec(query.sql, ...params)
-          : sql.exec(query.sql);
-
-        return {
-          columns: cursor.columnNames,
-          rows: Array.from(cursor.raw()),
-          meta: {
-            rows_read: cursor.rowsRead,
-            rows_written: cursor.rowsWritten,
-          },
-        };
-      };
-
-      if (queries.length === 0) {
-        return [];
-      }
-
-      const results = [];
-
-      if (queries.length > 1) {
-        this.ctx.storage.transactionSync(() => {
-          for (const query of queries) {
-            results.push(executeQuery(query));
-          }
-        });
-      } else {
-        results.push(executeQuery(queries[0]));
-      }
-
-      return results;
-    }
-  }
-
-  Object.defineProperty(Wrapper, "name", { value: UserClass.name });
-  return Wrapper;
-}
-`;
 
 /**
  * Transforms worker modules to wrap Durable Object classes for the local explorer.
@@ -276,14 +208,12 @@ export function wrapDurableObjectModules(
 	);
 
 	// Build new modules array:
-	// 1. New wrapper entry module
+	// 1. New wrapper entry module (workerd uses first module as entry)
 	// 2. Wrapper helper module with createDurableObjectWrapper
-	// 3. Original entry module (keeps its name for source mapping)
-	// 4. Rest of modules unchanged
+	// 3. All original modules unchanged (entry keeps its name for source mapping)
 	return [
 		{ name: "__mf_do_wrapper_entry.js", esModule: wrapperEntry },
-		{ name: "__mf_do_wrapper.js", esModule: DO_WRAPPER_MODULE_CODE },
-		entryModule,
-		...modules.slice(1),
+		{ name: "__mf_do_wrapper.js", esModule: SCRIPT_DO_WRAPPER() },
+		...modules,
 	];
 }

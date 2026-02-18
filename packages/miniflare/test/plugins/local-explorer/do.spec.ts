@@ -614,7 +614,7 @@ describe("Durable Objects API", () => {
 			`);
 		});
 
-		test("multiple queries run in transaction", async ({ expect }) => {
+		test("can make multiple queries", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/workers/durable_objects/namespaces/${namespaceId}/query`,
 				{
@@ -853,7 +853,7 @@ describe("Durable Objects API", () => {
 			expect(data.success).toBe(false);
 		});
 
-		test("returns 500 for SQL syntax error", async ({ expect }) => {
+		test("returns 400 for SQL syntax error", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/workers/durable_objects/namespaces/${namespaceId}/query`,
 				{
@@ -866,7 +866,7 @@ describe("Durable Objects API", () => {
 				}
 			);
 
-			expect(response.status).toBe(500);
+			expect(response.status).toBe(400);
 			const data = (await response.json()) as ErrorResponse;
 
 			expect(data.success).toBe(false);

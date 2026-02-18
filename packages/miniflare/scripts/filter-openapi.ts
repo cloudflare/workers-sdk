@@ -78,8 +78,8 @@ export interface FilterConfig {
 }
 
 export interface ExtensionsConfig {
-	paths?: Record<string, Record<string, unknown>>;
-	schemas?: Record<string, unknown>;
+	paths?: Record<string, Record<string, OpenAPIOperation>>;
+	schemas?: Record<string, OpenAPISchema>;
 }
 export interface EndpointConfig {
 	path: string;
@@ -104,16 +104,19 @@ export interface IgnoresConfig {
 	schemaProperties?: Record<string, string[]>;
 }
 interface OpenAPIOperation {
-	parameters?: Array<{ name: string }>;
+	parameters?: Array<{ name: string; [key: string]: unknown }>;
 	requestBody?: {
-		content: Record<string, { schema?: OpenAPISchema }>;
+		content: Record<string, { schema?: OpenAPISchema; [key: string]: unknown }>;
+		[key: string]: unknown;
 	};
 	security?: unknown;
+	[key: string]: unknown;
 }
 
 interface OpenAPISchema {
-	properties?: Record<string, unknown>;
+	properties?: Record<string, OpenAPIOperation>;
 	required?: string[];
+	[key: string]: unknown;
 }
 
 interface OpenAPIComponents {
@@ -201,10 +204,7 @@ function filterOpenAPISpec(
 	// 8. Merge extensions (local-only paths and schemas not in upstream API)
 	if (config.extensions) {
 		if (config.extensions.paths) {
-			Object.assign(
-				filteredSpec.paths,
-				config.extensions.paths as typeof filteredSpec.paths
-			);
+			Object.assign(filteredSpec.paths, config.extensions.paths);
 		}
 		if (config.extensions.schemas) {
 			filteredSpec.components.schemas ??= {};
