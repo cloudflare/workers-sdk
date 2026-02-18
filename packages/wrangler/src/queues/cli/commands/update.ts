@@ -25,8 +25,7 @@ export const queuesUpdateCommand = createCommand({
 		},
 		"delivery-delay-secs": {
 			type: "number",
-			describe:
-				"How long a published message should be delayed for, in seconds. Must be between 0 and 43200",
+			describe: `How long a published message should be delayed for, in seconds. Must be between ${MIN_DELIVERY_DELAY_SECS} and ${MAX_DELIVERY_DELAY_SECS}`,
 		},
 		"message-retention-period-secs": {
 			type: "number",
