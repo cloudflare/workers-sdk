@@ -54,7 +54,8 @@
 		"cjs-module-lexer": "^1.2.3",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
-		"wrangler": "workspace:*"
+		"wrangler": "workspace:*",
+		"zod": "^3.25.76"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -77,13 +78,12 @@
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"zod": "^3.25.76"
+		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "4.1.0-beta.1",
-		"@vitest/snapshot": "4.1.0-beta.1",
-		"vitest": "4.1.0-beta.1"
+		"@vitest/runner": "4.1.0-beta.4",
+		"@vitest/snapshot": "4.1.0-beta.4",
+		"vitest": "4.1.0-beta.4"
 	},
 	"volta": {
 		"extends": "../../package.json"

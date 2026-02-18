@@ -502,6 +502,11 @@ async function buildProjectWorkerOptions(
 			path: path.join(modulesRoot, "node:vm"),
 			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/vm.mjs`)),
 		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, "node:v8"),
+			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/v8.mjs`)),
+		},
 	];
 
 	// Build array of workers contributed by the workspace
