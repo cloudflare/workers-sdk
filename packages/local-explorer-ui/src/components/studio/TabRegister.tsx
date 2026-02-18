@@ -1,16 +1,23 @@
+import { TableIcon } from "@phosphor-icons/react";
+import { StudioTableExplorerTab } from "./Tabs/TableExplorer";
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
-const RegisteredTabDefinition = [
-	// TODO: Add query, table, edit table and new table tab definitions
-] as Array<
-	TabDefinition<{
-		id?: string;
-		schemaName?: string;
-		tableName?: string;
-		type: string;
-	}>
->;
+const TableTab: TabDefinition<{
+	schemaName: string;
+	tableName: string;
+	type: "table";
+}> = {
+	icon: TableIcon,
+	makeComponent: ({ schemaName, tableName }) => (
+		<StudioTableExplorerTab schemaName={schemaName} tableName={tableName} />
+	),
+	makeIdentifier: (tab) => `table/${tab.schemaName}.${tab.tableName}`,
+	makeTitle: ({ tableName }) => tableName,
+	type: "table",
+};
+
+const RegisteredTabDefinition = [TableTab];
 
 export interface TabDefinition<T extends { type: string }> {
 	icon: Icon;
