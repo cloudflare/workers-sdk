@@ -85,7 +85,11 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 			default: false,
 		})
 		.check((yargs) => {
-			if (yargs.skipConfirmation && !yargs.secretName && !yargs.disableSecretsStore) {
+			if (
+				yargs.skipConfirmation &&
+				!yargs.secretName &&
+				!yargs.disableSecretsStore
+			) {
 				throw new Error(
 					"--secret-name is required when using --skip-confirmation"
 				);
@@ -514,7 +518,11 @@ export const containersRegistriesConfigureCommand = createCommand({
 	},
 	positionalArgs: ["DOMAIN"],
 	validateArgs(args) {
-		if (args.skipConfirmation && !args.secretName) {
+		if (
+			args.skipConfirmation &&
+			!args.secretName &&
+			!args.disableSecretsStore
+		) {
 			throw new UserError(
 				"--secret-name is required when using --skip-confirmation"
 			);
