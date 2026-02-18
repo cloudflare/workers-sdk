@@ -1,6 +1,7 @@
 import assert from "node:assert";
+import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
-import { Service, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
 import { CoreBindings } from "../../workers";
 import {
@@ -157,4 +158,62 @@ export function constructExplorerBindingMap(
 	}
 
 	return IDToBindingName;
+}
+
+/**
+ * We need to wrap and extend user Durable Object classes to inject an
+ * internal sqlite introspection method for the local explorer to use.
+ *
+ * This generates a new entry module that replaces the original user entry
+ * module, which re-exports everything with DO classes wrapped.
+ */
+function generateWrapperEntry(
+	userEntryName: string,
+	durableObjectClassNames: string[]
+): string {
+	const lines = [
+		`import { createDurableObjectWrapper } from "./__mf_do_wrapper.js";`,
+		`import * as __mf_original__ from "./${userEntryName}";`,
+		// Re-export everything from original module
+		`export * from "./${userEntryName}";`,
+		`export default __mf_original__.default;`,
+	];
+
+	for (const className of durableObjectClassNames) {
+		lines.push(
+			`export const ${className} = createDurableObjectWrapper(__mf_original__.${className});`
+		);
+	}
+
+	return lines.join("\n");
+}
+
+/**
+ * Transforms worker modules to wrap Durable Object classes for the local explorer.
+ *
+ * This function modifies the modules array to:
+ * 1. Insert a new wrapper entry module at the front (workerd uses first module as entry)
+ * 2. Inject the wrapper helper module
+ * 3. Keep the original entry module with its original name (preserves source mapping)
+ */
+export function wrapDurableObjectModules(
+	modules: Worker_Module[],
+	durableObjectClassNames: string[]
+): Worker_Module[] {
+	const entryModule = modules[0];
+
+	const wrapperEntry = generateWrapperEntry(
+		entryModule.name,
+		durableObjectClassNames
+	);
+
+	// Build new modules array:
+	// 1. New wrapper entry module (workerd uses first module as entry)
+	// 2. Wrapper helper module with createDurableObjectWrapper
+	// 3. All original modules unchanged (entry keeps its name for source mapping)
+	return [
+		{ name: "__mf_do_wrapper_entry.js", esModule: wrapperEntry },
+		{ name: "__mf_do_wrapper.js", esModule: SCRIPT_DO_WRAPPER() },
+		...modules,
+	];
 }
