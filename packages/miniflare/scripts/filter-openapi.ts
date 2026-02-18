@@ -74,6 +74,12 @@ writeFilteredOpenAPIFile(values.input, outputPath, config);
 export interface FilterConfig {
 	endpoints: EndpointConfig[];
 	ignores?: IgnoresConfig;
+	extensions?: ExtensionsConfig;
+}
+
+export interface ExtensionsConfig {
+	paths?: Record<string, Record<string, OpenAPIOperation>>;
+	schemas?: Record<string, OpenAPISchema>;
 }
 export interface EndpointConfig {
 	path: string;
@@ -98,16 +104,19 @@ export interface IgnoresConfig {
 	schemaProperties?: Record<string, string[]>;
 }
 interface OpenAPIOperation {
-	parameters?: Array<{ name: string }>;
+	parameters?: Array<{ name: string; [key: string]: unknown }>;
 	requestBody?: {
-		content: Record<string, { schema?: OpenAPISchema }>;
+		content: Record<string, { schema?: OpenAPISchema; [key: string]: unknown }>;
+		[key: string]: unknown;
 	};
 	security?: unknown;
+	[key: string]: unknown;
 }
 
 interface OpenAPISchema {
-	properties?: Record<string, unknown>;
+	properties?: Record<string, OpenAPIOperation>;
 	required?: string[];
+	[key: string]: unknown;
 }
 
 interface OpenAPIComponents {
@@ -192,7 +201,18 @@ function filterOpenAPISpec(
 		components: filteredComponents,
 	};
 
-	// 8. Strip all x-* extensions from the final spec (single pass)
+	// 8. Merge extensions (local-only paths and schemas not in upstream API)
+	if (config.extensions) {
+		if (config.extensions.paths) {
+			Object.assign(filteredSpec.paths, config.extensions.paths);
+		}
+		if (config.extensions.schemas) {
+			filteredSpec.components.schemas ??= {};
+			Object.assign(filteredSpec.components.schemas, config.extensions.schemas);
+		}
+	}
+
+	// 9. Strip all x-* extensions from the final spec (single pass)
 	return stripExtensions(filteredSpec) as OpenAPISpec;
 }
 

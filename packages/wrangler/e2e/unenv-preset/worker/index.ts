@@ -1033,6 +1033,35 @@ export const WorkerdTests: Record<string, () => void> = {
 			);
 		}
 	},
+
+	async testReadline() {
+		const readline = await import("node:readline");
+
+		for (const target of [readline, readline.default]) {
+			assertTypeOfProperties(target, {
+				Interface: "function",
+				clearLine: "function",
+				clearScreenDown: "function",
+				createInterface: "function",
+				cursorTo: "function",
+				emitKeypressEvents: "function",
+				moveCursor: "function",
+				promises: "object",
+			});
+		}
+	},
+
+	async testReadlinePromises() {
+		const readlinePromises = await import("node:readline/promises");
+
+		for (const target of [readlinePromises, readlinePromises.default]) {
+			assertTypeOfProperties(target, {
+				Interface: "function",
+				Readline: "function",
+				createInterface: "function",
+			});
+		}
+	},
 };
 
 /**
