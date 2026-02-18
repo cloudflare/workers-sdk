@@ -3,8 +3,10 @@
 "@cloudflare/workers-utils": minor
 ---
 
-Make config reading APIs async to support future code-based config files
+Add async alternatives to config reading APIs to support future code-based config files
 
-`unstable_readConfig` now returns `Promise<Config>` instead of `Config`, and `experimental_readRawConfig` now returns a promise. If you rely on these experimental APIs, you'll need to update your usage. In the majority of cases, this will be as simple as adding an `await` keyword before the function call.
+- Add `loadConfig` as an async alternative to `readConfig` (sync, unchanged)
+- Add `experimental_loadConfig` as an async alternative to `experimental_readRawConfig` (sync, unchanged)
+- Add `unstable_loadMiniflareWorkerOptions` as an async alternative to `unstable_getMiniflareWorkerOptions` (sync, unchanged)
 
-`unstable_getMiniflareWorkerOptions` is also now async as a consequence of `readConfig` becoming async.
+The existing sync APIs are preserved for backwards compatibility. The new async versions will support programmatic config files (.ts/.js) in future.

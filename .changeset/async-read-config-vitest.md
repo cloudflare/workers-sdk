@@ -2,4 +2,4 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-Update internal config reading calls to use async APIs
+Use async `unstable_loadMiniflareWorkerOptions` for config reading
