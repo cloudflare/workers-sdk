@@ -1,21 +1,19 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineWorkersConfig({
-	test: {
-		poolOptions: {
-			workers: {
-				singleWorker: true,
-				isolatedStorage: false,
-				wrangler: {
-					configPath: "./wrangler.jsonc",
-				},
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			wrangler: {
+				configPath: "./wrangler.jsonc",
 			},
-		},
-	},
+		}),
+	],
+	test: {},
 	resolve: {
 		// promjs has broken package.json (main points to lib/index.js but files are at root)
 		alias: {
