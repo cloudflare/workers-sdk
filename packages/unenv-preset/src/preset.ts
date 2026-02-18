@@ -5,7 +5,7 @@ import type { Preset } from "unenv";
 //
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-const nativeModules = [
+const standardNativeModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
 	"_stream_readable",
@@ -89,7 +89,7 @@ export function getCloudflarePreset({
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
-		...nativeModules,
+		...standardNativeModules,
 		...httpOverrides.nativeModules,
 		...http2Overrides.nativeModules,
 		...osOverrides.nativeModules,
@@ -1109,34 +1109,39 @@ function getReadlineOverrides({
  * - can be disabled with the "disable_nodejs_perf_hooks_module" flag
  */
 function getPerfHooksOverrides({
-	compatibilityDate,
 	compatibilityFlags,
 }: {
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): { nativeModules: string[]; hybridModules: string[]; polyfills: string[] } {
-	const disabledByFlag = compatibilityFlags.includes(
-		"disable_nodejs_perf_hooks_module"
+	const disabledModulesByFlag =
+		compatibilityFlags.includes("disable_nodejs_perf_hooks_module") &&
+		compatibilityFlags.includes("experimental");
+	const disabledGlobalsByFlag = compatibilityFlags.includes(
+		"disable_global_performance_classes"
 	);
 
-	const enabledByFlag = compatibilityFlags.includes(
-		"enable_nodejs_perf_hooks_module"
-	);
-	const enabledByDate = compatibilityDate >= "2025-09-21";
+	const enabledModulesByFlag =
+		compatibilityFlags.includes("enable_nodejs_perf_hooks_module") &&
+		compatibilityFlags.includes("experimental");
+	const enabledGlobalsByFlag =
+		compatibilityFlags.includes("enable_global_performance_classes") &&
+		compatibilityFlags.includes("experimental");
 
-	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+	const enabledModules = enabledModulesByFlag && !disabledModulesByFlag;
+	const enabledGlobals = enabledGlobalsByFlag && !disabledGlobalsByFlag;
+
+	const nativeModules = enabledModules ? ["perf_hooks"] : [];
+	const hybridModules = enabledModules ? [] : ["perf_hooks"];
+	const polyfills = !enabledGlobals
+		? ["@cloudflare/unenv-preset/polyfill/performance"]
+		: [];
 
 	// The native perf_hooks module should implement all the APIs.
 	// It can then be used as a native module.
-	return enabled
-		? {
-				nativeModules: ["perf_hooks"],
-				hybridModules: [],
-				polyfills: [],
-			}
-		: {
-				nativeModules: [],
-				hybridModules: ["perf_hooks"],
-				polyfills: ["@cloudflare/unenv-preset/polyfill/performance"],
-			};
+	return {
+		nativeModules,
+		hybridModules,
+		polyfills,
+	};
 }
