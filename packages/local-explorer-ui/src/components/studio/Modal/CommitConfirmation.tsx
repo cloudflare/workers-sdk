@@ -1,35 +1,48 @@
 import { Button, Dialog } from "@cloudflare/kumo";
 import { PlayIcon, SpinnerIcon } from "@phosphor-icons/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { CodeBlock } from "../Code/Block";
 
-interface Props {
+interface StudioCommitConfirmationProps {
 	closeModal: () => void;
 	isOpen: boolean;
 	onConfirm: () => Promise<void>;
 	statements: string[];
 }
 
-export function StudioCommitConfirmation(props: Props) {
-	const [errorMessage, setErrorMessage] = useState<string>("");
-	const [isRequesting, setIsRequesting] = useState<boolean>(false);
+export function StudioCommitConfirmation({
+	closeModal,
+	isOpen,
+	onConfirm,
+	statements,
+}: StudioCommitConfirmationProps) {
+	const [errorMessage, setErrorMessage] = useState("");
+	const [isRequesting, setIsRequesting] = useState(false);
 
-	const onConfirm = useCallback(async () => {
+	const handleConfirm = async (): Promise<void> => {
 		setIsRequesting(true);
+		setErrorMessage("");
+
 		try {
-			await props.onConfirm();
-			props.closeModal();
+			await onConfirm();
+			closeModal();
+		} catch (err) {
+			if (err instanceof Error) {
+				setErrorMessage(err.message);
+			} else {
+				setErrorMessage(String(err));
+			}
 		} finally {
 			setIsRequesting(false);
 		}
-	}, [props]);
+	};
 
 	return (
 		<Dialog.Root
-			open={!!props.isOpen}
+			open={isOpen}
 			onOpenChange={(open: boolean) => {
 				if (!open) {
-					props.closeModal();
+					closeModal();
 				}
 			}}
 		>
@@ -39,7 +52,7 @@ export function StudioCommitConfirmation(props: Props) {
 
 				<div className="flex flex-col gap-4 text-sm">
 					{!!errorMessage && (
-						<div className="text-red-500 font-mono">{errorMessage}</div>
+						<div className="font-mono text-red-500">{errorMessage}</div>
 					)}
 
 					<div>
@@ -48,37 +61,22 @@ export function StudioCommitConfirmation(props: Props) {
 					</div>
 
 					<CodeBlock
-						code={props.statements.join("\n")}
+						code={statements.join("\n")}
 						language="sql"
 						maxHeight={500}
 					/>
 				</div>
 
-				<div className="flex gap-2 justify-end mt-4">
+				<div className="mt-4 flex justify-end gap-2">
 					<Button
 						disabled={isRequesting}
-						onClick={async () => {
-							setIsRequesting(true);
-
-							try {
-								await onConfirm();
-								props.closeModal();
-							} catch (err) {
-								if (err instanceof Error) {
-									setErrorMessage(err.message);
-								} else {
-									setErrorMessage(String(err));
-								}
-							} finally {
-								setIsRequesting(false);
-							}
-						}}
+						onClick={handleConfirm}
 						variant="primary"
 					>
 						{isRequesting ? (
-							<SpinnerIcon className="w-4 h-4 animate-spin" />
+							<SpinnerIcon className="h-4 w-4 animate-spin" />
 						) : (
-							<PlayIcon className="w-4 h-4" />
+							<PlayIcon className="h-4 w-4" />
 						)}
 						<span>Confirm & Execute</span>
 					</Button>
