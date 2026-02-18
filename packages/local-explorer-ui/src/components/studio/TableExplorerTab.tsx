@@ -385,16 +385,26 @@ export function StudioTableExplorerTab({
 	return (
 		<div className="w-full h-full flex flex-col bg-surface">
 			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
-				<Button shape="square" onClick={onRefreshClicked}>
+				<Button
+					aria-label="Refresh"
+					className="hover:bg-border transition"
+					onClick={onRefreshClicked}
+				>
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
 				{!readOnlyMode && (
 					<>
-						<Button onClick={onAddRowClick}>
+						<Button
+							className="hover:bg-border transition"
+							onClick={onAddRowClick}
+						>
 							<span className="text-xs">Add row</span>
 						</Button>
-						<Button onClick={onDeleteRowClick}>
+						<Button
+							className="hover:bg-border transition"
+							onClick={onDeleteRowClick}
+						>
 							<span className="text-xs">Delete row</span>
 						</Button>
 					</>
@@ -470,33 +480,39 @@ export function StudioTableExplorerTab({
 				<div>
 					<InputGroup size="base">
 						<InputGroup.Button
-							shape="square"
+							aria-label="Previous Page"
 							disabled={!state || pageOffset <= 0}
 							onClick={onPagePrevious}
+							shape="square"
 						>
 							<CaretLeftIcon size={14} weight="bold" />
 						</InputGroup.Button>
-						<input
-							className="border-l text-center bg-transparent text-sm outline-none"
-							style={{ width: 50 }}
-							value={pageLimitInput}
-							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
-							aria-label="Limit"
-							onBlur={onLimitBlur}
-						/>
-						<input
-							style={{ width: 50 }}
-							value={pageOffsetInput}
-							className="border-l text-center bg-transparent text-sm outline-none"
-							onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
-							aria-label="Offset"
-							onBlur={onOffsetBlur}
-						/>
+
+						<div className="divide-x divide-border h-full flex align-center">
+							<input
+								className="text-center bg-transparent text-sm outline-none"
+								style={{ width: 50 }}
+								value={pageLimitInput}
+								onChange={(e) => setPageLimitInput(e.currentTarget.value)}
+								aria-label="Limit"
+								onBlur={onLimitBlur}
+							/>
+							<input
+								style={{ width: 50 }}
+								value={pageOffsetInput}
+								className="text-center bg-transparent text-sm outline-none"
+								onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
+								aria-label="Offset"
+								onBlur={onOffsetBlur}
+							/>
+						</div>
+
 						<InputGroup.Button
-							size="sm"
-							shape="square"
-							onClick={onPageNext}
+							aria-label="Next Page"
 							disabled={!hasNextPage}
+							onClick={onPageNext}
+							shape="square"
+							size="sm"
 						>
 							<CaretRightIcon size={14} weight="bold" />
 						</InputGroup.Button>
