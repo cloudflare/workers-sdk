@@ -128,7 +128,12 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		const webSocket = response.webSocket;
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
+		const isReInit = this.#webSocketContainer.webSocket !== undefined;
 		this.#webSocketContainer.webSocket = webSocket;
+
+		if (isReInit) {
+			this.hot.listen();
+		}
 	}
 
 	async fetchWorkerExportTypes(
