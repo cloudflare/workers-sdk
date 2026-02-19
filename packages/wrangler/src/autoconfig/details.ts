@@ -240,9 +240,9 @@ async function detectFramework(
 		logger.warn(
 			"No lock file has been detected in the current working directory." +
 				" This might indicate that the project is part of a workspace. Auto-configuration of " +
-				`projects inside workspaces is limited. See ${chalk.hex(
-					"#3B818D"
-				)("https://developers.cloudflare.com/workers/framework-guides/automatic-configuration/#workspaces")}`
+				`projects inside workspaces is limited. See ${chalk.hex("#3B818D")(
+					"https://developers.cloudflare.com/workers/framework-guides/automatic-configuration/#workspaces"
+				)}`
 		);
 	}
 
