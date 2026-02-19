@@ -110,4 +110,18 @@ export default defineConfig((options) => [
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 	},
+	// Separate entry for wrangler/config subpath export (programmatic config)
+	// ESM-only as per plan - config files are always ESM
+	{
+		treeshake: true,
+		keepNames: true,
+		entry: { config: "src/config/worker.ts" },
+		platform: "node",
+		format: ["esm"],
+		dts: true,
+		outDir: "wrangler-dist",
+		tsconfig: "tsconfig.json",
+		external: EXTERNAL_DEPENDENCIES,
+		sourcemap: process.env.SOURCEMAPS !== "false",
+	},
 ]);

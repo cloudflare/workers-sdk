@@ -15,9 +15,9 @@ import type { StartDevWorkerInput } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
-import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
+	CfAccount,
 	CfModule,
 	CfScriptFormat,
 	CfWorkerContext,

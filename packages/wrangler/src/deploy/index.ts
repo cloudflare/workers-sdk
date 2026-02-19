@@ -5,6 +5,7 @@ import {
 	configFileName,
 	formatCompatibilityDate,
 	getCIOverrideName,
+	isProgrammaticConfigPath,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -284,7 +285,9 @@ export const deployCommand = createCommand({
 			// we don't want to run autoconfig since we assume that the user knows what they are doing
 			// and that they are specifying what needs to be deployed
 			!args.script &&
-			!args.assets;
+			!args.assets &&
+			// Programmatic configs are explicitly authored — autoconfig doesn't apply
+			!isProgrammaticConfigPath(config.configPath);
 
 		if (
 			config.pages_build_output_dir &&

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { convertConfigToBindings } from "../api/startDevWorker/utils";
 import { getSubdomainValuesAPIMock } from "../triggers/deploy";
 import {
 	diffJsonObjects,
@@ -7,9 +8,12 @@ import {
 } from "../utils/diff-json";
 import type { JsonLike } from "../utils/diff-json";
 import type {
+	Binding,
 	Config,
 	ConfigBindingFieldName,
 	RawConfig,
+	StartDevWorkerInput,
+	Trigger,
 } from "@cloudflare/workers-utils";
 
 // Exhaustive map of all binding keys in CfWorkerInit["bindings"].
@@ -75,11 +79,29 @@ type ConfigDiff = {
 /**
  * Computes the difference between a remote representation of a Worker's config and a local configuration.
  *
+ * Accepts either a resolved `Config` (from a TOML/JSON config file) or a `StartDevWorkerInput`
+ * (from a programmatic config). The remote config is normalized to match whichever local format
+ * is provided, and the diff is computed in that format.
+ *
  * @param remoteConfig The remote representation of a Worker's config
- * @param localResolvedConfig The local (resolved) config
+ * @param localConfig The local config — either a resolved Config or a StartDevWorkerInput
  * @returns Object containing the diffing information
  */
 export function getRemoteConfigDiff(
+	remoteConfig: RawConfig,
+	localConfig: Config | StartDevWorkerInput
+): ConfigDiff {
+	// Discriminate: StartDevWorkerInput has `entrypoint`, Config does not
+	if ("entrypoint" in localConfig) {
+		return getInputDiff(remoteConfig, localConfig as StartDevWorkerInput);
+	}
+	return getConfigDiff(remoteConfig, localConfig as Config);
+}
+
+/**
+ * Config-path diff: both sides normalized as Config objects (existing behavior).
+ */
+function getConfigDiff(
 	remoteConfig: RawConfig,
 	localResolvedConfig: Config
 ): ConfigDiff {
@@ -93,6 +115,31 @@ export function getRemoteConfigDiff(
 	const diff = diffJsonObjects(
 		normalizedRemoteConfig as unknown as Record<string, JsonLike>,
 		normalizedLocalConfig as unknown as Record<string, JsonLike>
+	);
+
+	return {
+		diff,
+		nonDestructive: isNonDestructive(diff),
+	};
+}
+
+/**
+ * StartDevWorkerInput-path diff: both sides normalized as flat diffable objects
+ * with camelCase fields and `Record<string, Binding>` bindings.
+ */
+function getInputDiff(
+	remoteConfig: RawConfig,
+	localInput: StartDevWorkerInput
+): ConfigDiff {
+	const normalizedLocal = normalizeLocalInput(localInput);
+	const normalizedRemote = normalizeRemoteAsInput(
+		remoteConfig,
+		normalizedLocal
+	);
+
+	const diff = diffJsonObjects(
+		normalizedRemote as unknown as Record<string, JsonLike>,
+		normalizedLocal as unknown as Record<string, JsonLike>
 	);
 
 	return {
@@ -539,6 +586,215 @@ function orderObjectFields<T extends Record<string, unknown>>(
 	}
 
 	return orderedSource;
+}
+
+// ============================================================================
+// StartDevWorkerInput diff path
+// ============================================================================
+
+/**
+ * The set of deployment-relevant fields used for diffing when the local config
+ * is a StartDevWorkerInput. This is a plain object shape that captures the
+ * intersection of what both the remote API and StartDevWorkerInput can express.
+ *
+ * Fields that only exist in dev mode (dev, legacy, build internals, etc.)
+ * are intentionally excluded.
+ */
+type DiffableInput = {
+	name?: string;
+	entrypoint?: string;
+	compatibilityDate?: string;
+	compatibilityFlags?: string[];
+	bindings?: Record<string, Binding>;
+	triggers?: Trigger[];
+	tailConsumers?: StartDevWorkerInput["tailConsumers"];
+	assets?: string;
+	// These fields come from the remote config (RawConfig) and are deployment-relevant
+	// even though StartDevWorkerInput may not have direct equivalents yet.
+	observability?: RawConfig["observability"];
+	placement?: RawConfig["placement"];
+	limits?: RawConfig["limits"];
+	logpush?: RawConfig["logpush"];
+};
+
+/**
+ * Normalizes a local StartDevWorkerInput for diffing by extracting only
+ * deployment-relevant fields and normalizing defaults to match what the
+ * remote side would have.
+ */
+function normalizeLocalInput(localInput: StartDevWorkerInput): DiffableInput {
+	const triggers = localInput.triggers
+		? normalizeTriggerOrder(localInput.triggers)
+		: undefined;
+
+	const result: DiffableInput = {
+		name: localInput.name,
+		entrypoint: localInput.entrypoint,
+		compatibilityDate: localInput.compatibilityDate,
+		compatibilityFlags: localInput.compatibilityFlags,
+		bindings: localInput.bindings
+			? structuredClone(localInput.bindings)
+			: undefined,
+		triggers,
+		tailConsumers: localInput.tailConsumers,
+		assets: localInput.assets,
+		// observability is normalized with defaults filled in so both sides match
+		observability: normalizeObservability(undefined),
+	};
+
+	// Remove undefined fields so they don't show up in the diff
+	for (const [key, value] of Object.entries(result)) {
+		if (value === undefined) {
+			delete (result as Record<string, unknown>)[key];
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Converts a remote RawConfig into a DiffableInput-shaped object that can be
+ * compared against the local StartDevWorkerInput.
+ *
+ * The normalizedLocal is used to:
+ *  - Copy local-only fields so they don't appear as diffs
+ *  - Reorder keys to match local ordering
+ */
+function normalizeRemoteAsInput(
+	remoteConfig: RawConfig,
+	normalizedLocal: DiffableInput
+): DiffableInput {
+	// Convert Config-style binding arrays to flat Record<string, Binding>
+	const remoteBindings = convertConfigToBindings(remoteConfig, {
+		usePreviewIds: false,
+	});
+
+	// Convert routes, workers_dev, crons into Trigger[]
+	const remoteTriggers: Trigger[] = [];
+
+	// workers_dev / preview_urls → Trigger
+	// Note: the Trigger type for workers.dev is just { type: "workers.dev" } —
+	// presence means enabled. We include it if workers_dev is true.
+	if (remoteConfig.workers_dev) {
+		remoteTriggers.push({ type: "workers.dev" });
+	}
+
+	// Routes → Trigger
+	if (remoteConfig.routes) {
+		for (const route of remoteConfig.routes) {
+			if (typeof route === "string") {
+				remoteTriggers.push({ type: "route", pattern: route });
+			} else {
+				remoteTriggers.push({ type: "route", ...route });
+			}
+		}
+	}
+
+	// Crons → Trigger
+	if (remoteConfig.triggers?.crons) {
+		for (const cron of remoteConfig.triggers.crons) {
+			remoteTriggers.push({ type: "cron", cron });
+		}
+	}
+
+	let result: DiffableInput = {};
+
+	// Start with all local fields so local-only fields don't show as diffs
+	Object.entries(normalizedLocal).forEach(([key, value]) => {
+		if (key !== "observability") {
+			(result as Record<string, unknown>)[key] = value;
+		}
+	});
+
+	// Override with remote values
+	if (remoteConfig.name !== undefined) {
+		result.name = remoteConfig.name;
+	}
+	// Skip entrypoint/main — not relevant for diff (existing Config path skips `main` too)
+	if (remoteConfig.compatibility_date !== undefined) {
+		result.compatibilityDate = remoteConfig.compatibility_date;
+	}
+	if (remoteConfig.compatibility_flags !== undefined) {
+		result.compatibilityFlags = remoteConfig.compatibility_flags;
+	}
+	if (Object.keys(remoteBindings).length > 0 || normalizedLocal.bindings) {
+		result.bindings = reorderObjectKeys(
+			remoteBindings,
+			normalizedLocal.bindings ?? {}
+		);
+	}
+	if (remoteTriggers.length > 0 || normalizedLocal.triggers) {
+		result.triggers = normalizeTriggerOrder(remoteTriggers);
+	}
+	if (remoteConfig.placement !== undefined) {
+		result.placement = remoteConfig.placement;
+	}
+	if (remoteConfig.limits !== undefined) {
+		result.limits = remoteConfig.limits;
+	}
+	if (remoteConfig.tail_consumers !== undefined) {
+		result.tailConsumers = remoteConfig.tail_consumers ?? undefined;
+	}
+	if (remoteConfig.logpush !== undefined) {
+		result.logpush = remoteConfig.logpush;
+	}
+
+	result.observability = normalizeObservability(remoteConfig.observability);
+
+	// Reorder top-level fields to match local ordering
+	result = orderObjectFields(
+		result as unknown as Record<string, unknown>,
+		normalizedLocal as unknown as Record<string, unknown>
+	) as unknown as DiffableInput;
+
+	return result;
+}
+
+/**
+ * Reorders the keys of a source object to match the key order of a target object.
+ * Keys present in both are placed first (in target's order), then keys only in source.
+ */
+function reorderObjectKeys<V>(
+	source: Record<string, V>,
+	target: Record<string, V>
+): Record<string, V> {
+	const result: Record<string, V> = {};
+	// Keys in both, in target's order
+	for (const key of Object.keys(target)) {
+		if (key in source) {
+			result[key] = source[key];
+		}
+	}
+	// Keys only in source
+	for (const key of Object.keys(source)) {
+		if (!(key in target)) {
+			result[key] = source[key];
+		}
+	}
+	return result;
+}
+
+/**
+ * Normalizes trigger array ordering so that triggers of the same type are grouped
+ * and ordered consistently (workers.dev first, then routes, then crons, then queue-consumers).
+ * This prevents spurious diffs from ordering differences.
+ */
+function normalizeTriggerOrder(triggers: Trigger[]): Trigger[] {
+	const typeOrder: Record<string, number> = {
+		"workers.dev": 0,
+		route: 1,
+		cron: 2,
+		"queue-consumer": 3,
+	};
+	return [...triggers].sort((a, b) => {
+		const orderA = typeOrder[a.type] ?? 99;
+		const orderB = typeOrder[b.type] ?? 99;
+		if (orderA !== orderB) {
+			return orderA - orderB;
+		}
+		// Within the same type, sort by a stable key
+		return getBindingKey(a).localeCompare(getBindingKey(b));
+	});
 }
 
 /**
