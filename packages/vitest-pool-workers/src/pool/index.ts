@@ -8,6 +8,7 @@ import getPort, { portNumbers } from "get-port";
 import {
 	getNodeCompat,
 	kCurrentWorker,
+	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
 	maybeApply,
@@ -435,10 +436,14 @@ async function buildProjectWorkerOptions(
 	}
 
 	// Make sure we define the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` Durable Object,
-	// which is the singleton host for running tests.
+	// which is the singleton host for running tests. It's ephemeral (in-memory)
+	// because the runner doesn't need persistent state, and all disk-backed DOs
+	// hit a workerd bug on Windows where SQLite paths use Unix-style forward
+	// slashes (cloudflare/workerd#6110).
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
 		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
 		unsafePreventEviction: true,
+		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 	};
 
 	// Vite has its own define mechanism, but we can't control it from custom
@@ -668,7 +673,8 @@ export async function connectToMiniflareSocket(
 		workerName
 	);
 
-	const stub = ns.getByName("singleton");
+	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
+	const stub = ns.get("singleton");
 
 	const res = await stub.fetch("http://placeholder", {
 		headers: {

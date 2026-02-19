@@ -177,10 +177,12 @@ export function runInRunnerObject<R>(
 		instance: __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__
 	) => R | Promise<R>
 ): Promise<R> {
-	const stub =
-		exports.__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__.getByName(
-			"singleton"
-		);
+	// Runner DO is ephemeral (ColoLocalActorNamespace), which has .get(name)
+	// instead of the standard idFromName()/get(id) API
+	const ns = env["__VITEST_POOL_WORKERS_RUNNER_OBJECT"] as unknown as {
+		get(name: string): Fetcher;
+	};
+	const stub = ns.get("singleton");
 	return runInStub(stub, callback);
 }
 
