@@ -139,7 +139,7 @@ async function registryConfigureCommand(
 	}
 
 	log(`Getting ${registryType.secretType}...\n`);
-	const accessKey = await promptForRegistryPrivateCredential(
+	const privateCredential = await promptForRegistryPrivateCredential(
 		registryType.secretType
 	);
 
