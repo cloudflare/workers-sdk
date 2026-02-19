@@ -232,11 +232,11 @@ async function detectFramework(
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
 	const packageManager = convertDetectedPackageManager(project.packageManager);
 
-	const lockFixExists = packageManager.lockFiles.some((lockFile) =>
+	const lockFileExists = packageManager.lockFiles.some((lockFile) =>
 		existsSync(join(projectPath, lockFile))
 	);
 
-	if (!lockFixExists) {
+	if (!lockFileExists) {
 		logger.warn(
 			"No lock file has been detected in the current working directory." +
 				" This might indicate that the project is part of a workspace. Auto-configuration of " +
