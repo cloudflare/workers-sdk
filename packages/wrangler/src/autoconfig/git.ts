@@ -8,15 +8,8 @@ import { spinner } from "@cloudflare/cli/interactive";
 //       we should clean this duplication up
 
 function directoryExists(path: string): boolean {
-	try {
-		const stat = statSync(path);
-		return stat.isDirectory();
-	} catch (error) {
-		if ((error as { code: string }).code === "ENOENT") {
-			return false;
-		}
-		throw new Error(error as string);
-	}
+	const stat = statSync(path, { throwIfNoEntry: false });
+	return stat?.isDirectory() ?? false;
 }
 
 export async function appendToGitIgnore(
