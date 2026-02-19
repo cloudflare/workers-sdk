@@ -174,9 +174,6 @@ const embedWorkersPlugin = {
 			if (builder === undefined) {
 				builder = await esbuild.context({
 					platform: "node", // Marks `node:*` imports as external
-					// Apply workerd conditions so capnweb resolves to its workerd entry
-					// point (native ReadableStream). Safe for all workers since packages
-					// without "workerd" exports fall back to defaults.
 					conditions: ["workerd", "worker", "browser"],
 					format: "esm",
 					target: "esnext",

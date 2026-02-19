@@ -1,10 +1,7 @@
 /**
- * Thin wrapped binding extension for dispatch namespaces.
+ * Wrapped binding extension for dispatch namespaces.
  *
- * Runs inside the user's worker isolate. Provides a genuinely synchronous
- * .get() that delegates to the dispatch namespace proxy client worker
- * via a service binding. The proxy client (separate worker) owns the
- * capnweb connection.
+ * Delegates to {@link DispatchNamespaceProxy} via a service binding.
  */
 
 interface Env {

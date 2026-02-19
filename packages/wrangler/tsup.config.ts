@@ -32,10 +32,6 @@ function embedWorkersPlugin({
 					workersContexts.get(args.path) ??
 					(await esbuild.context({
 						platform: "node", // Marks `node:*` imports as external
-						// Apply workerd conditions to all embedded workers. This ensures
-						// capnweb resolves to its workerd entry point (native ReadableStream).
-						// Safe to apply globally because wrangler's embedded workers all run
-						// in workerd, and non-capnweb code is unaffected by these conditions.
 						conditions: ["workerd", "worker", "browser"],
 						format: "esm",
 						target: "esnext",

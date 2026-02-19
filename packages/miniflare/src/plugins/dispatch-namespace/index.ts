@@ -6,6 +6,7 @@ import {
 	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 	RemoteProxyConnectionString,
 } from "../shared";
 
@@ -45,9 +46,6 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			return [];
 		}
 
-		// Each dispatch namespace gets a wrapped binding. The extension module
-		// is a thin shim that delegates .get() to the proxy client worker via
-		// a service binding. This keeps capnweb out of the user's isolate.
 		const bindings = Object.entries(
 			options.dispatchNamespaces
 		).map<Worker_Binding>(([name, config]) => {
@@ -87,34 +85,14 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			return [];
 		}
 
-		// Each dispatch namespace gets a proxy client worker that owns the
-		// capnweb connection. The thin extension module calls into this via
-		// a service binding.
 		return Object.entries(options.dispatchNamespaces).map(([name, config]) => ({
 			name: getProxyServiceName(name, config.remoteProxyConnectionString),
-			worker: {
-				compatibilityDate: "2025-01-01",
-				modules: [
-					{
-						name: "dispatch-namespace-proxy.worker.js",
-						esModule: SCRIPT_DISPATCH_NAMESPACE_PROXY(),
-					},
-				],
-				bindings: [
-					...(config.remoteProxyConnectionString?.href
-						? [
-								{
-									name: "remoteProxyConnectionString",
-									text: config.remoteProxyConnectionString.href,
-								},
-							]
-						: []),
-					{
-						name: "binding",
-						text: name,
-					},
-				],
-			},
+			worker: remoteProxyClientWorker(
+				config.remoteProxyConnectionString,
+				name,
+				undefined,
+				SCRIPT_DISPATCH_NAMESPACE_PROXY
+			),
 		}));
 	},
 	getExtensions({ options }) {

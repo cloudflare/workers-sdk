@@ -31,8 +31,8 @@ catalogs:
       specifier: ^0.0.14
       version: 0.0.14
     capnweb:
-      specifier: https://pkg.pr.new/cloudflare/capnweb@139
-      version: 0.4.0
+      specifier: ^0.5.0
+      version: 0.5.0
     ci-info:
       specifier: ^4.4.0
       version: 4.4.0
@@ -2259,7 +2259,7 @@ importers:
         version: 0.0.14(typescript@5.8.3)
       capnweb:
         specifier: catalog:default
-        version: https://pkg.pr.new/cloudflare/capnweb@139
+        version: 0.5.0
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
@@ -4253,7 +4253,7 @@ importers:
         version: 0.1.0
       capnweb:
         specifier: catalog:default
-        version: https://pkg.pr.new/cloudflare/capnweb@139
+        version: 0.5.0
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
@@ -9468,9 +9468,8 @@ packages:
       typescript:
         optional: true
 
-  capnweb@https://pkg.pr.new/cloudflare/capnweb@139:
-    resolution: {tarball: https://pkg.pr.new/cloudflare/capnweb@139}
-    version: 0.4.0
+  capnweb@0.5.0:
+    resolution: {integrity: sha512-fujruGZ4jw3u7mzjqgU+Iad9ms2pS7jwEaAR42bbQe9Eax8Rq+MAOCLT1zmmL5AB/wuKf+0YoCYxfcnSfk2/1Q==}
 
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
@@ -20474,7 +20473,7 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
 
-  capnweb@https://pkg.pr.new/cloudflare/capnweb@139: {}
+  capnweb@0.5.0: {}
 
   caseless@0.12.0: {}
 

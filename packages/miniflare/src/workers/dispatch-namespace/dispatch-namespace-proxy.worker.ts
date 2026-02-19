@@ -5,14 +5,7 @@ import {
 	throwRemoteRequired,
 } from "../shared/remote-bindings-utils";
 
-/**
- * Proxy client for dispatch namespace bindings.
- *
- * Exposed as a service binding to the thin extension module. The extension
- * calls .get() via workerd RPC; .get() creates a capnweb stub with the
- * dispatch options baked in and returns it. Promise pipelining means
- * `namespace.get("worker").fetch(req)` works without awaiting.
- */
+/** Proxy client for dispatch namespace bindings. */
 export default class DispatchNamespaceProxy extends WorkerEntrypoint<RemoteBindingEnv> {
 	get(
 		name: string,
