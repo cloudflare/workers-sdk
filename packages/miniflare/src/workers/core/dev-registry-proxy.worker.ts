@@ -28,7 +28,7 @@ async function connectToEntrypoint(
 	props: Props,
 	target: RegistryEntry
 ): Promise<Fetcher> {
-	const { service, entrypoint } = props;
+	const { entrypoint } = props;
 	// Named entrypoints route directly to the user worker service, bypassing
 	// any assets/vite proxy layer. The default entrypoint uses the registry's
 	// configured service name, which accounts for those proxies.
@@ -161,7 +161,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			if (typeof tailMethod === "function") {
 				await Reflect.apply(tailMethod, fetcher, [serializedEvents]);
 			}
-		} catch (_e) {
+		} catch {
 			// Silently ignore tail forwarding errors — tail events are
 			// best-effort and should not break the producer worker.
 		}
