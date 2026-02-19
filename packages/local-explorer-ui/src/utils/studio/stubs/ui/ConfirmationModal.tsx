@@ -67,10 +67,20 @@ export const ConfirmationModal = ({
 				}
 			}}
 		>
-			<Dialog>
-				<Dialog.Title>{title}</Dialog.Title>
-				<div>{body}</div>
-				<div className="flex gap-2 justify-end mt-4">
+			<Dialog className="p-8">
+				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error Broken Kumo types */}
+					<Dialog.Title className="text-2xl font-semibold">
+						{title}
+					</Dialog.Title>
+				</div>
+
+				{/* @ts-expect-error Broken Kumo types */}
+				<Dialog.Description className="text-kumo-subtle">
+					{body}
+				</Dialog.Description>
+
+				<div className="mt-8 flex justify-end gap-2">
 					{actions({ isRequesting, onConfirm, closeModal: onCancel })}
 				</div>
 			</Dialog>
