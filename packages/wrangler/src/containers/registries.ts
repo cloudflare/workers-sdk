@@ -190,7 +190,7 @@ async function registryConfigureCommand(
 			domain: configureArgs.DOMAIN,
 			accountId: accountId,
 			storeId: secretStoreId,
-			accessKey: accessKey,
+			privateCredential: privateCredential,
 			secretType: registryType.secretType,
 		});
 
@@ -200,7 +200,7 @@ async function registryConfigureCommand(
 		};
 	} else {
 		// If we are not using the secret store, we will be passing in the secret directly
-		private_credential = accessKey;
+		private_credential = privateCredential;
 	}
 
 	try {
@@ -257,7 +257,7 @@ interface GetOrCreateSecretOptions {
 	domain: string;
 	accountId: string;
 	storeId: string;
-	accessKey: string;
+	privateCredential: string;
 	secretType?: string;
 }
 
@@ -280,7 +280,7 @@ async function getOrCreateSecret(
 			await promiseSpinner(
 				createSecret(options.config, options.accountId, options.storeId, {
 					name: secretName,
-					value: options.accessKey,
+					value: options.privateCredential,
 					scopes: ["containers"],
 					comment: `Created by Wrangler: credentials for image registry ${options.domain}`,
 				})
