@@ -139,7 +139,9 @@ async function registryConfigureCommand(
 	}
 
 	log(`Getting ${registryType.secretType}...\n`);
-	const accessKey = await promptForSecretAccessKey(registryType.secretType);
+	const accessKey = await promptForRegistryPrivateCredential(
+		registryType.secretType
+	);
 
 	// Secret Store is not available in FedRAMP High
 	let private_credential: ImageRegistryAuth["private_credential"];
@@ -319,7 +321,9 @@ async function getOrCreateSecret(
 	}
 }
 
-async function promptForSecretAccessKey(secretType?: string): Promise<string> {
+async function promptForRegistryPrivateCredential(
+	secretType?: string
+): Promise<string> {
 	if (isNonInteractiveOrCI()) {
 		// Non-interactive mode: expect JSON input via stdin
 		const stdinInput = trimTrailingWhitespace(await readFromStdin());
