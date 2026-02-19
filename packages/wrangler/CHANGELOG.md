@@ -1,5 +1,78 @@
 # wrangler
 
+## 4.67.0
+
+### Minor Changes
+
+- [#12401](https://github.com/cloudflare/workers-sdk/pull/12401) [`8723684`](https://github.com/cloudflare/workers-sdk/commit/872368456bfd72cdb45dc8c82f1ab16392d6a1f8) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Add validation retry loops to pipelines setup command
+
+  The `wrangler pipelines setup` command now prompts users to retry when validation errors occur, instead of failing the entire setup process. This includes:
+
+  - Validation retry prompts for pipeline names, bucket names, and field names
+  - A "simple" mode for sink configuration that uses sensible defaults
+  - Automatic bucket creation when buckets don't exist
+  - Automatic Data Catalog enablement when not already active
+
+  This improves the setup experience by allowing users to correct mistakes without restarting the entire configuration flow.
+
+- [#12395](https://github.com/cloudflare/workers-sdk/pull/12395) [`aa82c2b`](https://github.com/cloudflare/workers-sdk/commit/aa82c2b46be762adecca3f661a8f8228fb9c7c28) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Generate typed pipeline bindings from stream schemas
+
+  When running `wrangler types`, pipeline bindings now generate TypeScript types based on the stream's schema definition. This gives you full autocomplete and type checking when sending data to your pipelines.
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"pipelines": [
+  		{ "binding": "ANALYTICS", "pipeline": "analytics-stream-id" },
+  	],
+  }
+  ```
+
+  If your stream has a schema with fields like `user_id` (string) and `event_count` (int32), the generated types will be:
+
+  ```typescript
+  declare namespace Cloudflare {
+  	type AnalyticsStreamRecord = { user_id: string; event_count: number };
+  	interface Env {
+  		ANALYTICS: Pipeline<Cloudflare.AnalyticsStreamRecord>;
+  	}
+  }
+  ```
+
+  For unstructured streams or when not authenticated, bindings fall back to the generic `Pipeline<PipelineRecord>` type.
+
+### Patch Changes
+
+- [#12592](https://github.com/cloudflare/workers-sdk/pull/12592) [`aaa7200`](https://github.com/cloudflare/workers-sdk/commit/aaa720037b78adb4ad08301d77de4ef0dd759fe3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260217.0 | 1.20260218.0 |
+
+- [#12606](https://github.com/cloudflare/workers-sdk/pull/12606) [`2f19a40`](https://github.com/cloudflare/workers-sdk/commit/2f19a4047b64d3ffa0e5b0400a6217849785e09b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260218.0 | 1.20260219.0 |
+
+- [#12604](https://github.com/cloudflare/workers-sdk/pull/12604) [`e2a6600`](https://github.com/cloudflare/workers-sdk/commit/e2a66009445c310af581508bec593a8f0cd66464) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: pass `--env` flag to auxiliary workers in multi-worker mode
+
+  When running `wrangler dev` with multiple config files (e.g. `-c ./apps/api/wrangler.jsonc -c ./apps/queues/wrangler.jsonc -e=dev`), the `--env` flag was not being passed to auxiliary (non-primary) workers. This meant that environment-specific configuration (such as queue bindings) was not applied to auxiliary workers, causing features like queue consumers to not be triggered in local development.
+
+- [#12597](https://github.com/cloudflare/workers-sdk/pull/12597) [`0b17117`](https://github.com/cloudflare/workers-sdk/commit/0b171175f1fe8c885a54398ee84fd0aa35ca9cbe) Thanks [@sdnts](https://github.com/sdnts)! - The maximum allowed delivery and retry delays for Queues is now 24 hours
+
+- [#12598](https://github.com/cloudflare/workers-sdk/pull/12598) [`ca58062`](https://github.com/cloudflare/workers-sdk/commit/ca58062d0a4d31995cbac344bb6e994a8b569b24) Thanks [@mattzcarey](https://github.com/mattzcarey)! - Stop redacting `wrangler whoami` output in non-interactive mode
+
+  `wrangler whoami` is explicitly invoked to retrieve account info, so email and account names should always be visible. Redacting them in non-interactive/CI environments makes it difficult for coding agents and automated tools to identify which account to use. Other error messages that may appear unexpectedly in CI logs (e.g. multi-account selection errors) remain redacted.
+
+- Updated dependencies [[`f239077`](https://github.com/cloudflare/workers-sdk/commit/f23907711bd49214b08a8625ac3f74ecef416956), [`aaa7200`](https://github.com/cloudflare/workers-sdk/commit/aaa720037b78adb4ad08301d77de4ef0dd759fe3), [`2f19a40`](https://github.com/cloudflare/workers-sdk/commit/2f19a4047b64d3ffa0e5b0400a6217849785e09b), [`5f9f0b4`](https://github.com/cloudflare/workers-sdk/commit/5f9f0b40dbe4c80ab15bea6a589f5c3296945fbc), [`452cdc8`](https://github.com/cloudflare/workers-sdk/commit/452cdc8c370d5224d71f3292faaf72c3ea9ad86c), [`527e4f5`](https://github.com/cloudflare/workers-sdk/commit/527e4f5651b8858f11a1b9bab4627a4ae5cc1bc0), [`0b17117`](https://github.com/cloudflare/workers-sdk/commit/0b171175f1fe8c885a54398ee84fd0aa35ca9cbe)]:
+  - miniflare@4.20260219.0
+  - @cloudflare/unenv-preset@2.14.0
+
 ## 4.66.0
 
 ### Minor Changes

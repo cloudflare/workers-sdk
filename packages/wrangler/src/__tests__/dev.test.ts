@@ -2579,6 +2579,64 @@ describe.sequential("wrangler dev", () => {
 			});
 		});
 	});
+
+	describe("multi-worker mode", () => {
+		it("should pass --env to auxiliary workers", async () => {
+			writeWranglerConfig(
+				{
+					name: "primary",
+					main: "primary.js",
+					compatibility_date: "2024-01-01",
+					env: {
+						dev: {
+							name: "primary-dev",
+						},
+					},
+				},
+				"wrangler.primary.jsonc"
+			);
+			writeWranglerConfig(
+				{
+					name: "auxiliary",
+					main: "auxiliary.js",
+					compatibility_date: "2024-01-01",
+					env: {
+						dev: {
+							name: "auxiliary-dev",
+						},
+					},
+				},
+				"wrangler.auxiliary.jsonc"
+			);
+			fs.writeFileSync("primary.js", `export default {};`);
+			fs.writeFileSync("auxiliary.js", `export default {};`);
+
+			let setCallCount = 0;
+			setSpy.mockImplementation(async () => {
+				setCallCount++;
+				if (setCallCount >= 2) {
+					throw new FatalError("Bailing early in tests");
+				}
+				return undefined;
+			});
+			spy.mockImplementation(() => {});
+
+			try {
+				await runWrangler(
+					"dev -c wrangler.primary.jsonc -c wrangler.auxiliary.jsonc --env=dev"
+				);
+			} catch {
+				// Expected to throw after second set call
+			}
+
+			expect(setSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+			const primaryInput = setSpy.mock.calls[0][0] as StartDevWorkerInput;
+			const auxiliaryInput = setSpy.mock.calls[1][0] as StartDevWorkerInput;
+
+			expect(primaryInput.env).toBe("dev");
+			expect(auxiliaryInput.env).toBe("dev");
+		});
+	});
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {

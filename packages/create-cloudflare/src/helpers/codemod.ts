@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readdirSync } from "node:fs";
+import { lstatSync, readdirSync } from "node:fs";
 import nodePath, { extname, join } from "node:path";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
@@ -82,11 +82,7 @@ export const transformFile = (
 export const loadSnippets = (parentFolder: string) => {
 	const snippetsPath = join(parentFolder, "snippets");
 
-	if (!existsSync(snippetsPath)) {
-		return {};
-	}
-
-	if (!lstatSync(snippetsPath).isDirectory) {
+	if (!lstatSync(snippetsPath, { throwIfNoEntry: false })?.isDirectory()) {
 		return {};
 	}
 
@@ -95,7 +91,7 @@ export const loadSnippets = (parentFolder: string) => {
 	return (
 		files
 			// don't try loading directories
-			.filter((fileName) => lstatSync(join(snippetsPath, fileName)).isFile)
+			.filter((fileName) => lstatSync(join(snippetsPath, fileName)).isFile())
 			// only load js or ts files
 			.filter((fileName) => [".js", ".ts"].includes(extname(fileName)))
 			.reduce((acc, snippetPath) => {
