@@ -748,6 +748,30 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:perf_hooks
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+
+		// TODO: re-enable this test case when native workerd implements all the APIs
+		// {
+		// 	name: "perf_hooks enabled by flag",
+		// 	compatibilityDate: "2024-09-23",
+		// 	compatibilityFlags: ["enable_nodejs_perf_hooks_module", "experimental"],
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_perf_hooks_module: true,
+		// 	},
+		// },
+		{
+			name: "perf_hooks disabled by flag",
+			// TODO: change the date passed the default enabled date (when defined)
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_perf_hooks_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

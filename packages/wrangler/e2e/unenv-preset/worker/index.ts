@@ -1062,6 +1062,24 @@ export const WorkerdTests: Record<string, () => void> = {
 			});
 		}
 	},
+
+	async testPerfHooks() {
+		assertTypeOf(globalThis, "performance", "object");
+		assertTypeOf(globalThis, "PerformanceObserver", "function");
+
+		assert.doesNotThrow(() => globalThis.performance.now());
+		assert.doesNotThrow(() => globalThis.performance.mark("test"));
+		assert.doesNotThrow(() => globalThis.performance.measure("test"));
+
+		const perfHooks = await import("node:perf_hooks");
+
+		assertTypeOf(perfHooks, "performance", "object");
+		assertTypeOf(perfHooks, "PerformanceObserver", "function");
+
+		assert.doesNotThrow(() => perfHooks.performance.now());
+		assert.doesNotThrow(() => perfHooks.performance.mark("test"));
+		assert.doesNotThrow(() => perfHooks.performance.measure("test"));
+	},
 };
 
 /**
