@@ -182,7 +182,6 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"scheduled",
 	"queue",
 	"test",
-	"tailStream",
 	"email",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
@@ -298,7 +297,6 @@ export function createWorkerEntrypointWrapper(
 	);
 
 	// Add prototype methods for all default handlers
-	// const prototype = Entrypoint.prototype as unknown as Record<string, unknown>;
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (
 			this: WorkerEntrypoint<Cloudflare.Env>,
@@ -337,7 +335,7 @@ export function createWorkerEntrypointWrapper(
 					}
 				} else {
 					// Assuming the user has messed up
-					const message = `Expected ${entrypoint} export of ${mainPath}to be an object or a class, got ${entrypointValue}`;
+					const message = `Expected ${entrypoint} export of ${mainPath} to be an object or a class, got ${entrypointValue}`;
 					throw new TypeError(message);
 				}
 			});
@@ -409,8 +407,6 @@ export function createDurableObjectWrapper(
 		const property = getDurableObjectRPCProperty(this, className, key);
 		return getRPCPropertyCallableThenable(key, property);
 	});
-
-	// Wrapper[Symbol.hasInstance] = () => true
 
 	Wrapper.prototype[kEnsureInstance] = async function (
 		this: DurableObjectWrapper

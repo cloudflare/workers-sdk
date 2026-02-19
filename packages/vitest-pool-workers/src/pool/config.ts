@@ -258,16 +258,15 @@ async function parseCustomPoolOptions(
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
 
-		const remoteProxySessionData =
-			options.remoteBindings ?? true
-				? await wrangler.maybeStartOrUpdateRemoteProxySession(
-						{
-							path: options.wrangler.configPath,
-							environment: options.wrangler.environment,
-						},
-						preExistingRemoteProxySessionData ?? null
-					)
-				: null;
+		const remoteProxySessionData = options.remoteBindings
+			? await wrangler.maybeStartOrUpdateRemoteProxySession(
+					{
+						path: options.wrangler.configPath,
+						environment: options.wrangler.environment,
+					},
+					preExistingRemoteProxySessionData ?? null
+				)
+			: null;
 
 		if (options.wrangler?.configPath && remoteProxySessionData) {
 			remoteProxySessionsDataMap.set(

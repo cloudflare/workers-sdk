@@ -178,7 +178,7 @@ export function runInRunnerObject<R>(
 	) => R | Promise<R>
 ): Promise<R> {
 	// Runner DO is ephemeral (ColoLocalActorNamespace), which has .get(name)
-	// instead of the standard idFromName()/get(id) API
+	// instead of the standard idFromName()/get(id) API.
 	const ns = env["__VITEST_POOL_WORKERS_RUNNER_OBJECT"] as unknown as {
 		get(name: string): Fetcher;
 	};

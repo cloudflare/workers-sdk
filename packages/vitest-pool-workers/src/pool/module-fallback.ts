@@ -162,14 +162,13 @@ async function getCjsNamedExports(
 		}
 		try {
 			const resolvedContents = fs.readFileSync(resolved, "utf8");
-			seen.add(filePath);
+			seen.add(resolved);
 			const resolvedNames = await getCjsNamedExports(
 				vite,
 				resolved,
 				resolvedContents,
 				seen
 			);
-			seen.delete(filePath);
 			for (const name of resolvedNames) {
 				result.add(name);
 			}

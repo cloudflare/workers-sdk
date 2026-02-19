@@ -27,8 +27,17 @@ function structuredSerializableParse(value: string): unknown {
 
 globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
 
-// Mock Service Worker needs this
-globalThis.BroadcastChannel = class {};
+// Mock Service Worker needs this — stub with no-op methods since workerd
+// doesn't provide BroadcastChannel
+globalThis.BroadcastChannel = class {
+	constructor(public name: string) {}
+	postMessage(_message: unknown) {}
+	close() {}
+	addEventListener(_type: string, _listener: unknown) {}
+	removeEventListener(_type: string, _listener: unknown) {}
+	onmessage: ((event: unknown) => void) | null = null;
+	onmessageerror: ((event: unknown) => void) | null = null;
+} as unknown as typeof BroadcastChannel;
 
 globalThis.process = process; // Required by `vite-node`
 process.argv = []; // Required by `@vitest/utils`

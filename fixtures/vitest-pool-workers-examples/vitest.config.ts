@@ -1,5 +1,4 @@
-// This file is named `vitest.workers.config.ts` so it doesn't get included
-// in the monorepo's `vitest.workspace.ts`.
+// Root vitest config for the vitest-pool-workers-examples fixture.
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({

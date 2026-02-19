@@ -473,7 +473,7 @@ async function buildProjectWorkerOptions(
 	// module names. Setting `modulesRoot` to a drive letter and prepending this
 	// to paths ensures correct names. This requires us to specify `contents`
 	// with module definitions though, as the new paths don't exist.
-	// TODO(now): need to add source URL comments here to ensure those are correct
+	// TODO: add source URL comments to injected modules for better stack traces
 	const modulesRoot = process.platform === "win32" ? "Z:\\" : "/";
 	runnerWorker.modulesRoot = modulesRoot;
 
@@ -686,7 +686,12 @@ export async function connectToMiniflareSocket(
 	});
 
 	const webSocket = res.webSocket;
-	assert(webSocket !== null);
+	if (webSocket === null) {
+		const body = await res.text().catch(() => "");
+		throw new Error(
+			`Failed to establish WebSocket to runner (status ${res.status}): ${body}`
+		);
+	}
 
 	webSocket.accept();
 

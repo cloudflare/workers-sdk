@@ -11,8 +11,12 @@ export const SELF = new Proxy(
 	{},
 	{
 		get(_, p) {
-			// @ts-expect-error This works at runtime
-			return exports.default[p].bind(exports.default);
+			const target = exports.default as unknown as Record<
+				string | symbol,
+				unknown
+			>;
+			const value = target[p];
+			return typeof value === "function" ? value.bind(target) : value;
 		},
 	}
 );
@@ -24,8 +28,8 @@ export function getSerializedOptions(): SerializedOptions {
 
 	assert(
 		options !== undefined,
-		"Expected serialised options" +
-			Object.keys(__vitest_worker__.providedContext)
+		"Expected serialised options, got keys: " +
+			Object.keys(__vitest_worker__.providedContext).join(", ")
 	);
 	const parsedOptions = JSON.parse(options);
 	return {
