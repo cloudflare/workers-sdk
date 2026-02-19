@@ -12,6 +12,50 @@ import { isFileNotFoundError } from "./helpers";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { ViteDevServer } from "vite";
 
+// Coverage instrumentation support for Istanbul provider.
+// The instrumenter is lazily created when `enableCoverageInstrumentation()` is
+// called (by the pool when coverage is enabled). `istanbul-lib-instrument` is
+// a transitive dependency of `@vitest/coverage-istanbul`, so it is available
+// when the user has Istanbul coverage configured.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let coverageInstrumenter: any = null;
+let coverageInstrumentationAttempted = false;
+
+export async function enableCoverageInstrumentation(): Promise<void> {
+	if (coverageInstrumentationAttempted) return;
+	coverageInstrumentationAttempted = true;
+	try {
+		// Dynamic import to avoid hard dependency — this package is available
+		// when @vitest/coverage-istanbul is installed by the user.
+		const instrumentModule = "istanbul-lib-instrument";
+		const { createInstrumenter } = await import(instrumentModule);
+		coverageInstrumenter = createInstrumenter({
+			compact: false,
+			esModules: true,
+			// Use the same coverage variable as @vitest/coverage-istanbul
+			coverageVariable: "__VITEST_COVERAGE__",
+			coverageGlobalScope: "globalThis",
+			coverageGlobalScopeFunc: false,
+		});
+	} catch {
+		// istanbul-lib-instrument not available
+	}
+}
+
+function shouldInstrumentForCoverage(filePath: string): boolean {
+	if (coverageInstrumenter === null) return false;
+	if (
+		filePath.includes("/node_modules/") ||
+		filePath.includes("\\node_modules\\")
+	) {
+		return false;
+	}
+	if (filePath.startsWith(distPath)) {
+		return false;
+	}
+	return true;
+}
+
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
 	(log) => (debuglog = log)
@@ -470,7 +514,20 @@ async function load(
 		return buildModuleResponse(target, { json });
 	}
 
-	let contents = fs.readFileSync(filePath, "utf8");
+	const originalContents = fs.readFileSync(filePath, "utf8");
+	let contents = originalContents;
+
+	// Istanbul coverage instrumentation for user source files loaded through
+	// the module fallback service (these files bypass Vite transforms and would
+	// otherwise not be instrumented for coverage collection).
+	if (shouldInstrumentForCoverage(filePath)) {
+		try {
+			contents = coverageInstrumenter.instrumentSync(contents, filePath);
+		} catch {
+			debuglog(logBase, "coverage-instrument-failed:", filePath);
+		}
+	}
+
 	const targetUrl = pathToFileURL(target);
 	contents = withSourceUrl(contents, targetUrl);
 
@@ -492,7 +549,7 @@ async function load(
 		const disableShimSpecifier = `./${fileName}${disableCjsEsmShimSuffix}`;
 		const quotedDisableShimSpecifier = JSON.stringify(disableShimSpecifier);
 		let esModule = `import mod from ${quotedDisableShimSpecifier}; export default mod;`;
-		for (const name of await getCjsNamedExports(vite, filePath, contents)) {
+		for (const name of await getCjsNamedExports(vite, filePath, originalContents)) {
 			esModule += ` export const ${name} = mod.${name};`;
 		}
 		debuglog(logBase, "cjs-esm-shim:", filePath);

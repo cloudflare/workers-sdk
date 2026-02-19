@@ -230,6 +230,32 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			await scheduler.wait(100);
 		}
 
+		// Collect and send Istanbul coverage data from the workerd runtime back
+		// to the pool's Node.js process via the loopback service. This bridges
+		// the gap where coverage data is populated inside workerd but Vitest's
+		// coverage provider reads it from the Node.js process.
+		// Vitest's Istanbul provider uses "__VITEST_COVERAGE__" as the key.
+		const COVERAGE_KEY = "__VITEST_COVERAGE__";
+		const coverageData = (globalThis as Record<string, unknown>)[COVERAGE_KEY];
+		if (
+			coverageData != null &&
+			typeof coverageData === "object" &&
+			Object.keys(coverageData as object).length > 0
+		) {
+			try {
+				await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
+					"http://placeholder/coverage",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(coverageData),
+					}
+				);
+			} catch {
+				// Coverage data transfer failed — non-fatal, continue test run
+			}
+		}
+
 		// Unlike the official threads and forks pool, we do not recycle the miniflare instances to maintain the module cache.
 		// However, this creates a side effect where the module mock will not be re-evaluated on watch mode.
 		// This fixes https://github.com/cloudflare/workers-sdk/issues/6844 by resetting the module graph.
