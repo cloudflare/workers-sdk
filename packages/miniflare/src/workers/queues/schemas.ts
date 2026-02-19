@@ -4,7 +4,7 @@ export const QueueMessageDelaySchema = z
 	.number()
 	.int()
 	.min(0)
-	.max(43200)
+	.max(86400)
 	.optional();
 
 export const QueueProducerOptionsSchema = /* @__PURE__ */ z.object({

@@ -1,5 +1,17 @@
 # @cloudflare/unenv-preset
 
+## 2.14.0
+
+### Minor Changes
+
+- [#11734](https://github.com/cloudflare/workers-sdk/pull/11734) [`5f9f0b4`](https://github.com/cloudflare/workers-sdk/commit/5f9f0b40dbe4c80ab15bea6a589f5c3296945fbc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:readline` module when the `enable_nodejs_readline_module` compatibility flag is enabled.
+
+  This feature is currently experimental and requires both the `enable_nodejs_readline_module` and `experimental` compatibility flags to be set.
+
+- [#12043](https://github.com/cloudflare/workers-sdk/pull/12043) [`452cdc8`](https://github.com/cloudflare/workers-sdk/commit/452cdc8c370d5224d71f3292faaf72c3ea9ad86c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:worker_threads` module from workerd when the `enable_nodejs_worker_threads_module` compatibility flag is enabled.
+
+  This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_worker_threads_module` compatibility flags to be set.
+
 ## 2.13.0
 
 ### Minor Changes

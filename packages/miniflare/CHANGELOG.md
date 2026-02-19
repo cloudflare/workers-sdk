@@ -1,5 +1,53 @@
 # miniflare
 
+## 4.20260219.0
+
+### Minor Changes
+
+- [#12462](https://github.com/cloudflare/workers-sdk/pull/12462) [`f239077`](https://github.com/cloudflare/workers-sdk/commit/f23907711bd49214b08a8625ac3f74ecef416956) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `Miniflare#purgeCache()` method to clear cache entries programmatically
+
+  This allows developers to clear cached data during local development without
+  restarting the Miniflare instance. Useful when working with Workers Sites
+  or any application that uses the Cache API.
+
+  ```typescript
+  const mf = new Miniflare({
+  	/* options */
+  });
+
+  // Purge the default cache
+  await mf.purgeCache();
+
+  // Purge a specific named cache
+  await mf.purgeCache("my-named-cache");
+  ```
+
+- [#12574](https://github.com/cloudflare/workers-sdk/pull/12574) [`527e4f5`](https://github.com/cloudflare/workers-sdk/commit/527e4f5651b8858f11a1b9bab4627a4ae5cc1bc0) Thanks [@emily-shen](https://github.com/emily-shen)! - Local explorer: add /query endpoint to introspect sqlite in DOs
+
+  This required adding a wrapper that extends user DO classes and adds in an extra method to access `ctx.storage.sql`. This _shouldn't_ have any impact on user code, but is gated by the env var `X_LOCAL_EXPLORER`.
+
+  This is for an experimental WIP feature.
+
+### Patch Changes
+
+- [#12592](https://github.com/cloudflare/workers-sdk/pull/12592) [`aaa7200`](https://github.com/cloudflare/workers-sdk/commit/aaa720037b78adb4ad08301d77de4ef0dd759fe3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260217.0 | 1.20260218.0 |
+
+- [#12606](https://github.com/cloudflare/workers-sdk/pull/12606) [`2f19a40`](https://github.com/cloudflare/workers-sdk/commit/2f19a4047b64d3ffa0e5b0400a6217849785e09b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260218.0 | 1.20260219.0 |
+
+- [#12597](https://github.com/cloudflare/workers-sdk/pull/12597) [`0b17117`](https://github.com/cloudflare/workers-sdk/commit/0b171175f1fe8c885a54398ee84fd0aa35ca9cbe) Thanks [@sdnts](https://github.com/sdnts)! - The maximum allowed delivery and retry delays for Queues is now 24 hours
+
 ## 4.20260217.0
 
 ### Minor Changes
