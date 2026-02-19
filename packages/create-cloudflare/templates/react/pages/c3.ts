@@ -8,13 +8,7 @@ import type { C3Context } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	const variant = await inputPrompt({
-		type: "select",
-		question: "Select a variant:",
-		label: "variant",
-		options: variantsOptions,
-		defaultValue: variantsOptions[0].value,
-	});
+	const variant = await getVariant(ctx);
 
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--template", variant]);
 
@@ -39,6 +33,26 @@ const variantsOptions = [
 		label: "JavaScript + SWC",
 	},
 ];
+
+async function getVariant(ctx: C3Context) {
+	if (ctx.args.variant) {
+		const selected = variantsOptions.find((v) => v.value === ctx.args.variant);
+		if (!selected) {
+			throw new Error(
+				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`,
+			);
+		}
+		return selected.value;
+	}
+
+	return await inputPrompt({
+		type: "select",
+		question: "Select a variant:",
+		label: "variant",
+		options: variantsOptions,
+		defaultValue: variantsOptions[0].value,
+	});
+}
 
 const config: TemplateConfig = {
 	configVersion: 1,
