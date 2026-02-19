@@ -22,21 +22,6 @@ import type * as http from "node:http";
 // `miniflare` are loaded (e.g. when configuring Vitest and when running pool)
 export const kCurrentWorker = Symbol.for("miniflare.kCurrentWorker");
 
-// Marker for a pre-resolved ServiceDesignator that should be used as-is,
-// without passing through getUserServiceName(). Used by the dev registry
-// proxy to point bindings directly at internal core services.
-export const kResolvedServiceDesignator = Symbol.for(
-	"miniflare.kResolvedServiceDesignator"
-);
-
-export interface ResolvedServiceDesignator {
-	[kResolvedServiceDesignator]: true;
-	/** The already-resolved service name (not wrapped in getUserServiceName) */
-	name: string;
-	entrypoint?: string;
-	props?: Record<string, unknown>;
-}
-
 export const HttpOptionsHeaderSchema = z.object({
 	name: z.string(), // name should be required
 	value: z.ostring(), // If omitted, the header will be removed
@@ -115,13 +100,6 @@ export const CustomFetchServiceSchema = z.custom<
 export const ServiceDesignatorSchema = z.union([
 	z.string(),
 	z.literal(kCurrentWorker),
-	z.custom<ResolvedServiceDesignator>(
-		(v) =>
-			typeof v === "object" &&
-			v !== null &&
-			kResolvedServiceDesignator in v &&
-			v[kResolvedServiceDesignator] === true
-	),
 	z.object({
 		name: z.union([z.string(), z.literal(kCurrentWorker)]),
 		entrypoint: z.ostring(),

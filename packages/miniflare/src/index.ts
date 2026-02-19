@@ -83,7 +83,6 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
-	kResolvedServiceDesignator,
 	maybeWrappedModuleToWorkerName,
 	NameSourceOptions,
 	reviveError,
@@ -102,6 +101,7 @@ import {
 	RuntimeOptions,
 	serializeConfig,
 	Service,
+	ServiceDesignator,
 	Socket,
 	SocketIdentifier,
 	SocketPorts,
@@ -452,9 +452,16 @@ function getDurableObjectClassNames(
 }
 
 /**
- * This collects all external service bindings from all workers and overrides
- * it to point to the dev registry proxy. A fallback service will be created
- * for each of the external service in case the external service is not available.
+ * Collects all external service bindings, tail workers, and durable objects
+ * from all workers. Returns the map of external services (for creating proxy
+ * services and watching the registry) and a set of external worker names
+ * (for the plugin system to redirect bindings to the dev registry proxy).
+ *
+ * Service bindings and tails are NOT mutated here — the redirect to the
+ * dev registry proxy happens in the plugin system's getCustomServiceDesignator()
+ * which receives the externalWorkerNames set. Durable objects ARE still
+ * rewritten here because they use a different proxy mechanism (outbound DO
+ * proxy service) that works with the standard designator format.
  */
 function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	const externalServices = new Map<
@@ -480,33 +487,19 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	};
 
 	for (const workerOpts of allWorkerOpts) {
-		// Override service bindings if they point to a worker that doesn't exist
+		// Identify external service bindings (don't mutate — the plugin handles redirection)
 		if (workerOpts.core.serviceBindings) {
-			for (const [name, service] of Object.entries(
+			for (const [, service] of Object.entries(
 				workerOpts.core.serviceBindings
 			)) {
 				const { serviceName, entrypoint, remoteProxyConnectionString } =
 					normaliseServiceDesignator(service);
 
 				if (
-					// Skip if it is a remote service
 					remoteProxyConnectionString === undefined &&
-					// Skip if the service is bound to another Worker defined in the Miniflare config
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
-					// This is a service binding to a worker that doesn't exist
-					// Override it to route through the dev registry proxy worker
-					workerOpts.core.serviceBindings[name] = {
-						[kResolvedServiceDesignator]: true,
-						name: SERVICE_DEV_REGISTRY_PROXY,
-						entrypoint: "ExternalServiceProxy",
-						props: {
-							service: serviceName,
-							entrypoint: entrypoint ?? null,
-						},
-					};
-
 					const entrypoints = getEntrypoints(serviceName);
 					entrypoints.entrypoints.add(entrypoint);
 				}
@@ -552,6 +545,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 			}
 		}
 
+		// Identify external tail workers (don't mutate — the plugin handles redirection)
 		if (workerOpts.core.tails) {
 			for (let i = 0; i < workerOpts.core.tails.length; i++) {
 				const {
@@ -561,24 +555,10 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
 
 				if (
-					// Skip if it is a remote service
 					remoteProxyConnectionString === undefined &&
-					// Skip if the service is bound to the existing workers
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
-					// This is a tail worker that doesn't exist
-					// Override it to route through the dev registry proxy worker
-					workerOpts.core.tails[i] = {
-						[kResolvedServiceDesignator]: true,
-						name: SERVICE_DEV_REGISTRY_PROXY,
-						entrypoint: "ExternalServiceProxy",
-						props: {
-							service: serviceName,
-							entrypoint: entrypoint ?? null,
-						},
-					};
-
 					const entrypoints = getEntrypoints(serviceName);
 					entrypoints.entrypoints.add(entrypoint);
 				}
@@ -1860,6 +1840,60 @@ export class Miniflare {
 						capnpConnectHost: HOST_CAPNP_CONNECT,
 					},
 				});
+			}
+		}
+
+		// Redirect service bindings and tails that point to external workers
+		// to the dev registry proxy. This runs after plugin processing so the
+		// plugin system doesn't need to know about the dev registry at all.
+		if (externalServices && externalServices.size > 0) {
+			const externalUserServiceNames = new Set(
+				[...externalServices.keys()].map(getUserServiceName)
+			);
+			const proxyDesignator = (
+				workerName: string,
+				entrypoint?: string
+			): ServiceDesignator => ({
+				name: SERVICE_DEV_REGISTRY_PROXY,
+				entrypoint: "ExternalServiceProxy",
+				props: {
+					json: JSON.stringify({
+						service: workerName,
+						entrypoint: entrypoint ?? null,
+					}),
+				},
+			});
+
+			// Rewrite service bindings
+			for (const bindings of allWorkerBindings.values()) {
+				for (const binding of bindings) {
+					if (
+						"service" in binding &&
+						binding.service?.name &&
+						externalUserServiceNames.has(binding.service.name)
+					) {
+						const workerName = binding.service.name.replace("core:user:", "");
+						Object.assign(
+							binding.service,
+							proxyDesignator(workerName, binding.service.entrypoint)
+						);
+					}
+				}
+			}
+
+			// Rewrite tails inside worker service definitions
+			for (const service of services.values()) {
+				const tails = "worker" in service ? service.worker?.tails : undefined;
+				if (!tails) {
+					continue;
+				}
+				for (let i = 0; i < tails.length; i++) {
+					const tail = tails[i];
+					if (tail.name && externalUserServiceNames.has(tail.name)) {
+						const workerName = tail.name.replace("core:user:", "");
+						tails[i] = proxyDesignator(workerName, tail.entrypoint);
+					}
+				}
 			}
 		}
 
