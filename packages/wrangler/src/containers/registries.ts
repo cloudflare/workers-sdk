@@ -511,7 +511,7 @@ export const containersRegistriesConfigureCommand = createCommand({
 		},
 		"skip-confirmation": {
 			type: "boolean",
-			description: "skip confirmation prompts",
+			description: "Skip confirmation prompts",
 			alias: "y",
 			default: false,
 		},
@@ -572,7 +572,7 @@ export const containersRegistriesDeleteCommand = createCommand({
 		},
 		"skip-confirmation": {
 			type: "boolean",
-			description: "skip confirmation prompts for registry and secret deletion",
+			description: "Skip confirmation prompts for registry and secret deletion",
 			alias: "y",
 			default: false,
 		},
