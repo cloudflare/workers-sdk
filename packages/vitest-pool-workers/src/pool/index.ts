@@ -8,7 +8,6 @@ import getPort, { portNumbers } from "get-port";
 import {
 	getNodeCompat,
 	kCurrentWorker,
-	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
 	maybeApply,
@@ -436,13 +435,10 @@ async function buildProjectWorkerOptions(
 	}
 
 	// Make sure we define the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` Durable Object,
-	// which is the singleton host for running tests. It's ephemeral because the
-	// runner doesn't need persistent state, and disk-backed DOs hit a workerd bug
-	// on Windows (sqlite.c++ uses Unix-style paths with the win32 SQLite VFS).
+	// which is the singleton host for running tests.
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
 		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
 		unsafePreventEviction: true,
-		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 	};
 
 	// Vite has its own define mechanism, but we can't control it from custom
