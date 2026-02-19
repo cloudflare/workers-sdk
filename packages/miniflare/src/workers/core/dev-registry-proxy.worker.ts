@@ -73,11 +73,14 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 					return Reflect.get(target, prop);
 				}
 
-				// For arbitrary RPC methods, connect to the debug port and
-				// call the method directly using Reflect.apply().
+				// For arbitrary RPC properties/methods, connect to the debug port.
+				// The returned value must be both callable (for RPC method calls
+				// like `env.SERVICE.method()`) and thenable (for RPC property
+				// access like `await env.SERVICE.property`). This mirrors workerd's
+				// JsRpcProperty behavior.
 				if (typeof prop === "string") {
 					const methodName = prop;
-					return async function (...args: unknown[]) {
+					const rpcCall = async function (...args: unknown[]) {
 						const registryEntry = await resolveTarget(
 							target.env,
 							target._props.service
@@ -111,6 +114,41 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 							);
 						}
 					};
+					// Make the function thenable so `await env.SERVICE.property`
+					// resolves via the remote, matching JsRpcProperty behavior.
+					// Without this, `await fn` would just resolve to fn itself
+					// (functions are not thenable), silently swallowing errors.
+					rpcCall.then = (
+						resolve: (v: unknown) => void,
+						reject: (e: unknown) => void
+					) => {
+						(async () => {
+							const registryEntry = await resolveTarget(
+								target.env,
+								target._props.service
+							);
+							if (!registryEntry) {
+								throw new Error(
+									`Cannot access "${methodName}" as we couldn't find a local dev session for the "${target._props.entrypoint ?? "default"}" entrypoint of service "${target._props.service}" to proxy to.`
+								);
+							}
+							try {
+								const fetcher = await connectToEntrypoint(
+									target.env,
+									target._props,
+									registryEntry
+								);
+								return await (fetcher as unknown as Record<string, unknown>)[
+									methodName
+								];
+							} catch (e) {
+								throw new Error(
+									`Error accessing "${methodName}" on the "${target._props.entrypoint ?? "default"}" entrypoint of service "${target._props.service}": ${e instanceof Error ? e.message : String(e)}`
+								);
+							}
+						})().then(resolve, reject);
+					};
+					return rpcCall;
 				}
 
 				return undefined;
