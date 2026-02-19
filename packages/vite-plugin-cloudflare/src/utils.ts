@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as nodePath from "node:path";
 import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
@@ -41,6 +42,16 @@ export function getOutputDirectory(
 		userConfig.environments?.[environmentName]?.build?.outDir ??
 		nodePath.join(rootOutputDirectory, environmentName)
 	);
+}
+
+export function getChildOutputDirectory(
+	parentEnvironmentOptions: vite.EnvironmentOptions,
+	childEnvironmentName: string
+): string {
+	const parentOutDir = parentEnvironmentOptions.build?.outDir;
+	assert(parentOutDir, "Parent environment outDir is not defined");
+
+	return nodePath.join(parentOutDir, childEnvironmentName);
 }
 
 const postfixRE = /[?#].*$/;
