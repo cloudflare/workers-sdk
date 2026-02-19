@@ -4,6 +4,7 @@ import {
 	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 	RemoteProxyConnectionString,
 } from "../shared";
 
@@ -60,38 +61,20 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			return [];
 		}
 
-		// Use dedicated worker with custom .get() - can't use remoteProxyClientWorker
-		// because dispatch namespaces need .get() to return a local stub with
-		// dispatch options embedded, not an RPC call to the server
+		// Uses dedicated worker with custom .get() that returns a local stub
+		// with dispatch options embedded (not an RPC call to the server)
 		return Object.entries(options.dispatchNamespaces).map(([name, config]) => ({
 			name: getUserBindingServiceName(
 				DISPATCH_NAMESPACE_PLUGIN_NAME,
 				name,
 				config.remoteProxyConnectionString
 			),
-			worker: {
-				compatibilityDate: "2025-01-01",
-				modules: [
-					{
-						name: "index.worker.js",
-						esModule: DISPATCH_NAMESPACE_WORKER(),
-					},
-				],
-				bindings: [
-					...(config.remoteProxyConnectionString?.href
-						? [
-								{
-									name: "remoteProxyConnectionString",
-									text: config.remoteProxyConnectionString.href,
-								},
-							]
-						: []),
-					{
-						name: "binding",
-						text: name,
-					},
-				],
-			},
+			worker: remoteProxyClientWorker(
+				config.remoteProxyConnectionString,
+				name,
+				undefined,
+				DISPATCH_NAMESPACE_WORKER
+			),
 		}));
 	},
 };

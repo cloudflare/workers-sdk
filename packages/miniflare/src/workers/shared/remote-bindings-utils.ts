@@ -66,7 +66,8 @@ export function makeRemoteProxyStub(
 	extraContext?: Record<string, string>
 ): Fetcher {
 	const url = new URL(remoteProxyConnectionString);
-	url.protocol = "ws:";
+	// Upgrade to WebSocket protocol, preserving TLS (https→wss, http→ws)
+	url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
 	url.searchParams.set("MF-Binding", bindingName);
 	if (extraContext) {
 		for (const [key, value] of Object.entries(extraContext)) {
