@@ -1,5 +1,15 @@
 # @cloudflare/local-explorer-ui
 
+## 0.5.0
+
+### Minor Changes
+
+- [#12570](https://github.com/cloudflare/workers-sdk/pull/12570) [`01ded52`](https://github.com/cloudflare/workers-sdk/commit/01ded5289e744e6f604edcbffdd6b1c95e6339c0) Thanks [@NuroDev](https://github.com/NuroDev)! - Add the initial plumbing for data studio components.
+
+  This serves as another stepping stone for adding the complete data studio to the local explorer.
+
+  This is a WIP experimental feature.
+
 ## 0.4.0
 
 ### Minor Changes
