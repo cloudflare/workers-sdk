@@ -71,7 +71,7 @@
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"vitest": "catalog:default"
+		"vitest": "catalog:vitest-3"
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0",

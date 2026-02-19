@@ -49,10 +49,7 @@ describe("Hello World user worker", () => {
 			const response = await SELF.fetch("http://example.com/message");
 			expect(await response.text()).toMatchInlineSnapshot(`"Hello, World!"`);
 		});
-		it("does get assets directly is using SELF", async ({ expect }) => {
-			const response = await SELF.fetch("http://example.com/");
-			expect(await response.text()).toContain("Asset index.html");
-		});
+
 		it("can also get assets via binding", async ({ expect }) => {
 			const response = await SELF.fetch("http://example.com/binding");
 			expect(await response.text()).toContain("binding.html");

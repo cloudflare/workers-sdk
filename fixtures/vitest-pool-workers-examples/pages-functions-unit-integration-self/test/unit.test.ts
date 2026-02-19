@@ -50,19 +50,6 @@ describe("functions", () => {
 		expect(await response.text()).toBe("value");
 	});
 
-	it("uses isolated storage for each test", async ({ expect }) => {
-		// Check write in previous test undone
-		const request = new IncomingRequest("http://example.com/api/kv/key");
-		const ctx = createPagesEventContext<typeof apiKVKeyFunction.onRequestGet>({
-			request,
-			data: { user: "test" },
-			params: { key: "key" },
-		});
-		const response = await apiKVKeyFunction.onRequestGet(ctx);
-		await waitOnExecutionContext(ctx);
-		expect(response.status).toBe(204);
-	});
-
 	it("calls middleware", async ({ expect }) => {
 		const request = new IncomingRequest("http://example.com/api/ping");
 		const ctx = createPagesEventContext<typeof apiMiddleware.onRequest>({

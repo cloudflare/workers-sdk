@@ -22,7 +22,11 @@ it("should list posts", async ({ expect }) => {
 	const response = await SELF.fetch("https://example.com/");
 	expect(response.status).toBe(200);
 	expect(await response.text()).toMatchInlineSnapshot(`
-		"https://example.com/one
+		"https://example.com/hello
+		👋
+
+		--------------------
+		https://example.com/one
 		1
 
 		--------------------

@@ -1,8 +1,5 @@
-import {
-	createExecutionContext,
-	env,
-	runInDurableObject,
-} from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
@@ -13,7 +10,6 @@ import type {
 	Engine,
 	EngineLogs,
 } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 async function setWorkflowEntrypoint(
@@ -28,7 +24,7 @@ async function setWorkflowEntrypoint(
 				// eslint-disable-next-line @typescript-eslint/no-shadow
 				protected ctx: ExecutionContext,
 				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected env: ProvidedEnv
+				protected env: Cloudflare.Env
 			) {}
 			public async run(
 				event: Readonly<WorkflowEvent<unknown>>,

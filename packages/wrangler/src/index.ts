@@ -45,6 +45,7 @@ import {
 	cloudchamberSshListCommand,
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
+import { codemodCommand } from "./codemod";
 import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import {
@@ -714,6 +715,14 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("dev");
+
+	registry.define([
+		{
+			command: "wrangler codemod",
+			definition: codemodCommand,
+		},
+	]);
+	registry.registerNamespace("codemod");
 
 	registry.define([
 		{

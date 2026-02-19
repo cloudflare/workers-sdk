@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { exports } from "cloudflare:workers";
-import { getSerializedOptions, internalEnv } from "./env";
+import { env, exports } from "cloudflare:workers";
+import { getSerializedOptions } from "./env";
 import type { __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ } from "./index";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
@@ -60,8 +60,7 @@ function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 			continue;
 		}
 
-		const namespace =
-			internalEnv[key] ?? (exports as Record<string, unknown>)?.[key];
+		const namespace = env[key] ?? (exports as Record<string, unknown>)?.[key];
 		assert(
 			isDurableObjectNamespace(namespace),
 			`Expected ${key} to be a DurableObjectNamespace binding`
@@ -103,10 +102,12 @@ async function runInStub<O extends DurableObject, R>(
 	const response = await stub.fetch("http://x", {
 		cf: { [CF_KEY_ACTION]: id },
 	});
+
 	// `result` may be `undefined`
 	assert(actionResults.has(id), `Expected action result for ${id}`);
 	const result = actionResults.get(id);
 	actionResults.delete(id);
+
 	if (result === kUseResponse) {
 		return response as R;
 	} else if (response.ok) {
@@ -172,12 +173,16 @@ export async function runDurableObjectAlarm(
  * behalf of a different request` error.
  */
 export function runInRunnerObject<R>(
-	env: Env,
 	callback: (
 		instance: __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__
 	) => R | Promise<R>
 ): Promise<R> {
-	const stub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.get("singleton");
+	// Runner DO is ephemeral (ColoLocalActorNamespace), which has .get(name)
+	// instead of the standard idFromName()/get(id) API.
+	const ns = env["__VITEST_POOL_WORKERS_RUNNER_OBJECT"] as unknown as {
+		get(name: string): Fetcher;
+	};
+	const stub = ns.get("singleton");
 	return runInStub(stub, callback);
 }
 
@@ -190,6 +195,7 @@ export async function maybeHandleRunRequest(
 	if (actionId === undefined) {
 		return;
 	}
+
 	assert(typeof actionId === "number", `Expected numeric ${CF_KEY_ACTION}`);
 	try {
 		const callback = actionResults.get(actionId);
@@ -229,7 +235,7 @@ export async function listDurableObjectIds(
 	// We can use this to find the bound name for this binding. We inject a
 	// mapping between bound names and unique keys for namespaces. We then use
 	// this to get a unique key and find all IDs on disk.
-	const boundName = Object.entries(internalEnv).find(
+	const boundName = Object.entries(env).find(
 		(entry) => namespace === entry[1]
 	)?.[0];
 	assert(boundName !== undefined, "Expected to find bound name for namespace");
@@ -240,8 +246,7 @@ export async function listDurableObjectIds(
 
 	let uniqueKey = designator.unsafeUniqueKey;
 	if (uniqueKey === undefined) {
-		const scriptName =
-			designator.scriptName ?? internalEnv.__VITEST_POOL_WORKERS_SELF_NAME;
+		const scriptName = designator.scriptName ?? options.selfName;
 		const className = designator.className;
 		uniqueKey = `${scriptName}-${className}`;
 	}
@@ -249,8 +254,7 @@ export async function listDurableObjectIds(
 	const url = `http://placeholder/durable-objects?unique_key=${encodeURIComponent(
 		uniqueKey
 	)}`;
-	const res =
-		await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(url);
+	const res = await env.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(url);
 	assert.strictEqual(res.status, 200);
 	const ids = await res.json();
 	assert(Array.isArray(ids));

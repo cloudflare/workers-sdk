@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { minimalVitestConfig, test } from "./helpers";
+import { test, vitestConfig } from "./helpers";
 
 test(
 	"disk snapshots",
@@ -10,7 +10,7 @@ test(
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		// Check writes new snapshots
 		await seed({
-			"vitest.config.mts": minimalVitestConfig,
+			"vitest.config.mts": vitestConfig(),
 			"index.test.ts": dedent`
 			import { it, expect } from "vitest";
 			it("matches snapshot", () => {
@@ -118,7 +118,7 @@ test.skipIf(process.platform === "win32")(
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		// Check writes new snapshots
 		await seed({
-			"vitest.config.mts": minimalVitestConfig,
+			"vitest.config.mts": vitestConfig(),
 			"index.test.ts": dedent`
 			import { it, expect } from "vitest";
 			it("matches snapshot", () => {
@@ -148,7 +148,7 @@ test.skipIf(process.platform === "win32")(
 
 		// Check fails if snapshots differ
 		await seed({
-			"vitest.config.mts": minimalVitestConfig,
+			"vitest.config.mts": vitestConfig(),
 			"index.test.ts": dedent`
 			import { it, expect } from "vitest";
 			it("matches snapshot", () => {

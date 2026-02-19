@@ -1,12 +1,8 @@
-import {
-	createExecutionContext,
-	env,
-	runInDurableObject,
-} from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import { WorkflowBinding } from "../src/binding";
 import type { Engine } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 async function setWorkflowEntrypoint(
@@ -21,7 +17,7 @@ async function setWorkflowEntrypoint(
 				// eslint-disable-next-line @typescript-eslint/no-shadow
 				protected ctx: ExecutionContext,
 				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected env: ProvidedEnv
+				protected env: Cloudflare.Env
 			) {}
 			public async run(
 				event: Readonly<WorkflowEvent<unknown>>,
@@ -65,7 +61,7 @@ describe("WorkflowBinding", () => {
 
 		const disposeSpy = vi.fn();
 
-		await runInDurableObject(engineStub, (engine) => {
+		await runInDurableObject<Engine, void>(engineStub, (engine) => {
 			const originalReceiveEvent = engine.receiveEvent.bind(engine);
 			engine.receiveEvent = (event) => {
 				const result = originalReceiveEvent(event);

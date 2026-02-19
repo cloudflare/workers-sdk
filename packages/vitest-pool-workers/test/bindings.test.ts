@@ -1,25 +1,16 @@
 import dedent from "ts-dedent";
-import { test } from "./helpers";
+import { test, vitestConfig } from "./helpers";
 
 test("hello_world support", async ({ expect, seed, vitestRun }) => {
 	await seed({
-		"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							singleWorker: true,
-							wrangler: { configPath: "./wrangler.jsonc" },
-						},
-					},
-				}
-			});
-		`,
+		"vitest.config.mts": vitestConfig({
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
 		"wrangler.jsonc": dedent`
 			{
 				"name": "test-worker",
-				"compatibility_date": "2025-01-01",
+				"compatibility_date": "2025-12-02",
+				"compatibility_flags": ["nodejs_compat"],
 				"unsafe_hello_world": [
 					{
 						"binding": "HELLO_WORLD",

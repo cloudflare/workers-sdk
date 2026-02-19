@@ -19,6 +19,7 @@
 		"playwright-chromium": "catalog:default",
 		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
-		"typescript": "catalog:default"
+		"typescript": "catalog:default",
+		"vitest": "catalog:vitest-3"
 	}
 }

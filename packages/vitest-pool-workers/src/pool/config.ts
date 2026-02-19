@@ -9,10 +9,13 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
-import { getProjectPath, getRelativeProjectPath } from "./helpers";
+import {
+	getProjectPath,
+	getRelativeProjectConfigPath,
+	getRelativeProjectPath,
+} from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
-import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
+import type { TestProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
@@ -22,13 +25,10 @@ export interface WorkersConfigPluginAPI {
 
 const PLUGIN_VALUES = Object.values(PLUGINS);
 
-const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
-export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
-
 const WorkersPoolOptionsSchema = z.object({
 	/**
 	 * Entrypoint to Worker run in the same isolate/context as tests. This is
-	 * required to use `import { SELF } from "cloudflare:test"`, or Durable
+	 * required to use `import { exports } from "cloudflare:workers"`, or Durable
 	 * Objects without an explicit `scriptName`. Note this goes through Vite
 	 * transforms and can be a TypeScript file. Note also
 	 * `import module from "<path-to-main>"` inside tests gives exactly the same
@@ -36,14 +36,6 @@ const WorkersPoolOptionsSchema = z.object({
 	 * bindings.
 	 */
 	main: z.ostring(),
-	/**
-	 * Enables per-test isolated storage. If enabled, any writes to storage
-	 * performed in a test will be undone at the end of the test. The test storage
-	 * environment is copied from the containing suite, meaning `beforeAll()`
-	 * hooks can be used to seed data. If this is disabled, all tests will share
-	 * the same storage.
-	 */
-	isolatedStorage: z.boolean().default(true),
 	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
@@ -67,15 +59,6 @@ const WorkersPoolOptionsSchema = z.object({
 			])
 		)
 		.default({}),
-	/**
-	 * If enabled, Workers will be run in a single shared worker instance.
-	 */
-	/**
-	 * Runs all tests in this project serially in the same worker, using the same
-	 * module cache. This can significantly speed up tests if you've got lots of
-	 * small test files.
-	 */
-	singleWorker: z.boolean().default(false),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),
@@ -86,6 +69,7 @@ const WorkersPoolOptionsSchema = z.object({
 		.object({ configPath: z.ostring(), environment: z.ostring() })
 		.optional(),
 });
+
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
@@ -94,6 +78,7 @@ export type SourcelessWorkerOptions = Omit<
 	// from which `WorkerOptions` is derived. Therefore, we manually include it.
 	modulesRules?: ModuleRule[];
 };
+
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
 		workers?: WorkerOptions[];
@@ -209,13 +194,11 @@ const remoteProxySessionsDataMap = new Map<
 
 async function parseCustomPoolOptions(
 	rootPath: string,
-	value: unknown,
-	opts: PathParseParams
+	value: unknown
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(
-		value,
-		opts
+		value
 	) as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
 
@@ -229,7 +212,7 @@ async function parseCustomPoolOptions(
 			rootPath,
 			options.miniflare,
 			/* withoutScript */ true, // (script provided by runner)
-			{ path: [...opts.path, "miniflare"] }
+			{ path: ["miniflare"] }
 		);
 	} catch (e) {
 		coalesceZodErrors(errorRef, e);
@@ -247,7 +230,7 @@ async function parseCustomPoolOptions(
 					worker,
 					/* withoutScript */ false,
 					{
-						path: [...opts.path, "miniflare", "workers", i],
+						path: ["miniflare", "workers", i],
 					}
 				);
 			} catch (e) {
@@ -275,16 +258,15 @@ async function parseCustomPoolOptions(
 			? remoteProxySessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
 
-		const remoteProxySessionData =
-			options.remoteBindings ?? true
-				? await wrangler.maybeStartOrUpdateRemoteProxySession(
-						{
-							path: options.wrangler.configPath,
-							environment: options.wrangler.environment,
-						},
-						preExistingRemoteProxySessionData ?? null
-					)
-				: null;
+		const remoteProxySessionData = options.remoteBindings
+			? await wrangler.maybeStartOrUpdateRemoteProxySession(
+					{
+						path: options.wrangler.configPath,
+						environment: options.wrangler.environment,
+					},
+					preExistingRemoteProxySessionData ?? null
+				)
+			: null;
 
 		if (options.wrangler?.configPath && remoteProxySessionData) {
 			remoteProxySessionsDataMap.set(
@@ -307,22 +289,6 @@ async function parseCustomPoolOptions(
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 				}
 			);
-
-		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});
-
-		const hasAIOrVectorizeBindings = wrappedBindings.some((binding) => {
-			return (
-				typeof binding === "object" &&
-				(binding.scriptName.includes("__WRANGLER_EXTERNAL_VECTORIZE_WORKER") ||
-					binding.scriptName.includes("__WRANGLER_EXTERNAL_AI_WORKER"))
-			);
-		});
-
-		if (hasAIOrVectorizeBindings) {
-			log.warn(
-				"Workers AI and Vectorize bindings will access your Cloudflare account and incur usage charges even in testing. We recommend mocking any usage of these bindings in your tests."
-			);
-		}
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;
@@ -361,7 +327,8 @@ async function parseCustomPoolOptions(
 }
 
 export async function parseProjectOptions(
-	project: WorkspaceProject
+	project: TestProject,
+	poolOptions: unknown
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -381,44 +348,27 @@ export async function parseProjectOptions(
 			`Unexpected custom \`environment\` ${quotedEnvironment} in project ${relativePath}.`,
 			"The Workers pool always runs your tests inside of an environment providing Workers runtime APIs.",
 			`Please remove the \`environment\` configuration${migrationGuide}`,
-			"Use `poolMatchGlobs`/`environmentMatchGlobs` to run a subset of your tests in a different pool/environment.",
 		].join("\n");
 		throw new TypeError(message);
 	}
 
 	const projectPath = getProjectPath(project);
-	const rootPath =
-		typeof projectPath === "string" ? path.dirname(projectPath) : "";
-	const poolOptions = project.config.poolOptions;
-	let workersPoolOptions = poolOptions?.workers ?? {};
+
 	try {
-		if (typeof workersPoolOptions === "function") {
-			// https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vitest/src/integrations/inject.ts
-			const inject = <K extends keyof ProvidedContext>(
-				key: K
-			): ProvidedContext[K] => {
-				return project.getProvidedContext()[key];
-			};
-			workersPoolOptions = await workersPoolOptions({ inject });
-		}
-		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
-			path: OPTIONS_PATH_ARRAY,
-		});
+		return await parseCustomPoolOptions(projectPath, poolOptions);
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
 			throw e;
 		}
 		let formatted: string;
 		try {
-			formatted = formatZodError(e, {
-				test: { poolOptions: { workers: workersPoolOptions } },
-			});
+			formatted = formatZodError(e, poolOptions);
 		} catch {
 			throw e;
 		}
-		const relativePath = getRelativeProjectPath(project);
+		const relativePath = getRelativeProjectConfigPath(project);
 		throw new TypeError(
-			`Unexpected pool options in project ${relativePath}:\n${formatted}`
+			`Unexpected options in project ${relativePath}:\n${formatted}`
 		);
 	}
 }

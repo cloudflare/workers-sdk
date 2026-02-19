@@ -1,7 +1,6 @@
 import {
 	createPagesEventContext,
 	env,
-	ProvidedEnv,
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { it, onTestFinished } from "vitest";
@@ -11,7 +10,7 @@ import { it, onTestFinished } from "vitest";
 // `Request` to pass to `createPagesEventContext()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-type BareFunction = PagesFunction<ProvidedEnv, never, Record<string, never>>;
+type BareFunction = PagesFunction<Cloudflare.Env, never, Record<string, never>>;
 
 it("can consume body in middleware and in next request", async ({ expect }) => {
 	const fn: BareFunction = async (ctx) => {
@@ -94,7 +93,7 @@ it("requires ASSETS service binding", async ({ expect }) => {
 	onTestFinished(() => {
 		env.ASSETS = originalASSETS;
 	});
-	delete (env as Partial<ProvidedEnv>).ASSETS;
+	delete (env as Partial<Cloudflare.Env>).ASSETS;
 
 	const request = new IncomingRequest("https://example.com", {
 		method: "POST",
@@ -124,7 +123,7 @@ it("correctly types parameters", async ({ expect }) => {
 
 	// Check no params and no data required
 	{
-		type Fn = PagesFunction<ProvidedEnv, never, Record<string, never>>;
+		type Fn = PagesFunction<Cloudflare.Env, never, Record<string, never>>;
 		createPagesEventContext<Fn>({ request });
 		createPagesEventContext<Fn>({ request, params: {} });
 		// @ts-expect-error no params required
@@ -136,7 +135,7 @@ it("correctly types parameters", async ({ expect }) => {
 
 	// Check no params but data required
 	{
-		type Fn = PagesFunction<ProvidedEnv, never, { b: string }>;
+		type Fn = PagesFunction<Cloudflare.Env, never, { b: string }>;
 		// @ts-expect-error data required
 		createPagesEventContext<Fn>({ request });
 		// @ts-expect-error data required
@@ -150,7 +149,7 @@ it("correctly types parameters", async ({ expect }) => {
 
 	// Check no data but params required
 	{
-		type Fn = PagesFunction<ProvidedEnv, "a", Record<string, never>>;
+		type Fn = PagesFunction<Cloudflare.Env, "a", Record<string, never>>;
 		// @ts-expect-error params required
 		createPagesEventContext<Fn>({ request });
 		// @ts-expect-error params required
@@ -164,7 +163,7 @@ it("correctly types parameters", async ({ expect }) => {
 
 	// Check params and data required
 	{
-		type Fn = PagesFunction<ProvidedEnv, "a", { b: string }>;
+		type Fn = PagesFunction<Cloudflare.Env, "a", { b: string }>;
 		// @ts-expect-error params required
 		createPagesEventContext<Fn>({ request });
 		// @ts-expect-error params required

@@ -26,7 +26,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
-		"@cloudflare/vitest-pool-workers": "catalog:default",
+		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
@@ -36,7 +36,7 @@
 		"glob": "^10.4.5",
 		"html-rewriter-wasm": "^0.4.1",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:vitest-3"
 	},
 	"volta": {
 		"extends": "../../package.json"
