@@ -6,6 +6,7 @@ import { newWebSocketRpcSession } from "capnweb";
 export type RemoteBindingEnv = {
 	remoteProxyConnectionString?: string;
 	binding: string;
+	bindingType?: string;
 };
 
 /**
