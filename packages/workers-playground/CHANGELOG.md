@@ -1,5 +1,13 @@
 # workers-playground
 
+## 0.3.0
+
+### Minor Changes
+
+- [#12549](https://github.com/cloudflare/workers-sdk/pull/12549) [`10e2e15`](https://github.com/cloudflare/workers-sdk/commit/10e2e15406e9721ecf89f69226de771674aa6227) Thanks [@penalosa](https://github.com/penalosa)! - Add expandable object logging and improved console UI
+
+  The Quick Editor console now displays logged objects and arrays as expandable tree views instead of `[object Object]`.
+
 ## 0.2.6
 
 ### Patch Changes
