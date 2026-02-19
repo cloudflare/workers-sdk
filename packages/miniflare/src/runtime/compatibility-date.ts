@@ -1,61 +1,22 @@
 import assert from "node:assert";
-import module from "node:module";
-import path from "node:path";
+import { supportedCompatibilityDate } from ".";
 
-type YYYY = `${number}${number}${number}${number}`;
-type MM = `${number}${number}`;
-type DD = `${number}${number}`;
+export type YYYY = `${number}${number}${number}${number}`;
+export type MM = `${number}${number}`;
+export type DD = `${number}${number}`;
 
 /**
  * Represents a valid compatibility date, a string such as `2025-09-27`
  */
 export type CompatDate = `${YYYY}-${MM}-${DD}`;
 
-type GetCompatDateOptions = {
-	projectPath?: string;
-};
-
-type GetCompatDateResult = {
-	date: CompatDate;
-	source: "workerd" | "fallback";
-};
-
 /**
- * Gets the compatibility date of the locally installed workerd package.
+ * Gets the compatibility date of the locally installed workerd package, it also ensures that the date is not in the future.
  *
- * If the package is not found the fallback date of 2025-09-27 is returned instead.
- *
- * Additionally, if the workerd date is set to the future then the current date is returned instead.
- *
- * @param options.projectPath the path to the project
- * @returns an object including the compatibility date and its source
+ * @returns The latest compatibility date supported by the local workerd package, or today's date if the workerd date is in the future.
  */
-export function getLocalWorkerdCompatibilityDate({
-	projectPath = process.cwd(),
-}: GetCompatDateOptions = {}): GetCompatDateResult {
-	try {
-		// Note: createRequire expects a filename, not a directory. When given a directory,
-		// Node.js looks for node_modules in the parent directory instead of the given directory.
-		// Appending package.json ensures resolution starts from the correct location.
-		const projectRequire = module.createRequire(
-			path.join(projectPath, "package.json")
-		);
-		const miniflareEntry = projectRequire.resolve("miniflare");
-		const miniflareRequire = module.createRequire(miniflareEntry);
-		const miniflareWorkerd = miniflareRequire("workerd") as {
-			compatibilityDate: string;
-		};
-		const workerdDate = miniflareWorkerd.compatibilityDate;
-		return {
-			date: toSafeCompatibilityDate(new Date(workerdDate)),
-			source: "workerd",
-		};
-	} catch {}
-
-	return {
-		date: "2025-09-27",
-		source: "fallback",
-	};
+export function getLocalWorkerdCompatibilityDate(): CompatDate {
+	return toSafeCompatibilityDate(new Date(supportedCompatibilityDate));
 }
 
 /**

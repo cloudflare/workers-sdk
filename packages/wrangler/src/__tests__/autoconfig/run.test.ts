@@ -27,16 +27,13 @@ import { writeWorkerSource } from "../helpers/write-worker-source";
 import type { Framework } from "../../autoconfig/frameworks";
 import type { MockInstance } from "vitest";
 
-vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+vi.mock("miniflare", async (importOriginal) => {
 	const originalModule =
 		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-		await importOriginal<Awaited<typeof import("@cloudflare/workers-utils")>>();
+		await importOriginal<Awaited<typeof import("miniflare")>>();
 	return {
 		...originalModule,
-		getLocalWorkerdCompatibilityDate: vi.fn(() => ({
-			date: "2000-01-01",
-			source: "workerd",
-		})),
+		getLocalWorkerdCompatibilityDate: vi.fn(() => "2000-01-01"),
 	};
 });
 

@@ -3,11 +3,11 @@ import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
 	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import { formatCompatibilityDate } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";

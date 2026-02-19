@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { isCompatDate } from "@cloudflare/workers-utils";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -11,6 +10,8 @@ import {
 	writeJSONWithComments,
 } from "helpers/json";
 import TOML from "smol-toml";
+import { isCompatDate } from "../../../miniflare/dist/src";
+import type { CompatDate } from "../../../miniflare/dist/src";
 import type { CommentObject, Reviver } from "comment-json";
 import type { TomlTable } from "smol-toml";
 import type { C3Context } from "types";
@@ -210,7 +211,7 @@ export const addVscodeConfig = (ctx: C3Context) => {
 async function getCompatibilityDate(
 	tentativeDate: unknown,
 	projectPath: string,
-): Promise<string> {
+): Promise<CompatDate> {
 	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
 		// Use the tentative date when it is valid.
 		// It may be there for a specific compat reason
