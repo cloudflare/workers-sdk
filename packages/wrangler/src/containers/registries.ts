@@ -197,9 +197,9 @@ async function registryConfigureCommand(
 
 		// check if secret name already used within secret store.
 		let makeSecret = true;
-		let secretNameConfirmed = true;
+		let secretNameConfirmed = false;
 
-		while (secretNameConfirmed) {
+		while (!secretNameConfirmed) {
 			const existingSecretId = await getSecretByName(
 				config,
 				accountId,
@@ -224,7 +224,7 @@ async function registryConfigureCommand(
 
 				if (reuseExisting) {
 					makeSecret = false;
-					secretNameConfirmed = false;
+					secretNameConfirmed = true;
 				} else {
 					secretName = undefined;
 					while (!secretName) {
@@ -241,7 +241,7 @@ async function registryConfigureCommand(
 					}
 				}
 			} else {
-				secretNameConfirmed = false;
+				secretNameConfirmed = true;
 			}
 		}
 
