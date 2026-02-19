@@ -19,7 +19,6 @@ export interface Env {
 	//
 	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
 	// MY_SERVICE: Fetcher;
-	AI: Ai;
 }
 
 export default {
@@ -30,8 +29,6 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 		if (url.pathname === "/error") throw new Error("Hello Error");
-
-		const answer = await env.AI.aiSearch().list();
-		return Response.json(answer);
+		return new Response("Hello World!");
 	},
 };

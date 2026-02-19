@@ -1,41 +1,24 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
-import {
-	makeRemoteProxyStub,
-	RemoteBindingEnv,
-	throwRemoteRequired,
-} from "../shared/remote-bindings-utils";
-
 /**
- * WorkerEntrypoint for dispatch namespace bindings.
+ * Thin wrapped binding extension for dispatch namespaces.
  *
- * Unlike the generic remote-proxy-client, this worker has a custom `.get()`
- * method that creates a local stub with dispatch options baked in. This
- * ensures `.get()` is synchronous and options are passed correctly.
- *
- * Promise pipelining means `namespace.get("worker").fetch(request)` works
- * without awaiting `.get()`.
+ * Runs inside the user's worker isolate. Provides a genuinely synchronous
+ * .get() that delegates to the dispatch namespace proxy client worker
+ * via a service binding. The proxy client (separate worker) owns the
+ * capnweb connection.
  */
-export default class DispatchNamespaceBinding extends WorkerEntrypoint<RemoteBindingEnv> {
-	get(
-		name: string,
-		args?: { [key: string]: unknown },
-		options?: DynamicDispatchOptions
-	): Fetcher {
-		if (!this.env.remoteProxyConnectionString) {
-			throwRemoteRequired(this.env.binding);
-		}
-		// Create a local stub with dispatch options embedded - this is NOT an RPC
-		// call to the server. The options are passed when .fetch() is called.
-		return makeRemoteProxyStub(
-			this.env.remoteProxyConnectionString,
-			this.env.binding,
-			{
-				"MF-Dispatch-Namespace-Options": JSON.stringify({
-					name,
-					args,
-					options,
-				}),
-			}
-		);
-	}
+
+interface Env {
+	proxyClient: DispatchNamespace;
+}
+
+export default function (env: Env): DispatchNamespace {
+	return {
+		get(
+			name: string,
+			args?: { [key: string]: unknown },
+			options?: DynamicDispatchOptions
+		): Fetcher {
+			return env.proxyClient.get(name, args, options);
+		},
+	} satisfies DispatchNamespace;
 }

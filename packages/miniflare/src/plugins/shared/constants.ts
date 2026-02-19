@@ -76,15 +76,14 @@ export function objectEntryWorker(
 export function remoteProxyClientWorker(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
 	binding: string,
-	bindingType?: string,
-	workerScript: () => string = SCRIPT_REMOTE_PROXY_CLIENT
+	bindingType?: string
 ) {
 	return {
 		compatibilityDate: "2025-01-01",
 		modules: [
 			{
 				name: "index.worker.js",
-				esModule: workerScript(),
+				esModule: SCRIPT_REMOTE_PROXY_CLIENT(),
 			},
 		],
 		bindings: [

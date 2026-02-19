@@ -2,6 +2,5 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "worker-ts",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-01-01",
-	"ai": { "binding": "AI" },
+	"compatibility_date": "2023-05-04",
 }
