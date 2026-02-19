@@ -41,7 +41,7 @@ import type {
 } from "../yargs-types";
 import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
 import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils";
 
 function _registryConfigureYargs(args: CommonYargsArgv) {
 	return args
@@ -184,13 +184,11 @@ async function registryConfigureCommand(
 		log("\n");
 
 		secretName = await getOrCreateSecret({
-			secretName: configureArgs.secretName, // could be undefined
-			skipConfirmation: configureArgs.skipConfirmation,
+			configureArgs: configureArgs,
 			config: config,
-			domain: configureArgs.DOMAIN,
 			accountId: accountId,
 			storeId: secretStoreId,
-			privateCredential: privateCredential,
+			privateCredential,
 			secretType: registryType.secretType,
 		});
 
@@ -251,10 +249,8 @@ async function promptForSecretName(secretType?: string): Promise<string> {
 }
 
 interface GetOrCreateSecretOptions {
-	secretName?: string;
-	skipConfirmation: boolean;
-	config: ComplianceConfig;
-	domain: string;
+	configureArgs: StrictYargsOptionsToInterface<typeof _registryConfigureYargs>;
+	config: Config;
 	accountId: string;
 	storeId: string;
 	privateCredential: string;
@@ -265,7 +261,8 @@ async function getOrCreateSecret(
 	options: GetOrCreateSecretOptions
 ): Promise<string> {
 	let secretName =
-		options.secretName ?? (await promptForSecretName(options.secretType));
+		options.configureArgs.secretName ??
+		(await promptForSecretName(options.secretType));
 
 	while (true) {
 		const existingSecretId = await getSecretByName(
@@ -282,7 +279,7 @@ async function getOrCreateSecret(
 					name: secretName,
 					value: options.privateCredential,
 					scopes: ["containers"],
-					comment: `Created by Wrangler: credentials for image registry ${options.domain}`,
+					comment: `Created by Wrangler: credentials for image registry ${options.configureArgs.DOMAIN}`,
 				})
 			);
 
@@ -294,7 +291,7 @@ async function getOrCreateSecret(
 		}
 
 		// secret exists + skipConfirmation - default to reusing the secret
-		if (options.skipConfirmation) {
+		if (options.configureArgs.skipConfirmation) {
 			log(
 				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
 			);
