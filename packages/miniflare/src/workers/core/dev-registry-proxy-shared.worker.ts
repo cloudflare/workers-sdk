@@ -170,7 +170,6 @@ export function createProxyDurableObjectClass({
 
 const SERIALIZED_DATE = "___serialized_date___";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function tailEventsReplacer(_: string, value: any) {
 	if (value instanceof Date) {
 		return { [SERIALIZED_DATE]: value.toISOString() };
@@ -178,7 +177,6 @@ export function tailEventsReplacer(_: string, value: any) {
 	return value;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function tailEventsReviver(_: string, value: any) {
 	if (value && typeof value === "object" && SERIALIZED_DATE in value) {
 		return new Date(value[SERIALIZED_DATE]);
