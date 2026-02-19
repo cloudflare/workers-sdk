@@ -310,7 +310,7 @@ describe("containers registries configure", () => {
 				│
 				│
 				│
-				│ Container-scoped secret AWS_Secret_Access_Key created in Secrets Store.
+				│ Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
 				│
 				╰ Registry configuration completed
 

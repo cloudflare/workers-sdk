@@ -41,7 +41,7 @@ import type {
 } from "../yargs-types";
 import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
 import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 function _registryConfigureYargs(args: CommonYargsArgv) {
 	return args
@@ -139,7 +139,7 @@ async function registryConfigureCommand(
 	}
 
 	log(`Getting ${registryType.secretType}...\n`);
-	const secret = await getSecret(registryType.secretType);
+	const accessKey = await promptForSecretAccessKey(registryType.secretType);
 
 	// Secret Store is not available in FedRAMP High
 	let private_credential: ImageRegistryAuth["private_credential"];
@@ -181,82 +181,16 @@ async function registryConfigureCommand(
 
 		log("\n");
 
-		while (!secretName) {
-			try {
-				const res = await prompt(`Secret name:`, {
-					defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
-				});
-
-				validateSecretName(res);
-				secretName = res;
-			} catch (e) {
-				log((e as Error).message);
-				continue;
-			}
-		}
-
-		// check if secret name already used within secret store.
-		let makeSecret = true;
-		let secretNameConfirmed = false;
-
-		while (!secretNameConfirmed) {
-			const existingSecretId = await getSecretByName(
-				config,
-				accountId,
-				secretStoreId,
-				secretName
-			);
-
-			if (existingSecretId) {
-				if (configureArgs.skipConfirmation) {
-					secretNameConfirmed = false;
-					makeSecret = false;
-
-					break;
-				}
-
-				startSection(
-					`The provided secret name (${secretName}) is already in-use within the secret store. (Store ID: ${secretStoreId})`
-				);
-				const reuseExisting = await confirm(
-					`Do you want to reuse the existing secret? If not, then you'll be prompted to pick a new name.`
-				);
-
-				if (reuseExisting) {
-					makeSecret = false;
-					secretNameConfirmed = true;
-				} else {
-					secretName = undefined;
-					while (!secretName) {
-						try {
-							const res = await prompt(`Secret name:`, {
-								defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
-							});
-							validateSecretName(res);
-							secretName = res;
-						} catch (e) {
-							log((e as Error).message);
-							continue;
-						}
-					}
-				}
-			} else {
-				secretNameConfirmed = true;
-			}
-		}
-
-		if (makeSecret) {
-			await promiseSpinner(
-				createSecret(config, accountId, secretStoreId, {
-					name: secretName,
-					value: secret,
-					scopes: ["containers"],
-					comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
-				})
-			);
-
-			log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
-		}
+		secretName = await getOrCreateSecret({
+			secretName: configureArgs.secretName, // could be undefined
+			skipConfirmation: configureArgs.skipConfirmation,
+			config: config,
+			domain: configureArgs.DOMAIN,
+			accountId: accountId,
+			storeId: secretStoreId,
+			accessKey: accessKey,
+			secretType: registryType.secretType,
+		});
 
 		private_credential = {
 			store_id: secretStoreId,
@@ -264,7 +198,7 @@ async function registryConfigureCommand(
 		};
 	} else {
 		// If we are not using the secret store, we will be passing in the secret directly
-		private_credential = secret;
+		private_credential = accessKey;
 	}
 
 	try {
@@ -298,7 +232,94 @@ async function registryConfigureCommand(
 	endSection("Registry configuration completed");
 }
 
-async function getSecret(secretType?: string): Promise<string> {
+async function promptForSecretName(secretType?: string): Promise<string> {
+	while (true) {
+		try {
+			const res = await prompt(`Secret name:`, {
+				defaultValue: `${secretType?.replaceAll(" ", "_")}`,
+			});
+
+			validateSecretName(res);
+			return res;
+		} catch (e) {
+			log((e as Error).message);
+			continue;
+		}
+	}
+}
+
+interface GetOrCreateSecretOptions {
+	secretName?: string;
+	skipConfirmation: boolean;
+	config: ComplianceConfig;
+	domain: string;
+	accountId: string;
+	storeId: string;
+	accessKey: string;
+	secretType?: string;
+}
+
+async function getOrCreateSecret(
+	options: GetOrCreateSecretOptions
+): Promise<string> {
+	let secretName =
+		options.secretName ?? (await promptForSecretName(options.secretType));
+
+	while (true) {
+		const existingSecretId = await getSecretByName(
+			options.config,
+			options.accountId,
+			options.storeId,
+			secretName
+		);
+
+		// secret doesn't exist - make a new one
+		if (!existingSecretId) {
+			await promiseSpinner(
+				createSecret(options.config, options.accountId, options.storeId, {
+					name: secretName,
+					value: options.accessKey,
+					scopes: ["containers"],
+					comment: `Created by Wrangler: credentials for image registry ${options.domain}`,
+				})
+			);
+
+			log(
+				`Container-scoped secret "${secretName}" created in Secrets Store.\n`
+			);
+
+			return secretName;
+		}
+
+		// secret exists + skipConfirmation - default to reusing the secret
+		if (options.skipConfirmation) {
+			log(
+				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
+			);
+			return secretName;
+		}
+
+		// secret exists but not skipping confirmation - ask user if they want to reuse the secret
+		startSection(
+			`The provided secret name "${secretName}" is already in-use within the secret store. (Store ID: ${options.storeId})`
+		);
+
+		const reuseExisting = await confirm(
+			`Do you want to reuse the existing secret? If not, then you'll be prompted to pick a new name.`
+		);
+
+		if (reuseExisting) {
+			log(
+				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
+			);
+			return secretName;
+		}
+
+		secretName = await promptForSecretName(options.secretType);
+	}
+}
+
+async function promptForSecretAccessKey(secretType?: string): Promise<string> {
 	if (isNonInteractiveOrCI()) {
 		// Non-interactive mode: expect JSON input via stdin
 		const stdinInput = trimTrailingWhitespace(await readFromStdin());
