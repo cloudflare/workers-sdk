@@ -28,6 +28,7 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
+import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -280,13 +281,20 @@ export function isValidIdentifier(key: string) {
 }
 
 /**
- * Construct a type key, if it's not a valid identifier, wrap it in quotes
+ * Escapes special characters in a string for use in a TypeScript string literal.
+ */
+export function escapeTypeScriptString(str: string): string {
+	return JSON.stringify(str).slice(1, -1);
+}
+
+/**
+ * Construct a type key, if it's not a valid identifier, wrap it in quotes with proper escaping
  */
 export function constructTypeKey(key: string) {
 	if (isValidIdentifier(key)) {
 		return `${key}`;
 	}
-	return `"${key}"`;
+	return `"${escapeTypeScriptString(key)}"`;
 }
 
 export function constructTSModuleGlob(glob: string) {
@@ -448,6 +456,7 @@ async function generateSimpleEnvTypes(
 	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
 	const collectedVars = collectAllVars(collectionArgs);
 	const collectedWorkflows = collectAllWorkflows(collectionArgs);
+	const collectedPipelines = collectAllPipelines(collectionArgs);
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
@@ -462,6 +471,28 @@ async function generateSimpleEnvTypes(
 			key: constructTypeKey(binding.name),
 			type: binding.type,
 		});
+	}
+
+	// Track named type definitions (e.g., `type MyStreamRecord = {...}`) to be added to the Cloudflare namespace
+	const typeDefinitions: string[] = [];
+
+	if (collectedPipelines.length > 0) {
+		const pipelineTypes = await fetchPipelineTypes(config, collectedPipelines);
+		for (const pipelineType of pipelineTypes) {
+			// For service-worker format, type definitions are at the top level (not in Cloudflare namespace)
+			// so we need to strip the "Cloudflare." prefix from the type reference
+			const typeRef =
+				entrypointFormat === "service-worker"
+					? pipelineType.type.replace("Cloudflare.", "")
+					: pipelineType.type;
+			envTypeStructure.push({
+				key: constructTypeKey(pipelineType.binding),
+				type: typeRef,
+			});
+			if (pipelineType.typeDefinition) {
+				typeDefinitions.push(pipelineType.typeDefinition);
+			}
+		}
 	}
 
 	if (collectedVars) {
@@ -670,7 +701,8 @@ async function generateSimpleEnvTypes(
 			entrypoint
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
-			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()]
+			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+			typeDefinitions
 		);
 
 		const hash = createHash("sha256")
@@ -739,6 +771,7 @@ async function generatePerEnvironmentTypes(
 	const servicesPerEnv = collectServicesPerEnvironment(collectionArgs);
 	const workflowsPerEnv = collectWorkflowsPerEnvironment(collectionArgs);
 	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
+	const pipelinesPerEnv = collectPipelinesPerEnvironment(collectionArgs);
 
 	// Track all binding names and their types across all environments for aggregation
 	const aggregatedBindings = new Map<
@@ -857,6 +890,8 @@ async function generatePerEnvironmentTypes(
 
 	const perEnvInterfaces = new Array<string>();
 	const stringKeys = new Array<string>();
+	// Track named type definitions (e.g., `type MyStreamRecord = {...}`) to be added to the Cloudflare namespace
+	const typeDefinitions = new Set<string>();
 
 	for (const envName of envNames) {
 		const interfaceName = toEnvInterfaceName(envName);
@@ -927,6 +962,27 @@ async function generatePerEnvironmentTypes(
 			trackBinding(unsafe.name, type, envName);
 		}
 
+		const envPipelines = pipelinesPerEnv.get(envName) ?? [];
+		if (envPipelines.length > 0) {
+			const pipelineTypes = await fetchPipelineTypes(config, envPipelines);
+			for (const pipelineType of pipelineTypes) {
+				// For service-worker format, type definitions are at the top level (not in Cloudflare namespace)
+				// so we need to strip the "Cloudflare." prefix from the type reference
+				const typeRef =
+					entrypointFormat === "service-worker"
+						? pipelineType.type.replace("Cloudflare.", "")
+						: pipelineType.type;
+				envBindings.push({
+					key: constructTypeKey(pipelineType.binding),
+					value: typeRef,
+				});
+				trackBinding(pipelineType.binding, typeRef, envName);
+				if (pipelineType.typeDefinition) {
+					typeDefinitions.add(pipelineType.typeDefinition);
+				}
+			}
+		}
+
 		if (envBindings.length > 0) {
 			const bindingLines = envBindings
 				.map(({ key, value }) => `\t\t${key}: ${value};`)
@@ -980,6 +1036,23 @@ async function generatePerEnvironmentTypes(
 	for (const unsafe of topLevelUnsafe) {
 		const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
 		trackBinding(unsafe.name, type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const topLevelPipelines = pipelinesPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	if (topLevelPipelines.length > 0) {
+		const pipelineTypes = await fetchPipelineTypes(config, topLevelPipelines);
+		for (const pipelineType of pipelineTypes) {
+			// For service-worker format, type definitions are at the top level (not in Cloudflare namespace)
+			// so we need to strip the "Cloudflare." prefix from the type reference
+			const typeRef =
+				entrypointFormat === "service-worker"
+					? pipelineType.type.replace("Cloudflare.", "")
+					: pipelineType.type;
+			trackBinding(pipelineType.binding, typeRef, TOP_LEVEL_ENV_NAME);
+			if (pipelineType.typeDefinition) {
+				typeDefinitions.add(pipelineType.typeDefinition);
+			}
+		}
 	}
 
 	const aggregatedEnvBindings = new Array<{
@@ -1073,7 +1146,8 @@ async function generatePerEnvironmentTypes(
 		entrypoint
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
-		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()]
+		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+		[...typeDefinitions]
 	);
 
 	const hash = createHash("sha256")
@@ -1121,10 +1195,17 @@ function generatePerEnvTypeStrings(
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: string[]
+	configuredDurableObjects: string[],
+	typeDefinitions: string[] = []
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let processEnv = "";
+
+	// Named type definitions go inside the Cloudflare namespace
+	const typeDefsContent =
+		typeDefinitions.length > 0
+			? typeDefinitions.map((def) => `\t${def}`).join("\n")
+			: "";
 
 	if (formatType === "modules") {
 		if (
@@ -1144,13 +1225,15 @@ function generatePerEnvTypeStrings(
 			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
 			: "";
 
-		baseContent = `declare namespace Cloudflare {${globalPropsContent}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
-		// Service worker syntax - just output aggregated bindings as globals
+		// Service worker syntax - type definitions go at the top level since there's no namespace
+		const globalTypeDefsContent =
+			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
 		const envBindingLines = aggregatedEnvBindings
 			.map(({ key, type }) => `\tconst ${key}: ${type};`)
 			.join("\n");
-		baseContent = `export {};\ndeclare global {\n${envBindingLines}\n}`;
+		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envBindingLines}\n}`;
 	}
 
 	const modulesContent = modulesTypeStructure.join("\n");
@@ -1219,13 +1302,20 @@ function generateTypeStrings(
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: string[]
+	configuredDurableObjects: string[],
+	typeDefinitions: string[] = []
 ): {
 	consoleOutput: string;
 	fileContent: string;
 } {
 	let baseContent = "";
 	let processEnv = "";
+
+	// Type definitions (e.g., pipeline record types) go inside the Cloudflare namespace
+	const typeDefsContent =
+		typeDefinitions.length > 0
+			? typeDefinitions.map((def) => `\t${def}`).join("\n")
+			: "";
 
 	if (formatType === "modules") {
 		if (
@@ -1235,9 +1325,12 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
-		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
+		// For service worker format, type definitions still go at the top level since there's no namespace
+		const globalTypeDefsContent =
+			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
+		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
 
 	const modulesContent = modulesTypeStructure.join("\n");
@@ -1708,25 +1801,7 @@ function collectCoreBindings(
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
-		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
-			if (!pipeline.binding) {
-				throwMissingBindingError({
-					binding: pipeline,
-					bindingType: "pipelines",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-					index,
-				});
-			}
-
-			addBinding(
-				pipeline.binding,
-				'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
-				"pipelines",
-				envName
-			);
-		}
+		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
 			addBinding("LOGFWDR_SCHEMA", "any", "logfwdr", envName);
@@ -2111,6 +2186,87 @@ function collectAllUnsafeBindings(
 	}
 
 	return Array.from(unsafeMap.values());
+}
+
+/**
+ * Collects pipeline bindings across environments.
+ *
+ * This is separate from collectCoreBindings because pipelines need async
+ * schema fetching for typed bindings.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected pipeline bindings with their names and pipeline IDs.
+ */
+function collectAllPipelines(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	binding: string;
+	pipeline: string;
+}> {
+	const pipelinesMap = new Map<
+		string,
+		{
+			binding: string;
+			pipeline: string;
+		}
+	>();
+
+	function collectEnvironmentPipelines(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
+		if (!env?.pipelines) {
+			return;
+		}
+
+		for (const [index, pipeline] of env.pipelines.entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			if (!pipeline.pipeline) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "pipeline",
+					index,
+				});
+			}
+
+			if (pipelinesMap.has(pipeline.binding)) {
+				continue;
+			}
+
+			pipelinesMap.set(pipeline.binding, {
+				binding: pipeline.binding,
+				pipeline: pipeline.pipeline,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		collectEnvironmentPipelines(envConfig, args.env);
+	} else {
+		collectEnvironmentPipelines(rawConfig, TOP_LEVEL_ENV_NAME);
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentPipelines(env, envName);
+		}
+	}
+
+	return Array.from(pipelinesMap.values());
 }
 
 const logHorizontalRule = () => {
@@ -2502,24 +2658,7 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
-		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
-			if (!pipeline.binding) {
-				throwMissingBindingError({
-					binding: pipeline,
-					bindingType: "pipelines",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-					index,
-				});
-			}
-
-			bindings.push({
-				bindingCategory: "pipelines",
-				name: pipeline.binding,
-				type: 'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
-			});
-		}
+		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
 			bindings.push({
@@ -2981,6 +3120,101 @@ function collectUnsafeBindingsPerEnvironment(
 		const envUnsafe = collectEnvironmentUnsafe(env, envName);
 		if (envUnsafe.length > 0) {
 			result.set(envName, envUnsafe);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects pipeline bindings per environment.
+ *
+ * This is separate from collectCoreBindingsPerEnvironment because pipelines
+ * need async schema fetching for typed bindings.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of pipeline bindings
+ */
+function collectPipelinesPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		binding: string;
+		pipeline: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			binding: string;
+			pipeline: string;
+		}>
+	>();
+
+	function collectEnvironmentPipelines(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{
+		binding: string;
+		pipeline: string;
+	}> {
+		const pipelines = new Array<{
+			binding: string;
+			pipeline: string;
+		}>();
+
+		if (!env?.pipelines) {
+			return pipelines;
+		}
+
+		for (const [index, pipeline] of env.pipelines.entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			if (!pipeline.pipeline) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "pipeline",
+					index,
+				});
+			}
+
+			pipelines.push({
+				binding: pipeline.binding,
+				pipeline: pipeline.pipeline,
+			});
+		}
+
+		return pipelines;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelPipelines = collectEnvironmentPipelines(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelPipelines.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelPipelines);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envPipelines = collectEnvironmentPipelines(env, envName);
+		if (envPipelines.length > 0) {
+			result.set(envName, envPipelines);
 		}
 	}
 
