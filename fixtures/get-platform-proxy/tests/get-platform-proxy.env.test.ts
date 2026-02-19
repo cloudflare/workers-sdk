@@ -1,17 +1,7 @@
 import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect throughout tests */
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	MockInstance,
-	vi,
-} from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { beforeEach, describe, it, MockInstance, vi } from "vitest";
 import { getPlatformProxy } from "./shared";
 import type {
 	Fetcher,
@@ -20,7 +10,6 @@ import type {
 	KVNamespace,
 	Workflow,
 } from "@cloudflare/workers-types";
-import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
 	MY_VAR: string;
@@ -41,7 +30,6 @@ type Env = {
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
 
 describe("getPlatformProxy - env", () => {
-	let devWorkers: Unstable_DevWorker[];
 	let warn = {} as MockInstance<typeof console.warn>;
 
 	beforeEach(() => {
@@ -52,7 +40,9 @@ describe("getPlatformProxy - env", () => {
 	});
 
 	describe("var bindings", () => {
-		it("correctly obtains var bindings from both wrangler config and .dev.vars", async () => {
+		it("correctly obtains var bindings from both wrangler config and .dev.vars", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerConfigFilePath,
 			});
@@ -68,7 +58,9 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("correctly makes vars from .dev.vars override the ones in wrangler config", async () => {
+		it("correctly makes vars from .dev.vars override the ones in wrangler config", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerConfigFilePath,
 			});
@@ -81,7 +73,9 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler config", async () => {
+		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler config", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerConfigFilePath,
 			});
@@ -99,7 +93,9 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
+		it("correctly reads a toml from a custom path alongside with its .dev.vars", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: path.join(
 					__dirname,
@@ -123,7 +119,7 @@ describe("getPlatformProxy - env", () => {
 		});
 	});
 
-	it("correctly reads a json config file", async () => {
+	it("correctly reads a json config file", async ({ expect }) => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: path.join(__dirname, "..", "wrangler.json"),
 		});
@@ -139,7 +135,7 @@ describe("getPlatformProxy - env", () => {
 		}
 	});
 
-	it("correctly obtains functioning ASSETS bindings", async () => {
+	it("correctly obtains functioning ASSETS bindings", async ({ expect }) => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerConfigFilePath,
 		});
@@ -149,7 +145,7 @@ describe("getPlatformProxy - env", () => {
 		await dispose();
 	});
 
-	it("correctly obtains functioning KV bindings", async () => {
+	it("correctly obtains functioning KV bindings", async ({ expect }) => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerConfigFilePath,
 		});
@@ -164,7 +160,7 @@ describe("getPlatformProxy - env", () => {
 		await dispose();
 	});
 
-	it("correctly obtains functioning R2 bindings", async () => {
+	it("correctly obtains functioning R2 bindings", async ({ expect }) => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerConfigFilePath,
 		});
@@ -182,7 +178,7 @@ describe("getPlatformProxy - env", () => {
 		}
 	});
 
-	it("correctly obtains functioning D1 bindings", async () => {
+	it("correctly obtains functioning D1 bindings", async ({ expect }) => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerConfigFilePath,
 		});
@@ -210,7 +206,7 @@ describe("getPlatformProxy - env", () => {
 		}
 	});
 
-	it("correctly obtains functioning Image bindings", async () => {
+	it("correctly obtains functioning Image bindings", async ({ expect }) => {
 		expect.extend({ toMatchImageSnapshot });
 
 		const { env, dispose } = await getPlatformProxy<Env>({
@@ -249,7 +245,9 @@ describe("getPlatformProxy - env", () => {
 
 	// Important: the hyperdrive values are passthrough ones since the workerd specific hyperdrive values only make sense inside
 	//            workerd itself and would simply not work in a node.js process
-	it("correctly obtains passthrough Hyperdrive bindings", async () => {
+	it("correctly obtains passthrough Hyperdrive bindings", async ({
+		expect,
+	}) => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerConfigFilePath,
 		});
@@ -269,7 +267,7 @@ describe("getPlatformProxy - env", () => {
 	});
 
 	describe("DO warnings", () => {
-		it("warns about internal DOs and doesn't crash", async () => {
+		it("warns about internal DOs and doesn't crash", async ({ expect }) => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_internal_do.jsonc"),
 			});
@@ -285,14 +283,16 @@ describe("getPlatformProxy - env", () => {
 				`);
 		});
 
-		it("doesn't warn about external DOs and doesn't crash", async () => {
+		it("doesn't warn about external DOs and doesn't crash", async ({
+			expect,
+		}) => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),
 			});
 			expect(warn).not.toHaveBeenCalled();
 		});
 
-		it("warns about Workflows and doesn't crash", async () => {
+		it("warns about Workflows and doesn't crash", async ({ expect }) => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_workflow.jsonc"),
 			});
@@ -308,7 +308,9 @@ describe("getPlatformProxy - env", () => {
 	});
 
 	describe("with a target environment", () => {
-		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
+		it("should provide bindings targeting a specified environment and also inherit top-level ones", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerConfigFilePath,
 				environment: "production",
@@ -325,7 +327,9 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("should not provide bindings targeting an environment when none was specified", async () => {
+		it("should not provide bindings targeting an environment when none was specified", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerConfigFilePath,
 			});
@@ -341,7 +345,9 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("should provide secrets targeting a specified environment", async () => {
+		it("should provide secrets targeting a specified environment", async ({
+			expect,
+		}) => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerConfigFilePath,
 				environment: "production",
@@ -355,7 +361,9 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("should error if a non-existent environment is provided", async () => {
+		it("should error if a non-existent environment is provided", async ({
+			expect,
+		}) => {
 			await expect(
 				getPlatformProxy({
 					configPath: wranglerConfigFilePath,

@@ -58,7 +58,11 @@ import {
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
-import { constructExplorerBindingMap, getExplorerServices } from "./explorer";
+import {
+	constructExplorerBindingMap,
+	getExplorerServices,
+	wrapDurableObjectModules,
+} from "./explorer";
 import {
 	buildStringScriptPath,
 	convertModuleDefinition,
@@ -743,6 +747,26 @@ export const CORE_PLUGIN: Plugin<
 		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
 
+		// Wrap Durable Object classes for the local explorer
+		// This injects a method onto user defined DO classes to allow
+		// us to introspect the sqlite databases, since these are not
+		// available on the stub.
+		const sqliteClasses = classNamesEntries.filter(
+			([, { enableSql }]) => enableSql
+		);
+		if (
+			sharedOptions.unsafeLocalExplorer &&
+			// service-format workers are not supported
+			"modules" in workerScript &&
+			sqliteClasses.length > 0 &&
+			"esModule" in workerScript.modules[0]
+		) {
+			workerScript.modules = wrapDurableObjectModules(
+				workerScript.modules,
+				sqliteClasses.map(([className]) => className)
+			);
+		}
+
 		const compatibilityDate = validateCompatibilityDate(
 			log,
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
@@ -1019,6 +1043,11 @@ export function getGlobalServices({
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
+		// Add cache service binding for purgeCache() API
+		{
+			name: CoreBindings.SERVICE_CACHE,
+			service: { name: getCacheServiceName(0) },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({

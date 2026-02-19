@@ -270,11 +270,8 @@ describe("wrangler pipelines", () => {
 			expect(std.out).toContain(
 				"✨ Successfully created pipeline 'my_pipeline' with id 'pipeline_123'."
 			);
-			expect(std.out).toContain(
-				"Send your first event to stream 'test_stream':"
-			);
-			expect(std.out).toContain("Worker Integration:");
-			expect(std.out).toContain("HTTP Endpoint:");
+			expect(std.out).toContain("Then send events:");
+			expect(std.out).toContain("Or via HTTP:");
 		});
 
 		it("should create pipeline from SQL file", async () => {

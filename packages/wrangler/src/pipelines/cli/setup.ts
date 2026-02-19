@@ -1,24 +1,31 @@
 import { readFileSync } from "node:fs";
 import {
+	APIError,
 	bucketFormatMessage,
 	isValidR2BucketName,
 	parseJSON,
 	UserError,
 } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
+import { createR2Bucket, getR2Bucket } from "../../r2/helpers/bucket";
+import {
+	enableR2Catalog,
+	getR2Catalog,
+	upsertR2CatalogCredential,
+} from "../../r2/helpers/catalog";
 import { requireAuth } from "../../user";
 import {
 	createPipeline,
 	createSink,
 	createStream,
-	deleteSink,
 	deleteStream,
 	validateSql,
 } from "../client";
 import { SINK_DEFAULTS } from "../defaults";
-import { authorizeR2Bucket } from "../index";
+import { authorizeR2Bucket, verifyR2Credentials } from "../index";
 import { validateEntityName } from "../validate";
 import {
 	displayUsageExamples,
@@ -35,6 +42,291 @@ import type {
 	Stream,
 } from "../types";
 import type { Config } from "@cloudflare/workers-utils";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+	if (error instanceof APIError && error.notes.length > 0) {
+		return error.notes[0].text;
+	}
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return fallback;
+}
+
+async function promptWithRetry<T>(
+	getMessage: () => string,
+	getValue: () => Promise<T>,
+	validate: (value: T) => void
+): Promise<T> {
+	while (true) {
+		const value = await getValue();
+		try {
+			validate(value);
+			return value;
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Validation failed";
+			logger.error(message);
+
+			const retry = await confirm("Would you like to try again?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError(`${getMessage()} - cancelled`);
+			}
+		}
+	}
+}
+
+async function ensureBucketExists(
+	config: Config,
+	accountId: string,
+	bucketName: string
+): Promise<boolean> {
+	try {
+		await getR2Bucket(config, accountId, bucketName);
+		logger.log(`  Using existing bucket "${bucketName}"`);
+		return false;
+	} catch (err) {
+		if (err instanceof APIError && err.code === 10006) {
+			// Bucket doesn't exist, create it
+		} else {
+			throw err;
+		}
+	}
+
+	process.stdout.write(`  Creating bucket "${bucketName}"...`);
+	await createR2Bucket(config, accountId, bucketName);
+	logger.log(chalk.green(" done"));
+	return true;
+}
+
+function validateBucketName(name: string): void {
+	if (!name) {
+		throw new UserError("Bucket name is required");
+	}
+	if (!isValidR2BucketName(name)) {
+		throw new UserError(
+			`The bucket name "${name}" is invalid. ${bucketFormatMessage}`
+		);
+	}
+}
+
+async function promptBucketName(): Promise<string> {
+	return promptWithRetry(
+		() => "R2 bucket name",
+		() => prompt("R2 bucket name (will be created if it doesn't exist):"),
+		validateBucketName
+	);
+}
+
+async function ensureCatalogEnabled(
+	config: Config,
+	accountId: string,
+	bucketName: string
+): Promise<void> {
+	let catalogEnabled = false;
+	try {
+		const catalog = await getR2Catalog(config, accountId, bucketName);
+		catalogEnabled = catalog.status === "active";
+	} catch (err) {
+		if (err instanceof APIError && err.code === 10006) {
+			// Catalog not enabled yet
+		} else {
+			throw err;
+		}
+	}
+
+	if (catalogEnabled) {
+		logger.log("  Data Catalog already enabled");
+	} else {
+		process.stdout.write("  Enabling Data Catalog...");
+		await enableR2Catalog(config, accountId, bucketName);
+		logger.log(chalk.green(" done"));
+	}
+}
+
+function displayCatalogTokenInstructions(accountId: string): void {
+	logger.log(chalk.dim("\n  To create a Catalog API token:"));
+	logger.log(
+		chalk.dim(
+			`  Visit https://dash.cloudflare.com/${accountId}/r2/api-tokens/create?type=account`
+		)
+	);
+	logger.log(
+		chalk.dim('  Create token with "Admin Read & Write" permissions\n')
+	);
+}
+
+function displayR2CredentialsInstructions(accountId: string): void {
+	logger.log(chalk.dim("\n  To create R2 API credentials:"));
+	logger.log(
+		chalk.dim(
+			`  Visit https://dash.cloudflare.com/${accountId}/r2/api-tokens/create?type=account`
+		)
+	);
+	logger.log(
+		chalk.dim('  Create token with "Object Read & Write" permissions\n')
+	);
+}
+
+const COMPRESSION_CHOICES = [
+	{ title: "uncompressed", value: "uncompressed" },
+	{ title: "snappy", value: "snappy" },
+	{ title: "gzip", value: "gzip" },
+	{ title: "zstd", value: "zstd" },
+	{ title: "lz4", value: "lz4" },
+] as const;
+
+async function promptCompression(): Promise<string> {
+	return select("Compression:", {
+		choices: [...COMPRESSION_CHOICES],
+		defaultOption: 3, // zstd
+		fallbackOption: 3,
+	});
+}
+
+async function promptRollingPolicy(): Promise<{
+	fileSizeBytes: number;
+	intervalSeconds: number;
+}> {
+	const fileSizeMB = await promptWithRetry(
+		() => "File size",
+		() =>
+			prompt("Roll file when size reaches (MB, minimum 5):", {
+				defaultValue: "100",
+			}),
+		(value) => {
+			const num = parseInt(value, 10);
+			if (isNaN(num) || num < 5) {
+				throw new UserError("File size must be a number >= 5");
+			}
+		}
+	);
+
+	const intervalSeconds = await promptWithRetry(
+		() => "Interval",
+		() =>
+			prompt("Roll file when time reaches (seconds, minimum 10):", {
+				defaultValue: String(SINK_DEFAULTS.rolling_policy.interval_seconds),
+			}),
+		(value) => {
+			const num = parseInt(value, 10);
+			if (isNaN(num) || num < 10) {
+				throw new UserError("Interval must be a number >= 10");
+			}
+		}
+	);
+
+	return {
+		fileSizeBytes: parseInt(fileSizeMB) * 1024 * 1024,
+		intervalSeconds: parseInt(intervalSeconds),
+	};
+}
+
+async function promptCatalogToken(
+	config: Config,
+	accountId: string,
+	bucketName: string
+): Promise<string> {
+	while (true) {
+		const token = await prompt("Catalog API token:", { isSecret: true });
+
+		if (!token) {
+			logger.error("Catalog API token is required");
+			const retry = await confirm("Would you like to try again?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError("Catalog API token - cancelled");
+			}
+			continue;
+		}
+
+		process.stdout.write("  Validating token...");
+		try {
+			await upsertR2CatalogCredential(config, accountId, bucketName, token);
+			logger.log(chalk.green(" done"));
+			return token;
+		} catch {
+			logger.log(chalk.red(" failed"));
+			logger.log(
+				chalk.dim(
+					'  Token invalid or missing permissions. Ensure it has "Admin Read & Write" access.'
+				)
+			);
+
+			const retry = await confirm("Would you like to try again?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError("Catalog API token validation failed");
+			}
+		}
+	}
+}
+
+async function promptR2Credentials(
+	accountId: string,
+	bucketName: string
+): Promise<{ access_key_id: string; secret_access_key: string }> {
+	while (true) {
+		const accessKeyId = await prompt("R2 Access Key ID:");
+		if (!accessKeyId) {
+			logger.error("R2 Access Key ID is required");
+			const retry = await confirm("Would you like to try again?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError("R2 Access Key ID - cancelled");
+			}
+			continue;
+		}
+
+		const secretAccessKey = await prompt("R2 Secret Access Key:", {
+			isSecret: true,
+		});
+		if (!secretAccessKey) {
+			logger.error("R2 Secret Access Key is required");
+			const retry = await confirm("Would you like to try again?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError("R2 Secret Access Key - cancelled");
+			}
+			continue;
+		}
+
+		process.stdout.write("  Validating credentials...");
+		try {
+			await verifyR2Credentials(
+				accountId,
+				bucketName,
+				accessKeyId,
+				secretAccessKey
+			);
+			logger.log(chalk.green(" done"));
+			return {
+				access_key_id: accessKeyId,
+				secret_access_key: secretAccessKey,
+			};
+		} catch {
+			logger.log(chalk.red(" failed"));
+			logger.log(
+				chalk.dim(
+					'  Credentials invalid or missing permissions. Ensure token has "Object Read & Write" access.'
+				)
+			);
+
+			const retry = await confirm("Would you like to try again?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError("R2 credentials validation failed");
+			}
+		}
+	}
+}
 
 interface SetupConfig {
 	pipelineName: string;
@@ -60,10 +352,7 @@ export const pipelinesSetupCommand = createCommand({
 	async handler(args, { config }) {
 		await requireAuth(config);
 
-		logger.log("🚀 Welcome to Cloudflare Pipelines Setup!");
-		logger.log(
-			"This will guide you through creating a complete pipeline: stream → pipeline → sink\n"
-		);
+		logger.log("Cloudflare Pipelines Setup\n");
 
 		try {
 			const setupConfig = await setupPipelineNaming(args.name);
@@ -71,7 +360,7 @@ export const pipelinesSetupCommand = createCommand({
 			await setupStreamConfiguration(setupConfig);
 			await setupSinkConfiguration(config, setupConfig);
 			const created = await reviewAndCreateStreamSink(config, setupConfig);
-			await setupSQLTransformationWithValidation(config, setupConfig, created);
+			await setupSQLTransformationWithValidation(config, setupConfig);
 			await createPipelineIfNeeded(config, setupConfig, created, args);
 		} catch (error) {
 			if (error instanceof UserError) {
@@ -87,15 +376,23 @@ export const pipelinesSetupCommand = createCommand({
 async function setupPipelineNaming(
 	providedName?: string
 ): Promise<SetupConfig> {
-	const pipelineName =
-		providedName ||
-		(await prompt("What would you like to name your pipeline?"));
+	const pipelineName = providedName
+		? providedName
+		: await promptWithRetry(
+				() => "Pipeline name",
+				() => prompt("What would you like to name your pipeline?"),
+				(name) => {
+					if (!name) {
+						throw new UserError("Pipeline name is required");
+					}
+					validateEntityName("pipeline", name);
+				}
+			);
 
-	if (!pipelineName) {
-		throw new UserError("Pipeline name is required");
+	// If name was provided via args, still validate it (but no retry)
+	if (providedName) {
+		validateEntityName("pipeline", providedName);
 	}
-
-	validateEntityName("pipeline", pipelineName);
 
 	const streamName = `${pipelineName}_stream`;
 	const sinkName = `${pipelineName}_sink`;
@@ -120,7 +417,7 @@ async function setupPipelineNaming(
 async function setupStreamConfiguration(
 	setupConfig: SetupConfig
 ): Promise<void> {
-	logger.log("\n▶ Let's configure your data source (stream):");
+	logger.log("\nSTREAM\n");
 
 	const httpEnabled = await confirm("Enable HTTP endpoint for sending data?", {
 		defaultValue: true,
@@ -160,13 +457,11 @@ async function setupStreamConfiguration(
 		worker_binding: { enabled: true },
 		...(schema && { schema: { fields: schema } }),
 	};
-
-	logger.log("✨ Stream configuration complete\n");
 }
 
 async function setupSchemaConfiguration(): Promise<SchemaField[] | undefined> {
 	const schemaMethod = await select(
-		"How would you like to define the schema?",
+		"How would you like to define the schema for incoming events?",
 		{
 			choices: [
 				{ title: "Build interactively", value: "interactive" },
@@ -192,24 +487,20 @@ async function setupSchemaConfiguration(): Promise<SchemaField[] | undefined> {
 
 async function buildSchemaInteractively(): Promise<SchemaField[]> {
 	const fields: SchemaField[] = [];
+
+	logger.log("");
+
 	let fieldNumber = 1;
-
-	logger.log("\n▶ Building schema interactively:");
-
-	let continueAdding = true;
-	while (continueAdding) {
-		const field = await buildField(fieldNumber);
-		fields.push(field);
+	while (true) {
+		fields.push(await buildField(fieldNumber));
 
 		const addAnother = await confirm(`Add field #${fieldNumber + 1}?`, {
 			defaultValue: fieldNumber < 3,
 		});
-
 		if (!addAnother) {
-			continueAdding = false;
-		} else {
-			fieldNumber++;
+			break;
 		}
+		fieldNumber++;
 	}
 
 	return fields;
@@ -222,11 +513,15 @@ async function buildField(
 	const indent = "  ".repeat(depth);
 	logger.log(`${indent}Field #${fieldNumber}:`);
 
-	const name = await prompt(`${indent}  Name:`);
-
-	if (!name) {
-		throw new UserError("Field name is required");
-	}
+	const name = await promptWithRetry(
+		() => "Field name",
+		() => prompt(`${indent}  Name:`),
+		(value) => {
+			if (!value) {
+				throw new UserError("Field name is required");
+			}
+		}
+	);
 
 	const typeChoices = [
 		{ title: "string", value: "string" },
@@ -240,7 +535,6 @@ async function buildField(
 		{ title: "bytes", value: "bytes" },
 	];
 
-	// Only show complex types if not nested too deep
 	if (depth < 2) {
 		typeChoices.push(
 			{ title: "struct (nested object)", value: "struct" },
@@ -264,7 +558,6 @@ async function buildField(
 		required,
 	};
 
-	// Handle type-specific configuration
 	if (type === "timestamp") {
 		const unit = await select(`${indent}  Unit:`, {
 			choices: [
@@ -280,23 +573,19 @@ async function buildField(
 	} else if (type === "struct" && depth < 2) {
 		logger.log(`\nDefine nested fields for struct '${name}':`);
 		field.fields = [];
-		let structFieldNumber = 1;
 
-		let continueAdding = true;
-		while (continueAdding) {
-			const structField = await buildField(structFieldNumber, depth + 1);
-			field.fields.push(structField);
+		let structFieldNumber = 1;
+		while (true) {
+			field.fields.push(await buildField(structFieldNumber, depth + 1));
 
 			const addAnother = await confirm(
 				`${indent}Add another field to struct '${name}'?`,
 				{ defaultValue: false }
 			);
-
 			if (!addAnother) {
-				continueAdding = false;
-			} else {
-				structFieldNumber++;
+				break;
 			}
+			structFieldNumber++;
 		}
 	} else if (type === "list" && depth < 2) {
 		logger.log(`\nDefine item type for list '${name}':`);
@@ -337,16 +626,66 @@ async function loadSchemaFromFile(): Promise<SchemaField[]> {
 	}
 }
 
+async function loadSqlFromFile(): Promise<string> {
+	const filePath = await prompt("SQL file path:");
+
+	try {
+		const sql = readFileSync(filePath, "utf-8").trim();
+
+		if (!sql) {
+			throw new UserError("SQL file is empty");
+		}
+
+		return sql;
+	} catch (error) {
+		logger.error(
+			`Failed to read SQL file: ${error instanceof Error ? error.message : String(error)}`
+		);
+
+		const retry = await confirm("Would you like to try again?", {
+			defaultValue: true,
+		});
+
+		if (retry) {
+			return loadSqlFromFile();
+		} else {
+			throw new UserError("SQL file loading cancelled");
+		}
+	}
+}
+
 async function setupSinkConfiguration(
 	config: Config,
 	setupConfig: SetupConfig
 ): Promise<void> {
-	logger.log("▶ Let's configure your destination (sink):");
+	logger.log("\nSINK\n");
 
-	const sinkType = await select("Select destination type:", {
+	const sinkType = await select("Destination type:", {
 		choices: [
 			{ title: "R2 Bucket", value: "r2" },
-			{ title: "Data Catalog Table", value: "r2_data_catalog" },
+			{ title: "Data Catalog (Iceberg)", value: "r2_data_catalog" },
+		],
+		defaultOption: 0,
+		fallbackOption: 0,
+	});
+
+	const simpleDescription =
+		sinkType === "r2"
+			? "parquet + zstd, 100MB file rolls, auto-generated credentials"
+			: "parquet + zstd, 100MB file rolls";
+
+	const setupMode = await select("Setup mode:", {
+		choices: [
+			{
+				title: "Simple (recommended defaults)",
+				description: simpleDescription,
+				value: "simple",
+			},
+			{
+				title: "Advanced (configure all options)",
+				description: "format, compression, rolling policy, credentials, etc.",
+				value: "advanced",
+			},
 		],
 		defaultOption: 0,
 		fallbackOption: 0,
@@ -354,13 +693,104 @@ async function setupSinkConfiguration(
 
 	const accountId = await requireAuth(config);
 
-	if (sinkType === "r2") {
-		await setupR2Sink(config, accountId, setupConfig);
+	if (setupMode === "simple") {
+		if (sinkType === "r2") {
+			await setupSimpleR2Sink(config, accountId, setupConfig);
+		} else {
+			await setupSimpleDataCatalogSink(config, accountId, setupConfig);
+		}
 	} else {
-		await setupDataCatalogSink(setupConfig);
+		if (sinkType === "r2") {
+			await setupR2Sink(config, accountId, setupConfig);
+		} else {
+			await setupDataCatalogSink(config, accountId, setupConfig);
+		}
 	}
+}
 
-	logger.log("✨ Sink configuration complete\n");
+async function setupSimpleR2Sink(
+	config: Config,
+	accountId: string,
+	setupConfig: SetupConfig
+): Promise<void> {
+	const bucket = await promptBucketName();
+	await ensureBucketExists(config, accountId, bucket);
+
+	process.stdout.write("  Generating credentials...");
+	const cleanedSinkName = setupConfig.sinkName.replace(/_/g, "-");
+	const auth = await authorizeR2Bucket(
+		config,
+		cleanedSinkName,
+		accountId,
+		bucket,
+		{ quiet: true }
+	);
+	logger.log(chalk.green(" done"));
+
+	setupConfig.sinkConfig = {
+		name: setupConfig.sinkName,
+		type: "r2",
+		format: {
+			type: "parquet",
+			compression: "zstd",
+		},
+		config: {
+			bucket,
+			partitioning: {
+				time_pattern: "year=%Y/month=%m/day=%d",
+			},
+			credentials: {
+				access_key_id: auth.accessKeyId,
+				secret_access_key: auth.secretAccessKey,
+			},
+			rolling_policy: {
+				file_size_bytes: 100 * 1024 * 1024,
+				interval_seconds: SINK_DEFAULTS.rolling_policy.interval_seconds,
+			},
+		},
+	};
+}
+
+async function setupSimpleDataCatalogSink(
+	config: Config,
+	accountId: string,
+	setupConfig: SetupConfig
+): Promise<void> {
+	const bucket = await promptBucketName();
+	await ensureBucketExists(config, accountId, bucket);
+	await ensureCatalogEnabled(config, accountId, bucket);
+
+	const tableName = await promptWithRetry(
+		() => "Table name",
+		() => prompt("Table name (e.g. events, user_activity):"),
+		(value) => {
+			if (!value) {
+				throw new UserError("Table name is required");
+			}
+		}
+	);
+
+	displayCatalogTokenInstructions(accountId);
+	const token = await promptCatalogToken(config, accountId, bucket);
+
+	setupConfig.sinkConfig = {
+		name: setupConfig.sinkName,
+		type: "r2_data_catalog",
+		format: {
+			type: "parquet",
+			compression: "zstd",
+		},
+		config: {
+			bucket,
+			namespace: "default",
+			table_name: tableName,
+			token,
+			rolling_policy: {
+				file_size_bytes: 100 * 1024 * 1024,
+				interval_seconds: SINK_DEFAULTS.rolling_policy.interval_seconds,
+			},
+		},
+	};
 }
 
 async function setupR2Sink(
@@ -368,17 +798,8 @@ async function setupR2Sink(
 	accountId: string,
 	setupConfig: SetupConfig
 ): Promise<void> {
-	const bucket = await prompt("R2 bucket name:");
-
-	if (!bucket) {
-		throw new UserError("Bucket name is required");
-	}
-
-	if (!isValidR2BucketName(bucket)) {
-		throw new UserError(
-			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
-		);
-	}
+	const bucket = await promptBucketName();
+	await ensureBucketExists(config, accountId, bucket);
 
 	const path = await prompt(
 		"The base prefix in your bucket where data will be written (optional):",
@@ -403,33 +824,9 @@ async function setupR2Sink(
 		fallbackOption: 0,
 	});
 
-	let compression;
-	if (format === "parquet") {
-		compression = await select("Compression:", {
-			choices: [
-				{ title: "uncompressed", value: "uncompressed" },
-				{ title: "snappy", value: "snappy" },
-				{ title: "gzip", value: "gzip" },
-				{ title: "zstd", value: "zstd" },
-				{ title: "lz4", value: "lz4" },
-			],
-			defaultOption: 3,
-			fallbackOption: 3,
-		});
-	}
-
-	const fileSizeMB = await prompt(
-		"Roll file when size reaches (MB, minimum 5):",
-		{
-			defaultValue: "100",
-		}
-	);
-	const intervalSeconds = await prompt(
-		"Roll file when time reaches (seconds, minimum 10):",
-		{
-			defaultValue: String(SINK_DEFAULTS.rolling_policy.interval_seconds),
-		}
-	);
+	const compression =
+		format === "parquet" ? await promptCompression() : undefined;
+	const rollingPolicy = await promptRollingPolicy();
 
 	const useOAuth = await confirm(
 		"Automatically generate credentials needed to write to your R2 bucket?",
@@ -440,26 +837,23 @@ async function setupR2Sink(
 
 	let credentials;
 	if (useOAuth) {
-		logger.log("🔐 Generating R2 credentials...");
-		// Clean up sink name for service token generation (remove underscores)
+		process.stdout.write("  Generating credentials...");
 		const cleanedSinkName = setupConfig.sinkName.replace(/_/g, "-");
 		const auth = await authorizeR2Bucket(
 			config,
 			cleanedSinkName,
 			accountId,
-			bucket
+			bucket,
+			{ quiet: true }
 		);
+		logger.log(chalk.green(" done"));
 		credentials = {
 			access_key_id: auth.accessKeyId,
 			secret_access_key: auth.secretAccessKey,
 		};
 	} else {
-		credentials = {
-			access_key_id: await prompt("R2 Access Key ID:"),
-			secret_access_key: await prompt("R2 Secret Access Key:", {
-				isSecret: true,
-			}),
-		};
+		displayR2CredentialsInstructions(accountId);
+		credentials = await promptR2Credentials(accountId, bucket);
 	}
 
 	let formatConfig: SinkFormat;
@@ -488,47 +882,47 @@ async function setupR2Sink(
 			}),
 			credentials,
 			rolling_policy: {
-				file_size_bytes: parseInt(fileSizeMB) * 1024 * 1024, // Convert MB to bytes
-				interval_seconds: parseInt(intervalSeconds),
+				file_size_bytes: rollingPolicy.fileSizeBytes,
+				interval_seconds: rollingPolicy.intervalSeconds,
 			},
 		},
 	};
 }
 
-async function setupDataCatalogSink(setupConfig: SetupConfig): Promise<void> {
-	const bucket = await prompt("R2 bucket name (for catalog storage):");
-	const namespace = await prompt("Namespace:", { defaultValue: "default" });
-	const tableName = await prompt("Table name:");
-	const token = await prompt("Catalog API token:", { isSecret: true });
+async function setupDataCatalogSink(
+	config: Config,
+	accountId: string,
+	setupConfig: SetupConfig
+): Promise<void> {
+	const bucket = await promptBucketName();
+	await ensureBucketExists(config, accountId, bucket);
+	await ensureCatalogEnabled(config, accountId, bucket);
 
-	if (!bucket || !namespace || !tableName || !token) {
-		throw new UserError("All Data Catalog fields are required");
-	}
-
-	const compression = await select("Compression:", {
-		choices: [
-			{ title: "uncompressed", value: "uncompressed" },
-			{ title: "snappy", value: "snappy" },
-			{ title: "gzip", value: "gzip" },
-			{ title: "zstd", value: "zstd" },
-			{ title: "lz4", value: "lz4" },
-		],
-		defaultOption: 3,
-		fallbackOption: 3,
-	});
-
-	const fileSizeMB = await prompt(
-		"Roll file when size reaches (MB, minimum 5):",
-		{
-			defaultValue: "100",
+	const namespace = await promptWithRetry(
+		() => "Namespace",
+		() => prompt("Namespace:", { defaultValue: "default" }),
+		(value) => {
+			if (!value) {
+				throw new UserError("Namespace is required");
+			}
 		}
 	);
-	const intervalSeconds = await prompt(
-		"Roll file when time reaches (seconds, minimum 10):",
-		{
-			defaultValue: String(SINK_DEFAULTS.rolling_policy.interval_seconds),
+
+	const tableName = await promptWithRetry(
+		() => "Table name",
+		() => prompt("Table name:"),
+		(value) => {
+			if (!value) {
+				throw new UserError("Table name is required");
+			}
 		}
 	);
+
+	displayCatalogTokenInstructions(accountId);
+	const token = await promptCatalogToken(config, accountId, bucket);
+
+	const compression = await promptCompression();
+	const rollingPolicy = await promptRollingPolicy();
 
 	setupConfig.sinkConfig = {
 		name: setupConfig.sinkName,
@@ -543,8 +937,8 @@ async function setupDataCatalogSink(setupConfig: SetupConfig): Promise<void> {
 			table_name: tableName,
 			token,
 			rolling_policy: {
-				file_size_bytes: parseInt(fileSizeMB) * 1024 * 1024,
-				interval_seconds: parseInt(intervalSeconds),
+				file_size_bytes: rollingPolicy.fileSizeBytes,
+				interval_seconds: rollingPolicy.intervalSeconds,
 			},
 		},
 	};
@@ -552,67 +946,57 @@ async function setupDataCatalogSink(setupConfig: SetupConfig): Promise<void> {
 
 async function setupSQLTransformationWithValidation(
 	config: Config,
-	setupConfig: SetupConfig,
-	created: { stream?: Stream; sink?: Sink }
+	setupConfig: SetupConfig
 ): Promise<void> {
-	logger.log("\n▶ Pipeline SQL:");
+	logger.log("\nSQL\n");
 
-	logger.log("\nAvailable tables:");
-	logger.log(`  • ${setupConfig.streamName} (source stream)`);
-	logger.log(`  • ${setupConfig.sinkName} (destination sink)`);
+	logger.log("  Available tables:");
+	logger.log(`    ${setupConfig.streamName} (source)`);
+	logger.log(`    ${setupConfig.sinkName} (sink)\n`);
 
 	if (setupConfig.streamConfig.schema?.fields) {
-		logger.log("\nStream input schema:");
+		logger.log("  Schema:");
 		const schemaRows = formatSchemaFieldsForTable(
 			setupConfig.streamConfig.schema.fields
 		);
 		logger.table(schemaRows);
 	}
 
-	const sqlMethod = await select(
-		"How would you like to provide SQL that will define how your pipeline will transform and route data?",
-		{
-			choices: [
-				{
-					title:
-						"Use simple ingestion query (copy all data from stream to sink)",
-					value: "simple",
-				},
-				{ title: "Write interactively", value: "interactive" },
-				{ title: "Load from file", value: "file" },
-			],
-			defaultOption: 0,
-			fallbackOption: 0,
-		}
-	);
+	const sqlMethod = await select("Query:", {
+		choices: [
+			{
+				title: "Simple ingestion (SELECT * FROM stream)",
+				value: "simple",
+			},
+			{ title: "Write custom SQL", value: "interactive" },
+			{ title: "Load from file", value: "file" },
+		],
+		defaultOption: 0,
+		fallbackOption: 0,
+	});
 
 	let sql: string;
 
 	if (sqlMethod === "simple") {
 		sql = `INSERT INTO ${setupConfig.sinkName} SELECT * FROM ${setupConfig.streamName};`;
-		logger.log(`\nUsing query: ${sql}`);
+		logger.log(chalk.dim(`\n  ${sql}\n`));
 	} else if (sqlMethod === "interactive") {
 		logger.log(
-			`\n💡 Example: INSERT INTO ${setupConfig.sinkName} SELECT * FROM ${setupConfig.streamName};`
+			chalk.dim(
+				`\n  Example: INSERT INTO ${setupConfig.sinkName} SELECT * FROM ${setupConfig.streamName};\n`
+			)
 		);
 
 		sql = await promptMultiline("Enter SQL query:", "SQL");
 	} else {
-		const filePath = await prompt("SQL file path:");
-		try {
-			sql = readFileSync(filePath, "utf-8").trim();
-		} catch (error) {
-			throw new UserError(
-				`Failed to read SQL file: ${error instanceof Error ? error.message : String(error)}`
-			);
-		}
+		sql = await loadSqlFromFile();
 	}
 
 	if (!sql) {
 		throw new UserError("SQL query cannot be empty");
 	}
 
-	logger.log("🌀 Validating SQL...");
+	process.stdout.write("  Validating...");
 	try {
 		const validationResult = await validateSql(config, { sql });
 
@@ -620,14 +1004,12 @@ async function setupSQLTransformationWithValidation(
 			!validationResult.tables ||
 			Object.keys(validationResult.tables).length === 0
 		) {
+			logger.log(chalk.yellow(" warning"));
 			logger.warn(
-				"SQL validation returned no tables - this might indicate an issue with the query"
+				"  SQL validation returned no tables - this might indicate an issue with the query"
 			);
 		} else {
-			const tableNames = Object.keys(validationResult.tables);
-			logger.log(
-				`✨ SQL validation passed. References tables: ${tableNames.join(", ")}`
-			);
+			logger.log(chalk.green(" done"));
 		}
 
 		setupConfig.pipelineConfig = {
@@ -635,6 +1017,8 @@ async function setupSQLTransformationWithValidation(
 			sql,
 		};
 	} catch (error) {
+		logger.log(chalk.red(" failed"));
+
 		let errorMessage = "SQL validation failed";
 
 		if (error && typeof error === "object") {
@@ -653,20 +1037,18 @@ async function setupSQLTransformationWithValidation(
 		}
 
 		const retry = await confirm(
-			`SQL validation failed: ${errorMessage}\n\nRetry with different SQL?`,
+			`  ${errorMessage}\n\n  Retry with different SQL?`,
 			{ defaultValue: true }
 		);
 
 		if (retry) {
-			return setupSQLTransformationWithValidation(config, setupConfig, created);
+			return setupSQLTransformationWithValidation(config, setupConfig);
 		} else {
 			throw new UserError(
 				"SQL validation failed and setup cannot continue without valid pipeline SQL"
 			);
 		}
 	}
-
-	logger.log("✨ SQL configuration complete\n");
 }
 
 async function promptMultiline(
@@ -693,37 +1075,42 @@ async function reviewAndCreateStreamSink(
 	config: Config,
 	setupConfig: SetupConfig
 ): Promise<{ stream?: Stream; sink?: Sink }> {
-	// Display summary
-	logger.log("▶ Configuration Summary:");
-	logger.log(`\nStream: ${setupConfig.streamName}`);
-	logger.log(
-		`  • HTTP: ${setupConfig.streamConfig.http.enabled ? "Enabled" : "Disabled"}`
-	);
-	if (setupConfig.streamConfig.http.enabled) {
-		logger.log(
-			`  • Authentication: ${setupConfig.streamConfig.http.authentication ? "Required" : "None"}`
-		);
-	}
-	logger.log(
-		`  • Schema: ${setupConfig.streamConfig.schema?.fields ? `${setupConfig.streamConfig.schema.fields.length} fields` : "Unstructured"}`
-	);
+	logger.log("\nSUMMARY\n");
 
-	logger.log(`\nSink: ${setupConfig.sinkName}`);
-	logger.log(
-		`  • Type: ${setupConfig.sinkConfig.type === "r2" ? "R2 Bucket" : "Data Catalog"}`
-	);
+	const httpStatus = setupConfig.streamConfig.http.enabled
+		? setupConfig.streamConfig.http.authentication
+			? "enabled (auth required)"
+			: "enabled"
+		: "disabled";
+	const schemaStatus = setupConfig.streamConfig.schema?.fields
+		? `${setupConfig.streamConfig.schema.fields.length} field${setupConfig.streamConfig.schema.fields.length === 1 ? "" : "s"}`
+		: "unstructured";
+
+	logger.log(`  Stream    ${setupConfig.streamName}`);
+	logger.log(chalk.dim(`            HTTP ${httpStatus}, ${schemaStatus}\n`));
+
 	if (setupConfig.sinkConfig.type === "r2") {
-		logger.log(`  • Bucket: ${setupConfig.sinkConfig.config.bucket}`);
+		const format = setupConfig.sinkConfig.format?.type || "parquet";
+		const compression =
+			setupConfig.sinkConfig.format?.type === "parquet"
+				? (setupConfig.sinkConfig.format as ParquetFormat).compression || ""
+				: "";
+		logger.log(`  Sink      ${setupConfig.sinkName}`);
 		logger.log(
-			`  • Format: ${setupConfig.sinkConfig.format?.type || "parquet"}`
+			chalk.dim(
+				`            R2 → ${setupConfig.sinkConfig.config.bucket}, ${format}${compression ? ` + ${compression}` : ""}\n`
+			)
 		);
 	} else {
+		logger.log(`  Sink      ${setupConfig.sinkName}`);
 		logger.log(
-			`  • Table: ${setupConfig.sinkConfig.config.namespace}/${setupConfig.sinkConfig.config.table_name}`
+			chalk.dim(
+				`            Data Catalog → ${setupConfig.sinkConfig.config.namespace}/${setupConfig.sinkConfig.config.table_name}\n`
+			)
 		);
 	}
 
-	const proceed = await confirm("Create stream and sink?", {
+	const proceed = await confirm("Create resources?", {
 		defaultValue: true,
 	});
 
@@ -731,53 +1118,62 @@ async function reviewAndCreateStreamSink(
 		throw new UserError("Setup cancelled");
 	}
 
-	// Create resources with rollback on failure
 	const created: { stream?: Stream; sink?: Sink } = {};
 
-	try {
-		// Create stream
-		logger.log("\n🌀 Creating stream...");
-		created.stream = await createStream(config, setupConfig.streamConfig);
-		logger.log(`✨ Created stream: ${created.stream.name}`);
+	while (!created.stream) {
+		try {
+			process.stdout.write("\n  Creating stream...");
+			created.stream = await createStream(config, setupConfig.streamConfig);
+			logger.log(chalk.green(" done"));
+		} catch (error) {
+			logger.log(chalk.red(" failed"));
+			logger.log(
+				chalk.dim(`  ${getErrorMessage(error, "Stream creation failed")}`)
+			);
 
-		// Create sink
-		logger.log("🌀 Creating sink...");
-		created.sink = await createSink(config, setupConfig.sinkConfig);
-		logger.log(`✨ Created sink: ${created.sink.name}`);
-
-		logger.log("\n✨ Stream and sink created successfully!");
-		return created;
-	} catch (error) {
-		logger.error(
-			`❌ Setup failed: ${error instanceof Error ? error.message : String(error)}`
-		);
-
-		logger.log("🌀 Rolling back created resources...");
-
-		if (created.stream) {
-			try {
-				await deleteStream(config, created.stream.id);
-				logger.log(`✨ Cleaned up stream: ${created.stream.name}`);
-			} catch (cleanupError) {
-				logger.warn(
-					`Failed to cleanup stream: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
-				);
+			const retry = await confirm("  Retry?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				throw new UserError("Stream creation cancelled");
 			}
 		}
-
-		if (created.sink) {
-			try {
-				await deleteSink(config, created.sink.id);
-				logger.log(`✨ Cleaned up sink: ${created.sink.name}`);
-			} catch (cleanupError) {
-				logger.warn(
-					`Failed to cleanup sink: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
-				);
-			}
-		}
-
-		throw error;
 	}
+
+	while (!created.sink) {
+		try {
+			process.stdout.write("  Creating sink...");
+			created.sink = await createSink(config, setupConfig.sinkConfig);
+			logger.log(chalk.green(" done"));
+		} catch (error) {
+			logger.log(chalk.red(" failed"));
+			logger.log(
+				chalk.dim(`  ${getErrorMessage(error, "Sink creation failed")}`)
+			);
+
+			const retry = await confirm(
+				"  Retry? (stream was created successfully)",
+				{
+					defaultValue: true,
+				}
+			);
+			if (!retry) {
+				process.stdout.write("  Cleaning up stream...");
+				try {
+					await deleteStream(config, created.stream.id);
+					logger.log(chalk.green(" done"));
+				} catch (cleanupError) {
+					logger.log(chalk.red(" failed"));
+					logger.warn(
+						`  ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
+					);
+				}
+				throw new UserError("Sink creation cancelled");
+			}
+		}
+	}
+
+	return created;
 }
 
 async function createPipelineIfNeeded(
@@ -790,26 +1186,47 @@ async function createPipelineIfNeeded(
 		throw new UserError("Pipeline configuration is missing");
 	}
 
-	try {
-		logger.log("🌀 Creating pipeline...");
-		const pipeline = await createPipeline(config, setupConfig.pipelineConfig);
-		logger.log(`✨ Created pipeline: ${pipeline.name}`);
+	while (true) {
+		try {
+			process.stdout.write("  Creating pipeline...");
+			await createPipeline(config, setupConfig.pipelineConfig);
+			logger.log(chalk.green(" done"));
 
-		logger.log("\n✨ Setup complete!");
+			logger.log(chalk.green("\n✓ Setup complete\n"));
 
-		if (created.stream) {
-			await displayUsageExamples(created.stream, config, args);
+			if (created.stream) {
+				await displayUsageExamples(created.stream, config, args);
+			}
+			return;
+		} catch (error) {
+			logger.log(chalk.red(" failed"));
+			logger.log(
+				chalk.dim(`  ${getErrorMessage(error, "Pipeline creation failed")}`)
+			);
+			logger.log(
+				chalk.dim(
+					"\n  Stream and sink were created, but pipeline creation failed."
+				)
+			);
+
+			const retry = await confirm("  Try again with different SQL?", {
+				defaultValue: true,
+			});
+			if (!retry) {
+				logger.log(
+					chalk.dim(
+						"\n  You can create the pipeline later with: wrangler pipelines create"
+					)
+				);
+				logger.log(
+					chalk.dim(
+						`  Your stream "${setupConfig.streamName}" and sink "${setupConfig.sinkName}" are ready.`
+					)
+				);
+				return;
+			}
+
+			await setupSQLTransformationWithValidation(config, setupConfig);
 		}
-	} catch (error) {
-		logger.error(
-			`❌ Pipeline creation failed: ${error instanceof Error ? error.message : String(error)}`
-		);
-		logger.log(
-			"\n⚠️  Stream and sink were created successfully, but pipeline creation failed."
-		);
-		logger.log(
-			"You can try creating the pipeline manually with: wrangler pipelines create"
-		);
-		throw error;
 	}
 }

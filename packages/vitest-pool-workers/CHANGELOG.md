@@ -1,5 +1,13 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.12.13
+
+### Patch Changes
+
+- Updated dependencies [[`5a868a0`](https://github.com/cloudflare/workers-sdk/commit/5a868a0c0b305548e4ad60a50f20ab4cd8900741), [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e), [`c58e81b`](https://github.com/cloudflare/workers-sdk/commit/c58e81b85e1ff1285ac024508739c997ec04984e), [`33a9a8f`](https://github.com/cloudflare/workers-sdk/commit/33a9a8f97e61c45507865eb8c5c9cace7ab27e64), [`8077c14`](https://github.com/cloudflare/workers-sdk/commit/8077c14a84e4b50015d356349a330a970693533f), [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e), [`7d2355e`](https://github.com/cloudflare/workers-sdk/commit/7d2355ea146365391f3cd8b0e5a80057e6013151), [`936187d`](https://github.com/cloudflare/workers-sdk/commit/936187d4be8686a7849278ff57f7f927062e2cce), [`7ea69af`](https://github.com/cloudflare/workers-sdk/commit/7ea69af67f0427c621eb8fa0b31ebaa4c6537870), [`5cc7158`](https://github.com/cloudflare/workers-sdk/commit/5cc7158b39a247e3c33f158327a1cee99dd5e719), [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e), [`43c462a`](https://github.com/cloudflare/workers-sdk/commit/43c462af9684980b8332a8e3a31a9bd9f08777f5), [`c4c86f8`](https://github.com/cloudflare/workers-sdk/commit/c4c86f813d9ce406d8b36da7148665b805d0676b), [`7d2355e`](https://github.com/cloudflare/workers-sdk/commit/7d2355ea146365391f3cd8b0e5a80057e6013151), [`c9d0f9d`](https://github.com/cloudflare/workers-sdk/commit/c9d0f9d6d5f2f3d322ac6ba9ccb0d05a5c96bbe6), [`5cc7158`](https://github.com/cloudflare/workers-sdk/commit/5cc7158b39a247e3c33f158327a1cee99dd5e719), [`5cc7158`](https://github.com/cloudflare/workers-sdk/commit/5cc7158b39a247e3c33f158327a1cee99dd5e719), [`c9d0f9d`](https://github.com/cloudflare/workers-sdk/commit/c9d0f9d6d5f2f3d322ac6ba9ccb0d05a5c96bbe6)]:
+  - miniflare@4.20260217.0
+  - wrangler@4.66.0
+
 ## 0.12.12
 
 ### Patch Changes
