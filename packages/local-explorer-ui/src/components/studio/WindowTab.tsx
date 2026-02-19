@@ -1,5 +1,5 @@
 import { cn } from "@cloudflare/kumo";
-import { CircleIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { CircleIcon, XIcon } from "@phosphor-icons/react";
 import {
 	createContext,
 	useCallback,
@@ -8,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { StudioWindowTabMenu } from "./WindowTab/MenuProps";
 import type { Icon } from "@phosphor-icons/react";
 
 export interface StudioWindowTabItem {
@@ -194,37 +195,6 @@ function StudioTabContentWrapper({
 				{tab.component}
 			</div>
 		</StudioCurrentWindowTabContext.Provider>
-	);
-}
-
-interface StudioWindowTabMenuProps {
-	onClick: () => void;
-}
-
-function StudioWindowTabMenu({
-	onClick,
-}: StudioWindowTabMenuProps): JSX.Element {
-	const className = useMemo<string>(
-		() =>
-			cn(
-				"flex gap-2 relative px-2", // display style
-				"bg-surface-secondary", // background color
-				"border-b border-border", // border style
-				"items-center text-left text-xs text-muted" // text style
-			),
-		[]
-	);
-
-	return (
-		<div
-			className={className}
-			onClick={onClick}
-			style={{ position: "sticky", right: 0 }}
-		>
-			<div className="flex px-2 py-1.5 items-center gap-2 cursor-pointer hover:text-text hover:bg-surface-tertiary transition-colors rounded-md">
-				<PlusIcon /> New
-			</div>
-		</div>
 	);
 }
 
