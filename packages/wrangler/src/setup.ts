@@ -14,7 +14,7 @@ export const setupCommand = createCommand({
 	metadata: {
 		description: "🪄 Setup a project to work on Cloudflare",
 		owner: "Workers: Authoring and Testing",
-		status: "experimental",
+		status: "stable",
 		category: "Compute & AI",
 	},
 	args: {
