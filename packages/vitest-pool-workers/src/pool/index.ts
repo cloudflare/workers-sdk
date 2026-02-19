@@ -614,11 +614,25 @@ async function buildProjectMiniflareOptions(
 		}
 	}
 
+	const workers = [runnerWorker, ...auxiliaryWorkers];
+
+	// workerd's Windows SQLite VFS uses kj::Path::toString() which produces
+	// Unix-style forward-slash paths, causing SQLITE_CANTOPEN with the default
+	// win32 VFS. Use in-memory DO storage on Windows to avoid disk SQLite
+	// entirely. DOs still work (including SQLite-backed ones), just without
+	// cross-restart persistence, which doesn't matter for tests.
+	// TODO: Remove once workerd ships the fix (cloudflare/workerd#6110)
+	if (process.platform === "win32") {
+		for (const worker of workers) {
+			worker.unsafeEphemeralDurableObjects = true;
+		}
+	}
+
 	return {
 		...SHARED_MINIFLARE_OPTIONS,
 		inspectorPort,
 		unsafeModuleFallbackService: moduleFallbackService,
-		workers: [runnerWorker, ...auxiliaryWorkers],
+		workers,
 	};
 }
 export async function getProjectMiniflare(
