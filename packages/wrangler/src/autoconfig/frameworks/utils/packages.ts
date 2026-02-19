@@ -1,5 +1,5 @@
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import { up as findUpSync } from "empathic/find";
+import * as find from "empathic/find";
 
 /**
  * Checks wether a package is installed in a target project or not
@@ -35,7 +35,7 @@ export function getInstalledPackageVersion(
 		if (!packagePath) {
 			return undefined;
 		}
-		const packageJsonPath = findUpSync("package.json", {
+		const packageJsonPath = find.file("package.json", {
 			cwd: packagePath,
 			last: opts.stopAtProjectPath === true ? projectPath : undefined,
 		});

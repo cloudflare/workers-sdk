@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import chalk from "chalk";
-import { dir as findDirUpSync } from "empathic/find";
+import * as find from "empathic/find";
 import { logger } from "../../logger";
 
 /**
@@ -41,7 +41,7 @@ export function logRuntimeTypesMessage(
 	);
 
 	if (!isNodeTypesInstalled && isNodeCompat) {
-		const nodeModules = findDirUpSync("node_modules/@types/node");
+		const nodeModules = find.dir("node_modules/@types/node");
 		if (nodeModules) {
 			isNodeTypesInstalled = true;
 		}
