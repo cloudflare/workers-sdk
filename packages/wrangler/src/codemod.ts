@@ -35,7 +35,7 @@ function vitestPoolV3ToV4(args: string | undefined) {
 				`Selected Vitest config file does not exist: '${args}'`
 			);
 		}
-		filePath = path.join(process.cwd(), args);
+		filePath = path.resolve(process.cwd(), args);
 	} else if (existsSync(filePathTS)) {
 		filePath = filePathTS;
 	} else if (existsSync(filePathJS)) {
