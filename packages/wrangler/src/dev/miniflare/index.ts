@@ -911,7 +911,7 @@ export async function buildMiniflareOptions(
 			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
-	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
+	const { sourceOptions } = await buildSourceOptions(config);
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
 		config,
 		remoteProxyConnectionString
