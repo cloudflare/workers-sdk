@@ -5,7 +5,6 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "../plugins/core";
-import { kResolvedServiceDesignator } from "../plugins/core/services";
 import { RemoteProxyConnectionString } from "../plugins/shared";
 import { WORKER_BINDING_DEV_REGISTRY_DISK } from "../plugins/shared/constants";
 import { kVoid, Service, Worker_DurableObjectNamespace } from "../runtime";
@@ -23,11 +22,7 @@ export function normaliseServiceDesignator(
 
 	if (typeof service === "string") {
 		serviceName = service;
-	} else if (
-		typeof service === "object" &&
-		"name" in service &&
-		!(kResolvedServiceDesignator in service)
-	) {
+	} else if (typeof service === "object" && "name" in service) {
 		serviceName = service.name !== kCurrentWorker ? service.name : undefined;
 		entrypoint = service.entrypoint;
 		remoteProxyConnectionString = service.remoteProxyConnectionString;

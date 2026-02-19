@@ -75,7 +75,6 @@ import { PROXY_SECRET } from "./proxy";
 import {
 	CustomFetchServiceSchema,
 	kCurrentWorker,
-	kResolvedServiceDesignator,
 	ServiceDesignatorSchema,
 } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry";
@@ -368,22 +367,6 @@ function getCustomServiceDesignator(
 	service: z.infer<typeof ServiceDesignatorSchema>,
 	hasAssetsAndIsVitest: boolean = false
 ): ServiceDesignator {
-	// Pre-resolved designator: used by the dev registry proxy to point bindings
-	// directly at internal core services without getUserServiceName() wrapping
-	if (
-		typeof service === "object" &&
-		kResolvedServiceDesignator in service &&
-		service[kResolvedServiceDesignator] === true
-	) {
-		return {
-			name: service.name,
-			entrypoint: service.entrypoint,
-			props: service.props
-				? { json: JSON.stringify(service.props) }
-				: undefined,
-		};
-	}
-
 	let serviceName: string;
 	let entrypoint: string | undefined;
 	let props: { json: string } | undefined;
@@ -432,14 +415,6 @@ function maybeGetCustomServiceService(
 	name: string,
 	service: z.infer<typeof ServiceDesignatorSchema>
 ): Service | undefined {
-	// Pre-resolved designator: the target service is defined elsewhere
-	if (
-		typeof service === "object" &&
-		kResolvedServiceDesignator in service &&
-		service[kResolvedServiceDesignator] === true
-	) {
-		return undefined;
-	}
 	if (typeof service === "function") {
 		// Custom `fetch` function
 		return {
