@@ -178,14 +178,6 @@ export function StudioTableExplorerTab({
 		void onRefreshClicked();
 	}, [onRefreshClicked]);
 
-	const readOnlyMode = useMemo(() => {
-		if (!state) {
-			return true;
-		}
-
-		return state.getHeaders().every((header) => header.setting.readonly);
-	}, [state]);
-
 	// @ts-expect-error TODO: Re-enable in a later PR
 	const _headerIndexList = useMemo((): number[] => {
 		if (!schema) {
@@ -399,26 +391,22 @@ export function StudioTableExplorerTab({
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
-				{!readOnlyMode && (
-					<>
-						<Button
-							className="hover:bg-border! transition"
-							onClick={onAddRowClick}
-							variant="ghost"
-						>
-							<PlusIcon />
-							<span className="text-xs">Add row</span>
-						</Button>
-						<Button
-							className="hover:bg-border! transition"
-							onClick={onDeleteRowClick}
-							variant="ghost"
-						>
-							<TrashIcon />
-							<span className="text-xs">Delete row</span>
-						</Button>
-					</>
-				)}
+				<Button
+					className="hover:bg-border! transition"
+					onClick={onAddRowClick}
+					variant="ghost"
+				>
+					<PlusIcon />
+					<span className="text-xs">Add row</span>
+				</Button>
+				<Button
+					className="hover:bg-border! transition"
+					onClick={onDeleteRowClick}
+					variant="ghost"
+				>
+					<TrashIcon />
+					<span className="text-xs">Delete row</span>
+				</Button>
 
 				<div className="grow text-xs">
 					{/* TODO: Re-add in a later PR */}
