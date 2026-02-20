@@ -52,7 +52,7 @@ export function StudioQueryResultStats({
 			);
 		}
 
-		if (stats.rowsRead) {
+		if (stats.rowCount) {
 			content.push(
 				<div className="px-2" key="rows-read">
 					<span className="font-semibold">Rows Read</span>: {stats.rowCount}
