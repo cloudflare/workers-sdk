@@ -14759,6 +14759,61 @@ export default{
 			`);
 		});
 
+		it("should deploy a workflow with limits", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				async ({ params, request }) => {
+					expect(params.workflowName).toBe("my-workflow");
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(body).toEqual({
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					});
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
 		it("should not call Workflow's API if the workflow binds to another script", async () => {
 			writeWranglerConfig({
 				main: "index.js",

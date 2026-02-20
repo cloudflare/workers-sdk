@@ -271,6 +271,7 @@ export default async function triggersDeploy(
 						body: JSON.stringify({
 							script_name: scriptName,
 							class_name: workflow.class_name,
+							...(workflow.limits && { limits: workflow.limits }),
 						}),
 						headers: {
 							"Content-Type": "application/json",

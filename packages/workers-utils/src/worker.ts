@@ -181,6 +181,9 @@ export interface CfWorkflow {
 	script_name?: string;
 	remote?: boolean;
 	raw?: boolean;
+	limits?: {
+		steps?: number;
+	};
 }
 
 export interface CfQueue {

@@ -5,7 +5,7 @@ import {
 } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, it, vi } from "vitest";
-import { InstanceEvent, InstanceStatus } from "../src";
+import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -270,5 +270,119 @@ describe("Engine", () => {
 		expect(
 			logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_START)
 		).toBe(true);
+	});
+
+	describe("step limits", () => {
+		it("should enforce step limit when exceeded", async ({ expect }) => {
+			const stepLimit = 3;
+
+			const engineStub = await runWorkflow(
+				"STEP-LIMIT-EXCEEDED",
+				async (_event, step) => {
+					// Try to run more steps than the limit
+					for (let i = 0; i < stepLimit + 1; i++) {
+						await step.do(`step-${i}`, async () => `result-${i}`);
+					}
+				}
+			);
+
+			// Set the step limit on the engine
+			await runInDurableObject(engineStub, (engine) => {
+				engine.stepLimit = stepLimit;
+			});
+
+			// Re-init to run with the new limit
+			await setWorkflowEntrypoint(engineStub, async (_event, step) => {
+				for (let i = 0; i < stepLimit + 1; i++) {
+					await step.do(`step-${i}`, async () => `result-${i}`);
+				}
+			});
+
+			const engineId = env.ENGINE.idFromName("STEP-LIMIT-EXCEEDED-2");
+			const freshStub = env.ENGINE.get(engineId);
+
+			await runInDurableObject(freshStub, (engine) => {
+				engine.stepLimit = stepLimit;
+			});
+
+			await setWorkflowEntrypoint(freshStub, async (_event, step) => {
+				for (let i = 0; i < stepLimit + 1; i++) {
+					await step.do(`step-${i}`, async () => `result-${i}`);
+				}
+			});
+
+			await freshStub.init(
+				12346,
+				{} as DatabaseWorkflow,
+				{} as DatabaseVersion,
+				{ id: "STEP-LIMIT-EXCEEDED-2" } as DatabaseInstance,
+				{
+					payload: {},
+					timestamp: new Date(),
+					instanceId: "STEP-LIMIT-EXCEEDED-2",
+				}
+			);
+
+			const logs = (await freshStub.readLogs()) as EngineLogs;
+
+			expect(
+				logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+			).toBe(true);
+		});
+
+		it("should succeed when steps are exactly at the limit", async ({
+			expect,
+		}) => {
+			const stepLimit = 3;
+
+			const engineId = env.ENGINE.idFromName("STEP-LIMIT-AT-LIMIT");
+			const freshStub = env.ENGINE.get(engineId);
+
+			await runInDurableObject(freshStub, (engine) => {
+				engine.stepLimit = stepLimit;
+			});
+
+			await setWorkflowEntrypoint(freshStub, async (_event, step) => {
+				for (let i = 0; i < stepLimit; i++) {
+					await step.do(`step-${i}`, async () => `result-${i}`);
+				}
+				return "done";
+			});
+
+			await freshStub.init(
+				12346,
+				{} as DatabaseWorkflow,
+				{} as DatabaseVersion,
+				{ id: "STEP-LIMIT-AT-LIMIT" } as DatabaseInstance,
+				{
+					payload: {},
+					timestamp: new Date(),
+					instanceId: "STEP-LIMIT-AT-LIMIT",
+				}
+			);
+
+			const logs = (await freshStub.readLogs()) as EngineLogs;
+
+			expect(
+				logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
+			).toBe(true);
+			expect(
+				logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
+			).toBe(false);
+		});
+
+		it("should use DEFAULT_STEP_LIMIT when no limit is configured", async ({
+			expect,
+		}) => {
+			const engineId = env.ENGINE.idFromName("STEP-LIMIT-DEFAULT");
+			const freshStub = env.ENGINE.get(engineId);
+
+			const stepLimit = await runInDurableObject(
+				freshStub,
+				(engine) => engine.stepLimit
+			);
+
+			expect(stepLimit).toBe(DEFAULT_STEP_LIMIT);
+		});
 	});
 });

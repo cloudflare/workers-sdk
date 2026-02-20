@@ -301,6 +301,7 @@ function workflowEntry(
 		class_name: className,
 		script_name: scriptName,
 		remote,
+		limits,
 	}: CfWorkflow,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
@@ -310,8 +311,11 @@ function workflowEntry(
 		className: string;
 		scriptName?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		stepLimit?: number;
 	},
 ] {
+	const stepLimit = limits?.steps;
+
 	if (!remoteProxyConnectionString || !remote) {
 		return [
 			binding,
@@ -319,6 +323,7 @@ function workflowEntry(
 				name,
 				className,
 				scriptName,
+				...(stepLimit !== undefined && { stepLimit }),
 			},
 		];
 	}
@@ -330,6 +335,7 @@ function workflowEntry(
 			className,
 			scriptName,
 			remoteProxyConnectionString,
+			...(stepLimit !== undefined && { stepLimit }),
 		},
 	];
 }
