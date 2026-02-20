@@ -6,7 +6,7 @@ import {
 	readFileSync,
 } from "@cloudflare/workers-utils";
 import TOML from "smol-toml";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import {
 	clearProfileOverride,
 	deleteProfile,
@@ -38,7 +38,7 @@ describe("Profile", () => {
 	});
 
 	describe("validateProfileName", () => {
-		it("should accept valid profile names", () => {
+		it("should accept valid profile names", ({ expect }) => {
 			expect(() => validateProfileName("default")).not.toThrow();
 			expect(() => validateProfileName("work")).not.toThrow();
 			expect(() => validateProfileName("my-company")).not.toThrow();
@@ -46,13 +46,13 @@ describe("Profile", () => {
 			expect(() => validateProfileName("Test123")).not.toThrow();
 		});
 
-		it("should reject empty names", () => {
+		it("should reject empty names", ({ expect }) => {
 			expect(() => validateProfileName("")).toThrow(
 				"Profile name cannot be empty"
 			);
 		});
 
-		it("should reject names with invalid characters", () => {
+		it("should reject names with invalid characters", ({ expect }) => {
 			expect(() => validateProfileName("my profile")).toThrow(
 				"Only letters, numbers, hyphens, and underscores"
 			);
@@ -64,7 +64,7 @@ describe("Profile", () => {
 			);
 		});
 
-		it("should reject names that are too long", () => {
+		it("should reject names that are too long", ({ expect }) => {
 			const longName = "a".repeat(65);
 			expect(() => validateProfileName(longName)).toThrow(
 				"at most 64 characters"
@@ -73,20 +73,20 @@ describe("Profile", () => {
 	});
 
 	describe("getAuthConfigFilePath", () => {
-		it("should return default.toml for the default profile", () => {
+		it("should return default.toml for the default profile", ({ expect }) => {
 			const filePath = getAuthConfigFilePath("default");
 			expect(filePath).toContain("default.toml");
 			expect(filePath).not.toContain("profiles");
 		});
 
-		it("should return profiles/<name>.toml for named profiles", () => {
+		it("should return profiles/<name>.toml for named profiles", ({ expect }) => {
 			const filePath = getAuthConfigFilePath("work");
 			expect(filePath).toContain(path.join("profiles", "work.toml"));
 		});
 	});
 
 	describe("writeAuthConfigFile / readAuthConfigFile", () => {
-		it("should write and read auth config for the default profile", () => {
+		it("should write and read auth config for the default profile", ({ expect }) => {
 			const config: UserAuthConfig = {
 				oauth_token: "test-token",
 				refresh_token: "test-refresh",
@@ -99,7 +99,7 @@ describe("Profile", () => {
 			expect(read.refresh_token).toBe("test-refresh");
 		});
 
-		it("should write and read auth config for a named profile", () => {
+		it("should write and read auth config for a named profile", ({ expect }) => {
 			const config: UserAuthConfig = {
 				oauth_token: "work-token",
 				refresh_token: "work-refresh",
@@ -112,7 +112,7 @@ describe("Profile", () => {
 			expect(read.refresh_token).toBe("work-refresh");
 		});
 
-		it("should keep profiles isolated from each other", () => {
+		it("should keep profiles isolated from each other", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "default-token",
@@ -136,15 +136,15 @@ describe("Profile", () => {
 	});
 
 	describe("profileExists", () => {
-		it("should always return true for default", () => {
+		it("should always return true for default", ({ expect }) => {
 			expect(profileExists("default")).toBe(true);
 		});
 
-		it("should return false for non-existent profiles", () => {
+		it("should return false for non-existent profiles", ({ expect }) => {
 			expect(profileExists("nonexistent")).toBe(false);
 		});
 
-		it("should return true after writing a profile config", () => {
+		it("should return true after writing a profile config", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -158,11 +158,11 @@ describe("Profile", () => {
 	});
 
 	describe("listProfiles", () => {
-		it("should return only default when no profiles exist", () => {
+		it("should return only default when no profiles exist", ({ expect }) => {
 			expect(listProfiles()).toEqual(["default"]);
 		});
 
-		it("should include named profiles", () => {
+		it("should include named profiles", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token1",
@@ -188,29 +188,29 @@ describe("Profile", () => {
 	});
 
 	describe("getActiveProfile", () => {
-		it("should return default when nothing is configured", () => {
+		it("should return default when nothing is configured", ({ expect }) => {
 			expect(getActiveProfile()).toBe("default");
 		});
 
-		it("should respect WRANGLER_PROFILE env var", () => {
+		it("should respect WRANGLER_PROFILE env var", ({ expect }) => {
 			vi.stubEnv("WRANGLER_PROFILE", "work");
 			expect(getActiveProfile()).toBe("work");
 			vi.unstubAllEnvs();
 		});
 
-		it("should respect setProfileOverride", () => {
+		it("should respect setProfileOverride", ({ expect }) => {
 			setProfileOverride("custom");
 			expect(getActiveProfile()).toBe("custom");
 		});
 
-		it("should respect profiles.toml active_profile", () => {
+		it("should respect profiles.toml active_profile", ({ expect }) => {
 			setActiveProfile("work");
 			// Reset any override so profiles.toml is checked
 			clearProfileOverride();
 			expect(getActiveProfile()).toBe("work");
 		});
 
-		it("should reject invalid WRANGLER_PROFILE values", () => {
+		it("should reject invalid WRANGLER_PROFILE values", ({ expect }) => {
 			vi.stubEnv("WRANGLER_PROFILE", "../../../etc/passwd");
 			expect(() => getActiveProfile()).toThrow(
 				"Only letters, numbers, hyphens, and underscores"
@@ -218,7 +218,7 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("should reject invalid active_profile in profiles.toml", () => {
+		it("should reject invalid active_profile in profiles.toml", ({ expect }) => {
 			const configDir = path.join(
 				getGlobalWranglerConfigPath(),
 				"config"
@@ -235,7 +235,7 @@ describe("Profile", () => {
 	});
 
 	describe("setActiveProfile", () => {
-		it("should write profiles.toml", () => {
+		it("should write profiles.toml", ({ expect }) => {
 			setActiveProfile("work");
 			const profilesConfigPath = path.join(
 				getGlobalWranglerConfigPath(),
@@ -250,19 +250,19 @@ describe("Profile", () => {
 	});
 
 	describe("deleteProfile", () => {
-		it("should throw when trying to delete default", () => {
+		it("should throw when trying to delete default", ({ expect }) => {
 			expect(() => deleteProfile("default")).toThrow(
 				"Cannot delete the default profile"
 			);
 		});
 
-		it("should throw when profile doesn't exist", () => {
+		it("should throw when profile doesn't exist", ({ expect }) => {
 			expect(() => deleteProfile("nonexistent")).toThrow(
 				'does not exist'
 			);
 		});
 
-		it("should delete an existing profile", () => {
+		it("should delete an existing profile", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -276,7 +276,7 @@ describe("Profile", () => {
 			expect(profileExists("work")).toBe(false);
 		});
 
-		it("should reset profiles.toml when deleting active profile while a different override is set", () => {
+		it("should reset profiles.toml when deleting active profile while a different override is set", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -311,7 +311,7 @@ describe("Profile", () => {
 	});
 
 	describe("staging environment", () => {
-		it("profileExists should find staging profile in staging env", () => {
+		it("profileExists should find staging profile in staging env", ({ expect }) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			writeAuthConfigFile(
 				{
@@ -325,7 +325,7 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("profileExists should not find production profile in staging env", () => {
+		it("profileExists should not find production profile in staging env", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -339,7 +339,7 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("listProfiles should list staging profiles by correct name", () => {
+		it("listProfiles should list staging profiles by correct name", ({ expect }) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			writeAuthConfigFile(
 				{
@@ -355,7 +355,7 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("listProfiles should not list production profiles in staging env", () => {
+		it("listProfiles should not list production profiles in staging env", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -370,7 +370,7 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("deleteProfile should delete staging profile in staging env", () => {
+		it("deleteProfile should delete staging profile in staging env", ({ expect }) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			writeAuthConfigFile(
 				{
@@ -386,7 +386,7 @@ describe("Profile", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("deleteProfile should not find production profile in staging env", () => {
+		it("deleteProfile should not find production profile in staging env", ({ expect }) => {
 			writeAuthConfigFile(
 				{
 					oauth_token: "token",
@@ -403,25 +403,25 @@ describe("Profile", () => {
 
 	describe("CLI commands", () => {
 		describe("wrangler profile list", () => {
-			it("should list default profile when no others exist", async () => {
+			it("should list default profile when no others exist", async ({ expect }) => {
 				await runWrangler("profile list");
 				expect(std.out).toContain("default");
 			});
 
-			it("should show (active) marker", async () => {
+			it("should show (active) marker", async ({ expect }) => {
 				await runWrangler("profile list");
 				expect(std.out).toContain("default (active)");
 			});
 		});
 
 		describe("wrangler profile use", () => {
-			it("should fail when profile doesn't exist", async () => {
+			it("should fail when profile doesn't exist", async ({ expect }) => {
 				await expect(
 					runWrangler("profile use nonexistent")
 				).rejects.toThrow(/does not exist/);
 			});
 
-			it("should switch to an existing profile", async () => {
+			it("should switch to an existing profile", async ({ expect }) => {
 				writeAuthConfigFile(
 					{
 						oauth_token: "token",
@@ -436,13 +436,13 @@ describe("Profile", () => {
 		});
 
 		describe("wrangler profile delete", () => {
-			it("should fail when trying to delete default", async () => {
+			it("should fail when trying to delete default", async ({ expect }) => {
 				await expect(
 					runWrangler("profile delete default")
 				).rejects.toThrow(/Cannot delete the default profile/);
 			});
 
-			it("should delete an existing profile", async () => {
+			it("should delete an existing profile", async ({ expect }) => {
 				writeAuthConfigFile(
 					{
 						oauth_token: "token",
