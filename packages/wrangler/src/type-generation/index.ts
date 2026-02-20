@@ -10,7 +10,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import * as find from "empathic/find";
+import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -1257,7 +1257,7 @@ function generatePerEnvTypeStrings(
  * @throws {UserError} If a non-Wrangler .d.ts file already exists at the given path.
  */
 const validateTypesFile = (path: string): void => {
-	const wranglerOverrideDTSPath = find.file(path);
+	const wranglerOverrideDTSPath = findUpSync(path);
 	if (wranglerOverrideDTSPath === undefined) {
 		return;
 	}
