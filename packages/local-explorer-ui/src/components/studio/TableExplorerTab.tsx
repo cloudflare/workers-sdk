@@ -3,6 +3,7 @@ import {
 	ArrowsCounterClockwiseIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
+	ListNumbersIcon,
 	PlusIcon,
 	SpinnerIcon,
 	TrashIcon,
@@ -467,6 +468,23 @@ export function StudioTableExplorerTab({
 
 				<div>
 					<InputGroup size="base">
+						<div className="flex items-center justify-center px-2 border-r border-border">
+							<ListNumbersIcon size={14} />
+						</div>
+
+						<input
+							className="text-center bg-transparent text-sm outline-none border border-none rounded-r-lg px-1"
+							style={{ width: 50 }}
+							value={pageLimitInput}
+							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
+							aria-label="Rows per page"
+							onBlur={onLimitBlur}
+						/>
+					</InputGroup>
+				</div>
+
+				<div>
+					<InputGroup size="base">
 						<InputGroup.Button
 							aria-label="Previous Page"
 							disabled={!state || pageOffset <= 0}
@@ -476,24 +494,14 @@ export function StudioTableExplorerTab({
 							<CaretLeftIcon size={14} weight="bold" />
 						</InputGroup.Button>
 
-						<div className="divide-x divide-border h-full flex align-center">
-							<input
-								className="text-center bg-transparent text-sm outline-none"
-								style={{ width: 50 }}
-								value={pageLimitInput}
-								onChange={(e) => setPageLimitInput(e.currentTarget.value)}
-								aria-label="Limit"
-								onBlur={onLimitBlur}
-							/>
-							<input
-								style={{ width: 50 }}
-								value={pageOffsetInput}
-								className="text-center bg-transparent text-sm outline-none"
-								onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
-								aria-label="Offset"
-								onBlur={onOffsetBlur}
-							/>
-						</div>
+						<input
+							style={{ width: 50 }}
+							value={pageOffsetInput}
+							className="text-center bg-transparent text-sm outline-none"
+							onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
+							aria-label="Page offset"
+							onBlur={onOffsetBlur}
+						/>
 
 						<InputGroup.Button
 							aria-label="Next Page"
