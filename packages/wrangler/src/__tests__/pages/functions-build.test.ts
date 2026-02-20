@@ -603,8 +603,7 @@ export const cat = "dog";`
 
 
 			export const cat = "dog";
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
