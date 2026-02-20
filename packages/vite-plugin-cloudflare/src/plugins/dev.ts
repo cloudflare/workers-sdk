@@ -17,7 +17,6 @@ import {
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
-import type { ExportTypes } from "../export-types";
 import {
 	disposeRemoteProxySessions,
 	getDevMiniflareOptions,
@@ -25,6 +24,7 @@ import {
 import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
+import type { ExportTypes } from "../export-types";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
 

@@ -104,7 +104,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		options: { isEntryWorker: boolean; isParentEnvironment: boolean }
 	): Promise<void> {
 		if (this.#webSocketContainer.webSocket) {
-			this.hot.close();
+			await this.hot.close();
 			this.#webSocketContainer.webSocket.close();
 		}
 
