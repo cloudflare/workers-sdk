@@ -28,6 +28,7 @@
 		"@codemirror/state": "^6.5.4",
 		"@codemirror/view": "^6.39.14",
 		"@lezer/common": "^1.5.1",
+		"@lezer/highlight": "^1.2.3",
 		"@phosphor-icons/react": "^2.1.10",
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-router": "^1.158.0",
