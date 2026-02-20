@@ -39,4 +39,9 @@ export default defineConfig({
 			},
 		},
 	},
+	resolve: {
+		alias: {
+			"react/jsx-runtime.js": "react/jsx-runtime",
+		},
+	},
 });
