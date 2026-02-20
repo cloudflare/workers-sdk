@@ -275,6 +275,39 @@ describe("Profile", () => {
 			deleteProfile("work");
 			expect(profileExists("work")).toBe(false);
 		});
+
+		it("should reset profiles.toml when deleting active profile while a different override is set", () => {
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			// Mark "work" as the active profile in profiles.toml
+			setActiveProfile("work");
+			expect(getActiveProfile()).toBe("work");
+
+			// Set a CLI override to a different profile so getActiveProfile()
+			// would return "personal" instead of "work"
+			writeAuthConfigFile(
+				{
+					oauth_token: "token2",
+					refresh_token: "refresh2",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"personal"
+			);
+			setProfileOverride("personal");
+			expect(getActiveProfile()).toBe("personal");
+
+			// Delete "work" — profiles.toml should be reset to "default"
+			// even though the override points elsewhere
+			deleteProfile("work");
+			clearProfileOverride();
+			expect(getActiveProfile()).toBe("default");
+		});
 	});
 
 	describe("staging environment", () => {

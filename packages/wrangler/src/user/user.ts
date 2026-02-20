@@ -396,6 +396,34 @@ export function validateProfileName(name: string): void {
 }
 
 /**
+ * Read the `active_profile` value directly from `profiles.toml`,
+ * ignoring CLI overrides and environment variables.
+ * Returns `undefined` when profiles.toml doesn't exist or the
+ * active profile is "default".
+ */
+function getActiveProfileFromConfig(): string | undefined {
+	try {
+		const profilesConfigPath = path.join(
+			getGlobalWranglerConfigPath(),
+			USER_AUTH_CONFIG_PATH,
+			PROFILES_CONFIG_FILE
+		);
+		const profilesConfig = parseTOML(readFileSync(profilesConfigPath)) as {
+			active_profile?: string;
+		};
+		if (
+			profilesConfig.active_profile &&
+			profilesConfig.active_profile !== "default"
+		) {
+			return profilesConfig.active_profile;
+		}
+	} catch {
+		// profiles.toml doesn't exist; that's fine
+	}
+	return undefined;
+}
+
+/**
  * Resolve the active profile name.
  *
  * Priority (highest to lowest):
@@ -415,26 +443,7 @@ export function getActiveProfile(): string {
 		return envProfile;
 	}
 
-	let activeProfileFromConfig: string | undefined;
-	try {
-		const profilesConfigPath = path.join(
-			getGlobalWranglerConfigPath(),
-			USER_AUTH_CONFIG_PATH,
-			PROFILES_CONFIG_FILE
-		);
-		const profilesConfig = parseTOML(readFileSync(profilesConfigPath)) as {
-			active_profile?: string;
-		};
-		if (
-			profilesConfig.active_profile &&
-			profilesConfig.active_profile !== "default"
-		) {
-			activeProfileFromConfig = profilesConfig.active_profile;
-		}
-	} catch {
-		// profiles.toml doesn't exist; that's fine
-	}
-
+	const activeProfileFromConfig = getActiveProfileFromConfig();
 	if (activeProfileFromConfig) {
 		validateProfileName(activeProfileFromConfig);
 		return activeProfileFromConfig;
@@ -535,8 +544,10 @@ export function deleteProfile(name: string): void {
 	}
 	rmSync(profilePath);
 
-	// If this was the active profile, reset to default
-	if (getActiveProfile() === name) {
+	// If this was the active profile in profiles.toml, reset to default.
+	// Use getActiveProfileFromConfig() instead of getActiveProfile() so that
+	// CLI overrides (--profile) and WRANGLER_PROFILE don't mask the check.
+	if (getActiveProfileFromConfig() === name) {
 		setActiveProfile("default");
 	}
 }
