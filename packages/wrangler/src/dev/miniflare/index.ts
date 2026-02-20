@@ -720,9 +720,23 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 		workflows: Object.fromEntries(
-			workflows.map((workflow) =>
-				workflowEntry(workflow, remoteProxyConnectionString)
-			)
+			workflows.map((workflow) => {
+				if (
+					workflow.script_name !== undefined &&
+					workflow.script_name !== config.name &&
+					workflow.limits
+				) {
+					logger.warn(
+						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+							`The limits will not be applied locally — configure them on the worker that defines the workflow.`
+					);
+					return workflowEntry(
+						{ ...workflow, limits: undefined },
+						remoteProxyConnectionString
+					);
+				}
+				return workflowEntry(workflow, remoteProxyConnectionString);
+			})
 		),
 		secretsStoreSecrets: Object.fromEntries(
 			secretsStoreSecrets.map((binding) => [binding.binding, binding])

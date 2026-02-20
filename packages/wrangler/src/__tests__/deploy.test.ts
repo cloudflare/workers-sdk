@@ -14878,6 +14878,48 @@ export default{
 			`);
 		});
 
+		it("should warn when deploying a workflow with limits that references an external script", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toContain(
+				'Workflow "my-workflow" has "limits" configured but references external script "another-script"'
+			);
+		});
+
 		describe("workflow conflict detection", () => {
 			function mockGetWorkflow(
 				workflowsByName: Record<
