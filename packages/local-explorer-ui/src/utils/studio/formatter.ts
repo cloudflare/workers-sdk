@@ -2,7 +2,7 @@
 // It’s intentionally small and limited in scope.
 // For broader functionality, consider switching to a full library such as sql-formatter.
 
-import { sqliteBuiltinFunctionList } from "../../components/studio/SQLEditor/SQLiteDialect";
+import { sqliteBuiltinFunctionList } from "../../components/studio/SQLEditor/SQLite/Dialect";
 import { tokenizeSQL } from "./sql";
 import type { StudioDialect, StudioSQLToken } from "../../types/studio";
 

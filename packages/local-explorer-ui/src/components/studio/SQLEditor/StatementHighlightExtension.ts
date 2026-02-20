@@ -11,7 +11,10 @@ to see which parts of the query are included in the selection.
 */
 
 import { syntaxTree } from "@codemirror/language";
-import type { EditorState } from "@codemirror/state";
+import { StateField } from "@codemirror/state";
+import { Decoration, EditorView } from "@codemirror/view";
+import type { EditorState, Range } from "@codemirror/state";
+import type { DecorationSet } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 
 export interface StudioStatementSegment {
@@ -241,3 +244,49 @@ export function resolveStudioToNearestStatement(
 
 	return prevStatement;
 }
+
+const statementLineHighlight = Decoration.line({
+	class: "cm-highlight-statement",
+});
+
+/**
+ * TODO
+ *
+ * @param state
+ *
+ * @returns TODO
+ */
+function getDecorationFromState(state: EditorState): DecorationSet {
+	const statement = resolveStudioToNearestStatement(state);
+	if (!statement) {
+		return Decoration.none;
+	}
+
+	// Get the line of the node
+	const fromLineNumber = state.doc.lineAt(statement.from).number;
+	const toLineNumber = state.doc.lineAt(statement.to).number;
+
+	const d = new Array<Range<Decoration>>();
+	for (let i = fromLineNumber; i <= toLineNumber; i++) {
+		d.push(statementLineHighlight.range(state.doc.line(i).from));
+	}
+
+	return Decoration.set(d);
+}
+
+const SqlStatementStateField = StateField.define({
+	create: (state) => getDecorationFromState(state),
+	provide: (f) => EditorView.decorations.from(f),
+	update: (_, tr) => getDecorationFromState(tr.state),
+});
+
+const SqlStatementTheme = EditorView.baseTheme({
+	".cm-highlight-statement": {
+		borderLeft: "3px solid #ff9ff3 !important",
+	},
+});
+
+export const StudioSQLStatementHighlightExtension = [
+	SqlStatementStateField,
+	SqlStatementTheme,
+];

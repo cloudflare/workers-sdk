@@ -7,6 +7,7 @@ import { runStudioMultipleSQLStatements } from "../../../utils/studio/query";
 import { useStudioContext } from "../Context";
 import { StudioQueryResultSummary } from "../Query/ResultSummary";
 import { StudioQueryResultTab } from "../Query/ResultTab";
+import { StudioSQLEditor } from "../SQLEditor";
 import {
 	resolveStudioToNearestStatement,
 	splitStudioSQLStatements,
@@ -22,9 +23,7 @@ interface StudioQueryTabProps {
 	query?: string;
 }
 
-export function StudioQueryTab({
-	query: _query,
-}: StudioQueryTabProps): JSX.Element {
+export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	const { driver, schemas, refreshSchema } = useStudioContext();
 
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
@@ -93,7 +92,7 @@ export function StudioQueryTab({
 		void runMultipleStatements([statement]);
 	}, [editorRef, runMultipleStatements]);
 
-	const _keybinding = useMemo(
+	const keybinding = useMemo(
 		() => [
 			{
 				key: "Ctrl-Enter",
@@ -118,7 +117,7 @@ export function StudioQueryTab({
 	);
 
 	// Update cursor position information
-	const _onCursorChange = useCallback(
+	const onCursorChange = useCallback(
 		(_: unknown, line: number, col: number): void => {
 			setCursorLineNumber(line);
 			setCursorColumnNumber(col + 1);
@@ -180,7 +179,7 @@ export function StudioQueryTab({
 		}
 	}, [queryTabs]);
 
-	const _autoCompelteSchema = useMemo((): Record<string, string[]> => {
+	const autoCompelteSchema = useMemo((): Record<string, string[]> => {
 		if (!schemas) {
 			return {};
 		}
@@ -242,8 +241,7 @@ export function StudioQueryTab({
 		>
 			<div className="w-full flex flex-col bg-surface">
 				<div className="grow overflow-hidden">
-					{/* TODO: Re-enable once implemented */}
-					{/* <StudioSQLEditor
+					<StudioSQLEditor
 						autoCompleteSchema={autoCompelteSchema}
 						autoFocus
 						className="p-2 w-full h-full"
@@ -253,7 +251,7 @@ export function StudioQueryTab({
 						onCursorChange={onCursorChange}
 						ref={editorRef}
 						statementHighlight
-					/> */}
+					/>
 				</div>
 				<div
 					className="shrink-0 py-2 px-4 flex items-center gap-2"
