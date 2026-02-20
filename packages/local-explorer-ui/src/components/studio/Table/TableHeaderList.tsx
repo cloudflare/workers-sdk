@@ -20,7 +20,10 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 	return (
 		<thead className="contents">
 			<tr className="contents">
-				<th className="sticky top-0 left-0 z-30 border-r border-b bg-bg-secondary border-border"></th>
+				{headers.length > 0 && (
+					<th className="sticky top-0 left-0 z-30 border-r border-b bg-bg-secondary border-border"></th>
+				)}
+
 				{headers.map((header, idx) => {
 					return (
 						<StudioTableHeader
