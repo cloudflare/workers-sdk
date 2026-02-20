@@ -378,19 +378,19 @@ export async function generateEnvTypes(
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
 
-	// Merge config-declared secret keys (from wrangler.jsonc "secrets" field) into the secrets set
+	// Merge config-declared secret names (from wrangler.jsonc "secrets" array) into the secrets set
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
-	for (const k of Object.keys(rawConfig.secrets ?? {})) {
+	for (const k of rawConfig.secrets ?? []) {
 		secrets[k] = "";
 	}
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
-		for (const k of Object.keys(envConfig.secrets ?? {})) {
+		for (const k of envConfig.secrets ?? []) {
 			secrets[k] = "";
 		}
 	} else {
 		for (const env of Object.values(rawConfig.env ?? {})) {
-			for (const k of Object.keys(env.secrets ?? {})) {
+			for (const k of env.secrets ?? []) {
 				secrets[k] = "";
 			}
 		}

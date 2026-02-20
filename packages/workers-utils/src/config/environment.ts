@@ -702,16 +702,16 @@ export interface EnvironmentNonInheritable {
 
 	/**
 	 * Declarations of secret binding names for type generation only.
-	 * Keys are the binding names; values are empty objects (no value is stored in config).
+	 * Each name is typed as optional `string` on the generated `Env`.
 	 * Actual secret values are set via `wrangler secret put` or the Dashboard.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default {}
+	 * @default []
 	 * @nonInheritable
 	 */
-	secrets: Record<string, Record<string, never>>;
+	secrets: string[];
 
 	/**
 	 * A list of durable objects that your Worker should be bound to.

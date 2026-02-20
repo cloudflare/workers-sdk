@@ -1480,10 +1480,7 @@ describe("generate types", () => {
 				vars: {
 					PUBLIC_KEY: "abc",
 				},
-				secrets: {
-					WEBHOOK_SECRET: {},
-					GITHUB_PATS: {},
-				},
+				secrets: ["WEBHOOK_SECRET", "GITHUB_PATS"],
 			}),
 			"utf-8"
 		);

@@ -1567,7 +1567,7 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"secrets",
 			validateSecrets(envName),
-			{}
+			[]
 		),
 		define: notInheritable(
 			diagnostics,
@@ -2246,23 +2246,19 @@ const validateSecrets =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
 
 		if (value !== undefined) {
-			if (typeof value !== "object" || value === null) {
+			if (!Array.isArray(value)) {
 				diagnostics.errors.push(
-					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					`The field "${fieldPath}" should be an array of secret names (e.g. ["MY_SECRET"]) but got ${JSON.stringify(
 						value
 					)}.\n`
 				);
 				isValid = false;
 			} else {
-				for (const [secretName, secretValue] of Object.entries(value)) {
-					if (
-						typeof secretValue !== "object" ||
-						secretValue === null ||
-						Array.isArray(secretValue)
-					) {
+				for (let i = 0; i < value.length; i++) {
+					if (typeof value[i] !== "string") {
 						diagnostics.errors.push(
-							`The field "${fieldPath}.${secretName}" should be an empty object (secret values are set via \`wrangler secret put\` or the Dashboard) but got ${JSON.stringify(
-								secretValue
+							`The field "${fieldPath}[${i}]" should be a string (secret name) but got ${JSON.stringify(
+								value[i]
 							)}.\n`
 						);
 						isValid = false;
