@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
-import module from "node:module";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
+	getLocalWorkerdCompatibilityDate,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -278,12 +278,9 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			const miniflareEntry = require.resolve("miniflare");
-			const miniflareRequire = module.createRequire(miniflareEntry);
-			const miniflareWorkerd = miniflareRequire("workerd") as {
-				compatibilityDate: string;
-			};
-			const currentDate = miniflareWorkerd.compatibilityDate;
+			// Use getLocalWorkerdCompatibilityDate() which applies the same safe date
+			// conversion as wrangler does (converting future dates to today's date)
+			const { date: currentDate } = getLocalWorkerdCompatibilityDate();
 
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
