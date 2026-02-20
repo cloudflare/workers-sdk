@@ -4,11 +4,7 @@ import { CaretRightIcon, DatabaseIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
-import type {
-	D1DatabaseResponse,
-	WorkersKvNamespace,
-	WorkersNamespace,
-} from "../api";
+import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
 
