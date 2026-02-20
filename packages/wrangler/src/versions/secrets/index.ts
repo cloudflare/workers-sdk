@@ -70,6 +70,7 @@ export interface VersionDetails {
 			limits: CfUserLimits;
 		};
 	};
+	cache_options?: { enabled: boolean };
 }
 
 interface ScriptSettings {
@@ -191,6 +192,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		keep_assets: true,
 		assets: undefined,
 		observability: scriptSettings.observability,
+		cache: versionInfo.cache_options,
 	};
 
 	const body = createWorkerUploadForm(worker, bindings, {
