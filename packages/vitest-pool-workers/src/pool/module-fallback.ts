@@ -296,6 +296,161 @@ async function viteResolve(
 	return trimViteVersionHash(resolved.id);
 }
 
+// Returns `true` if `specifier` looks like a bare package specifier
+// (e.g. "some-lib", "@org/pkg", "some-lib/sub/path") as opposed to a
+// relative path (e.g. "dep.mjs", "../dep.mjs") or a built-in
+// (e.g. "node:fs", "cloudflare:sockets").
+function isBareSpecifier(specifier: string): boolean {
+	return (
+		specifier[0] !== "." &&
+		specifier[0] !== "/" &&
+		!specifier.includes(":")
+	);
+}
+
+// Find the directory containing the nearest `package.json` above `filePath`.
+function findPackageDir(filePath: string): string | undefined {
+	for (const parentPath of getParentPaths(filePath)) {
+		if (isFile(posixPath.join(parentPath, "package.json"))) {
+			return parentPath;
+		}
+	}
+	return undefined;
+}
+
+// Walk up from `referrer` looking for `node_modules/<packageName>` and
+// return its directory path if found.
+function findPackageInNodeModules(
+	packageName: string,
+	referrer: string
+): string | undefined {
+	for (const parentPath of getParentPaths(referrer)) {
+		const candidate = posixPath.join(parentPath, "node_modules", packageName);
+		if (isDirectory(candidate)) {
+			return candidate;
+		}
+	}
+	return undefined;
+}
+
+// Resolves a package.json exports entry to a file path string, handling
+// nested condition objects (e.g. `{ "import": { "types": "...", "default": "..." } }`).
+function resolveExportsEntry(entry: unknown): string | undefined {
+	if (typeof entry === "string") {
+		return entry;
+	}
+	if (typeof entry === "object" && entry !== null) {
+		const conditions = entry as Record<string, unknown>;
+		// Prefer import > default > require, resolving nested objects recursively
+		for (const key of ["import", "default", "require"]) {
+			const value = conditions[key];
+			if (typeof value === "string") {
+				return value;
+			}
+			if (typeof value === "object" && value !== null) {
+				const nested = resolveExportsEntry(value);
+				if (nested !== undefined) {
+					return nested;
+				}
+			}
+		}
+	}
+	return undefined;
+}
+
+// Detects and corrects the case where a bare specifier (e.g. `"some-lib"`)
+// was resolved to a file within the same package as the referrer. This
+// happens when the package has a subpath export whose name collides with
+// an npm dependency name (e.g. exports `"./some-lib"` and depends on
+// `"some-lib"`). Returns the correct package directory, or `undefined`
+// if no correction is needed.
+function maybeCorrectSubpathCollision(
+	resolvedPath: string,
+	specifier: string,
+	referrer: string
+): string | undefined {
+	const referrerPkgDir = findPackageDir(referrer);
+	const resolvedPkgDir = findPackageDir(resolvedPath);
+	if (referrerPkgDir === undefined || referrerPkgDir !== resolvedPkgDir) {
+		return undefined;
+	}
+	// The specifier resolved to a file in the same package as the referrer.
+	// This could be a subpath export collision (bare specifier matching a
+	// subpath export file), OR a genuine relative import (e.g. "./lodash").
+	// Since workerd strips the "./" prefix, we can't tell from the specifier
+	// alone. Verify the referrer's package actually has a subpath export
+	// that matches — if not, this isn't a collision.
+	try {
+		const referrerPkgJson = JSON.parse(
+			fs.readFileSync(
+				posixPath.join(referrerPkgDir, "package.json"),
+				"utf8"
+			)
+		);
+		const referrerExports = referrerPkgJson.exports;
+		if (
+			typeof referrerExports !== "object" ||
+			referrerExports === null ||
+			referrerExports["./" + specifier] === undefined
+		) {
+			// No matching subpath export in the referrer's package — not a collision.
+			return undefined;
+		}
+	} catch {
+		return undefined;
+	}
+	// The referrer's package has a subpath export that collides with this
+	// specifier. Look for the actual npm package in node_modules.
+	const packageName = specifier.startsWith("@")
+		? specifier.split("/").slice(0, 2).join("/")
+		: specifier.split("/")[0];
+	const pkgDir = findPackageInNodeModules(packageName, referrer);
+	if (pkgDir === undefined || pkgDir === referrerPkgDir) {
+		return undefined;
+	}
+	// Found the actual npm package. Resolve its entry point by reading
+	// its package.json exports/main field.
+	try {
+		const pkgJsonPath = posixPath.join(pkgDir, "package.json");
+		const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
+		// Try exports map first (handles ESM packages with "exports" field)
+		const subpath = "." + specifier.slice(packageName.length);
+		const exports = pkgJson.exports;
+		if (exports) {
+			let entry: unknown;
+			if (typeof exports === "string") {
+				// "exports": "./index.js"
+				entry = subpath === "." ? exports : undefined;
+			} else if (exports[subpath] !== undefined) {
+				// "exports": { ".": ..., "./sub": ... }
+				entry = exports[subpath];
+			} else if (subpath === "." && exports["."] === undefined) {
+				// Top-level condition keys: "exports": { "import": "...", "default": "..." }
+				// (no "." subpath key, keys are conditions not subpaths)
+				const hasSubpathKeys = Object.keys(exports).some(
+					(k: string) => k.startsWith(".")
+				);
+				if (!hasSubpathKeys) {
+					entry = exports;
+				}
+			}
+			const entryPath = resolveExportsEntry(entry);
+			if (typeof entryPath === "string") {
+				const resolved = posixPath.join(pkgDir, entryPath);
+				if (isFile(resolved)) {
+					return resolved;
+				}
+			}
+		}
+		// Fall back to main/module fields
+		const main = pkgJson.module ?? pkgJson.main ?? "index.js";
+		const resolved = posixPath.join(pkgDir, main);
+		return maybeGetTargetFilePath(resolved) ?? resolved;
+	} catch {
+		return undefined;
+	}
+}
+
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: ViteDevServer,
@@ -308,6 +463,22 @@ async function resolve(
 
 	let filePath = maybeGetTargetFilePath(target);
 	if (filePath !== undefined) {
+		// When workerd joins a bare specifier with the referrer's directory,
+		// it may accidentally match a file in the same package (e.g. a subpath
+		// export file with the same name as an npm dependency). If the specifier
+		// is a bare package name and the resolved file is in the same package
+		// as the referrer, prefer Node's resolution which correctly
+		// distinguishes package names from subpath exports.
+		if (isBareSpecifier(specifier)) {
+			const nodeResolved = maybeCorrectSubpathCollision(
+				filePath,
+				specifier,
+				referrer
+			);
+			if (nodeResolved !== undefined) {
+				return nodeResolved;
+			}
+		}
 		return filePath;
 	}
 
@@ -332,7 +503,21 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	filePath = await viteResolve(vite, specifier, referrer, method === "require");
+
+	// Also check the Vite-resolved path for the same subpath export collision.
+	if (isBareSpecifier(specifier)) {
+		const nodeResolved = maybeCorrectSubpathCollision(
+			filePath,
+			specifier,
+			referrer
+		);
+		if (nodeResolved !== undefined) {
+			return nodeResolved;
+		}
+	}
+
+	return filePath;
 }
 
 function buildRedirectResponse(filePath: string) {
