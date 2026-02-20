@@ -1,7 +1,10 @@
 import assert from "node:assert";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
-import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
+import {
+	getLocalExplorerEnabledFromEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import {
 	extractBindingsOfType,
@@ -726,13 +729,9 @@ export function buildMiniflareBindingOptions(
 					workflow.script_name !== config.name &&
 					workflow.limits
 				) {
-					logger.warn(
+					throw new UserError(
 						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`The limits will not be applied locally — configure them on the worker that defines the workflow.`
-					);
-					return workflowEntry(
-						{ ...workflow, limits: undefined },
-						remoteProxyConnectionString
+							`Configure limits on the worker that defines the workflow.`
 					);
 				}
 				return workflowEntry(workflow, remoteProxyConnectionString);

@@ -14878,7 +14878,7 @@ export default{
 			`);
 		});
 
-		it("should warn when deploying a workflow with limits that references an external script", async () => {
+		it("should error when deploying a workflow with limits that references an external script", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				name: "this-script",
@@ -14913,9 +14913,7 @@ export default{
             `
 			);
 
-			await runWrangler("deploy");
-
-			expect(std.warn).toContain(
+			await expect(runWrangler("deploy")).rejects.toThrow(
 				'Workflow "my-workflow" has "limits" configured but references external script "another-script"'
 			);
 		});
