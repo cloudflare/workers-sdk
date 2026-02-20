@@ -47,6 +47,7 @@ export class Context extends RpcTarget {
 	#state: DurableObjectState;
 
 	#counters: Map<string, number> = new Map();
+	#lifetimeStepCounter: number = 0;
 
 	constructor(engine: Engine, state: DurableObjectState) {
 		super();
@@ -83,6 +84,15 @@ export class Context extends RpcTarget {
 		} else {
 			closure = configOrCallback as () => Promise<T>;
 			stepConfig = {};
+		}
+
+		this.#lifetimeStepCounter++;
+
+		const stepLimit = this.#engine.stepLimit;
+		if (this.#lifetimeStepCounter > stepLimit) {
+			throw new WorkflowFatalError(
+				`The limit of ${stepLimit} steps has been reached. This limit can be changed in your worker configuration.`
+			);
 		}
 
 		if (!isValidStepName(name)) {
