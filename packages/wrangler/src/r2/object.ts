@@ -271,23 +271,20 @@ export const r2ObjectPutCommand = createCommand({
 		let sizeBytes: number;
 		if (file) {
 			try {
-				const stats = fs.statSync(file, { throwIfNoEntry: false });
-				if (!stats) {
-					throw new UserError(`The file "${file}" does not exist.`);
-				}
+				const stats = fs.statSync(file);
 				sizeBytes = stats.size;
-
 				objectStream = stream.Readable.toWeb(fs.createReadStream(file));
 			} catch (err) {
-				if (err instanceof UserError) {
-					throw err;
+				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+					throw new UserError(`The file "${file}" does not exist.`);
 				}
-				throw new UserError(
+				const error = new UserError(
 					`An error occurred while trying to read the file "${file}": ${
 						(err as Error).message
-					}`,
-					{ cause: err }
+					}`
 				);
+				error.cause = err;
+				throw error;
 			}
 		} else {
 			const buffer = await new Promise<Buffer>((resolve, reject) => {
