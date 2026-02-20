@@ -134,9 +134,6 @@ function NamespaceView() {
 										<th className="text-left px-4 py-3 font-medium text-text-secondary border-b border-border">
 											Object ID
 										</th>
-										<th className="text-left px-4 py-3 font-medium text-text-secondary border-b border-border">
-											Has Stored Data
-										</th>
 										<th className="text-right px-4 py-3 font-medium text-text-secondary border-b border-border">
 											Actions
 										</th>
@@ -149,17 +146,6 @@ function NamespaceView() {
 											key={obj.id}
 										>
 											<td className="px-4 py-3 font-mono text-xs">{obj.id}</td>
-											<td className="px-4 py-3">
-												{obj.hasStoredData ? (
-													<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
-														Yes
-													</span>
-												) : (
-													<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-text-secondary/10 text-text-secondary">
-														No
-													</span>
-												)}
-											</td>
 											<td className="px-4 py-3 text-right">
 												<Link
 													className="inline-flex items-center justify-center py-1.5 px-3 text-xs font-medium rounded-md cursor-pointer transition-colors bg-primary text-white hover:bg-primary-hover"
