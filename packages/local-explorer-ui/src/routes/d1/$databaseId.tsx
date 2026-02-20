@@ -6,7 +6,7 @@ import {
 	TableIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
 import { LocalD1Driver } from "../../drivers/d1";
@@ -35,6 +35,9 @@ export const Route = createFileRoute("/d1/$databaseId")({
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
 	const searchParams = Route.useSearch();
+	const navigate = useNavigate();
+
+	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 
 	const driver = useMemo<LocalD1Driver>(
 		() => new LocalD1Driver(params.databaseId),
@@ -47,6 +50,26 @@ function DatabaseView(): JSX.Element {
 			type: "d1",
 		}),
 		[params.databaseId]
+	);
+
+	const handleTableChange = useCallback(
+		(tableName: string | undefined) => {
+			// Skip if the table hasn't changed to avoid unnecessary navigation
+			if (lastSyncedTable.current === tableName) {
+				return;
+			}
+
+			lastSyncedTable.current = tableName;
+
+			void navigate({
+				replace: true,
+				search: {
+					table: tableName,
+				},
+				to: ".",
+			});
+		},
+		[navigate]
 	);
 
 	return (
@@ -73,6 +96,7 @@ function DatabaseView(): JSX.Element {
 					driver={driver}
 					initialTable={searchParams.table}
 					key={params.databaseId}
+					onTableChange={handleTableChange}
 					resource={resource}
 				/>
 			</div>
