@@ -378,6 +378,24 @@ export async function generateEnvTypes(
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
 
+	// Merge config-declared secret keys (from wrangler.jsonc "secrets" field) into the secrets set
+	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+	for (const k of Object.keys(rawConfig.secrets ?? {})) {
+		secrets[k] = "";
+	}
+	if (args.env) {
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		for (const k of Object.keys(envConfig.secrets ?? {})) {
+			secrets[k] = "";
+		}
+	} else {
+		for (const env of Object.values(rawConfig.env ?? {})) {
+			for (const k of Object.keys(env.secrets ?? {})) {
+				secrets[k] = "";
+			}
+		}
+	}
+
 	const entrypointFormat = entrypoint?.format ?? "modules";
 
 	// Note: we infer whether the user has provided an envInterface by checking
@@ -393,8 +411,6 @@ export async function generateEnvTypes(
 			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
 		);
 	}
-
-	const { rawConfig } = experimental_readRawConfig(collectionArgs);
 	const hasEnvironments =
 		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
 
@@ -466,12 +482,14 @@ async function generateSimpleEnvTypes(
 	const envTypeStructure = new Array<{
 		key: string;
 		type: string;
+		required?: boolean;
 	}>();
 
 	for (const binding of collectedBindings) {
 		envTypeStructure.push({
 			key: constructTypeKey(binding.name),
 			type: binding.type,
+			required: true,
 		});
 	}
 
@@ -490,6 +508,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: constructTypeKey(pipelineType.binding),
 				type: typeRef,
+				required: true,
 			});
 			if (pipelineType.typeDefinition) {
 				typeDefinitions.push(pipelineType.typeDefinition);
@@ -506,6 +525,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: constructTypeKey(varName),
 				type: varValues.length === 1 ? varValues[0] : varValues.join(" | "),
+				required: true,
 			});
 			stringKeys.push(varName);
 		}
@@ -515,6 +535,7 @@ async function generateSimpleEnvTypes(
 		envTypeStructure.push({
 			key: constructTypeKey(secretName),
 			type: "string",
+			required: false,
 		});
 		stringKeys.push(secretName);
 	}
@@ -538,6 +559,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: key,
 				type: `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`,
+				required: true,
 			});
 			continue;
 		}
@@ -546,6 +568,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: key,
 				type: `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`,
+				required: true,
 			});
 			continue;
 		}
@@ -553,6 +576,7 @@ async function generateSimpleEnvTypes(
 		envTypeStructure.push({
 			key: key,
 			type: `DurableObjectNamespace /* ${durableObject.class_name} */`,
+			required: true,
 		});
 	}
 
@@ -576,6 +600,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: key,
 				type: `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`,
+				required: true,
 			});
 			continue;
 		}
@@ -584,6 +609,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: key,
 				type: `Service /* entrypoint ${service.entrypoint} from ${service.service} */`,
+				required: true,
 			});
 			continue;
 		}
@@ -591,6 +617,7 @@ async function generateSimpleEnvTypes(
 		envTypeStructure.push({
 			key,
 			type: `Fetcher /* ${service.service} */`,
+			required: true,
 		});
 	}
 
@@ -613,6 +640,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: key,
 				type: `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`,
+				required: true,
 			});
 			continue;
 		}
@@ -621,6 +649,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: key,
 				type: `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`,
+				required: true,
 			});
 			continue;
 		}
@@ -628,6 +657,7 @@ async function generateSimpleEnvTypes(
 		envTypeStructure.push({
 			key,
 			type: `Workflow /* ${workflow.class_name} */`,
+			required: true,
 		});
 	}
 
@@ -636,6 +666,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: constructTypeKey(unsafe.name),
 				type: "RateLimit",
+				required: true,
 			});
 			continue;
 		}
@@ -643,6 +674,7 @@ async function generateSimpleEnvTypes(
 		envTypeStructure.push({
 			key: constructTypeKey(unsafe.name),
 			type: "any",
+			required: true,
 		});
 	}
 
@@ -652,6 +684,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: constructTypeKey(dataBlobs),
 				type: "ArrayBuffer",
+				required: true,
 			});
 		}
 	}
@@ -662,6 +695,7 @@ async function generateSimpleEnvTypes(
 			envTypeStructure.push({
 				key: constructTypeKey(textBlobs),
 				type: "string",
+				required: true,
 			});
 		}
 	}
@@ -695,7 +729,10 @@ async function generateSimpleEnvTypes(
 		const { consoleOutput, fileContent } = generateTypeStrings(
 			entrypointFormat,
 			envInterface,
-			envTypeStructure.map(({ key, type }) => `${key}: ${type};`),
+			envTypeStructure.map(
+				({ key, type, required }) =>
+					`${key}${required === false ? "?" : ""}: ${type};`
+			),
 			modulesTypeStructure,
 			stringKeys,
 			config.compatibility_date,
@@ -1066,7 +1103,7 @@ async function generatePerEnvironmentTypes(
 	for (const secretName in secrets) {
 		aggregatedEnvBindings.push({
 			key: constructTypeKey(secretName),
-			required: true,
+			required: false,
 			type: "string",
 		});
 	}

@@ -879,7 +879,7 @@ describe("generate types", () => {
 					ANOTHER: "thing";
 					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
 					"some-other-var": "some-other-value";
-					SECRET: string;
+					SECRET?: string;
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import("./index").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace<import("./index").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
@@ -1054,7 +1054,7 @@ describe("generate types", () => {
 					ANOTHER: "thing";
 					OBJECT_VAR: {"enterprise":"1701-D","activeDuty":true,"captain":"Picard"};
 					"some-other-var": "some-other-value";
-					SECRET: string;
+					SECRET?: string;
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import("./index").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
@@ -1454,9 +1454,9 @@ describe("generate types", () => {
 				interface Env {
 					myTomlVarA: "A from wrangler toml";
 					myTomlVarB: "B from wrangler toml";
-					SECRET_A: string;
-					MULTI_LINE_SECRET: string;
-					UNQUOTED_SECRET: string;
+					SECRET_A?: string;
+					MULTI_LINE_SECRET?: string;
+					UNQUOTED_SECRET?: string;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1467,6 +1467,34 @@ describe("generate types", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
+	});
+
+	it("should include declared secrets from config as optional Env properties", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2024-01-01",
+				main: "src/index.ts",
+				vars: {
+					PUBLIC_KEY: "abc",
+				},
+				secrets: {
+					WEBHOOK_SECRET: {},
+					GITHUB_PATS: {},
+				},
+			}),
+			"utf-8"
+		);
+		fs.mkdirSync("./src", { recursive: true });
+		fs.writeFileSync("./src/index.ts", "export default {};", "utf-8");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toContain("WEBHOOK_SECRET?: string");
+		expect(std.out).toContain("GITHUB_PATS?: string");
+		expect(std.out).toContain("PUBLIC_KEY: \"abc\"");
 	});
 
 	it("should use explicit --env-file instead of .dev.vars when both exist", async ({
@@ -1509,8 +1537,8 @@ describe("generate types", () => {
 			declare namespace Cloudflare {
 				interface Env {
 					myTomlVarA: "A from wrangler toml";
-					SECRET_FROM_TEMPLATE: string;
-					TEMPLATE_ONLY: string;
+					SECRET_FROM_TEMPLATE?: string;
+					TEMPLATE_ONLY?: string;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1562,9 +1590,9 @@ describe("generate types", () => {
 				interface Env {
 					myTomlVarA: "A from wrangler toml";
 					myTomlVarB: "B from wrangler toml";
-					SECRET_A_DOT_ENV: string;
-					MULTI_LINE_SECRET: string;
-					UNQUOTED_SECRET: string;
+					SECRET_A_DOT_ENV?: string;
+					MULTI_LINE_SECRET?: string;
+					UNQUOTED_SECRET?: string;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1646,8 +1674,8 @@ describe("generate types", () => {
 
 			declare namespace Cloudflare {
 				interface Env {
-					MY_VARIABLE_A: string;
-					MY_VARIABLE_B: string;
+					MY_VARIABLE_A?: string;
+					MY_VARIABLE_B?: string;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -2328,7 +2356,7 @@ describe("generate types", () => {
 						MY_SECRET: string;
 					}
 					interface Env {
-						MY_SECRET: string;
+						MY_SECRET?: string;
 						KV_STAGING?: KVNamespace;
 					}
 				}

@@ -41,6 +41,7 @@ const reorderableBindings = {
 
 	// Non-array bindings (nothing to reorder)
 	vars: false,
+	secrets: false,
 	wasm_modules: false,
 	text_blobs: false,
 	data_blobs: false,

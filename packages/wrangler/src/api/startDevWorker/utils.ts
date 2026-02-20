@@ -361,6 +361,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "media", ...x };
 				break;
 			}
+			case "secrets": {
+				// Secret names are declared for type generation only; values are set via wrangler secret put or Dashboard.
+				// Do not add to bindings.
+				break;
+			}
 			default:
 				assertNever(type);
 		}

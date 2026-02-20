@@ -21,6 +21,7 @@ type ValidKeys = Exclude<
 	| "ai"
 	| "browser"
 	| "vars"
+	| "secrets"
 	| "wasm_modules"
 	| "text_blobs"
 	| "data_blobs"
