@@ -260,9 +260,9 @@ export default async function triggersDeploy(
 				workflow.script_name !== scriptName
 			) {
 				if (workflow.limits) {
-					logger.warn(
+					throw new UserError(
 						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-							`The limits will not be applied — configure them on the worker that defines the workflow.`
+							`Configure limits on the worker that defines the workflow.`
 					);
 				}
 				continue;
