@@ -883,7 +883,7 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
 			    Argument: sslmode, Given: "random", Choices: "require", "verify-ca", "verify-full", "REQUIRED",
 			  "VERIFY_CA", "VERIFY_IDENTITY"
@@ -1028,7 +1028,7 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'REQUIRED' is set[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'REQUIRED' is set[0m
 
 			"
 		`);
@@ -1043,7 +1043,7 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
 
 			"
 		`);
@@ -1058,7 +1058,7 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
 
 			"
 		`);
@@ -1073,7 +1073,7 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid sslmode 'verify-full' for MySQL. Valid options are: REQUIRED, VERIFY_CA, VERIFY_IDENTITY[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid sslmode 'verify-full' for MySQL. Valid options are: REQUIRED, VERIFY_CA, VERIFY_IDENTITY[0m
 
 			"
 		`);
