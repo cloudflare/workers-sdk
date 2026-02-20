@@ -1,5 +1,9 @@
+import { getStudioTableNameFromSQL } from "./formatter";
 import type {
+	IStudioDriver,
 	StudioDialect,
+	StudioMultipleQueryProgress,
+	StudioMultipleQueryResult,
 	StudioResultHeader,
 	StudioResultSet,
 	StudioSQLToken,
@@ -223,7 +227,6 @@ export function transformStudioArrayBasedResult<HeaderType>({
 				acc[header.name] = transformValue
 					? transformValue(row[index], header)
 					: row[index];
-
 				return acc;
 			},
 			{} as Record<string, unknown>
@@ -234,4 +237,81 @@ export function transformStudioArrayBasedResult<HeaderType>({
 		headers: resultHeaders,
 		rows: data,
 	};
+}
+
+/**
+ * Executes multiple SQL statements in sequence and reports progress.
+ *
+ * Each statement's execution time, error (if any), and result stats
+ * are tracked and reported through the `onProgress` callback.
+ *
+ * @param driver - The database driver to execute queries with.
+ * @param statements - An array of SQL statements to run.
+ * @param onProgress - Optional callback to report progress and logs during execution.
+ *
+ * @returns A list of successful results and all execution logs.
+ */
+export async function runStudioMultipleSQLStatements(
+	driver: IStudioDriver,
+	statements: string[],
+	onProgress?: (progress: StudioMultipleQueryProgress) => void
+): Promise<{
+	result: StudioMultipleQueryResult[];
+	logs: StudioMultipleQueryProgress["logs"];
+}> {
+	const logs: StudioMultipleQueryProgress["logs"] = [];
+	const result: StudioMultipleQueryResult[] = [];
+	const total = statements.length;
+
+	const reportProgress = (progress: number, error = false) => {
+		onProgress?.({ logs, progress, total, error });
+	};
+
+	for (let i = 0; i < statements.length; i++) {
+		const statement = statements[i] as string;
+		const sql = statement;
+
+		const logEntry: StudioMultipleQueryProgress["logs"][number] = {
+			order: i,
+			sql,
+			start: Date.now(),
+		};
+
+		logs.push(logEntry);
+		reportProgress(i + 1);
+
+		try {
+			const r = await driver.query(sql);
+
+			logEntry.end = Date.now();
+			logEntry.stats = r.stat;
+
+			// Inject the query request time
+			r.stat = {
+				...r.stat,
+				requestDurationMs: logEntry.end ? logEntry.end - logEntry.start : null,
+			};
+
+			if (r.headers.length > 0) {
+				const predictedTableName = getStudioTableNameFromSQL(sql);
+
+				result.push({
+					sql: statement,
+					order: i,
+					predictedTableName,
+					result: r,
+				});
+			}
+
+			reportProgress(i + 1);
+		} catch (e) {
+			logEntry.end = Date.now();
+			logEntry.error = (e as Error).toString();
+
+			reportProgress(i + 1, true);
+			break;
+		}
+	}
+
+	return { result, logs };
 }

@@ -1,8 +1,10 @@
+import { BinocularsIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
+import { StudioQueryTab } from "./QueryTab";
 import { StudioTabDefinitionList } from "./TabRegister";
 import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
@@ -29,6 +31,11 @@ interface StudioProps {
 	 */
 	initialTable?: string;
 	/**
+	 * Callback when the selected table changes (e.g., when a table tab is selected or closed).
+	 * Called with the table name, or `null` when no table is selected.
+	 */
+	onTableChange?: (tableName: string | null) => void;
+	/**
 	 * Metadata about the current studio resource.
 	 */
 	resource: StudioResource;
@@ -37,15 +44,23 @@ interface StudioProps {
 export function Studio({
 	driver,
 	initialTable,
+	onTableChange,
 	resource,
 }: StudioProps): JSX.Element {
-	// Track whether we've already opened the initial table
-	const hasOpenedInitialTable = useRef<boolean>(false);
+	// Track the last table we opened to detect changes
+	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
 	const [loadingSchema, setLoadingSchema] = useState(true);
 	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => [
-		// TODO: Re-add `StudioQueryTab` default tab
+		{
+			component: <StudioQueryTab />,
+			icon: BinocularsIcon,
+			identifier: "query-1",
+			key: window.crypto.randomUUID(),
+			title: "Query",
+			type: "query",
+		},
 	]);
 
 	const [selectedTabKey, setSelectedTabKey] = useState<string>(
@@ -116,27 +131,26 @@ export function Studio({
 	 */
 	const openStudioTab = useCallback<StudioContextValue["openStudioTab"]>(
 		(data: StudioTabDefinitionMetadata, isTemporary?: boolean) => {
+			// Getting tab setting
+			const tabTypeDefinition = StudioTabDefinitionList[data.type];
+			if (!tabTypeDefinition) {
+				console.error("Trying to open unknown tab type", data);
+				return;
+			}
+
+			const identifier = tabTypeDefinition.makeIdentifier(data);
+
+			// Generate the key upfront so we can select it after updating tabs
+			const newTabKey = window.crypto.randomUUID();
+
 			setTabs((prevTabs) => {
-				// Getting tab setting
-				const tabTypeDefinition = StudioTabDefinitionList[data.type];
-				if (!tabTypeDefinition) {
-					console.error("Trying to open unknown tab type", data);
-					return prevTabs;
-				}
-
-				const identifier = tabTypeDefinition.makeIdentifier(data);
-
 				// Open existing tab if exist
 				const foundMatchedTab = prevTabs.find(
 					(tab) => tab.identifier === identifier
 				);
 				if (foundMatchedTab) {
-					setSelectedTabKey(foundMatchedTab.key);
 					return prevTabs;
 				}
-
-				const newTabKey = window.crypto.randomUUID();
-				setSelectedTabKey(newTabKey);
 
 				// Check if there is any temporary, we will replace instead of adding new tab
 				const tempTab = prevTabs.find((tab) => tab.isTemp && !tab.isDirty);
@@ -153,7 +167,6 @@ export function Studio({
 								isTemp: isTemporary,
 							} as StudioWindowTabItem;
 						}
-
 						return tab;
 					});
 				}
@@ -170,8 +183,13 @@ export function Studio({
 					} satisfies StudioWindowTabItem,
 				];
 			});
+
+			// Select the tab after updating tabs state
+			// Check if tab already exists and select it, otherwise select the new tab
+			const existingTab = tabs.find((tab) => tab.identifier === identifier);
+			setSelectedTabKey(existingTab ? existingTab.key : newTabKey);
 		},
-		[setSelectedTabKey]
+		[setSelectedTabKey, tabs]
 	);
 
 	/**
@@ -199,14 +217,28 @@ export function Studio({
 		});
 	}, []);
 
-	// Open initial table from URL param after schemas load (only once)
+	// Open table from URL param after schemas load, and when initialTable changes.
+	// When no table is specified, select the first Query tab.
 	useEffect((): void => {
-		if (
-			hasOpenedInitialTable.current ||
-			!initialTable ||
-			!schemas ||
-			loadingSchema
-		) {
+		if (!schemas || loadingSchema) {
+			return;
+		}
+
+		// When no table is specified, select the first Query tab
+		if (!initialTable) {
+			// Only switch if we were previously viewing a table
+			if (lastOpenedTable.current !== null) {
+				const queryTab = tabs.find((tab) => tab.type === "query");
+				if (queryTab) {
+					setSelectedTabKey(queryTab.key);
+				}
+				lastOpenedTable.current = null;
+			}
+			return;
+		}
+
+		// Skip if we've already opened this specific table
+		if (lastOpenedTable.current === initialTable) {
 			return;
 		}
 
@@ -221,15 +253,53 @@ export function Studio({
 				tableName: initialTable,
 				type: "table",
 			});
-			hasOpenedInitialTable.current = true;
+			lastOpenedTable.current = initialTable;
 			return;
 		}
 
 		console.warn(
 			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
 		);
-		hasOpenedInitialTable.current = true;
-	}, [initialTable, loadingSchema, openStudioTab, schemas]);
+		lastOpenedTable.current = initialTable;
+	}, [
+		initialTable,
+		loadingSchema,
+		openStudioTab,
+		schemas,
+		tabs,
+		setSelectedTabKey,
+	]);
+
+	/**
+	 * Extracts the table name from a tab, if it's a table tab.
+	 * Table tab identifiers have the format: "table/{schemaName}.{tableName}"
+	 */
+	const getTableNameFromTab = useCallback(
+		(tab: StudioWindowTabItem): string | null => {
+			const tableMatch = tab.identifier.match(/^table\/[^.]+\.(.+)$/);
+			return tableMatch?.[1] ?? null;
+		},
+		[]
+	);
+
+	/**
+	 * Wrapper around `setSelectedTabKey` that also notifies the parent
+	 * when the user changes tabs (for syncing URL state).
+	 */
+	const handleUserTabChange = useCallback(
+		(newKey: string) => {
+			setSelectedTabKey(newKey);
+
+			if (onTableChange) {
+				const newTab = tabs.find((tab) => tab.key === newKey);
+				if (newTab) {
+					const tableName = getTableNameFromTab(newTab);
+					onTableChange(tableName);
+				}
+			}
+		},
+		[tabs, onTableChange, getTableNameFromTab]
+	);
 
 	/**
 	 * Replaces an existing studio tab with a new one built from the provided
@@ -308,6 +378,7 @@ export function Studio({
 		() => ({
 			closeStudioTab,
 			driver,
+			handleUserTabChange,
 			loadingSchema,
 			openStudioTab,
 			refreshSchema,
@@ -323,6 +394,7 @@ export function Studio({
 		[
 			closeStudioTab,
 			driver,
+			handleUserTabChange,
 			loadingSchema,
 			openStudioTab,
 			refreshSchema,

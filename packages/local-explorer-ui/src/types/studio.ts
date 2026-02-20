@@ -167,10 +167,51 @@ interface StudioForeignKeyClause {
 	onUpdate?: StudioForeignKeyAction;
 }
 
-export type StudioResource = {
-	databaseId?: string;
-	type: "d1";
-};
+export interface StudioMultipleQueryProgress {
+	/** True if an error occurred during execution */
+	error?: boolean;
+	/** Execution logs for each SQL statement */
+	logs: {
+		/** Timestamp (ms) when execution ended, if available */
+		end?: number;
+		/** Error message if the query failed */
+		error?: string;
+		/** Index of the statement in the original array */
+		order: number;
+		/** The SQL statement that was executed */
+		sql: string;
+		/** Timestamp (ms) when execution started */
+		start: number;
+		/** Optional result stats (e.g., rows, time) */
+		stats?: StudioResultStat;
+	}[];
+	/** Number of statements successfully completed */
+	progress: number;
+	/** Total number of statements to execute */
+	total: number;
+}
+
+export interface StudioMultipleQueryResult {
+	/** Index of the statement in the original array */
+	order: number;
+	/** The predicted table name */
+	predictedTableName?: string;
+	/** The full result set returned from the query execution */
+	result: StudioResultSet;
+	/** The SQL statement that was executed */
+	sql: string;
+}
+
+export type StudioResource =
+	| {
+			databaseId?: string;
+			type: "d1";
+	  }
+	| {
+			namespaceId: string;
+			objectId: string;
+			type: "do";
+	  };
 
 export interface StudioResultHeader {
 	columnType?: string;
@@ -190,7 +231,7 @@ export interface StudioResultSet {
 	stat: StudioResultStat;
 }
 
-interface StudioResultStat {
+export interface StudioResultStat {
 	/**
 	 * Time taken to execute the SQL query on the server (excluding network latency), in milliseconds
 	 */
@@ -202,6 +243,10 @@ interface StudioResultStat {
 	rowsAffected: number;
 	rowsRead: number | null;
 	rowsWritten: number | null;
+	/**
+	 * Number of rows returned by the query
+	 */
+	rowCount: number;
 }
 
 export interface StudioSchemaItem {
@@ -280,7 +325,7 @@ export interface StudioTableColumnConstraint {
 	uniqueConflict?: StudioColumnConflict;
 }
 
-interface StudioTableConstraintChange {
+export interface StudioTableConstraintChange {
 	key: string;
 	new: StudioTableColumnConstraint | null;
 	old: StudioTableColumnConstraint | null;

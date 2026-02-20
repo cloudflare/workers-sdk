@@ -15,7 +15,7 @@ export function StudioWindowTabMenu({
 			onClick={onClick}
 			type="button"
 		>
-			<PlusIcon /> New
+			<PlusIcon /> New Query
 		</button>
 	);
 }
