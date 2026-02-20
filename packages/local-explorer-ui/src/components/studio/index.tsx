@@ -240,6 +240,15 @@ export function Studio({
 			return;
 		}
 
+		// Don't clear the table during initial load when we're expecting to open a table.
+		// Wait for schemas to load and the initialTable to be processed first.
+		if (
+			loadingSchema ||
+			(initialTable && lastOpenedTable.current !== initialTable)
+		) {
+			return;
+		}
+
 		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
 		if (!selectedTab) {
 			onTableChange(undefined);
@@ -248,7 +257,7 @@ export function Studio({
 
 		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
 		onTableChange(tableMatch ? tableMatch[1] : undefined);
-	}, [onTableChange, selectedTabKey, tabs]);
+	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
 	/**
 	 * Replaces an existing studio tab with a new one built from the provided
