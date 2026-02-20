@@ -3,7 +3,9 @@ import {
 	ArrowsCounterClockwiseIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
+	PlusIcon,
 	SpinnerIcon,
+	TrashIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -392,6 +394,7 @@ export function StudioTableExplorerTab({
 					className="hover:bg-border! transition"
 					onClick={onRefreshClicked}
 					shape="square"
+					variant="ghost"
 				>
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
@@ -401,13 +404,17 @@ export function StudioTableExplorerTab({
 						<Button
 							className="hover:bg-border! transition"
 							onClick={onAddRowClick}
+							variant="ghost"
 						>
+							<PlusIcon />
 							<span className="text-xs">Add row</span>
 						</Button>
 						<Button
 							className="hover:bg-border! transition"
 							onClick={onDeleteRowClick}
+							variant="ghost"
 						>
+							<TrashIcon />
 							<span className="text-xs">Delete row</span>
 						</Button>
 					</>
