@@ -39,7 +39,7 @@ process.on("exit", () => {
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
-	let hotListenerCleanup: (() => void) | undefined;
+	let serverCleanup: (() => void) | undefined;
 
 	return {
 		async buildEnd() {
@@ -66,12 +66,19 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
 
+			// Clean up handlers from previous server (e.g., on restart)
+			serverCleanup?.();
+			serverCleanup = undefined;
+
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
 			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
+
+			// Collect cleanup functions to be called on restart or close
+			const cleanupFunctions: Array<() => void> = [];
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
 				debuglog("Initializing the Vite module runners");
@@ -105,9 +112,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						ctx.miniflare
 					);
 				}
-
-				hotListenerCleanup?.();
-				hotListenerCleanup = undefined;
 
 				const hotListeners: Array<{
 					environment: vite.DevEnvironment;
@@ -156,7 +160,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					hotListeners.push({ environment, listener });
 				}
 
-				hotListenerCleanup = () => {
+				const cleanupHotListeners = () => {
 					for (const { environment, listener } of hotListeners) {
 						environment.hot.off(
 							"vite-plugin-cloudflare:worker-export-types",
@@ -164,6 +168,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						);
 					}
 				};
+				cleanupFunctions.push(cleanupHotListeners);
 
 				const entryWorkerConfig = ctx.entryWorkerConfig;
 				assert(entryWorkerConfig, `No entry Worker config`);
@@ -176,11 +181,14 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						ctx.miniflare,
 						entryWorkerName
 					);
-					viteDevServer.httpServer.once("close", () => {
-						cleanupWebSocket();
-						hotListenerCleanup?.();
-						hotListenerCleanup = undefined;
+					cleanupFunctions.push(cleanupWebSocket);
+
+					const onHttpServerClose = () => {
 						void disposeRemoteProxySessions();
+					};
+					viteDevServer.httpServer.once("close", onHttpServerClose);
+					cleanupFunctions.push(() => {
+						viteDevServer.httpServer?.off("close", onHttpServerClose);
 					});
 				}
 
@@ -274,10 +282,21 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				}
 			}
 
-			viteDevServer.watcher.on("close", () => {
-				hotListenerCleanup?.();
-				hotListenerCleanup = undefined;
+			const onWatcherClose = () => {
+				serverCleanup?.();
+				serverCleanup = undefined;
+			};
+			viteDevServer.watcher.on("close", onWatcherClose);
+			cleanupFunctions.push(() => {
+				viteDevServer.watcher.off("close", onWatcherClose);
 			});
+
+			// Store the combined cleanup function
+			serverCleanup = () => {
+				for (const cleanup of cleanupFunctions) {
+					cleanup();
+				}
+			};
 
 			return () => {
 				if (preMiddleware) {

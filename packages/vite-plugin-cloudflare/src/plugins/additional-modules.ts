@@ -12,18 +12,33 @@ export const additionalModulesPlugin = createPlugin(
 	"additional-modules",
 	(ctx) => {
 		const additionalModulePaths = new Set<string>();
+		let serverCleanup: (() => void) | undefined;
 
 		return {
 			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
 			configureServer(viteDevServer) {
+				// Clean up handlers from previous server (e.g., on restart)
+				serverCleanup?.();
+				serverCleanup = undefined;
+
 				additionalModulePaths.clear();
-				const cleanup = () => {
+
+				const onHttpServerClose = () => {
 					additionalModulePaths.clear();
 				};
-				viteDevServer.httpServer?.once("close", cleanup);
-				viteDevServer.watcher.on("close", cleanup);
+				const onWatcherClose = () => {
+					additionalModulePaths.clear();
+				};
+
+				viteDevServer.httpServer?.once("close", onHttpServerClose);
+				viteDevServer.watcher.on("close", onWatcherClose);
+
+				serverCleanup = () => {
+					viteDevServer.httpServer?.off("close", onHttpServerClose);
+					viteDevServer.watcher.off("close", onWatcherClose);
+				};
 			},
 			applyToEnvironment(environment) {
 				return ctx.getWorkerConfig(environment.name) !== undefined;
