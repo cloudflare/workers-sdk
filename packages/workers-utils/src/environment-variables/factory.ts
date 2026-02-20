@@ -21,6 +21,8 @@ type VariableNames =
 	| "CLOUDFLARE_COMPLIANCE_REGION"
 	/** API token for R2 SQL service. */
 	| "WRANGLER_R2_SQL_AUTH_TOKEN"
+	/** Authentication profile name for multi-account support. */
+	| "WRANGLER_PROFILE"
 
 	// ## Development & Local Testing
 

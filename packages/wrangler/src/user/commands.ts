@@ -258,7 +258,7 @@ export const profileNamespace = createNamespace({
 	metadata: {
 		description: "🔀 Manage authentication profiles for multiple accounts",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "open beta",
 		category: "Account",
 	},
 });
@@ -267,7 +267,7 @@ export const profileListCommand = createCommand({
 	metadata: {
 		description: "List all authentication profiles",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "open beta",
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -287,7 +287,7 @@ export const profileUseCommand = createCommand({
 	metadata: {
 		description: "Switch the active authentication profile",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "open beta",
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -317,7 +317,7 @@ export const profileDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an authentication profile",
 		owner: "Workers: Authoring and Testing",
-		status: "open-beta",
+		status: "open beta",
 	},
 	behaviour: {
 		printConfigWarnings: false,
