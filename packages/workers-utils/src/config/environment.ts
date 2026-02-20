@@ -701,6 +701,19 @@ export interface EnvironmentNonInheritable {
 	vars: Record<string, string | Json>;
 
 	/**
+	 * Declarations of secret binding names for type generation only.
+	 * Keys are the binding names; values are empty objects (no value is stored in config).
+	 * Actual secret values are set via `wrangler secret put` or the Dashboard.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	secrets: Record<string, Record<string, never>>;
+
+	/**
 	 * A list of durable objects that your Worker should be bound to.
 	 *
 	 * For more information about Durable Objects, see the documentation at

@@ -91,6 +91,7 @@ export type ConfigBindingFieldName =
 	| "version_metadata"
 	| "unsafe"
 	| "vars"
+	| "secrets"
 	| "wasm_modules"
 	| "dispatch_namespaces"
 	| "mtls_certificates"
@@ -127,6 +128,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
 	vars: "Environment Variable",
+	secrets: "Secret",
 	wasm_modules: "Wasm Module",
 	dispatch_namespaces: "Dispatch Namespace",
 	mtls_certificates: "mTLS Certificate",
@@ -1557,6 +1559,16 @@ function normalizeAndValidateEnvironment(
 			validateVars(envName),
 			{}
 		),
+		secrets: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"secrets",
+			validateSecrets(envName),
+			{}
+		),
 		define: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2219,6 +2231,41 @@ const validateVars =
 								`This is not what you probably want, since "vars" configuration is not inherited by environments.\n` +
 								`Please add "vars.${varName}" to "env.${envName}".`
 						);
+					}
+				}
+			}
+		}
+		return isValid;
+	};
+
+const validateSecrets =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		let isValid = true;
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (value !== undefined) {
+			if (typeof value !== "object" || value === null) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+						value
+					)}.\n`
+				);
+				isValid = false;
+			} else {
+				for (const [secretName, secretValue] of Object.entries(value)) {
+					if (
+						typeof secretValue !== "object" ||
+						secretValue === null ||
+						Array.isArray(secretValue)
+					) {
+						diagnostics.errors.push(
+							`The field "${fieldPath}.${secretName}" should be an empty object (secret values are set via \`wrangler secret put\` or the Dashboard) but got ${JSON.stringify(
+								secretValue
+							)}.\n`
+						);
+						isValid = false;
 					}
 				}
 			}

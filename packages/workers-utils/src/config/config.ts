@@ -325,6 +325,7 @@ export const defaultWranglerConfig: Config = {
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	vars: {},
+	secrets: {},
 	durable_objects: { bindings: [] },
 	kv_namespaces: [],
 	queues: {

@@ -95,6 +95,7 @@ describe("normalizeAndValidateConfig()", () => {
 			dispatch_namespaces: [],
 			mtls_certificates: [],
 			vars: {},
+			secrets: {},
 			define: {},
 			definedEnvironments: [],
 			targetEnvironment: undefined,
