@@ -196,9 +196,9 @@ describe("types", () => {
 				name = "test-worker"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
+				secrets = ["WEBHOOK_SECRET", "GITHUB_PATS"]
 				[vars]
 				MY_VAR = "my-var-value"
-				secrets = ["WEBHOOK_SECRET", "GITHUB_PATS"]
 			`,
 		});
 		const output = await helper.run(`wrangler types --include-runtime=false`);
