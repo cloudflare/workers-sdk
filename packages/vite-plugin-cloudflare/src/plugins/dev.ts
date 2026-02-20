@@ -279,10 +279,20 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 								redirect: "manual",
 							});
 						} else {
-							request.headers.set(
-								CoreHeaders.ROUTE_OVERRIDE,
-								ROUTER_WORKER_NAME
-							);
+							// Let the entry worker's hostname routing handle subdomain requests
+							const host = request.headers.get("Host");
+							const hostname = host?.replace(/:\d+$/, "");
+							const isSubdomainRequest =
+								hostname &&
+								hostname.endsWith(".localhost") &&
+								hostname !== "localhost";
+
+							if (!isSubdomainRequest) {
+								request.headers.set(
+									CoreHeaders.ROUTE_OVERRIDE,
+									ROUTER_WORKER_NAME
+								);
+							}
 
 							return ctx.miniflare.dispatchFetch(request, {
 								redirect: "manual",

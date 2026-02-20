@@ -26,6 +26,7 @@ import {
 } from "./constants";
 import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
+import { resolveEntrypointRouting } from "./hostname-routing";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { withTrailingSlash } from "./utils";
@@ -327,11 +328,17 @@ export async function getDevMiniflareOptions(
 								);
 							}
 
+							const entrypointSubdomains = resolveEntrypointRouting(
+								worker,
+								exportTypes
+							);
+
 							return {
 								externalWorkers,
 								worker: {
 									...workerOptions,
 									name: worker.config.name,
+									unsafeEntrypointSubdomains: entrypointSubdomains,
 									modulesRoot: miniflareModulesRoot,
 									modules: [
 										{

@@ -266,6 +266,16 @@ export interface DevConfig {
 	 * @default false
 	 */
 	generate_types: boolean;
+
+	/**
+	 * Expose entrypoints via localhost subdomain URLs during local development.
+	 *
+	 * - `true`: expose all exports, using export names as hostname aliases
+	 * - `Record<string, string | true>`: selectively expose specific exports;
+	 *   `true` uses the export name as the alias, a string sets a custom alias
+	 * - `false` or omitted: disabled (default behavior)
+	 */
+	expose_entrypoints: boolean | Record<string, string | boolean>;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -314,6 +324,7 @@ export const defaultWranglerConfig: Config = {
 		enable_containers: true,
 		container_engine: undefined,
 		generate_types: false,
+		expose_entrypoints: false,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
