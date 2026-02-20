@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
 	mockCreateDate,
 	mockEndDate,
@@ -930,15 +931,17 @@ describe("wrangler workflows", () => {
 		});
 
 		it("should accept workflow binding with valid limits", async () => {
-			writeWorkerSource({ format: "ts" });
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
 			writeWranglerConfig({
-				main: "index.ts",
+				main: "index.js",
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						script_name: "external-script",
 						limits: { steps: 5000 },
 					},
 				],
@@ -949,15 +952,17 @@ describe("wrangler workflows", () => {
 		});
 
 		it("should accept workflow binding with empty limits object", async () => {
-			writeWorkerSource({ format: "ts" });
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
 			writeWranglerConfig({
-				main: "index.ts",
+				main: "index.js",
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						script_name: "external-script",
 						limits: {},
 					},
 				],
@@ -968,15 +973,17 @@ describe("wrangler workflows", () => {
 		});
 
 		it("should accept workflow binding with limits.steps at boundary value 1", async () => {
-			writeWorkerSource({ format: "ts" });
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
 			writeWranglerConfig({
-				main: "index.ts",
+				main: "index.js",
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						script_name: "external-script",
 						limits: { steps: 1 },
 					},
 				],
@@ -987,15 +994,17 @@ describe("wrangler workflows", () => {
 		});
 
 		it("should accept workflow binding with limits.steps at boundary value 100000", async () => {
-			writeWorkerSource({ format: "ts" });
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
 			writeWranglerConfig({
-				main: "index.ts",
+				main: "index.js",
 				workflows: [
 					{
 						binding: "MY_WORKFLOW",
 						name: "my-workflow",
 						class_name: "MyWorkflow",
-						script_name: "external-script",
 						limits: { steps: 100_000 },
 					},
 				],
