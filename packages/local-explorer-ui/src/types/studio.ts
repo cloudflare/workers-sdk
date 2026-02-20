@@ -181,7 +181,7 @@ export interface StudioResultHeader {
 
 export type StudioResultValue<T = unknown> = T | undefined | null;
 
-type StudioResultRow = Record<string, unknown>;
+export type StudioResultRow = Record<string, unknown>;
 
 export interface StudioResultSet {
 	headers: StudioResultHeader[];
@@ -190,7 +190,7 @@ export interface StudioResultSet {
 	stat: StudioResultStat;
 }
 
-interface StudioResultStat {
+export interface StudioResultStat {
 	/**
 	 * Time taken to execute the SQL query on the server (excluding network latency), in milliseconds
 	 */
@@ -202,6 +202,10 @@ interface StudioResultStat {
 	rowsAffected: number;
 	rowsRead: number | null;
 	rowsWritten: number | null;
+	/**
+	 * Number of rows returned by the query
+	 */
+	rowCount: number;
 }
 
 export interface StudioSchemaItem {

@@ -10,6 +10,7 @@ const EMPTY_RESULT = {
 		rowsAffected: 0,
 		rowsRead: null,
 		rowsWritten: null,
+		rowCount: 0,
 	},
 } satisfies StudioResultSet;
 

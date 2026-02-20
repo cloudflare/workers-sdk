@@ -1,3 +1,6 @@
+@source "../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 
 @custom-variant dark (@media (prefers-color-scheme: dark));
@@ -16,12 +19,57 @@
 	--color-danger-hover: #dc2626;
 	--color-success: #16a34a;
 
+	/* Surface colors */
+	--color-surface: #fef7ed;
+	--color-surface-secondary: #f5f0eb;
+	--color-surface-tertiary: #ebe3db;
+	--color-muted: #8a6e5c;
+	--color-accent: #f0e6dc;
+	--color-background: #fffdfb;
+
 	/* Focus ring shadows */
 	--shadow-focus-primary: 0 0 0 3px rgba(255, 72, 1, 0.15);
 	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
 
 	/* Custom sizing */
 	--width-sidebar: 240px;
+}
+
+/*
+ * Map @cloudflare/kumo component tokens to our brand theme.
+ * Kumo components reference --color-kumo-* and --text-color-kumo-* variables.
+ * Without these mappings, backgrounds and text colors may not render correctly.
+ */
+:root {
+	/* Background tokens */
+	--color-kumo-base: var(--color-background);
+	--color-kumo-control: var(--color-surface);
+	--color-kumo-elevated: var(--color-surface-secondary);
+	--color-kumo-overlay: var(--color-accent);
+	--color-kumo-recessed: var(--color-surface-tertiary);
+	--color-kumo-tint: var(--color-surface-secondary);
+
+	/* Interactive / brand tokens */
+	--color-kumo-brand: var(--color-primary);
+	--color-kumo-brand-hover: var(--color-primary-hover);
+	--color-kumo-interact: var(--color-surface-tertiary);
+	--color-kumo-danger: var(--color-danger);
+
+	/* Border / line tokens */
+	--color-kumo-fill: var(--color-border);
+	--color-kumo-line: var(--color-border);
+	--color-kumo-ring: var(--color-muted);
+
+	/* Tooltip tokens */
+	--color-kumo-tip-shadow: rgba(0, 0, 0, 0.08);
+	--color-kumo-tip-stroke: transparent;
+
+	/* Text color tokens */
+	--text-color-kumo-default: var(--color-text);
+	--text-color-kumo-subtle: var(--color-muted);
+	--text-color-kumo-inactive: var(--color-muted);
+	--text-color-kumo-danger: var(--color-danger);
+	--text-color-kumo-link: var(--color-primary);
 }
 
 /* Dark mode color overrides */
@@ -39,8 +87,20 @@
 		--color-danger-hover: #ef4444;
 		--color-success: #22c55e;
 
+		/* Surface colors — dark mode */
+		--color-surface: #0f0c0a;
+		--color-surface-secondary: #231c18;
+		--color-surface-tertiary: #3d2e24;
+		--color-muted: #a08678;
+		--color-accent: #2e221a;
+		--color-background: #1a1412;
+
 		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
 		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
+
+		/* Kumo tooltip overrides for dark mode */
+		--color-kumo-tip-shadow: transparent;
+		--color-kumo-tip-stroke: var(--color-border);
 	}
 }
 

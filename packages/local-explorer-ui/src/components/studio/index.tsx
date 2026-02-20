@@ -29,6 +29,11 @@ interface StudioProps {
 	 */
 	initialTable?: string;
 	/**
+	 * Callback fired when the selected table changes (e.g., when switching tabs).
+	 * Receives `undefined` if the selected tab is not a table tab.
+	 */
+	onTableChange?: (tableName: string | undefined) => void;
+	/**
 	 * Metadata about the current studio resource.
 	 */
 	resource: StudioResource;
@@ -37,10 +42,10 @@ interface StudioProps {
 export function Studio({
 	driver,
 	initialTable,
+	onTableChange,
 	resource,
 }: StudioProps): JSX.Element {
-	// Track whether we've already opened the initial table
-	const hasOpenedInitialTable = useRef<boolean>(false);
+	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
 	const [loadingSchema, setLoadingSchema] = useState(true);
@@ -116,27 +121,24 @@ export function Studio({
 	 */
 	const openStudioTab = useCallback<StudioContextValue["openStudioTab"]>(
 		(data: StudioTabDefinitionMetadata, isTemporary?: boolean) => {
+			const tabTypeDefinition = StudioTabDefinitionList[data.type];
+			if (!tabTypeDefinition) {
+				console.error("Trying to open unknown tab type", data);
+				return;
+			}
+
+			const identifier = tabTypeDefinition.makeIdentifier(data);
+
+			const newTabKey = window.crypto.randomUUID();
+
 			setTabs((prevTabs) => {
-				// Getting tab setting
-				const tabTypeDefinition = StudioTabDefinitionList[data.type];
-				if (!tabTypeDefinition) {
-					console.error("Trying to open unknown tab type", data);
-					return prevTabs;
-				}
-
-				const identifier = tabTypeDefinition.makeIdentifier(data);
-
 				// Open existing tab if exist
 				const foundMatchedTab = prevTabs.find(
 					(tab) => tab.identifier === identifier
 				);
 				if (foundMatchedTab) {
-					setSelectedTabKey(foundMatchedTab.key);
 					return prevTabs;
 				}
-
-				const newTabKey = window.crypto.randomUUID();
-				setSelectedTabKey(newTabKey);
 
 				// Check if there is any temporary, we will replace instead of adding new tab
 				const tempTab = prevTabs.find((tab) => tab.isTemp && !tab.isDirty);
@@ -170,8 +172,11 @@ export function Studio({
 					} satisfies StudioWindowTabItem,
 				];
 			});
+
+			const existingTab = tabs.find((tab) => tab.identifier === identifier);
+			setSelectedTabKey(existingTab ? existingTab.key : newTabKey);
 		},
-		[setSelectedTabKey]
+		[setSelectedTabKey, tabs]
 	);
 
 	/**
@@ -199,14 +204,13 @@ export function Studio({
 		});
 	}, []);
 
-	// Open initial table from URL param after schemas load (only once)
+	// Open table from URL param after schemas load, and when initialTable changes
 	useEffect((): void => {
-		if (
-			hasOpenedInitialTable.current ||
-			!initialTable ||
-			!schemas ||
-			loadingSchema
-		) {
+		if (!initialTable || !schemas || loadingSchema) {
+			return;
+		}
+
+		if (lastOpenedTable.current === initialTable) {
 			return;
 		}
 
@@ -221,15 +225,39 @@ export function Studio({
 				tableName: initialTable,
 				type: "table",
 			});
-			hasOpenedInitialTable.current = true;
+			lastOpenedTable.current = initialTable;
 			return;
 		}
 
 		console.warn(
 			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
 		);
-		hasOpenedInitialTable.current = true;
+		lastOpenedTable.current = initialTable;
 	}, [initialTable, loadingSchema, openStudioTab, schemas]);
+
+	useEffect((): void => {
+		if (!onTableChange) {
+			return;
+		}
+
+		// Don't clear the table during initial load when we're expecting to open a table.
+		// Wait for schemas to load and the initialTable to be processed first.
+		if (
+			loadingSchema ||
+			(initialTable && lastOpenedTable.current !== initialTable)
+		) {
+			return;
+		}
+
+		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
+		if (!selectedTab) {
+			onTableChange(undefined);
+			return;
+		}
+
+		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
+		onTableChange(tableMatch ? tableMatch[1] : undefined);
+	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
 	/**
 	 * Replaces an existing studio tab with a new one built from the provided

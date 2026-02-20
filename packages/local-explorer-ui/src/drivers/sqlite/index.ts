@@ -1,6 +1,6 @@
 import { StethoscopeIcon } from "@phosphor-icons/react";
 import { StudioSQLiteExplainTab } from "../../components/studio/Explain/SQLiteExplainTab";
-import { tokenizeSQL } from "../../utils/studio";
+import { tokenizeSQL } from "../../utils/studio/sql";
 import { StudioDriverCommon } from "../common";
 import { buildSQLiteSchemaDiffStatement } from "./generate";
 import {
