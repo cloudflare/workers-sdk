@@ -181,13 +181,6 @@ export function StudioTableExplorerTab({
 		onRefreshClicked();
 	}, [onRefreshClicked]);
 
-	const readOnlyMode = useMemo(() => {
-		if (!state) {
-			return true;
-		}
-		return state.getHeaders().every((header) => header.setting.readonly);
-	}, [state]);
-
 	const headerIndexList = useMemo(() => {
 		if (!schema) {
 			return [];
@@ -396,18 +389,14 @@ export function StudioTableExplorerTab({
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
-				{!readOnlyMode && (
-					<>
-						<Button onClick={onAddRowClick} variant="ghost">
-							<PlusIcon />
-							<span className="text-xs">Add row</span>
-						</Button>
-						<Button onClick={onDeleteRowClick} variant="ghost">
-							<TrashIcon />
-							<span className="text-xs">Delete row</span>
-						</Button>
-					</>
-				)}
+				<Button onClick={onAddRowClick} variant="ghost">
+					<PlusIcon />
+					<span className="text-xs">Add row</span>
+				</Button>
+				<Button onClick={onDeleteRowClick} variant="ghost">
+					<TrashIcon />
+					<span className="text-xs">Delete row</span>
+				</Button>
 
 				<div className="grow text-xs">
 					<StudioWhereFilterInput

@@ -87,7 +87,18 @@ function buildTableResultHeader(
 ): StudioTableHeaderInput<StudioResultHeaderMetadata>[] {
 	const { result, driver, tableSchema } = props;
 
-	const headers = result.headers.map((column) => {
+	// When the result has no headers (e.g., empty table with no rows),
+	// fall back to using the table schema columns to build headers
+	const sourceHeaders =
+		result.headers.length > 0
+			? result.headers
+			: (tableSchema?.columns ?? []).map((col) => ({
+					columnType: col.type,
+					displayName: col.name,
+					name: col.name,
+				}));
+
+	const headers = sourceHeaders.map((column) => {
 		return {
 			store: new Map(),
 			name: column.name,
