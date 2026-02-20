@@ -12,6 +12,7 @@ import {
 	resolveStudioToNearestStatement,
 	splitStudioSQLStatements,
 } from "../SQLEditor/StatementHighlightExtension";
+import { StudioWindowTab } from "../WindowTab";
 import type {
 	StudioMultipleQueryProgress,
 	StudioMultipleQueryResult,
@@ -33,7 +34,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [progress, setProgress] = useState<StudioMultipleQueryProgress>();
 	const [results, setResults] = useState<StudioMultipleQueryResult[]>();
-	const [_selectedResultTabKey, setSelectedResultTabKey] =
+	const [selectedResultTabKey, setSelectedResultTabKey] =
 		useState<string>("summary");
 
 	const runMultipleStatements = useCallback(
@@ -321,15 +322,12 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 			</div>
 			<div className="w-full h-full bg-surface">
 				{queryTabs && queryTabs.length > 0 && (
-					<>
-						{/* TODO: Re-enable once implemented */}
-						{/* <StudioWindowTab
-							key="main-window-tab"
-							onSelectedTabChange={setSelectedResultTabKey}
-							selectedTabKey={selectedResultTabKey}
-							tabs={queryTabs}
-						/> */}
-					</>
+					<StudioWindowTab
+						key="main-window-tab"
+						onSelectedTabChange={setSelectedResultTabKey}
+						selectedTabKey={selectedResultTabKey}
+						tabs={queryTabs}
+					/>
 				)}
 			</div>
 		</SplitPane>
