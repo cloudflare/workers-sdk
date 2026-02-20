@@ -382,16 +382,20 @@ export function clearProfileOverride(): void {
  */
 export function validateProfileName(name: string): void {
 	if (!name) {
-		throw new UserError("Profile name cannot be empty.");
+		throw new UserError("Profile name cannot be empty.", {
+			telemetryMessage: "profile name empty",
+		});
 	}
 	if (name.length > MAX_PROFILE_NAME_LENGTH) {
 		throw new UserError(
-			`Profile name must be at most ${MAX_PROFILE_NAME_LENGTH} characters.`
+			`Profile name must be at most ${MAX_PROFILE_NAME_LENGTH} characters.`,
+			{ telemetryMessage: "profile name too long" }
 		);
 	}
 	if (!PROFILE_NAME_PATTERN.test(name)) {
 		throw new UserError(
-			`Profile name "${name}" is invalid. Only letters, numbers, hyphens, and underscores are allowed.`
+			`Profile name "${name}" is invalid. Only letters, numbers, hyphens, and underscores are allowed.`,
+			{ telemetryMessage: "profile name invalid characters" }
 		);
 	}
 }
@@ -534,14 +538,17 @@ export function setActiveProfile(name: string): void {
 export function deleteProfile(name: string): void {
 	if (name === "default") {
 		throw new UserError(
-			'Cannot delete the default profile. Use `wrangler logout` instead.'
+			"Cannot delete the default profile. Use `wrangler logout` instead.",
+			{ telemetryMessage: "profile delete default forbidden" }
 		);
 	}
 	validateProfileName(name);
 
 	const profilePath = getAuthConfigFilePath(name);
 	if (!existsSync(profilePath)) {
-		throw new UserError(`Profile "${name}" does not exist.`);
+		throw new UserError(`Profile "${name}" does not exist.`, {
+			telemetryMessage: "profile delete missing",
+		});
 	}
 	rmSync(profilePath);
 
