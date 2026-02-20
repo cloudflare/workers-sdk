@@ -1,11 +1,12 @@
 import { BinocularsIcon, PencilIcon, TableIcon } from "@phosphor-icons/react";
+import { StudioQueryTab } from "./Tabs/Query";
 import { StudioTableExplorerTab } from "./Tabs/TableExplorer";
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
 const QueryTab: TabDefinition<{ id: string; type: "query" }> = {
 	icon: BinocularsIcon,
-	makeComponent: () => <></>,
+	makeComponent: () => <StudioQueryTab />,
 	makeIdentifier: (tab) => `query/${tab.id}`,
 	makeTitle: () => "Query",
 	type: "query",
