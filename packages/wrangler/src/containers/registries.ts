@@ -44,44 +44,58 @@ import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client
 import type { Config } from "@cloudflare/workers-utils";
 
 function _registryConfigureYargs(args: CommonYargsArgv) {
-	return (
-		args
-			.positional("DOMAIN", {
-				describe: "Domain to configure for the registry",
-				type: "string",
-				demandOption: true,
-			})
-			.option("public-credential", {
-				type: "string",
-				description:
-					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-				demandOption: true,
-				alias: ["aws-access-key-id"],
-			})
-			.option("secret-store-id", {
-				type: "string",
-				description:
-					"The ID of the secret store to use to store the registry credentials.",
-				demandOption: false,
-				conflicts: ["disableSecretsStore"],
-			})
-			// TODO: allow users to provide an existing secret name
-			// but then we can't get secrets by name, only id, so we would need to list all secrets and find the right one
-			.option("secret-name", {
-				type: "string",
-				description:
-					"The name for the secret the private registry credentials should be stored under.",
-				demandOption: false,
-				conflicts: ["disableSecretsStore"],
-			})
-			.option("disableSecretsStore", {
-				type: "boolean",
-				description:
-					"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
-				demandOption: false,
-				conflicts: ["secret-store-id", "secret-name"],
-			})
-	);
+	return args
+		.positional("DOMAIN", {
+			describe: "Domain to configure for the registry",
+			type: "string",
+			demandOption: true,
+		})
+		.option("public-credential", {
+			type: "string",
+			description:
+				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
+			demandOption: true,
+			alias: ["aws-access-key-id"],
+		})
+		.option("secret-store-id", {
+			type: "string",
+			description:
+				"The ID of the secret store to use to store the registry credentials.",
+			demandOption: false,
+			conflicts: ["disable-secrets-store"],
+		})
+		.option("secret-name", {
+			type: "string",
+			description:
+				"The name for the secret the private registry credentials should be stored under.",
+			demandOption: false,
+			conflicts: ["disable-secrets-store"],
+		})
+		.option("disable-secrets-store", {
+			type: "boolean",
+			description:
+				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
+			demandOption: false,
+			conflicts: ["secret-store-id", "secret-name"],
+		})
+		.option("skip-confirmation", {
+			type: "boolean",
+			description: "Skip confirmation prompt",
+			alias: "y",
+			default: false,
+		})
+		.check((yargs) => {
+			if (
+				yargs.skipConfirmation &&
+				!yargs.secretName &&
+				!yargs.disableSecretsStore
+			) {
+				throw new Error(
+					"--secret-name is required when using --skip-confirmation"
+				);
+			}
+			return true;
+		});
 }
 
 async function registryConfigureCommand(
@@ -107,7 +121,7 @@ async function registryConfigureCommand(
 	if (isFedRAMPHigh) {
 		if (!configureArgs.disableSecretsStore) {
 			throw new UserError(
-				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore."
+				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store."
 			);
 		}
 	} else {
@@ -125,7 +139,9 @@ async function registryConfigureCommand(
 	}
 
 	log(`Getting ${registryType.secretType}...\n`);
-	const secret = await getSecret(registryType.secretType);
+	const privateCredential = await promptForRegistryPrivateCredential(
+		registryType.secretType
+	);
 
 	// Secret Store is not available in FedRAMP High
 	let private_credential: ImageRegistryAuth["private_credential"];
@@ -137,12 +153,15 @@ async function registryConfigureCommand(
 			const stores = await listStores(config, accountId);
 			if (stores.length === 0) {
 				const defaultStoreName = "default_secret_store";
-				const yes = await confirm(
-					`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
-				);
-				if (!yes) {
-					endSection("Cancelled.");
-					return;
+				if (!configureArgs.skipConfirmation) {
+					const yes = await confirm(
+						`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
+					);
+
+					if (!yes) {
+						endSection("Cancelled.");
+						return;
+					}
 				}
 				const res = await promiseSpinner(
 					createStore(config, accountId, { name: defaultStoreName })
@@ -164,36 +183,22 @@ async function registryConfigureCommand(
 
 		log("\n");
 
-		while (!secretName) {
-			try {
-				const res = await prompt(`Secret name:`, {
-					defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
-				});
+		secretName = await getOrCreateSecret({
+			configureArgs: configureArgs,
+			config: config,
+			accountId: accountId,
+			storeId: secretStoreId,
+			privateCredential,
+			secretType: registryType.secretType,
+		});
 
-				validateSecretName(res);
-				secretName = res;
-			} catch (e) {
-				log((e as Error).message);
-				continue;
-			}
-		}
-
-		await promiseSpinner(
-			createSecret(config, accountId, secretStoreId, {
-				name: secretName,
-				value: secret,
-				scopes: ["containers"],
-				comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
-			})
-		);
 		private_credential = {
 			store_id: secretStoreId,
 			secret_name: secretName,
 		};
-		log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
 	} else {
 		// If we are not using the secret store, we will be passing in the secret directly
-		private_credential = secret;
+		private_credential = privateCredential;
 	}
 
 	try {
@@ -227,7 +232,95 @@ async function registryConfigureCommand(
 	endSection("Registry configuration completed");
 }
 
-async function getSecret(secretType?: string): Promise<string> {
+async function promptForSecretName(secretType?: string): Promise<string> {
+	while (true) {
+		try {
+			const res = await prompt(`Secret name:`, {
+				defaultValue: `${secretType?.replaceAll(" ", "_")}`,
+			});
+
+			validateSecretName(res);
+			return res;
+		} catch (e) {
+			log((e as Error).message);
+			continue;
+		}
+	}
+}
+
+interface GetOrCreateSecretOptions {
+	configureArgs: StrictYargsOptionsToInterface<typeof _registryConfigureYargs>;
+	config: Config;
+	accountId: string;
+	storeId: string;
+	privateCredential: string;
+	secretType?: string;
+}
+
+async function getOrCreateSecret(
+	options: GetOrCreateSecretOptions
+): Promise<string> {
+	let secretName =
+		options.configureArgs.secretName ??
+		(await promptForSecretName(options.secretType));
+
+	while (true) {
+		const existingSecretId = await getSecretByName(
+			options.config,
+			options.accountId,
+			options.storeId,
+			secretName
+		);
+
+		// secret doesn't exist - make a new one
+		if (!existingSecretId) {
+			await promiseSpinner(
+				createSecret(options.config, options.accountId, options.storeId, {
+					name: secretName,
+					value: options.privateCredential,
+					scopes: ["containers"],
+					comment: `Created by Wrangler: credentials for image registry ${options.configureArgs.DOMAIN}`,
+				})
+			);
+
+			log(
+				`Container-scoped secret "${secretName}" created in Secrets Store.\n`
+			);
+
+			return secretName;
+		}
+
+		// secret exists + skipConfirmation - default to reusing the secret
+		if (options.configureArgs.skipConfirmation) {
+			log(
+				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
+			);
+			return secretName;
+		}
+
+		// secret exists but not skipping confirmation - ask user if they want to reuse the secret
+		startSection(
+			`The provided secret name "${secretName}" is already in-use within the secret store. (Store ID: ${options.storeId})`
+		);
+
+		const reuseExisting = await confirm(
+			`Do you want to reuse the existing secret? If not, then you'll be prompted to pick a new name.`
+		);
+
+		if (reuseExisting) {
+			log(
+				`Using existing secret "${secretName}" from secret store with id: ${options.storeId}.\n`
+			);
+			return secretName;
+		}
+
+		secretName = await promptForSecretName(options.secretType);
+	}
+}
+
+async function promptForRegistryPrivateCredential(
+	secretType?: string
+): Promise<string> {
 	if (isNonInteractiveOrCI()) {
 		// Non-interactive mode: expect JSON input via stdin
 		const stdinInput = trimTrailingWhitespace(await readFromStdin());
@@ -422,24 +515,41 @@ export const containersRegistriesConfigureCommand = createCommand({
 			description:
 				"The ID of the secret store to use to store the registry credentials.",
 			demandOption: false,
-			conflicts: "disableSecretsStore",
+			conflicts: "disable-secrets-store",
 		},
 		"secret-name": {
 			type: "string",
 			description:
 				"The name for the secret the private registry credentials should be stored under.",
 			demandOption: false,
-			conflicts: "disableSecretsStore",
+			conflicts: "disable-secrets-store",
 		},
-		disableSecretsStore: {
+		"disable-secrets-store": {
 			type: "boolean",
 			description:
 				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
 			demandOption: false,
 			conflicts: ["secret-store-id", "secret-name"],
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation prompts",
+			alias: "y",
+			default: false,
+		},
 	},
 	positionalArgs: ["DOMAIN"],
+	validateArgs(args) {
+		if (
+			args.skipConfirmation &&
+			!args.secretName &&
+			!args.disableSecretsStore
+		) {
+			throw new UserError(
+				"--secret-name is required when using --skip-confirmation"
+			);
+		}
+	},
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
 		await registryConfigureCommand(args, config);
