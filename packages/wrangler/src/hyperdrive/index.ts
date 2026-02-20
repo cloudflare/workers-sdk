@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
+import { MySqlSslmode, PostgresSslmode } from "./client";
 import type {
 	CachingOptions,
 	Mtls,
@@ -8,7 +9,6 @@ import type {
 	OriginWithSecrets,
 	OriginWithSecretsPartial,
 } from "./client";
-import { MySqlSslmode, PostgresSslmode } from "./client";
 import type { hyperdriveCreateCommand } from "./create";
 import type { hyperdriveUpdateCommand } from "./update";
 
