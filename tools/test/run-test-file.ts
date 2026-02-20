@@ -1,12 +1,12 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { findUpSync } from "find-up";
+import * as find from "empathic/find";
 
 const currentFile = process.argv[2];
 const currentDirectory = path.dirname(currentFile);
 
-const packageJsonPath = findUpSync("package.json", { cwd: currentDirectory });
+const packageJsonPath = find.file("package.json", { cwd: currentDirectory });
 
 if (!packageJsonPath) {
 	console.error("No package.json found.");
