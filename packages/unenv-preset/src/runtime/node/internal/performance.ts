@@ -246,10 +246,14 @@ export class Performance implements nodePerfHooks.Performance {
 			}
 			end = this.getEntriesByName(endMark, "mark")[0]?.startTime;
 		} else {
-			start =
-				Number.parseFloat(startOrMeasureOptions?.start as string) || this.now();
-			end =
-				Number.parseFloat(startOrMeasureOptions?.end as string) || this.now();
+			start = Number.parseFloat(startOrMeasureOptions?.start as string);
+			if (Number.isNaN(start)) {
+				start = this.now();
+			}
+			end = Number.parseFloat(startOrMeasureOptions?.end as string);
+			if (Number.isNaN(end)) {
+				end = this.now();
+			}
 		}
 		const entry = new PerformanceMeasure(measureName, {
 			startTime: start,

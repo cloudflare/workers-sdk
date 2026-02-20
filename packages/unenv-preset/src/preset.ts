@@ -1114,9 +1114,9 @@ function getPerfHooksOverrides({
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): { nativeModules: string[]; hybridModules: string[]; polyfills: string[] } {
-	const disabledModulesByFlag =
-		compatibilityFlags.includes("disable_nodejs_perf_hooks_module") &&
-		compatibilityFlags.includes("experimental");
+	const disabledModulesByFlag = compatibilityFlags.includes(
+		"disable_nodejs_perf_hooks_module"
+	);
 	const disabledGlobalsByFlag = compatibilityFlags.includes(
 		"disable_global_performance_classes"
 	);
