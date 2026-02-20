@@ -3,4 +3,4 @@
 "wrangler": patch
 ---
 
-Use capnweb's native ReadableStream support for remote Media and Dispatch Namespace bindings
+Internal refactor to use capnweb's native `ReadableStream` support to power remote Media and Dispatch Namespace bindings.
