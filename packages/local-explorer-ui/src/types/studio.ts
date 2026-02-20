@@ -243,6 +243,10 @@ export interface StudioResultStat {
 	rowsAffected: number;
 	rowsRead: number | null;
 	rowsWritten: number | null;
+	/**
+	 * Number of rows returned by the query
+	 */
+	rowCount: number;
 }
 
 export interface StudioSchemaItem {

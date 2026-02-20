@@ -95,10 +95,11 @@ export class LocalDOConnection implements IStudioConnection {
 	 * @returns A normalised result set for use by the studio UI.
 	 */
 	private transformResult(result: DoRawQueryResult): StudioResultSet {
+		const rows = (result.rows ?? []) as unknown[][];
 		return {
 			...transformStudioArrayBasedResult({
 				headers: result.columns ?? [],
-				rows: (result.rows ?? []) as unknown[][],
+				rows,
 				transformHeader: (headerName) => ({
 					name: headerName,
 					displayName: headerName,
@@ -109,6 +110,7 @@ export class LocalDOConnection implements IStudioConnection {
 				rowsAffected: 0,
 				rowsRead: result.meta?.rows_read ?? null,
 				rowsWritten: result.meta?.rows_written ?? null,
+				rowCount: rows.length,
 			},
 		};
 	}
