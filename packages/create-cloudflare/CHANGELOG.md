@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.64.3
+
+### Patch Changes
+
+- [#12609](https://github.com/cloudflare/workers-sdk/pull/12609) [`1714b9b`](https://github.com/cloudflare/workers-sdk/commit/1714b9bbc834d6eac5982a41daf91026c1ad44b1) Thanks [@Hari-07](https://github.com/Hari-07)! - Fix --variant flag being ignored for pages
+
+  When creating a Pages project using `npm create cloudflare -- --type pages --variant <variant>`,
+  the `--variant` flag was being ignored, causing users to be prompted for variant selection
+  or defaulting to an unexpected variant. This now correctly passes the variant to the project setup.
+
+- [#12602](https://github.com/cloudflare/workers-sdk/pull/12602) [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603) Thanks [@anonrig](https://github.com/anonrig)! - Optimize filesystem operations by using Node.js's throwIfNoEntry: false option
+
+  This reduces the number of system calls made when checking for file existence by avoiding the overhead of throwing and catching errors for missing paths. This is an internal performance optimization with no user-visible behavioral changes.
+
 ## 2.64.2
 
 ### Patch Changes
