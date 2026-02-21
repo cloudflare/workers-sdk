@@ -2,7 +2,25 @@
 
 Wrangler is an open-source project and we welcome contributions from you. Thank you!
 
-Below you can find some guidance on how to be most effective when contributing to the project.
+Below you can find guidance on how to be most effective when contributing to the project.
+
+- [Before getting started](#before-getting-started)
+- [Getting started](#getting-started)
+  - [Set up your environment](#set-up-your-environment)
+  - [Fork and clone the repository](#fork-and-clone-the-repository)
+    - [For external contributors](#for-external-contributors)
+    - [For Cloudflare employees](#for-cloudflare-employees)
+  - [Install dependencies](#install-dependencies)
+- [Building and running](#building-and-running)
+- [Checking the code](#checking-the-code)
+
+  - [Type chechking](#type-checking)
+    - [Changing TypeScript version in VS Code's command palette](#changing-typescript-version-in-vs-codes-command-palette)
+  - [Linting](#linting)
+  - [Formatting](#formatting)
+  - [Testing](#testing)
+
+- [Making changes]
 
 ## tl;dr for contributing to Wrangler
 
@@ -34,10 +52,11 @@ Wrangler is built and run on the Node.js JavaScript runtime.
 - Install a code editor - we recommend using [VS Code](https://code.visualstudio.com/).
   - When opening the project in VS Code for the first time, it will prompt you to install the [recommended VS Code extensions](https://code.visualstudio.com/docs/editor/extension-marketplace#:~:text=install%20the%20recommended%20extensions) for the project.
 - Install the [git](https://git-scm.com/) version control tool.
+- Install `pnpm` via npm: `npm install -g pnpm`
 
-### Fork and clone this repository
+### Fork and clone the repository
 
-#### For External Contributors
+#### For external contributors
 
 Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
 
@@ -70,7 +89,7 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
   upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
 
-- You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
+- Regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
 
   ```sh
   git switch main
@@ -80,43 +99,41 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
   Already up to date.
   ```
 
-#### For Cloudflare Employees
+#### For Cloudflare employees
 
 If you are a Cloudflare employee, you do not need to fork the repository - instead, you can clone the main repository directly. This allows you to push branches directly to the upstream repository.
 
 If you find that you don't have write access, please reach out to your manager or the Wrangler team internally.
 
-Clone the main repository:
+- Clone the main repository:
 
-```sh
-git clone https://github.com/cloudflare/workers-sdk.git
-cd workers-sdk
-```
+  ```sh
+  git clone https://github.com/cloudflare/workers-sdk.git
+  cd workers-sdk
+  ```
 
-Create new branches directly in the cloned repository and push them to the main repository:
+- Create new branches directly in the cloned repository and push them to the main repository:
 
-```sh
-git checkout -b <new-branch-name>
-git push origin <new-branch-name>
-```
+  ```sh
+  git checkout -b <new-branch-name>
+  git push origin <new-branch-name>
+  ```
 
 ### Install dependencies
 
-**Warning**
-When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
+> [!WARNING]
+> When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
+>
+> - On Linux:
+>   - libc++ (e.g. the package `libc++1` on Debian Bullseye)
+> - On macOS:
+>   - The XCode command line tools, which can be installed with xcode-select --install
 
-- On Linux:
-  - libc++ (e.g. the package `libc++1` on Debian Bullseye)
-- On macOS:
-  - The XCode command line tools, which can be installed with xcode-select --install
-
-The Node.js dependencies of the project are managed by the [`pnpm`](https://pnpm.io/) tool.
-
-This repository is setup as a [mono-repo](https://pnpm.io/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
-
-While each workspace has its own dependencies, you install the dependencies using `pnpm` at the root of the project.
+The Node.js dependencies of this repository are managed by the [`pnpm`](https://pnpm.io/) tool.
 
 > If you haven't used `pnpm` before, you can install it with `npm install -g pnpm`
+
+As a note, this repository is set up as a [mono-repo](https://pnpm.io/workspaces) of workspaces, each stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory. While each workspace has its own dependencies, you can install the dependencies for all using `pnpm` at the root of the project.
 
 - Install all the dependencies
 
@@ -143,7 +160,7 @@ Workspaces in this project are mostly written in [TypeScript](https://www.typesc
 
 ## Checking the code
 
-The code in the repository is checked for type checking, formatting, linting and testing errors.
+The code in the repository is checked for type checking, formatting, linting and testing errors. Please make sure all checks pass before submitting a PR.
 
 - Run all checks in all the workspaces
 
@@ -151,11 +168,13 @@ The code in the repository is checked for type checking, formatting, linting and
   pnpm run check
   ```
 
-When doing normal development, you may want to run these checks individually.
+When doing normal development, you may want to run these checks individually. Please see the following sections for instruction running individual checks.
 
 ### Type Checking
 
-The code is checked for type errors by [TypeScript](https://www.typescriptlang.org/).
+The code is checked for type errors by [TypeScript](https://www.typescriptlang.org/). If using VS Code, it will run type-checking automatically while editing source code, providing immediate feedback.
+
+Type checks can also be manually run:
 
 - Type check all the code in the repository
 
@@ -163,13 +182,11 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
   pnpm run check:type
   ```
 
-- VS Code will also run type-checking while editing source code, providing immediate feedback.
+#### Changing TypeScript version in VS Code's command palette
 
-#### Changing TypeScript Version in VS Code's Command Palette
+For TypeScript to work properly in the monorepo, the version used in VS Code must match the project's current TypeScript version. If this is not the case, follow the steps below to change VS Code's TypeScript version.
 
-For TypeScript to work properly in the Monorepo the version used in VSCode must be the project's current TypeScript version, follow these steps:
-
-1. Open the project in VSCode.
+1. Open the project in VS Code.
 
 2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the command palette.
 
@@ -179,14 +196,16 @@ For TypeScript to work properly in the Monorepo the version used in VSCode must 
 
    - Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
 
-5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
+5. After selecting the TypeScript version, VS Code will reload the workspace using the chosen version.
 
-Now you have successfully switched the TypeScript version used within the project via the command palette in VSCode.
-Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VSCode.
+Now you have successfully switched the TypeScript version used within the project via the command palette in VS Code.
+Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VS Code.
 
 ### Linting
 
-The code is checked for linting errors by [ESLint](https://eslint.org/).
+The code is checked for linting errors by [ESLint](https://eslint.org/). The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
+
+Linting checks can also be manually run:
 
 - Run the linting checks
 
@@ -194,11 +213,11 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
   pnpm run check:lint
   ```
 
-- The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
-
 ### Formatting
 
-The code is checked for formatting errors by [Prettier](https://prettier.io/).
+The code is checked for formatting errors by [Prettier](https://prettier.io/). The repository has a recommended VS Code plugin to run Prettier checks and automatically format using Prettier while editing source code, providing immediate feedback
+
+Formatting and formatting checks can also be manually run:
 
 - Run the formatting checks
 
@@ -206,8 +225,7 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
   pnpm run check:format
   ```
 
-- The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback
-- Use the following command to run prettier on the codebase
+- Run prettier on the codebase
 
   ```sh
   pnpm run prettify
@@ -253,7 +271,7 @@ Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is co
 
   This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
 
-## Steps For Making Changes
+## Making changes
 
 Every change you make should be stored in a [git commit](https://github.com/git-guides/git-commit).
 Changes should be committed to a new local branch, which then gets pushed to your fork of the repository on GitHub.
@@ -301,11 +319,11 @@ Making sure your branch follows our recommendations for git will help ensure you
 - Once your PR has been reviewed, when addressing feedback try not to modify already reviewed commits with force pushes. This slows down the review process and makes it hard to keep track of what changes have been made. Instead, add additional commits to your PR to address any feedback (`git commit --fixup` is a helpful tool here).
 - When merging your PR into `main`, `workers-sdk` enforces squash merges. As such, please try and make sure that the commit message associated with the merge clearly describes the entire change your PR makes.
 
-## PR Review
+## PR review
 
 PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other. As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback.
 
-## PR Previews
+## PR previews
 
 Every PR will have an associated pre-release build for all releasable packages within the repository, powered by [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/9492#issuecomment-2943757675)).
 
@@ -317,7 +335,7 @@ It's also possible to generate preview builds for the applications in the reposi
 
 Once built, you can find the preview link for these applications in the [Deploy Pages Previews](.github/workflows/deploy-pages-previews.yml) action output
 
-## PR Tests
+## PR tests
 
 Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages. For documentation on how these testing frameworks work, see:
 
