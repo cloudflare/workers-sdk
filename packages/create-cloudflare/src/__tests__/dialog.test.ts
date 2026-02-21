@@ -122,7 +122,7 @@ describe("dialog helpers", () => {
 
 				🔍 View Project
 				Visit: https://example.test.workers.dev
-				Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project
+				Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project/production
 
 				💻 Continue Developing
 				Deploy again: pnpm run deploy
