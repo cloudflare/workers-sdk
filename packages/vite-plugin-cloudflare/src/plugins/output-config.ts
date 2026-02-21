@@ -152,8 +152,12 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 
 function readAssetsIgnoreFile(assetsIgnorePath: string): string {
 	const content = existsSync(assetsIgnorePath) ? readFileSync(assetsIgnorePath, "utf-8") : "";
+	if (content.length === 0) {
+		return "";
+	}
 	return content.at(-1) === "\n" ? content : `${content}\n`
 }
+
 
 function getAssetsDirectory(
 	workerOutputDirectory: string,
