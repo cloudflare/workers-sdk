@@ -3415,6 +3415,37 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "queues.consumers[3]" should, optionally, have a number "max_concurrency" field but got {"queue":"myQueue","max_batch_size":"3","max_batch_timeout":null,"max_retries":"hello","dead_letter_queue":5,"max_concurrency":"hello"}."
 				`);
 			});
+
+			it("should warn if delivery_delay is set on a queue producer", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							producers: [
+								{ binding: "QUEUE_BINDING_1", queue: "queue1" },
+								{
+									binding: "QUEUE_BINDING_2",
+									queue: "queue2",
+									delivery_delay: 60,
+								},
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.queues.producers).toHaveLength(2);
+				expect(config.queues.producers?.[1]).toMatchObject({
+					delivery_delay: 60,
+				});
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The \\"delivery_delay\\" field in \\"queues.producers[1]\\" is deprecated and has no effect. Queue-level settings should be configured using \\"wrangler queues update\\" instead. This setting will be removed in a future version."
+				`);
+			});
 		});
 
 		describe("[r2_buckets]", () => {

@@ -3623,6 +3623,18 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		}
 	}
 
+	// Warn if delivery_delay is set, as it is deprecated and has no effect
+	if (
+		hasProperty(value, "delivery_delay") &&
+		value.delivery_delay !== undefined
+	) {
+		diagnostics.warnings.push(
+			`The "delivery_delay" field in "${field}" is deprecated and has no effect. ` +
+				`Queue-level settings should be configured using "wrangler queues update" instead. ` +
+				`This setting will be removed in a future version.`
+		);
+	}
+
 	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
