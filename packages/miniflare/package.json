@@ -78,7 +78,7 @@
 		"acorn": "8.14.0",
 		"acorn-walk": "8.3.2",
 		"capnp-es": "catalog:default",
-		"capnweb": "^0.1.0",
+		"capnweb": "catalog:default",
 		"chokidar": "^4.0.1",
 		"ci-info": "catalog:default",
 		"concurrently": "^8.2.2",

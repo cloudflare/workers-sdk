@@ -174,6 +174,7 @@ const embedWorkersPlugin = {
 			if (builder === undefined) {
 				builder = await esbuild.context({
 					platform: "node", // Marks `node:*` imports as external
+					conditions: ["workerd", "worker", "browser"],
 					format: "esm",
 					target: "esnext",
 					bundle: true,
@@ -186,7 +187,7 @@ const embedWorkersPlugin = {
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
 					outbase: pkgRoot,
-					// Apply the node-to-internal rewrite only for shared extension workers
+					// Shared extension workers need node:* → node-internal:*
 					plugins:
 						args.path === miniflareSharedExtensionPath ||
 						args.path === miniflareZodExtensionPath

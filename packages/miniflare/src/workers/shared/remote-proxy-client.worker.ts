@@ -1,43 +1,39 @@
-import { newWebSocketRpcSession } from "capnweb";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { makeFetch } from "./remote-bindings-utils";
+import {
+	makeFetch,
+	makeRemoteProxyStub,
+	RemoteBindingEnv,
+	throwRemoteRequired,
+} from "./remote-bindings-utils";
 
-type Env = {
-	remoteProxyConnectionString?: string;
-	binding: string;
-	bindingType?: string;
-};
-export default class Client extends WorkerEntrypoint<Env> {
-	async fetch(request: Request) {
+/** Generic remote proxy client for bindings. */
+export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
+	fetch(request: Request): Promise<Response> {
 		return makeFetch(
 			this.env.remoteProxyConnectionString,
 			this.env.binding
 		)(request);
 	}
 
-	constructor(ctx: ExecutionContext, env: Env) {
-		let stub: unknown;
-		if (env.remoteProxyConnectionString) {
-			const url = new URL(env.remoteProxyConnectionString);
-			url.protocol = "ws:";
-			url.searchParams.set("MF-Binding", env.binding);
-			if (env.bindingType) {
-				url.searchParams.set("MF-Binding-Type", env.bindingType);
-			}
-			stub = newWebSocketRpcSession(url.href);
-		}
-
+	constructor(ctx: ExecutionContext, env: RemoteBindingEnv) {
 		super(ctx, env);
 
+		const stub = env.remoteProxyConnectionString
+			? makeRemoteProxyStub(
+					env.remoteProxyConnectionString,
+					env.binding,
+					env.bindingType ? { "MF-Binding-Type": env.bindingType } : undefined
+				)
+			: undefined;
+
 		return new Proxy(this, {
-			get(target, prop) {
+			get: (target, prop) => {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
 				if (!stub) {
-					throw new Error(`Binding ${env.binding} needs to be run remotely`);
+					throwRemoteRequired(env.binding);
 				}
-
 				return Reflect.get(stub, prop);
 			},
 		});
