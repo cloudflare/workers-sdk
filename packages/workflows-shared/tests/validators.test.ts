@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import {
+	isValidStepConfig,
 	isValidStepName,
 	isValidWorkflowInstanceId,
 	isValidWorkflowName,
@@ -71,5 +72,36 @@ describe("Workflow instance step name validation", () => {
 		"valid step name",
 	])("should accept valid names", (value, { expect }) => {
 		expect(isValidStepName(value as string)).toBe(true);
+	});
+});
+
+describe("Workflow step config validation", () => {
+	it.each([
+		{ timeout: "5 years", retries: { limit: 1 } },
+		{ timeout: "5 years", retries: { delay: 50 } },
+		{ timeout: "5 years", retries: { backoff: "exponential" } },
+		{
+			timeout: "5 years",
+			retries: {
+				delay: "10 minutes",
+				limit: 5,
+				"i-like-trains": "yes".repeat(100),
+			},
+		},
+	])("should reject invalid step configs", function (value) {
+		expect(isValidStepConfig(value)).toBe(false);
+	});
+
+	it.each([
+		{
+			retries: { limit: 0, delay: 100000, backoff: "exponential" },
+			timeout: "15 minutes",
+		},
+		{
+			retries: { limit: 5, delay: 0, backoff: "constant" },
+			timeout: "2 minutes",
+		},
+	])("should accept valid names", function (value) {
+		expect(isValidStepConfig(value)).toBe(true);
 	});
 });
