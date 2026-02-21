@@ -28,6 +28,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
+import { updateCheck } from "./update-check";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -641,7 +642,10 @@ export async function getPreviewMiniflareOptions(
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
 class ViteMiniflareLogger extends Log {
+	#warnedCompatibilityDateFallback = false;
+
 	private logger: vite.Logger;
+
 	constructor(config: vite.ResolvedConfig) {
 		super(miniflareLogLevelFromViteLogLevel(config.logLevel));
 		this.logger = config.logger;
@@ -656,6 +660,26 @@ class ViteMiniflareLogger extends Log {
 			case LogLevel.INFO:
 				return this.logger.info(message);
 		}
+	}
+
+	override warn(message: string): void {
+		// Only log warning about requesting a compatibility date after the workerd
+		// binary's version once, and only if there's an update available.
+		if (message.startsWith("The latest compatibility date supported by")) {
+			if (this.#warnedCompatibilityDateFallback) {
+				return;
+			}
+			this.#warnedCompatibilityDateFallback = true;
+			return void updateCheck().then((maybeNewVersion) => {
+				if (maybeNewVersion === undefined) {
+					return;
+				}
+				this.logger.warn(
+					`${message}\nFeatures enabled by your requested compatibility date may not be available. Upgrade to \`@cloudflare/vite-plugin@${maybeNewVersion}\` to remove this warning.`
+				);
+			});
+		}
+		this.logger.warn(message);
 	}
 
 	override logReady() {
