@@ -112,7 +112,12 @@ export function getWranglerTmpDir(
 	const removeDir = () => {
 		if (cleanup) {
 			try {
-				return fs.rmSync(tmpDir, { recursive: true, force: true });
+				return fs.rmSync(tmpDir, {
+					recursive: true,
+					force: true,
+					maxRetries: 5,
+					retryDelay: 100,
+				});
 			} catch {
 				// This sometimes fails on Windows with EBUSY
 			}

@@ -42,7 +42,12 @@ describe("find_additional_modules dev", () => {
 	afterAll(async () => {
 		await worker.dispose();
 		try {
-			await fs.rm(tmpDir, { recursive: true, force: true });
+			await fs.rm(tmpDir, {
+				recursive: true,
+				force: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 		} catch (e) {
 			// It seems that Windows doesn't let us delete this, with errors like:
 			//
@@ -142,7 +147,12 @@ describe("find_additional_modules deploy", () => {
 		tmpDir = await getTmpDir();
 	});
 	afterAll(async () => {
-		await fs.rm(tmpDir, { recursive: true, force: true });
+		await fs.rm(tmpDir, {
+			recursive: true,
+			force: true,
+			maxRetries: 5,
+			retryDelay: 100,
+		});
 	});
 
 	test("doesn't bundle additional modules", async ({ expect }) => {
