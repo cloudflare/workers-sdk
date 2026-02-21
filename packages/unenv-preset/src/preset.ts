@@ -5,7 +5,7 @@ import type { Preset } from "unenv";
 //
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-const nativeModules = [
+const standardNativeModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
 	"_stream_readable",
@@ -85,10 +85,11 @@ export function getCloudflarePreset({
 	const childProcessOverrides = getChildProcessOverrides(compat);
 	const workerThreadsOverrides = getWorkerThreadsOverrides(compat);
 	const readlineOverrides = getReadlineOverrides(compat);
+	const performanceOverrides = getPerfHooksOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
-		...nativeModules,
+		...standardNativeModules,
 		...httpOverrides.nativeModules,
 		...http2Overrides.nativeModules,
 		...osOverrides.nativeModules,
@@ -111,6 +112,7 @@ export function getCloudflarePreset({
 		...childProcessOverrides.nativeModules,
 		...workerThreadsOverrides.nativeModules,
 		...readlineOverrides.nativeModules,
+		...performanceOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -137,6 +139,7 @@ export function getCloudflarePreset({
 		...childProcessOverrides.hybridModules,
 		...workerThreadsOverrides.hybridModules,
 		...readlineOverrides.hybridModules,
+		...performanceOverrides.hybridModules,
 	];
 
 	return {
@@ -172,7 +175,7 @@ export function getCloudflarePreset({
 			...consoleOverrides.inject,
 			...processOverrides.inject,
 		},
-		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
+		polyfill: [...performanceOverrides.polyfills],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
 	};
 }
@@ -1095,4 +1098,50 @@ function getReadlineOverrides({
 				nativeModules: [],
 				hybridModules: [],
 			};
+}
+
+/**
+ * Returns the overrides for `node:perf_hooks` (unenv or workerd)
+ *
+ * The native performance implementation:
+ * - is enabled starting from 2025-09-21
+ * - can be enabled with the "enable_nodejs_perf_hooks_module" flag
+ * - can be disabled with the "disable_nodejs_perf_hooks_module" flag
+ */
+function getPerfHooksOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[]; polyfills: string[] } {
+	const disabledModulesByFlag = compatibilityFlags.includes(
+		"disable_nodejs_perf_hooks_module"
+	);
+	const disabledGlobalsByFlag = compatibilityFlags.includes(
+		"disable_global_performance_classes"
+	);
+
+	const enabledModulesByFlag =
+		compatibilityFlags.includes("enable_nodejs_perf_hooks_module") &&
+		compatibilityFlags.includes("experimental");
+	const enabledGlobalsByFlag =
+		compatibilityFlags.includes("enable_global_performance_classes") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabledModules = enabledModulesByFlag && !disabledModulesByFlag;
+	const enabledGlobals = enabledGlobalsByFlag && !disabledGlobalsByFlag;
+
+	const nativeModules = enabledModules ? ["perf_hooks"] : [];
+	const hybridModules = enabledModules ? [] : ["perf_hooks"];
+	const polyfills = !enabledGlobals
+		? ["@cloudflare/unenv-preset/polyfill/performance"]
+		: [];
+
+	// The native perf_hooks module should implement all the APIs.
+	// It can then be used as a native module.
+	return {
+		nativeModules,
+		hybridModules,
+		polyfills,
+	};
 }

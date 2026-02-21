@@ -1062,6 +1062,105 @@ export const WorkerdTests: Record<string, () => void> = {
 			});
 		}
 	},
+
+	async testPerfHooks() {
+		assertTypeOf(globalThis, "performance", "object");
+		assertTypeOf(globalThis, "PerformanceObserver", "function");
+
+		assert.doesNotThrow(() => globalThis.performance.now());
+		assert.doesNotThrow(() => globalThis.performance.mark("test"));
+		assert.doesNotThrow(() => globalThis.performance.measure("test"));
+
+		const perfHooks = await import("node:perf_hooks");
+
+		assertTypeOf(perfHooks, "performance", "object");
+		assertTypeOf(perfHooks, "PerformanceObserver", "function");
+
+		assert.doesNotThrow(() => perfHooks.performance.now());
+		assert.doesNotThrow(() => perfHooks.performance.mark("test"));
+		assert.doesNotThrow(() => perfHooks.performance.measure("test"));
+
+		// Test performance.nodeTiming (Node.js-specific property)
+		const nodeTiming = perfHooks.performance.nodeTiming;
+		assertTypeOf(perfHooks.performance, "nodeTiming", "object");
+		assert.strictEqual(nodeTiming.name, "node");
+		assert.strictEqual(nodeTiming.entryType, "node");
+		assertTypeOf(nodeTiming, "startTime", "number");
+		assertTypeOf(nodeTiming, "duration", "number");
+		assertTypeOf(nodeTiming, "nodeStart", "number");
+		assertTypeOf(nodeTiming, "v8Start", "number");
+		assertTypeOf(nodeTiming, "bootstrapComplete", "number");
+		assertTypeOf(nodeTiming, "environment", "number");
+		assertTypeOf(nodeTiming, "loopStart", "number");
+		assertTypeOf(nodeTiming, "loopExit", "number");
+		assertTypeOf(nodeTiming, "idleTime", "number");
+
+		// Test performance.markResourceTiming() doesn't throw
+		// Note: Both workerd and unenv polyfill accept no arguments (stub implementations)
+		assert.doesNotThrow(() =>
+			(perfHooks.performance.markResourceTiming as unknown as () => void)()
+		);
+
+		// Test all 24 constants exist
+		const { constants } = perfHooks;
+		assertTypeOf(perfHooks, "constants", "object");
+		// GC type constants
+		assertTypeOf(constants, "NODE_PERFORMANCE_GC_MAJOR", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_GC_MINOR", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_GC_INCREMENTAL", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_GC_WEAKCB", "number");
+		// GC flags constants
+		assertTypeOf(constants, "NODE_PERFORMANCE_GC_FLAGS_NO", "number");
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_GC_FLAGS_CONSTRUCT_RETAINED",
+			"number"
+		);
+		assertTypeOf(constants, "NODE_PERFORMANCE_GC_FLAGS_FORCED", "number");
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_GC_FLAGS_SYNCHRONOUS_PHANTOM_PROCESSING",
+			"number"
+		);
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_GC_FLAGS_ALL_AVAILABLE_GARBAGE",
+			"number"
+		);
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_GC_FLAGS_ALL_EXTERNAL_MEMORY",
+			"number"
+		);
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_GC_FLAGS_SCHEDULE_IDLE",
+			"number"
+		);
+		// Entry type constants
+		assertTypeOf(constants, "NODE_PERFORMANCE_ENTRY_TYPE_GC", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_ENTRY_TYPE_HTTP", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_ENTRY_TYPE_HTTP2", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_ENTRY_TYPE_NET", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_ENTRY_TYPE_DNS", "number");
+		// Milestone constants
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN_TIMESTAMP",
+			"number"
+		);
+		assertTypeOf(constants, "NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_MILESTONE_ENVIRONMENT", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_MILESTONE_NODE_START", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_MILESTONE_V8_START", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_MILESTONE_LOOP_START", "number");
+		assertTypeOf(constants, "NODE_PERFORMANCE_MILESTONE_LOOP_EXIT", "number");
+		assertTypeOf(
+			constants,
+			"NODE_PERFORMANCE_MILESTONE_BOOTSTRAP_COMPLETE",
+			"number"
+		);
+	},
 };
 
 /**
