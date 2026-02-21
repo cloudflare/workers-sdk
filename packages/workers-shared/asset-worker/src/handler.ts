@@ -996,6 +996,39 @@ const encodePath = (pathname: string) => {
 		.join("/");
 };
 
+/**
+ * Merge query parameters from the incoming request with those from the
+ * redirect destination. Destination params take precedence – if the same
+ * key appears in both, the destination value wins.
+ *
+ * Returns the merged query string (including the leading `?`), or an
+ * empty string if there are no params.
+ */
+const mergeSearchParams = (
+	incomingSearch: string,
+	destinationSearch: string
+): string => {
+	if (!incomingSearch && !destinationSearch) {
+		return "";
+	}
+	if (!incomingSearch) {
+		return destinationSearch;
+	}
+	if (!destinationSearch) {
+		return incomingSearch;
+	}
+
+	const merged = new URLSearchParams(incomingSearch);
+	const destination = new URLSearchParams(destinationSearch);
+
+	// Destination params overwrite incoming params
+	for (const [key, value] of destination) {
+		merged.set(key, value);
+	}
+
+	return `?${merged.toString()}`;
+};
+
 const handleRedirects = (
 	env: Env,
 	request: Request,
@@ -1030,13 +1063,17 @@ const handleRedirects = (
 			} else {
 				const { status, to } = redirectMatch;
 				const destination = new URL(to, request.url);
+				const mergedSearch = mergeSearchParams(
+					search,
+					destination.search
+				);
 				const location =
 					destination.origin === new URL(request.url).origin
-						? `${destination.pathname}${destination.search || search}${
+						? `${destination.pathname}${mergedSearch}${
 								destination.hash
 							}`
 						: `${destination.href.slice(0, destination.href.length - (destination.search.length + destination.hash.length))}${
-								destination.search ? destination.search : search
+								mergedSearch
 							}${destination.hash}`;
 
 				span.setTags({
