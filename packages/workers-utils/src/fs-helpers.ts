@@ -9,5 +9,10 @@ import fs from "node:fs";
  * @returns `true` if the path is a directory, `false` otherwise
  */
 export function isDirectory(path: string) {
-	return fs.statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
+	try {
+		return fs.statSync(path).isDirectory();
+	} catch {
+		// ignore error
+		return false;
+	}
 }

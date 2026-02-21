@@ -40,9 +40,8 @@ export const pagesFunctionsOptimizeRoutesCommand = createCommand({
 		}
 
 		if (
-			!lstatSync(routesOutputDirectory, {
-				throwIfNoEntry: false,
-			})?.isDirectory()
+			!existsSync(routesOutputDirectory) ||
+			!lstatSync(routesOutputDirectory).isDirectory()
 		) {
 			throw new FatalError(
 				`Oops! Folder ${routesOutputDirectory} does not exist. Please make sure --output-routes-path is a valid file path (for example "/public/_routes.json").`,

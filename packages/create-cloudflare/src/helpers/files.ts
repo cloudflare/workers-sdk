@@ -46,9 +46,12 @@ export const removeFile = (path: string) => {
 
 export const directoryExists = (path: string): boolean => {
 	try {
-		const stat = statSync(path, { throwIfNoEntry: false });
-		return stat?.isDirectory() ?? false;
+		const stat = statSync(path);
+		return stat.isDirectory();
 	} catch (error) {
+		if ((error as { code: string }).code === "ENOENT") {
+			return false;
+		}
 		throw new Error(error as string);
 	}
 };

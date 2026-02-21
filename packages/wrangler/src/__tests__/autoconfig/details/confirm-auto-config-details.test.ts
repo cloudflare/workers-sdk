@@ -56,9 +56,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "dlx": [
 				      "npx",
 				    ],
-				    "lockFiles": [
-				      "package-lock.json",
-				    ],
 				    "npx": "npx",
 				    "type": "npm",
 				  },
@@ -118,9 +115,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "dlx": [
 				      "npx",
 				    ],
-				    "lockFiles": [
-				      "package-lock.json",
-				    ],
 				    "npx": "npx",
 				    "type": "npm",
 				  },
@@ -179,9 +173,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "packageManager": {
 				    "dlx": [
 				      "npx",
-				    ],
-				    "lockFiles": [
-				      "package-lock.json",
 				    ],
 				    "npx": "npx",
 				    "type": "npm",
@@ -263,9 +254,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "packageManager": {
 				    "dlx": [
 				      "npx",
-				    ],
-				    "lockFiles": [
-				      "package-lock.json",
 				    ],
 				    "npx": "npx",
 				    "type": "npm",

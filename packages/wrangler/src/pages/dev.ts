@@ -414,8 +414,7 @@ export const pagesDevCommand = createCommand({
 				? join(directory, singleWorkerScriptPath)
 				: resolve(singleWorkerScriptPath);
 		const usingWorkerDirectory =
-			lstatSync(workerScriptPath, { throwIfNoEntry: false })?.isDirectory() ??
-			false;
+			existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 		const usingWorkerScript = existsSync(workerScriptPath);
 		const enableBundling = args.bundle ?? !(args.noBundle ?? config.no_bundle);
 

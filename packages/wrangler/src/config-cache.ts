@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import * as path from "node:path";
 import { getWranglerCacheDirFromEnv } from "@cloudflare/workers-utils";
-import * as find from "empathic/find";
+import { findUpSync } from "find-up";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 
@@ -29,7 +29,9 @@ export function getCacheFolder(): string {
 	}
 
 	// Find node_modules using existing find-up logic
-	const closestNodeModulesDirectory = find.dir("node_modules");
+	const closestNodeModulesDirectory = findUpSync("node_modules", {
+		type: "directory",
+	});
 
 	const nodeModulesCache = closestNodeModulesDirectory
 		? path.join(closestNodeModulesDirectory, ".cache", "wrangler")
