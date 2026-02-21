@@ -162,6 +162,10 @@ export function getCloudflarePreset({
 					[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 				])
 			),
+
+			// Use the actual `debug` package.
+			// The basic unenv shim has much less functionality.
+			debug: "debug",
 		},
 		inject: {
 			// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
