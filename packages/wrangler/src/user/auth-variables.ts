@@ -103,6 +103,15 @@ export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_PROFILE` specifies the authentication profile to use.
+ * This allows switching between multiple Cloudflare accounts
+ * without re-authenticating each time.
+ */
+export const getWranglerProfileFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_PROFILE",
+});
+
+/**
  * Set the `WRANGLER_CF_AUTHORIZATION_TOKEN` to the CF_Authorization token found at https://dash.staging.cloudflare.com/bypass-limits
  * if you want to access the staging environment, triggered by `WRANGLER_API_ENVIRONMENT=staging`.
  */
