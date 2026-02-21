@@ -142,7 +142,7 @@ function getMigrationNames(migrationsPath: string): Array<string> {
 
 	dir.closeSync();
 
-	return migrations;
+	return migrations.sort();
 }
 
 /**
