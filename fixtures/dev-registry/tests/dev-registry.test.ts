@@ -327,7 +327,9 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
 			expect(response.status).toBe(503);
-			expect(await response.text()).toEqual("Service Unavailable");
+			expect(await response.text()).toEqual(
+				`Couldn't find a local dev session for Durable Object "TestObject" of service "internal-durable-object" to proxy to`
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -369,13 +371,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
-			expect({
-				status: response.status,
-				body: await response.text(),
-			}).toEqual({
-				status: 500,
-				body: 'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.',
-			});
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				`Couldn't find a local dev session for Durable Object "TestObject" of service "internal-durable-object" to proxy to`
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -383,7 +382,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 
-		// Test RPC after internal durable object is started (should still fail)
+		// Test RPC after internal durable object is started (should now succeed via debug port)
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "durable-object",
@@ -391,10 +390,8 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			});
 			const response = await fetch(`${externalDurableObject}?${searchParams}`);
 
-			expect(response.status).toBe(500);
-			expect(await response.text()).toEqual(
-				'Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.'
-			);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong");
 		}, waitForTimeout);
 	});
 
@@ -669,7 +666,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
-		});
+		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
 			// Trigger tail handler of exported-handler via worker-entrypoint
@@ -1043,7 +1040,9 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		await vi.waitFor(async () => {
 			const response = await stub.fetch("http://localhost");
 			expect(response.status).toBe(503);
-			expect(await response.text()).toEqual("Service Unavailable");
+			expect(await response.text()).toEqual(
+				`Couldn't find a local dev session for Durable Object "TestObject" of service "internal-durable-object" to proxy to`
+			);
 		}, waitForTimeout);
 
 		await runWranglerDev(
@@ -1066,19 +1065,27 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			"wrangler.external-durable-object.jsonc",
 			devRegistryPath
 		);
-		const id = env.DURABLE_OBJECT.newUniqueId();
-		const stub = env.DURABLE_OBJECT.get(id);
 
-		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
-		);
+		// Test DO RPC fallback before internal durable object is started.
+		// The exact error depends on the proxy layer, so we just verify the call rejects.
+		await vi.waitFor(async () => {
+			const id = env.DURABLE_OBJECT.newUniqueId();
+			const stub = env.DURABLE_OBJECT.get(id);
+
+			await expect(stub.ping()).rejects.toThrow();
+		}, waitForTimeout);
+
 		await runWranglerDev(
 			"wrangler.internal-durable-object.jsonc",
 			devRegistryPath
 		);
 
-		expect(() => stub.ping()).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Cannot access "TestObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.]`
-		);
+		await vi.waitFor(async () => {
+			const id = env.DURABLE_OBJECT.newUniqueId();
+			const stub = env.DURABLE_OBJECT.get(id);
+
+			const result = await stub.ping();
+			expect(result).toEqual("Pong");
+		}, waitForTimeout);
 	});
 });

@@ -12,12 +12,6 @@ describe.sequential("DevRegistry", () => {
 			script: `addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello from service worker!"));
 			})`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -110,12 +104,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -206,12 +194,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -271,12 +253,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -348,12 +324,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: "TestEntrypoint",
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -431,12 +401,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -516,12 +480,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -550,12 +508,12 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to durable object with do proxy disabled", async ({ expect }) => {
+	test("fetch to durable object with remote running", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -585,7 +543,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -607,18 +565,23 @@ describe.sequential("DevRegistry", () => {
 		});
 		useDispose(local);
 
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe("Service Unavailable");
-		expect(res.status).toBe(503);
+		// DO fetch now works natively via the debug port
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Hello from Durable Object!");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
 	});
 
-	test("RPC to durable object with do proxy disabled", async ({ expect }) => {
+	test("RPC to durable object with remote running", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -642,7 +605,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -670,12 +633,15 @@ describe.sequential("DevRegistry", () => {
 		});
 		useDispose(local);
 
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe(
-			`Couldn't find the durable Object "MyDurableObject" of script "remote-worker".`
+		// DO RPC now works natively via the debug port
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("pong");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
 		);
-		expect(res.status).toBe(500);
 	});
 
 	test("fetch to durable object", async ({ expect }) => {
@@ -683,7 +649,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -708,13 +674,15 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe("Service Unavailable");
+		expect(await res.text()).toBe(
+			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+		);
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -755,7 +723,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -784,15 +752,15 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe(
-			`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
+		expect(await res.text()).toContain(
+			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
 		);
 		expect(res.status).toBe(500);
 
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -812,13 +780,12 @@ describe.sequential("DevRegistry", () => {
 		useDispose(remote);
 
 		await remote.ready;
+		// DO RPC now works natively via the debug port
 		await vi.waitFor(
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
-				expect(await res.text()).toBe(
-					`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
-				);
-				expect(res.status).toBe(500);
+				expect(await res.text()).toBe("Response from remote worker: pong");
+				expect(res.status).toBe(200);
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
@@ -854,12 +821,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				};
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -972,12 +933,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		};
 
 		const local = new Miniflare({
@@ -1110,7 +1065,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -1135,13 +1090,15 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe("Service Unavailable");
+		expect(await res.text()).toBe(
+			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+		);
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			https: true,
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
@@ -1233,12 +1190,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(unrelated);
 
@@ -1260,12 +1211,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		onTestFinished(async () => {
 			try {

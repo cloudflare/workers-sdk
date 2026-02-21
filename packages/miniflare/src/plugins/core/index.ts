@@ -169,6 +169,15 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		/** Override the workerd service name used as the default entrypoint in the
+		 * dev registry. When set, the dev registry will route requests for this
+		 * worker's default entrypoint to the specified worker name (wrapped with
+		 * getUserServiceName) instead of the worker's own service or assets proxy.
+		 *
+		 * Used by the vite plugin to route through the vite proxy worker, which
+		 * handles both HMR and asset serving in vite dev mode. */
+		unsafeOverrideDefaultEntrypoint: z.string().optional(),
+
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
@@ -273,8 +282,6 @@ export const CoreSharedOptionsSchema = z
 
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
-		// Enable External Durable Objects Proxy / Internal DOs registration
-		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
 			.function(z.tuple([z.custom<WorkerRegistry>()]))
@@ -448,10 +455,12 @@ function maybeGetCustomServiceService(
 		};
 	} else if (
 		typeof service === "object" &&
+		"remoteProxyConnectionString" in service &&
 		service.remoteProxyConnectionString !== undefined
 	) {
 		assert(
 			service.remoteProxyConnectionString &&
+				"name" in service &&
 				service.name &&
 				typeof service.name === "string"
 		);
