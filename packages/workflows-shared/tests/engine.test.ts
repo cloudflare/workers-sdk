@@ -1,84 +1,14 @@
-import {
-	createExecutionContext,
-	env,
-	runInDurableObject,
-} from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
+import { runWorkflow, runWorkflowDefer } from "./utils";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
-	Engine,
 	EngineLogs,
 } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
-import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
-
-async function setWorkflowEntrypoint(
-	stub: DurableObjectStub<Engine>,
-	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
-) {
-	const ctx = createExecutionContext();
-	await runInDurableObject(stub, (instance) => {
-		// @ts-expect-error this is only a stub for WorkflowEntrypoint
-		instance.env.USER_WORKFLOW = new (class {
-			constructor(
-				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected ctx: ExecutionContext,
-				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected env: ProvidedEnv
-			) {}
-			public async run(
-				event: Readonly<WorkflowEvent<unknown>>,
-				step: WorkflowStep
-			): Promise<unknown> {
-				return await callback(event, step);
-			}
-		})(ctx, env);
-	});
-}
-
-async function runWorkflow(
-	instanceId: string,
-	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
-): Promise<DurableObjectStub<Engine>> {
-	const engineId = env.ENGINE.idFromName(instanceId);
-	const engineStub = env.ENGINE.get(engineId);
-
-	await setWorkflowEntrypoint(engineStub, callback);
-
-	await engineStub.init(
-		12346,
-		{} as DatabaseWorkflow,
-		{} as DatabaseVersion,
-		{} as DatabaseInstance,
-		{ payload: {}, timestamp: new Date(), instanceId: "some-instance-id" }
-	);
-
-	return engineStub;
-}
-
-async function runWorkflowDefer(
-	instanceId: string,
-	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
-): Promise<DurableObjectStub<Engine>> {
-	const engineId = env.ENGINE.idFromName(instanceId);
-	const engineStub = env.ENGINE.get(engineId);
-
-	await setWorkflowEntrypoint(engineStub, callback);
-
-	void engineStub.init(
-		12346,
-		{} as DatabaseWorkflow,
-		{} as DatabaseVersion,
-		{} as DatabaseInstance,
-		{ payload: {}, timestamp: new Date(), instanceId: "some-instance-id" }
-	);
-
-	return engineStub;
-}
 
 describe("Engine", () => {
 	it("should not retry after NonRetryableError is thrown", async ({
