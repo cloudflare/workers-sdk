@@ -154,8 +154,8 @@ describe("LocalRuntimeController", () => {
 				modules: [
 					{
 						type: "commonjs",
-						name: "add.cjs",
-						filePath: "/virtual/cjs/add.cjs",
+						name: "esm/add.cjs",
+						filePath: "/virtual/esm/add.cjs",
 						content: `
 					const addModule = require("./add.wasm");
 					const addInstance = new WebAssembly.Instance(addModule);
@@ -169,8 +169,8 @@ describe("LocalRuntimeController", () => {
 					},
 					{
 						type: "commonjs",
-						name: "base64.cjs",
-						filePath: "/virtual/node/base64.cjs",
+						name: "esm/base64.cjs",
+						filePath: "/virtual/esm/base64.cjs",
 						content: `module.exports = {
 						encode(value) {
 							return Buffer.from(value).toString("base64");
@@ -185,20 +185,20 @@ describe("LocalRuntimeController", () => {
 					},
 					{
 						type: "text",
-						name: "data/wave.txt",
-						filePath: "/virtual/data/wave.txt",
+						name: "esm/data/wave.txt",
+						filePath: "/virtual/esm/data/wave.txt",
 						content: "👋",
 					},
 					{
 						type: "buffer",
-						name: "data/wave.bin",
-						filePath: "/virtual/data/wave.bin",
+						name: "esm/data/wave.bin",
+						filePath: "/virtual/esm/data/wave.bin",
 						content: "🌊",
 					},
 					{
 						type: "compiled-wasm",
-						name: "add.wasm",
-						filePath: "/virtual/add.wasm",
+						name: "esm/add.wasm",
+						filePath: "/virtual/esm/add.wasm",
 						content: WASM_ADD_MODULE,
 					},
 				],
@@ -263,34 +263,34 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			if (isWindows) {
 				expect(normalizeDrive(await res.text())).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///D:/virtual/cjs/add.cjs:7:14)
-			    at Object.fetch (file:///D:/virtual/esm/index.mjs:15:19)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///D:/virtual/esm/add.cjs:7:14)
+				    at Object.fetch (file:///D:/virtual/esm/index.mjs:15:19)"
+				`);
 
 				// Check stack traces from CommonJS modules include file path
 				res = await fetch(new URL("/throw-other-commonjs", url));
 				expect(res.status).toBe(200);
 				expect(normalizeDrive(await res.text())).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///D:/virtual/node/base64.cjs:9:14)
-			    at Object.fetch (file:///D:/virtual/esm/index.mjs:17:22)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///D:/virtual/esm/base64.cjs:9:14)
+				    at Object.fetch (file:///D:/virtual/esm/index.mjs:17:22)"
+				`);
 			} else {
 				expect(await res.text()).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///virtual/cjs/add.cjs:7:14)
-			    at Object.fetch (file:///virtual/esm/index.mjs:15:19)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///virtual/esm/add.cjs:7:14)
+				    at Object.fetch (file:///virtual/esm/index.mjs:15:19)"
+				`);
 
 				// Check stack traces from CommonJS modules include file path
 				res = await fetch(new URL("/throw-other-commonjs", url));
 				expect(res.status).toBe(200);
 				expect(await res.text()).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///virtual/node/base64.cjs:9:14)
-			    at Object.fetch (file:///virtual/esm/index.mjs:17:22)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///virtual/esm/base64.cjs:9:14)
+				    at Object.fetch (file:///virtual/esm/index.mjs:17:22)"
+				`);
 			}
 		});
 		it("should start Miniflare with service worker", async () => {
@@ -572,6 +572,65 @@ describe("LocalRuntimeController", () => {
 			expect(await nextMessage()).toMatchObject({ id: 1 });
 			const res = await resPromise;
 			expect(await res.text()).toBe("body");
+		});
+		it("should resolve modules relative to moduleRoot when entry is nested (issue #6353)", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const config = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				compatibilityDate: "2023-10-01",
+			};
+			const bundle: Bundle = {
+				type: "esm",
+				modules: [
+					{
+						type: "esm",
+						name: "foo.js",
+						filePath: "/virtual/base_dir/foo.js",
+						content: `export const message = "hello from foo";`,
+					},
+				],
+				id: 0,
+				path: "/virtual/base_dir/nested/index.mjs",
+				entrypointSource: dedent/*javascript*/ `
+					import { message } from "../foo.js";
+					export default {
+						fetch(request, env, ctx) {
+							return new Response(message);
+						}
+					}
+				`,
+				entry: {
+					file: "nested/index.mjs",
+					projectRoot: "/virtual/",
+					configPath: undefined,
+					format: "modules",
+					moduleRoot: "/virtual/base_dir",
+					name: undefined,
+					exports: [],
+				},
+				dependencies: {},
+				sourceMapPath: undefined,
+				sourceMapMetadata: undefined,
+			};
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+
+			const res = await fetch(url);
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("hello from foo");
 		});
 	});
 

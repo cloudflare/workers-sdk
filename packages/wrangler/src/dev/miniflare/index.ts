@@ -179,7 +179,14 @@ async function buildSourceOptions(
 
 		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
-		const modulesRoot = path.dirname(scriptPath);
+		// Use entry.moduleRoot when the script is within it (e.g., no_bundle with base_dir),
+		// otherwise fall back to the script's directory (e.g., bundled output in temp dir)
+		const entryModuleRoot = config.bundle.entry.moduleRoot;
+		const modulesRoot =
+			scriptPath.startsWith(entryModuleRoot + path.sep) ||
+			scriptPath.startsWith(entryModuleRoot + "/")
+				? entryModuleRoot
+				: path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
 			modulesRoot,
 
