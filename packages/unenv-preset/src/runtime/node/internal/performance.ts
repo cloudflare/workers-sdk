@@ -189,16 +189,18 @@ export class Performance implements nodePerfHooks.Performance {
 
 	clearMarks(markName?: string | undefined): void {
 		this._entries = markName
-			? this._entries.filter((e) => !(e.name === markName && e.entryType === "mark"))
+			? this._entries.filter(
+					(e) => !(e.name === markName && e.entryType === "mark")
+				)
 			: this._entries.filter((e) => e.entryType !== "mark");
-
 	}
 
 	clearMeasures(measureName?: string | undefined): void {
 		this._entries = measureName
-			? this._entries.filter((e) => !(e.name === measureName && e.entryType === "measure"))
+			? this._entries.filter(
+					(e) => !(e.name === measureName && e.entryType === "measure")
+				)
 			: this._entries.filter((e) => e.entryType !== "measure");
-
 	}
 
 	clearResourceTimings(): void {
