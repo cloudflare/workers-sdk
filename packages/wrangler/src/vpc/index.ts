@@ -19,6 +19,7 @@ export const vpcServiceNamespace = createNamespace({
 
 export enum ServiceType {
 	Http = "http",
+	Tcp = "tcp",
 }
 
 export interface ServicePortOptions {
@@ -94,17 +95,25 @@ export const serviceOptions = {
 	type: {
 		type: "string",
 		demandOption: true,
-		choices: ["http"],
+		choices: ["tcp", "http"],
 		group: "Required Configuration",
 		description: "The type of the VPC service",
 	},
+	"tcp-port": {
+		type: "number",
+		conflicts: ["http-port", "https-port"],
+		description: "TCP port number",
+		group: "TCP Options",
+	},
 	"http-port": {
 		type: "number",
+		conflicts: ["tcp-port"],
 		description: "HTTP port (default: 80)",
 		group: "Port Configuration",
 	},
 	"https-port": {
 		type: "number",
+		conflicts: ["tcp-port"],
 		description: "HTTPS port number (default: 443)",
 		group: "Port Configuration",
 	},

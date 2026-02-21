@@ -30,13 +30,24 @@ export const upsertOptions = (
 				"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
 			group: "Configure using a connection string",
 		},
+		"service-id": {
+			type: "string",
+			description: "The Workers VPC Service ID of the origin database",
+			conflicts: [
+				"origin-host",
+				"origin-port",
+				"connection-string",
+				"access-client-id",
+				"access-client-secret",
+			],
+		},
 		"origin-host": {
 			alias: "host",
 			type: "string",
 			description: "The host of the origin database",
-			conflicts: "connection-string",
+			conflicts: ["connection-string", "service-id"],
 			group:
-				"Configure using individual parameters [conflicts with --connection-string]",
+				"Configure using individual parameters [conflicts with --connection-string, --service-id]",
 		},
 		"origin-port": {
 			alias: "port",
@@ -44,11 +55,12 @@ export const upsertOptions = (
 			description: "The port number of the origin database",
 			conflicts: [
 				"connection-string",
+				"service-id",
 				"access-client-id",
 				"access-client-secret",
 			],
 			group:
-				"Configure using individual parameters [conflicts with --connection-string]",
+				"Configure using individual parameters [conflicts with --connection-string, --service-id]",
 		},
 		"origin-scheme": {
 			alias: "scheme",
@@ -86,18 +98,18 @@ export const upsertOptions = (
 			type: "string",
 			description:
 				"The Client ID of the Access token to use when connecting to the origin database",
-			conflicts: ["connection-string", "origin-port"],
+			conflicts: ["connection-string", "origin-port", "service-id"],
 			implies: ["access-client-secret"],
 			group:
-				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port, --service-id]",
 		},
 		"access-client-secret": {
 			type: "string",
 			description:
 				"The Client Secret of the Access token to use when connecting to the origin database",
-			conflicts: ["connection-string", "origin-port"],
+			conflicts: ["connection-string", "origin-port", "service-id"],
 			group:
-				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port, --service-id]",
 		},
 		"caching-disabled": {
 			type: "boolean",
@@ -236,7 +248,11 @@ export function getOriginFromArgs<
 		: OriginDatabaseWithSecrets;
 
 	let networkOrigin: NetworkOriginWithSecrets | undefined;
-	if (args.accessClientId || args.accessClientSecret) {
+	if (args.serviceId) {
+		networkOrigin = {
+			service_id: args.serviceId,
+		};
+	} else if (args.accessClientId || args.accessClientSecret) {
 		if (!args.accessClientId || !args.accessClientSecret) {
 			throw new UserError(
 				"You must provide both an Access Client ID and Access Client Secret when configuring Hyperdrive-over-Access"
