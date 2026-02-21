@@ -874,7 +874,7 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=random", async ({
+	it("should error on create hyperdrive with invalid sslmode", async ({
 		expect,
 	}) => {
 		await expect(() =>
@@ -885,7 +885,195 @@ describe("hyperdrive commands", () => {
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-			    Argument: sslmode, Given: "random", Choices: "require", "verify-ca", "verify-full"
+			    Argument: sslmode, Given: "random", Choices: "require", "verify-ca", "verify-full", "REQUIRED",
+			  "VERIFY_CA", "VERIFY_IDENTITY"
+
+			"
+		`);
+	});
+
+	it("should successfully create a MySQL hyperdrive with mtls config and sslmode=VERIFY_IDENTITY", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=12345 --mtls-certificate-id=1234 --sslmode=VERIFY_IDENTITY"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "12345",
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "VERIFY_IDENTITY",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should successfully create a MySQL hyperdrive with mtls config and sslmode=VERIFY_CA", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=12345 --sslmode=VERIFY_CA"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "12345",
+			    "sslmode": "VERIFY_CA",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should successfully create a MySQL hyperdrive with sslmode=REQUIRED", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=REQUIRED"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "REQUIRED",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should error on create MySQL hyperdrive with sslmode=REQUIRED and CA flag set", async ({
+		expect,
+	}) => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=1234 --sslmode=REQUIRED"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'REQUIRED' is set[0m
+
+			"
+		`);
+	});
+
+	it("should error on create MySQL hyperdrive with sslmode=VERIFY_CA missing CA", async ({
+		expect,
+	}) => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_CA"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
+
+			"
+		`);
+	});
+
+	it("should error on create MySQL hyperdrive with sslmode=VERIFY_IDENTITY missing CA", async ({
+		expect,
+	}) => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_IDENTITY"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
+
+			"
+		`);
+	});
+
+	it("should error on create MySQL hyperdrive with invalid sslmode", async ({
+		expect,
+	}) => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --sslmode=verify-full"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid sslmode 'verify-full' for MySQL. Valid options are: REQUIRED, VERIFY_CA, VERIFY_IDENTITY[0m
 
 			"
 		`);
