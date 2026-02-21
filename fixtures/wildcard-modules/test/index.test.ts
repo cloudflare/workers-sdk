@@ -56,7 +56,12 @@ describe("wildcard imports: dev", () => {
 	afterAll(async () => {
 		await worker.stop();
 		try {
-			await fs.rm(tmpDir, { recursive: true, force: true });
+			await fs.rm(tmpDir, {
+				recursive: true,
+				force: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 		} catch (e) {
 			// It seems that Windows doesn't let us delete this, with errors like:
 			//
@@ -153,7 +158,12 @@ describe("wildcard imports: deploy", () => {
 		tmpDir = await getTmpDir();
 	});
 	afterAll(async () => {
-		await fs.rm(tmpDir, { recursive: true, force: true });
+		await fs.rm(tmpDir, {
+			recursive: true,
+			force: true,
+			maxRetries: 5,
+			retryDelay: 100,
+		});
 	});
 
 	test("bundles wildcard modules", async ({ expect }) => {

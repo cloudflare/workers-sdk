@@ -718,7 +718,12 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			fs.rmSync("./persist", {
+				recursive: true,
+				force: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -782,7 +787,12 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			fs.rmSync("./persist", {
+				recursive: true,
+				force: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1028,7 +1038,12 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			fs.rmSync("./persist", {
+				recursive: true,
+				force: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1098,7 +1113,12 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			fs.rmSync("./persist", {
+				recursive: true,
+				force: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),

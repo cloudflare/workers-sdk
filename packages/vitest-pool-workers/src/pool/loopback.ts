@@ -315,7 +315,12 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 	await fs.cp(stackFramePath, persistPath, { recursive: true });
 
 	// Remove the stack frame
-	await fs.rm(stackFramePath, { recursive: true, force: true });
+	await fs.rm(stackFramePath, {
+		recursive: true,
+		force: true,
+		maxRetries: 5,
+		retryDelay: 100,
+	});
 }
 
 const PLUGIN_PRODUCT_NAMES: Record<string, string | undefined> = {
