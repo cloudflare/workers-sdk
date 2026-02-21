@@ -1076,6 +1076,226 @@ describe("[Asset Worker] `handleRequest`", () => {
 			expect(location).toBe("/google.com");
 			expect(location).not.toMatch(/^https?:\/\//);
 		});
+
+		it("should preserve incoming query string on static redirects", async ({
+			expect,
+		}) => {
+			const configuration: AssetConfig = normalizeConfiguration({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {
+						"/old": {
+							status: 301,
+							to: "/new",
+							lineNumber: 1,
+						},
+					},
+					rules: {},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			const response = await handleRequest(
+				new Request("https://example.com/old?ref=homepage&utm=test"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag,
+				analytics
+			);
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"/new?ref=homepage&utm=test"
+			);
+		});
+
+		it("should preserve incoming query string on dynamic redirects", async ({
+			expect,
+		}) => {
+			const configuration: AssetConfig = normalizeConfiguration({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {},
+					rules: {
+						"/blog/*": {
+							status: 302,
+							to: "/articles/:splat",
+						},
+					},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			const response = await handleRequest(
+				new Request("https://example.com/blog/my-post?ref=twitter"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag,
+				analytics
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe(
+				"/articles/my-post?ref=twitter"
+			);
+		});
+
+		it("should merge incoming query params with destination query params", async ({
+			expect,
+		}) => {
+			const configuration: AssetConfig = normalizeConfiguration({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {},
+					rules: {
+						"/products/:code/:name": {
+							status: 302,
+							to: "/products?code=:code&name=:name",
+						},
+					},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			// Request has ?tracking=abc which should be merged into the redirect
+			const response = await handleRequest(
+				new Request(
+					"https://example.com/products/42/widget?tracking=abc"
+				),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag,
+				analytics
+			);
+
+			expect(response.status).toBe(302);
+			const location = response.headers.get("Location");
+			expect(location).toBeTruthy();
+			const locationUrl = new URL(location as string, "https://example.com");
+			expect(locationUrl.pathname).toBe("/products");
+			expect(locationUrl.searchParams.get("code")).toBe("42");
+			expect(locationUrl.searchParams.get("name")).toBe("widget");
+			expect(locationUrl.searchParams.get("tracking")).toBe("abc");
+		});
+
+		it("should let destination query params take precedence over incoming ones", async ({
+			expect,
+		}) => {
+			const configuration: AssetConfig = normalizeConfiguration({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {},
+					rules: {
+						"/products/:code/:name": {
+							status: 302,
+							to: "/products?code=:code&name=:name",
+						},
+					},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			// Request has ?code=override – destination's code=42 should win
+			const response = await handleRequest(
+				new Request(
+					"https://example.com/products/42/widget?code=override&extra=yes"
+				),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag,
+				analytics
+			);
+
+			expect(response.status).toBe(302);
+			const location = response.headers.get("Location");
+			expect(location).toBeTruthy();
+			const locationUrl = new URL(location as string, "https://example.com");
+			expect(locationUrl.searchParams.get("code")).toBe("42");
+			expect(locationUrl.searchParams.get("name")).toBe("widget");
+			expect(locationUrl.searchParams.get("extra")).toBe("yes");
+		});
+
+		it("should merge query params on cross-origin redirects", async ({
+			expect,
+		}) => {
+			const configuration: AssetConfig = normalizeConfiguration({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {},
+					rules: {
+						"/external/:id": {
+							status: 302,
+							to: "https://other.example.com/items?id=:id",
+						},
+					},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			const response = await handleRequest(
+				new Request(
+					"https://example.com/external/42?ref=homepage"
+				),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag,
+				analytics
+			);
+
+			expect(response.status).toBe(302);
+			const location = response.headers.get("Location");
+			expect(location).toBeTruthy();
+			const locationUrl = new URL(location as string);
+			expect(locationUrl.origin).toBe("https://other.example.com");
+			expect(locationUrl.pathname).toBe("/items");
+			expect(locationUrl.searchParams.get("id")).toBe("42");
+			expect(locationUrl.searchParams.get("ref")).toBe("homepage");
+		});
 	});
 });
 
