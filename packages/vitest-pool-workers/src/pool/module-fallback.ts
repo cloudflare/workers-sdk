@@ -34,6 +34,8 @@ const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
 const emptyLibPath = posixPath.join(libPath, "cloudflare/empty-internal.cjs");
 
+const forceModuleCompiledWasmSuffix = "?mf_vitest_force=CompiledWasm";
+
 // File path suffix to disable CJS to ESM-with-named-exports shimming
 const disableCjsEsmShimSuffix = "?mf_vitest_no_cjs_esm_shim";
 function trimSuffix(suffix: string, value: string) {
@@ -427,8 +429,15 @@ async function load(
 	// It seems unlikely a package would want to do anything else with a `.wasm`
 	// file. Note if a module rule was applied to `.wasm` files, this path will
 	// have a `?mf_vitest_force` suffix already, so this line won't do anything.
-	if (filePath.endsWith(".wasm")) {
-		filePath += `?mf_vitest_force=CompiledWasm`;
+	if (filePath.endsWith(".wasm") || filePath.endsWith(".wasm?module")) {
+		filePath += forceModuleCompiledWasmSuffix;
+	}
+
+	// Remove `?module` from a WebAssembly module if present. It's included as an
+	// alternative extension to `.wasm` but it won't resolve as-is.
+	if (filePath.endsWith(".wasm?module" + forceModuleCompiledWasmSuffix)) {
+		filePath = trimSuffix("?module" + forceModuleCompiledWasmSuffix, filePath);
+		filePath += forceModuleCompiledWasmSuffix;
 	}
 
 	// If we're importing with a forced module type, load the file as that type
