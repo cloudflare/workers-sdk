@@ -90,7 +90,6 @@
 		"expect-type": "^0.15.0",
 		"get-port": "^7.1.0",
 		"glob-to-regexp": "0.4.1",
-		"heap-js": "^2.5.0",
 		"hono": "^4.11.5",
 		"http-cache-semantics": "^4.1.0",
 		"jsonc-parser": "catalog:default",

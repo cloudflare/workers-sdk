@@ -2290,9 +2290,6 @@ importers:
       glob-to-regexp:
         specifier: 0.4.1
         version: 0.4.1
-      heap-js:
-        specifier: ^2.5.0
-        version: 2.5.0
       hono:
         specifier: ^4.11.5
         version: 4.11.5
