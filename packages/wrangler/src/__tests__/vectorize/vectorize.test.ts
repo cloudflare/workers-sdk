@@ -356,6 +356,35 @@ describe("vectorize commands", () => {
 		`);
 	});
 
+	it("should output JSON when listing vectorize indexes with --json", async () => {
+		mockVectorizeV2Request();
+		await runWrangler("vectorize list --json");
+		expect(std.out).toMatchInlineSnapshot(`
+			"[
+			  {
+			    \\"created_on\\": \\"2024-07-11T13:02:18.00268Z\\",
+			    \\"modified_on\\": \\"2024-07-11T13:02:18.00268Z\\",
+			    \\"name\\": \\"test-index\\",
+			    \\"description\\": \\"test-desc\\",
+			    \\"config\\": {
+			      \\"dimensions\\": 1536,
+			      \\"metric\\": \\"euclidean\\"
+			    }
+			  },
+			  {
+			    \\"created_on\\": \\"2024-07-11T13:02:18.00268Z\\",
+			    \\"modified_on\\": \\"2024-07-11T13:02:18.00268Z\\",
+			    \\"name\\": \\"another-index\\",
+			    \\"description\\": \\"another-desc\\",
+			    \\"config\\": {
+			      \\"dimensions\\": 32,
+			      \\"metric\\": \\"dot-product\\"
+			    }
+			  }
+			]"
+		`);
+	});
+
 	it("should warn when there are no vectorize indexes", async () => {
 		mockVectorizeV2RequestError();
 		await runWrangler("vectorize list");
@@ -853,6 +882,27 @@ describe("vectorize commands", () => {
 			├─┼─┤
 			│ bool-prop │ boolean │
 			└─┴─┘"
+		`);
+	});
+
+	it("should output JSON when listing metadata indexes with --json", async () => {
+		mockVectorizeV2Request();
+		await runWrangler("vectorize list-metadata-index test-index --json");
+		expect(std.out).toMatchInlineSnapshot(`
+			"[
+			  {
+			    \\"propertyName\\": \\"string-prop\\",
+			    \\"indexType\\": \\"string\\"
+			  },
+			  {
+			    \\"propertyName\\": \\"num-prop\\",
+			    \\"indexType\\": \\"number\\"
+			  },
+			  {
+			    \\"propertyName\\": \\"bool-prop\\",
+			    \\"indexType\\": \\"boolean\\"
+			  }
+			]"
 		`);
 	});
 

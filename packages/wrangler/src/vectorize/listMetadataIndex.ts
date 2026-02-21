@@ -26,7 +26,9 @@ export const vectorizeListMetadataIndexCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		logger.log(`📋 Fetching metadata indexes...`);
+		if (!args.json) {
+			logger.log(`📋 Fetching metadata indexes...`);
+		}
 		const res = await listMetadataIndex(config, args.name);
 
 		if (res.metadataIndexes.length === 0) {
