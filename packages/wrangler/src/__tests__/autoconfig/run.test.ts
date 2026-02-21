@@ -94,11 +94,11 @@ describe("autoconfig (deploy)", () => {
 		clearOutputFilePath();
 	});
 
-	it("should not check for autoconfig without flag", async () => {
+	it("should not check for autoconfig when `deploy` is run with `--x-autoconfig=false`", async () => {
 		writeWorkerSource();
 		writeWranglerConfig({ main: "index.js" });
 		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
-		await runDeploy();
+		await runDeploy(`--x-autoconfig=false`);
 
 		expect(getDetailsSpy).not.toHaveBeenCalled();
 	});
