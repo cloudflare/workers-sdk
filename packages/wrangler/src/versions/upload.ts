@@ -730,6 +730,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					: undefined,
 			logpush: undefined, // both logpush and observability are not supported in versions upload
 			observability: undefined,
+			cache: config.cache,
 		};
 
 		if (config.containers && config.containers.length > 0) {
