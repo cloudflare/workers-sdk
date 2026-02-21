@@ -26,8 +26,15 @@ export const vectorizeListMetadataIndexCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		logger.log(`📋 Fetching metadata indexes...`);
+		if (!args.json) {
+			logger.log(`📋 Fetching metadata indexes...`);
+		}
 		const res = await listMetadataIndex(config, args.name);
+
+		if (args.json) {
+			logger.json(res.metadataIndexes);
+			return;
+		}
 
 		if (res.metadataIndexes.length === 0) {
 			logger.warn(`
@@ -36,11 +43,6 @@ You haven't created any metadata indexes on this account.
 Use 'wrangler vectorize create-metadata-index <name>' to create one, or visit
 https://developers.cloudflare.com/vectorize/ to get started.
 		`);
-			return;
-		}
-
-		if (args.json) {
-			logger.log(JSON.stringify(res.metadataIndexes, null, 2));
 			return;
 		}
 

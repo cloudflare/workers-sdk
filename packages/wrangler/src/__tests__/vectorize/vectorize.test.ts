@@ -379,6 +379,13 @@ describe("vectorize commands", () => {
 		`);
 	});
 
+	it("should output clean JSON when there are no vectorize indexes with --json flag", async () => {
+		mockVectorizeV2RequestError();
+		await runWrangler("vectorize list --json");
+		expect(std.out).toMatchInlineSnapshot(`"[]"`);
+		expect(std.warn).toBe("");
+	});
+
 	it("should handle a get on a vectorize V1 index", async () => {
 		mockVectorizeRequest();
 		await runWrangler("vectorize get test-index --deprecated-v1=true");
@@ -877,6 +884,13 @@ describe("vectorize commands", () => {
 
 "
 		`);
+	});
+
+	it("should output clean JSON when there are no metadata indexes with --json flag", async () => {
+		mockVectorizeV2RequestError();
+		await runWrangler("vectorize list-metadata-index test-index --json");
+		expect(std.out).toMatchInlineSnapshot(`"[]"`);
+		expect(std.warn).toBe("");
 	});
 
 	it("should handle delete metadata index", async () => {
