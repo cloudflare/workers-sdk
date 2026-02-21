@@ -32,7 +32,7 @@ export class NextJs extends Framework {
 			await runCommand(
 				[
 					...dlx,
-					"@opennextjs/cloudflare",
+					"https://pkg.pr.new/@opennextjs/cloudflare@1133",
 					"migrate",
 					// Note: we force-install so that even if an incompatible version of
 					//       Next.js is used this installation still succeeds, moving users
