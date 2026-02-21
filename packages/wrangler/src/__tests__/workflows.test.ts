@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
 	mockCreateDate,
 	mockEndDate,
@@ -927,6 +928,180 @@ describe("wrangler workflows", () => {
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain('"workflows" bindings should be objects');
+		});
+
+		it("should accept workflow binding with valid limits", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with empty limits object", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: {},
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with limits.steps at boundary value 1", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 1 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with limits.steps at boundary value 100000", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 100_000 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should reject workflow binding with limits.steps of 0", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 0 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be an integer between 1 and 100,000'
+			);
+		});
+
+		it("should reject workflow binding with limits.steps above 100000", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 100_001 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be an integer between 1 and 100,000'
+			);
+		});
+
+		it("should reject workflow binding with non-integer limits.steps", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 1.5 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be an integer between 1 and 100,000'
+			);
+		});
+
+		it("should reject workflow binding with negative limits.steps", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: -1 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be an integer between 1 and 100,000'
+			);
+		});
+
+		it("should reject workflow binding with non-object limits", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: "invalid",
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'should, optionally, have an object "limits" field'
+			);
 		});
 
 		it("should reject workflows binding with same name", async () => {

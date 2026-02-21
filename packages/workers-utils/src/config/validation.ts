@@ -2528,12 +2528,41 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "limits") && value.limits !== undefined) {
+		if (typeof value.limits !== "object" || value.limits === null) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const limits = value.limits as Record<string, unknown>;
+			if (limits.steps !== undefined) {
+				if (
+					typeof limits.steps !== "number" ||
+					!Number.isInteger(limits.steps) ||
+					limits.steps < 1 ||
+					limits.steps > 100_000
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings "limits.steps" field must be an integer between 1 and 100,000 but got ${JSON.stringify(
+							limits.steps
+						)}.`
+					);
+					isValid = false;
+				}
+			}
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"remote",
+		"limits",
 	]);
 
 	return isValid;
