@@ -19,7 +19,13 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	// Add the pages integration
 	// For some reason `pnpx qwik add` fails for qwik so we use `pnpm qwik add` instead.
-	const cmd = [name === "pnpm" ? npm : npx, "qwik", "add", "cloudflare-pages"];
+	const cmd = [
+		name === "pnpm" ? npm : npx,
+		"qwik",
+		"add",
+		"cloudflare-pages",
+		"--skipConfirmation=true",
+	];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
 
