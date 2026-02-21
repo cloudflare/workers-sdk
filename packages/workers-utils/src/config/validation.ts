@@ -1697,7 +1697,14 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"services",
-			validateBindingArray(envName, validateServiceBinding),
+			validateBindingArray(
+				envName,
+				((workerName) => (diag, field, value, config) => {
+					// Use topLevelEnv name if available, otherwise fall back to rawEnv or rawConfig name
+					const name = config?.name ?? workerName;
+					return validateServiceBinding(diag, field, value, config, name);
+				})(rawEnv.name ?? rawConfig?.name)
+			),
 			[]
 		),
 		analytics_engine_datasets: notInheritable(
@@ -3982,12 +3989,25 @@ const validateBindingsHaveUniqueNames = (
 	return !hasDuplicates;
 };
 
-const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
+const validateServiceBinding = (
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown,
+	topLevelEnv: Environment | undefined,
+	workerName: string | undefined
+): boolean => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
 			`"services" bindings should be objects, but got ${JSON.stringify(value)}`
 		);
 		return false;
+	}
+	// Default service field to worker name if not provided
+	if (!("service" in value)) {
+		const name = topLevelEnv?.name ?? workerName;
+		if (name) {
+			(value as Record<string, unknown>).service = name;
+		}
 	}
 	let isValid = true;
 	// Service bindings must have a binding, a service, optionally an environment, and, optionally an entrypoint.

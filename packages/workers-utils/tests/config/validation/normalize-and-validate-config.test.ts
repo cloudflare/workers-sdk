@@ -3678,6 +3678,43 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "services[8]" bindings should have a string "entrypoint" field but got {"binding":"SERVICE_BINDING_1","service":"SERVICE_BINDING_SERVICE_1","entrypoint":123}."
 				`);
 			});
+
+			it("should default service field to worker name when not provided", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "my-worker",
+						services: [{ binding: "MY_SERVICE" }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.services).toEqual([
+					{
+						binding: "MY_SERVICE",
+						service: "my-worker",
+					},
+				]);
+			});
+
+			it("should error if service field is missing and worker name is also missing", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						services: [{ binding: "MY_SERVICE" }],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"services[0]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"MY_SERVICE\\"}."
+				`);
+			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {
