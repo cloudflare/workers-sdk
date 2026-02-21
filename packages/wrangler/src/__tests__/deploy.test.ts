@@ -1002,7 +1002,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - Unexpected fields found in d1_databases[0] field: "tail_consumers"
 
