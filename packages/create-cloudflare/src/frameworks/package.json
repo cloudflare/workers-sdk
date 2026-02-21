@@ -10,7 +10,7 @@
 		"@angular/create": "21.1.4",
 		"create-docusaurus": "3.9.2",
 		"create-hono": "0.19.4",
-		"create-next-app": "15.5.6",
+		"create-next-app": "16.1.6",
 		"create-qwik": "1.19.0",
 		"create-vite": "8.3.0",
 		"create-rwsdk": "3.1.3",
