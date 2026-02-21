@@ -17,6 +17,23 @@ import type {
 	WranglerLogger,
 } from "./types";
 
+const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:main@sha256:3b3c97a1eb30c33f0ea9df2260af36ef7e414a304de6549d444c08026d92c653";
+
+export function getEgressInterceptorImage(): string {
+	return (
+		process.env.WRANGLER_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+export async function pullEgressInterceptorImage(
+	dockerPath: string
+): Promise<void> {
+	const image = getEgressInterceptorImage();
+	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+}
+
 export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,

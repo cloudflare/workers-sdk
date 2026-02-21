@@ -1,4 +1,7 @@
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import {
+	prepareContainerImagesForDev,
+	pullEgressInterceptorImage,
+} from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
@@ -50,6 +53,14 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					logger: vitePreviewServer.config.logger,
 					isVite: true,
 				});
+
+				if (
+					ctx.allWorkerConfigs.some((c) =>
+						c.compatibility_flags.includes("experimental")
+					)
+				) {
+					await pullEgressInterceptorImage(dockerPath);
+				}
 
 				const containerImageTags = new Set(containerTagToOptionsMap.keys());
 				vitePreviewServer.config.logger.info(
