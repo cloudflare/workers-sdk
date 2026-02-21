@@ -192,7 +192,10 @@ const CoreOptionsSchemaInput = z.intersection(
 		containerEngine: z
 			.union([
 				z.object({
-					localDocker: z.object({ socketPath: z.string() }),
+					localDocker: z.object({
+						socketPath: z.string(),
+						containerEgressInterceptorImage: z.string().optional(),
+					}),
 				}),
 				z.string(),
 			])
@@ -905,7 +908,10 @@ export const CORE_PLUGIN: Plugin<
 							);
 						}
 					),
-					containerEngine: getContainerEngine(options.containerEngine),
+					containerEngine: getContainerEngine(
+						options.containerEngine,
+						options.compatibilityFlags
+					),
 				},
 			});
 		}
@@ -1210,13 +1216,28 @@ function getWorkerScript(
 	}
 }
 
+const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:main@sha256:3b3c97a1eb30c33f0ea9df2260af36ef7e414a304de6549d444c08026d92c653";
+
+/**
+ * Returns the default containerEgressInterceptorImage. It's used for
+ * container network interception for local dev.
+ */
+function getContainerEgressInterceptorImage(): string {
+	return (
+		process.env.WRANGLER_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
 /**
  * Returns the Container engine configuration
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
 function getContainerEngine(
-	engineOrSocketPath: Worker_ContainerEngine | string | undefined
+	engineOrSocketPath: Worker_ContainerEngine | string | undefined,
+	compatibilityFlags?: string[]
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
 		// TODO: workerd does not support win named pipes
@@ -1226,11 +1247,27 @@ function getContainerEngine(
 				: "unix:///var/run/docker.sock";
 	}
 
+	const egressImage = compatibilityFlags?.includes("experimental")
+		? getContainerEgressInterceptorImage()
+		: undefined;
+
 	if (typeof engineOrSocketPath === "string") {
-		return { localDocker: { socketPath: engineOrSocketPath } };
+		return {
+			localDocker: {
+				socketPath: engineOrSocketPath,
+				containerEgressInterceptorImage: egressImage,
+			},
+		};
 	}
 
-	return engineOrSocketPath;
+	return {
+		localDocker: {
+			...engineOrSocketPath.localDocker,
+			containerEgressInterceptorImage:
+				engineOrSocketPath.localDocker.containerEgressInterceptorImage ??
+				egressImage,
+		},
+	};
 }
 
 export * from "./errors";
