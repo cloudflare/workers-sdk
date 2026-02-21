@@ -2846,3 +2846,54 @@ describe(".env support in local dev", () => {
 		`);
 	});
 });
+
+describe("--host flag with Origin header preservation", () => {
+	it("should preserve port in Origin and Referer headers with --host localhost:4000", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+				`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request) {
+							return new Response(
+								\`Host: \${request.headers.get('host')}\\nOrigin: \${request.headers.get('origin')}\\nReferer: \${request.headers.get('referer')}\`
+							);
+						}
+					}
+				`,
+			"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+				`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --host localhost:4000");
+		const { url } = await worker.waitForReady();
+
+		// Make a request with Origin and Referer headers that include ports
+		const response = await fetch(url, {
+			headers: {
+				Origin: "http://localhost:8787",
+				Referer: "http://localhost:8787/some/path",
+			},
+		});
+
+		const text = await response.text();
+
+		// Verify that the Origin and Referer headers preserve their ports
+		expect(text).toContain("Host: localhost:4000");
+		expect(text).toContain("Origin: http://localhost:8787");
+		expect(text).toContain("Referer: http://localhost:8787/some/path");
+
+		// Verify that ports are NOT stripped (this was the bug)
+		expect(text).not.toContain("Origin: http://localhost\n"); // without port
+		expect(text).not.toContain("Referer: http://localhost/"); // without port
+	});
+});

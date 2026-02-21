@@ -148,6 +148,7 @@ async function resolveDevConfig(
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
 			hostname: host ?? getInferredHost(routes, config.configPath),
+			port: input.dev?.origin?.port,
 		},
 		liveReload: input.dev?.liveReload || false,
 		testScheduled: input.dev?.testScheduled,
