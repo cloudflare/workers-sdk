@@ -103,6 +103,11 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		workerConfig: ResolvedWorkerConfig,
 		options: { isEntryWorker: boolean; isParentEnvironment: boolean }
 	): Promise<void> {
+		if (this.#webSocketContainer.webSocket) {
+			await this.hot.close();
+			this.#webSocketContainer.webSocket.close();
+		}
+
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
@@ -123,7 +128,12 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		const webSocket = response.webSocket;
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
+		const isReInit = this.#webSocketContainer.webSocket !== undefined;
 		this.#webSocketContainer.webSocket = webSocket;
+
+		if (isReInit) {
+			this.hot.listen();
+		}
 	}
 
 	async fetchWorkerExportTypes(

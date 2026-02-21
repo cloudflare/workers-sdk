@@ -72,6 +72,7 @@ let parentEnvironmentName: string | undefined;
 interface EnvironmentState {
 	webSocket: WebSocket;
 	concurrentModuleNodePromises: Map<string, Promise<EvaluatedModuleNode>>;
+	isParentEnvironment: boolean;
 }
 
 /**
@@ -124,7 +125,19 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 		const environmentState: EnvironmentState = {
 			webSocket: server,
 			concurrentModuleNodePromises: new Map(),
+			isParentEnvironment,
 		};
+
+		const cleanupEnvironment = () => {
+			this.#environments.delete(environmentName);
+			moduleRunners.delete(environmentName);
+
+			if (parentEnvironmentName === environmentName) {
+				parentEnvironmentName = undefined;
+			}
+		};
+		server.addEventListener("close", cleanupEnvironment);
+		server.addEventListener("error", cleanupEnvironment);
 		this.#environments.set(environmentName, environmentState);
 
 		const moduleRunner = await createModuleRunner(

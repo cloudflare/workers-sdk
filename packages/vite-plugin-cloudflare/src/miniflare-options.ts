@@ -94,6 +94,36 @@ const remoteProxySessionsDataMap = new Map<
 	} | null
 >();
 
+async function pruneRemoteProxySessionsDataMap(
+	validConfigPaths: Set<string>
+): Promise<void> {
+	const disposePromises: Array<Promise<void>> = [];
+
+	for (const [configPath, data] of remoteProxySessionsDataMap) {
+		if (!validConfigPaths.has(configPath)) {
+			if (data?.session) {
+				disposePromises.push(data.session.dispose());
+			}
+			remoteProxySessionsDataMap.delete(configPath);
+		}
+	}
+
+	await Promise.all(disposePromises);
+}
+
+export async function disposeRemoteProxySessions(): Promise<void> {
+	const disposePromises: Array<Promise<void>> = [];
+
+	for (const data of remoteProxySessionsDataMap.values()) {
+		if (data?.session) {
+			disposePromises.push(data.session.dispose());
+		}
+	}
+
+	remoteProxySessionsDataMap.clear();
+	await Promise.all(disposePromises);
+}
+
 export async function getDevMiniflareOptions(
 	ctx: AssetsOnlyPluginContext | WorkersPluginContext,
 	viteDevServer: vite.ViteDevServer
@@ -101,6 +131,8 @@ export async function getDevMiniflareOptions(
 	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 	containerTagToOptionsMap: ContainerTagToOptionsMap;
 }> {
+	await pruneRemoteProxySessionsDataMap(ctx.resolvedPluginConfig.configPaths);
+
 	const inputInspectorPort = await getInputInspectorPort(ctx, viteDevServer);
 	const { resolvedPluginConfig, resolvedViteConfig, entryWorkerConfig } = ctx;
 
@@ -526,6 +558,13 @@ export async function getPreviewMiniflareOptions(
 	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 	containerTagToOptionsMap: ContainerTagToOptionsMap;
 }> {
+	const previewConfigPaths = new Set(
+		ctx.resolvedPluginConfig.workers
+			.map((worker) => worker.configPath)
+			.filter((configPath): configPath is string => Boolean(configPath))
+	);
+	await pruneRemoteProxySessionsDataMap(previewConfigPaths);
+
 	const inputInspectorPort = await getInputInspectorPort(
 		ctx,
 		vitePreviewServer

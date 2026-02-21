@@ -14,48 +14,56 @@ export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
 	entryWorkerName?: string
-) {
+): () => void {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
-	httpServer.on(
-		"upgrade",
-		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-			// Socket errors crash Node.js if unhandled
-			socket.on("error", () => socket.destroy());
+	const upgradeHandler = async (
+		request: IncomingMessage,
+		socket: Duplex,
+		head: Buffer
+	) => {
+		// Socket errors crash Node.js if unhandled
+		socket.on("error", () => socket.destroy());
 
-			const url = new URL(request.url ?? "", UNKNOWN_HOST);
+		const url = new URL(request.url ?? "", UNKNOWN_HOST);
 
-			// Ignore Vite HMR WebSockets
-			if (request.headers["sec-websocket-protocol"]?.startsWith("vite")) {
-				return;
-			}
-
-			const headers = createHeaders(request);
-
-			if (entryWorkerName) {
-				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
-			}
-
-			const response = await miniflare.dispatchFetch(url, {
-				headers,
-				method: request.method,
-			});
-			const workerWebSocket = response.webSocket;
-
-			if (!workerWebSocket) {
-				socket.destroy();
-				return;
-			}
-
-			nodeWebSocket.handleUpgrade(
-				request,
-				socket,
-				head,
-				async (clientWebSocket) => {
-					void coupleWebSocket(clientWebSocket, workerWebSocket);
-					nodeWebSocket.emit("connection", clientWebSocket, request);
-				}
-			);
+		// Ignore Vite HMR WebSockets
+		if (request.headers["sec-websocket-protocol"]?.startsWith("vite")) {
+			return;
 		}
-	);
+
+		const headers = createHeaders(request);
+
+		if (entryWorkerName) {
+			headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+		}
+
+		const response = await miniflare.dispatchFetch(url, {
+			headers,
+			method: request.method,
+		});
+		const workerWebSocket = response.webSocket;
+
+		if (!workerWebSocket) {
+			socket.destroy();
+			return;
+		}
+
+		nodeWebSocket.handleUpgrade(
+			request,
+			socket,
+			head,
+			async (clientWebSocket) => {
+				void coupleWebSocket(clientWebSocket, workerWebSocket);
+				nodeWebSocket.emit("connection", clientWebSocket, request);
+			}
+		);
+	};
+
+	httpServer.on("upgrade", upgradeHandler);
+
+	return () => {
+		httpServer.off("upgrade", upgradeHandler);
+		nodeWebSocket.close();
+	};
 }

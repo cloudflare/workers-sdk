@@ -17,10 +17,14 @@ import {
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
-import { getDevMiniflareOptions } from "../miniflare-options";
+import {
+	disposeRemoteProxySessions,
+	getDevMiniflareOptions,
+} from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
+import type { ExportTypes } from "../export-types";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
 
@@ -35,6 +39,7 @@ process.on("exit", () => {
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
+	let serverCleanup: (() => void) | undefined;
 
 	return {
 		async buildEnd() {
@@ -61,12 +66,19 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
 
+			// Clean up handlers from previous server (e.g., on restart)
+			serverCleanup?.();
+			serverCleanup = undefined;
+
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
 			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
+
+			// Collect cleanup functions to be called on restart or close
+			const cleanupFunctions: Array<() => void> = [];
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
 				debuglog("Initializing the Vite module runners");
@@ -101,45 +113,62 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
+				const hotListeners: Array<{
+					environment: vite.DevEnvironment;
+					listener: (newExportTypes: ExportTypes) => Promise<void>;
+				}> = [];
+
 				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 					const environment = viteDevServer.environments[environmentName];
 					assert(
 						environment,
 						`Expected environment "${environmentName}" to be defined`
 					);
+					const listener = async (newExportTypes: ExportTypes) => {
+						const workerConfig = ctx.getWorkerConfig(environmentName);
+						assert(
+							workerConfig,
+							`Expected workerConfig for environment "${environmentName}" to be defined`
+						);
+						const oldExportTypes = ctx.workerNameToExportTypesMap.get(
+							workerConfig.name
+						);
+						assert(
+							oldExportTypes,
+							`Expected export types for Worker "${workerConfig.name}" to be defined`
+						);
+						const exportTypeHasChanged = compareExportTypes(
+							oldExportTypes,
+							newExportTypes
+						);
+
+						if (exportTypeHasChanged) {
+							viteDevServer.config.logger.info(
+								colors.dim(
+									colors.yellow(
+										"Worker exports have changed. Restarting dev server."
+									)
+								)
+							);
+							await viteDevServer.restart();
+						}
+					};
 					environment.hot.on(
 						"vite-plugin-cloudflare:worker-export-types",
-						async (newExportTypes) => {
-							const workerConfig = ctx.getWorkerConfig(environmentName);
-							assert(
-								workerConfig,
-								`Expected workerConfig for environment "${environmentName}" to be defined`
-							);
-							const oldExportTypes = ctx.workerNameToExportTypesMap.get(
-								workerConfig.name
-							);
-							assert(
-								oldExportTypes,
-								`Expected export types for Worker "${workerConfig.name}" to be defined`
-							);
-							const exportTypeHasChanged = compareExportTypes(
-								oldExportTypes,
-								newExportTypes
-							);
-
-							if (exportTypeHasChanged) {
-								viteDevServer.config.logger.info(
-									colors.dim(
-										colors.yellow(
-											"Worker exports have changed. Restarting dev server."
-										)
-									)
-								);
-								await viteDevServer.restart();
-							}
-						}
+						listener
 					);
+					hotListeners.push({ environment, listener });
 				}
+
+				const cleanupHotListeners = () => {
+					for (const { environment, listener } of hotListeners) {
+						environment.hot.off(
+							"vite-plugin-cloudflare:worker-export-types",
+							listener
+						);
+					}
+				};
+				cleanupFunctions.push(cleanupHotListeners);
 
 				const entryWorkerConfig = ctx.entryWorkerConfig;
 				assert(entryWorkerConfig, `No entry Worker config`);
@@ -147,11 +176,20 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				// The HTTP server is not available in middleware mode
 				if (viteDevServer.httpServer) {
-					handleWebSocket(
+					const cleanupWebSocket = handleWebSocket(
 						viteDevServer.httpServer,
 						ctx.miniflare,
 						entryWorkerName
 					);
+					cleanupFunctions.push(cleanupWebSocket);
+
+					const onHttpServerClose = () => {
+						void disposeRemoteProxySessions();
+					};
+					viteDevServer.httpServer.once("close", onHttpServerClose);
+					cleanupFunctions.push(() => {
+						viteDevServer.httpServer?.off("close", onHttpServerClose);
+					});
 				}
 
 				const staticRouting: StaticRouting | undefined =
@@ -243,6 +281,22 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					};
 				}
 			}
+
+			const onWatcherClose = () => {
+				serverCleanup?.();
+				serverCleanup = undefined;
+			};
+			viteDevServer.watcher.on("close", onWatcherClose);
+			cleanupFunctions.push(() => {
+				viteDevServer.watcher.off("close", onWatcherClose);
+			});
+
+			// Store the combined cleanup function
+			serverCleanup = () => {
+				for (const cleanup of cleanupFunctions) {
+					cleanup();
+				}
+			};
 
 			return () => {
 				if (preMiddleware) {
