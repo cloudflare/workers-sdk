@@ -95,7 +95,11 @@ export const tailCommand = createCommand({
 	async handler(args, { config }) {
 		args.format ??= process.stdout.isTTY ? "pretty" : "json";
 		if (args.format === "pretty") {
-			await printWranglerBanner();
+			const shouldContinue = await printWranglerBanner();
+			if (!shouldContinue) {
+				// User/agent chose to abort (e.g., to update Wrangler first)
+				return;
+			}
 		}
 
 		if (config.pages_build_output_dir) {
