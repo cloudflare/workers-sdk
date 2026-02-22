@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
-import { rm } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, vi } from "vitest";
+import { removeDir } from "../fs-helpers";
 
 const originalCwd = process.cwd();
 
@@ -31,14 +31,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
 			// Don't block on deleting the tmp dir.
-			// `maxRetries` handles transient `EBUSY` errors on Windows where
-			// workerd may not have fully released file handles yet.
-			void rm(tmpDir, {
-				recursive: true,
-				force: true,
-				maxRetries: 5,
-				retryDelay: 100,
-			}).catch(() => {
+			void removeDir(tmpDir).catch(() => {
 				// Best effort - if retries are exhausted, just move on.
 				// These are only temp files after all.
 			});
