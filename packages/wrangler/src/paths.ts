@@ -112,11 +112,7 @@ export function getWranglerTmpDir(
 
 	const cleanupDir = () => {
 		if (cleanup) {
-			try {
-				return removeDirSync(tmpDir);
-			} catch {
-				// This sometimes fails on Windows with EBUSY
-			}
+			removeDirSync(tmpDir, { noThrow: true });
 		}
 	};
 	const removeExitListener = onExit(cleanupDir);

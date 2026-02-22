@@ -21,14 +21,24 @@ export function isDirectory(path: string) {
  * and `EPERM` errors with automatic backoff retries.
  *
  * @param dirPath The directory path to remove
+ * @param options.noThrow If `true`, errors are silently swallowed instead of thrown (defaults to `false`)
  */
-export async function removeDir(dirPath: string): Promise<void> {
-	await fs.promises.rm(dirPath, {
-		recursive: true,
-		force: true,
-		maxRetries: 5,
-		retryDelay: 100,
-	});
+export async function removeDir(
+	dirPath: string,
+	{ noThrow = false }: { noThrow?: boolean } = {}
+): Promise<void> {
+	try {
+		await fs.promises.rm(dirPath, {
+			recursive: true,
+			force: true,
+			maxRetries: 5,
+			retryDelay: 100,
+		});
+	} catch (e) {
+		if (!noThrow) {
+			throw e;
+		}
+	}
 }
 
 /**
@@ -37,12 +47,22 @@ export async function removeDir(dirPath: string): Promise<void> {
  * @see {@link removeDir} for the async version and rationale.
  *
  * @param dirPath The directory path to remove
+ * @param options.noThrow If `true`, errors are silently swallowed instead of thrown (defaults to `false`)
  */
-export function removeDirSync(dirPath: string): void {
-	fs.rmSync(dirPath, {
-		recursive: true,
-		force: true,
-		maxRetries: 5,
-		retryDelay: 100,
-	});
+export function removeDirSync(
+	dirPath: string,
+	{ noThrow = false }: { noThrow?: boolean } = {}
+): void {
+	try {
+		fs.rmSync(dirPath, {
+			recursive: true,
+			force: true,
+			maxRetries: 5,
+			retryDelay: 100,
+		});
+	} catch (e) {
+		if (!noThrow) {
+			throw e;
+		}
+	}
 }
