@@ -1054,7 +1054,12 @@ export class Miniflare {
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
 			try {
-				fs.rmSync(this.#tmpPath, { force: true, recursive: true });
+				fs.rmSync(this.#tmpPath, {
+					force: true,
+					recursive: true,
+					maxRetries: 5,
+					retryDelay: 100,
+				});
 			} catch (e) {
 				// `rmSync` may fail on Windows with `EBUSY` if `workerd` is still
 				// running. `Runtime#dispose()` should kill the runtime immediately.
@@ -2785,7 +2790,14 @@ export class Miniflare {
 
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
-			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
+			// `maxRetries` handles `EBUSY` on Windows if `workerd` hasn't fully
+			// released file handles yet after `dispose()`.
+			await fs.promises.rm(this.#tmpPath, {
+				force: true,
+				recursive: true,
+				maxRetries: 5,
+				retryDelay: 100,
+			});
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();

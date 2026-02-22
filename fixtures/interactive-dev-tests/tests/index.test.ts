@@ -382,7 +382,12 @@ if (process.platform === "win32") {
 			});
 			afterAll(async () => {
 				try {
-					fs.rmSync(tmpDir, { recursive: true, force: true });
+					fs.rmSync(tmpDir, {
+						recursive: true,
+						force: true,
+						maxRetries: 5,
+						retryDelay: 100,
+					});
 				} catch (e) {
 					// It seems that Windows doesn't let us delete this, with errors like:
 					//
@@ -562,7 +567,12 @@ if (process.platform === "win32") {
 
 				afterAll(async () => {
 					try {
-						fs.rmSync(tmpDir, { recursive: true, force: true });
+						fs.rmSync(tmpDir, {
+							recursive: true,
+							force: true,
+							maxRetries: 5,
+							retryDelay: 100,
+						});
 					} catch (e) {
 						// It seems that Windows doesn't let us delete this, with errors like:
 						//
@@ -677,7 +687,12 @@ if (process.platform === "win32") {
 			});
 			afterAll(async () => {
 				try {
-					fs.rmSync(tmpDir, { recursive: true, force: true });
+					fs.rmSync(tmpDir, {
+						recursive: true,
+						force: true,
+						maxRetries: 5,
+						retryDelay: 100,
+					});
 				} catch (e) {
 					// It seems that Windows doesn't let us delete this, with errors like:
 					//
@@ -839,7 +854,12 @@ if (process.platform === "win32") {
 				});
 				afterAll(async () => {
 					try {
-						fs.rmSync(tmpDir, { recursive: true, force: true });
+						fs.rmSync(tmpDir, {
+							recursive: true,
+							force: true,
+							maxRetries: 5,
+							retryDelay: 100,
+						});
 					} catch (e) {
 						// It seems that Windows doesn't let us delete this, with errors like:
 						//

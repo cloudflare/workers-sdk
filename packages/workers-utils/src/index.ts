@@ -91,4 +91,4 @@ export type { CompatDate } from "./compatibility-date";
 
 export { isDockerfile } from "./config/validation";
 
-export { isDirectory } from "./fs-helpers";
+export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";

@@ -1,6 +1,7 @@
 import { assert } from "node:console";
 import fs from "node:fs";
 import path from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
@@ -109,22 +110,18 @@ export function getWranglerTmpDir(
 	const tmpPrefix = path.join(tmpRoot, `${prefix}-`);
 	const tmpDir = fs.realpathSync(fs.mkdtempSync(tmpPrefix));
 
-	const removeDir = () => {
+	const cleanupDir = () => {
 		if (cleanup) {
-			try {
-				return fs.rmSync(tmpDir, { recursive: true, force: true });
-			} catch {
-				// This sometimes fails on Windows with EBUSY
-			}
+			removeDirSync(tmpDir, { noThrow: true });
 		}
 	};
-	const removeExitListener = onExit(removeDir);
+	const removeExitListener = onExit(cleanupDir);
 
 	return {
 		path: tmpDir,
 		remove() {
 			removeExitListener();
-			removeDir();
+			cleanupDir();
 		},
 	};
 }
