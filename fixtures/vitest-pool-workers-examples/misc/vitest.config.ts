@@ -36,6 +36,7 @@ export default defineConfig({
 
 	test: {
 		exclude: ["test/assets.test.ts", "test/nodejs.test.ts"],
+		globalSetup: ["./global-setup.ts"],
 		setupFiles: ["test/setup.ts"],
 	},
 });
