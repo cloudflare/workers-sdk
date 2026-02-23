@@ -3,7 +3,10 @@ import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
 import { assertIsPreview } from "../context";
-import { getPreviewMiniflareOptions } from "../miniflare-options";
+import {
+	disposeRemoteProxySessions,
+	getPreviewMiniflareOptions,
+} from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 
@@ -25,7 +28,11 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			const closePreviewServer =
 				vitePreviewServer.close.bind(vitePreviewServer);
 			vitePreviewServer.close = async () => {
-				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
+				await Promise.all([
+					ctx.disposeMiniflare(),
+					disposeRemoteProxySessions(),
+					closePreviewServer(),
+				]);
 			};
 
 			const { miniflareOptions, containerTagToOptionsMap } =
@@ -63,7 +70,14 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				};
 			}
 
-			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
+			const cleanupWebSocket = handleWebSocket(
+				vitePreviewServer.httpServer,
+				ctx.miniflare
+			);
+			vitePreviewServer.httpServer.once("close", () => {
+				cleanupWebSocket();
+				void disposeRemoteProxySessions();
+			});
 
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(
