@@ -1,5 +1,59 @@
 # create-cloudflare
 
+## 2.64.3
+
+### Patch Changes
+
+- [#12630](https://github.com/cloudflare/workers-sdk/pull/12630) [`e8fddc5`](https://github.com/cloudflare/workers-sdk/commit/e8fddc58fb99892f2ce5d1bb8c940b29acbe6c2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.21.0 | 3.21.1 |
+
+- [#12631](https://github.com/cloudflare/workers-sdk/pull/12631) [`5641c52`](https://github.com/cloudflare/workers-sdk/commit/5641c525bf65395918de0495fed2dd0c42f56d85) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.575 | 0.0.581 |
+
+- [#12633](https://github.com/cloudflare/workers-sdk/pull/12633) [`35c8ebd`](https://github.com/cloudflare/workers-sdk/commit/35c8ebd688e7d4aaf30b3a147fa5b65e405f740f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.59.3 | 0.59.8 |
+
+- [#12634](https://github.com/cloudflare/workers-sdk/pull/12634) [`11ace96`](https://github.com/cloudflare/workers-sdk/commit/11ace963bd195792bd53f7eec444c35fbbb27ec9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.12.1 | 0.12.2 |
+
+- [#12635](https://github.com/cloudflare/workers-sdk/pull/12635) [`4cee91e`](https://github.com/cloudflare/workers-sdk/commit/4cee91e87edddf6decfded0ef6fb503d36d25961) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.6.11 | 0.6.13 |
+
+- [#12609](https://github.com/cloudflare/workers-sdk/pull/12609) [`1714b9b`](https://github.com/cloudflare/workers-sdk/commit/1714b9bbc834d6eac5982a41daf91026c1ad44b1) Thanks [@Hari-07](https://github.com/Hari-07)! - Fix --variant flag being ignored for pages
+
+  When creating a Pages project using `npm create cloudflare -- --type pages --variant <variant>`,
+  the `--variant` flag was being ignored, causing users to be prompted for variant selection
+  or defaulting to an unexpected variant. This now correctly passes the variant to the project setup.
+
+- [#12602](https://github.com/cloudflare/workers-sdk/pull/12602) [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603) Thanks [@anonrig](https://github.com/anonrig)! - Optimize filesystem operations by using Node.js's throwIfNoEntry: false option
+
+  This reduces the number of system calls made when checking for file existence by avoiding the overhead of throwing and catching errors for missing paths. This is an internal performance optimization with no user-visible behavioral changes.
+
 ## 2.64.2
 
 ### Patch Changes
