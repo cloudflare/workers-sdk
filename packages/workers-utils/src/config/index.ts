@@ -13,6 +13,7 @@ export type {
 	RawDevConfig,
 } from "./config";
 export type {
+	CacheOptions,
 	ConfigModuleRuleType,
 	Environment,
 	RawEnvironment,

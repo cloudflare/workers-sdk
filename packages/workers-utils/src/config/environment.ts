@@ -621,6 +621,14 @@ interface EnvironmentInheritable {
 	observability: Observability | undefined;
 
 	/**
+	 * Specify the cache behavior of the Worker.
+	 *
+	 * @inheritable
+	 * @hidden
+	 */
+	cache: CacheOptions | undefined;
+
+	/**
 	 * Specify the compliance region mode of the Worker.
 	 *
 	 * Although if the user does not specify a compliance region, the default is `public`,
@@ -1426,6 +1434,11 @@ export interface Observability {
 		 */
 		destinations?: string[];
 	};
+}
+
+export interface CacheOptions {
+	/** If cache is enabled for this Worker */
+	enabled: boolean;
 }
 
 export type DockerConfiguration = {
