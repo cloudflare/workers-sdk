@@ -210,7 +210,15 @@ async function generateAssetsFetch(
 	});
 
 	if (signal) {
-		signal.addEventListener("abort", () => watcher.close(), { once: true });
+		if (signal.aborted) {
+			void watcher.close().catch(() => {});
+		} else {
+			signal.addEventListener(
+				"abort",
+				() => void watcher.close().catch(() => {}),
+				{ once: true }
+			);
+		}
 	}
 
 	const generateResponse = async (request: Request) => {

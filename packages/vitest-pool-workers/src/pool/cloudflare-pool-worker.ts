@@ -3,7 +3,7 @@ import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { parseProjectOptions } from "./config";
-import { disposeAllPagesBindings } from "./pages";
+import { poolWorkerStarted, poolWorkerStopped } from "./pages";
 import { type WorkerPoolOptionsContext } from "./plugin";
 import {
 	assertCompatibleVitestVersion,
@@ -56,6 +56,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 	}
 
 	async start(): Promise<void> {
+		poolWorkerStarted();
+
 		let resolvedPoolOptions: WorkersPoolOptions;
 		if (typeof this.poolOptions === "function") {
 			// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/integrations/inject.ts
@@ -109,11 +111,11 @@ export class CloudflarePoolWorker implements PoolWorker {
 		await this.mf?.dispose();
 		this.mf = undefined;
 
-		// Clean up file watchers created by buildPagesASSETSBinding(). These are
-		// registered globally because vitest evaluates all project configs at
-		// startup, so watchers may exist for projects whose pool workers were
-		// never started.
-		disposeAllPagesBindings();
+		// Decrement the active worker count. When the last worker stops, this
+		// closes file watchers created by buildPagesASSETSBinding() during config
+		// evaluation — they're registered globally because vitest evaluates all
+		// project configs at startup, even for projects that won't run.
+		poolWorkerStopped();
 	}
 
 	send(message: WorkerRequest): void {
