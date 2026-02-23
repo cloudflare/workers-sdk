@@ -7,7 +7,7 @@ test("chunks large WebSocket messages bi-directionally", async ({
 	vitestRun,
 }) => {
 	// Check loads module greater than 1 MiB `workerd` limit...
-	const bigText = "xyz".repeat(4);
+	const bigText = "xyz".repeat(400_000);
 	await seed({
 		"big.txt": bigText,
 		"vitest.config.mts": vitestConfig({

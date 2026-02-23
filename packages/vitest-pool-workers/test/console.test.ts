@@ -52,15 +52,14 @@ test.skipIf(process.platform === "win32")(
 	}
 );
 
-test("handles detatched console methods", async ({
+test("handles detached console methods", async ({
 	expect,
 	seed,
-	vitestDev,
+	vitestRun,
 }) => {
 	await seed({
 		"vitest.config.mts": vitestConfig(),
 		"index.test.ts": dedent`
-			import { SELF } from "cloudflare:test";
 			import { expect, it } from "vitest";
 			it("does not crash when using a detached console method", async () => {
 				const fn = console["debug"];
@@ -69,8 +68,8 @@ test("handles detatched console methods", async ({
 			});
 	`,
 	});
-	const result = vitestDev();
-	expect(result.stderr).toMatch("");
+	const result = await vitestRun();
+	expect(await result.exitCode).toBe(0);
 });
 
 test("console.logs() inside `export default`ed handlers with SELF", async ({
@@ -106,7 +105,6 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 		`,
 	});
 	const result = await vitestRun();
-	console.log(result.stderr);
 	expect(result.stdout).toMatch(
 		"stdout | index.test.ts > sends request\none\ntwo"
 	);

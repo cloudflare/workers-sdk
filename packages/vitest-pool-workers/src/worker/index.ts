@@ -53,7 +53,7 @@ Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `v
 
 // Vitest needs this
 // @ts-expect-error Apparently this is read-only
-process.versions = { node: "20.0.0" };
+process.versions = { ...process.versions, node: "20.0.0" };
 
 globalThis.__console = console;
 
@@ -87,7 +87,7 @@ const monkeypatchedSetTimeout = (...args: Parameters<typeof setTimeout>) => {
 	const callbackName = args[0]?.name ?? "";
 	const callerFileName = getCallerFileName(monkeypatchedSetTimeout);
 	const fromVitest =
-		/\/node_modules\/(\.store\/)?vitest/.test(callerFileName ?? "") ||
+		/\/node_modules\/(\.pnpm\/|\.store\/)?vitest/.test(callerFileName ?? "") ||
 		/\/packages\/vitest\/dist/.test(callerFileName ?? "");
 
 	// If this `setTimeout()` isn't from Vitest, or has a non-zero delay,

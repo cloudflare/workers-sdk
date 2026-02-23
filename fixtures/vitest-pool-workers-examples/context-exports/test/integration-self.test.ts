@@ -55,7 +55,6 @@ it("will still guess re-exports on the exports.default worker that cannot be ful
 }) => {
 	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
 	// Although esbuild cannot really analyze what is being re-exported, it can at least see that something is being re-exported with that name.
-	const warnSpy = vi.spyOn(console, "warn");
 	const response = await exports.default.fetch(
 		"http://example.com/virtual-explicit"
 	);
@@ -69,7 +68,6 @@ it("can access configured virtual entry points on the exports.default worker tha
 }) => {
 	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
 	// Although esbuild cannot really analyze what is being re-exported, it can at least see that something is being re-exported with that name.
-	const warnSpy = vi.spyOn(console, "warn");
 	const response = await exports.default.fetch(
 		"http://example.com/virtual-configured"
 	);

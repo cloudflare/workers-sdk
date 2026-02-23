@@ -39,9 +39,9 @@ import type { Readable } from "node:stream";
 import type { TestProject, Vitest } from "vitest/node";
 
 export function structuredSerializableStringify(value: unknown): string {
-	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
-	// Deleting it doesn't seem to cause any problems, and error stack traces etc...
-	// still seem to work
+	// Vitest v2+ sends a sourcemap to its runner, which we can't serialise currently.
+	// Stripping it doesn't seem to cause any problems, and error stack traces etc.
+	// still seem to work.
 	// TODO: Figure out how to serialise SourceMap instances
 	if (
 		value &&
@@ -52,7 +52,8 @@ export function structuredSerializableStringify(value: unknown): string {
 		"map" in value.r &&
 		value.r.map
 	) {
-		delete value.r.map;
+		// Shallow-copy to avoid mutating the caller's object
+		value = { ...value, r: { ...value.r, map: undefined } };
 	}
 	return devalue.stringify(value, structuredSerializableReducers);
 }
@@ -748,7 +749,7 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 	);
 
 	// Hard error on Vitest v3, which definitely won't work
-	if (actualVitestVersion.startsWith("3")) {
+	if (semverSatisfies(actualVitestVersion, "3.x")) {
 		const message = `You're running \`vitest@${actualVitestVersion}\`, but this version of \`@cloudflare/vitest-pool-workers\` only supports \`vitest ${expectedVitestVersion}\`.`;
 		throw new Error(message);
 	}

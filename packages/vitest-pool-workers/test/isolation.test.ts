@@ -125,52 +125,10 @@ test(
 );
 
 test(
-	"shared storage with multiple workers",
-	{ timeout: 60_000 },
-	async ({ expect, seed, vitestRun }) => {
-		await seed({
-			"vitest.config.mts": vitestConfig({
-				miniflare: {
-					compatibilityDate: "2025-12-02",
-					compatibilityFlags: ["nodejs_compat"],
-					kvNamespaces: ["NAMESPACE"],
-				},
-			}),
-			"a.test.ts": dedent/* javascript */ `
-				import { env } from "cloudflare:test";
-				import { it, expect } from "vitest";
-				it("does something", async () => {
-					globalThis.A_THING = true;
-					await env.NAMESPACE.put("a", "1");
-
-					expect(globalThis.B_THING).toBe(undefined);
-				});
-			`,
-			"b.test.ts": dedent/* javascript */ `
-				import { env } from "cloudflare:test";
-				import { it, expect } from "vitest";
-				it("does something else", async () => {
-					globalThis.B_THING = true;
-					await env.NAMESPACE.put("b", "2");
-
-					expect(globalThis.A_THING).toBe(true);
-					expect(await env.NAMESPACE.get("a")).toBe("1");
-				});
-			`,
-		});
-		const result = await vitestRun({
-			flags: ["--no-isolate", "--max-workers=1"],
-		});
-		expect(await result.exitCode).toBe(0);
-	}
-);
-
-test(
 	"shared storage with single worker",
 	{ timeout: 60_000 },
 	async ({ expect, seed, vitestRun }) => {
-		// Check shared global scopes, storage shared, and shared auxiliaries:
-		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-false-singleworker-true
+		// With --no-isolate --max-workers=1, test files share globals, storage, and auxiliaries
 		await seed({
 			"auxiliary.mjs": dedent/* javascript */ `
 				let count = 0;
@@ -181,10 +139,8 @@ test(
 				}
 			`,
 			"vitest.config.mts": vitestConfig({
-				isolatedStorage: false,
-				singleWorker: true,
 				miniflare: {
-					compatibilityDate: "2024-01-01",
+					compatibilityDate: "2025-12-02",
 					compatibilityFlags: ["nodejs_compat"],
 					kvNamespaces: ["NAMESPACE"],
 					serviceBindings: { AUXILIARY: "auxiliary" },

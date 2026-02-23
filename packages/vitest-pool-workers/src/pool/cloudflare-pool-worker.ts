@@ -19,7 +19,11 @@ import type {
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
-import type { Miniflare, WebSocket } from "miniflare";
+import type {
+	Miniflare,
+	MessageEvent as MiniflareMessageEvent,
+	WebSocket,
+} from "miniflare";
 import type {
 	PoolOptions,
 	PoolWorker,
@@ -33,6 +37,11 @@ export class CloudflarePoolWorker implements PoolWorker {
 	private socket: WebSocket | undefined;
 	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
 	private main: string | undefined;
+	// Store wrapped listeners so off() can remove them correctly.
+	// Vitest registers at most one listener per event type.
+	private messageListener?: (event: MiniflareMessageEvent) => void;
+	private errorListener?: (event: Event) => void;
+	private closeListener?: () => void;
 
 	constructor(
 		private options: PoolOptions,
@@ -94,6 +103,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 	}
 
 	async stop(): Promise<void> {
+		this.socket?.close();
+		this.socket = undefined;
 		await this.mf?.dispose();
 		this.mf = undefined;
 	}
@@ -106,32 +117,55 @@ export class CloudflarePoolWorker implements PoolWorker {
 			"Message sent to Worker before initialisation"
 		);
 
-		// This is an initialisation message containing the config. Some properties need modifying
+		// Avoid mutating Vitest's message objects — shallow-copy the parts we modify
+		let toSend: WorkerRequest = message;
 		if (message.type === "start") {
 			// Users can write `vitest --inspect` to start an inspector connection for their tests
 			// We intercept that option and use it to enable inspection of the Workers running in workerd
 			// We need to stop it passing through into Vitest's in-Worker code, or Vitest will try and import
 			// and run `inspector.open()` from `node:inspector`
-			message.context.config.inspector ??= {};
-			message.context.config.inspector.enabled = false;
+			toSend = {
+				...message,
+				context: {
+					...message.context,
+					config: {
+						...message.context.config,
+						inspector: {
+							...message.context.config.inspector,
+							enabled: false,
+						},
+					},
+				},
+			};
 		} else if (message.type === "run") {
 			// For some reason providing this using the Vitest `project.provide` API
 			// doesn't work in Vitest Projects, and so we just provide the context directly
-			message.context.providedContext.cloudflarePoolOptions = JSON.stringify({
-				// Include resolved `main` if defined
-				main: this.main,
-				// Include designators of all Durable Object namespaces bound in the
-				// runner worker. We'll use this to list IDs in a namespace. We'll
-				// also use this to check Durable Object test runner helpers are
-				// only used with classes defined in the current worker, as these
-				// helpers rely on wrapping the object.
-				durableObjectBindingDesignators: [
-					...getDurableObjectDesignators(this.parsedPoolOptions).entries(),
-				],
-				selfName: getRunnerName(this.options.project),
-			});
+			toSend = {
+				...message,
+				context: {
+					...message.context,
+					providedContext: {
+						...message.context.providedContext,
+						cloudflarePoolOptions: JSON.stringify({
+							// Include resolved `main` if defined
+							main: this.main,
+							// Include designators of all Durable Object namespaces bound in the
+							// runner worker. We'll use this to list IDs in a namespace. We'll
+							// also use this to check Durable Object test runner helpers are
+							// only used with classes defined in the current worker, as these
+							// helpers rely on wrapping the object.
+							durableObjectBindingDesignators: [
+								...getDurableObjectDesignators(
+									this.parsedPoolOptions
+								).entries(),
+							],
+							selfName: getRunnerName(this.options.project),
+						}),
+					},
+				},
+			};
 		}
-		this.socket.send(structuredSerializableStringify(message));
+		this.socket.send(structuredSerializableStringify(toSend));
 	}
 
 	on(
@@ -152,7 +186,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 		const compiledRules = compileModuleRules(rules ?? []);
 
 		if (event === "message") {
-			this.socket.addEventListener("message", (m) => {
+			const messageWrapper = (m: { data: string | ArrayBuffer }) => {
 				const d = structuredSerializableParse(
 					m.data as string
 				) as WorkerResponse;
@@ -210,29 +244,32 @@ export class CloudflarePoolWorker implements PoolWorker {
 					}
 				}
 				(callback as (response: WorkerResponse) => void)(d);
-			});
+			};
+			this.messageListener = messageWrapper as (
+				event: MiniflareMessageEvent
+			) => void;
+			this.socket.addEventListener("message", this.messageListener);
 		} else if (event === "error") {
-			this.socket.addEventListener("error", (e) => {
-				(callback as (maybeError: unknown) => void)(e.error);
-			});
+			this.errorListener = (e: Event) => {
+				(callback as (maybeError: unknown) => void)("error" in e ? e.error : e);
+			};
+			this.socket.addEventListener("error", this.errorListener);
 		} else if (event === "exit") {
-			this.socket.addEventListener("close", callback as () => void);
+			this.closeListener = callback as () => void;
+			this.socket.addEventListener("close", this.closeListener);
 		}
 	}
 
-	off(event: string, callback: (_arg: unknown) => void): void {
-		// Map Vitest event names to WebSocket event names
-		const eventMap: Record<string, string> = {
-			exit: "close",
-			message: "message",
-			error: "error",
-		};
-		const wsEvent = eventMap[event];
-		if (wsEvent !== undefined) {
-			this.socket?.removeEventListener(
-				wsEvent as "close" | "message" | "error",
-				callback as () => void
-			);
+	off(event: string, _callback: (_arg: unknown) => void): void {
+		if (event === "message" && this.messageListener) {
+			this.socket?.removeEventListener("message", this.messageListener);
+			this.messageListener = undefined;
+		} else if (event === "error" && this.errorListener) {
+			this.socket?.removeEventListener("error", this.errorListener);
+			this.errorListener = undefined;
+		} else if (event === "exit" && this.closeListener) {
+			this.socket?.removeEventListener("close", this.closeListener);
+			this.closeListener = undefined;
 		}
 	}
 
