@@ -256,7 +256,7 @@ export const deployCommand = createCommand({
 			describe:
 				"Experimental: Enables framework detection and automatic configuration when deploying",
 			type: "boolean",
-			default: true,
+			default: false,
 		},
 	},
 	behaviour: {

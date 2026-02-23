@@ -253,7 +253,6 @@ async function detectFramework(
 					name: "Cloudflare Pages",
 					id: "cloudflare-pages",
 				},
-				dist: wranglerConfig?.pages_build_output_dir,
 			},
 			packageManager,
 		};

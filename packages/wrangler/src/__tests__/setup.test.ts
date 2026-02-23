@@ -35,7 +35,7 @@ describe("wrangler setup", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler setup
 
-			🪄 Setup a project to work on Cloudflare
+			🪄 Setup a project to work on Cloudflare [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
