@@ -2,6 +2,8 @@
 "@cloudflare/workers-shared": patch
 ---
 
-tweak the parsing of \_redirects file
+Exclude trailing comments from `_redirects` line length validation
 
-The max line length is now 1000 characters, excluding comments.
+This is consistent with full line comments where the line length is not limited.
+
+Additionally, the maximum line length for redirect directives has been corrected to 1000 characters (matching the Workers platform limit), down from 2000.
