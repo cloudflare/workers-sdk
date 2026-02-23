@@ -113,7 +113,7 @@
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
 		"am-i-vibing": "^0.1.0",
-		"capnweb": "^0.1.0",
+		"capnweb": "catalog:default",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
 		"ci-info": "catalog:default",
