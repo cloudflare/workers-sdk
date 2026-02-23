@@ -55,7 +55,7 @@
 			"cache": true
 		},
 		"check:format:changesets": {
-			"inputs": [".changeset/*.mdx"],
+			"inputs": [".changeset/*.md"],
 			"cache": true
 		}
 	}
