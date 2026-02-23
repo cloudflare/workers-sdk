@@ -92,7 +92,7 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					ctx.resolvedViteConfig.publicDir.length > 0
 						? readAssetsIgnoreFile(
 								path.join(ctx.resolvedViteConfig.publicDir, ".assetsignore")
-						  )
+							)
 						: "";
 
 				this.emitFile({
@@ -151,13 +151,14 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 });
 
 function readAssetsIgnoreFile(assetsIgnorePath: string): string {
-	const content = existsSync(assetsIgnorePath) ? readFileSync(assetsIgnorePath, "utf-8") : "";
+	const content = existsSync(assetsIgnorePath)
+		? readFileSync(assetsIgnorePath, "utf-8")
+		: "";
 	if (content.length === 0) {
 		return "";
 	}
-	return content.at(-1) === "\n" ? content : `${content}\n`
+	return content.at(-1) === "\n" ? content : `${content}\n`;
 }
-
 
 function getAssetsDirectory(
 	workerOutputDirectory: string,
