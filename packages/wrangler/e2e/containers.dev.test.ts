@@ -47,6 +47,7 @@ for (const source of imageSource) {
 				name: `${workerName}`,
 				main: "src/index.ts",
 				compatibility_date: "2025-04-03",
+				compatibility_flags: ["experimental", "enable_ctx_exports"],
 				containers: [
 					{
 						image: "./Dockerfile",
@@ -72,7 +73,13 @@ for (const source of imageSource) {
 			await helper.seed({
 				"wrangler.json": JSON.stringify(wranglerConfig),
 				"src/index.ts": dedent`
-						import { DurableObject } from "cloudflare:workers";
+						import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+
+						export class TestService extends WorkerEntrypoint {
+							async fetch(req: Request) {
+								return new Response("hello from worker");
+							}
+						}
 
 						export class E2EContainer extends DurableObject<Env> {
 							container: globalThis.Container;
@@ -101,6 +108,22 @@ for (const source of imageSource) {
 											.getTcpPort(8080)
 											.fetch("http://foo/bar/baz");
 										return new Response(await res.text());
+
+									case "/setup-intercept":
+										await (this.container as any).interceptOutboundHttp(
+											"11.0.0.1:80",
+											(this.ctx as any).exports.TestService()
+										);
+										return new Response("Intercept setup done");
+
+									case "/fetch-intercept":
+										const interceptRes = await this.container
+											.getTcpPort(8080)
+											.fetch("http://foo/intercept", {
+												headers: { "x-host": "11.0.0.1:80" },
+											});
+										return new Response(await interceptRes.text());
+
 									default:
 										return new Response("Hi from Container DO");
 								}
@@ -126,6 +149,23 @@ for (const source of imageSource) {
 					const { createServer } = require("http");
 
 					const server = createServer(function (req, res) {
+						if (req.url === "/intercept") {
+							const targetHost = req.headers["x-host"] || "11.0.0.1";
+							fetch("http://" + targetHost)
+								.then(function (result) { return result.text(); })
+								.then(function (body) {
+									res.writeHead(200);
+									res.write(body);
+									res.end();
+								})
+								.catch(function (err) {
+									res.writeHead(500);
+									res.write(targetHost + " " + err.message);
+									res.end();
+								});
+							return;
+						}
+
 						res.writeHead(200, { "Content-Type": "text/plain" });
 						res.write("Hello World! Have an env var! " + process.env.MESSAGE);
 						res.end();
@@ -239,6 +279,29 @@ for (const source of imageSource) {
 					expect(text).toBe("Hello World! Have an env var! I'm an env var!");
 				},
 				{ timeout: 5_000 }
+			);
+
+			// Set up egress HTTP interception so the container can call back to the worker
+			response = await fetch(`${ready.url}/setup-intercept`, {
+				signal: AbortSignal.timeout(5_000),
+				headers: { "MF-Disable-Pretty-Error": "true" },
+			});
+			text = await response.text();
+			expect(response.status).toBe(200);
+			expect(text).toBe("Intercept setup done");
+
+			// Fetch through the container's /intercept route which curls back to the worker
+			await vi.waitFor(
+				async () => {
+					response = await fetch(`${ready.url}/fetch-intercept`, {
+						signal: AbortSignal.timeout(5_000),
+						headers: { "MF-Disable-Pretty-Error": "true" },
+					});
+					text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toBe("hello from worker");
+				},
+				{ timeout: 10_000 }
 			);
 
 			// Check that a container is running using `docker ps`
