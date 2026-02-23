@@ -5,7 +5,6 @@ import {
 	cleanupContainers,
 	getDevContainerImageName,
 	prepareContainerImagesForDev,
-	pullEgressInterceptorImage,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
@@ -271,18 +270,16 @@ export class LocalRuntimeController extends RuntimeController {
 					},
 					logger: logger,
 					isVite: false,
+					compatibilityFlags: data.config.compatibilityFlags,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
 				}
+
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
 				logger.log(chalk.dim("⎔ Container image(s) ready"));
-
-				if (data.config.compatibilityFlags?.includes("experimental")) {
-					await pullEgressInterceptorImage(this.dockerPath);
-				}
 			}
 
 			const options = await MF.buildMiniflareOptions(

@@ -1,8 +1,5 @@
 import assert from "node:assert";
-import {
-	prepareContainerImagesForDev,
-	pullEgressInterceptorImage,
-} from "@cloudflare/containers-shared";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { CoreHeaders } from "miniflare";
@@ -211,15 +208,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
 						isVite: true,
+						compatibilityFlags: ctx.allWorkerConfigs.flatMap(
+							(c) => c.compatibility_flags
+						),
 					});
-
-					if (
-						ctx.allWorkerConfigs.some((c) =>
-							c.compatibility_flags.includes("experimental")
-						)
-					) {
-						await pullEgressInterceptorImage(getDockerPath());
-					}
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());
 					viteDevServer.config.logger.info(

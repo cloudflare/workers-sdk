@@ -114,6 +114,7 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	isVite: boolean;
+	compatibilityFlags?: string[];
 }): Promise<void> {
 	const {
 		dockerPath,
@@ -168,6 +169,13 @@ export async function prepareContainerImagesForDev(args: {
 
 			await checkExposedPorts(dockerPath, options);
 		}
+	}
+
+	// Pull the egress interceptor image if experimental flag is enabled.
+	// This image is used to intercept outbound HTTP from containers and
+	// route it back to workerd (e.g. for interceptOutboundHttp).
+	if (!aborted && args.compatibilityFlags?.includes("experimental")) {
+		await pullEgressInterceptorImage(dockerPath);
 	}
 }
 
