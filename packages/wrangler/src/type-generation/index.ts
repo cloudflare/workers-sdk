@@ -10,7 +10,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { findUpSync } from "find-up";
+import * as find from "empathic/find";
 import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -150,9 +150,11 @@ export const typesCommand = createCommand({
 		const { envInterface, path: outputPath } = args;
 
 		if (
-			!config.configPath ||
-			!fs.existsSync(config.configPath) ||
-			fs.statSync(config.configPath).isDirectory()
+			config.configPath == null ||
+			(fs
+				.statSync(config.configPath, { throwIfNoEntry: false })
+				?.isDirectory() ??
+				true)
 		) {
 			throw new UserError(
 				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
@@ -1255,7 +1257,7 @@ function generatePerEnvTypeStrings(
  * @throws {UserError} If a non-Wrangler .d.ts file already exists at the given path.
  */
 const validateTypesFile = (path: string): void => {
-	const wranglerOverrideDTSPath = findUpSync(path);
+	const wranglerOverrideDTSPath = find.file(path);
 	if (wranglerOverrideDTSPath === undefined) {
 		return;
 	}

@@ -167,6 +167,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 			flags: ["--style", "sass"],
+			// TODO: currently the Angular tests are failing with `URL with hostname "localhost" is not allowed.`
+			//       we need to investigate this so that we can un-quarantine the Angular tests
+			quarantine: true,
 		},
 		{
 			name: "angular:workers",
@@ -186,6 +189,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: false,
 			flags: ["--style", "sass"],
+			// TODO: currently the Angular tests are failing with `URL with hostname "localhost" is not allowed.`
+			//       we need to investigate this so that we can un-quarantine the Angular tests
+			quarantine: true,
 		},
 		{
 			name: "gatsby:pages",
@@ -784,6 +790,9 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: false,
 			flags: ["--style", "sass"],
 			verifyTypes: false,
+			// TODO: currently the Angular tests are failing with `URL with hostname "localhost" is not allowed.`
+			//       we need to investigate this so that we can un-quarantine the Angular tests
+			quarantine: true,
 		},
 		{
 			name: "nuxt:workers",

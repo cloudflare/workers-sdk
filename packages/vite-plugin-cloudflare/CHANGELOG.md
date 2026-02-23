@@ -1,5 +1,29 @@
 # @cloudflare/vite-plugin
 
+## 1.25.4
+
+### Patch Changes
+
+- Updated dependencies [[`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece), [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece)]:
+  - wrangler@4.68.0
+
+## 1.25.3
+
+### Patch Changes
+
+- Updated dependencies [[`e93dc01`](https://github.com/cloudflare/workers-sdk/commit/e93dc01839aee047b37188b850cac7f3465c7bd4), [`c2ed7c2`](https://github.com/cloudflare/workers-sdk/commit/c2ed7c23057b5fd74788f9b0c5415edc8a592276), [`d920811`](https://github.com/cloudflare/workers-sdk/commit/d9208114c391a2a9f49adab9056c3ddb24005984), [`896734d`](https://github.com/cloudflare/workers-sdk/commit/896734d4a754dded85086f88641f26848e554913), [`ebdbe52`](https://github.com/cloudflare/workers-sdk/commit/ebdbe52c2bcd1b30758b54de57a046f3ab196f04), [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603), [`6f6cd94`](https://github.com/cloudflare/workers-sdk/commit/6f6cd944480d6161c582c7af68f6c4205ddeaefe)]:
+  - wrangler@4.67.1
+  - miniflare@4.20260302.0
+
+## 1.25.2
+
+### Patch Changes
+
+- Updated dependencies [[`f239077`](https://github.com/cloudflare/workers-sdk/commit/f23907711bd49214b08a8625ac3f74ecef416956), [`aaa7200`](https://github.com/cloudflare/workers-sdk/commit/aaa720037b78adb4ad08301d77de4ef0dd759fe3), [`2f19a40`](https://github.com/cloudflare/workers-sdk/commit/2f19a4047b64d3ffa0e5b0400a6217849785e09b), [`8723684`](https://github.com/cloudflare/workers-sdk/commit/872368456bfd72cdb45dc8c82f1ab16392d6a1f8), [`e2a6600`](https://github.com/cloudflare/workers-sdk/commit/e2a66009445c310af581508bec593a8f0cd66464), [`5f9f0b4`](https://github.com/cloudflare/workers-sdk/commit/5f9f0b40dbe4c80ab15bea6a589f5c3296945fbc), [`452cdc8`](https://github.com/cloudflare/workers-sdk/commit/452cdc8c370d5224d71f3292faaf72c3ea9ad86c), [`527e4f5`](https://github.com/cloudflare/workers-sdk/commit/527e4f5651b8858f11a1b9bab4627a4ae5cc1bc0), [`aa82c2b`](https://github.com/cloudflare/workers-sdk/commit/aa82c2b46be762adecca3f661a8f8228fb9c7c28), [`0b17117`](https://github.com/cloudflare/workers-sdk/commit/0b171175f1fe8c885a54398ee84fd0aa35ca9cbe), [`ca58062`](https://github.com/cloudflare/workers-sdk/commit/ca58062d0a4d31995cbac344bb6e994a8b569b24)]:
+  - miniflare@4.20260219.0
+  - wrangler@4.67.0
+  - @cloudflare/unenv-preset@2.14.0
+
 ## 1.25.1
 
 ### Patch Changes

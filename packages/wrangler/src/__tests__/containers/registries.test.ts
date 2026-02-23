@@ -48,7 +48,7 @@ describe("containers registries configure", () => {
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --public-credential=test-id --disableSecretsStore`
+				`containers registries configure ${domain} --public-credential=test-id --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Secrets Store can only be disabled in FedRAMP compliance regions.]`
@@ -61,23 +61,23 @@ describe("containers registries configure", () => {
 				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.]`
+			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store.]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disableSecretsStore`
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Arguments secret-store-id and disableSecretsStore are mutually exclusive]`
+			`[Error: Arguments secret-store-id and disable-secrets-store are mutually exclusive]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disableSecretsStore`
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Arguments secret-name and disableSecretsStore are mutually exclusive]`
+			`[Error: Arguments secret-name and disable-secrets-store are mutually exclusive]`
 		);
 	});
 
@@ -123,7 +123,7 @@ describe("containers registries configure", () => {
 			});
 
 			await runWrangler(
-				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disableSecretsStore`
+				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disable-secrets-store`
 			);
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -161,7 +161,7 @@ describe("containers registries configure", () => {
 				});
 
 				await runWrangler(
-					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disableSecretsStore`
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disable-secrets-store`
 				);
 			});
 		});
@@ -192,6 +192,7 @@ describe("containers registries configure", () => {
 					modified: "2024-01-01T00:00:00Z",
 				},
 			]);
+			mockListSecrets(storeId, []);
 			mockCreateSecret(storeId);
 			mockPutRegistry({
 				domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com",
@@ -235,6 +236,7 @@ describe("containers registries configure", () => {
 
 			mockListSecretStores([]);
 			mockCreateSecretStore(newStoreId);
+			mockListSecrets(newStoreId, []);
 			mockCreateSecret(newStoreId);
 			mockPutRegistry({
 				domain: awsEcrDomain,
@@ -275,6 +277,7 @@ describe("containers registries configure", () => {
 				result: "AWS_Secret_Access_Key",
 			});
 
+			mockListSecrets(providedStoreId, []);
 			mockCreateSecret(providedStoreId);
 			mockPutRegistry({
 				domain: awsEcrDomain,
@@ -307,7 +310,7 @@ describe("containers registries configure", () => {
 				│
 				│
 				│
-				│ Container-scoped secret AWS_Secret_Access_Key created in Secrets Store.
+				│ Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
 				│
 				╰ Registry configuration completed
 
@@ -336,6 +339,7 @@ describe("containers registries configure", () => {
 						modified: "2024-01-01T00:00:00Z",
 					},
 				]);
+				mockListSecrets(storeId, []);
 				mockCreateSecret(storeId);
 				mockPutRegistry({
 					domain: awsEcrDomain,
@@ -352,6 +356,53 @@ describe("containers registries configure", () => {
 				await runWrangler(
 					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=AWS_Secret_Access_Key`
 				);
+			});
+
+			it("should reuse existing secret with --skip-confirmation", async () => {
+				const storeId = "test-store-id-reuse";
+				const secretName = "existing_secret";
+
+				mockStdIn.send("test-secret-value");
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, [
+					{
+						id: "existing-secret-id",
+						store_id: storeId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry({
+					domain: awsEcrDomain,
+					is_public: false,
+					auth: {
+						public_credential: "test-access-key-id",
+						private_credential: {
+							store_id: storeId,
+							secret_name: secretName,
+						},
+					},
+					kind: "ECR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=${secretName} --skip-confirmation`
+				);
+
+				// Should not contain "created" message since we reused existing secret
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
 			});
 		});
 	});

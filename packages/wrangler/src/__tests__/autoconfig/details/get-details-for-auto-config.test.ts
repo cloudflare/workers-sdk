@@ -19,7 +19,7 @@ import type { Mock, MockInstance } from "vitest";
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	let isNonInteractiveOrCISpy: MockInstance;
 
 	beforeEach(() => {
@@ -120,6 +120,27 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the applications in the workspace and try again.]`
 		);
+	});
+
+	it("should warn when no lock file is detected (project may be inside a workspace)", async ({
+		expect,
+	}) => {
+		// Create a project without a lock file - simulating a project inside a workspace
+		// where the lock file is at the workspace root
+		await seed({
+			"package.json": JSON.stringify({
+				name: "my-app",
+				dependencies: {},
+			}),
+			"index.html": "<h1>Hello World</h1>",
+		});
+
+		await details.getDetailsForAutoConfig();
+
+		expect(std.warn).toContain(
+			"No lock file has been detected in the current working directory."
+		);
+		expect(std.warn).toContain("project is part of a workspace");
 	});
 
 	it("should use npm build instead of framework build if present", async ({

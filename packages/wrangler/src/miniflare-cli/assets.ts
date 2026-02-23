@@ -237,8 +237,7 @@ async function generateAssetsFetch(
 				}
 
 				if (
-					existsSync(filepath) &&
-					lstatSync(filepath).isFile() &&
+					lstatSync(filepath, { throwIfNoEntry: false })?.isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
 					const hash = hashFile(filepath);
