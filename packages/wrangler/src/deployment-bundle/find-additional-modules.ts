@@ -14,6 +14,10 @@ import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
 import type { CfModule, Rule } from "@cloudflare/workers-utils";
 
+// Directories that should never be traversed when scanning for additional modules.
+// Matches the skip list used by findAdditionalModuleWatchDirs().
+const SKIP_DIRECTORIES = new Set(["node_modules", ".git"]);
+
 async function* getFiles(
 	configPath: string | undefined,
 	moduleRoot: string,
@@ -25,7 +29,11 @@ async function* getFiles(
 		const absPath = path.join(moduleRoot, file.name);
 		if (file.isDirectory()) {
 			// Skip the hidden Wrangler directory so we don't accidentally bundle non-user files.
-			if (absPath !== wranglerHiddenDirPath) {
+			// Also skip node_modules and .git to avoid traversing massive directory trees.
+			if (
+				absPath !== wranglerHiddenDirPath &&
+				!SKIP_DIRECTORIES.has(file.name)
+			) {
 				yield* getFiles(configPath, absPath, relativeTo, projectRoot);
 			}
 		} else {
@@ -276,12 +284,22 @@ async function matchFiles(
 	// This is usually a poorly specified Wrangler configuration file, but duplicate modules will cause a crash at runtime
 	const moduleNames = new Set<string>();
 
+	// Pre-compile all glob patterns into RegExp objects so we don't recompile
+	// them on every file iteration (was O(files * rules * globs) compilations).
+	const compiledRules = rules.map((rule) => ({
+		rule,
+		regexps: rule.globs.map((glob: string) =>
+			globToRegExp(glob, { globstar: true })
+		),
+	}));
+	const compiledRemovedRules = removedRules.map((rule) => ({
+		rule,
+		regexps: rule.globs.map((glob: string) => globToRegExp(glob)),
+	}));
+
 	for await (const filePath of files) {
-		for (const rule of rules) {
-			for (const glob of rule.globs) {
-				const regexp = globToRegExp(glob, {
-					globstar: true,
-				});
+		for (const { rule, regexps } of compiledRules) {
+			for (const regexp of regexps) {
 				if (!regexp.test(filePath)) {
 					continue;
 				}
@@ -311,9 +329,8 @@ async function matchFiles(
 		}
 
 		// This is just a sanity check verifying that no files match rules that were removed
-		for (const rule of removedRules) {
-			for (const glob of rule.globs) {
-				const regexp = globToRegExp(glob);
+		for (const { rule, regexps } of compiledRemovedRules) {
+			for (const regexp of regexps) {
 				if (regexp.test(filePath)) {
 					throw new UserError(
 						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(

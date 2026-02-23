@@ -298,88 +298,104 @@ export type AssetReverseMap = {
 };
 
 /**
+ * Recursively walks a directory collecting relative file paths.
+ * Uses `withFileTypes` to skip directories and symlinks without stat() calls.
+ */
+async function walkFiles(
+	dir: string,
+	baseDir: string,
+	result: string[] = []
+): Promise<string[]> {
+	const entries = await fs.readdir(dir, { withFileTypes: true });
+	for (const entry of entries) {
+		const fullPath = path.join(dir, entry.name);
+		if (entry.isDirectory()) {
+			await walkFiles(fullPath, baseDir, result);
+		} else if (entry.isFile()) {
+			result.push(path.relative(baseDir, fullPath));
+		}
+	}
+	return result;
+}
+
+/**
  * Traverses the asset directory to create an asset manifest and asset reverse map.
  * These are available to the Asset Worker as a binding.
  * NB: This runs every time the dev server restarts.
  */
 const walk = async (dir: string) => {
-	const files = await fs.readdir(dir, { recursive: true });
+	const fileList = await walkFiles(dir, dir);
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
 	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
 	let counter = 0;
 	await Promise.all(
-		files.map(async (file) => {
+		fileList.map(async (file) => {
 			if (assetsIgnoreFunction(file)) {
 				return;
 			}
-			/** absolute file path */
 			const filepath = path.join(dir, file);
-			const relativeFilepath = path.relative(dir, filepath);
+			// Only stat for mtime (needed for dev content hash) — withFileTypes
+			// already filtered out directories and symlinks
 			const filestat = await fs.stat(filepath);
 
-			// TODO: decide whether to follow symbolic links
-			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
-				return;
-			} else {
-				// TODO: Warn about _worker.js
+			// TODO: Warn about _worker.js
 
-				if (filestat.size > MAX_ASSET_SIZE) {
-					throw new Error(
-						`Asset too large.\n` +
-							`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
-								MAX_ASSET_SIZE,
-								{
-									binary: true,
-								}
-							)}. We found a file ${filepath} with a size of ${prettyBytes(
-								filestat.size,
-								{
-									binary: true,
-								}
-							)}.\n` +
-							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
-					);
-				}
-
-				/*
-				 * Each manifest entry is a series of bytes that store data in a [header,
-				 * pathHash, contentHash] format, where:
-				 *   - `header` is a fixed 20 bytes reserved but currently unused
-				 *   - `pathHash` is the hashed file path
-				 *   - `contentHash` is the hashed file content in prod
-				 *
-				 * The `contentHash` of a file is determined by reading the contents of
-				 * the file, and applying a hash function on the read data. In local
-				 * development, performing this operation for each asset file would
-				 * become very expensive very quickly, as it would have to be performed
-				 * every time a dev server reload is trigerred. In watch mode, depending
-				 * on the user's setup, this could potentially be on every file change.
-				 *
-				 * To avoid this from becoming a performance bottleneck, we're doing
-				 * things a bit differently for dev, and implementing the `contentHash`
-				 * as a hash function of the file path and the modified timestamp.
-				 * (`hash(filePath + modifiedTime)`).
-				 * This way a file's corresponding 'contentHash' will always update
-				 * if the file changes, and `wrangler dev` will serve the updated asset
-				 * files instead of incorrectly returning 304s.
-				 */
-
-				const [pathHash, contentHash] = await Promise.all([
-					hashPath(normalizeFilePath(relativeFilepath)),
-					// used absolute filepath here so that changes to the enclosing asset folder will be registered
-					hashPath(filepath + filestat.mtimeMs.toString()),
-				]);
-				manifest.push({
-					pathHash,
-					contentHash,
-				});
-				assetsReverseMap[bytesToHex(contentHash)] = {
-					filePath: relativeFilepath,
-					contentType: getContentType(filepath),
-				};
-				counter++;
+			if (filestat.size > MAX_ASSET_SIZE) {
+				throw new Error(
+					`Asset too large.\n` +
+						`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
+							MAX_ASSET_SIZE,
+							{
+								binary: true,
+							}
+						)}. We found a file ${filepath} with a size of ${prettyBytes(
+							filestat.size,
+							{
+								binary: true,
+							}
+						)}.\n` +
+						`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
+				);
 			}
+
+			/*
+			 * Each manifest entry is a series of bytes that store data in a [header,
+			 * pathHash, contentHash] format, where:
+			 *   - `header` is a fixed 20 bytes reserved but currently unused
+			 *   - `pathHash` is the hashed file path
+			 *   - `contentHash` is the hashed file content in prod
+			 *
+			 * The `contentHash` of a file is determined by reading the contents of
+			 * the file, and applying a hash function on the read data. In local
+			 * development, performing this operation for each asset file would
+			 * become very expensive very quickly, as it would have to be performed
+			 * every time a dev server reload is trigerred. In watch mode, depending
+			 * on the user's setup, this could potentially be on every file change.
+			 *
+			 * To avoid this from becoming a performance bottleneck, we're doing
+			 * things a bit differently for dev, and implementing the `contentHash`
+			 * as a hash function of the file path and the modified timestamp.
+			 * (`hash(filePath + modifiedTime)`).
+			 * This way a file's corresponding 'contentHash' will always update
+			 * if the file changes, and `wrangler dev` will serve the updated asset
+			 * files instead of incorrectly returning 304s.
+			 */
+
+			const [pathHash, contentHash] = await Promise.all([
+				hashPath(normalizeFilePath(file)),
+				// used absolute filepath here so that changes to the enclosing asset folder will be registered
+				hashPath(filepath + filestat.mtimeMs.toString()),
+			]);
+			manifest.push({
+				pathHash,
+				contentHash,
+			});
+			assetsReverseMap[bytesToHex(contentHash)] = {
+				filePath: file,
+				contentType: getContentType(filepath),
+			};
+			counter++;
 		})
 	);
 	if (counter > MAX_ASSET_COUNT) {
@@ -433,14 +449,14 @@ const encodeManifest = (manifest: ManifestEntry[]) => {
 };
 
 const bytesToHex = (buffer: Uint8Array<ArrayBuffer>) => {
-	return [...new Uint8Array(buffer)]
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+	return Buffer.from(buffer).toString("hex");
 };
 
+const encoder = new TextEncoder();
 const hashPath = async (path: string) => {
-	const encoder = new TextEncoder();
 	const data = encoder.encode(path);
+	// TODO(anonrig): When we support Node.js 22+, make this method
+	// sync and use crypto.hash('sha-256', data.buffer as ArrayBuffer, { outputEncoding: 'hex' });
 	const hashBuffer = await crypto.subtle.digest(
 		"SHA-256",
 		data.buffer as ArrayBuffer
