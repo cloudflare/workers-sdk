@@ -1,4 +1,8 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import {
+	tailEventsReplacer,
+	tailEventsReviver,
+} from "../core/dev-registry-proxy-shared.worker";
 import type RouterWorker from "@cloudflare/workers-shared/asset-worker";
 
 interface Env {
@@ -23,11 +27,6 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 	}
 
 	async scheduled(controller: ScheduledController) {
-		// Forward the scheduled event to the user worker.
-		// The RPC proxy only intercepts fetch (routing through the asset router)
-		// and tail — all other lifecycle events go directly to the user worker.
-		// Use Fetcher.scheduled() with a plain object since ScheduledController
-		// has non-serializable methods (like noRetry()).
 		const result = await (this.env.USER_WORKER as Fetcher).scheduled({
 			scheduledTime: new Date(controller.scheduledTime),
 			cron: controller.cron,
@@ -84,32 +83,4 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 			},
 		});
 	}
-}
-
-// NOTE: These helpers are duplicated in core/dev-registry-proxy-shared.worker.ts.
-// They're kept separate because these workers are bundled independently.
-const serializedDate = "___serialized_date___";
-const serializedBigInt = "___serialized_bigint___";
-
-function tailEventsReplacer(_: string, value: any) {
-	// The tail events might contain Date objects which will not be restored directly
-	if (value instanceof Date) {
-		return { [serializedDate]: value.toISOString() };
-	} else if (typeof value === "bigint") {
-		return { [serializedBigInt]: value.toString() };
-	}
-	return value;
-}
-
-function tailEventsReviver(_: string, value: any) {
-	// To restore Date objects from the serialized events
-	if (value && typeof value === "object") {
-		if (serializedDate in value) {
-			return new Date(value[serializedDate]);
-		} else if (serializedBigInt in value) {
-			return BigInt(value[serializedBigInt]);
-		}
-	}
-
-	return value;
 }

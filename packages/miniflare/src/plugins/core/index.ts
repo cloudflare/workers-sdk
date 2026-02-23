@@ -460,7 +460,6 @@ function maybeGetCustomServiceService(
 	) {
 		assert(
 			service.remoteProxyConnectionString &&
-				"name" in service &&
 				service.name &&
 				typeof service.name === "string"
 		);

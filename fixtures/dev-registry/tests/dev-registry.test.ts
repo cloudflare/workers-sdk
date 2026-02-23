@@ -1066,8 +1066,6 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			devRegistryPath
 		);
 
-		// Test DO RPC fallback before internal durable object is started.
-		// The exact error depends on the proxy layer, so we just verify the call rejects.
 		await vi.waitFor(async () => {
 			const id = env.DURABLE_OBJECT.newUniqueId();
 			const stub = env.DURABLE_OBJECT.get(id);

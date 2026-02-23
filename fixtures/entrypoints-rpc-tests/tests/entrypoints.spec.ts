@@ -598,7 +598,6 @@ describe("entrypoints", () => {
 
 		const rpcResponse = await fetch(new URL("/rpc", url));
 		const errors = await rpcResponse.json();
-		// DO RPC now works natively through the debug port — no errors expected.
 		expect(errors).toMatchInlineSnapshot(`[]`);
 	});
 

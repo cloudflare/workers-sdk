@@ -1,17 +1,10 @@
 /**
  * Shared utilities for the dev-registry proxy workers.
- *
- * These functions are used by both:
- * - dev-registry-proxy.worker.ts (the ExternalServiceProxy entrypoint worker)
- * - the outbound DO proxy service (createOutboundDoProxyService in external-service.ts)
- *
- * This file is bundled as a standalone worker module and included alongside
- * the inline JS in the outbound DO proxy service's modules array.
  */
 import { DurableObject } from "cloudflare:workers";
 
-// --- Types ---
-
+// These interfaces mirror the workerd debug port RPC API.
+// See https://github.com/cloudflare/workerd/blob/main/src/workerd/server/server.c++
 export interface WorkerdDebugPortConnector {
 	connect(address: string): Promise<WorkerdDebugPortClient>;
 }
@@ -31,19 +24,14 @@ export interface WorkerdDebugPortClient {
 
 export interface RegistryEntry {
 	debugPortAddress: string;
-	/** Service name for the default entrypoint (may route through assets/vite proxy). */
 	defaultEntrypointService: string;
-	/** Service name for the user worker directly (for named entrypoints and DOs). */
 	userWorkerService: string;
 }
 
-/** Minimal env shape required by the shared functions. */
 export interface ProxyEnv {
 	DEV_REGISTRY: Fetcher;
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 }
-
-// --- Functions ---
 
 /**
  * Resolve a worker name to its registry entry by fetching from the
@@ -114,9 +102,59 @@ export async function connectToActor(
 }
 
 /**
- * Create a DurableObject proxy class that forwards fetch and RPC calls
- * to a remote Durable Object via the workerd debug port.
+ * Creates a Proxy handler that forwards arbitrary RPC method calls and property
+ * access through an async fetcher. Each property access returns a callable+thenable
+ * value to support both `stub.method()` and `await stub.property`.
+ *
+ * The async fetcher is needed because the remote is resolved via the debug port
+ * at call time — there's no static target to Reflect.get against.
  */
+export function createRpcProxyHandler<T extends object>(
+	getFetcher: () => Promise<Fetcher>,
+	errorContext: string
+): ProxyHandler<T> {
+	return {
+		get(target, prop) {
+			if (Reflect.has(target, prop)) {
+				const value = Reflect.get(target, prop);
+				if (typeof value === "function") {
+					return value.bind(target);
+				}
+				return value;
+			}
+			if (typeof prop === "string") {
+				const methodName = prop;
+				const rpcCall = async function (...args: unknown[]) {
+					const fetcher = await getFetcher();
+					const method = (
+						fetcher as unknown as Record<string, (...a: unknown[]) => unknown>
+					)[methodName];
+					if (typeof method !== "function") {
+						throw new Error(
+							`Method "${methodName}" not found on ${errorContext}`
+						);
+					}
+					return Reflect.apply(method, fetcher, args);
+				};
+				rpcCall.then = (
+					resolve: (v: unknown) => void,
+					reject: (e: unknown) => void
+				) => {
+					getFetcher()
+						.then((fetcher) =>
+							Promise.resolve(
+								(fetcher as unknown as Record<string, unknown>)[methodName]
+							)
+						)
+						.then(resolve, reject);
+				};
+				return rpcCall;
+			}
+			return undefined;
+		},
+	};
+}
+
 export function createProxyDurableObjectClass({
 	scriptName,
 	className,
@@ -127,72 +165,27 @@ export function createProxyDurableObjectClass({
 	return class extends DurableObject {
 		constructor(ctx: DurableObjectState, env: ProxyEnv) {
 			super(ctx, env);
-			return new Proxy(this, {
-				get(obj, prop) {
-					if (Reflect.has(obj, prop)) {
-						const value = Reflect.get(obj, prop);
-						if (typeof value === "function") {
-							return value.bind(obj);
-						}
-						return value;
-					}
-					if (typeof prop === "string") {
-						const methodName = prop;
-						const rpcCall = async function (...args: unknown[]) {
-							const fetcher = await connectToActor(
-								obj.env as ProxyEnv,
-								scriptName,
-								className,
-								obj.ctx.id.toString()
-							);
-							if (!fetcher) {
-								throw new Error(
-									`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`
-								);
-							}
-							const method = (
-								fetcher as unknown as Record<
-									string,
-									(...a: unknown[]) => unknown
-								>
-							)[methodName];
-							if (typeof method !== "function") {
-								throw new Error(
-									`Method "${methodName}" not found on remote Durable Object "${className}" of service "${scriptName}"`
-								);
-							}
-							return Reflect.apply(method, fetcher, args);
-						};
-
-						// Make the function thenable so `await stub.property`
-						// resolves via the remote, matching JsRpcProperty behavior.
-						rpcCall.then = (
-							resolve: (v: unknown) => void,
-							reject: (e: unknown) => void
-						) => {
-							connectToActor(
-								obj.env as ProxyEnv,
-								scriptName,
-								className,
-								obj.ctx.id.toString()
-							)
-								.then((fetcher) => {
-									if (!fetcher) {
-										throw new Error(
-											`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`
-										);
-									}
-									return Promise.resolve(
-										(fetcher as unknown as Record<string, unknown>)[methodName]
-									);
-								})
-								.then(resolve, reject);
-						};
-						return rpcCall;
-					}
-					return undefined;
-				},
-			});
+			const getFetcher = async (): Promise<Fetcher> => {
+				const fetcher = await connectToActor(
+					env,
+					scriptName,
+					className,
+					ctx.id.toString()
+				);
+				if (!fetcher) {
+					throw new Error(
+						`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`
+					);
+				}
+				return fetcher;
+			};
+			return new Proxy(
+				this,
+				createRpcProxyHandler(
+					getFetcher,
+					`remote Durable Object "${className}" of service "${scriptName}"`
+				)
+			);
 		}
 
 		async fetch(request: Request): Promise<Response> {
@@ -219,10 +212,6 @@ export function createProxyDurableObjectClass({
 		}
 	} as unknown as typeof DurableObject;
 }
-
-// --- Tail event serialization helpers ---
-// Tail events contain Date objects and BigInts that aren't directly serializable over capnp,
-// so we JSON round-trip them with custom replacer/reviver.
 
 const SERIALIZED_DATE = "___serialized_date___";
 const SERIALIZED_BIGINT = "___serialized_bigint___";

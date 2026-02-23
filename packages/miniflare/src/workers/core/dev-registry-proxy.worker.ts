@@ -1,17 +1,14 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import {
+	createRpcProxyHandler,
 	resolveTarget,
 	tailEventsReplacer,
 	tailEventsReviver,
 } from "./dev-registry-proxy-shared.worker";
 import type { ProxyEnv } from "./dev-registry-proxy-shared.worker";
 
-// The entry worker service name in each miniflare/workerd instance.
-// This must match SERVICE_ENTRY from plugins/core/constants.ts.
 const ENTRY_SERVICE_NAME = "core:entry";
 
-// Binding names for the dev registry proxy worker.
-// These must match the binding names used in #assembleConfig() in index.ts.
 export const DevRegistryProxyBindings = {
 	DEBUG_PORT: "DEV_REGISTRY_DEBUG_PORT",
 	DEV_REGISTRY: "DEV_REGISTRY",
@@ -24,15 +21,7 @@ interface Props {
 	entrypoint: string | null;
 }
 
-/**
- * Proxy entrypoint for external service bindings.
- *
- * Uses a Proxy in the constructor (same pattern as assets/rpc-proxy.worker.ts)
- * to intercept arbitrary RPC method calls and forward them through the debug port.
- */
 export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
-	// Public (not #private) because private fields are incompatible with Proxy —
-	// the Proxy get trap cannot access private fields on the target object.
 	_props: Props;
 
 	#remoteFetcherPromise: Promise<Fetcher> | undefined;
@@ -42,69 +31,16 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		super(ctx, env);
 		this._props = (ctx as unknown as { props: Props }).props;
 
-		return new Proxy(this, {
-			get(target, prop) {
-				// If the property exists on ExternalServiceProxy, use it
-				if (Reflect.has(target, prop)) {
-					const value = Reflect.get(target, prop);
-					if (typeof value === "function") {
-						return value.bind(target);
-					}
-					return value;
-				}
-
-				// For arbitrary RPC properties/methods, connect to the debug port.
-				// The returned value must be both callable (for RPC method calls
-				// like `env.SERVICE.method()`) and thenable (for RPC property
-				// access like `await env.SERVICE.property`). This mirrors workerd's
-				// JsRpcProperty behavior.
-				if (typeof prop === "string") {
-					const methodName = prop;
-					const rpcCall = async function (...args: unknown[]) {
-						const fetcher = await target.#getRemoteFetcher();
-						const method = (
-							fetcher as unknown as Record<string, (...a: unknown[]) => unknown>
-						)[methodName];
-						if (typeof method !== "function") {
-							throw new Error(
-								`Method "${methodName}" not found on remote service "${target._props.service}"`
-							);
-						}
-						// IMPORTANT: RPC method calls on the debug port fetcher MUST use
-						// Reflect.apply() rather than method.apply(). See class doc comment.
-						return Reflect.apply(method, fetcher, args);
-					};
-
-					// Make the function thenable so `await env.SERVICE.property`
-					// resolves via the remote, matching JsRpcProperty behavior.
-					rpcCall.then = (
-						resolve: (v: unknown) => void,
-						reject: (e: unknown) => void
-					) => {
-						target
-							.#getRemoteFetcher()
-							.then((fetcher) =>
-								Promise.resolve(
-									(fetcher as unknown as Record<string, unknown>)[methodName]
-								)
-							)
-							.then(resolve, reject);
-					};
-					return rpcCall;
-				}
-
-				return undefined;
-			},
-		});
+		return new Proxy(
+			this,
+			createRpcProxyHandler(
+				() => this.#getRemoteFetcher(),
+				`remote service "${this._props.service}"`
+			)
+		);
 	}
 
-	/**
-	 * Gets a `Fetcher` for the remote service, caching it for a short period.
-	 * This avoids repeatedly resolving and connecting on every RPC call.
-	 */
 	async #getRemoteFetcher(): Promise<Fetcher> {
-		// Cache the fetcher promise for 1 second to improve performance of
-		// rapid sequential calls.
 		if (
 			this.#remoteFetcherPromise !== undefined &&
 			Date.now() - this.#remoteFetcherPromiseTimestamp < 1000
@@ -121,9 +57,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 				);
 			}
 
-			// Named entrypoints route directly to the user worker service, bypassing
-			// any assets/vite proxy layer. The default entrypoint uses the registry's
-			// configured service name, which accounts for those proxies.
 			const serviceName =
 				entrypoint === null || entrypoint === "default"
 					? target.defaultEntrypointService
@@ -137,9 +70,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		this.#remoteFetcherPromise = promise;
 		this.#remoteFetcherPromiseTimestamp = Date.now();
 
-		// If the connection fails, clear the cache so the next call retries.
-		// Only clear if the cache still holds this promise (a newer call may
-		// have already replaced it).
 		promise.catch(() => {
 			if (this.#remoteFetcherPromise === promise) {
 				this.#remoteFetcherPromise = undefined;
@@ -157,7 +87,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		} catch (e) {
 			const { service, entrypoint } = this._props;
 			const message = e instanceof Error ? e.message : String(e);
-			// Re-throw connection errors as HTTP Responses for fetch()
 			if (message.startsWith("Couldn't find")) {
 				return new Response(message, { status: 503 });
 			} else {
@@ -170,12 +99,8 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	}
 
 	async scheduled(controller: ScheduledController) {
-		// `scheduled()` needs a different forwarding mechanism than other RPCs
-		// because `Fetcher.scheduled()` is not supported over debug port RPC.
-		// Instead, we send an HTTP request to the entry service's scheduled handler.
-		// NOTE: This targets `core:entry` which routes the scheduled event to the
-		// main worker in the remote process. This assumes each workerd process
-		// hosts a single user worker (the standard dev mode configuration).
+		// Fetcher.scheduled() is a protocol method not available over debug port RPC,
+		// so we forward via HTTP to the entry service's /cdn-cgi/handler/scheduled route.
 		const { service, entrypoint } = this._props;
 		const target = await resolveTarget(this.env, service);
 		if (!target) {
@@ -215,8 +140,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	async tail(events: TraceItem[]) {
 		try {
 			const fetcher = await this.#getRemoteFetcher();
-			// Tail events are not directly serializable over capnp yet.
-			// JSON round-trip makes them transferable.
 			const serializedEvents = JSON.parse(
 				JSON.stringify(events, tailEventsReplacer),
 				tailEventsReviver
@@ -228,7 +151,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 				await Reflect.apply(tailMethod, fetcher, [serializedEvents]);
 			}
 		} catch (e) {
-			// Tail events are best-effort and should not break the producer worker.
 			console.warn(
 				`[dev-registry] Failed to forward tail events to "${this._props.service}": ${e instanceof Error ? e.message : String(e)}`
 			);
@@ -242,10 +164,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	}
 }
 
-/**
- * Default export — the proxy worker uses named entrypoints (ExternalServiceProxy)
- * for all service binding proxying.
- */
 export default <ExportedHandler<Env>>{
 	async fetch() {
 		return new Response("dev-registry-proxy: use named entrypoints", {
