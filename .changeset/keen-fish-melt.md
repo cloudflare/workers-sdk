@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-utils": minor
+"@cloudflare/workers-utils": patch
 ---
 
 Add `removeDir` and `removeDirSync` helpers with automatic retry logic for Windows EBUSY errors
