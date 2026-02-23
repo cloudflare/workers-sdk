@@ -27,44 +27,19 @@ interface Props {
 	entrypoint: string | null;
 }
 
-async function connectToEntrypoint(
-	env: Env,
-	props: Props,
-	target: RegistryEntry
-): Promise<Fetcher> {
-	const { entrypoint } = props;
-	// Named entrypoints route directly to the user worker service, bypassing
-	// any assets/vite proxy layer. The default entrypoint uses the registry's
-	// configured service name, which accounts for those proxies.
-	const serviceName =
-		entrypoint === null || entrypoint === "default"
-			? target.defaultEntrypointService
-			: target.userWorkerService;
-	const client = await env.DEV_REGISTRY_DEBUG_PORT.connect(
-		target.debugPortAddress
-	);
-	return client.getEntrypoint(serviceName, entrypoint ?? undefined);
-}
-
 /**
  * Proxy entrypoint for external service bindings.
  *
  * Uses a Proxy in the constructor (same pattern as assets/rpc-proxy.worker.ts)
  * to intercept arbitrary RPC method calls and forward them through the debug port.
- *
- * IMPORTANT: RPC method calls on the debug port fetcher MUST use Reflect.apply()
- * rather than method.apply(). The RPC methods returned by getEntrypoint() are
- * JsRpcProperty objects (callable via SetCallAsFunctionHandler), not v8::Functions.
- * Calling method.apply() resolves "apply" through the JSG wildcard property handler,
- * creating a nested JsRpcProperty for "ping.apply" which tries to serialize the
- * fetcher as an argument — triggering the "WorkerdDebugPort bindings cannot be
- * transferred" error. Reflect.apply() invokes [[Call]] directly, bypassing property
- * lookup entirely.
  */
 export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	// Public (not #private) because private fields are incompatible with Proxy —
 	// the Proxy get trap cannot access private fields on the target object.
 	_props: Props;
+
+	#remoteFetcherPromise: Promise<Fetcher> | undefined;
+	#remoteFetcherPromiseTimestamp = 0;
 
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
@@ -85,72 +60,33 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 				if (typeof prop === "string") {
 					const methodName = prop;
 					const rpcCall = async function (...args: unknown[]) {
-						const registryEntry = await resolveTarget(
-							target.env,
-							target._props.service
-						);
-						if (!registryEntry) {
+						const fetcher = await target.#getRemoteFetcher();
+						const method = (
+							fetcher as unknown as Record<string, (...a: unknown[]) => unknown>
+						)[methodName];
+						if (typeof method !== "function") {
 							throw new Error(
-								`Cannot access "${methodName}" as we couldn't find a local dev session for the "${target._props.entrypoint ?? "default"}" entrypoint of service "${target._props.service}" to proxy to.`
+								`Method "${methodName}" not found on remote service "${target._props.service}"`
 							);
 						}
-						try {
-							const fetcher = await connectToEntrypoint(
-								target.env,
-								target._props,
-								registryEntry
-							);
-							const method = (
-								fetcher as unknown as Record<
-									string,
-									(...a: unknown[]) => unknown
-								>
-							)[methodName];
-							if (typeof method !== "function") {
-								throw new Error(
-									`Method "${methodName}" not found on remote service "${target._props.service}"`
-								);
-							}
-							return Reflect.apply(method, fetcher, args);
-						} catch (e) {
-							throw new Error(
-								`Error calling "${methodName}" on the "${target._props.entrypoint ?? "default"}" entrypoint of service "${target._props.service}": ${e instanceof Error ? e.message : String(e)}`
-							);
-						}
+						// IMPORTANT: RPC method calls on the debug port fetcher MUST use
+						// Reflect.apply() rather than method.apply(). See class doc comment.
+						return Reflect.apply(method, fetcher, args);
 					};
+
 					// Make the function thenable so `await env.SERVICE.property`
 					// resolves via the remote, matching JsRpcProperty behavior.
-					// Without this, `await fn` would just resolve to fn itself
-					// (functions are not thenable), silently swallowing errors.
 					rpcCall.then = (
 						resolve: (v: unknown) => void,
 						reject: (e: unknown) => void
 					) => {
-						(async () => {
-							const registryEntry = await resolveTarget(
-								target.env,
-								target._props.service
-							);
-							if (!registryEntry) {
-								throw new Error(
-									`Cannot access "${methodName}" as we couldn't find a local dev session for the "${target._props.entrypoint ?? "default"}" entrypoint of service "${target._props.service}" to proxy to.`
-								);
-							}
-							try {
-								const fetcher = await connectToEntrypoint(
-									target.env,
-									target._props,
-									registryEntry
-								);
-								return await (fetcher as unknown as Record<string, unknown>)[
-									methodName
-								];
-							} catch (e) {
-								throw new Error(
-									`Error accessing "${methodName}" on the "${target._props.entrypoint ?? "default"}" entrypoint of service "${target._props.service}": ${e instanceof Error ? e.message : String(e)}`
-								);
-							}
-						})().then(resolve, reject);
+						target
+							.#getRemoteFetcher()
+							.then(
+								(fetcher) =>
+									(fetcher as unknown as Record<string, unknown>)[methodName]
+							)
+							.then(resolve, reject);
 					};
 					return rpcCall;
 				}
@@ -160,28 +96,76 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		});
 	}
 
-	async fetch(request: Request): Promise<Response> {
-		const { service, entrypoint } = this._props;
-		const target = await resolveTarget(this.env, service);
-		if (!target) {
-			return new Response(
-				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`,
-				{ status: 503 }
-			);
+	/**
+	 * Gets a `Fetcher` for the remote service, caching it for a short period.
+	 * This avoids repeatedly resolving and connecting on every RPC call.
+	 */
+	async #getRemoteFetcher(): Promise<Fetcher> {
+		// Cache the fetcher promise for 1 second to improve performance of
+		// rapid sequential calls.
+		if (
+			this.#remoteFetcherPromise !== undefined &&
+			Date.now() - this.#remoteFetcherPromiseTimestamp < 1000
+		) {
+			return this.#remoteFetcherPromise;
 		}
 
+		const promise = (async () => {
+			const { service, entrypoint } = this._props;
+			const target = await resolveTarget(this.env, service);
+			if (!target) {
+				throw new Error(
+					`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`
+				);
+			}
+
+			// Named entrypoints route directly to the user worker service, bypassing
+			// any assets/vite proxy layer. The default entrypoint uses the registry's
+			// configured service name, which accounts for those proxies.
+			const serviceName =
+				entrypoint === null || entrypoint === "default"
+					? target.defaultEntrypointService
+					: target.userWorkerService;
+			const client = await this.env.DEV_REGISTRY_DEBUG_PORT.connect(
+				target.debugPortAddress
+			);
+			return client.getEntrypoint(serviceName, entrypoint ?? undefined);
+		})();
+
+		this.#remoteFetcherPromise = promise;
+		this.#remoteFetcherPromiseTimestamp = Date.now();
+
+		// If the connection fails, clear the cache so the next call retries.
+		promise.catch(() => {
+			this.#remoteFetcherPromise = undefined;
+			this.#remoteFetcherPromiseTimestamp = 0;
+		});
+
+		return promise;
+	}
+
+	async fetch(request: Request): Promise<Response> {
 		try {
-			const fetcher = await connectToEntrypoint(this.env, this._props, target);
+			const fetcher = await this.#getRemoteFetcher();
 			return fetcher.fetch(request);
 		} catch (e) {
-			return new Response(
-				`Error connecting to service "${service}": ${e instanceof Error ? e.message : String(e)}`,
-				{ status: 502 }
-			);
+			const { service, entrypoint } = this._props;
+			const message = e instanceof Error ? e.message : String(e);
+			// Re-throw connection errors as HTTP Responses for fetch()
+			if (message.startsWith("Couldn't find")) {
+				return new Response(message, { status: 503 });
+			} else {
+				return new Response(
+					`Error connecting to service "${service}" for entrypoint "${entrypoint}": ${message}`,
+					{ status: 502 }
+				);
+			}
 		}
 	}
 
 	async scheduled(controller: ScheduledController) {
+		// `scheduled()` needs a different forwarding mechanism than other RPCs
+		// because `Fetcher.scheduled()` is not supported over debug port RPC.
 		const { service, entrypoint } = this._props;
 		const target = await resolveTarget(this.env, service);
 		if (!target) {
@@ -190,14 +174,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		// Debug port RPC fetchers don't support lifecycle event dispatch
-		// (fetcher.scheduled()), so we forward the scheduled event via HTTP
-		// to the entry worker's /cdn-cgi/handler/scheduled endpoint, which
-		// uses the workerd Fetcher.scheduled() API to properly dispatch the
-		// scheduled event to the user worker. This works because:
-		// 1. Wrangler always sets unsafeTriggerHandlers: true
-		// 2. The entry worker calls service.scheduled() on its internal
-		//    service binding (which properly dispatches within the same workerd)
 		try {
 			const client = await this.env.DEV_REGISTRY_DEBUG_PORT.connect(
 				target.debugPortAddress
@@ -227,17 +203,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	}
 
 	async tail(events: TraceItem[]) {
-		const { service } = this._props;
-		const target = await resolveTarget(this.env, service);
-		if (!target) {
-			return;
-		}
-
 		try {
-			const fetcher = await connectToEntrypoint(this.env, this._props, target);
+			const fetcher = await this.#getRemoteFetcher();
 			// Tail events are not directly serializable over capnp yet.
-			// JSON round-trip makes them transferable (same workaround as
-			// assets/rpc-proxy.worker.ts).
+			// JSON round-trip makes them transferable.
 			const serializedEvents = JSON.parse(
 				JSON.stringify(events, tailEventsReplacer),
 				tailEventsReviver
@@ -255,9 +224,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	}
 
 	async queue(batch: MessageBatch): Promise<void> {
-		// Not implemented yet: forwarding queue messages requires a way to get a
-		// remote `Queue` object over the debug port RPC, which isn't possible yet.
-		// For now, this will fail with an error if called.
 		throw new Error(
 			`Calling "queue" on a cross-process service binding is not yet supported`
 		);
