@@ -93,9 +93,11 @@ export async function resolveTarget(
 		return null;
 	}
 
-	// Validate required fields — the JSON comes from disk and may be stale
-	// or from an older version that doesn't include all fields.
+	// Validate shape and required fields — the JSON comes from disk and may
+	// be stale, corrupted, or from an older version that doesn't include all fields.
 	if (
+		!entry ||
+		typeof entry !== "object" ||
 		!entry.debugPortAddress ||
 		!entry.defaultEntrypointService ||
 		!entry.userWorkerService
@@ -217,7 +219,7 @@ export function createProxyDurableObjectClass({
 				);
 			}
 			try {
-				return fetcher.fetch(request);
+				return await fetcher.fetch(request);
 			} catch (e) {
 				return new Response(
 					`Error connecting to Durable Object "${className}" of "${scriptName}": ${e instanceof Error ? e.message : String(e)}`,

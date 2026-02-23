@@ -133,9 +133,13 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		this.#remoteFetcherPromiseTimestamp = Date.now();
 
 		// If the connection fails, clear the cache so the next call retries.
+		// Only clear if the cache still holds this promise (a newer call may
+		// have already replaced it).
 		promise.catch(() => {
-			this.#remoteFetcherPromise = undefined;
-			this.#remoteFetcherPromiseTimestamp = 0;
+			if (this.#remoteFetcherPromise === promise) {
+				this.#remoteFetcherPromise = undefined;
+				this.#remoteFetcherPromiseTimestamp = 0;
+			}
 		});
 
 		return promise;
@@ -144,7 +148,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	async fetch(request: Request): Promise<Response> {
 		try {
 			const fetcher = await this.#getRemoteFetcher();
-			return fetcher.fetch(request);
+			return await fetcher.fetch(request);
 		} catch (e) {
 			const { service, entrypoint } = this._props;
 			const message = e instanceof Error ? e.message : String(e);
