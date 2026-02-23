@@ -81,7 +81,9 @@ export class StudioTableState<HeaderMetadata = unknown> {
 				clearTimeout(this.changeBroadcastDebounceTimer);
 			}
 
-			this.changeListeners.reverse().forEach((cb) => cb(this));
+			for (const cb of [...this.changeListeners].reverse()) {
+				cb(this);
+			}
 		}
 
 		if (this.changeBroadcastDebounceTimer) {
@@ -90,7 +92,9 @@ export class StudioTableState<HeaderMetadata = unknown> {
 
 		this.changeBroadcastDebounceTimer = setTimeout(() => {
 			this.changeBroadcastDebounceTimer = null;
-			this.changeListeners.reverse().forEach((cb) => cb(this));
+			for (const cb of [...this.changeListeners].reverse()) {
+				cb(this);
+			}
 		}, 5);
 
 		return true;
