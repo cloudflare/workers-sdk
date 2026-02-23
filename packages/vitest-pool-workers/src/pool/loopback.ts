@@ -5,7 +5,7 @@ import { Response } from "miniflare";
 import { isFileNotFoundError } from "./helpers";
 import type { Awaitable, Miniflare, Request } from "miniflare";
 
-// Based on https://github.com/vitest-dev/vitest/blob/v4.0.15/packages/snapshot/src/env/node.ts
+// Based on https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/snapshot/src/env/node.ts
 async function handleSnapshotRequest(
 	request: Request,
 	url: URL

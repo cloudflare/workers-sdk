@@ -47,7 +47,7 @@ export class Console {
 	}
 
 	// Vitest expects this function to be called `value`:
-	// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/console.ts#L16
+	// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/runtime/console.ts#L19
 	value(stream: Writable, data: unknown[]): void {
 		stream.write(formatWithOptions(this.#inspectOptions, ...data) + "\n");
 	}

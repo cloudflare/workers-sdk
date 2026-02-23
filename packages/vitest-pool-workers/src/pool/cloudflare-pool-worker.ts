@@ -48,7 +48,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 	async start(): Promise<void> {
 		let resolvedPoolOptions: WorkersPoolOptions;
 		if (typeof this.poolOptions === "function") {
-			// https://github.com/vitest-dev/vitest/blob/v4.0.15/packages/vitest/src/integrations/inject.ts
+			// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/integrations/inject.ts
 			const inject = <K extends keyof ProvidedContext>(
 				key: K
 			): ProvidedContext[K] => {
@@ -158,7 +158,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 				) as WorkerResponse;
 
 				// This is a birpc serialised message before it's been parsed, which is why the properties are so unintelligible
-				// We're looking for a `fetch()` RPC call: https://github.com/vitest-dev/vitest/blob/772923645f250674e937dd887572e76e971524b9/packages/vitest/src/types/rpc.ts#L8
+				// We're looking for a `fetch()` RPC call: https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/types/rpc.ts#L8
 				if (
 					d &&
 					typeof d === "object" &&

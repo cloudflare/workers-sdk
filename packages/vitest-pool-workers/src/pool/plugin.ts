@@ -61,7 +61,7 @@ export function cloudflareTest(
 			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
 		},
 		// Run after `vitest:project` plugin:
-		// https://github.com/vitest-dev/vitest/blob/v3.0.5/packages/vitest/src/node/plugins/workspace.ts#L37
+		// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/node/plugins/workspace.ts#L122
 		config(config) {
 			config.resolve ??= {};
 			config.resolve.conditions ??= [];
@@ -84,7 +84,7 @@ export function cloudflareTest(
 			ensureArrayIncludes(config.resolve.conditions, requiredConditions);
 
 			// Vitest sets this to an empty array if unset, so restore Vite defaults:
-			// https://github.com/vitest-dev/vitest/blob/v3.0.5/packages/vitest/src/node/plugins/utils.ts#L156
+			// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/node/plugins/utils.ts#L121
 			ensureArrayIncludes(config.resolve.mainFields, requiredMainFields);
 
 			// Apply `package.json` `browser` field remapping in SSR mode:
