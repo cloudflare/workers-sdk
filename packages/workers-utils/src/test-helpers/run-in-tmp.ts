@@ -31,7 +31,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
 			// Don't block on deleting the tmp dir.
-			void removeDir(tmpDir, { noThrow: true });
+			removeDir(tmpDir, { fireAndForget: true });
 		}
 	});
 }

@@ -12,6 +12,7 @@ import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
+import { removeDir } from "@cloudflare/workers-utils";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
@@ -1053,20 +1054,11 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
-			try {
-				fs.rmSync(this.#tmpPath, {
-					force: true,
-					recursive: true,
-					maxRetries: 5,
-					retryDelay: 100,
-				});
-			} catch (e) {
-				// `rmSync` may fail on Windows with `EBUSY` if `workerd` is still
-				// running. `Runtime#dispose()` should kill the runtime immediately.
-				// `exitHook`s must be synchronous, so we can only clean up on a best
-				// effort basis.
-				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
-			}
+			// The exit hook handler is synchronous, so we can't wait for the runtime
+			// to dispose before deleting the temporary path.
+			// `Runtime#dispose()` should kill the runtime immediately but it might not,
+			// so we only clean up on a best effort basis.
+			removeDir(this.#tmpPath, { fireAndForget: true });
 			// Unregister all workers from the dev registry
 			this.#devRegistry.dispose()?.catch((e) => {
 				this.#log.debug(`Error disposing Dev Registry: ${getErrorMessage(e)}`);
@@ -2792,12 +2784,7 @@ export class Miniflare {
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			// `maxRetries` handles `EBUSY` on Windows if `workerd` hasn't fully
 			// released file handles yet after `dispose()`.
-			await fs.promises.rm(this.#tmpPath, {
-				force: true,
-				recursive: true,
-				maxRetries: 5,
-				retryDelay: 100,
-			});
+			await removeDir(this.#tmpPath);
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();

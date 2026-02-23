@@ -62,6 +62,7 @@
 		"@cloudflare/local-explorer-ui": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@hey-api/openapi-ts": "^0.90.0",
 		"@microsoft/api-extractor": "^7.52.8",

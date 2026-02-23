@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { removeDir } from "@fixture/shared/src/fs-helpers";
 import { fetch } from "undici";
 import { afterAll, assert, beforeAll, describe, test } from "vitest";
 import {
@@ -55,26 +56,7 @@ describe("wildcard imports: dev", () => {
 	});
 	afterAll(async () => {
 		await worker.stop();
-		try {
-			await fs.rm(tmpDir, {
-				recursive: true,
-				force: true,
-				maxRetries: 5,
-				retryDelay: 100,
-			});
-		} catch (e) {
-			// It seems that Windows doesn't let us delete this, with errors like:
-			//
-			// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-			// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-			// Serialized Error: {
-			// 	"code": "EBUSY",
-			// 	"errno": -4082,
-			// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-			// 	"syscall": "rmdir",
-			// }
-			console.error(e);
-		}
+		removeDir(tmpDir, { fireAndForget: true });
 	});
 
 	test("supports bundled modules", async ({ expect }) => {
@@ -157,13 +139,8 @@ describe("wildcard imports: deploy", () => {
 	beforeAll(async () => {
 		tmpDir = await getTmpDir();
 	});
-	afterAll(async () => {
-		await fs.rm(tmpDir, {
-			recursive: true,
-			force: true,
-			maxRetries: 5,
-			retryDelay: 100,
-		});
+	afterAll(() => {
+		removeDir(tmpDir, { fireAndForget: true });
 	});
 
 	test("bundles wildcard modules", async ({ expect }) => {
