@@ -7,7 +7,7 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 ## STRUCTURE
 
 - `src/config/` — Configuration types, validation, normalization
-  - `validation.ts` (5059 lines) — The config normalizer. Central to all wrangler config processing.
+  - `validation.ts` — The config normalizer (large file). Central to all wrangler config processing.
   - `environment.ts` — Environment/config field definitions (many deprecated fields)
   - `config.ts` — Config types
 - `src/test-helpers/` — Shared test utilities used across packages

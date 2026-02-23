@@ -8,16 +8,16 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 
 ## Structure
 
-- `src/` — CLI source (41 files at root level)
-- `src/__tests__/` — Unit tests (74 files), helpers in `src/__tests__/helpers/`
-- `e2e/` — E2E tests (25 files), requires Cloudflare credentials
+- `src/` — CLI source
+- `src/__tests__/` — Unit tests, helpers in `src/__tests__/helpers/`
+- `e2e/` — E2E tests, requires Cloudflare credentials
 - `bin/wrangler.js` — Shim that spawns Node with `--experimental-vm-modules`
 - `templates/` — Worker templates
 
 ## Entry Points
 
 - `src/cli.ts` — Build entry AND library API surface (dual-purpose). Calls `main()` when run directly; re-exports `./api` when imported as library.
-- `src/index.ts` — Yargs CLI tree builder (~2056 lines). Exports `main()`. NOT the package entry point despite the name.
+- `src/index.ts` — Yargs CLI tree builder (large file). Exports `main()`. NOT the package entry point despite the name.
 - `src/api/index.ts` — Public programmatic API barrel.
 
 ## Conventions (Wrangler-Specific)

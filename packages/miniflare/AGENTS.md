@@ -2,7 +2,7 @@
 
 ## Overview
 
-Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main class `Miniflare` in `src/index.ts` (2819 lines).
+Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main class `Miniflare` in `src/index.ts`.
 
 ## Structure
 

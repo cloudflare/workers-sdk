@@ -68,13 +68,13 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 | Task                                           | Location                                       | Notes                                                            |
 | ---------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
 | Add/modify a CLI command                       | `packages/wrangler/src/`                       | Commands registered in `src/index.ts` (2k+ line yargs tree)      |
-| Change local dev behavior                      | `packages/miniflare/src/`                      | `src/index.ts` is the main `Miniflare` class (2.8k lines)        |
+| Change local dev behavior                      | `packages/miniflare/src/`                      | `src/index.ts` is the main `Miniflare` class                     |
 | Modify Workers runtime simulation              | `packages/miniflare/src/workers/`              | ~30 embedded worker scripts, built via `worker:` virtual imports |
 | Add a test fixture                             | `fixtures/`                                    | Each fixture is a full workspace member with own `package.json`  |
-| Shared config types/validation                 | `packages/workers-utils/src/config/`           | `validation.ts` (5k lines) is the config normalizer              |
+| Shared config types/validation                 | `packages/workers-utils/src/config/`           | `validation.ts` is the config normalizer (large file)            |
 | Test helpers (runInTempDir, seed, mockConsole) | `packages/workers-utils/src/test-helpers/`     | Shared across wrangler, miniflare, others                        |
 | Cloudflare API mocks for tests                 | `packages/wrangler/src/__tests__/helpers/msw/` | MSW handlers per API domain                                      |
-| CI workflows                                   | `.github/workflows/`                           | 25 workflows; `test-and-check.yml` is the primary gate           |
+| CI workflows                                   | `.github/workflows/`                           | `test-and-check.yml` is the primary gate                         |
 | Build/deploy scripts                           | `tools/deployments/`                           | Validation + deployment helpers, run via `esbuild-register`      |
 | Changeset config and rules                     | `.changeset/README.md`                         | Must read before creating changesets                             |
 
@@ -140,7 +140,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 ## Key Locations
 
-- `/fixtures` - Test fixtures and example applications (79 dirs, each a workspace member)
+- `/fixtures` - Test fixtures and example applications (each a workspace member)
 - `/packages/wrangler/src` - Main Wrangler CLI source code
 - `/packages/miniflare/src` - Miniflare source
 - `/tools` - Build scripts and deployment utilities (run via `esbuild-register`, no build step)

@@ -25,7 +25,7 @@ Project scaffolding CLI for Cloudflare Workers. Single entry: `src/cli.ts` serve
 
 ## TESTING
 
-- E2E tests run across pnpm/npm, Linux/Windows
+- E2E tests run across pnpm/npm (yarn/bun also supported but not in CI), Linux/Windows
 - Own vitest setup: mocks `log-update` and `@cloudflare/cli/streams`
 - CI has experimental matrix for framework testing
 - Python/UV installed in CI for Python framework E2E tests
