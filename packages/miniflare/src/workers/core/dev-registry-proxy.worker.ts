@@ -46,7 +46,11 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			get(target, prop) {
 				// If the property exists on ExternalServiceProxy, use it
 				if (Reflect.has(target, prop)) {
-					return Reflect.get(target, prop);
+					const value = Reflect.get(target, prop);
+					if (typeof value === "function") {
+						return value.bind(target);
+					}
+					return value;
 				}
 
 				// For arbitrary RPC properties/methods, connect to the debug port.

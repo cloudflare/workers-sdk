@@ -238,7 +238,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 		);
 		expect(res.status).toBe(500);
 
@@ -271,7 +271,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+					`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -309,7 +309,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+			`Couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to`
 		);
 		expect(res.status).toBe(500);
 
@@ -341,7 +341,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+					`Couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -462,7 +462,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+						`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 					);
 				}
 			},
@@ -500,7 +500,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+						`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 					);
 				}
 			},
@@ -796,6 +796,7 @@ describe.sequential("DevRegistry", () => {
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
+			unsafeTriggerHandlers: true,
 			compatibilityFlags: ["experimental"],
 			modules: true,
 			script: `
@@ -845,7 +846,7 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		// Check scheduled() was dispatched
-		await local.dispatchFetch("http://placeholder");
+		await (await local.dispatchFetch("http://placeholder")).text();
 		const res = await remote.dispatchFetch("http://placeholder");
 		const json = (await res.json()) as { cron: string; scheduledTime: number };
 		expect(json).toMatchObject({ cron: "*/5 * * * *" });
@@ -1004,7 +1005,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 		);
 		expect(res.status).toBe(500);
 
@@ -1033,7 +1034,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+					`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 				);
 				expect(res.status).toBe(500);
 			},
