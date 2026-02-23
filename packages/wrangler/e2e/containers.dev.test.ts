@@ -110,9 +110,9 @@ for (const source of imageSource) {
 										return new Response(await res.text());
 
 									case "/setup-intercept":
-										await (this.container as any).interceptOutboundHttp(
+										await this.container.interceptOutboundHttp(
 											"11.0.0.1:80",
-											(this.ctx as any).exports.TestService()
+											this.ctx.exports.TestService()
 										);
 										return new Response("Intercept setup done");
 
