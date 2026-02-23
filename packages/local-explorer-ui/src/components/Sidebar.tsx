@@ -36,7 +36,7 @@ function SidebarItemGroup({
 }: SidebarItemGroupProps): JSX.Element {
 	return (
 		<Collapsible.Root defaultOpen>
-			<Collapsible.Trigger className="group flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
+			<Collapsible.Trigger className="group flex items-center gap-2 w-full h-10 py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
 				<CaretRightIcon className="transition-transform duration-200 group-data-panel-open:rotate-90" />
 				<Icon className="w-3.5 h-3.5" />
 				{title}

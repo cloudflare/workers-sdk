@@ -1,9 +1,8 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
-import module from "node:module";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
+	getLocalWorkerdCompatibilityDate,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -11,7 +10,15 @@ import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines with .each */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
@@ -271,12 +278,9 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			const miniflareEntry = require.resolve("miniflare");
-			const miniflareRequire = module.createRequire(miniflareEntry);
-			const miniflareWorkerd = miniflareRequire("workerd") as {
-				compatibilityDate: string;
-			};
-			const currentDate = miniflareWorkerd.compatibilityDate;
+			// Use getLocalWorkerdCompatibilityDate() which applies the same safe date
+			// conversion as wrangler does (converting future dates to today's date)
+			const { date: currentDate } = getLocalWorkerdCompatibilityDate();
 
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
@@ -2570,6 +2574,64 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
 			});
+		});
+	});
+
+	describe("multi-worker mode", () => {
+		it("should pass --env to auxiliary workers", async () => {
+			writeWranglerConfig(
+				{
+					name: "primary",
+					main: "primary.js",
+					compatibility_date: "2024-01-01",
+					env: {
+						dev: {
+							name: "primary-dev",
+						},
+					},
+				},
+				"wrangler.primary.jsonc"
+			);
+			writeWranglerConfig(
+				{
+					name: "auxiliary",
+					main: "auxiliary.js",
+					compatibility_date: "2024-01-01",
+					env: {
+						dev: {
+							name: "auxiliary-dev",
+						},
+					},
+				},
+				"wrangler.auxiliary.jsonc"
+			);
+			fs.writeFileSync("primary.js", `export default {};`);
+			fs.writeFileSync("auxiliary.js", `export default {};`);
+
+			let setCallCount = 0;
+			setSpy.mockImplementation(async () => {
+				setCallCount++;
+				if (setCallCount >= 2) {
+					throw new FatalError("Bailing early in tests");
+				}
+				return undefined;
+			});
+			spy.mockImplementation(() => {});
+
+			try {
+				await runWrangler(
+					"dev -c wrangler.primary.jsonc -c wrangler.auxiliary.jsonc --env=dev"
+				);
+			} catch {
+				// Expected to throw after second set call
+			}
+
+			expect(setSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+			const primaryInput = setSpy.mock.calls[0][0] as StartDevWorkerInput;
+			const auxiliaryInput = setSpy.mock.calls[1][0] as StartDevWorkerInput;
+
+			expect(primaryInput.env).toBe("dev");
+			expect(auxiliaryInput.env).toBe("dev");
 		});
 	});
 });

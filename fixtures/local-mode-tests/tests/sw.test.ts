@@ -1,10 +1,9 @@
 import path from "path";
 import { afterAll, beforeAll, describe, it } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { Unstable_DevWorker } from "wrangler";
+import { unstable_startWorker } from "wrangler";
 
 describe("service worker", () => {
-	let worker: Unstable_DevWorker;
+	let worker: Awaited<ReturnType<typeof unstable_startWorker>>;
 
 	let originalNodeEnv: string | undefined;
 
@@ -14,24 +13,23 @@ describe("service worker", () => {
 		process.env.NODE_ENV = "local-testing";
 
 		//since the script is invoked from the directory above, need to specify index.js is in src/
-		worker = await unstable_dev(path.resolve(__dirname, "..", "src", "sw.ts"), {
-			config: path.resolve(__dirname, "..", "wrangler.sw.jsonc"),
-			ip: "127.0.0.1",
-			experimental: {
-				disableDevRegistry: true,
-				disableExperimentalWarning: true,
-				devEnv: true,
+		worker = await unstable_startWorker({
+			entrypoint: path.resolve(__dirname, "../src/sw.ts"),
+			config: path.resolve(__dirname, "../wrangler.sw.jsonc"),
+			dev: {
+				server: { hostname: "127.0.0.1", port: 0 },
+				inspector: false,
 			},
 		});
 	});
 
 	afterAll(async () => {
-		await worker.stop();
+		await worker.dispose();
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
 	it("renders", async ({ expect }) => {
-		const resp = await worker.fetch();
+		const resp = await worker.fetch("http://example.com/");
 		expect(resp).not.toBe(undefined);
 
 		const text = await resp.text();

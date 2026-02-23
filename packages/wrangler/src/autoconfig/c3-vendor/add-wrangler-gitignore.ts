@@ -93,8 +93,9 @@ export const addWranglerToGitIgnore = (projectPath: string) => {
 	s.start("Adding Wrangler files to the .gitignore file");
 
 	const linesToAppend = [
-		"",
-		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
+		...(gitIgnorePreExisted
+			? ["", ...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : [])]
+			: []),
 	];
 
 	if (!hasDotWrangler && wranglerGitIgnoreFilesToAdd.length > 1) {

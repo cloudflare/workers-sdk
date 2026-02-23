@@ -175,6 +175,7 @@ export {
 	kCurrentWorker,
 	getNodeCompat,
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
+	INTROSPECT_SQLITE_METHOD,
 } from "./core";
 export type {
 	CompiledModuleRule,

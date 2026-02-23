@@ -1,9 +1,12 @@
-import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
+import SCRIPT_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
+import SCRIPT_DISPATCH_NAMESPACE_PROXY from "worker:dispatch-namespace/dispatch-namespace-proxy";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import {
+	getUserBindingServiceName,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 	RemoteProxyConnectionString,
 } from "../shared";
 
@@ -22,6 +25,18 @@ export const DispatchNamespaceOptionsSchema = z.object({
 
 export const DISPATCH_NAMESPACE_PLUGIN_NAME = "dispatch-namespace";
 
+/** Service name for the proxy client worker backing a dispatch namespace. */
+function getProxyServiceName(
+	name: string,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+): string {
+	return getUserBindingServiceName(
+		`${DISPATCH_NAMESPACE_PLUGIN_NAME}-proxy`,
+		name,
+		remoteProxyConnectionString
+	);
+}
+
 export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 	typeof DispatchNamespaceOptionsSchema
 > = {
@@ -39,17 +54,14 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				wrapped: {
 					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
 					innerBindings: [
-						...(config.remoteProxyConnectionString?.href
-							? [
-									{
-										name: "remoteProxyConnectionString",
-										text: config.remoteProxyConnectionString.href,
-									},
-								]
-							: []),
 						{
-							name: "binding",
-							text: name,
+							name: "proxyClient",
+							service: {
+								name: getProxyServiceName(
+									name,
+									config.remoteProxyConnectionString
+								),
+							},
 						},
 					],
 				},
@@ -68,8 +80,20 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices() {
-		return [];
+	async getServices({ options }) {
+		if (!options.dispatchNamespaces) {
+			return [];
+		}
+
+		return Object.entries(options.dispatchNamespaces).map(([name, config]) => ({
+			name: getProxyServiceName(name, config.remoteProxyConnectionString),
+			worker: remoteProxyClientWorker(
+				config.remoteProxyConnectionString,
+				name,
+				undefined,
+				SCRIPT_DISPATCH_NAMESPACE_PROXY
+			),
+		}));
 	},
 	getExtensions({ options }) {
 		if (!options.some((o) => o.dispatchNamespaces)) {
@@ -81,7 +105,7 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				modules: [
 					{
 						name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
-						esModule: LOCAL_DISPATCH_NAMESPACE(),
+						esModule: SCRIPT_DISPATCH_NAMESPACE(),
 						internal: true,
 					},
 				],

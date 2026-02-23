@@ -1,6 +1,5 @@
-import assert from "node:assert";
 import { resolve } from "node:path";
-import { beforeAll, describe, expect, test } from "vitest";
+import { assert, beforeAll, describe, expect, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,

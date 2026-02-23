@@ -1,5 +1,14 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- see #12346 */
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import type { AssetMetadata } from "../src/utils/kv";
 import type { MockInstance } from "vitest";
@@ -34,9 +43,9 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			);
 
 			const asset = await getAssetWithMetadataFromKV(mockKVNamespace, "abcd");
-			expect(asset).toBeDefined();
-			expect(asset?.value).toEqual("<html>Hello world</html>");
-			expect(asset?.metadata).toEqual({
+			assert(asset);
+			expect(asset.value).toEqual("<html>Hello world</html>");
+			expect(asset.metadata).toEqual({
 				contentType: "text/html",
 			});
 			expect(spy).toHaveBeenCalledOnce();

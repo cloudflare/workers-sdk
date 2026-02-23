@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { Blob } from "node:buffer";
 import http from "node:http";
 import { AddressInfo } from "node:net";
@@ -10,7 +9,7 @@ import {
 	FormData,
 	MessageEvent,
 } from "miniflare";
-import { onTestFinished, test } from "vitest";
+import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
 import { useServer } from "../test-shared";
 
@@ -53,7 +52,6 @@ test("fetch: performs web socket upgrade", async ({ expect }) => {
 		headers: { upgrade: "websocket", "user-agent": "Test" },
 	});
 	const webSocket = res.webSocket;
-	expect(webSocket).toBeDefined();
 	assert(webSocket);
 
 	const eventPromise = new DeferredPromise<void>();
@@ -81,7 +79,6 @@ test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", as
 		},
 	});
 	const webSocket = res.webSocket;
-	expect(webSocket).toBeDefined();
 	assert(webSocket);
 	const eventPromise = new DeferredPromise<MessageEvent>();
 	webSocket.addEventListener("message", eventPromise.resolve);

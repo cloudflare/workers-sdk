@@ -1,11 +1,11 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 
 interface BreadcrumbsProps {
 	icon: FC;
+	items: Array<ReactNode>;
 	title: string;
-	items: Array<string>;
 }
 
 export function Breadcrumbs({
@@ -20,10 +20,10 @@ export function Breadcrumbs({
 				{title}
 			</span>
 
-			{items.map((item) => (
-				<Fragment key={item}>
+			{items.map((item, index) => (
+				<Fragment key={index}>
 					<CaretRightIcon className="w-4 h-4" />
-					<span className="flex items-center gap-1.5">{item}</span>
+					{item}
 				</Fragment>
 			))}
 		</div>

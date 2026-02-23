@@ -68,8 +68,8 @@ export function validateBulkPutFile(
 			throw new UserError(`The file "${entry.file}" does not exist.`);
 		}
 
-		const stat = fs.statSync(entry.file);
-		if (!stat.isFile()) {
+		const stat = fs.statSync(entry.file, { throwIfNoEntry: false });
+		if (!stat?.isFile()) {
 			throw new UserError(`The path "${entry.file}" is not a file.`);
 		}
 

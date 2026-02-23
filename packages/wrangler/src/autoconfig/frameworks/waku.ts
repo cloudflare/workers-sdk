@@ -40,7 +40,6 @@ export class Waku extends Framework {
 		return {
 			wranglerConfig: {
 				main: "./dist/server/serve-cloudflare.js",
-				compatibility_flags: ["nodejs_compat"],
 				assets: {
 					binding: "ASSETS",
 					directory: "./dist/public",

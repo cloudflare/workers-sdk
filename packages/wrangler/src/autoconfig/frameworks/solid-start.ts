@@ -57,7 +57,6 @@ export class SolidStart extends Framework {
 		return {
 			wranglerConfig: {
 				main: "./.output/server/index.mjs",
-				compatibility_flags: ["nodejs_compat"],
 				assets: {
 					binding: "ASSETS",
 					directory: "./.output/public",

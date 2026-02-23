@@ -22,7 +22,6 @@ export class TanstackStart extends Framework {
 
 		return {
 			wranglerConfig: {
-				compatibility_flags: ["nodejs_compat"],
 				main: "@tanstack/react-start/server-entry",
 			},
 		};

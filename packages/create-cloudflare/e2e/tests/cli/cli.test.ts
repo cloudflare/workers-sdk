@@ -769,6 +769,45 @@ describe("Create Cloudflare CLI", () => {
 				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
 			);
 		});
+
+		test("error when using invalid --variant for React Pages framework", async ({
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=pages",
+					"--variant=invalid-variant",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(errors).toContain(
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
+			);
+		});
+
+		test("accepts --variant for React Pages framework without prompting", async ({
+			logStream,
+		}) => {
+			const { output } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=pages",
+					"--variant=react-ts",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(output).toContain("--template react-ts");
+			expect(output).not.toContain("Select a variant");
+		});
 	});
 });
 

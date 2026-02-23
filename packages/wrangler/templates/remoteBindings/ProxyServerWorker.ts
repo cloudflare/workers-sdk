@@ -3,43 +3,22 @@ import { EmailMessage } from "cloudflare:email";
 
 interface Env extends Record<string, unknown> {}
 
+/**
+ * List of RPC methods exposed by the raw AI binding that need proxying
+ * through a plain-object wrapper. The raw AI binding (deployed with raw:true)
+ * has a non-standard prototype that capnweb's typeForRpc() doesn't recognise,
+ * causing "RPC stub points at a non-serializable type". By wrapping only the
+ * allowed RPC methods in a plain object we give capnweb an Object.prototype
+ * target it can navigate.
+ *
+ * Add new AI RPC method names here as they are introduced.
+ */
+const AI_RPC_METHODS = ["aiSearch"] as const;
+
 class BindingNotFoundError extends Error {
 	constructor(name?: string) {
 		super(`Binding ${name ? `"${name}"` : ""} not found`);
 	}
-}
-
-/**
- * Here be dragons! capnweb does not currently support ReadableStreams, which Media
- * bindings use for input. As such, Media Bindings cannot be directly used via capnweb,
- * and need to be special cased.
- */
-
-function isSpecialCaseMediaBindingRequest(headers: Headers): boolean {
-	return headers.has("x-cf-media-input-options");
-}
-async function evaluateMediaBinding(
-	headers: Headers,
-	stream: ReadableStream,
-	binding: MediaBinding
-): Promise<Response> {
-	const inputOptions = JSON.parse(
-		headers.get("x-cf-media-input-options") as string
-	);
-	const outputOptions = JSON.parse(
-		headers.get("x-cf-media-output-options") as string
-	);
-
-	const result = await binding
-		.input(stream)
-		.transform(inputOptions)
-		.output(outputOptions);
-
-	return new Response(await result.media(), {
-		headers: {
-			"x-cf-media-content-type": await result.contentType(),
-		},
-	});
 }
 
 /**
@@ -54,6 +33,11 @@ async function evaluateMediaBinding(
  *    can't emulate that over an async boundary, we mock it locally and _actually_
  *    perform the .get() remotely at the first appropriate async point. See
  *    packages/miniflare/src/workers/dispatch-namespace/dispatch-namespace.worker.ts
+ *  - AI bindings (raw:true / minimal_mode) have a workerd-internal prototype
+ *    that capnweb's typeForRpc() classifies as "unsupported", causing
+ *    "RPC stub points at a non-serializable type". We wrap the binding in a
+ *    plain object that delegates only the allowed RPC methods (AI_RPC_METHODS)
+ *    so capnweb gets an Object.prototype target it can navigate.
  *
  * getExposedJSRPCBinding() and getExposedFetcher() perform the logic for figuring out
  * which binding is being accessed, dependending on the request. Note: Both have logic
@@ -91,6 +75,19 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 				}
 			},
 		};
+	}
+
+	if (url.searchParams.get("MF-Binding-Type") === "ai") {
+		const wrapper: Record<string, (...args: unknown[]) => unknown> = {};
+		for (const method of AI_RPC_METHODS) {
+			if (typeof (targetBinding as any)[method] === "function") {
+				wrapper[method] = (...args: unknown[]) =>
+					(targetBinding as any)[method](...args);
+			}
+		}
+		if (Object.keys(wrapper).length > 0) {
+			return wrapper;
+		}
 	}
 
 	if (url.searchParams.has("MF-Dispatch-Namespace-Options")) {
@@ -156,13 +153,6 @@ export default {
 						//   TypeError: Worker tried to return a WebSocket in a response to a request which did not contain the header "Upgrade: websocket"
 						originalHeaders.set(name, value);
 					}
-				}
-				if (isSpecialCaseMediaBindingRequest(originalHeaders)) {
-					return evaluateMediaBinding(
-						originalHeaders,
-						request.body as ReadableStream,
-						fetcher as unknown as MediaBinding
-					);
 				}
 
 				return fetcher.fetch(

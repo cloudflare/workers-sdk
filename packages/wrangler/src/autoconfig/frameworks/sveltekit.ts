@@ -39,7 +39,6 @@ export class SvelteKit extends Framework {
 		return {
 			wranglerConfig: {
 				main: ".svelte-kit/cloudflare/_worker.js",
-				compatibility_flags: ["nodejs_als"],
 				assets: {
 					binding: "ASSETS",
 					directory: ".svelte-kit/cloudflare",

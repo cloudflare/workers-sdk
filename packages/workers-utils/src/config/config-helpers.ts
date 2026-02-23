@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { findUpSync } from "find-up";
+import * as find from "empathic/find";
 import dedent from "ts-dedent";
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";
@@ -61,9 +61,9 @@ export function findWranglerConfig(
 	{ useRedirectIfAvailable = false } = {}
 ): ConfigPaths {
 	const userConfigPath =
-		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.toml`, { cwd: referencePath });
+		find.file(`wrangler.json`, { cwd: referencePath }) ??
+		find.file(`wrangler.jsonc`, { cwd: referencePath }) ??
+		find.file(`wrangler.toml`, { cwd: referencePath });
 
 	if (!useRedirectIfAvailable) {
 		return {
@@ -99,7 +99,7 @@ function findRedirectedWranglerConfig(
 	deployConfigPath: string | undefined;
 	redirected: boolean;
 } {
-	const deployConfigPath = findUpSync(PATH_TO_DEPLOY_CONFIG, { cwd });
+	const deployConfigPath = find.file(PATH_TO_DEPLOY_CONFIG, { cwd });
 	if (deployConfigPath === undefined) {
 		return { configPath: userConfigPath, deployConfigPath, redirected: false };
 	}

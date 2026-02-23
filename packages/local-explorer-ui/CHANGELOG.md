@@ -1,5 +1,31 @@
 # @cloudflare/local-explorer-ui
 
+## 0.5.0
+
+### Minor Changes
+
+- [#12570](https://github.com/cloudflare/workers-sdk/pull/12570) [`01ded52`](https://github.com/cloudflare/workers-sdk/commit/01ded5289e744e6f604edcbffdd6b1c95e6339c0) Thanks [@NuroDev](https://github.com/NuroDev)! - Add the initial plumbing for data studio components.
+
+  This serves as another stepping stone for adding the complete data studio to the local explorer.
+
+  This is a WIP experimental feature.
+
+## 0.4.0
+
+### Minor Changes
+
+- [#12518](https://github.com/cloudflare/workers-sdk/pull/12518) [`323f14e`](https://github.com/cloudflare/workers-sdk/commit/323f14e19605f3f0eb732992fa6d765657cb93ba) Thanks [@NuroDev](https://github.com/NuroDev)! - Implemented initial data studio driver support.
+
+  This provides the initial plumbing needed to add the complete data studio component to the local explorer in a later PR. D1 databases will now appear in the sidebar alongside KV namespaces when running the local explorer.
+
+  This is an experimental WIP feature.
+
+- [#12555](https://github.com/cloudflare/workers-sdk/pull/12555) [`2eeefeb`](https://github.com/cloudflare/workers-sdk/commit/2eeefeb01ddb6d44b99e3ea93a1b9faada925cb3) Thanks [@NuroDev](https://github.com/NuroDev)! - Add database table selection dropdown.
+
+  As part of the ongoing work to implement the data studio into the local explorer, this change allows you to view and select which table for a database you want to inspect.
+
+  This is an experimental WIP feature.
+
 ## 0.3.0
 
 ### Minor Changes

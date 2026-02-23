@@ -1,7 +1,6 @@
-import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
-import { beforeAll, describe, test, vi } from "vitest";
+import { assert, beforeAll, describe, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,

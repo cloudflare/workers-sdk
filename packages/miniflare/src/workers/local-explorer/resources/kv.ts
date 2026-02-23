@@ -168,13 +168,13 @@ export async function putKVValue(c: AppContext) {
 			try {
 				metadata = JSON.parse(metadataText);
 			} catch {
-				return errorResponse(400, 10002, "Invalid metadata JSON");
+				return errorResponse(400, 10001, "Invalid metadata JSON");
 			}
 		} else if (typeof formMetadata === "string") {
 			try {
 				metadata = JSON.parse(formMetadata);
 			} catch {
-				return errorResponse(400, 10002, "Invalid metadata JSON");
+				return errorResponse(400, 10001, "Invalid metadata JSON");
 			}
 		}
 	} else {

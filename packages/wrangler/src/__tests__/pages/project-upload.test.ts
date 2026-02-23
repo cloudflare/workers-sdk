@@ -126,6 +126,9 @@ describe("pages project upload", () => {
 		writeFileSync("some_dir/node_modules/some_package", "nodefile");
 		mkdirSync("functions");
 		writeFileSync("functions/foo.js", "func");
+		// .wrangler directory should be ignored (contains local cache/state)
+		mkdirSync(".wrangler/cache", { recursive: true });
+		writeFileSync(".wrangler/cache/some-cache-file", "cachefile");
 
 		// Accumulate multiple requests then assert afterwards
 		const requests: StrictRequest<UploadPayloadFile[]>[] = [];

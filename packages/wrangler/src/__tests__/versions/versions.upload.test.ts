@@ -4,7 +4,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handler callbacks */
-import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import { assert, beforeEach, describe, expect, it, test, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
@@ -1086,10 +1086,9 @@ describe("generatePreviewAlias", () => {
 
 		// Should be truncated to fit: max 63 - 21 - 1 = 41 chars
 		// With 4-char hash + hyphen, we have 41 - 4 - 1 = 36 chars for the prefix
-		expect(result).toBeDefined();
+		assert(result);
 		expect(result).toMatch(/^a{36}-[a-f0-9]{4}$/);
-		expect(result?.length).toBe(41);
-		expect(result).not.toBeUndefined();
+		expect(result.length).toBe(41);
 		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 
@@ -1135,11 +1134,11 @@ describe("generatePreviewAlias", () => {
 		);
 
 		const result = generatePreviewAlias(scriptName);
+		assert(result);
 		expect(result).toMatch(
 			/^some-really-really-really-really-really-long-br-[a-f0-9]{4}$/
 		);
-		expect(result?.length).toBe(52);
-		expect(result).not.toBeUndefined();
+		expect(result.length).toBe(52);
 		expect((scriptName + "-" + result).length).toBeLessThanOrEqual(63);
 	});
 

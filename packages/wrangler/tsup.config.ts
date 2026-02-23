@@ -32,6 +32,7 @@ function embedWorkersPlugin({
 					workersContexts.get(args.path) ??
 					(await esbuild.context({
 						platform: "node", // Marks `node:*` imports as external
+						conditions: ["workerd", "worker", "browser"],
 						format: "esm",
 						target: "esnext",
 						bundle: true,

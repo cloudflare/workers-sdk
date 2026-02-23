@@ -38,7 +38,7 @@ export class Qwik extends Framework {
 		return {
 			wranglerConfig: {
 				main: "./dist/_worker.js",
-				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+				compatibility_flags: ["global_fetch_strictly_public"],
 				assets: {
 					binding: "ASSET",
 					directory: "./dist",
