@@ -1,5 +1,13 @@
 # wrangler
 
+## 4.68.0
+
+### Minor Changes
+
+- [#12614](https://github.com/cloudflare/workers-sdk/pull/12614) [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Enable autoconfig for `wrangler deploy` by default (while allowing users to still disable it via `--x-autoconfig=false` if necessary)
+
+- [#12614](https://github.com/cloudflare/workers-sdk/pull/12614) [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Mark the `wrangler setup` command as stable
+
 ## 4.67.1
 
 ### Patch Changes

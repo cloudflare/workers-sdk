@@ -114,9 +114,7 @@ vi.mock("../package-manager", async (importOriginal) => ({
 	},
 }));
 
-vi.mock("../autoconfig/details");
 vi.mock("../autoconfig/run");
-vi.mock("../autoconfig/frameworks");
 vi.mock("../autoconfig/frameworks/utils/packages");
 vi.mock("../autoconfig/c3-vendor/command");
 
@@ -566,18 +564,34 @@ describe("deploy", () => {
 		`);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --x-autoconfig=false", async () => {
 		writeWranglerConfig({
 			pages_build_output_dir: "public",
 			name: "test-name",
 		});
 		await expect(
-			runWrangler("deploy")
+			runWrangler("deploy --x-autoconfig=false")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
 			[Error: It looks like you've run a Workers-specific command in a Pages project.
 			For Pages, please run \`wrangler pages deploy\` instead.]
 		`
+		);
+	});
+
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml and --x-autoconfig is provided", async () => {
+		mockConfirm({
+			text: "Are you sure that you want to proceed?",
+			result: true,
+		});
+
+		writeWranglerConfig({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+		await expect(runWrangler("deploy --x-autoconfig")).rejects.toThrowError();
+		expect(std.warn).toContain(
+			"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead."
 		);
 	});
 
@@ -589,7 +603,7 @@ describe("deploy", () => {
 
 		const getDetailsForAutoConfigSpy = vi
 			.spyOn(await import("../autoconfig/details"), "getDetailsForAutoConfig")
-			.mockResolvedValue({
+			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
 				workerName: "test-name",
@@ -628,7 +642,7 @@ describe("deploy", () => {
 
 		const getDetailsForAutoConfigSpy = vi
 			.spyOn(await import("../autoconfig/details"), "getDetailsForAutoConfig")
-			.mockResolvedValue({
+			.mockResolvedValueOnce({
 				configured: false,
 				projectPath: process.cwd(),
 				workerName: "test-name",
@@ -16603,13 +16617,13 @@ export default{
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not delegate to open-next deploy when the --x-autoconfig flag is not provided", async () => {
+		it("should not delegate to open-next deploy when --x-autoconfig=false is provided", async () => {
 			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
 				.runCommand;
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-autoconfig=false");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 
