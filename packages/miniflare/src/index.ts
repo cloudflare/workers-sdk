@@ -1853,6 +1853,10 @@ export class Miniflare {
 		// Redirect service bindings and tails that point to external workers
 		// to the dev registry proxy. This runs after plugin processing so the
 		// plugin system doesn't need to know about the dev registry at all.
+		// IMPORTANT: This mutates the already-assembled Worker_Binding and Service
+		// objects in-place. Any code that runs after this point will see the
+		// rewritten designators (pointing to core:dev-registry-proxy) rather than
+		// the original target service names.
 		if (externalServices && externalServices.size > 0) {
 			const externalUserServiceNames = new Set(
 				[...externalServices.keys()].map(getUserServiceName)

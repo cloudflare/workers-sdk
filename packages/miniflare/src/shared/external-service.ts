@@ -60,7 +60,7 @@ export function createOutboundDoProxyService(
 		`import { createProxyDurableObjectClass } from "./dev-registry-proxy-shared.worker.js";`,
 		...Array.from(externalObjects).map(
 			([scriptName, className]) =>
-				`export const ${getOutboundDoProxyClassName(scriptName, className)} = createProxyDurableObjectClass({ scriptName: "${scriptName}", className: "${className}" });`
+				`export const ${getOutboundDoProxyClassName(scriptName, className)} = createProxyDurableObjectClass({ scriptName: ${JSON.stringify(scriptName)}, className: ${JSON.stringify(className)} });`
 		),
 	].join("\n");
 

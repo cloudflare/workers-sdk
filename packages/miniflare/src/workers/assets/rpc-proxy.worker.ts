@@ -86,6 +86,8 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 	}
 }
 
+// NOTE: These helpers are duplicated in core/dev-registry-proxy-shared.worker.ts.
+// They're kept separate because these workers are bundled independently.
 const serializedDate = "___serialized_date___";
 
 function tailEventsReplacer(_: string, value: any) {

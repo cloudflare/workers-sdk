@@ -46,7 +46,7 @@ export interface ProxyEnv {
 // --- Functions ---
 
 const registryCache = new Map<string, RegistryEntry>();
-let cacheTimeout: NodeJS.Timeout | undefined;
+let cacheTimeout: ReturnType<typeof setTimeout> | undefined;
 
 function setCacheTimeout() {
 	if (cacheTimeout === undefined) {
@@ -61,7 +61,8 @@ function setCacheTimeout() {
 /**
  * Resolve a worker name to its registry entry by fetching from the
  * DiskDirectory service that exposes the dev registry directory.
- * Returns null if the worker is not registered (404).
+ * Returns null if the worker is not registered (404) or if the
+ * registry file is unreadable (e.g. mid-write, corrupted, stale format).
  */
 export async function resolveTarget(
 	env: ProxyEnv,
@@ -71,10 +72,27 @@ export async function resolveTarget(
 	if (cached) return cached;
 
 	const resp = await env.DEV_REGISTRY.fetch(`http://dummy/${service}`);
-	if (!resp.ok) {
+	if (resp.status === 404) {
 		return null;
 	}
-	const entry: RegistryEntry = await resp.json();
+	if (!resp.ok) {
+		console.warn(
+			`[dev-registry] Unexpected status ${resp.status} resolving service "${service}"`
+		);
+		return null;
+	}
+
+	let entry: RegistryEntry;
+	try {
+		entry = await resp.json();
+	} catch {
+		// File may be mid-write or corrupted — treat as not yet available.
+		console.warn(
+			`[dev-registry] Failed to parse registry entry for service "${service}"`
+		);
+		return null;
+	}
+
 	// Validate required fields — the JSON comes from disk and may be stale
 	// or from an older version that doesn't include all fields.
 	if (
@@ -133,7 +151,7 @@ export function createProxyDurableObjectClass({
 					}
 					if (typeof prop === "string") {
 						const methodName = prop;
-						return async function (...args: unknown[]) {
+						const rpcCall = async function (...args: unknown[]) {
 							const fetcher = await connectToActor(
 								obj.env as ProxyEnv,
 								scriptName,
@@ -153,6 +171,32 @@ export function createProxyDurableObjectClass({
 							)[methodName];
 							return Reflect.apply(method, fetcher, args);
 						};
+
+						// Make the function thenable so `await stub.property`
+						// resolves via the remote, matching JsRpcProperty behavior.
+						rpcCall.then = (
+							resolve: (v: unknown) => void,
+							reject: (e: unknown) => void
+						) => {
+							connectToActor(
+								obj.env as ProxyEnv,
+								scriptName,
+								className,
+								obj.ctx.id.toString()
+							)
+								.then((fetcher) => {
+									if (!fetcher) {
+										throw new Error(
+											`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`
+										);
+									}
+									return (fetcher as unknown as Record<string, unknown>)[
+										methodName
+									];
+								})
+								.then(resolve, reject);
+						};
+						return rpcCall;
 					}
 					return undefined;
 				},

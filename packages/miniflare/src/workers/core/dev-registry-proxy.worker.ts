@@ -166,6 +166,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	async scheduled(controller: ScheduledController) {
 		// `scheduled()` needs a different forwarding mechanism than other RPCs
 		// because `Fetcher.scheduled()` is not supported over debug port RPC.
+		// Instead, we send an HTTP request to the entry service's scheduled handler.
+		// NOTE: This targets `core:entry` which routes the scheduled event to the
+		// main worker in the remote process. This assumes each workerd process
+		// hosts a single user worker (the standard dev mode configuration).
 		const { service, entrypoint } = this._props;
 		const target = await resolveTarget(this.env, service);
 		if (!target) {
@@ -217,9 +221,11 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			if (typeof tailMethod === "function") {
 				await Reflect.apply(tailMethod, fetcher, [serializedEvents]);
 			}
-		} catch {
-			// Silently ignore tail forwarding errors — tail events are
-			// best-effort and should not break the producer worker.
+		} catch (e) {
+			// Tail events are best-effort and should not break the producer worker.
+			console.warn(
+				`[dev-registry] Failed to forward tail events to "${this._props.service}": ${e instanceof Error ? e.message : String(e)}`
+			);
 		}
 	}
 
