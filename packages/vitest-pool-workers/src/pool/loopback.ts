@@ -325,6 +325,7 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 	// tree-shaking improves or a sub-path export is added), this could be
 	// replaced with a direct import from `@cloudflare/workers-utils`.
 	// Keep aligned with `removeDir()` in `packages/workers-utils/src/fs-helpers.ts`.
+	// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- see comment above: barrel import breaks ESM bundle
 	await fs.rm(stackFramePath, {
 		recursive: true,
 		force: true,
