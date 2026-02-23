@@ -1,7 +1,7 @@
 import { assert } from "node:console";
 import fs from "node:fs";
 import path from "node:path";
-import { removeDir } from "@cloudflare/workers-utils";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
@@ -112,7 +112,11 @@ export function getWranglerTmpDir(
 
 	const cleanupDir = () => {
 		if (cleanup) {
-			removeDir(tmpDir, { fireAndForget: true });
+			try {
+				removeDirSync(tmpDir);
+			} catch {
+				/* best effort */
+			}
 		}
 	};
 	const removeExitListener = onExit(cleanupDir);
