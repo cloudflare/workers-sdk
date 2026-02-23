@@ -1217,7 +1217,7 @@ function getWorkerScript(
 }
 
 const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:main@sha256:3b3c97a1eb30c33f0ea9df2260af36ef7e414a304de6549d444c08026d92c653";
+	"cloudflare/proxy-everything:86bfd00@sha256:ea7a821fc18b57a5151df582d66f7af9b80b938ed4ec5e2d468a185b4b18883e";
 
 /**
  * Returns the default containerEgressInterceptorImage. It's used for
