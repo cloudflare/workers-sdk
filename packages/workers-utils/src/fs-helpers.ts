@@ -61,7 +61,7 @@ export function removeDir(
 	});
 	if (fireAndForget) {
 		// Silently swallow errors by catching and returning a resolved promise
-		void result.catch();
+		void result.catch(() => {});
 	} else {
 		return result;
 	}
