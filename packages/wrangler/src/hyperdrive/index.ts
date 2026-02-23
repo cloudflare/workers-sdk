@@ -159,10 +159,10 @@ export function getOriginFromArgs<
 
 		if (
 			url.port === "" &&
-			(url.protocol == "postgresql:" || url.protocol == "postgres:")
+			(url.protocol == "postgresql:" || url.protocol === "postgres:")
 		) {
 			url.port = "5432";
-		} else if (url.port === "" && url.protocol == "mysql:") {
+		} else if (url.port === "" && url.protocol === "mysql:") {
 			url.port = "3306";
 		}
 
@@ -245,7 +245,7 @@ export function getOriginFromArgs<
 			);
 		}
 
-		if (!args.originHost || args.originHost == "") {
+		if (!args.originHost || args.originHost === "") {
 			throw new UserError(
 				"You must provide an origin hostname for the database"
 			);
@@ -310,6 +310,7 @@ export function getCacheOptionsFromArgs(
 }
 
 function isPostgresScheme(scheme: string | undefined): boolean {
+	// We default to postgres when scheme is undefined for backwards compatibility.
 	return (
 		scheme === "postgres" || scheme === "postgresql" || scheme === undefined
 	);
@@ -350,12 +351,12 @@ export function getMtlsFromArgs(
 
 		// CA certificate validation for PostgreSQL
 		if (isPostgresScheme(scheme)) {
-			if (mtls.sslmode == "require" && mtls.ca_certificate_id?.trim()) {
+			if (mtls.sslmode === "require" && mtls.ca_certificate_id?.trim()) {
 				throw new UserError("CA not allowed when sslmode = 'require' is set");
 			}
 
 			if (
-				(mtls.sslmode == "verify-ca" || mtls.sslmode == "verify-full") &&
+				(mtls.sslmode === "verify-ca" || mtls.sslmode === "verify-full") &&
 				!mtls.ca_certificate_id?.trim()
 			) {
 				throw new UserError(
@@ -364,12 +365,12 @@ export function getMtlsFromArgs(
 			}
 		} else {
 			// CA certificate validation for MySQL
-			if (mtls.sslmode == "REQUIRED" && mtls.ca_certificate_id?.trim()) {
+			if (mtls.sslmode === "REQUIRED" && mtls.ca_certificate_id?.trim()) {
 				throw new UserError("CA not allowed when sslmode = 'REQUIRED' is set");
 			}
 
 			if (
-				(mtls.sslmode == "VERIFY_CA" || mtls.sslmode == "VERIFY_IDENTITY") &&
+				(mtls.sslmode === "VERIFY_CA" || mtls.sslmode === "VERIFY_IDENTITY") &&
 				!mtls.ca_certificate_id?.trim()
 			) {
 				throw new UserError(
