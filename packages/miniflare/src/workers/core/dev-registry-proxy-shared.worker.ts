@@ -130,7 +130,11 @@ export function createProxyDurableObjectClass({
 			return new Proxy(this, {
 				get(obj, prop) {
 					if (Reflect.has(obj, prop)) {
-						return Reflect.get(obj, prop);
+						const value = Reflect.get(obj, prop);
+						if (typeof value === "function") {
+							return value.bind(obj);
+						}
+						return value;
 					}
 					if (typeof prop === "string") {
 						const methodName = prop;
@@ -152,6 +156,11 @@ export function createProxyDurableObjectClass({
 									(...a: unknown[]) => unknown
 								>
 							)[methodName];
+							if (typeof method !== "function") {
+								throw new Error(
+									`Method "${methodName}" not found on remote Durable Object "${className}" of service "${scriptName}"`
+								);
+							}
 							return Reflect.apply(method, fetcher, args);
 						};
 
