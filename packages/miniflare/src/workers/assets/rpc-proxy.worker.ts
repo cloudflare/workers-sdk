@@ -39,7 +39,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	async queue(batch: MessageBatch): Promise<void> {
+	async queue(_batch: MessageBatch): Promise<void> {
 		// Not implemented yet: forwarding queue messages requires a way to get a
 		// remote `Queue` object over the debug port RPC, which isn't possible yet.
 		// For now, this will fail with an error if called.

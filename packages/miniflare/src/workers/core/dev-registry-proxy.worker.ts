@@ -4,10 +4,7 @@ import {
 	tailEventsReplacer,
 	tailEventsReviver,
 } from "./dev-registry-proxy-shared.worker";
-import type {
-	ProxyEnv,
-	RegistryEntry,
-} from "./dev-registry-proxy-shared.worker";
+import type { ProxyEnv } from "./dev-registry-proxy-shared.worker";
 
 // The entry worker service name in each miniflare/workerd instance.
 // This must match SERVICE_ENTRY from plugins/core/constants.ts.
@@ -229,7 +226,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	async queue(batch: MessageBatch): Promise<void> {
+	async queue(_batch: MessageBatch): Promise<void> {
 		throw new Error(
 			`Calling "queue" on a cross-process service binding is not yet supported`
 		);
