@@ -1,6 +1,8 @@
-# Workers Playground Pages Project
+# Workers Playground
 
 This package contains the client side assets used in the Workers Playground available in the Cloudflare Dashboard at [https://workers.cloudflare.com/playground].
+
+It is deployed as a Cloudflare Worker with static assets (assets-only in production).
 
 ## Developing locally
 
@@ -16,7 +18,7 @@ This package contains the client side assets used in the Workers Playground avai
 
 1. Run `pnpm -F workers-playground build`
 
-This generates the files into the `dist` directory that can then be deployed to Cloudflare Pages.
+This generates the files into the `dist` directory that can then be deployed as a Cloudflare Worker with static assets.
 
 ## Deployment
 
@@ -24,7 +26,7 @@ Deployments are managed by GitHub Actions:
 
 - deploy-pages-previews.yml:
   - Runs on any PR that has the `preview:workers-playground` label.
-  - Deploys a preview, which can then be accessed via [https://<SHA>.workers-playground.pages.dev/].
+  - Uploads a preview version via `wrangler versions upload`.
 - changesets.yml:
   - Runs when a "Version Packages" PR, containing a changeset that touches this package, is merged to `main`.
-  - Deploys this package to production, which can then be accessed via [https://workers-playground.pages.dev/].
+  - Deploys this package to production via `wrangler deploy`.

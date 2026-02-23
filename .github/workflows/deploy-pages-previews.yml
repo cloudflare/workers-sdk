@@ -1,20 +1,20 @@
-name: Deploy Pages Previews
+name: Deploy Previews
 
-# This workflow is designed to deploy a "preview" version of a Pages project based on PR labels.
+# This workflow is designed to deploy a "preview" version of a project based on PR labels.
 
 # Triggers:
 # - update to a PR that has one of the `preview:...` labels
 #
 # Actions:
-# - deploy the matching Pages project to Cloudflare.
+# - deploy the matching project to Cloudflare.
 #
-# PR Label                   | Pages Project
+# PR Label                         | Project
 # ---------------------------------------------------------
 # preview:chrome-devtools-patches  | packages/chrome-devtools-patches
-# preview:quick-edit         | packages/quick-edit
-# preview:workers-playground | packages/workers-playground
+# preview:quick-edit               | packages/quick-edit
+# preview:workers-playground       | packages/workers-playground
 #
-# Note: this workflow does not run tests against these packages, only for deploys previews.
+# Note: this workflow does not run tests against these packages, only deploys previews.
 
 on:
   pull_request:
@@ -71,12 +71,7 @@ jobs:
 
       - name: Deploy Workers Playground preview
         if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
-        run: |
-          output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
-          echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | sed -nE 's/.*Take a peek over at (https?:\/\/[^ ]+).*/\1/p')
-          echo "Extracted URL: $url"
-          echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
+        run: pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           VITE_DEVTOOLS_PREVIEW_URL: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}
@@ -110,5 +105,5 @@ jobs:
 
             ---
 
-            The Workers Playground preview is also now live. The Playground preview embeds the above DevTools preview, so you can see them working together at:
-            ${{ env.PLAYGROUND_URL }}/playground
+            The Workers Playground preview version has been uploaded. You can test it via the Cloudflare Dashboard or at:
+            https://workers-playground.workers.dev/playground

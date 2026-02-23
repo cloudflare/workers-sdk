@@ -392,6 +392,29 @@ describe("Preview Worker", () => {
 				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
+		it("should allow workers-playground.workers.dev", async ({ expect }) => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer:
+							"https://workers-playground.workers.dev/some/path",
+					},
+				}
+			);
+			expect(resp.headers.get("location")).toMatchInlineSnapshot(
+				'"/hello?world"'
+			);
+			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
+				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+			);
+		});
 		it("should reject unknown referer", async ({ expect }) => {
 			const resp = await fetch(
 				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
@@ -429,6 +452,32 @@ describe("Preview Worker", () => {
 					headers: {
 						"Sec-Fetch-Dest": "iframe",
 						Referer: "https://example.com/workers-playground.pages.dev",
+					},
+				}
+			);
+			expect(await resp.json()).toMatchInlineSnapshot(`
+				{
+				  "data": {},
+				  "error": "PreviewRequestForbidden",
+				  "message": "Preview request forbidden",
+				}
+			`);
+		});
+		it("should reject unknown referer with workers.dev in path", async ({
+			expect,
+		}) => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer:
+							"https://example.com/workers-playground.workers.dev",
 					},
 				}
 			);

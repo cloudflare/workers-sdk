@@ -9,8 +9,9 @@
 		"check": "pnpm exec tsx ./generate-default-hashes.ts check",
 		"check:lint": "eslint src --max-warnings=0 --cache",
 		"check:type": "tsc",
-		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler pages deploy --project-name workers-playground ./dist",
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy",
 		"dev": "vite",
+		"preview": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler versions upload",
 		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.ts"
 	},
 	"dependencies": {

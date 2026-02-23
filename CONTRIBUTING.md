@@ -315,7 +315,7 @@ It's also possible to generate preview builds for the applications in the reposi
 - `preview:workers-playground` for deploying [workers-playground](packages/workers-playground)
 - `preview:quick-edit` for deploying [quick-edit](packages/quick-edit)
 
-Once built, you can find the preview link for these applications in the [Deploy Pages Previews](.github/workflows/deploy-pages-previews.yml) action output
+Once built, you can find the preview link for these applications in the [Deploy Previews](.github/workflows/deploy-pages-previews.yml) action output
 
 ## PR Tests
 

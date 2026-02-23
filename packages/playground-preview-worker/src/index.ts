@@ -241,7 +241,8 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		!(
 			referer.hostname === "workers.cloudflare.com" ||
 			referer.hostname === "localhost" ||
-			referer.hostname.endsWith("workers-playground.pages.dev")
+			referer.hostname.endsWith("workers-playground.pages.dev") ||
+			referer.hostname.endsWith("workers-playground.workers.dev")
 		)
 	) {
 		throw new PreviewRequestForbidden();
