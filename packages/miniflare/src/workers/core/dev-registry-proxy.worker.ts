@@ -79,9 +79,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 					) => {
 						target
 							.#getRemoteFetcher()
-							.then(
-								(fetcher) =>
+							.then((fetcher) =>
+								Promise.resolve(
 									(fetcher as unknown as Record<string, unknown>)[methodName]
+								)
 							)
 							.then(resolve, reject);
 					};

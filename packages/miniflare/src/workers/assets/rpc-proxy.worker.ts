@@ -89,19 +89,26 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 // NOTE: These helpers are duplicated in core/dev-registry-proxy-shared.worker.ts.
 // They're kept separate because these workers are bundled independently.
 const serializedDate = "___serialized_date___";
+const serializedBigInt = "___serialized_bigint___";
 
 function tailEventsReplacer(_: string, value: any) {
 	// The tail events might contain Date objects which will not be restored directly
 	if (value instanceof Date) {
 		return { [serializedDate]: value.toISOString() };
+	} else if (typeof value === "bigint") {
+		return { [serializedBigInt]: value.toString() };
 	}
 	return value;
 }
 
 function tailEventsReviver(_: string, value: any) {
 	// To restore Date objects from the serialized events
-	if (value && typeof value === "object" && serializedDate in value) {
-		return new Date(value[serializedDate]);
+	if (value && typeof value === "object") {
+		if (serializedDate in value) {
+			return new Date(value[serializedDate]);
+		} else if (serializedBigInt in value) {
+			return BigInt(value[serializedBigInt]);
+		}
 	}
 
 	return value;

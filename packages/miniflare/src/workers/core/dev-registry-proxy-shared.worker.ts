@@ -192,9 +192,9 @@ export function createProxyDurableObjectClass({
 											`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`
 										);
 									}
-									return (fetcher as unknown as Record<string, unknown>)[
-										methodName
-									];
+									return Promise.resolve(
+										(fetcher as unknown as Record<string, unknown>)[methodName]
+									);
 								})
 								.then(resolve, reject);
 						};
@@ -231,21 +231,28 @@ export function createProxyDurableObjectClass({
 }
 
 // --- Tail event serialization helpers ---
-// Tail events contain Date objects that aren't directly serializable over capnp,
+// Tail events contain Date objects and BigInts that aren't directly serializable over capnp,
 // so we JSON round-trip them with custom replacer/reviver.
 
 const SERIALIZED_DATE = "___serialized_date___";
+const SERIALIZED_BIGINT = "___serialized_bigint___";
 
 export function tailEventsReplacer(_: string, value: any) {
 	if (value instanceof Date) {
 		return { [SERIALIZED_DATE]: value.toISOString() };
+	} else if (typeof value === "bigint") {
+		return { [SERIALIZED_BIGINT]: value.toString() };
 	}
 	return value;
 }
 
 export function tailEventsReviver(_: string, value: any) {
-	if (value && typeof value === "object" && SERIALIZED_DATE in value) {
-		return new Date(value[SERIALIZED_DATE]);
+	if (value && typeof value === "object") {
+		if (SERIALIZED_DATE in value) {
+			return new Date(value[SERIALIZED_DATE]);
+		} else if (SERIALIZED_BIGINT in value) {
+			return BigInt(value[SERIALIZED_BIGINT]);
+		}
 	}
 	return value;
 }
