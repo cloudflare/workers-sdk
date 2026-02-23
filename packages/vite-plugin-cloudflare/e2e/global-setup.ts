@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import util from "node:util";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
+import { removeDir } from "@cloudflare/workers-utils";
 import type { TestProject } from "vitest/node";
 
 const debuglog = util.debuglog("vite-plugin:test");
@@ -35,7 +36,7 @@ export default async function ({ provide }: TestProject) {
 			debuglog("Temporary directory left in-place at " + root);
 		} else {
 			debuglog("Cleaning up temporary directory...");
-			await fs.rm(root, { recursive: true, maxRetries: 10 });
+			await removeDir(root);
 		}
 	};
 }

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, assert, beforeEach, describe, test } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
@@ -17,7 +18,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(tempDir, { recursive: true, force: true });
+		removeDirSync(tempDir);
 	});
 
 	const viteEnv = { mode: "development", command: "serve" as const };
@@ -324,7 +325,7 @@ describe("resolvePluginConfig - entry worker config()", () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(tempDir, { recursive: true, force: true });
+		removeDirSync(tempDir);
 	});
 
 	const viteEnv = { mode: "development", command: "serve" as const };
@@ -441,7 +442,7 @@ describe("resolvePluginConfig - zero-config mode", () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(tempDir, { recursive: true, force: true });
+		removeDirSync(tempDir);
 	});
 
 	const viteEnv = { mode: "development", command: "serve" as const };
@@ -598,7 +599,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(tempDir, { recursive: true, force: true });
+		removeDirSync(tempDir);
 	});
 
 	const viteEnv = { mode: "development", command: "serve" as const };
@@ -796,7 +797,7 @@ describe("resolvePluginConfig - environment name validation", () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(tempDir, { recursive: true, force: true });
+		removeDirSync(tempDir);
 	});
 
 	const viteEnv = { mode: "development", command: "serve" as const };

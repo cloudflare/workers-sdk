@@ -1,5 +1,6 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import cmdShim from "cmd-shim";
 
 const nodeShebang = "#!/usr/bin/env node";
@@ -30,7 +31,7 @@ export async function mockBinary(
 	process.env.PATH = tmpDir + sep + oldPath;
 
 	return function unMock() {
-		rmSync(tmpDir, { recursive: true });
+		removeDirSync(tmpDir);
 		process.env.PATH = process.env.PATH?.replace(tmpDir + sep, "");
 	};
 }

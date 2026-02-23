@@ -1,6 +1,7 @@
 import assert from "node:assert";
-import { createWriteStream, mkdirSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync } from "node:fs";
 import nodePath from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { isExperimental, testPackageManager } from "./constants";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
@@ -20,10 +21,7 @@ export function createTestLogStream(task: RunnerTask) {
 
 export function recreateLogFolder(suite: RunnerTestSuite) {
 	// Clean the old folder if exists (useful for dev)
-	rmSync(getLogPath(suite), {
-		recursive: true,
-		force: true,
-	});
+	removeDirSync(getLogPath(suite));
 
 	mkdirSync(getLogPath(suite), { recursive: true });
 }

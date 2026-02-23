@@ -1,6 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
 import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
 import {
@@ -105,7 +106,7 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 
 	const nodeModulesPath = nodePath.join(ctx.project.path, "node_modules");
 	if (existsSync(nodeModulesPath)) {
-		rmSync(nodeModulesPath, { recursive: true });
+		removeDirSync(nodeModulesPath);
 	}
 
 	const lockfilePath = nodePath.join(ctx.project.path, "package-lock.json");

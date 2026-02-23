@@ -53,6 +53,7 @@ export function removeDir(
 	dirPath: string,
 	{ fireAndForget = false }: { fireAndForget?: boolean } = {}
 ): Promise<void> | void {
+	// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- this is the helper itself
 	const result = fs.promises.rm(dirPath, {
 		recursive: true,
 		force: true,
@@ -75,6 +76,7 @@ export function removeDir(
  * @param dirPath The directory path to remove
  */
 export function removeDirSync(dirPath: string): void {
+	// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- this is the helper itself
 	fs.rmSync(dirPath, {
 		recursive: true,
 		force: true,

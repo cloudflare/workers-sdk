@@ -1,14 +1,9 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
-import {
-	mkdirSync,
-	mkdtempSync,
-	readFileSync,
-	realpathSync,
-	rmSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import nodePath from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { test as originalTest } from "vitest";
 import { customTempProjectPath, isWindows } from "./constants";
 import { createTestLogStream } from "./log-stream";
@@ -48,12 +43,7 @@ const testProjectDir = (suite: string, test: string) => {
 
 			realpathSync(mkdtempSync(nodePath.join(tmpdir(), `c3-tests-${suite}`)));
 			const filepath = getPath();
-			rmSync(filepath, {
-				recursive: true,
-				force: true,
-				maxRetries: 10,
-				retryDelay: 100,
-			});
+			removeDirSync(filepath);
 		} catch (e) {
 			if (typeof e === "object" && e !== null && "code" in e) {
 				const code = e.code;
