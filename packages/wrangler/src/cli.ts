@@ -103,6 +103,7 @@ export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
+	signal?: AbortSignal;
 }
 export const unstable_generateASSETSBinding: (
 	opts: Unstable_ASSETSBindingsOptions

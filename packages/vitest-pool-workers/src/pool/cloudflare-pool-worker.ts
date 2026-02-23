@@ -3,6 +3,7 @@ import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { parseProjectOptions } from "./config";
+import { disposeAllPagesBindings } from "./pages";
 import { type WorkerPoolOptionsContext } from "./plugin";
 import {
 	assertCompatibleVitestVersion,
@@ -107,6 +108,12 @@ export class CloudflarePoolWorker implements PoolWorker {
 		this.socket = undefined;
 		await this.mf?.dispose();
 		this.mf = undefined;
+
+		// Clean up file watchers created by buildPagesASSETSBinding(). These are
+		// registered globally because vitest evaluates all project configs at
+		// startup, so watchers may exist for projects whose pool workers were
+		// never started.
+		disposeAllPagesBindings();
 	}
 
 	send(message: WorkerRequest): void {
