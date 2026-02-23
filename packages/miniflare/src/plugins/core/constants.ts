@@ -28,6 +28,10 @@ export function getUserServiceName(workerName = "") {
 	return `${SERVICE_USER_PREFIX}:${workerName}`;
 }
 
+export function stripUserServicePrefix(serviceName: string): string {
+	return serviceName.replace(/^core:user:/, "");
+}
+
 // Namespace custom services to avoid conflicts between user-specified names
 // and hardcoded Miniflare names
 export enum CustomServiceKind {

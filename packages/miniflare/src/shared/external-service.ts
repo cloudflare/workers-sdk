@@ -7,7 +7,12 @@ import {
 } from "../plugins/core";
 import { RemoteProxyConnectionString } from "../plugins/shared";
 import { WORKER_BINDING_DEV_REGISTRY_DISK } from "../plugins/shared/constants";
-import { kVoid, Service, Worker_DurableObjectNamespace } from "../runtime";
+import {
+	kVoid,
+	Service,
+	supportedCompatibilityDate,
+	Worker_DurableObjectNamespace,
+} from "../runtime";
 
 export function normaliseServiceDesignator(
 	service: z.infer<typeof ServiceDesignatorSchema>
@@ -64,8 +69,8 @@ export function createOutboundDoProxyService(
 		// This makes sure it matches the result script name on the worker binding
 		name: getUserServiceName(OUTBOUND_DO_PROXY_SERVICE_NAME),
 		worker: {
-			compatibilityDate: "2025-05-01",
-			compatibilityFlags: ["nodejs_compat"],
+			compatibilityDate: supportedCompatibilityDate,
+			compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 			// Use in-memory storage for the stub object classes *declared* by this
 			// script. They don't need to persist anything, and would end up using the
 			// incorrect unsafe unique key.

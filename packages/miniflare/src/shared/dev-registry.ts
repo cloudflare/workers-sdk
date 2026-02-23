@@ -85,16 +85,15 @@ export class DevRegistry {
 		this.registry = {};
 
 		// Only this step is async and could be awaited
-		return this.watcher
-			?.close()
-			.then(() => {
-				// Typescript complains that the return type is
-				// not compatible with `Promise<void>` without this.
-				return;
-			})
-			.finally(() => {
-				this.watcher = undefined;
-			});
+		return (
+			this.watcher
+				?.close()
+				// Ensure we always return a promise
+				.then(() => {})
+				.finally(() => {
+					this.watcher = undefined;
+				}) ?? Promise.resolve()
+		);
 	}
 
 	private unregisterWorkers() {

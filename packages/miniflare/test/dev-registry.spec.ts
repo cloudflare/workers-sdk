@@ -791,6 +791,67 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
+	test("scheduled to default entrypoint", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				let resolve, reject;
+				const promise = new Promise((res, rej) => {
+					resolve = res;
+					reject = rej;
+				});
+				export default {
+					async fetch() {
+						try {
+							const event = await Promise.race([
+								promise,
+								new Promise((_, cancel) => setTimeout(cancel, 1000))
+							]);
+							return Response.json(event);
+						} catch {
+							return new Response("No scheduled event received", { status: 500 });
+						}
+					},
+					scheduled(e) {
+						resolve({ cron: e.cron, scheduledTime: e.scheduledTime });
+					}
+				};
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			serviceBindings: {
+				REMOTE: "remote-worker",
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				export default {
+					async fetch(request, env) {
+						await env.REMOTE.scheduled({ cron: "*/5 * * * *" });
+						return new Response("scheduled event dispatched");
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		// Check scheduled() was dispatched
+		await local.dispatchFetch("http://placeholder");
+		const res = await remote.dispatchFetch("http://placeholder");
+		const json = (await res.json()) as { cron: string; scheduledTime: number };
+		expect(json).toMatchObject({ cron: "*/5 * * * *" });
+		expect(typeof json.scheduledTime).toBe("number");
+	});
+
 	test("tail to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({

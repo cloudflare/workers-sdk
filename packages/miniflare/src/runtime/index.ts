@@ -360,6 +360,9 @@ export * from "./config";
  * Gets a safe compatibility date from workerd. If the workerd compatibility
  * date is in the future, returns today's date instead. This handles the case
  * where workerd releases set their compatibility date up to 7 days in the future.
+ *
+ * Note this is computed at module load time, so could become stale if a server
+ * process runs over midnight.
  */
 function getSafeCompatibilityDate(): string {
 	const today = new Date().toISOString().slice(0, 10);

@@ -22,6 +22,32 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		return this.env.ROUTER_WORKER.fetch(request);
 	}
 
+	async scheduled(controller: ScheduledController) {
+		// Forward the scheduled event to the user worker.
+		// The RPC proxy only intercepts fetch (routing through the asset router)
+		// and tail — all other lifecycle events go directly to the user worker.
+		// Use Fetcher.scheduled() with a plain object since ScheduledController
+		// has non-serializable methods (like noRetry()).
+		const result = await (this.env.USER_WORKER as Fetcher).scheduled({
+			scheduledTime: new Date(controller.scheduledTime),
+			cron: controller.cron,
+		});
+		if (result.outcome !== "ok") {
+			throw new Error(
+				`User worker scheduled handler failed: ${result.outcome}`
+			);
+		}
+	}
+
+	async queue(batch: MessageBatch): Promise<void> {
+		// Not implemented yet: forwarding queue messages requires a way to get a
+		// remote `Queue` object over the debug port RPC, which isn't possible yet.
+		// For now, this will fail with an error if called.
+		throw new Error(
+			`Calling "queue" on a cross-process service binding is not yet supported`
+		);
+	}
+
 	tail(events: TraceItem[]) {
 		// Temporary workaround: the tail events is not serializable over capnproto yet
 		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.

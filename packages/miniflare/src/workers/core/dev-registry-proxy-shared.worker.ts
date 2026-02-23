@@ -45,6 +45,19 @@ export interface ProxyEnv {
 
 // --- Functions ---
 
+const registryCache = new Map<string, RegistryEntry>();
+let cacheTimeout: NodeJS.Timeout | undefined;
+
+function setCacheTimeout() {
+	if (cacheTimeout === undefined) {
+		// Clear cache every 30s to pick up revived workers.
+		cacheTimeout = setTimeout(() => {
+			registryCache.clear();
+			cacheTimeout = undefined;
+		}, 30_000);
+	}
+}
+
 /**
  * Resolve a worker name to its registry entry by fetching from the
  * DiskDirectory service that exposes the dev registry directory.
@@ -54,6 +67,9 @@ export async function resolveTarget(
 	env: ProxyEnv,
 	service: string
 ): Promise<RegistryEntry | null> {
+	const cached = registryCache.get(service);
+	if (cached) return cached;
+
 	const resp = await env.DEV_REGISTRY.fetch(`http://dummy/${service}`);
 	if (!resp.ok) {
 		return null;
@@ -68,6 +84,10 @@ export async function resolveTarget(
 	) {
 		return null;
 	}
+
+	registryCache.set(service, entry);
+	setCacheTimeout();
+
 	return entry;
 }
 

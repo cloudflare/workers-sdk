@@ -9,6 +9,10 @@ import type {
 	RegistryEntry,
 } from "./dev-registry-proxy-shared.worker";
 
+// The entry worker service name in each miniflare/workerd instance.
+// This must match SERVICE_ENTRY from plugins/core/constants.ts.
+const ENTRY_SERVICE_NAME = "core:entry";
+
 // Binding names for the dev registry proxy worker.
 // These must match the binding names used in #assembleConfig() in index.ts.
 export const DevRegistryProxyBindings = {
@@ -177,6 +181,51 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		}
 	}
 
+	async scheduled(controller: ScheduledController) {
+		const { service, entrypoint } = this._props;
+		const target = await resolveTarget(this.env, service);
+		if (!target) {
+			throw new Error(
+				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`
+			);
+		}
+
+		// Debug port RPC fetchers don't support lifecycle event dispatch
+		// (fetcher.scheduled()), so we forward the scheduled event via HTTP
+		// to the entry worker's /cdn-cgi/handler/scheduled endpoint, which
+		// uses the workerd Fetcher.scheduled() API to properly dispatch the
+		// scheduled event to the user worker. This works because:
+		// 1. Wrangler always sets unsafeTriggerHandlers: true
+		// 2. The entry worker calls service.scheduled() on its internal
+		//    service binding (which properly dispatches within the same workerd)
+		try {
+			const client = await this.env.DEV_REGISTRY_DEBUG_PORT.connect(
+				target.debugPortAddress
+			);
+			const fetcher = await client.getEntrypoint(ENTRY_SERVICE_NAME);
+			const params = new URLSearchParams();
+			if (controller.cron) {
+				params.set("cron", controller.cron);
+			}
+			if (controller.scheduledTime) {
+				params.set("time", String(controller.scheduledTime));
+			}
+			const response = await fetcher.fetch(
+				`http://localhost/cdn-cgi/handler/scheduled?${params}`
+			);
+			if (!response.ok) {
+				const body = await response.text();
+				throw new Error(
+					`Scheduled handler returned HTTP ${response.status}: ${body}`
+				);
+			}
+		} catch (e) {
+			throw new Error(
+				`Error calling "scheduled" on the "${entrypoint ?? "default"}" entrypoint of service "${service}": ${e instanceof Error ? e.message : String(e)}`
+			);
+		}
+	}
+
 	async tail(events: TraceItem[]) {
 		const { service } = this._props;
 		const target = await resolveTarget(this.env, service);
@@ -203,6 +252,15 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			// Silently ignore tail forwarding errors — tail events are
 			// best-effort and should not break the producer worker.
 		}
+	}
+
+	async queue(batch: MessageBatch): Promise<void> {
+		// Not implemented yet: forwarding queue messages requires a way to get a
+		// remote `Queue` object over the debug port RPC, which isn't possible yet.
+		// For now, this will fail with an error if called.
+		throw new Error(
+			`Calling "queue" on a cross-process service binding is not yet supported`
+		);
 	}
 }
 
