@@ -5,9 +5,12 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
 import * as recast from "recast";
+import semiver from "semiver";
 import dedent from "ts-dedent";
+import { logger } from "../../logger";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
+import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 import type { types } from "recast";
@@ -32,6 +35,8 @@ export class Waku extends Framework {
 				}
 			);
 
+			validateMinimumWakuVersion(projectPath);
+
 			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);
 		}
@@ -46,6 +51,23 @@ export class Waku extends Framework {
 				},
 			},
 		};
+	}
+}
+
+/**
+ * Checks whether the version of the Waku package is less than the minimum one we support, in that case a warning is presented
+ * to the user without blocking them.
+ *
+ * TODO: We should standardize and define a better approach for this type of check and apply it to all the frameworks we support.
+ *
+ * @param projectPath The path to the project
+ */
+function validateMinimumWakuVersion(projectPath: string) {
+	const wakuVersion = getInstalledPackageVersion("waku", projectPath);
+	if (wakuVersion && semiver(wakuVersion, "1.0.0-alpha.4") === -1) {
+		logger.warn(
+			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not fully supported and the automatic configuration might fail. If the process fails please update the Waku version and try again.`
+		);
 	}
 }
 
