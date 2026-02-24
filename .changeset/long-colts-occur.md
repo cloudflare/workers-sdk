@@ -2,6 +2,6 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Use `getLocalWorkerdCompatibilityDate` from `miniflare` instead of `@cloudflare/workers-utils`
+Use `supportedCompatibility` value from `miniflare` instead of getting the date from `@cloudflare/workers-utils`
 
-`miniflare` exports a more stable and robust version of the `getLocalWorkerdCompatibilityDate` utility, and that is the version that now the package uses. This doesn't have any specific user-facing effect (besides potentially making the function more reliable).
+`miniflare` exports the latest compatibility date `supportedCompatibility` as, and that is the value that now the package uses as the latest supported workerd compatibility date. This doesn't have any specific user-facing effect (besides potentially making the function more reliable).
