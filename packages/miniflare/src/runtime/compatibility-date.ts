@@ -6,7 +6,7 @@ export type MM = `${number}${number}`;
 export type DD = `${number}${number}`;
 
 /**
- * String represents a date following the Cloudflare compatibility date format, such as `2025-09-27`
+ * String representing a date following the Cloudflare compatibility date format, such as `2025-09-27`
  */
 export type CompatDate = `${YYYY}-${MM}-${DD}`;
 

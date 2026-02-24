@@ -20,9 +20,12 @@ export function getWorkerdCompatibilityDate(projectPath: string): CompatDate {
 		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 		const wrangler: Awaited<typeof import("wrangler")> =
 			projectRequire("wrangler");
-		const date = wrangler.getLocalWorkerdCompatibilityDate();
-		s.stop(`${brandColor("compatibility date")} ${dim(date)}`);
-		return date;
+		const { supportedCompatibilityDate } = wrangler;
+
+		s.stop(
+			`${brandColor("compatibility date")} ${dim(supportedCompatibilityDate)}`,
+		);
+		return supportedCompatibilityDate;
 	} catch {
 		// Note: this fallback date doesn't have any special meaning, it's simply the latest compatibility date at the time of writing
 		//       (source: https://github.com/cloudflare/workerd/blob/main/src/workerd/io/supported-compatibility-date.txt)
