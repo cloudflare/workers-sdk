@@ -63,6 +63,21 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Shared ESLint config in `packages/eslint-config-shared/`
 - Dependency management via pnpm catalog system
 
+## WHERE TO LOOK
+
+| Task                                           | Location                                       | Notes                                                            |
+| ---------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| Add/modify a CLI command                       | `packages/wrangler/src/`                       | Commands registered in `src/index.ts` (2k+ line yargs tree)      |
+| Change local dev behavior                      | `packages/miniflare/src/`                      | `src/index.ts` is the main `Miniflare` class                     |
+| Modify Workers runtime simulation              | `packages/miniflare/src/workers/`              | ~30 embedded worker scripts, built via `worker:` virtual imports |
+| Add a test fixture                             | `fixtures/`                                    | Each fixture is a full workspace member with own `package.json`  |
+| Shared config types/validation                 | `packages/workers-utils/src/config/`           | `validation.ts` is the config normalizer (large file)            |
+| Test helpers (runInTempDir, seed, mockConsole) | `packages/workers-utils/src/test-helpers/`     | Shared across wrangler, miniflare, others                        |
+| Cloudflare API mocks for tests                 | `packages/wrangler/src/__tests__/helpers/msw/` | MSW handlers per API domain                                      |
+| CI workflows                                   | `.github/workflows/`                           | `test-and-check.yml` is the primary gate                         |
+| Build/deploy scripts                           | `tools/deployments/`                           | Validation + deployment helpers, run via `esbuild-register`      |
+| Changeset config and rules                     | `.changeset/README.md`                         | Must read before creating changesets                             |
+
 ## Development Guidelines
 
 **Requirements:**
@@ -84,17 +99,34 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Format with Prettier - run `pnpm prettify` in the workspace root before committing
 - All changes to published packages require a changeset (see below)
 
+**Formatting (Prettier):**
+
+- Tabs (not spaces), double quotes, semicolons, trailing commas (es5)
+- Import order enforced: builtins → third-party → parent → sibling → index → types
+- `prettier-plugin-packagejson` sorts package.json keys
+
+**Security:**
+
+- Custom ESLint rule `workers-sdk/no-unsafe-command-execution`: no template literals or string concatenation in `exec`/`spawn`/`execFile` calls (command injection prevention, CWE-78). Disabled in test files only.
+
+**Dependencies:**
+
+- Packages must bundle deps into distributables; runtime `dependencies` are forbidden except for an explicit allowlist
+- External (non-bundled) deps must be declared in `scripts/deps.ts` with `EXTERNAL_DEPENDENCIES` and a comment explaining why
+
 **Testing Standards:**
 
 - Unit tests with Vitest for all packages
 - Fixture tests in `/fixtures` directory for filesystem/Worker scenarios
 - E2E tests require real Cloudflare account credentials
 - Use `vitest-pool-workers` for testing actual Workers runtime behavior
+- Shared vitest config (`vitest.shared.ts`): 50s timeouts, `retry: 2`, `restoreMocks: true`
 
 **Git Workflow:**
 
 - Check you are not on main before committing. Create a new branch for your work from main if needed.
 - Clean commit history required before first review
+- Don't squash commits after review
 - Never commit without changesets for user-facing changes
 - PR template requirements: Remove "Fixes #..." line when no relevant issue exists, keep all checkboxes (don't delete unchecked ones)
 
@@ -108,12 +140,12 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 ## Key Locations
 
-- `/fixtures` - Test fixtures and example applications
+- `/fixtures` - Test fixtures and example applications (each a workspace member)
 - `/packages/wrangler/src` - Main Wrangler CLI source code
 - `/packages/miniflare/src` - Miniflare source
-- `/tools` - Build scripts and deployment utilities
+- `/tools` - Build scripts and deployment utilities (run via `esbuild-register`, no build step)
 - `turbo.json` - Turbo build configuration
-- `pnpm-workspace.yaml` - Workspace configuration
+- `pnpm-workspace.yaml` - Workspace configuration (~156 workspace members)
 
 ## Testing Strategy
 
@@ -132,3 +164,37 @@ Every change to package code requires a changeset or it will not trigger a relea
 
 The changeset descriptions can either use conventional commit prefixes (e.g., "fix: remove unused option") or
 start with a capital letter and describe the change directly (e.g., "Remove unused option" not").
+
+**Changeset Rules:**
+
+- Major versions for `wrangler` are currently **forbidden**
+- `patch`: bug fixes; `minor`: new features, deprecations, experimental breaking changes; `major`: stable breaking changes only
+- No h1/h2/h3 headers in changeset descriptions (changelog uses h3)
+- Config examples must use `wrangler.json` (JSONC), not `wrangler.toml`
+- Separate changesets for distinct changes; do not lump unrelated changes
+
+## Anti-Patterns
+
+These are explicitly forbidden across the repo:
+
+- **npm/yarn** → use pnpm
+- **`any` type** → properly type everything
+- **Non-null assertions (`!`)** → use type narrowing
+- **Floating promises** → await or void explicitly
+- **Missing curly braces** → always brace control flow
+- **`console.*` in wrangler** → use the `logger` singleton
+- **Direct Cloudflare REST API calls** → use the Cloudflare TypeScript SDK
+- **Named imports from `ci-info`** → use default import (`import ci from "ci-info"`)
+- **Runtime dependencies** → bundle deps; external deps need explicit allowlist entry
+- **Committing to main** → always work on a branch
+
+## Subdirectory Knowledge
+
+Packages with their own AGENTS.md for deeper context:
+
+- `packages/wrangler/AGENTS.md` - CLI architecture, command structure, test patterns
+- `packages/miniflare/AGENTS.md` - Worker simulation, embedded workers, build system
+- `packages/vite-plugin-cloudflare/AGENTS.md` - Plugin architecture, playground setup
+- `packages/create-cloudflare/AGENTS.md` - Scaffolding, template system
+- `packages/vitest-pool-workers/AGENTS.md` - 3-context architecture, cloudflare:test module
+- `packages/workers-utils/AGENTS.md` - Shared config validation, test helpers
