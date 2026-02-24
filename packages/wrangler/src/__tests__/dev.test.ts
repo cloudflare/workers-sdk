@@ -18,6 +18,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { supportedCompatibilityDate } from "../api";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
@@ -277,11 +278,7 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			// Use getLocalWorkerdCompatibilityDate() which applies the same safe date
-			// conversion as wrangler does (converting future dates to today's date)
-			const { date: currentDate } = getLocalWorkerdCompatibilityDate();
-
-			expect(std.warn.replaceAll(currentDate, "<current-date>"))
+			expect(std.warn.replaceAll(supportedCompatibilityDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
