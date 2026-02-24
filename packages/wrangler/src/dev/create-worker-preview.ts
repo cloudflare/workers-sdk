@@ -183,7 +183,10 @@ export async function createPreviewSession(
 	const switchedExchangeUrl = switchHost(exchange_url, ctx.host, !!ctx.zone);
 
 	const headers: HeadersInit = {};
-	const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
+	const accessToken = await getAccessToken(
+		switchedExchangeUrl.hostname,
+		abortSignal
+	);
 
 	if (accessToken) {
 		headers.cookie = `CF_Authorization=${accessToken}`;
@@ -347,7 +350,10 @@ export async function createWorkerPreview(
 		abortSignal,
 		minimal_mode
 	);
-	const accessToken = await getAccessToken(token.prewarmUrl.hostname);
+	const accessToken = await getAccessToken(
+		token.prewarmUrl.hostname,
+		abortSignal
+	);
 
 	const headers: HeadersInit = { "cf-workers-preview-token": token.value };
 	if (accessToken) {
