@@ -2,6 +2,14 @@ export { unstable_dev } from "./dev";
 export type { Unstable_DevWorker, Unstable_DevOptions } from "./dev";
 export { unstable_pages } from "./pages";
 export {
+	generateTypes as unstable_generateTypes,
+	formatGeneratedTypes as unstable_formatGeneratedTypes,
+} from "../type-generation/api";
+export type {
+	GenerateTypesOptions as Unstable_GenerateTypesOptions,
+	GenerateTypesResult as Unstable_GenerateTypesResult,
+} from "../type-generation/api";
+export {
 	uploadMTlsCertificate,
 	uploadMTlsCertificateFromFs,
 	listMTlsCertificates,

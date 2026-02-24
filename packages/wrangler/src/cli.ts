@@ -17,6 +17,8 @@ import {
 	startRemoteProxySession,
 	startWorker,
 	unstable_dev,
+	unstable_formatGeneratedTypes,
+	unstable_generateTypes,
 	unstable_getDevCompatibilityDate,
 	unstable_getDurableObjectClassNameToUseSQLiteMap,
 	unstable_getMiniflareWorkerOptions,
@@ -36,6 +38,8 @@ import type {
 	Unstable_Config,
 	Unstable_DevOptions,
 	Unstable_DevWorker,
+	Unstable_GenerateTypesOptions,
+	Unstable_GenerateTypesResult,
 	Unstable_MiniflareWorkerOptions,
 	Unstable_RawConfig,
 	Unstable_RawEnvironment,
@@ -73,6 +77,8 @@ export {
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
+	unstable_generateTypes,
+	unstable_formatGeneratedTypes,
 };
 
 export type {
@@ -85,6 +91,8 @@ export type {
 	PlatformProxy,
 	SourcelessWorkerOptions,
 	Unstable_MiniflareWorkerOptions,
+	Unstable_GenerateTypesOptions,
+	Unstable_GenerateTypesResult,
 };
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
