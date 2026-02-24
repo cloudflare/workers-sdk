@@ -939,9 +939,9 @@ defined at the top-level.
   Returns the same object returned from incoming `Request`'s `cf` property. This
   object depends on the `cf` property from `SharedOptions`.
 
-### `getLocalWorkerdCompatibilityDate(): CompatDate`
+### `supportedCompatibilityDate`
 
-Returns the latest [compatibility date](https://developers.cloudflare.com/workers/platform/compatibility-dates/) supported by the locally installed `workerd` package. If the `workerd` package's compatibility date is in the future (which can happen on the day of a new release), today's date is returned instead to avoid potential issues. `CompatDate` is a string in `YYYY-MM-DD` format (e.g. `"2025-09-27"`).
+Exported value containing the latest [compatibility date](https://developers.cloudflare.com/workers/platform/compatibility-dates/) supported by the locally installed `workerd` package. If the `workerd` package's compatibility date is in the future, the value contains today's date instead. The value is a string in the `YYYY-MM-DD` format (e.g. `"2025-09-27"`).
 
 ## Configuration
 
