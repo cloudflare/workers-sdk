@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
+import { removeDir } from "@cloudflare/workers-utils";
 import { version } from "../package.json";
 import type { GlobalSetupContext } from "vitest/node";
 
@@ -27,10 +28,7 @@ export default async function ({ provide }: GlobalSetupContext) {
 		await stop();
 
 		console.log("Cleaning up temporary directory...");
-		try {
-			await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
-			// This sometimes fails on Windows with EBUSY
-		} catch {}
+		removeDir(projectPath, { fireAndForget: true });
 	};
 }
 

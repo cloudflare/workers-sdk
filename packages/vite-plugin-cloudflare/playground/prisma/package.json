@@ -16,6 +16,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@prisma/adapter-d1": "^7.0.0",
 		"@prisma/client": "^7.0.0",
 		"prisma": "^7.0.0",
