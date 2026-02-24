@@ -91,11 +91,17 @@ export const verifyDockerInstalled = async (
 ) => {
 	const dockerIsRunning = await isDockerRunning(dockerPath);
 	if (!dockerIsRunning) {
-		throw new UserError(
+		let message =
 			`The Docker CLI could not be launched. Please ensure that the Docker CLI is installed and the daemon is running.\n` +
-				`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.` +
-				`${isDev ? "\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false." : ""}`
-		);
+			`Other container tooling that is compatible with the Docker CLI and engine may work, but is not yet guaranteed to do so. You can specify an executable with the environment variable WRANGLER_DOCKER_BIN and a socket with DOCKER_HOST.`;
+		if (isDev) {
+			message +=
+				"\nTo suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or passing in --enable-containers=false.";
+		} else {
+			message +=
+				"\nIf you cannot run Docker locally, you can still deploy your Worker by passing --containers-rollout=none. This will not deploy or update your Container.";
+		}
+		throw new UserError(message);
 	}
 };
 
