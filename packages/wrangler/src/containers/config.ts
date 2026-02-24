@@ -50,7 +50,7 @@ export const getNormalizedContainerOptions = async (
 	config: Config,
 	args: {
 		/** set by args.containersRollout */
-		containersRollout?: "gradual" | "immediate";
+		containersRollout?: "gradual" | "immediate" | "none";
 		dryRun?: boolean;
 	}
 ): Promise<ContainerNormalizedConfig[]> => {
@@ -111,7 +111,10 @@ export const getNormalizedContainerOptions = async (
 				args?.containersRollout === "immediate"
 					? 100
 					: container.rollout_step_percentage ?? rolloutStepPercentageFallback,
-			rollout_kind: container.rollout_kind ?? "full_auto",
+			rollout_kind:
+				args?.containersRollout === "none"
+					? "none"
+					: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
 				logs_enabled:
