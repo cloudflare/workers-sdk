@@ -10,6 +10,7 @@ import semiver from "semiver";
 import dedent from "ts-dedent";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
@@ -65,7 +66,7 @@ export class Waku extends Framework {
 function validateMinimumWakuVersion(projectPath: string) {
 	const wakuVersion = getInstalledPackageVersion("waku", projectPath);
 	if (wakuVersion && semiver(wakuVersion, "1.0.0-alpha.4") < 0) {
-		throw new FatalError(
+		throw new AutoConfigFrameworkConfigurationError(
 			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported by the Wrangler automatic configuration. Please update the Waku version and try again.`
 		);
 	}
