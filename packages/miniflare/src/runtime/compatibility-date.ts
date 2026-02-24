@@ -11,36 +11,6 @@ export type DD = `${number}${number}`;
 export type CompatDate = `${YYYY}-${MM}-${DD}`;
 
 /**
- * Gets the compatibility date of the locally installed workerd package, it also ensures that the date is not in the future.
- *
- * @returns The latest compatibility date supported by the local workerd package, or today's date if the workerd date is in the future.
- */
-export function getLocalWorkerdCompatibilityDate(): CompatDate {
-	return toSafeCompatibilityDate(new Date(supportedCompatibilityDate));
-}
-
-/**
- * Workerd releases often have a date for the following day.
- * Unfortunately, Workers deployments will fail if they specify a compatibility date in the future. This means that most
- * who create a new project on the same day as a workerd release will have their deployments fail until they
- * manually adjust the compatibility date.
- *
- * To work around this, we must manually ensure that the compat date is not on a future UTC day when there was a recent workerd release.
- *
- * This function is the used to convert potential future dates to safe compatibility dates.
- *
- * @param date The local workerd date to check and convert
- * @returns A compat date created using today's date if the local workerd date is in the future, one using the local workerd date otherwise
- */
-function toSafeCompatibilityDate(date: Date): CompatDate {
-	if (date.getTime() > Date.now()) {
-		return formatCompatibilityDate(new Date());
-	}
-
-	return formatCompatibilityDate(date);
-}
-
-/**
  * Discern whether a string represents a compatibility date (`YYYY-MM-DD`)
  *
  * @param str The target string
@@ -67,11 +37,15 @@ export function formatCompatibilityDate(date: Date): CompatDate {
  * date is in the future, returns today's date instead. This handles the case
  * where workerd releases set their compatibility date up to 7 days in the future.
  */
-function getSafeCompatibilityDate(): string {
-	const today = new Date().toISOString().slice(0, 10);
+function getSafeCompatibilityDate(): CompatDate {
+	const today = formatCompatibilityDate(new Date());
+
 	if (workerdCompatibilityDate > today) {
 		return today;
 	}
+
+	assert(isCompatDate(workerdCompatibilityDate));
+
 	return workerdCompatibilityDate;
 }
 
