@@ -38,13 +38,14 @@ export function formatCompatibilityDate(date: Date): CompatDate {
  * where workerd releases set their compatibility date up to 7 days in the future.
  */
 function getSafeCompatibilityDate(): CompatDate {
+	// The compatibility data from workerd follows the CompatDate format
+	assert(isCompatDate(workerdCompatibilityDate));
+
 	const today = formatCompatibilityDate(new Date());
 
 	if (workerdCompatibilityDate > today) {
 		return today;
 	}
-
-	assert(isCompatDate(workerdCompatibilityDate));
 
 	return workerdCompatibilityDate;
 }
