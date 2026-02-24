@@ -11,7 +11,7 @@
 		"check:type": "tsc",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler pages deploy --project-name workers-playground ./dist",
 		"dev": "vite",
-		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.ts"
+		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts && pnpm exec oxfmt ./src/QuickEditor/defaultHashes.ts"
 	},
 	"dependencies": {
 		"@cloudflare/component-button": "^7.0.11",
