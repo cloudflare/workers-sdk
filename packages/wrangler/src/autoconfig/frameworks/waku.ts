@@ -4,10 +4,10 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
+import { FatalError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
-import { logger } from "../../logger";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
 import { getInstalledPackageVersion } from "./utils/packages";
@@ -24,6 +24,8 @@ export class Waku extends Framework {
 		projectPath,
 		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		validateMinimumWakuVersion(projectPath);
+
 		if (!dryRun) {
 			await installPackages(
 				packageManager,
@@ -34,8 +36,6 @@ export class Waku extends Framework {
 					doneText: `${brandColor("installed")}`,
 				}
 			);
-
-			validateMinimumWakuVersion(projectPath);
 
 			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);
@@ -65,8 +65,8 @@ export class Waku extends Framework {
 function validateMinimumWakuVersion(projectPath: string) {
 	const wakuVersion = getInstalledPackageVersion("waku", projectPath);
 	if (wakuVersion && semiver(wakuVersion, "1.0.0-alpha.4") < 0) {
-		logger.warn(
-			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not fully supported and the automatic configuration might fail. If the process fails please update the Waku version and try again.`
+		throw new FatalError(
+			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported and the automatic configuration might fail. If the process fails please update the Waku version and try again.`
 		);
 	}
 }
