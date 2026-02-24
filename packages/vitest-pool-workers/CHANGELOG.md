@@ -1,5 +1,13 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.12.17
+
+### Patch Changes
+
+- Updated dependencies [[`3d6e421`](https://github.com/cloudflare/workers-sdk/commit/3d6e421dcd03fad1837c52c0e677d91678c6eed7), [`294297e`](https://github.com/cloudflare/workers-sdk/commit/294297e8e5bb90e71a6db15278e3ab0a9345cacf)]:
+  - wrangler@4.68.1
+  - miniflare@4.20260302.0
+
 ## 0.12.16
 
 ### Patch Changes
