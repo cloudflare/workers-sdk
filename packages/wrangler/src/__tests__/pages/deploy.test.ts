@@ -75,6 +75,7 @@ describe("pages deploy", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
@@ -3486,8 +3487,7 @@ and that at least one include rule is provided.
 							Content-Type: text/plain
 
 							<html><body>Hello text modules</body></html>
-							------formdata-undici-0.test--
-							"
+							------formdata-undici-0.test--"
 						`);
 
 						return HttpResponse.json(
@@ -3751,8 +3751,7 @@ and that at least one include rule is provided.
 							};
 							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-							------formdata-undici-0.test--
-							"
+							------formdata-undici-0.test--"
 						`);
 
 						expect(JSON.parse(customRoutesJSON)).toMatchObject({
@@ -4124,8 +4123,7 @@ and that at least one include rule is provided.
 							};
 							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-							------formdata-undici-0.test--
-							"
+							------formdata-undici-0.test--"
 						`);
 
 						return HttpResponse.json(

@@ -423,6 +423,7 @@ describe("whoami", () => {
 		expect(() => (output = JSON.parse(std.out))).not.toThrow();
 		expect(output).toEqual({
 			loggedIn: true,
+			profile: "default",
 			authType: "OAuth Token",
 			email: "user@example.com",
 			accounts: [

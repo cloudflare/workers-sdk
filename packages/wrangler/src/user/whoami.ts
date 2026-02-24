@@ -8,7 +8,13 @@ import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
-import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
+import {
+	DefaultScopeKeys,
+	getActiveProfile,
+	getAPIToken,
+	getAuthFromEnv,
+	getScopes,
+} from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -19,6 +25,7 @@ export type WhoamiResult =
 	| { loggedIn: false }
 	| {
 			loggedIn: true;
+			profile: string;
 			authType: AuthType;
 			email: string | undefined;
 			accounts: AccountInfo[];
@@ -41,6 +48,7 @@ export async function whoami(
 	configAccountId?: string,
 	json?: boolean
 ) {
+	const activeProfile = getActiveProfile();
 	if (json) {
 		const user = await getUserInfo(complianceConfig);
 		if (!user) {
@@ -48,6 +56,7 @@ export async function whoami(
 		}
 		const result: WhoamiResult = {
 			loggedIn: true,
+			profile: activeProfile,
 			authType: user.authType,
 			email: user.email,
 			accounts: user.accounts,
@@ -57,6 +66,11 @@ export async function whoami(
 		return;
 	}
 
+	if (activeProfile !== "default") {
+		logger.log(
+			`Using profile: ${chalk.blue(activeProfile)}`
+		);
+	}
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
