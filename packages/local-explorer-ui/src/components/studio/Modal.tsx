@@ -56,7 +56,7 @@ export function ModalProvider({ children }: PropsWithChildren) {
 	const [modals, setModals] = useState<Array<IModalEntry>>([]);
 
 	const handleOpenModal = useCallback(
-		<Props = unknown,>(
+		<Props = unknown>(
 			ModalComponent: ComponentType<Props>,
 			props?: Omit<Props, keyof ModalInjectedProps> & { onClose?: () => void }
 		) => {
@@ -75,7 +75,7 @@ export function ModalProvider({ children }: PropsWithChildren) {
 	);
 
 	const handleCloseModal = useCallback(
-		<Props = unknown,>(ModalComponent?: ComponentType<Props>) => {
+		<Props = unknown>(ModalComponent?: ComponentType<Props>) => {
 			setModals((prev) => {
 				if (ModalComponent) {
 					return prev.filter(

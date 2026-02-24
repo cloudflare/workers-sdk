@@ -4,28 +4,34 @@
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
-		"workers",
-		"worker",
-		"vitest",
-		"jest",
-		"pool",
 		"environment",
-		"miniflare",
-		"unit",
 		"integration",
-		"test"
+		"jest",
+		"miniflare",
+		"pool",
+		"test",
+		"unit",
+		"vitest",
+		"worker",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vitest-pool-workers#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vitest-pool-workers"
 	},
-	"license": "MIT",
+	"files": [
+		"dist",
+		"types/cloudflare-test.d.ts"
+	],
 	"type": "module",
+	"main": "dist/pool/index.mjs",
+	"types": "types/cloudflare-test.d.ts",
 	"exports": {
 		".": {
 			"types": "./types/cloudflare-test.d.ts",
@@ -37,12 +43,6 @@
 			"require": "./dist/config/index.cjs"
 		}
 	},
-	"main": "dist/pool/index.mjs",
-	"types": "types/cloudflare-test.d.ts",
-	"files": [
-		"dist",
-		"types/cloudflare-test.d.ts"
-	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",

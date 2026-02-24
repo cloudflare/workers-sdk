@@ -5,8 +5,8 @@ import { brandColor } from "@cloudflare/cli/colors";
 import * as recast from "recast";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
-import { isPackageInstalled } from "./utils/packages";
 import { Framework } from ".";
+import { isPackageInstalled } from "./utils/packages";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 import type { types } from "recast";
 

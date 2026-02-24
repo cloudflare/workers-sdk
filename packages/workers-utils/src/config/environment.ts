@@ -7,8 +7,7 @@ import type { Json } from "../types";
  * This could be the top-level default environment, or a specific named environment.
  */
 export interface Environment
-	extends EnvironmentInheritable,
-		EnvironmentNonInheritable {}
+	extends EnvironmentInheritable, EnvironmentNonInheritable {}
 
 type SimpleRoute = string;
 export type ZoneIdRoute = {

@@ -1,6 +1,5 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { patchConfig } from "./client";
 import {
 	getCacheOptionsFromArgs,
 	getMtlsFromArgs,
@@ -8,6 +7,7 @@ import {
 	getOriginFromArgs,
 	upsertOptions,
 } from ".";
+import { patchConfig } from "./client";
 
 export const hyperdriveUpdateCommand = createCommand({
 	metadata: {

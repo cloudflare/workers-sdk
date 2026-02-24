@@ -7,8 +7,8 @@ import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
+import { getInstalledPackageVersion } from "./utils/packages";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Analog extends Framework {

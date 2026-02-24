@@ -827,7 +827,7 @@ describe("middleware", () => {
 
 		it("should build multiple middleware as expected", async () => {
 			await seedFs({
-				"src/index.js": dedent/* javascript */ `
+				"src/index.js": dedent /* javascript */ `
 				export default {
 					async fetch(request, env) {
 						return Response.json(env);
@@ -841,7 +841,7 @@ describe("middleware", () => {
 					}
 				}
 			`,
-				"wrangler.toml": dedent/*toml*/ `
+				"wrangler.toml": dedent /*toml*/ `
 				name = "worker-app"
 				main = "src/index.js"
 				compatibility_date = "2022-03-31"

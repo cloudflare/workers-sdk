@@ -3,11 +3,11 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js"
 	},
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "tsc",
 		"check:lint": "eslint . --max-warnings=0 --cache",

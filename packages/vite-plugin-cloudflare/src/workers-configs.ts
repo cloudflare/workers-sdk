@@ -12,14 +12,12 @@ export type WorkerResolvedConfig =
 	| AssetsOnlyWorkerResolvedConfig
 	| WorkerWithServerLogicResolvedConfig;
 
-export interface AssetsOnlyWorkerResolvedConfig
-	extends WorkerBaseResolvedConfig {
+export interface AssetsOnlyWorkerResolvedConfig extends WorkerBaseResolvedConfig {
 	type: "assets-only";
 	config: ResolvedAssetsOnlyConfig;
 }
 
-export interface WorkerWithServerLogicResolvedConfig
-	extends WorkerBaseResolvedConfig {
+export interface WorkerWithServerLogicResolvedConfig extends WorkerBaseResolvedConfig {
 	type: "worker";
 	config: ResolvedWorkerConfig;
 }

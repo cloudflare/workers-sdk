@@ -8,8 +8,8 @@ import { version } from "workerd";
 import yargs from "yargs";
 import { getEntry } from "../deployment-bundle/entry";
 import { logger } from "../logger";
-import { generateRuntimeTypes } from "./runtime";
 import { generateEnvTypes } from ".";
+import { generateRuntimeTypes } from "./runtime";
 import type { Entry } from "../deployment-bundle/entry";
 import type { Config } from "@cloudflare/workers-utils";
 

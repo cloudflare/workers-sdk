@@ -623,12 +623,9 @@ describe("asset-server handler", () => {
 		expect(response2.headers.get("link")).toBeNull();
 	});
 
-	test.todo(
-		"early hints should temporarily cache failures to parse links",
-		async () => {
-			// I couldn't figure out a way to make HTMLRewriter error out
-		}
-	);
+	test.todo("early hints should temporarily cache failures to parse links", async () => {
+		// I couldn't figure out a way to make HTMLRewriter error out
+	});
 
 	describe("should serve deleted assets from preservation cache", async () => {
 		beforeEach(() => {

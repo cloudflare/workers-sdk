@@ -16,7 +16,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
 					account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 					compatibility_date = "2023-01-01"
 			`,
-			"index.ts": dedent/*javascript*/ `
+			"index.ts": dedent /*javascript*/ `
 				export default {
 					async fetch(request, env) {
 						return new Response(
@@ -25,7 +25,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("switching runtimes", () => {
 					},
 				};
 			`,
-			"index.mjs": dedent/*javascript*/ `
+			"index.mjs": dedent /*javascript*/ `
 				import { setTimeout } from "timers/promises";
 				import { unstable_startWorker as startWorker } from "${WRANGLER_IMPORT}";
 

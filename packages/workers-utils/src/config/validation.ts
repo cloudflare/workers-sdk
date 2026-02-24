@@ -6,6 +6,7 @@ import { dedent } from "ts-dedent";
 import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isDirectory } from "../fs-helpers";
+import { configFileName, formatConfigSnippet } from ".";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -35,7 +36,6 @@ import {
 	validateTypedArray,
 	validateUniqueNameProperty,
 } from "./validation-helpers";
-import { configFileName, formatConfigSnippet } from ".";
 import type { Binding } from "../types";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -698,7 +698,7 @@ function normalizeAndValidateDev(
 		inspector_ip,
 		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
-		upstream_protocol = upstreamProtocolArg ?? remoteArg
+		upstream_protocol = (upstreamProtocolArg ?? remoteArg)
 			? "https"
 			: local_protocol,
 		host,

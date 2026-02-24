@@ -1,3 +1,4 @@
+import { setupTest } from "./test";
 import type {
 	D1Database,
 	D1DatabaseSession,
@@ -7,10 +8,9 @@ import type {
 	D1SessionBookmark,
 	D1SessionConstraint,
 } from "@cloudflare/workers-types/experimental";
-import type { Miniflare } from "miniflare";
 // Import suite tests - this registers the tests with vitest
 import "./suite";
-import { setupTest } from "./test";
+import type { Miniflare } from "miniflare";
 
 const kSend = Symbol("kSend");
 

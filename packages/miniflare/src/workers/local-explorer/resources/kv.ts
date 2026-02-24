@@ -88,7 +88,7 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 	}
 
 	const listResult = await kv.list({ cursor, limit, prefix });
-	const resultCursor = "cursor" in listResult ? listResult.cursor ?? "" : "";
+	const resultCursor = "cursor" in listResult ? (listResult.cursor ?? "") : "";
 
 	return c.json({
 		...wrapResponse(

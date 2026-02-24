@@ -8,9 +8,9 @@ import dedent from "ts-dedent";
 import { logger } from "../../logger";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
+import { Framework } from ".";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { transformViteConfig } from "./utils/vite-config";
-import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 const b = recast.types.builders;
@@ -160,7 +160,7 @@ export class ReactRouter extends Framework {
 
 			writeFileSync(
 				"workers/app.ts",
-				dedent/* javascript */ `
+				dedent /* javascript */ `
 					import { createRequestHandler } from "react-router";
 
 					declare module "react-router" {
@@ -196,7 +196,7 @@ export class ReactRouter extends Framework {
 			if (!existsSync("app/entry.server.tsx")) {
 				writeFileSync(
 					`app/entry.server.tsx`,
-					dedent/* javascript */ `
+					dedent /* javascript */ `
 					import type { AppLoadContext, EntryContext } from "react-router";
 					import { ServerRouter } from "react-router";
 					import { isbot } from "isbot";

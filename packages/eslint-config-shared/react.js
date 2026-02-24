@@ -1,7 +1,7 @@
-import base from "./index.js";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
+import base from "./index.js";
 
 // Use this ESLint config as @cloudflare/eslint-config-shared for Node projects
 export default defineConfig([

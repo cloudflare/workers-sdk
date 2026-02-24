@@ -1,8 +1,8 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { updateService } from "./client";
-import { buildRequest, validateRequest } from "./validation";
 import { serviceOptions, ServiceType } from "./index";
+import { buildRequest, validateRequest } from "./validation";
 
 export const vpcServiceUpdateCommand = createCommand({
 	metadata: {

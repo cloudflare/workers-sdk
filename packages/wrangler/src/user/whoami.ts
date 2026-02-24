@@ -7,8 +7,8 @@ import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
-import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
+import { fetchMembershipRoles } from "./membership";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -205,7 +205,8 @@ async function printMembershipInfo(
 		if (!accountFilter) {
 			return;
 		}
-		const eq = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" }) == 0; // prettier-ignore
+		const eq = (a: string, b: string) =>
+			a.localeCompare(b, undefined, { sensitivity: "base" }) == 0; // prettier-ignore
 		const selectedAccount = user.accounts.find(
 			(a) => eq(a.id, accountFilter) || eq(a.name, accountFilter)
 		);

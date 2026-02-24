@@ -153,7 +153,7 @@ function switchHost(
 	zonePreview: boolean
 ): URL {
 	const url = new URL(originalUrl);
-	url.hostname = zonePreview ? host ?? url.hostname : url.hostname;
+	url.hostname = zonePreview ? (host ?? url.hostname) : url.hostname;
 	return url;
 }
 /**

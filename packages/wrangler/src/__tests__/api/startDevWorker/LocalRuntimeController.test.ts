@@ -204,7 +204,7 @@ describe("LocalRuntimeController", () => {
 				],
 				id: 0,
 				path: "/virtual/esm/index.mjs",
-				entrypointSource: dedent/*javascript*/ `
+				entrypointSource: dedent /*javascript*/ `
 				import add from "./add.cjs";
 				import base64 from "./base64.cjs";
 				import wave1 from "./data/wave.txt";
@@ -304,7 +304,7 @@ describe("LocalRuntimeController", () => {
 			};
 			const bundle: Bundle = {
 				type: "commonjs",
-				entrypointSource: dedent/*javascript*/ `
+				entrypointSource: dedent /*javascript*/ `
 				addEventListener("fetch", (event) => {
 					const { pathname } = new URL(event.request.url);
 					if (pathname === "/") {
@@ -402,7 +402,7 @@ describe("LocalRuntimeController", () => {
 						VERSION: { type: "json", value: version },
 					},
 				} satisfies Partial<StartDevWorkerOptions>;
-				const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 					export default {
 						fetch(request, env, ctx) {
 							return Response.json({ binding: env.VERSION, bundle: ${version} });
@@ -456,7 +456,7 @@ describe("LocalRuntimeController", () => {
 				entrypoint: "NOT_REAL",
 				compatibilityDate: disabledDate,
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					fetch(request, env, ctx) { return new Response(typeof navigator); }
 				}
@@ -515,7 +515,7 @@ describe("LocalRuntimeController", () => {
 				name: "worker",
 				entrypoint: "NOT_REAL",
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					fetch(request, env, ctx) {
 						debugger;
@@ -593,7 +593,7 @@ describe("LocalRuntimeController", () => {
 					},
 				},
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 			export default {
 				fetch(request, env, ctx) {
 					const body = JSON.stringify(env, (key, value) => {
@@ -671,7 +671,7 @@ describe("LocalRuntimeController", () => {
 				dev: { persist: "./persist" },
 			};
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						const key = "http://localhost/";
@@ -743,7 +743,7 @@ describe("LocalRuntimeController", () => {
 				bindings: { NAMESPACE: { type: "kv_namespace", id: "ns" } },
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						if (request.method === "POST") await env.NAMESPACE.put("key", "value");
@@ -812,7 +812,7 @@ describe("LocalRuntimeController", () => {
 				(api) => api.create(secretValue)
 			);
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response(await env.SECRET.get());
@@ -847,7 +847,7 @@ describe("LocalRuntimeController", () => {
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						if (request.method === "POST") {
@@ -919,7 +919,7 @@ describe("LocalRuntimeController", () => {
 				entrypoint: "NOT_REAL",
 				legacy: { site: { bucket: ".", include: ["*.txt"] } },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 				const manifest = JSON.parse(manifestJSON);
 				export default {
@@ -988,7 +988,7 @@ describe("LocalRuntimeController", () => {
 				bindings: { BUCKET: { type: "r2_bucket", bucket_name: "bucket" } },
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						if (request.method === "POST") await env.BUCKET.put("key", "value");
@@ -1055,7 +1055,7 @@ describe("LocalRuntimeController", () => {
 				},
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						await env.DB.exec("CREATE TABLE IF NOT EXISTS entries (key text PRIMARY KEY, value text)");
@@ -1136,7 +1136,7 @@ describe("LocalRuntimeController", () => {
 				],
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						await env.QUEUE.send("message");
@@ -1192,7 +1192,7 @@ describe("LocalRuntimeController", () => {
 					DB: { type: "hyperdrive", id: "db", localConnectionString },
 				},
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						const socket = env.DB.connect();
@@ -1344,7 +1344,7 @@ describe("LocalRuntimeController", () => {
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						let log = {
@@ -1385,7 +1385,7 @@ describe("LocalRuntimeController", () => {
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					async fetch(request, env, ctx) {
 						return new Response("env.IMAGES is " + (env.IMAGES === undefined ? "not available" : "available"));

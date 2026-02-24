@@ -238,9 +238,7 @@ function applyDefines() {
 
 // `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton and "colo local" ephemeral object. Refer to:
 // https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
-export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__
-	implements DurableObject
-{
+export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ implements DurableObject {
 	executor: VitestExecutorType | undefined;
 
 	constructor(_state: DurableObjectState, env: Record<string, unknown> & Env) {

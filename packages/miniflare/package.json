@@ -4,24 +4,22 @@
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
-		"workers",
-		"worker",
+		"cloudworker",
 		"local",
-		"cloudworker"
+		"worker",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/miniflare#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT",
+	"author": "MrBBot <me@mrbbot.dev>",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/miniflare"
 	},
-	"license": "MIT",
-	"author": "MrBBot <me@mrbbot.dev>",
-	"main": "./dist/src/index.js",
-	"types": "./dist/src/index.d.ts",
 	"bin": {
 		"miniflare": "bootstrap.js"
 	},
@@ -30,6 +28,11 @@
 		"dist/local-explorer-ui",
 		"bootstrap.js"
 	],
+	"main": "./dist/src/index.js",
+	"types": "./dist/src/index.d.ts",
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
 		"capnp:workerd": "capnp-es node_modules/workerd/workerd.capnp -ots:src/runtime/config/generated --src-prefix=node_modules/workerd",
@@ -112,9 +115,6 @@
 	},
 	"volta": {
 		"extends": "../../package.json"
-	},
-	"publishConfig": {
-		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true

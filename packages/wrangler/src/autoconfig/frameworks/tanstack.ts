@@ -1,7 +1,7 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { installPackages } from "../c3-vendor/packages";
-import { transformViteConfig } from "./utils/vite-config";
 import { Framework } from ".";
+import { transformViteConfig } from "./utils/vite-config";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class TanstackStart extends Framework {

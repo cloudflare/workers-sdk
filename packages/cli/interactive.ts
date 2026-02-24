@@ -8,8 +8,6 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { CancelError } from "./error";
-import SelectRefreshablePrompt from "./select-list";
-import { stdout } from "./streams";
 import {
 	cancel,
 	crash,
@@ -20,6 +18,8 @@ import {
 	status,
 	stripAnsi,
 } from "./index";
+import SelectRefreshablePrompt from "./select-list";
+import { stdout } from "./streams";
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 

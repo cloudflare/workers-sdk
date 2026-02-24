@@ -1,8 +1,8 @@
 import semiver from "semiver";
 import { runCommand } from "../c3-vendor/command";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
+import { getInstalledPackageVersion } from "./utils/packages";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class NextJs extends Framework {

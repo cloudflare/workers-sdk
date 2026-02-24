@@ -33,8 +33,8 @@ import {
 import { validateSecretName } from "../secrets-store/commands";
 import { getAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { formatError } from "./deploy";
 import { containersScope } from ".";
+import { formatError } from "./deploy";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

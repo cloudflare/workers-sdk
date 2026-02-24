@@ -159,9 +159,9 @@ async function resolveDevConfig(
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: useContainers
-			? input.dev?.containerEngine ??
+			? (input.dev?.containerEngine ??
 				config.dev.container_engine ??
-				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
+				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath()))
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,

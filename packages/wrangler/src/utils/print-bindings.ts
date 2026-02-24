@@ -292,7 +292,7 @@ export function printBindings(
 					const value =
 						typeof database_id == "symbol"
 							? database_id
-							: preview_database_id ?? database_name ?? database_id;
+							: (preview_database_id ?? database_name ?? database_id);
 
 					return {
 						name: binding,
@@ -718,7 +718,9 @@ export function printBindings(
 
 		const maxValueLength = Math.max(
 			...output.map((b) =>
-				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
+				typeof b.value === "symbol"
+					? "inherited".length
+					: (b.value?.length ?? 0)
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
@@ -765,7 +767,7 @@ export function printBindings(
 			const bindingValue = dim(
 				typeof binding.value === "symbol"
 					? chalk.italic("inherited")
-					: binding.value ?? ""
+					: (binding.value ?? "")
 			);
 			const bindingString = padEndAnsi(
 				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,

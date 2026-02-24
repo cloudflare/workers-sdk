@@ -6,27 +6,27 @@
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/worker-utils"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "workers-devprod@cloudflare.com",
-	"exports": {
-		".": {
-			"browser": "./dist/browser.mjs",
-			"import": "./dist/index.mjs",
-			"types": "./dist/index.d.mts"
-		},
-		"./test-helpers": {
-			"import": "./dist/test-helpers/index.mjs",
-			"types": "./dist/test-helpers/index.d.mts"
-		}
-	},
 	"files": [
 		"dist"
 	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"browser": "./dist/browser.mjs",
+			"import": "./dist/index.mjs"
+		},
+		"./test-helpers": {
+			"types": "./dist/test-helpers/index.d.mts",
+			"import": "./dist/test-helpers/index.mjs"
+		}
+	},
 	"scripts": {
 		"build": "tsup",
 		"check:lint": "eslint . --max-warnings=0 --cache",

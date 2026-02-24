@@ -133,7 +133,7 @@ export function convertConfigToBindings(
 					output[binding] = {
 						type: "kv_namespace",
 						...x,
-						id: usePreviewIds ? x.preview_id ?? x.id : x.id,
+						id: usePreviewIds ? (x.preview_id ?? x.id) : x.id,
 					};
 				}
 				break;
@@ -215,7 +215,7 @@ export function convertConfigToBindings(
 						type: "r2_bucket",
 						...x,
 						bucket_name: usePreviewIds
-							? x.preview_bucket_name ?? x.bucket_name
+							? (x.preview_bucket_name ?? x.bucket_name)
 							: x.bucket_name,
 					};
 				}
@@ -227,7 +227,7 @@ export function convertConfigToBindings(
 						type: "d1",
 						...x,
 						database_id: usePreviewIds
-							? x.preview_database_id ?? x.database_id
+							? (x.preview_database_id ?? x.database_id)
 							: x.database_id,
 					};
 				}

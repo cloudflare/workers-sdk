@@ -5,20 +5,20 @@
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
-		"workers",
-		"cloudflare workers"
+		"cloudflare workers",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-shared#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/workers-shared"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "pnpm run check:type:tests && tsc",
