@@ -216,9 +216,11 @@ export async function launchBrowser({
 		dumpio: false,
 		pipe: false,
 		onExit: async () => {
-			await removeDir(tempUserData).catch((e) => {
-				log.debug(`Unable to remove Chrome user data directory: ${String(e)}`);
-			});
+			try {
+				await removeDir(tempUserData);
+			} catch (e) {
+				log.debug(`Unable to remove Chrome user data directory: ${e}`);
+			}
 		},
 	});
 	const wsEndpoint = await browserProcess.waitForLineOutput(

@@ -113,5 +113,3 @@ ruleTester.run("no-direct-recursive-rm", rule, {
 		},
 	],
 });
-
-console.log("All tests passed!");

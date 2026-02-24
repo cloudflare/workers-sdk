@@ -2789,9 +2789,6 @@ export class Miniflare {
 			await this.#runtime?.dispose();
 
 			await this.#stopLoopbackServer();
-			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
-			// `maxRetries` handles `EBUSY` on Windows if `workerd` hasn't fully
-			// released file handles yet after `dispose()`.
 			await removeDir(this.#tmpPath);
 
 			// Close the inspector proxy server if there is one

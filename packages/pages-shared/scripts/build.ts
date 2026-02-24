@@ -10,7 +10,12 @@ function resolve(...segments: string[]) {
 async function main() {
 	try {
 		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- build script runs via esbuild-register (CJS) which can't import the ESM-only workers-utils package
-		rmSync(resolve("dist"), { recursive: true, force: true });
+		rmSync(resolve("dist"), {
+			recursive: true,
+			force: true,
+			maxRetries: 5,
+			retryDelay: 100,
+		});
 	} catch {}
 
 	console.log("Building asset-server...");

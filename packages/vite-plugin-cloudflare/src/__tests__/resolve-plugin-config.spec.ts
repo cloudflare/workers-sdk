@@ -15,10 +15,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 
 	beforeEach(() => {
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-	});
-
-	afterEach(() => {
-		removeDirSync(tempDir);
+		return () => removeDirSync(tempDir);
 	});
 
 	const viteEnv = { mode: "development", command: "serve" as const };
