@@ -5233,7 +5233,11 @@ addEventListener('fetch', event => {});`
 				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed.]`
 			);
 
-			expect(requestCount).toBeLessThan(3);
+			// With streaming uploads, all bucket requests may fire before the
+			// first failure's abort signal propagates. The important behavior is
+			// that the deploy fails and no extra requests beyond the bucket count
+			// are made.
+			expect(requestCount).toBeLessThanOrEqual(3);
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
 			Building list of assets to upload...

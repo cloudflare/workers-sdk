@@ -5,6 +5,7 @@ import { createPatternMatcher } from "@cloudflare/workers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import xxhash from "xxhash-wasm";
+import { fetchResult } from "./cfetch";
 import {
 	BATCH_KEY_MAX,
 	createKVNamespace,
@@ -13,13 +14,51 @@ import {
 	getKVKeyValue,
 	listKVNamespaceKeys,
 	listKVNamespaces,
-	putKVBulkKeyValue,
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import type { KeyValue } from "./kv/helpers";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
+
+/**
+ * Creates a ReadableStream that produces a JSON array body for the KV bulk
+ * PUT API. Files are read from disk one at a time, keeping only a single
+ * file's content in memory at any given moment. This avoids buffering an
+ * entire ~100 MB bucket in memory before uploading.
+ */
+const textEncoder = new TextEncoder();
+
+function createStreamingBulkBody(
+	entries: [string, string][],
+	signal?: AbortSignal
+): ReadableStream<Uint8Array> {
+	let index = 0;
+
+	return new ReadableStream({
+		async pull(controller) {
+			if (signal?.aborted) {
+				controller.close();
+				return;
+			}
+
+			if (index >= entries.length) {
+				controller.enqueue(textEncoder.encode("]"));
+				controller.close();
+				return;
+			}
+
+			const [absFilePath, assetKey] = entries[index];
+			const value = await readFile(absFilePath, "base64");
+
+			// Build JSON fragment manually. Base64 values only contain
+			// [A-Za-z0-9+/=] which are all JSON-safe, so no escaping needed.
+			const prefix = index === 0 ? "[" : ",";
+			const fragment = `${prefix}{"key":${JSON.stringify(assetKey)},"value":"${value}","base64":true}`;
+			controller.enqueue(textEncoder.encode(fragment));
+			index++;
+		},
+	});
+}
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = new Set(["node_modules"]);
@@ -290,32 +329,23 @@ export async function syncWorkersSite(
 				break;
 			}
 
-			// Read all files in the bucket as base64
-			// TODO(perf): consider streaming the bulk upload body, rather than
-			//  buffering all base64 contents then JSON-stringifying. This probably
-			//  doesn't matter *too* much: we know buckets will be about 100MB, so
-			//  with 5 uploaders, we could load about 500MB into memory (+ extra
-			//  object keys/tags/copies/etc).
-			const bucket: KeyValue[] = [];
-			for (const [absAssetFile, assetKey] of nextBucket) {
-				bucket.push({
-					key: assetKey,
-					value: await readFile(absAssetFile, "base64"),
-					base64: true,
-				});
-				if (controller.signal.aborted) {
-					break;
-				}
-			}
+			// Stream files directly into the upload body — reads one file at
+			// a time to avoid buffering ~100 MB of base64 content per bucket.
+			// With 5 uploaders, peak memory stays proportional to the number of
+			// concurrent file reads (~5 files) instead of ~500 MB.
+			const body = createStreamingBulkBody(nextBucket, controller.signal);
 
-			// Upload the bucket to the KV namespace, suppressing logs, we do our own
 			try {
-				await putKVBulkKeyValue(
+				await fetchResult(
 					complianceConfig,
-					accountId,
-					namespace,
-					bucket,
-					/* quiet */ true,
+					`/accounts/${accountId}/storage/kv/namespaces/${namespace}/bulk`,
+					{
+						method: "PUT",
+						body,
+						headers: { "Content-Type": "application/json" },
+						duplex: "half",
+					},
+					undefined,
 					controller.signal
 				);
 			} catch (e) {

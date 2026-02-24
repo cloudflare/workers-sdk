@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
@@ -23,7 +23,7 @@ import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { hashFile } from "./pages/hash";
+import { hashFileContents } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
@@ -104,13 +104,16 @@ export const syncAssets = async (
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
 	// But don't add the actual content until uploading so we don't run out of memory
-	const manifestLookup = Object.entries(manifest);
+	const manifestByHash = new Map(
+		Object.entries(manifest).map(([filePath, entry]) => [
+			entry.hash,
+			[filePath, entry] as [string, { hash: string; size: number }],
+		])
+	);
 	let assetLogCount = 0;
 	const assetBuckets = initializeAssetsResponse.buckets.map((bucket) => {
 		return bucket.map((fileHash) => {
-			const manifestEntry = manifestLookup.find(
-				(file) => file[1].hash === fileHash
-			);
+			const manifestEntry = manifestByHash.get(fileHash);
 			if (manifestEntry === undefined) {
 				throw new FatalError(
 					`A file was requested that does not appear to exist.`,
@@ -141,25 +144,30 @@ export const syncAssets = async (
 		const doUpload = async (): Promise<UploadResponse> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
+
+			// Read all files in the bucket concurrently — they're independent I/O operations
+			const filesWithContent = await Promise.all(
+				bucket.map(async ([relPath, entry]) => {
+					const absFilePath = path.join(assetDirectory, relPath);
+					const content = await readFile(absFilePath, "base64");
+					return { relPath, absFilePath, entry, content };
+				})
+			);
+
 			const payload = new FormData();
 			const uploadedFiles: string[] = [];
-			for (const manifestEntry of bucket) {
-				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
-				uploadedFiles.push(manifestEntry[0]);
+			for (const { relPath, absFilePath, entry, content } of filesWithContent) {
+				uploadedFiles.push(relPath);
 				payload.append(
-					manifestEntry[1].hash,
-					new File(
-						[(await readFile(absFilePath)).toString("base64")],
-						manifestEntry[1].hash,
-						{
-							// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
-							// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
-							// So, to make it easier for any other clients, we'll just parse "application/null" on the API
-							// to mean actually null (signal to not send a Content-Type header with the response)
-							type: getContentType(absFilePath) ?? "application/null",
-						}
-					),
-					manifestEntry[1].hash
+					entry.hash,
+					new File([content], entry.hash, {
+						// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
+						// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
+						// So, to make it easier for any other clients, we'll just parse "application/null" on the API
+						// to mean actually null (signal to not send a Content-Type header with the response)
+						type: getContentType(absFilePath) ?? "application/null",
+					}),
+					entry.hash
 				);
 			}
 
@@ -255,9 +263,31 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
+/**
+ * Recursively walks a directory collecting relative file paths.
+ * Uses `withFileTypes` to distinguish files from directories without extra
+ * stat() syscalls. Symlinks are silently skipped.
+ */
+async function walkAssetFiles(
+	dir: string,
+	baseDir: string,
+	result: string[] = []
+): Promise<string[]> {
+	const entries = await readdir(dir, { withFileTypes: true });
+	for (const entry of entries) {
+		const fullPath = path.join(dir, entry.name);
+		if (entry.isDirectory()) {
+			await walkAssetFiles(fullPath, baseDir, result);
+		} else if (entry.isFile()) {
+			result.push(path.relative(baseDir, fullPath));
+		}
+	}
+	return result;
+}
+
 const buildAssetManifest = async (dir: string) => {
-	const files = await readdir(dir, { recursive: true });
-	logReadFilesFromDirectory(dir, files);
+	const fileList = await walkAssetFiles(dir, dir);
+	logReadFilesFromDirectory(dir, fileList);
 
 	const manifest: AssetManifest = {};
 
@@ -265,47 +295,49 @@ const buildAssetManifest = async (dir: string) => {
 		await createAssetsIgnoreFunction(dir);
 
 	await Promise.all(
-		files.map(async (relativeFilepath) => {
+		fileList.map(async (relativeFilepath) => {
 			if (assetsIgnoreFunction(relativeFilepath)) {
 				logger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
 				return;
 			}
 
+			errorOnLegacyPagesWorkerJSAsset(
+				relativeFilepath,
+				assetsIgnoreFilePresent
+			);
+
 			const filepath = path.join(dir, relativeFilepath);
-			const filestat = await stat(filepath);
 
-			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
-				return;
-			} else {
-				errorOnLegacyPagesWorkerJSAsset(
-					relativeFilepath,
-					assetsIgnoreFilePresent
+			// Read file once: buffer gives us both size (via .length) and content
+			// for hashing — eliminates separate stat() and double-read in hashFile.
+			const contents = await readFile(filepath);
+			const fileSize = contents.length;
+
+			if (fileSize > MAX_ASSET_SIZE) {
+				throw new UserError(
+					`Asset too large.\n` +
+						`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
+							MAX_ASSET_SIZE,
+							{
+								binary: true,
+							}
+						)}. We found a file ${filepath} with a size of ${prettyBytes(
+							fileSize,
+							{
+								binary: true,
+							}
+						)}.\n` +
+						`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`,
+					{ telemetryMessage: "Asset too large" }
 				);
-
-				if (filestat.size > MAX_ASSET_SIZE) {
-					throw new UserError(
-						`Asset too large.\n` +
-							`Cloudflare Workers supports assets with sizes of up to ${prettyBytes(
-								MAX_ASSET_SIZE,
-								{
-									binary: true,
-								}
-							)}. We found a file ${filepath} with a size of ${prettyBytes(
-								filestat.size,
-								{
-									binary: true,
-								}
-							)}.\n` +
-							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`,
-						{ telemetryMessage: "Asset too large" }
-					);
-				}
-				manifest[normalizeFilePath(relativeFilepath)] = {
-					hash: hashFile(filepath),
-					size: filestat.size,
-				};
 			}
+
+			const extension = path.extname(filepath).substring(1);
+			manifest[normalizeFilePath(relativeFilepath)] = {
+				hash: hashFileContents(contents, extension),
+				size: fileSize,
+			};
 		})
 	);
 	return manifest;
