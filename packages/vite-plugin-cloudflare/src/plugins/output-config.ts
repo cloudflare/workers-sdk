@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
@@ -86,12 +87,18 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					}
 				}
 			} else if (this.environment.name === "client") {
-				const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
+				const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"] as const;
+				const existingAssetsIgnoreContent =
+					ctx.resolvedViteConfig.publicDir.length > 0
+						? readAssetsIgnoreFile(
+								path.join(ctx.resolvedViteConfig.publicDir, ".assetsignore")
+							)
+						: "";
 
 				this.emitFile({
 					type: "asset",
 					fileName: ".assetsignore",
-					source: `${filesToAssetsIgnore.join("\n")}\n`,
+					source: `${existingAssetsIgnoreContent}${filesToAssetsIgnore.join("\n")}\n`,
 				});
 
 				// For assets only projects the `wrangler.json` file is emitted in the client output directory
@@ -142,6 +149,16 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 		},
 	};
 });
+
+function readAssetsIgnoreFile(assetsIgnorePath: string): string {
+	const content = existsSync(assetsIgnorePath)
+		? readFileSync(assetsIgnorePath, "utf-8")
+		: "";
+	if (content.length === 0) {
+		return "";
+	}
+	return content.at(-1) === "\n" ? content : `${content}\n`;
+}
 
 function getAssetsDirectory(
 	workerOutputDirectory: string,

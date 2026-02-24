@@ -1,5 +1,48 @@
 # wrangler
 
+## 4.68.0
+
+### Minor Changes
+
+- [#12614](https://github.com/cloudflare/workers-sdk/pull/12614) [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Enable autoconfig for `wrangler deploy` by default (while allowing users to still disable it via `--x-autoconfig=false` if necessary)
+
+- [#12614](https://github.com/cloudflare/workers-sdk/pull/12614) [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Mark the `wrangler setup` command as stable
+
+## 4.67.1
+
+### Patch Changes
+
+- [#12595](https://github.com/cloudflare/workers-sdk/pull/12595) [`e93dc01`](https://github.com/cloudflare/workers-sdk/commit/e93dc01839aee047b37188b850cac7f3465c7bd4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add a warning in the autoconfig logic letting users know that support for projects inside workspaces is limited
+
+- [#12582](https://github.com/cloudflare/workers-sdk/pull/12582) [`c2ed7c2`](https://github.com/cloudflare/workers-sdk/commit/c2ed7c23057b5fd74788f9b0c5415edc8a592276) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to use capnweb's native `ReadableStream` support to power remote Media and Dispatch Namespace bindings.
+
+- [#12618](https://github.com/cloudflare/workers-sdk/pull/12618) [`d920811`](https://github.com/cloudflare/workers-sdk/commit/d9208114c391a2a9f49adab9056c3ddb24005984) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260219.0 | 1.20260227.0 |
+
+- [#12637](https://github.com/cloudflare/workers-sdk/pull/12637) [`896734d`](https://github.com/cloudflare/workers-sdk/commit/896734d4a754dded85086f88641f26848e554913) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260227.0 | 1.20260302.0 |
+
+- [#12601](https://github.com/cloudflare/workers-sdk/pull/12601) [`ebdbe52`](https://github.com/cloudflare/workers-sdk/commit/ebdbe52c2bcd1b30758b54de57a046f3ab196f04) Thanks [@43081j](https://github.com/43081j)! - Switch to `empathic` for file-system upwards traversal to reduce dependency bloat.
+
+- [#12602](https://github.com/cloudflare/workers-sdk/pull/12602) [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603) Thanks [@anonrig](https://github.com/anonrig)! - Optimize filesystem operations by using Node.js's throwIfNoEntry: false option
+
+  This reduces the number of system calls made when checking for file existence by avoiding the overhead of throwing and catching errors for missing paths. This is an internal performance optimization with no user-visible behavioral changes.
+
+- [#12591](https://github.com/cloudflare/workers-sdk/pull/12591) [`6f6cd94`](https://github.com/cloudflare/workers-sdk/commit/6f6cd944480d6161c582c7af68f6c4205ddeaefe) Thanks [@martinezjandrew](https://github.com/martinezjandrew)! - Implemented logic within `wrangler containers registries configure` to check if a specified secret name is already in-use and offer to reuse that secret. Also added `--skip-confirmation` flag to the command to skip all interactive prompts.
+
+- Updated dependencies [[`c2ed7c2`](https://github.com/cloudflare/workers-sdk/commit/c2ed7c23057b5fd74788f9b0c5415edc8a592276), [`d920811`](https://github.com/cloudflare/workers-sdk/commit/d9208114c391a2a9f49adab9056c3ddb24005984), [`896734d`](https://github.com/cloudflare/workers-sdk/commit/896734d4a754dded85086f88641f26848e554913), [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603)]:
+  - miniflare@4.20260302.0
+
 ## 4.67.0
 
 ### Minor Changes
