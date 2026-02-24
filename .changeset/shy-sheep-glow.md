@@ -4,4 +4,4 @@
 
 Update Waku autoconfig logic
 
-As of `1.0.0-alpha.4` the Waku projects should have a different setup built on top of the Cloudflare Vite plugin, the changes here update the Wrangler autoconfig logic to apply such setup
+As of `1.0.0-alpha.4`, Waku projects can be built on top of the Cloudflare Vite plugin, and the changes here allow Wrangler autoconfig to support this. Running autoconfig on older versions of Waku will result in an error.
