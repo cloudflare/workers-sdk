@@ -106,6 +106,19 @@ function checkCall(node, context) {
 			}
 		}
 
+		// rm can also come from "node:fs" / "fs" (callback-based)
+		if (name === "rm" && FS_MODULES.includes(source)) {
+			const options = node.arguments[1];
+			if (hasRecursiveOption(options)) {
+				return name;
+			}
+			// callback-based fs.rm: options may be in arg[2] if arg[1] is the callback
+			const options2 = node.arguments[2];
+			if (hasRecursiveOption(options2)) {
+				return name;
+			}
+		}
+
 		return null;
 	}
 

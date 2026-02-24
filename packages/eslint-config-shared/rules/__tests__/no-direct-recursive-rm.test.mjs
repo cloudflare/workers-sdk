@@ -27,6 +27,10 @@ ruleTester.run("no-direct-recursive-rm", rule, {
 		{
 			code: 'import { rm } from "node:fs/promises"; await rm("file.txt", { force: true });',
 		},
+		// Named import rm from "node:fs" (callback-based) without recursive
+		{
+			code: 'import { rm } from "node:fs"; rm("file.txt", (err) => {});',
+		},
 		// Using the correct helpers
 		{
 			code: 'import { removeDir } from "@cloudflare/workers-utils"; await removeDir("dir");',
@@ -109,6 +113,16 @@ ruleTester.run("no-direct-recursive-rm", rule, {
 		// Callback-based fs.rm from "node:fs" with recursive in second arg
 		{
 			code: 'import fs from "node:fs"; fs.rm("dir", { recursive: true, force: true }, (err) => {});',
+			errors: [{ messageId: "noDirectRecursiveRm" }],
+		},
+		// Named import rm from "node:fs" (callback-based) with recursive
+		{
+			code: 'import { rm } from "node:fs"; rm("dir", { recursive: true, force: true }, (err) => {});',
+			errors: [{ messageId: "noDirectRecursiveRm" }],
+		},
+		// Named import rm from "node:fs" with recursive (no callback)
+		{
+			code: 'import { rm } from "node:fs"; rm("dir", { recursive: true, force: true });',
 			errors: [{ messageId: "noDirectRecursiveRm" }],
 		},
 	],
