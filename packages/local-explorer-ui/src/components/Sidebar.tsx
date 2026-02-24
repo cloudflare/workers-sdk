@@ -35,25 +35,26 @@ function SidebarItemGroup({
 	title,
 }: SidebarItemGroupProps): JSX.Element {
 	return (
-		<Collapsible.Root defaultOpen>
-			<Collapsible.Trigger className="group flex items-center gap-2 w-full h-10 py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
-				<CaretRightIcon className="transition-transform duration-200 group-data-panel-open:rotate-90" />
-				<Icon className="w-3.5 h-3.5" />
+		<Collapsible.Root defaultOpen className="py-0.5">
+			<Collapsible.Trigger className="group flex items-center gap-2 w-[calc(100%-0.25rem)] ml-1 p-3 bg-transparent font-semibold text-xs text-text cursor-pointer transition-colors rounded-l-md hover:bg-surface-tertiary">
+				<CaretRightIcon
+					className="w-3.5 h-3.5 text-muted transition-transform duration-200 group-data-panel-open:rotate-90"
+					weight="bold"
+				/>
+				<Icon className="w-4 h-4 text-muted" />
 				{title}
 			</Collapsible.Trigger>
 
 			<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-starting-style:h-0 data-starting-style:opacity-0 data-ending-style:h-0 data-ending-style:opacity-0">
-				<ul className="list-none flex-1 overflow-y-auto">
+				<ul className="list-none ml-3 pl-3 space-y-0.5 border-l border-border">
 					{loading ? (
-						<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+						<li className="py-1.5 px-2 text-text-secondary text-sm">
 							Loading...
 						</li>
 					) : null}
 
 					{error ? (
-						<li className="block py-2.5 px-4 text-danger border-b border-border">
-							{error}
-						</li>
+						<li className="py-1.5 px-2 text-danger text-sm">{error}</li>
 					) : null}
 
 					{!loading && !error
@@ -61,10 +62,9 @@ function SidebarItemGroup({
 								<li key={item.id}>
 									<Link
 										className={cn(
-											"block py-2.5 px-4 text-text no-underline border-b border-border cursor-pointer transition-colors hover:bg-border",
+											"block py-2.5 px-2 text-text text-sm no-underline rounded-l-md cursor-pointer transition-colors hover:bg-surface-tertiary",
 											{
-												"bg-primary/8 text-primary border-l-3 border-l-primary pl-3.25":
-													item.isActive,
+												"bg-primary/10 text-primary font-medium": item.isActive,
 											}
 										)}
 										params={item.link.params}
@@ -78,7 +78,7 @@ function SidebarItemGroup({
 						: null}
 
 					{!loading && !error && items.length === 0 && (
-						<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+						<li className="py-1.5 px-2 text-text-secondary text-sm italic">
 							{emptyLabel}
 						</li>
 					)}
@@ -108,7 +108,7 @@ export function Sidebar({
 	return (
 		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
 			<a
-				className="flex items-center gap-2.5 p-4 border-b border-border min-h-16.75 box-border"
+				className="flex items-center gap-2.5 p-4 min-h-16.75 box-border"
 				href="/"
 			>
 				<CloudflareLogo className="shrink-0 text-primary" />

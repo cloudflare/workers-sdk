@@ -1,4 +1,4 @@
-import { tokenizeSQL } from "../../utils/studio";
+import { tokenizeSQL } from "../../utils/studio/sql";
 import type {
 	StudioColumnConflict,
 	StudioSortDirection,

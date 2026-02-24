@@ -1,5 +1,13 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { test } from "vitest";
-import { getResponse, page, viteTestUrl } from "../../__test-utils__";
+import {
+	getResponse,
+	isBuild,
+	page,
+	rootDir,
+	viteTestUrl,
+} from "../../__test-utils__";
 import "./base-tests";
 
 test("fetches transformed HTML asset", async ({ expect }) => {
@@ -25,3 +33,15 @@ test("fetches original HTML asset if requested directly", async ({
 	const content = await page.textContent("h1");
 	expect(content).toBe("Original content");
 });
+
+test.runIf(isBuild)(
+	"emits .assetsignore in client output directory merged with defaults",
+	({ expect }) => {
+		expect(
+			fs.readFileSync(
+				path.join(rootDir, "dist", "client", ".assetsignore"),
+				"utf-8"
+			)
+		).toBe(`test-file.txt\n*.bak\nwrangler.json\n.dev.vars\n`);
+	}
+);
