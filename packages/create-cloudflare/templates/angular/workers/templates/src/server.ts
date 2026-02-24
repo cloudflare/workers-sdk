@@ -1,11 +1,9 @@
 import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 
-// When running in wrangler dev, allow localhost SSR.
-// `process.env.NODE_ENV` is statically replaced at build time by wrangler:
-// - `wrangler dev` sets it to "development"
-// - `wrangler deploy` sets it to "production"
 const angularApp = new AngularAppEngine({
-	allowedHosts: process.env['NODE_ENV'] === 'development' ? ['localhost'] : [],
+	// It is safe to set allow `localhost`, so that SSR can run in local development,
+	// as, in production, Cloudflare will ensure that `localhost` is not the host.
+	allowedHosts: ['localhost'],
 });
 
 /**
