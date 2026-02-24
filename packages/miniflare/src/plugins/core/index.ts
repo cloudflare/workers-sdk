@@ -1217,7 +1217,7 @@ function getWorkerScript(
 }
 
 const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:86bfd00@sha256:ea7a821fc18b57a5151df582d66f7af9b80b938ed4ec5e2d468a185b4b18883e";
+	"cloudflare/proxy-everything:4dc6c7f@sha256:9621ef445ef120409e5d95bbd845ab2fa0f613636b59a01d998f5704f4096ae2";
 
 /**
  * Returns the default containerEgressInterceptorImage. It's used for
@@ -1225,7 +1225,7 @@ const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
  */
 function getContainerEgressInterceptorImage(): string {
 	return (
-		process.env.WRANGLER_CONTAINER_EGRESS_IMAGE ??
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
 		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
 	);
 }
