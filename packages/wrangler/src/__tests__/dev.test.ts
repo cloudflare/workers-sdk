@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
-	getLocalWorkerdCompatibilityDate,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";

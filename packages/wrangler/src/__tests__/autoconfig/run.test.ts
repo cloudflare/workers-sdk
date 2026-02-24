@@ -33,7 +33,7 @@ vi.mock("miniflare", async (importOriginal) => {
 		await importOriginal<Awaited<typeof import("miniflare")>>();
 	return {
 		...originalModule,
-		getLocalWorkerdCompatibilityDate: vi.fn(() => "2000-01-01"),
+		supportedCompatibilityDate: "2000-01-01",
 	};
 });
 

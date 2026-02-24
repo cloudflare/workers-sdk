@@ -48,11 +48,11 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
  */
 export function unstable_getDevCompatibilityDate() {
-	return miniflareModule.getLocalWorkerdCompatibilityDate();
+	return miniflareModule.supportedCompatibilityDate;
 }
 
 export {
-	getLocalWorkerdCompatibilityDate,
+	supportedCompatibilityDate,
 	isCompatDate,
 	formatCompatibilityDate,
 } from "miniflare";

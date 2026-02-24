@@ -1,6 +1,6 @@
 import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
-import { getLocalWorkerdCompatibilityDate } from "miniflare";
+import { supportedCompatibilityDate } from "miniflare";
 import * as recast from "recast";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { usesTypescript } from "../uses-typescript";
@@ -14,8 +14,6 @@ export class SolidStart extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			const filePath = `app.config.${usesTypescript(projectPath) ? "ts" : "js"}`;
-
-			const compatDate = getLocalWorkerdCompatibilityDate();
 
 			updateStatus(`Updating configuration in ${blue(filePath)}`);
 
@@ -40,7 +38,7 @@ export class SolidStart extends Framework {
 									),
 									b.objectProperty(
 										b.identifier("compatibilityDate"),
-										b.stringLiteral(compatDate)
+										b.stringLiteral(supportedCompatibilityDate)
 									),
 								])
 							),

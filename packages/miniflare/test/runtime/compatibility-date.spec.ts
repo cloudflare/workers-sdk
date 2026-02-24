@@ -1,7 +1,7 @@
 import {
 	formatCompatibilityDate,
-	getLocalWorkerdCompatibilityDate,
 	isCompatDate,
+	supportedCompatibilityDate,
 } from "miniflare";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 
@@ -71,29 +71,28 @@ describe("formatCompatibilityDate", () => {
 	});
 });
 
-describe("getLocalWorkerdCompatibilityDate", () => {
+describe("supportedCompatibilityDate", () => {
 	test("returns a valid compat date string", ({ expect }) => {
-		const result = getLocalWorkerdCompatibilityDate();
+		expect(isCompatDate(supportedCompatibilityDate)).toBe(true);
+	});
 
-		// Should match YYYY-MM-DD format
-		expect(isCompatDate(result)).toBe(true);
-
-		// Should be parseable as a date
-		const parsed = new Date(result);
+	test("should be parseable as a date", ({ expect }) => {
+		const parsed = new Date(supportedCompatibilityDate);
 		expect(parsed.toString()).not.toBe("Invalid Date");
 	});
 
-	test("returns a date that is not in the future", ({ expect }) => {
-		const result = getLocalWorkerdCompatibilityDate();
-		const resultDate = new Date(result);
+	test("should not be in the future", ({ expect }) => {
+		const supportedCompatibilityDateAsDate = new Date(
+			supportedCompatibilityDate
+		);
 		const now = new Date();
 
 		// The returned date should not be after today (in UTC)
 		// We compare timestamps at midnight UTC for both dates
 		const resultTimestamp = Date.UTC(
-			resultDate.getUTCFullYear(),
-			resultDate.getUTCMonth(),
-			resultDate.getUTCDate()
+			supportedCompatibilityDateAsDate.getUTCFullYear(),
+			supportedCompatibilityDateAsDate.getUTCMonth(),
+			supportedCompatibilityDateAsDate.getUTCDate()
 		);
 		const todayTimestamp = Date.UTC(
 			now.getUTCFullYear(),
@@ -120,13 +119,11 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 			const mockDate = new Date(Date.UTC(2024, 0, 15, 12, 0, 0)); // Jan 15, 2024 noon UTC
 			vi.setSystemTime(mockDate);
 
-			const result = getLocalWorkerdCompatibilityDate();
-
 			// The result should be a valid compat date
-			expect(isCompatDate(result)).toBe(true);
+			expect(isCompatDate(supportedCompatibilityDate)).toBe(true);
 
 			// The result should not be in the future relative to the mocked time
-			const resultDate = new Date(result);
+			const resultDate = new Date(supportedCompatibilityDate);
 			expect(resultDate.getTime()).toBeLessThanOrEqual(mockDate.getTime());
 		});
 
@@ -142,8 +139,7 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 
 			for (const time of times) {
 				vi.setSystemTime(time);
-				const result = getLocalWorkerdCompatibilityDate();
-				expect(isCompatDate(result)).toBe(true);
+				expect(isCompatDate(supportedCompatibilityDate)).toBe(true);
 			}
 		});
 	});

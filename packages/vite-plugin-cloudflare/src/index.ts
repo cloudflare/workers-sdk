@@ -1,4 +1,4 @@
-import { getLocalWorkerdCompatibilityDate as miniflareGetLocalWorkerdCompatibilityDate } from "miniflare";
+import { supportedCompatibilityDate } from "miniflare";
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
@@ -41,7 +41,7 @@ export function getLocalWorkerdCompatibilityDate(_projectPath: string): {
 	source: "workerd";
 } {
 	return {
-		date: miniflareGetLocalWorkerdCompatibilityDate(),
+		date: supportedCompatibilityDate,
 		source: "workerd",
 	};
 }
