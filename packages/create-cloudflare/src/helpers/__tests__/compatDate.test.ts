@@ -26,7 +26,7 @@ describe("Compatibility Date Helpers", () => {
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("normal flow", async ({ expect }) => {
 			const mockWrangler = {
-				getLocalWorkerdCompatibilityDate: () => "2025-01-10",
+				supportedCompatibilityDate: "2025-01-10",
 			};
 			vi.mocked(createRequire).mockReturnValue(
 				(() => mockWrangler) as unknown as NodeJS.Require,
@@ -49,7 +49,7 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
-			const fallbackDate = "2026-02-04";
+			const fallbackDate = "2026-03-03";
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
