@@ -1,3 +1,10 @@
+import { initUndiciDispatcher } from "../shared/undici-dispatcher";
+
+// When wrangler is imported as a library (e.g. by vitest-pool-workers),
+// the CLI entry point doesn't run. Ensure undici respects NODE_EXTRA_CA_CERTS
+// and proxy env vars.
+initUndiciDispatcher();
+
 export { unstable_dev } from "./dev";
 export type { Unstable_DevWorker, Unstable_DevOptions } from "./dev";
 export { unstable_pages } from "./pages";

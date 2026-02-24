@@ -6,7 +6,6 @@ import {
 	experimental_readRawConfig,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
@@ -327,6 +326,7 @@ import {
 } from "./secrets-store/commands";
 import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
+import { initUndiciDispatcher } from "./shared/undici-dispatcher";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
@@ -337,7 +337,6 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -393,10 +392,8 @@ import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
-if (proxy) {
-	setGlobalDispatcher(
-		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
-	);
+const { proxy: usingProxy } = initUndiciDispatcher();
+if (usingProxy) {
 	logger.log(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
