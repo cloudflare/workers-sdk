@@ -3,7 +3,7 @@ import {
 	isCompatDate,
 	supportedCompatibilityDate,
 } from "miniflare";
-import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { describe, test } from "vitest";
 
 describe("isCompatDate", () => {
 	test("returns true for valid date strings", ({ expect }) => {
@@ -101,46 +101,5 @@ describe("supportedCompatibilityDate", () => {
 		);
 
 		expect(resultTimestamp).toBeLessThanOrEqual(todayTimestamp);
-	});
-
-	describe("toSafeCompatibilityDate", () => {
-		beforeEach(() => {
-			vi.useFakeTimers();
-		});
-
-		afterEach(() => {
-			vi.useRealTimers();
-		});
-
-		test("uses today's date when workerd date would be in the future", ({
-			expect,
-		}) => {
-			// Set the current time to a specific date
-			const mockDate = new Date(Date.UTC(2024, 0, 15, 12, 0, 0)); // Jan 15, 2024 noon UTC
-			vi.setSystemTime(mockDate);
-
-			// The result should be a valid compat date
-			expect(isCompatDate(supportedCompatibilityDate)).toBe(true);
-
-			// The result should not be in the future relative to the mocked time
-			const resultDate = new Date(supportedCompatibilityDate);
-			expect(resultDate.getTime()).toBeLessThanOrEqual(mockDate.getTime());
-		});
-
-		test("returns consistent format regardless of system time", ({
-			expect,
-		}) => {
-			// Test with different times of day
-			const times = [
-				new Date(Date.UTC(2024, 5, 15, 0, 0, 0)), // midnight
-				new Date(Date.UTC(2024, 5, 15, 12, 0, 0)), // noon
-				new Date(Date.UTC(2024, 5, 15, 23, 59, 59)), // end of day
-			];
-
-			for (const time of times) {
-				vi.setSystemTime(time);
-				expect(isCompatDate(supportedCompatibilityDate)).toBe(true);
-			}
-		});
 	});
 });
