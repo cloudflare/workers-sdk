@@ -10,6 +10,7 @@ interface StudioQueryResultTabProps {
 }
 
 export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
+	// @ts-expect-error TODO: Re-enable once StudioResultTable is implemented
 	const _state = useMemo(
 		(): StudioTableState<StudioResultHeaderMetadata> =>
 			createStudioTableStateFromResult({
@@ -18,6 +19,7 @@ export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
 		[result]
 	);
 
+	// @ts-expect-error TODO: Re-enable once StudioResultTable is implemented
 	const _headerIndexList = useMemo(() => {
 		if (!result.result.headers) {
 			return [];
