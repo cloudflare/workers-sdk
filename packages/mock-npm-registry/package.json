@@ -15,6 +15,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"@verdaccio/types": "^10.8.0",
 		"eslint": "catalog:default",

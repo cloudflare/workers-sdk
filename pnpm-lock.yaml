@@ -167,6 +167,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260302.0
+      '@fixture/shared':
+        specifier: workspace:*
+        version: link:../shared
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1210,6 +1213,9 @@ importers:
 
   fixtures/shared:
     devDependencies:
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../../packages/workers-utils
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1371,6 +1377,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260302.0
+      '@fixture/shared':
+        specifier: workspace:*
+        version: link:../shared
       undici:
         specifier: catalog:default
         version: 7.18.2
@@ -2221,6 +2230,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260302.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -2359,6 +2371,9 @@ importers:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
         version: link:../eslint-config-shared
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -3443,6 +3458,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260302.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../../../workers-utils
       '@prisma/adapter-d1':
         specifier: ^7.0.0
         version: 7.0.1
@@ -3758,6 +3776,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260302.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
