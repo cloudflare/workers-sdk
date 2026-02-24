@@ -27,12 +27,12 @@ describe("containers registries --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers registries
 
-			Configure and manage non-Cloudflare registries
+			Configure and manage non-Cloudflare registries [open beta]
 
 			COMMANDS
-			  wrangler containers registries configure <DOMAIN>  Configure credentials for a non-Cloudflare container registry
-			  wrangler containers registries list                List all configured container registries
-			  wrangler containers registries delete <DOMAIN>     Delete a configured container registry
+			  wrangler containers registries configure <DOMAIN>  Configure credentials for a non-Cloudflare container registry [open beta]
+			  wrangler containers registries list                List all configured container registries [open beta]
+			  wrangler containers registries delete <DOMAIN>     Delete a configured container registry [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -481,6 +481,7 @@ describe("containers registries configure", () => {
 					modified: "2024-01-01T00:00:00Z",
 				},
 			]);
+			mockListSecrets(storeId, []);
 			mockCreateSecret(storeId);
 			mockPutRegistry({
 				domain: "docker.io",
@@ -523,6 +524,7 @@ describe("containers registries configure", () => {
 						modified: "2024-01-01T00:00:00Z",
 					},
 				]);
+				mockListSecrets(storeId, []);
 				mockCreateSecret(storeId);
 				mockPutRegistry({
 					domain: dockerHubDomain,

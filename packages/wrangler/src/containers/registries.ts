@@ -7,10 +7,10 @@ import {
 } from "@cloudflare/cli";
 import {
 	ApiError,
+	ExternalRegistryKind,
 	getAndValidateRegistryType,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
-import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
 import {
 	APIError,
 	getCloudflareComplianceRegion,
@@ -40,8 +40,10 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
-import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
+import type {
+	DeleteImageRegistryResponse,
+	ImageRegistryAuth,
+} from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
 function _registryConfigureYargs(args: CommonYargsArgv) {
@@ -600,7 +602,6 @@ export const containersRegistriesListCommand = createCommand({
 		description: "List all configured container registries",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
-		hidden: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
@@ -623,7 +624,6 @@ export const containersRegistriesDeleteCommand = createCommand({
 		description: "Delete a configured container registry",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
-		hidden: true,
 	},
 	args: {
 		DOMAIN: {
