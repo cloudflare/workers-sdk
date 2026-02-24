@@ -66,7 +66,7 @@ function validateMinimumWakuVersion(projectPath: string) {
 	const wakuVersion = getInstalledPackageVersion("waku", projectPath);
 	if (wakuVersion && semiver(wakuVersion, "1.0.0-alpha.4") < 0) {
 		throw new FatalError(
-			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported and the automatic configuration might fail. If the process fails please update the Waku version and try again.`
+			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported by the Wrangler automatic configuration. Please update the Waku version and try again.`
 		);
 	}
 }
