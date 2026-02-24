@@ -43,7 +43,7 @@ export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
- * @deprecated use `getLocalWorkerdCompatibilityDate` instead.
+ * @deprecated use `supportedCompatibilityDate` instead.
  *
  * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
  */
