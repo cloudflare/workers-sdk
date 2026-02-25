@@ -3486,7 +3486,8 @@ and that at least one include rule is provided.
 							Content-Type: text/plain
 
 							<html><body>Hello text modules</body></html>
-							------formdata-undici-0.test--"
+							------formdata-undici-0.test--
+							"
 						`);
 
 						return HttpResponse.json(
@@ -3750,7 +3751,8 @@ and that at least one include rule is provided.
 							};
 							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-							------formdata-undici-0.test--"
+							------formdata-undici-0.test--
+							"
 						`);
 
 						expect(JSON.parse(customRoutesJSON)).toMatchObject({
@@ -4122,7 +4124,8 @@ and that at least one include rule is provided.
 							};
 							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-							------formdata-undici-0.test--"
+							------formdata-undici-0.test--
+							"
 						`);
 
 						return HttpResponse.json(
