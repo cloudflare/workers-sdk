@@ -292,11 +292,12 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 								side="bottom"
 								style={{ width: 250 }}
 							>
-								<DropdownMenu.Item onSelect={onRunCurrentClicked}>
+								<DropdownMenu.Item onClick={onRunCurrentClicked}>
 									Run current statement
 									<DropdownMenu.Shortcut>⌘+⏎</DropdownMenu.Shortcut>
 								</DropdownMenu.Item>
-								<DropdownMenu.Item onSelect={onRunAllClicked}>
+
+								<DropdownMenu.Item onClick={onRunAllClicked}>
 									Run all statement
 									<DropdownMenu.Shortcut>⇧+⌘+⏎</DropdownMenu.Shortcut>
 								</DropdownMenu.Item>
@@ -304,7 +305,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 								{driver.isSupportExplain && (
 									<>
 										<DropdownMenu.Separator />
-										<DropdownMenu.Item onSelect={handleExplain}>
+										<DropdownMenu.Item onClick={handleExplain}>
 											Explain current statement
 										</DropdownMenu.Item>
 									</>
