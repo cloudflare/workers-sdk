@@ -260,11 +260,15 @@ export function Studio({
 
 		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
 		if (!selectedTab) {
+			lastOpenedTable.current = null;
 			onTableChange(undefined);
 			return;
 		}
 
 		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
+		if (!tableMatch) {
+			lastOpenedTable.current = null;
+		}
 		onTableChange(tableMatch ? tableMatch[1] : undefined);
 	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
