@@ -140,11 +140,17 @@ async function queryUpdateService(
 		response = await fetch(url.toString(), {
 			headers: { "User-Agent": "wrangler" },
 		});
-	} catch {
+	} catch (e) {
+		logger.debug(
+			`Failed to reach update service: ${e instanceof Error ? e.message : String(e)}`
+		);
 		return null;
 	}
 
 	if (!response.ok) {
+		logger.debug(
+			`Update service returned ${response.status} for ${goOS}/${goArch}`
+		);
 		return null;
 	}
 
@@ -192,7 +198,7 @@ async function getLatestVersionInfo(): Promise<VersionResponse> {
 	);
 
 	const fallback = await queryUpdateService("linux", "amd64");
-	if (!fallback || !fallback.version) {
+	if (!fallback?.version) {
 		throw new UserError(
 			`[cloudflared] Failed to determine the latest cloudflared version.\n\n` +
 				`The update service did not return results for ${goOS}/${goArch},\n` +
@@ -270,8 +276,9 @@ function validateBinary(binPath: string): void {
 			errorMessage += `  - For Debian/Ubuntu: sudo apt-get install libc6\n`;
 		}
 
+		const cacheDir = join(getGlobalWranglerConfigPath(), "cloudflared");
 		errorMessage += `\nYou can try:\n`;
-		errorMessage += `  1. Deleting the cache directory: rm -rf ~/.wrangler/cloudflared/\n`;
+		errorMessage += `  1. Deleting the cache directory: rm -rf ${cacheDir}\n`;
 		errorMessage += `  2. Running the command again to re-download\n`;
 		errorMessage += `  3. Manually installing cloudflared: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n`;
 		errorMessage += `  4. Setting WRANGLER_CLOUDFLARED_PATH to point to your cloudflared binary`;
@@ -496,7 +503,7 @@ async function downloadAndExtractTarball(
 
 	try {
 		execFileSync("tar", ["-xzf", tempTarPath, "-C", cacheDir], {
-			stdio: ["pipe", "pipe", "pipe"],
+			stdio: "ignore",
 		});
 
 		const extractedPath = join(cacheDir, "cloudflared");
@@ -558,7 +565,9 @@ export async function getCloudflaredPath(): Promise<string> {
 		logger.debug(
 			`Using cloudflared from WRANGLER_CLOUDFLARED_PATH: ${envPath}`
 		);
-		validateBinary(envPath);
+		// Skip validation — the user explicitly set the path, so trust it.
+		// This also avoids issues on platforms where the binary format
+		// differs (e.g. shell scripts won't pass --version on Windows).
 		return envPath;
 	}
 

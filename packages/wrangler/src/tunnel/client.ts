@@ -161,11 +161,8 @@ export async function getTunnelToken(
 			}
 		);
 
-		// The token response can be a string or an object with token property
-		if (typeof response === "string") {
-			return response;
-		}
-		return (response as { token?: string }).token || "";
+		// The SDK types declare this as string
+		return String(response);
 	});
 }
 
@@ -188,10 +185,12 @@ function normalizeTunnelResponse(response: unknown): CloudflareTunnelResource {
 }
 
 /**
- * UUID v4 regex pattern for validation
+ * General UUID regex pattern for validation.
+ * Accepts any UUID version (not restricted to v4) since tunnel IDs
+ * are not guaranteed to be strictly UUID v4.
  */
 const UUID_REGEX =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Check if a string is a valid UUID

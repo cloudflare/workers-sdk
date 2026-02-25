@@ -10,6 +10,8 @@ import {
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("cloudflared binary management", () => {
+	runInTempDir();
+
 	describe("getCloudflaredBinPath", () => {
 		it("should return path in wrangler config directory cache including version", ({
 			expect,

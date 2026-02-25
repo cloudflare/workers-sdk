@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+import { UserError } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
@@ -9,6 +11,30 @@ import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { CloudflareTunnelResource } from "../../tunnel/client";
+
+// Mock spawnCloudflared so `tunnel run` tests don't need a real binary.
+// The mock emits "exit" on next tick so the handler's Promise resolves.
+vi.mock("../../tunnel/cloudflared", async () => {
+	const actual = await vi.importActual("../../tunnel/cloudflared");
+	return {
+		...actual,
+		spawnCloudflared: vi.fn(async () => {
+			const cp = new EventEmitter() as EventEmitter & {
+				stderr: null;
+				killed: boolean;
+				kill: () => boolean;
+			};
+			cp.stderr = null;
+			cp.killed = false;
+			cp.kill = () => {
+				cp.killed = true;
+				return true;
+			};
+			process.nextTick(() => cp.emit("exit", 0, null));
+			return cp;
+		}),
+	};
+});
 
 // Default tunnel for mocking responses
 const defaultTunnel: CloudflareTunnelResource = {
@@ -177,7 +203,7 @@ describe("tunnel commands", () => {
 
 			await expect(
 				runWrangler("tunnel info nonexistent-id")
-			).rejects.toThrowError();
+			).rejects.toThrowError(UserError);
 
 			expect(std.err).toContain("ERROR");
 		});
@@ -226,6 +252,32 @@ describe("tunnel commands", () => {
 			await expect(() => runWrangler("tunnel delete")).rejects.toThrow(
 				"Not enough non-option arguments"
 			);
+		});
+	});
+
+	describe("tunnel run", () => {
+		it("should pass token via TUNNEL_TOKEN env var, not CLI args", async ({
+			expect,
+		}) => {
+			const { spawnCloudflared } = await import("../../tunnel/cloudflared");
+
+			await runWrangler("tunnel run --token TEST_TOKEN");
+
+			expect(spawnCloudflared).toHaveBeenCalledTimes(1);
+			const [calledArgs, calledOpts] = vi.mocked(spawnCloudflared).mock
+				.calls[0] as [string[], { env?: Record<string, string> }];
+
+			// Token must NOT appear in CLI args (would leak via `ps`)
+			expect(calledArgs).not.toContain("--token");
+			expect(calledArgs).not.toContain("--token-file");
+			expect(calledArgs).not.toContain("TEST_TOKEN");
+
+			// Token must be passed via env var
+			expect(calledOpts?.env?.TUNNEL_TOKEN).toBe("TEST_TOKEN");
+		});
+
+		it("should require tunnel or token", async ({ expect }) => {
+			await expect(runWrangler("tunnel run")).rejects.toThrowError(UserError);
 		});
 	});
 });
