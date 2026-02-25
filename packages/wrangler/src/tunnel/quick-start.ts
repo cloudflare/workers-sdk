@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";
 import { spawnCloudflared } from "./cloudflared";
@@ -35,7 +36,8 @@ export const tunnelQuickStartCommand = createCommand({
 			type: "string",
 			default: "info",
 			choices: ["debug", "info", "warn", "error", "fatal"] as const,
-			description: "Log level for cloudflared",
+			description:
+				"Log level for cloudflared (does not affect Wrangler logs, which are controlled by WRANGLER_LOG)",
 		},
 	},
 	positionalArgs: ["url"],
@@ -69,68 +71,7 @@ export const tunnelQuickStartCommand = createCommand({
 		// Track if we've already started shutting down
 		let isShuttingDown = false;
 
-		// Handle process spawn error
-		cloudflared.on("error", (error) => {
-			if (isShuttingDown) {
-				return;
-			}
-
-			logger.error(`Failed to run cloudflared: ${error.message}`);
-
-			if (error.message.includes("ENOENT")) {
-				logger.error(
-					`\nThe cloudflared binary could not be executed.\n` +
-						`This might be a permissions issue or the binary is corrupted.\n\n` +
-						`Try removing the cache and running again:\n` +
-						`  rm -rf ~/.wrangler/cloudflared\n` +
-						`  wrangler tunnel quick-start ${args.url}`
-				);
-			}
-
-			process.exit(1);
-		});
-
-		// Handle process exit
-		cloudflared.on("exit", (code, signal) => {
-			if (isShuttingDown) {
-				// Expected shutdown
-				logger.log("Tunnel stopped.");
-				process.exit(0);
-			}
-
-			if (signal) {
-				logger.log(`\ncloudflared terminated by signal: ${signal}`);
-				process.exit(0);
-			}
-
-			if (code !== 0 && code !== null) {
-				logger.error(`\ncloudflared exited with code ${code}`);
-
-				// Provide helpful error messages for common exit codes
-				if (code === 1) {
-					logger.error(
-						`\nThis might indicate:\n` +
-							`  - The local URL "${args.url}" is not reachable\n` +
-							`  - Network connectivity issues\n` +
-							`  - Port already in use\n\n` +
-							`Make sure your local service is running at ${args.url}\n` +
-							`Try running with --log-level debug for more information.`
-					);
-				}
-
-				process.exit(code);
-			}
-		});
-
-		// Handle stderr for error detection
-		if (cloudflared.stderr) {
-			cloudflared.stderr.on("data", (data) => {
-				const output = data.toString();
-				process.stderr.write(output);
-			});
-		}
-
-		// Handle SIGINT to gracefully shut down
+		// Handle SIGINT/SIGTERM to gracefully shut down
 		const shutdownHandler = () => {
 			if (isShuttingDown) {
 				return;
@@ -153,5 +94,70 @@ export const tunnelQuickStartCommand = createCommand({
 
 		process.on("SIGINT", shutdownHandler);
 		process.on("SIGTERM", shutdownHandler);
+		process.on("exit", shutdownHandler);
+
+		// Handle stderr for cloudflared output
+		if (cloudflared.stderr) {
+			cloudflared.stderr.on("data", (data: Buffer) => {
+				process.stderr.write(data.toString());
+			});
+		}
+
+		// Return a promise that resolves/rejects based on the child process lifecycle.
+		// This avoids calling process.exit() and lets the command infrastructure handle exit.
+		return new Promise<void>((resolve, reject) => {
+			cloudflared.on("error", (error) => {
+				if (isShuttingDown) {
+					resolve();
+					return;
+				}
+
+				let message = `Failed to run cloudflared: ${error.message}`;
+
+				if (error.message.includes("ENOENT")) {
+					message +=
+						`\n\nThe cloudflared binary could not be executed.\n` +
+						`This might be a permissions issue or the binary is corrupted.\n\n` +
+						`Try removing the cache and running again:\n` +
+						`  rm -rf ~/.wrangler/cloudflared\n` +
+						`  wrangler tunnel quick-start ${args.url}`;
+				}
+
+				reject(new UserError(message));
+			});
+
+			cloudflared.on("exit", (code, signal) => {
+				if (isShuttingDown) {
+					logger.log("Tunnel stopped.");
+					resolve();
+					return;
+				}
+
+				if (signal) {
+					logger.log(`\ncloudflared terminated by signal: ${signal}`);
+					resolve();
+					return;
+				}
+
+				if (code !== 0 && code !== null) {
+					let message = `cloudflared exited with code ${code}`;
+
+					if (code === 1) {
+						message +=
+							`\n\nThis might indicate:\n` +
+							`  - The local URL "${args.url}" is not reachable\n` +
+							`  - Network connectivity issues\n` +
+							`  - Port already in use\n\n` +
+							`Make sure your local service is running at ${args.url}\n` +
+							`Try running with --log-level debug for more information.`;
+					}
+
+					reject(new UserError(message));
+					return;
+				}
+
+				resolve();
+			});
+		});
 	},
 });

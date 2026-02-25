@@ -1,12 +1,12 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, it, vi } from "vitest";
-import { spawnCloudflared } from "../tunnel/cloudflared";
-import { tunnelRunCommand } from "../tunnel/run";
-import type * as CloudflaredModule from "../tunnel/cloudflared";
+import { spawnCloudflared } from "../../tunnel/cloudflared";
+import { tunnelRunCommand } from "../../tunnel/run";
+import type * as CloudflaredModule from "../../tunnel/cloudflared";
 
-vi.mock("../tunnel/cloudflared", async () => {
+vi.mock("../../tunnel/cloudflared", async () => {
 	const actual = await vi.importActual<typeof CloudflaredModule>(
-		"../tunnel/cloudflared"
+		"../../tunnel/cloudflared"
 	);
 	return {
 		...actual,
@@ -21,6 +21,8 @@ vi.mock("../tunnel/cloudflared", async () => {
 			cp.kill = () => {
 				cp.killed = true;
 			};
+			// Emit exit on next tick so the handler's Promise resolves
+			process.nextTick(() => cp.emit("exit", 0, null));
 			return cp;
 		}),
 	};

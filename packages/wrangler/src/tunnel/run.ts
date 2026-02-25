@@ -20,12 +20,13 @@ export const tunnelRunCommand = createCommand({
 		},
 		token: {
 			type: "string",
+			conflicts: ["tokenFile"],
 			description:
 				"The tunnel token to use (skips API auth, useful for running on remote machines)",
 		},
 		tokenFile: {
 			type: "string",
-			alias: "token-file",
+			conflicts: ["token"],
 			description: "Read tunnel token from a file",
 		},
 		url: {
@@ -36,7 +37,8 @@ export const tunnelRunCommand = createCommand({
 			type: "string",
 			default: "info",
 			choices: ["debug", "info", "warn", "error", "fatal"] as const,
-			description: "Log level for cloudflared",
+			description:
+				"Log level for cloudflared (does not affect Wrangler logs, which are controlled by WRANGLER_LOG)",
 		},
 	},
 	positionalArgs: ["tunnel"],
@@ -131,69 +133,7 @@ export const tunnelRunCommand = createCommand({
 		// Track if we've already started shutting down
 		let isShuttingDown = false;
 
-		// Handle process spawn error (e.g., binary not found after download)
-		cloudflared.on("error", (error) => {
-			if (isShuttingDown) {
-				return;
-			}
-
-			logger.error(`Failed to run cloudflared: ${error.message}`);
-
-			if (error.message.includes("ENOENT")) {
-				logger.error(
-					`\nThe cloudflared binary could not be executed.\n` +
-						`This might be a permissions issue or the binary is corrupted.\n\n` +
-						`Try removing the cache and running again:\n` +
-						`  rm -rf ~/.wrangler/cloudflared\n` +
-						`  wrangler tunnel run ${tunnelId || "--token <token>"}`
-				);
-			}
-
-			process.exit(1);
-		});
-
-		// Handle process exit
-		cloudflared.on("exit", (code, signal) => {
-			if (isShuttingDown) {
-				// Expected shutdown
-				logger.log("Tunnel stopped.");
-				process.exit(0);
-			}
-
-			if (signal) {
-				logger.log(`\ncloudflared terminated by signal: ${signal}`);
-				process.exit(0);
-			}
-
-			if (code !== 0 && code !== null) {
-				logger.error(`\ncloudflared exited with code ${code}`);
-
-				// Provide helpful error messages for common exit codes
-				if (code === 1) {
-					logger.error(
-						`\nThis might indicate:\n` +
-							`  - Invalid tunnel configuration\n` +
-							`  - Network connectivity issues\n` +
-							`  - Authentication problems\n\n` +
-							`Try running with --log-level debug for more information.`
-					);
-				}
-
-				process.exit(code);
-			}
-		});
-
-		// Handle stderr for error detection
-		if (cloudflared.stderr) {
-			cloudflared.stderr.on("data", (data) => {
-				const output = data.toString();
-				// Log stderr but don't treat all stderr as errors
-				// cloudflared outputs info to stderr
-				process.stderr.write(output);
-			});
-		}
-
-		// Handle SIGINT to gracefully shut down
+		// Handle SIGINT/SIGTERM to gracefully shut down
 		const shutdownHandler = () => {
 			if (isShuttingDown) {
 				return;
@@ -216,5 +156,70 @@ export const tunnelRunCommand = createCommand({
 
 		process.on("SIGINT", shutdownHandler);
 		process.on("SIGTERM", shutdownHandler);
+		process.on("exit", shutdownHandler);
+
+		// Handle stderr for cloudflared output
+		if (cloudflared.stderr) {
+			cloudflared.stderr.on("data", (data: Buffer) => {
+				// cloudflared outputs info to stderr
+				process.stderr.write(data.toString());
+			});
+		}
+
+		// Return a promise that resolves/rejects based on the child process lifecycle.
+		// This avoids calling process.exit() and lets the command infrastructure handle exit.
+		return new Promise<void>((resolve, reject) => {
+			cloudflared.on("error", (error) => {
+				if (isShuttingDown) {
+					resolve();
+					return;
+				}
+
+				let message = `Failed to run cloudflared: ${error.message}`;
+
+				if (error.message.includes("ENOENT")) {
+					message +=
+						`\n\nThe cloudflared binary could not be executed.\n` +
+						`This might be a permissions issue or the binary is corrupted.\n\n` +
+						`Try removing the cache and running again:\n` +
+						`  rm -rf ~/.wrangler/cloudflared\n` +
+						`  wrangler tunnel run ${tunnelId || "--token <token>"}`;
+				}
+
+				reject(new UserError(message));
+			});
+
+			cloudflared.on("exit", (code, signal) => {
+				if (isShuttingDown) {
+					logger.log("Tunnel stopped.");
+					resolve();
+					return;
+				}
+
+				if (signal) {
+					logger.log(`\ncloudflared terminated by signal: ${signal}`);
+					resolve();
+					return;
+				}
+
+				if (code !== 0 && code !== null) {
+					let message = `cloudflared exited with code ${code}`;
+
+					if (code === 1) {
+						message +=
+							`\n\nThis might indicate:\n` +
+							`  - Invalid tunnel configuration\n` +
+							`  - Network connectivity issues\n` +
+							`  - Authentication problems\n\n` +
+							`Try running with --log-level debug for more information.`;
+					}
+
+					reject(new UserError(message));
+					return;
+				}
+
+				resolve();
+			});
+		});
 	},
 });

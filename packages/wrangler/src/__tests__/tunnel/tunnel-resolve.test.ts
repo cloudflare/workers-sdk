@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { resolveTunnelId } from "../tunnel/client";
+import { resolveTunnelId } from "../../tunnel/client";
 import type Cloudflare from "cloudflare";
 
 function asyncIterableFromArray<T>(items: T[]): AsyncIterable<T> {

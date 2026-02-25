@@ -19,9 +19,13 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { arch, homedir } from "node:os";
+import { arch } from "node:os";
 import { dirname, join } from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	getCloudflaredPathFromEnv,
+	getGlobalWranglerConfigPath,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { sync as commandExistsSync } from "command-exists";
 import { fetch } from "undici";
 import { confirm } from "../dialogs";
@@ -144,8 +148,17 @@ async function queryUpdateService(
 		return null;
 	}
 
-	const data = (await response.json()) as VersionResponse;
+	let data: VersionResponse;
+	try {
+		data = (await response.json()) as VersionResponse;
+	} catch {
+		// Response was not valid JSON (e.g. bot-challenge page)
+		return null;
+	}
 
+	// The update worker may return a response with only a version but no download URL
+	// (e.g. when querying a platform it doesn't have a binary for). In that case we
+	// still return the data so callers can use the version to construct a fallback URL.
 	if (data.error || !data.url || !data.version) {
 		return data.version ? data : null;
 	}
@@ -210,7 +223,7 @@ async function getLatestVersionInfo(): Promise<VersionResponse> {
  * Uses the resolved version so the cache is per-version.
  */
 function getCacheDir(version: string): string {
-	return join(homedir(), ".wrangler", "cloudflared", version);
+	return join(getGlobalWranglerConfigPath(), "cloudflared", version);
 }
 
 /**
@@ -239,11 +252,11 @@ function isBinaryExecutable(binPath: string): boolean {
  */
 function validateBinary(binPath: string): void {
 	try {
-		const result = execFileSync(binPath, ["--version"], {
+		const output = execFileSync(binPath, ["--version"], {
 			stdio: ["pipe", "pipe", "pipe"],
 			timeout: 10000,
-		});
-		const output = result.toString().trim();
+			encoding: "utf8",
+		}).trim();
 		logger.debug(`cloudflared version: ${output}`);
 	} catch {
 		let errorMessage = `[cloudflared] Failed to validate cloudflared binary at ${binPath}\n\n`;
@@ -304,7 +317,8 @@ function getInstalledVersion(binPath: string): string | null {
 		const output = execFileSync(binPath, ["--version"], {
 			stdio: ["pipe", "pipe", "pipe"],
 			timeout: 10000,
-		}).toString();
+			encoding: "utf8",
+		});
 		const match = output.match(/(\d+\.\d+\.\d+)/);
 		return match ? match[1] : null;
 	} catch {
@@ -453,6 +467,7 @@ async function downloadCloudflared(
 	}
 
 	logger.log(`cloudflared ${version} installed`);
+	logger.debug(`Binary location: ${binPath}`);
 }
 
 /**
@@ -532,7 +547,7 @@ async function downloadBinary(
  */
 export async function getCloudflaredPath(): Promise<string> {
 	// Check for environment variable override first
-	const envPath = process.env.WRANGLER_CLOUDFLARED_PATH;
+	const envPath = getCloudflaredPathFromEnv();
 	if (envPath) {
 		if (!existsSync(envPath)) {
 			throw new UserError(
@@ -623,7 +638,7 @@ export async function spawnCloudflared(
 export function removeCloudflaredCache(version?: string): void {
 	const cacheDir = version
 		? getCacheDir(version)
-		: join(homedir(), ".wrangler", "cloudflared");
+		: join(getGlobalWranglerConfigPath(), "cloudflared");
 	if (existsSync(cacheDir)) {
 		rmSync(cacheDir, { recursive: true, force: true });
 		logger.log(`Removed cloudflared cache: ${cacheDir}`);

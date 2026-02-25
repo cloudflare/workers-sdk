@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { redactCloudflaredArgsForLogging } from "../tunnel/cloudflared";
+import { redactCloudflaredArgsForLogging } from "../../tunnel/cloudflared";
 
 describe("cloudflared arg redaction", () => {
 	it("redacts --token and other sensitive values", ({ expect }) => {

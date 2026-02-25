@@ -32,8 +32,8 @@ export const tunnelInfoCommand = createCommand({
 		logger.log(`\nTunnel Information:`);
 		logger.log(`  ID: ${tunnel.id}`);
 		logger.log(`  Name: ${tunnel.name}`);
-		logger.log(`  Status: ${tunnel.status || "unknown"}`);
-		logger.log(`  Type: ${tunnel.tun_type || "cfd_tunnel"}`);
+		logger.log(`  Status: ${tunnel.status ?? "unknown"}`);
+		logger.log(`  Type: ${tunnel.tun_type ?? "cfd_tunnel"}`);
 		if (tunnel.created_at) {
 			logger.log(`  Created: ${new Date(tunnel.created_at).toLocaleString()}`);
 		}

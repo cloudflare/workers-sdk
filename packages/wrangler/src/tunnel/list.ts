@@ -31,11 +31,11 @@ export const tunnelListCommand = createCommand({
 			tunnels.map((tunnel) => ({
 				id: tunnel.id,
 				name: tunnel.name,
-				status: tunnel.status || "unknown",
+				status: tunnel.status ?? "unknown",
 				created_at: tunnel.created_at
 					? new Date(tunnel.created_at).toLocaleString()
 					: "",
-				tun_type: tunnel.tun_type || "cfd_tunnel",
+				tun_type: tunnel.tun_type ?? "cfd_tunnel",
 			}))
 		);
 	},

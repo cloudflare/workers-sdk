@@ -1,14 +1,14 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { endEventLoop } from "./helpers/end-event-loop";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
-import { useMockIsTTY } from "./helpers/mock-istty";
-import { createFetchResult, msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { runWrangler } from "./helpers/run-wrangler";
-import type { CloudflareTunnelResource } from "../tunnel/client";
+import { endEventLoop } from "../helpers/end-event-loop";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { useMockIsTTY } from "../helpers/mock-istty";
+import { createFetchResult, msw } from "../helpers/msw";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import type { CloudflareTunnelResource } from "../../tunnel/client";
 
 // Default tunnel for mocking responses
 const defaultTunnel: CloudflareTunnelResource = {
@@ -270,18 +270,14 @@ function mockTunnelList(tunnels: CloudflareTunnelResource[]) {
 			// Return tunnels on first page, empty on subsequent pages
 			const result = page === 1 ? tunnels : [];
 
-			return HttpResponse.json({
-				success: true,
-				errors: [],
-				messages: [],
-				result,
-				result_info: {
+			return HttpResponse.json(
+				createFetchResult(result, true, [], [], {
 					page,
 					per_page: perPage,
 					count: result.length,
 					total_count: tunnels.length,
-				},
-			});
+				})
+			);
 		})
 	);
 }

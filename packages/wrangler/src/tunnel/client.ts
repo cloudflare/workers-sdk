@@ -47,9 +47,12 @@ function isTunnelPermissionError(error: unknown): boolean {
 }
 
 /**
- * Wrap a tunnel API call with permission error handling
+ * Wrap a tunnel API call with error handling.
+ * - Permission errors get a helpful message about API token setup.
+ * - Other Cloudflare API errors are wrapped as UserError to prevent Sentry spam,
+ *   since these are typically user-facing issues (bad input, missing resources, etc.).
  */
-async function withTunnelPermissionCheck<T>(
+async function withTunnelErrorHandling<T>(
 	operation: () => Promise<T>
 ): Promise<T> {
 	try {
@@ -57,6 +60,9 @@ async function withTunnelPermissionCheck<T>(
 	} catch (error) {
 		if (isTunnelPermissionError(error)) {
 			throw new UserError(TUNNEL_PERMISSION_ERROR_MESSAGE);
+		}
+		if (error instanceof CloudflareSDK.APIError) {
+			throw new UserError(error.message, { cause: error });
 		}
 		throw error;
 	}
@@ -85,7 +91,7 @@ export async function createTunnel(
 	accountId: string,
 	name: string
 ): Promise<CloudflareTunnelResource> {
-	return withTunnelPermissionCheck(async () => {
+	return withTunnelErrorHandling(async () => {
 		const response = (await sdk.zeroTrust.tunnels.cloudflared.create({
 			account_id: accountId,
 			name,
@@ -105,7 +111,7 @@ export async function getTunnel(
 	accountId: string,
 	tunnelId: string
 ): Promise<CloudflareTunnelResource> {
-	return withTunnelPermissionCheck(async () => {
+	return withTunnelErrorHandling(async () => {
 		const response = await sdk.zeroTrust.tunnels.cloudflared.get(tunnelId, {
 			account_id: accountId,
 		});
@@ -121,7 +127,7 @@ export async function listTunnels(
 	sdk: Cloudflare,
 	accountId: string
 ): Promise<CloudflareTunnelResource[]> {
-	return withTunnelPermissionCheck(async () => {
+	return withTunnelErrorHandling(async () => {
 		const tunnels: CloudflareTunnelResource[] = [];
 		for await (const tunnel of sdk.zeroTrust.tunnels.cloudflared.list({
 			account_id: accountId,
@@ -141,7 +147,7 @@ export async function deleteTunnel(
 	accountId: string,
 	tunnelId: string
 ): Promise<void> {
-	return withTunnelPermissionCheck(async () => {
+	return withTunnelErrorHandling(async () => {
 		await sdk.zeroTrust.tunnels.cloudflared.delete(tunnelId, {
 			account_id: accountId,
 		});
@@ -156,7 +162,7 @@ export async function getTunnelToken(
 	accountId: string,
 	tunnelId: string
 ): Promise<string> {
-	return withTunnelPermissionCheck(async () => {
+	return withTunnelErrorHandling(async () => {
 		const response = await sdk.zeroTrust.tunnels.cloudflared.token.get(
 			tunnelId,
 			{
@@ -222,7 +228,7 @@ export async function resolveTunnelId(
 	}
 
 	// Look up tunnel by name using the SDK list filter.
-	const tunnels = await withTunnelPermissionCheck(async () => {
+	const tunnels = await withTunnelErrorHandling(async () => {
 		const results: CloudflareTunnelResource[] = [];
 		for await (const tunnel of sdk.zeroTrust.tunnels.cloudflared.list({
 			account_id: accountId,
