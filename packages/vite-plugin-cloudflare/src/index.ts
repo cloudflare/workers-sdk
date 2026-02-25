@@ -20,7 +20,7 @@ import {
 	virtualModulesPlugin,
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
-import { debuglog } from "./utils";
+import { debounce, debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
 import type * as vite from "vite";
@@ -62,8 +62,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async configureServer(viteDevServer) {
 				// Patch the `server.restart` method to track whether the server is restarting or not.
-				const restartServer = viteDevServer.restart.bind(viteDevServer);
-				viteDevServer.restart = async () => {
+				// Note: we debounce this to prevent possible rapid consecutive restarts in quick succession, since these
+				//       aren't actually useful and can cause timing related issues with the plugin.
+				viteDevServer.restart = debounce(async () => {
+					const restartServer = viteDevServer.restart.bind(viteDevServer);
+
 					try {
 						ctx.setIsRestartingDevServer(true);
 						debuglog("From server.restart(): Restarting server...");
@@ -72,7 +75,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					} finally {
 						ctx.setIsRestartingDevServer(false);
 					}
-				};
+				}, 500);
 			},
 		},
 		configPlugin(ctx),

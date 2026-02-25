@@ -140,3 +140,46 @@ function toMiniflareRequest(
 }
 
 export const isRolldown = "rolldownVersion" in vite;
+
+/**
+ * Creates a debounced async function that delays invoking `fn` until after
+ * `delayMs` milliseconds have elapsed since the last time the debounced
+ * function was invoked. All calls during the delay period will receive
+ * the same promise that resolves when the debounced function executes.
+ *
+ * @param fn The async function to debounce
+ * @param delayMs The delay in milliseconds
+ * @returns A debounced version of the function with the same signature
+ */
+export function debounce<T extends () => Promise<void>>(
+	fn: T,
+	delayMs: number
+): T {
+	let timeoutId: NodeJS.Timeout | undefined;
+	let pendingPromise: Promise<void> | undefined;
+	let resolvePending: (() => void) | undefined;
+
+	return (() => {
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
+
+		if (!pendingPromise) {
+			pendingPromise = new Promise<void>((resolve) => {
+				resolvePending = resolve;
+			});
+		}
+
+		timeoutId = setTimeout(async () => {
+			try {
+				await fn();
+			} finally {
+				resolvePending?.();
+				pendingPromise = undefined;
+				resolvePending = undefined;
+			}
+		}, delayMs);
+
+		return pendingPromise;
+	}) as T;
+}
