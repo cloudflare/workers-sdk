@@ -401,20 +401,15 @@ export function StudioTableExplorerTab({
 	return (
 		<div className="w-full h-full flex flex-col bg-surface">
 			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
-				<Button
-					aria-label="Refresh"
-					onClick={onRefreshClicked}
-					shape="square"
-					variant="ghost"
-				>
+				<Button aria-label="Refresh" onClick={onRefreshClicked} shape="square">
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
-				<Button onClick={onAddRowClick} variant="ghost">
+				<Button onClick={onAddRowClick}>
 					<PlusIcon />
 					<span className="text-xs">Add row</span>
 				</Button>
-				<Button onClick={onDeleteRowClick} variant="ghost">
+				<Button onClick={onDeleteRowClick}>
 					<TrashIcon />
 					<span className="text-xs">Delete row</span>
 				</Button>
