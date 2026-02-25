@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
@@ -863,6 +864,33 @@ describe("deploy", () => {
 
 			it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
 				setIsTTY(false);
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
+				writeWranglerConfig({
+					account_id: undefined,
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockOAuthServerCallback();
+				mockGetMemberships([
+					{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+				]);
+
+				await expect(runWrangler("deploy index.js")).rejects
+					.toMatchInlineSnapshot(`
+					[Error: More than one account available but unable to select one in non-interactive mode.
+					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+					Available accounts are (\`<name>\`: \`<account_id>\`):
+					  \`enterprise\`: \`1701\`
+					  \`enterprise-nx\`: \`nx01\`]
+				`);
+			});
+
+			it("should redact account names in CI even when non-interactive", async () => {
+				setIsTTY(false);
+				vi.mocked(ci).isCI = true;
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
 				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 				writeWranglerConfig({
