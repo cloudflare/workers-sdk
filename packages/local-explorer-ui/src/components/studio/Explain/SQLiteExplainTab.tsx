@@ -2,7 +2,7 @@ import { cn, Tooltip } from "@cloudflare/kumo";
 import { TableIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
 import type { StudioResultSet } from "../../../types/studio";
-import type { ReactNode } from "react";
+import type { JSX, ReactNode } from "react";
 
 interface StudioSQLiteExplainProps {
 	data: StudioResultSet;

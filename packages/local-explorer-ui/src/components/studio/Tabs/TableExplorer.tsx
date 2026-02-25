@@ -27,6 +27,7 @@ import type {
 } from "../../../types/studio";
 import type { StudioTableState } from "../Table/State";
 import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
+import type { JSX } from "react";
 
 interface StudioTableExplorerTabProps {
 	schemaName: string;
@@ -486,7 +487,7 @@ export function StudioTableExplorerTab({
 
 						<input
 							aria-label="Rows per page"
-							className="text-center bg-transparent text-sm outline-none border border-none rounded-r-lg px-1 w-[50px]"
+							className="text-center bg-transparent text-sm outline-none border border-none rounded-r-lg px-1 w-12.5"
 							onBlur={onLimitBlur}
 							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
 							value={pageLimitInput}
@@ -507,7 +508,7 @@ export function StudioTableExplorerTab({
 
 						<input
 							aria-label="Page offset"
-							className="text-center bg-transparent text-sm outline-none w-[50px]"
+							className="text-center bg-transparent text-sm outline-none w-12.5"
 							onBlur={onOffsetBlur}
 							onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
 							value={pageOffsetInput}

@@ -2,6 +2,7 @@ import { cn } from "@cloudflare/kumo";
 import { CircleIcon, XIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { StudioWindowTabItem } from "./types";
+import type { JSX } from "react";
 
 interface StudioWindowTabItemRendererProps {
 	index: number;

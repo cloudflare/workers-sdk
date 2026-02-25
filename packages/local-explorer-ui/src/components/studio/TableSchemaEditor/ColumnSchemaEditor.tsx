@@ -226,7 +226,12 @@ export function StudioColumnSchemaEditor({
 				<DropdownMenu>
 					<DropdownMenu.Trigger
 						render={
-							<Button variant="ghost" size="sm" shape="square">
+							<Button
+								aria-label="Column options"
+								variant="ghost"
+								size="sm"
+								shape="square"
+							>
 								<DotsThreeOutlineIcon weight="fill" size={16} />
 							</Button>
 						}

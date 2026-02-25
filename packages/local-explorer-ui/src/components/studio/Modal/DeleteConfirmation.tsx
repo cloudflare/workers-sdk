@@ -59,7 +59,6 @@ export const StudioDeleteConfirmationModal = ({
 			open={isOpen}
 		>
 			<Dialog>
-				{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
 				<Dialog.Title>{title}</Dialog.Title>
 
 				<form onSubmit={handleSubmit}>

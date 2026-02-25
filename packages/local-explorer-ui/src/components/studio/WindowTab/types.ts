@@ -1,4 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
+import type { JSX } from "react";
 
 export interface StudioWindowTabItem {
 	component: JSX.Element;

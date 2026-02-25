@@ -89,7 +89,7 @@ export function StudioTableHeaderResizer({
 	return (
 		<div
 			className={
-				"absolute top-0 right-0 bottom-0 w-[10px] cursor-col-resize opacity-0 hover:opacity-50"
+				"absolute top-0 right-0 bottom-0 w-2.5 cursor-col-resize opacity-0 hover:opacity-50"
 			}
 			ref={handlerRef}
 			onMouseDown={() => setResizing(true)}

@@ -17,7 +17,6 @@ import { StudioSQLiteDialect } from "./SQLiteDialect";
 import { createSQLTableNameHighlightPlugin } from "./SQLiteTableNameHighlightPlugin";
 import { StudioSQLBaseTheme, StudioSQLTheme } from "./SQLThemePlugin";
 import { StudioSQLStatementHighlightExtension } from "./StatementHighlightExtension";
-import { StudioWAEDialect } from "./WAEDialect";
 import type { StudioDialect } from "../../../types/studio";
 import type {
 	StudioCodeMirrorProps,
@@ -56,7 +55,7 @@ export const StudioSQLEditor = forwardRef<
 			lineNumbers(),
 			autocompletion(),
 			sql({
-				dialect: dialect === "wae" ? StudioWAEDialect : StudioSQLiteDialect,
+				dialect: StudioSQLiteDialect,
 				schema: autoCompleteSchema,
 			}),
 			history(),

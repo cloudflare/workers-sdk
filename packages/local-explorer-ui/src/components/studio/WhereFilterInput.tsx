@@ -1,7 +1,7 @@
 import { Button, Tooltip } from "@cloudflare/kumo";
 import { SpinnerIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { tokenizeSQL } from "../../utils/studio";
+import { tokenizeSQL } from "../../utils/studio/sql";
 import { StudioWhereParser } from "../../utils/studio/where-parser";
 import { StudioSQLWhereEditor } from "./SQLWhereEditor";
 import type { IStudioDriver } from "../../types/studio";
@@ -24,26 +24,6 @@ const SQLiteScalarFunctions = [
 	"upper",
 ] satisfies string[];
 
-const WAEScalarFunctions = [
-	"endswith",
-	"extract",
-	"format",
-	"formatdatetime",
-	"intdiv",
-	"isempty",
-	"length",
-	"now",
-	"position",
-	"startswith",
-	"substring",
-	"todatetime",
-	"tolower",
-	"tostartofinterval",
-	"touint32",
-	"tounixtimestamp",
-	"toupper",
-] satisfies string[];
-
 interface StudioWhereFilterInputProps {
 	columnNameList: string[];
 	driver: IStudioDriver;
@@ -54,7 +34,6 @@ interface StudioWhereFilterInputProps {
 
 export function StudioWhereFilterInput({
 	columnNameList,
-	driver,
 	loading,
 	onApply,
 	value,
@@ -65,9 +44,8 @@ export function StudioWhereFilterInput({
 	const [parsingError, setParsingError] = useState("");
 
 	const availableFunctionList = useMemo<string[]>(
-		() =>
-			driver.dialect === "wae" ? WAEScalarFunctions : SQLiteScalarFunctions,
-		[driver]
+		() => SQLiteScalarFunctions,
+		[]
 	);
 
 	useEffect(() => {

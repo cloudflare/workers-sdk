@@ -3,20 +3,16 @@
 // For broader functionality, consider switching to a full library such as sql-formatter.
 
 import { sqliteBuiltinFunctionList } from "../../components/studio/SQLEditor/SQLiteDialect";
-import { waeBuiltinFunctionList } from "../../components/studio/SQLEditor/WAEDialect";
-import { tokenizeSQL } from "./index";
+import { tokenizeSQL } from "./sql";
 import type { StudioDialect, StudioSQLToken } from "../../types/studio";
 
-export function beautifySQLQuery(statement: string, dialect: StudioDialect) {
+export function beautifySQLQuery(statement: string, _dialect: StudioDialect) {
 	// Split the token and remove the whietspace
 	const tokens = tokenizeSQL(statement, "sqlite").filter(
 		(token) => token.type !== "WHITESPACE"
 	);
 
-	const result = formatInternal(
-		tokens,
-		dialect === "sqlite" ? sqliteBuiltinFunctionList : waeBuiltinFunctionList
-	)
+	const result = formatInternal(tokens, sqliteBuiltinFunctionList)
 		.map((token) => token.value)
 		.join("")
 		.trim();

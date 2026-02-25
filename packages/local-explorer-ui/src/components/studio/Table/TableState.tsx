@@ -61,7 +61,7 @@ export class StudioTableState<HeaderMetadata = unknown> {
 	// This section contains methods and properties related to event handling,
 	// such as managing listeners and broadcasting changes.
 	protected changeListeners: TableStateChangeListener[] = [];
-	protected changeBroadcastDebounceTimer: number | null = null;
+	protected changeBroadcastDebounceTimer: NodeJS.Timeout | null = null;
 
 	addChangeListener(cb: TableStateChangeListener) {
 		this.changeListeners.push(cb);
@@ -90,7 +90,9 @@ export class StudioTableState<HeaderMetadata = unknown> {
 		}
 		this.changeBroadcastDebounceTimer = setTimeout(() => {
 			this.changeBroadcastDebounceTimer = null;
-			this.changeListeners.reverse().forEach((cb) => cb(this));
+			for (const cb of [...this.changeListeners].reverse()) {
+				cb(this);
+			}
 		}, 5);
 
 		return true;
