@@ -1,5 +1,138 @@
 # wrangler
 
+## 4.68.1
+
+### Patch Changes
+
+- [#12648](https://github.com/cloudflare/workers-sdk/pull/12648) [`3d6e421`](https://github.com/cloudflare/workers-sdk/commit/3d6e421dcd03fad1837c52c0e677d91678c6eed7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Angular scaffolding to allow localhost SSR in development mode
+
+  Recent versions of Angular's `AngularAppEngine` block serving SSR on `localhost` by default. This caused `wrangler dev` / `wrangler pages dev` to fail with `URL with hostname "localhost" is not allowed.`
+
+  The fix passes `allowedHosts: ["localhost"]` to the `AngularAppEngine` constructor in `server.ts`, which is safe to do even in production since Cloudflare will already restrict which host is allowed.
+
+- [#12657](https://github.com/cloudflare/workers-sdk/pull/12657) [`294297e`](https://github.com/cloudflare/workers-sdk/commit/294297e8e5bb90e71a6db15278e3ab0a9345cacf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update Waku autoconfig logic
+
+  As of `1.0.0-alpha.4`, Waku projects can be built on top of the Cloudflare Vite plugin, and the changes here allow Wrangler autoconfig to support this. Running autoconfig on older versions of Waku will result in an error.
+
+- Updated dependencies []:
+  - miniflare@4.20260302.0
+
+## 4.68.0
+
+### Minor Changes
+
+- [#12614](https://github.com/cloudflare/workers-sdk/pull/12614) [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Enable autoconfig for `wrangler deploy` by default (while allowing users to still disable it via `--x-autoconfig=false` if necessary)
+
+- [#12614](https://github.com/cloudflare/workers-sdk/pull/12614) [`8d882fa`](https://github.com/cloudflare/workers-sdk/commit/8d882fa1c4aa812482e53df2b668bf3b28549ece) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Mark the `wrangler setup` command as stable
+
+## 4.67.1
+
+### Patch Changes
+
+- [#12595](https://github.com/cloudflare/workers-sdk/pull/12595) [`e93dc01`](https://github.com/cloudflare/workers-sdk/commit/e93dc01839aee047b37188b850cac7f3465c7bd4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add a warning in the autoconfig logic letting users know that support for projects inside workspaces is limited
+
+- [#12582](https://github.com/cloudflare/workers-sdk/pull/12582) [`c2ed7c2`](https://github.com/cloudflare/workers-sdk/commit/c2ed7c23057b5fd74788f9b0c5415edc8a592276) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to use capnweb's native `ReadableStream` support to power remote Media and Dispatch Namespace bindings.
+
+- [#12618](https://github.com/cloudflare/workers-sdk/pull/12618) [`d920811`](https://github.com/cloudflare/workers-sdk/commit/d9208114c391a2a9f49adab9056c3ddb24005984) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260219.0 | 1.20260227.0 |
+
+- [#12637](https://github.com/cloudflare/workers-sdk/pull/12637) [`896734d`](https://github.com/cloudflare/workers-sdk/commit/896734d4a754dded85086f88641f26848e554913) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260227.0 | 1.20260302.0 |
+
+- [#12601](https://github.com/cloudflare/workers-sdk/pull/12601) [`ebdbe52`](https://github.com/cloudflare/workers-sdk/commit/ebdbe52c2bcd1b30758b54de57a046f3ab196f04) Thanks [@43081j](https://github.com/43081j)! - Switch to `empathic` for file-system upwards traversal to reduce dependency bloat.
+
+- [#12602](https://github.com/cloudflare/workers-sdk/pull/12602) [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603) Thanks [@anonrig](https://github.com/anonrig)! - Optimize filesystem operations by using Node.js's throwIfNoEntry: false option
+
+  This reduces the number of system calls made when checking for file existence by avoiding the overhead of throwing and catching errors for missing paths. This is an internal performance optimization with no user-visible behavioral changes.
+
+- [#12591](https://github.com/cloudflare/workers-sdk/pull/12591) [`6f6cd94`](https://github.com/cloudflare/workers-sdk/commit/6f6cd944480d6161c582c7af68f6c4205ddeaefe) Thanks [@martinezjandrew](https://github.com/martinezjandrew)! - Implemented logic within `wrangler containers registries configure` to check if a specified secret name is already in-use and offer to reuse that secret. Also added `--skip-confirmation` flag to the command to skip all interactive prompts.
+
+- Updated dependencies [[`c2ed7c2`](https://github.com/cloudflare/workers-sdk/commit/c2ed7c23057b5fd74788f9b0c5415edc8a592276), [`d920811`](https://github.com/cloudflare/workers-sdk/commit/d9208114c391a2a9f49adab9056c3ddb24005984), [`896734d`](https://github.com/cloudflare/workers-sdk/commit/896734d4a754dded85086f88641f26848e554913), [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603)]:
+  - miniflare@4.20260302.0
+
+## 4.67.0
+
+### Minor Changes
+
+- [#12401](https://github.com/cloudflare/workers-sdk/pull/12401) [`8723684`](https://github.com/cloudflare/workers-sdk/commit/872368456bfd72cdb45dc8c82f1ab16392d6a1f8) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Add validation retry loops to pipelines setup command
+
+  The `wrangler pipelines setup` command now prompts users to retry when validation errors occur, instead of failing the entire setup process. This includes:
+
+  - Validation retry prompts for pipeline names, bucket names, and field names
+  - A "simple" mode for sink configuration that uses sensible defaults
+  - Automatic bucket creation when buckets don't exist
+  - Automatic Data Catalog enablement when not already active
+
+  This improves the setup experience by allowing users to correct mistakes without restarting the entire configuration flow.
+
+- [#12395](https://github.com/cloudflare/workers-sdk/pull/12395) [`aa82c2b`](https://github.com/cloudflare/workers-sdk/commit/aa82c2b46be762adecca3f661a8f8228fb9c7c28) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Generate typed pipeline bindings from stream schemas
+
+  When running `wrangler types`, pipeline bindings now generate TypeScript types based on the stream's schema definition. This gives you full autocomplete and type checking when sending data to your pipelines.
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"pipelines": [
+  		{ "binding": "ANALYTICS", "pipeline": "analytics-stream-id" },
+  	],
+  }
+  ```
+
+  If your stream has a schema with fields like `user_id` (string) and `event_count` (int32), the generated types will be:
+
+  ```typescript
+  declare namespace Cloudflare {
+  	type AnalyticsStreamRecord = { user_id: string; event_count: number };
+  	interface Env {
+  		ANALYTICS: Pipeline<Cloudflare.AnalyticsStreamRecord>;
+  	}
+  }
+  ```
+
+  For unstructured streams or when not authenticated, bindings fall back to the generic `Pipeline<PipelineRecord>` type.
+
+### Patch Changes
+
+- [#12592](https://github.com/cloudflare/workers-sdk/pull/12592) [`aaa7200`](https://github.com/cloudflare/workers-sdk/commit/aaa720037b78adb4ad08301d77de4ef0dd759fe3) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260217.0 | 1.20260218.0 |
+
+- [#12606](https://github.com/cloudflare/workers-sdk/pull/12606) [`2f19a40`](https://github.com/cloudflare/workers-sdk/commit/2f19a4047b64d3ffa0e5b0400a6217849785e09b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260218.0 | 1.20260219.0 |
+
+- [#12604](https://github.com/cloudflare/workers-sdk/pull/12604) [`e2a6600`](https://github.com/cloudflare/workers-sdk/commit/e2a66009445c310af581508bec593a8f0cd66464) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: pass `--env` flag to auxiliary workers in multi-worker mode
+
+  When running `wrangler dev` with multiple config files (e.g. `-c ./apps/api/wrangler.jsonc -c ./apps/queues/wrangler.jsonc -e=dev`), the `--env` flag was not being passed to auxiliary (non-primary) workers. This meant that environment-specific configuration (such as queue bindings) was not applied to auxiliary workers, causing features like queue consumers to not be triggered in local development.
+
+- [#12597](https://github.com/cloudflare/workers-sdk/pull/12597) [`0b17117`](https://github.com/cloudflare/workers-sdk/commit/0b171175f1fe8c885a54398ee84fd0aa35ca9cbe) Thanks [@sdnts](https://github.com/sdnts)! - The maximum allowed delivery and retry delays for Queues is now 24 hours
+
+- [#12598](https://github.com/cloudflare/workers-sdk/pull/12598) [`ca58062`](https://github.com/cloudflare/workers-sdk/commit/ca58062d0a4d31995cbac344bb6e994a8b569b24) Thanks [@mattzcarey](https://github.com/mattzcarey)! - Stop redacting `wrangler whoami` output in non-interactive mode
+
+  `wrangler whoami` is explicitly invoked to retrieve account info, so email and account names should always be visible. Redacting them in non-interactive/CI environments makes it difficult for coding agents and automated tools to identify which account to use. Other error messages that may appear unexpectedly in CI logs (e.g. multi-account selection errors) remain redacted.
+
+- Updated dependencies [[`f239077`](https://github.com/cloudflare/workers-sdk/commit/f23907711bd49214b08a8625ac3f74ecef416956), [`aaa7200`](https://github.com/cloudflare/workers-sdk/commit/aaa720037b78adb4ad08301d77de4ef0dd759fe3), [`2f19a40`](https://github.com/cloudflare/workers-sdk/commit/2f19a4047b64d3ffa0e5b0400a6217849785e09b), [`5f9f0b4`](https://github.com/cloudflare/workers-sdk/commit/5f9f0b40dbe4c80ab15bea6a589f5c3296945fbc), [`452cdc8`](https://github.com/cloudflare/workers-sdk/commit/452cdc8c370d5224d71f3292faaf72c3ea9ad86c), [`527e4f5`](https://github.com/cloudflare/workers-sdk/commit/527e4f5651b8858f11a1b9bab4627a4ae5cc1bc0), [`0b17117`](https://github.com/cloudflare/workers-sdk/commit/0b171175f1fe8c885a54398ee84fd0aa35ca9cbe)]:
+  - miniflare@4.20260219.0
+  - @cloudflare/unenv-preset@2.14.0
+
 ## 4.66.0
 
 ### Minor Changes

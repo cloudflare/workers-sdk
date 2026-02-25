@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { removeDir } from "@cloudflare/workers-utils";
 import {
 	Browser,
 	CDP_WEBSOCKET_ENDPOINT_REGEX,
@@ -215,17 +216,11 @@ export async function launchBrowser({
 		dumpio: false,
 		pipe: false,
 		onExit: async () => {
-			await fs.promises
-				.rm(tempUserData, {
-					recursive: true,
-					force: true,
-					maxRetries: 5, // In case of Windows file locks
-				})
-				.catch((e) => {
-					log.debug(
-						`Unable to remove Chrome user data directory: ${String(e)}`
-					);
-				});
+			try {
+				await removeDir(tempUserData);
+			} catch (e) {
+				log.debug(`Unable to remove Chrome user data directory: ${e}`);
+			}
 		},
 	});
 	const wsEndpoint = await browserProcess.waitForLineOutput(

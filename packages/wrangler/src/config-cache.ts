@@ -1,13 +1,10 @@
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { getWranglerCacheDirFromEnv } from "@cloudflare/workers-utils";
-import { findUpSync } from "find-up";
+import {
+	getWranglerCacheDirFromEnv,
+	removeDirSync,
+} from "@cloudflare/workers-utils";
+import * as find from "empathic/find";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 
@@ -29,9 +26,7 @@ export function getCacheFolder(): string {
 	}
 
 	// Find node_modules using existing find-up logic
-	const closestNodeModulesDirectory = findUpSync("node_modules", {
-		type: "directory",
-	});
+	const closestNodeModulesDirectory = find.dir("node_modules");
 
 	const nodeModulesCache = closestNodeModulesDirectory
 		? path.join(closestNodeModulesDirectory, ".cache", "wrangler")
@@ -109,6 +104,6 @@ export function saveToConfigCache<T>(
 export function purgeConfigCaches() {
 	const cacheFolder = getCacheFolder();
 	if (cacheFolder) {
-		rmSync(cacheFolder, { recursive: true, force: true });
+		removeDirSync(cacheFolder);
 	}
 }

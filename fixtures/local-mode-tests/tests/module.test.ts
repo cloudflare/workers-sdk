@@ -1,10 +1,9 @@
 import path from "path";
 import { afterAll, beforeAll, describe, it } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { Unstable_DevWorker } from "wrangler";
+import { unstable_startWorker } from "wrangler";
 
 describe("module worker", () => {
-	let worker: Unstable_DevWorker;
+	let worker: Awaited<ReturnType<typeof unstable_startWorker>>;
 
 	let originalNodeEnv: string | undefined;
 
@@ -14,25 +13,22 @@ describe("module worker", () => {
 
 		process.env.NODE_ENV = "local-testing";
 
-		worker = await unstable_dev(
-			path.resolve(__dirname, "..", "src", "module.ts"),
-			{
-				config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
-				vars: { VAR4: "https://google.com" },
-				ip: "127.0.0.1",
-				port: 0,
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-					devEnv: true,
-				},
-			}
-		);
+		worker = await unstable_startWorker({
+			entrypoint: path.resolve(__dirname, "../src/module.ts"),
+			config: path.resolve(__dirname, "../wrangler.module.jsonc"),
+			bindings: {
+				VAR4: { type: "plain_text", value: "https://google.com" },
+			},
+			dev: {
+				server: { hostname: "127.0.0.1", port: 0 },
+				inspector: false,
+			},
+		});
 	});
 
 	afterAll(async () => {
 		try {
-			await worker.stop();
+			await worker.dispose();
 		} catch (e) {
 			console.error("Failed to stop worker", e);
 		}
@@ -40,7 +36,7 @@ describe("module worker", () => {
 	});
 
 	it("renders variables", async ({ expect }) => {
-		const resp = await worker.fetch("/vars");
+		const resp = await worker.fetch("http://example.com/vars");
 		expect(resp).not.toBe(undefined);
 
 		const text = await resp.text();
@@ -60,13 +56,15 @@ describe("module worker", () => {
 	});
 
 	it("should return Hi by default", async ({ expect }) => {
-		const resp = await worker.fetch("/");
+		const resp = await worker.fetch("http://example.com/");
 		expect(resp).not.toBe(undefined);
 		const respJson = await resp.text();
 		expect(respJson).toBe(JSON.stringify({ greeting: "Hi!" }));
 	});
 	it("should return Bonjour when French", async ({ expect }) => {
-		const resp = await worker.fetch("/", { headers: { lang: "fr-FR" } });
+		const resp = await worker.fetch("http://example.com/", {
+			headers: { lang: "fr-FR" },
+		});
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -75,7 +73,9 @@ describe("module worker", () => {
 	});
 
 	it("should return G'day when Australian", async ({ expect }) => {
-		const resp = await worker.fetch("/", { headers: { lang: "en-AU" } });
+		const resp = await worker.fetch("http://example.com/", {
+			headers: { lang: "en-AU" },
+		});
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -84,7 +84,9 @@ describe("module worker", () => {
 	});
 
 	it("should return Good day when British", async ({ expect }) => {
-		const resp = await worker.fetch("/", { headers: { lang: "en-GB" } });
+		const resp = await worker.fetch("http://example.com/", {
+			headers: { lang: "en-GB" },
+		});
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -93,7 +95,9 @@ describe("module worker", () => {
 	});
 
 	it("should return Howdy when Texan", async ({ expect }) => {
-		const resp = await worker.fetch("/", { headers: { lang: "en-TX" } });
+		const resp = await worker.fetch("http://example.com/", {
+			headers: { lang: "en-TX" },
+		});
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -102,7 +106,9 @@ describe("module worker", () => {
 	});
 
 	it("should return Hello when American", async ({ expect }) => {
-		const resp = await worker.fetch("/", { headers: { lang: "en-US" } });
+		const resp = await worker.fetch("http://example.com/", {
+			headers: { lang: "en-US" },
+		});
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -111,7 +117,9 @@ describe("module worker", () => {
 	});
 
 	it("should return Hola when Spanish", async ({ expect }) => {
-		const resp = await worker.fetch("/", { headers: { lang: "es-ES" } });
+		const resp = await worker.fetch("http://example.com/", {
+			headers: { lang: "es-ES" },
+		});
 		expect(resp).not.toBe(undefined);
 		if (resp) {
 			const respJson = await resp.text();
@@ -120,7 +128,7 @@ describe("module worker", () => {
 	});
 
 	it("returns hex string", async ({ expect }) => {
-		const resp = await worker.fetch("/buffer");
+		const resp = await worker.fetch("http://example.com/buffer");
 		expect(resp).not.toBe(undefined);
 
 		const text = await resp.text();

@@ -366,6 +366,60 @@ export type WorkersKvResultInfo = {
 	total_count?: number;
 };
 
+export type DoSqlWithParams = {
+	/**
+	 * SQL query to execute
+	 */
+	sql: string;
+	/**
+	 * Optional parameters for the SQL query
+	 */
+	params?: Array<unknown>;
+};
+
+export type DoQueryById = {
+	/**
+	 * Hex string ID of the Durable Object
+	 */
+	durable_object_id: string;
+	/**
+	 * Array of SQL queries to execute
+	 */
+	queries: Array<DoSqlWithParams>;
+};
+
+export type DoQueryByName = {
+	/**
+	 * Name to derive DO ID via idFromName()
+	 */
+	durable_object_name: string;
+	/**
+	 * Array of SQL queries to execute
+	 */
+	queries: Array<DoSqlWithParams>;
+};
+
+export type DoRawQueryResult = {
+	/**
+	 * Column names from the query result
+	 */
+	columns?: Array<string>;
+	/**
+	 * Array of row arrays containing query results
+	 */
+	rows?: Array<Array<unknown>>;
+	meta?: {
+		/**
+		 * Number of rows read during query execution
+		 */
+		rows_read?: number;
+		/**
+		 * Number of rows written during query execution
+		 */
+		rows_written?: number;
+	};
+};
+
 export type WorkersNamespaceWritable = {
 	class?: string;
 	name?: string;
@@ -800,3 +854,34 @@ export type DurableObjectsNamespaceListObjectsResponses = {
 
 export type DurableObjectsNamespaceListObjectsResponse =
 	DurableObjectsNamespaceListObjectsResponses[keyof DurableObjectsNamespaceListObjectsResponses];
+
+export type DurableObjectsNamespaceQuerySqliteData = {
+	body: DoQueryById | DoQueryByName;
+	path: {
+		namespace_id: WorkersSchemasId;
+	};
+	query?: never;
+	url: "/workers/durable_objects/namespaces/{namespace_id}/query";
+};
+
+export type DurableObjectsNamespaceQuerySqliteErrors = {
+	/**
+	 * Query response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceQuerySqliteError =
+	DurableObjectsNamespaceQuerySqliteErrors[keyof DurableObjectsNamespaceQuerySqliteErrors];
+
+export type DurableObjectsNamespaceQuerySqliteResponses = {
+	/**
+	 * Query response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<DoRawQueryResult>;
+	};
+};
+
+export type DurableObjectsNamespaceQuerySqliteResponse =
+	DurableObjectsNamespaceQuerySqliteResponses[keyof DurableObjectsNamespaceQuerySqliteResponses];

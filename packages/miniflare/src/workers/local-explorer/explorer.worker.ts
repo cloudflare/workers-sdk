@@ -14,12 +14,13 @@ import {
 	zCloudflareD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListNamespacesData,
 	zDurableObjectsNamespaceListObjectsData,
+	zDurableObjectsNamespaceQuerySqliteData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
-import { listDONamespaces, listDOObjects } from "./resources/do";
+import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -176,6 +177,12 @@ app.get(
 	"/api/workers/durable_objects/namespaces/:namespace_id/objects",
 	validateQuery(zDurableObjectsNamespaceListObjectsData.shape.query.unwrap()),
 	(c) => listDOObjects(c, c.req.param("namespace_id"), c.req.valid("query"))
+);
+
+app.post(
+	"/api/workers/durable_objects/namespaces/:namespace_id/query",
+	validateRequestBody(zDurableObjectsNamespaceQuerySqliteData.shape.body),
+	(c) => queryDOSqlite(c, c.req.param("namespace_id"), c.req.valid("json"))
 );
 
 export default app;

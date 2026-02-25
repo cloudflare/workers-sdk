@@ -6,6 +6,7 @@ import rl from "node:readline";
 import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
+import { removeDir } from "@fixture/shared/src/fs-helpers";
 import { fetch } from "undici";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- complex test with .each patterns */
 import {
@@ -380,22 +381,8 @@ if (process.platform === "win32") {
 					});
 				}
 			});
-			afterAll(async () => {
-				try {
-					fs.rmSync(tmpDir, { recursive: true, force: true });
-				} catch (e) {
-					// It seems that Windows doesn't let us delete this, with errors like:
-					//
-					// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-					// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-					// Serialized Error: {
-					// 	"code": "EBUSY",
-					// 	"errno": -4082,
-					// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-					// 	"syscall": "rmdir",
-					// }
-					console.error(e);
-				}
+			afterAll(() => {
+				removeDir(tmpDir, { fireAndForget: true });
 			});
 
 			it("should print rebuild containers hotkey", async () => {
@@ -560,22 +547,8 @@ if (process.platform === "win32") {
 					}
 				});
 
-				afterAll(async () => {
-					try {
-						fs.rmSync(tmpDir, { recursive: true, force: true });
-					} catch (e) {
-						// It seems that Windows doesn't let us delete this, with errors like:
-						//
-						// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-						// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-						// Serialized Error: {
-						// 	"code": "EBUSY",
-						// 	"errno": -4082,
-						// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-						// 	"syscall": "rmdir",
-						// }
-						console.error(e);
-					}
+				afterAll(() => {
+					removeDir(tmpDir, { fireAndForget: true });
 				});
 
 				it("should allow quitting while the image is building", async () => {
@@ -675,22 +648,8 @@ if (process.platform === "win32") {
 					});
 				}
 			});
-			afterAll(async () => {
-				try {
-					fs.rmSync(tmpDir, { recursive: true, force: true });
-				} catch (e) {
-					// It seems that Windows doesn't let us delete this, with errors like:
-					//
-					// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-					// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-					// Serialized Error: {
-					// 	"code": "EBUSY",
-					// 	"errno": -4082,
-					// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-					// 	"syscall": "rmdir",
-					// }
-					console.error(e);
-				}
+			afterAll(() => {
+				removeDir(tmpDir, { fireAndForget: true });
 			});
 
 			it("should print build logs for all the containers", async () => {
@@ -837,22 +796,8 @@ if (process.platform === "win32") {
 						});
 					}
 				});
-				afterAll(async () => {
-					try {
-						fs.rmSync(tmpDir, { recursive: true, force: true });
-					} catch (e) {
-						// It seems that Windows doesn't let us delete this, with errors like:
-						//
-						// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
-						// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-						// Serialized Error: {
-						// 	"code": "EBUSY",
-						// 	"errno": -4082,
-						// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
-						// 	"syscall": "rmdir",
-						// }
-						console.error(e);
-					}
+				afterAll(() => {
+					removeDir(tmpDir, { fireAndForget: true });
 				});
 
 				it("should be able to interact with both workers, rebuild the containers with the hotkey and all containers should be cleaned up at the end", async () => {

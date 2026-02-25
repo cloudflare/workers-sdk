@@ -97,6 +97,7 @@ describe("init", () => {
 					type: "yarn",
 					npx: "yarn",
 					dlx: ["yarn", "dlx"],
+					lockFiles: ["yarn.lock"],
 				};
 				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 

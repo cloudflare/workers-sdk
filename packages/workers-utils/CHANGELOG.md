@@ -1,5 +1,26 @@
 # @cloudflare/workers-utils
 
+## 0.11.2
+
+### Patch Changes
+
+- [#12629](https://github.com/cloudflare/workers-sdk/pull/12629) [`603fe18`](https://github.com/cloudflare/workers-sdk/commit/603fe181be7c06b9afa1e7741ef8edfc02fa8e22) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `removeDir` and `removeDirSync` helpers with automatic retry logic for Windows EBUSY errors
+
+  These new helpers wrap `fs.rm`/`fs.rmSync` with `maxRetries: 5` and `retryDelay: 100` to handle cases where file handles aren't immediately released (common on Windows with workerd).
+  The async helper also has a `fireAndForget` option to silently swallow errors and not await removal.
+
+  This improves reliability of cleanup operations across the codebase.
+
+## 0.11.1
+
+### Patch Changes
+
+- [#12601](https://github.com/cloudflare/workers-sdk/pull/12601) [`ebdbe52`](https://github.com/cloudflare/workers-sdk/commit/ebdbe52c2bcd1b30758b54de57a046f3ab196f04) Thanks [@43081j](https://github.com/43081j)! - Switch to `empathic` for file-system upwards traversal to reduce dependency bloat.
+
+- [#12602](https://github.com/cloudflare/workers-sdk/pull/12602) [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603) Thanks [@anonrig](https://github.com/anonrig)! - Optimize filesystem operations by using Node.js's throwIfNoEntry: false option
+
+  This reduces the number of system calls made when checking for file existence by avoiding the overhead of throwing and catching errors for missing paths. This is an internal performance optimization with no user-visible behavioral changes.
+
 ## 0.11.0
 
 ### Minor Changes

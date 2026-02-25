@@ -1,9 +1,13 @@
+import { INTROSPECT_SQLITE_METHOD } from "../../../plugins/core/constants";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zDurableObjectsNamespaceListNamespacesData,
 	zDurableObjectsNamespaceListObjectsData,
+	zDurableObjectsNamespaceQuerySqliteData,
 } from "../generated/zod.gen";
+import type { IntrospectSqliteMethod } from "../../../plugins/core/constants";
 import type { AppContext } from "../common";
+import type { Env } from "../explorer.worker";
 import type { z } from "zod";
 
 type ListNamespacesQuery = NonNullable<
@@ -78,7 +82,7 @@ export async function listDOObjects(
 		// No loopback service means we can't list DOs
 		c.env.MINIFLARE_LOOPBACK === undefined
 	) {
-		return errorResponse(404, 10000, `Namespace not found: ${namespaceId}`);
+		return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
 	}
 
 	// The DO storage structure is: <persistPath>/<uniqueKey>/<objectId>.sqlite
@@ -103,7 +107,7 @@ export async function listDOObjects(
 		}
 		return errorResponse(
 			500,
-			10000,
+			10001,
 			`Failed to read DO storage: ${response.statusText}`
 		);
 	}
@@ -149,4 +153,91 @@ export async function listDOObjects(
 			cursor: nextCursor,
 		},
 	});
+}
+
+// ============================================================================
+// Query Durable Object SQLite
+// ============================================================================
+
+type QueryBody = z.output<
+	typeof zDurableObjectsNamespaceQuerySqliteData
+>["body"];
+
+interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
+	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
+}
+
+function getDOBinding(
+	env: Env,
+	namespaceId: string
+): {
+	binding: DurableObjectNamespace<IntrospectableDurableObject>;
+	useSQLite: boolean;
+} | null {
+	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
+	if (!info) return null;
+	return {
+		binding: env[
+			info.binding
+		] as DurableObjectNamespace<IntrospectableDurableObject>,
+		useSQLite: info.useSQLite,
+	};
+}
+
+/**
+ * Query Durable Object SQLite storage
+ *
+ * Executes SQL queries against a specific Durable Object's SQLite storage
+ * using introspection method that is injected into user DO classes.
+ *
+ * The namespace ID is the uniqueKey: scriptName-className
+ */
+export async function queryDOSqlite(
+	c: AppContext,
+	namespaceId: string,
+	body: QueryBody
+): Promise<Response> {
+	// Look up namespace in binding map
+	const ns = getDOBinding(c.env, namespaceId);
+
+	if (!ns) {
+		return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+	}
+
+	if (!ns.useSQLite) {
+		return errorResponse(
+			400,
+			10001,
+			`Namespace does not use SQLite storage: ${namespaceId}`
+		);
+	}
+
+	const binding = ns.binding;
+	// Get DO ID - either from hex string or from name
+	let doId: DurableObjectId;
+	try {
+		if ("durable_object_id" in body) {
+			doId = binding.idFromString(body.durable_object_id);
+		} else {
+			doId = binding.idFromName(body.durable_object_name);
+		}
+	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : "Invalid Durable Object ID";
+		return errorResponse(400, 10001, message);
+	}
+
+	if (body.queries.length === 0) {
+		return errorResponse(400, 10001, "No queries provided");
+	}
+
+	const stub = binding.get(doId);
+
+	try {
+		const results = await stub[INTROSPECT_SQLITE_METHOD](body.queries);
+		return c.json(wrapResponse(results));
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Query failed";
+		return errorResponse(400, 10001, message);
+	}
 }
