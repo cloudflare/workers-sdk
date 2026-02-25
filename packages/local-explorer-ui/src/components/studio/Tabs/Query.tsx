@@ -2,23 +2,23 @@ import { Button, DropdownMenu } from "@cloudflare/kumo";
 import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { BinocularsIcon, CaretDownIcon, PlayIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { runStudioMultipleSQLStatements } from "../../utils/studio";
-import { beautifySQLQuery } from "../../utils/studio/formatter";
-import { useStudioContext } from "./Context";
-import { StudioQueryResultSummary } from "./QueryResultSummary";
-import { StudioQueryResultTab } from "./QueryResultTab";
-import { StudioSQLEditor } from "./SQLEditor";
+import { runStudioMultipleSQLStatements } from "../../../utils/studio";
+import { beautifySQLQuery } from "../../../utils/studio/formatter";
+import { useStudioContext } from "../Context";
+import { StudioQueryResultSummary } from "../QueryResult/Summary";
+import { StudioQueryResultTab } from "../QueryResult/Tab";
+import { StudioSQLEditor } from "../SQLEditor";
 import {
 	resolveStudioToNearestStatement,
 	splitStudioSQLStatements,
-} from "./SQLEditor/StatementHighlightExtension";
-import { StudioWindowTab } from "./WindowTab";
+} from "../SQLEditor/StatementHighlightExtension";
+import { StudioWindowTab } from "../WindowTab";
 import type {
 	StudioMultipleQueryProgress,
 	StudioMultipleQueryResult,
-} from "../../types/studio";
-import type { StudioCodeMirrorReference } from "./Code/Mirror";
-import type { StudioWindowTabItem } from "./WindowTab/types";
+} from "../../../types/studio";
+import type { StudioCodeMirrorReference } from "../Code/Mirror";
+import type { StudioWindowTabItem } from "../WindowTab/types";
 import type { JSX } from "react";
 
 interface StudioQueryTabProps {
@@ -29,37 +29,41 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 	const { driver, schemas, refreshSchema } = useStudioContext();
 
+	const [columnNumber, setColumnNumber] = useState<number>(1);
+	const [lineNumber, setLineNumber] = useState<number>(1);
+	const [loading, setLoading] = useState<boolean>(false);
+	const [progress, setProgress] = useState<StudioMultipleQueryProgress>();
+	const [results, setResults] = useState<StudioMultipleQueryResult[]>();
 	const [selectedResultTabKey, setSelectedResultTabKey] =
 		useState<string>("summary");
-	const [results, setResults] = useState<StudioMultipleQueryResult[]>();
-	const [progress, setProgress] = useState<StudioMultipleQueryProgress>();
-	const [loading, setLoading] = useState(false);
-
-	// Cursor Information
-	const [lineNumber, setLineNumber] = useState(1);
-	const [columnNumber, setColumnNumber] = useState(1);
 
 	const runMultipleStatements = useCallback(
-		(statements: string[]): void => {
+		async (statements: string[]): Promise<void> => {
 			setResults(undefined);
 			setProgress(undefined);
 			setLoading(true);
 
-			runStudioMultipleSQLStatements(driver, statements, setProgress)
-				.then((r) => {
-					setResults(r.result);
+			try {
+				const r = await runStudioMultipleSQLStatements(
+					driver,
+					statements,
+					setProgress
+				);
+				setResults(r.result);
 
-					const hasAlterSchema = r.logs.some((log) => {
-						const sql = log.sql.trim().toLowerCase();
-						return sql.startsWith("create ") || sql.startsWith("drop ");
-					});
+				const hasAlterSchema = r.logs.some((log) => {
+					const sql = log.sql.trim().toLowerCase();
+					return sql.startsWith("create ") || sql.startsWith("drop ");
+				});
 
-					if (hasAlterSchema) {
-						refreshSchema();
-					}
-				})
-				.catch(console.error)
-				.finally(() => setLoading(false));
+				if (hasAlterSchema) {
+					refreshSchema();
+				}
+			} catch (err) {
+				console.error(err);
+			} finally {
+				setLoading(false);
+			}
 		},
 		[driver, setProgress, refreshSchema]
 	);
@@ -71,7 +75,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 		}
 
 		const statements = splitStudioSQLStatements(view.state, true);
-		runMultipleStatements(statements.map((statement) => statement.text));
+		void runMultipleStatements(statements.map((statement) => statement.text));
 	}, [editorRef, runMultipleStatements]);
 
 	const onRunCurrentClicked = useCallback((): void => {
@@ -86,7 +90,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 		}
 
 		const statement = view.state.doc.sliceString(segment.from, segment.to);
-		runMultipleStatements([statement]);
+		void runMultipleStatements([statement]);
 	}, [editorRef, runMultipleStatements]);
 
 	const keybinding = useMemo(
@@ -123,7 +127,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	);
 
 	// Showing the result as tab
-	const queryTabs = useMemo(() => {
+	const queryTabs = useMemo((): StudioWindowTabItem[] | null => {
 		if (!progress) {
 			return null;
 		}
@@ -170,12 +174,11 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 		if (queryTabs && queryTabs.length > 0) {
 			// Synchronizes tab selection after query results change; length check guarantees this exists
 			const [tab] = queryTabs as [StudioWindowTabItem];
-			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setSelectedResultTabKey(tab.key);
 		}
 	}, [queryTabs]);
 
-	const autoCompelteSchema = useMemo(() => {
+	const autoCompelteSchema = useMemo((): Record<string, string[]> => {
 		if (!schemas) {
 			return {};
 		}
@@ -224,7 +227,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 			currentEditor.getValue()
 		);
 
-		runMultipleStatements([explainStatement]);
+		void runMultipleStatements([explainStatement]);
 	}, [editorRef, driver, runMultipleStatements]);
 
 	return (
@@ -248,10 +251,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 						statementHighlight
 					/>
 				</div>
-				<div
-					className="shrink-0 py-2 px-4 flex items-center gap-2"
-					style={{ paddingTop: 0 }}
-				>
+				<div className="shrink-0 pt-0 pb-2 px-4 flex items-center gap-2">
 					<div className="text-xs grow text-muted">
 						Ln {lineNumber} Col {columnNumber}
 					</div>
@@ -289,8 +289,8 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 							/>
 							<DropdownMenu.Content
 								align="end"
+								className="w-62.5"
 								side="bottom"
-								style={{ width: 250 }}
 							>
 								<DropdownMenu.Item onClick={onRunCurrentClicked}>
 									Run current statement
@@ -315,6 +315,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 					</div>
 				</div>
 			</div>
+
 			<div className="w-full h-full bg-surface">
 				{queryTabs && queryTabs.length > 0 && (
 					<StudioWindowTab

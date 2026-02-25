@@ -17,7 +17,7 @@ import { useStudioContext } from "../Context";
 import { useModal } from "../Modal";
 import { StudioCommitConfirmation } from "../Modal/CommitConfirmation";
 import { StudioDeleteConfirmationModal } from "../Modal/DeleteConfirmation";
-import { StudioQueryResultStats } from "../Query/ResultStats";
+import { StudioQueryResultStats } from "../QueryResult/Stats";
 import { StudioResultTable } from "../ResultTable";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
 import { StudioWhereFilterInput } from "../WhereFilterInput";

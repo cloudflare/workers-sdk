@@ -4,8 +4,8 @@ import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
-import { StudioQueryTab } from "./QueryTab";
 import { StudioTabDefinitionList } from "./TabRegister";
+import { StudioQueryTab } from "./Tabs/Query";
 import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
 	IStudioDriver,

@@ -12,11 +12,7 @@ import { useStudioContext } from "./Context";
 import { useStudioContextMenu } from "./ContextMenu";
 import { StudioDropTableModal } from "./DropTableModal";
 import { StudioTreeView } from "./TreeView";
-import type {
-	DropdownItemBuilderProps,
-	StudioSchemaItem,
-	StudioSchemas,
-} from "../../types/studio";
+import type { StudioSchemaItem, StudioSchemas } from "../../types/studio";
 import type { StudioTreeViewItem } from "./TreeView";
 
 export function StudioSidebarPane() {

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { SkeletonBlock } from "../../utils/studio/stubs/ui/SkeletonBlock";
-import { useStudioContext } from "./Context";
-import { StudioTableSchemaEditor } from "./Table/SchemaEditor";
-import { useStudioCurrentWindowTab } from "./WindowTab/Context";
+import { SkeletonBlock } from "../../../utils/studio/stubs/ui/SkeletonBlock";
+import { useStudioContext } from "../Context";
+import { StudioTableSchemaEditor } from "../Table/SchemaEditor";
+import { useStudioCurrentWindowTab } from "../WindowTab/Context";
 import type {
 	StudioTableSchema,
 	StudioTableSchemaChange,
-} from "../../types/studio";
+} from "../../../types/studio";
+import type { JSX } from "react";
 
 interface StudioEditTableTabProps {
 	schemaName?: string;
@@ -16,41 +17,47 @@ interface StudioEditTableTabProps {
 export function StudioCreateUpdateTableTab({
 	schemaName,
 	tableName,
-}: StudioEditTableTabProps) {
+}: StudioEditTableTabProps): JSX.Element {
 	const { driver, refreshSchema, replaceStudioTab } = useStudioContext();
-	const [loading, setLoading] = useState(!!schemaName && !!tableName);
 	const { identifier: tabIdentifier } = useStudioCurrentWindowTab();
 
+	const [loading, setLoading] = useState(!!schemaName && !!tableName);
+
 	const [value, setValue] = useState<StudioTableSchemaChange>({
-		schemaName: "main",
+		columns: [],
+		constraints: [],
+		indexes: [],
 		name: {
 			new: "",
 			old: "",
 		},
-		columns: [],
-		constraints: [],
-		indexes: [],
+		schemaName: "main",
 	});
 
 	// Determines if the editor is in create mode (no previous table name)
 	const isCreateMode = !value.name.old;
 
-	useEffect(() => {
-		if (!schemaName || !tableName) {
-			return;
+	useEffect((): void => {
+		async function updateValue(): Promise<void> {
+			if (!schemaName || !tableName) {
+				return;
+			}
+
+			try {
+				const tableSchema = await driver.tableSchema(schemaName, tableName);
+				setValue(transformTableSchematableSchema(tableSchema));
+			} catch (err) {
+				console.error(err);
+			} finally {
+				setLoading(false);
+			}
 		}
 
-		driver
-			.tableSchema(schemaName, tableName)
-			.then((tableSchema) => {
-				setValue(transformTableSchematableSchema(tableSchema));
-			})
-			.catch(console.error)
-			.finally(() => setLoading(false));
+		void updateValue();
 	}, [driver, schemaName, tableName]);
 
 	const onSaveChange = useCallback(
-		async (statements: string[]) => {
+		async (statements: string[]): Promise<void> => {
 			if (!value.schemaName || !value.name.new) {
 				return;
 			}
@@ -66,9 +73,9 @@ export function StudioCreateUpdateTableTab({
 			replaceStudioTab(
 				tabIdentifier,
 				{
-					type: "edit-table",
 					schemaName: value.schemaName,
 					tableName: value.name.new,
+					type: "edit-table",
 				},
 				{
 					withoutReplaceComponent: true,
@@ -84,13 +91,13 @@ export function StudioCreateUpdateTableTab({
 		<div className="overflow-auto w-full h-full bg-surface">
 			{!loading ? (
 				<StudioTableSchemaEditor
-					driver={driver}
-					value={value}
-					onChange={setValue}
-					highlightSchemaChanges={!isCreateMode} // Highlight diffs only in edit mode
-					readOnlyExistingColumns={!isCreateMode} // Prevent editing existing columns in edit mode
-					onSaveChange={onSaveChange}
 					disabledAddColumn={!driver.isSupportEditTable}
+					driver={driver}
+					highlightSchemaChanges={!isCreateMode} // Highlight diffs only in edit mode
+					onChange={setValue}
+					onSaveChange={onSaveChange}
+					readOnlyExistingColumns={!isCreateMode} // Prevent editing existing columns in edit mode
+					value={value}
 				/>
 			) : (
 				<div className="p-4">
