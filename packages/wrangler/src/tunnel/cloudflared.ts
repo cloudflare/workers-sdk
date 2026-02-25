@@ -15,7 +15,6 @@ import {
 	existsSync,
 	mkdirSync,
 	renameSync,
-	rmSync,
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
@@ -24,6 +23,7 @@ import { dirname, join } from "node:path";
 import {
 	getCloudflaredPathFromEnv,
 	getGlobalWranglerConfigPath,
+	removeDirSync,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { sync as commandExistsSync } from "command-exists";
@@ -640,7 +640,7 @@ export function removeCloudflaredCache(version?: string): void {
 		? getCacheDir(version)
 		: join(getGlobalWranglerConfigPath(), "cloudflared");
 	if (existsSync(cacheDir)) {
-		rmSync(cacheDir, { recursive: true, force: true });
+		removeDirSync(cacheDir);
 		logger.log(`Removed cloudflared cache: ${cacheDir}`);
 	}
 }
