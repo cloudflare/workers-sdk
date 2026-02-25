@@ -269,7 +269,6 @@ describe("tunnel commands", () => {
 
 			// Token must NOT appear in CLI args (would leak via `ps`)
 			expect(calledArgs).not.toContain("--token");
-			expect(calledArgs).not.toContain("--token-file");
 			expect(calledArgs).not.toContain("TEST_TOKEN");
 
 			// Token must be passed via env var

@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import { join } from "node:path";
 import {
 	getGlobalWranglerConfigPath,
@@ -20,18 +19,12 @@ export const tunnelRunCommand = createCommand({
 		tunnel: {
 			type: "string",
 			description:
-				"The name or UUID of the tunnel to run (required unless --token/--token-file is provided)",
+				"The name or UUID of the tunnel to run (required unless --token is provided)",
 		},
 		token: {
 			type: "string",
-			conflicts: ["tokenFile"],
 			description:
 				"The tunnel token to use (skips API auth, useful for running on remote machines)",
-		},
-		tokenFile: {
-			type: "string",
-			conflicts: ["token"],
-			description: "Read tunnel token from a file",
 		},
 		url: {
 			type: "string",
@@ -48,26 +41,15 @@ export const tunnelRunCommand = createCommand({
 	positionalArgs: ["tunnel"],
 	async handler(args, { config, logger, sdk }) {
 		let tokenStr = args.token;
-		if (!tokenStr && args.tokenFile) {
-			try {
-				tokenStr = fs.readFileSync(args.tokenFile, "utf8").trim();
-			} catch (e) {
-				throw new UserError(
-					`Failed to read token file "${args.tokenFile}".\n\n` +
-						`${e instanceof Error ? e.message : String(e)}`
-				);
-			}
-		}
 
 		let tunnelId: string | undefined;
 		if (!tokenStr) {
 			if (!args.tunnel) {
 				throw new UserError(
-					`Either a tunnel name/UUID or --token/--token-file must be provided.\n\n` +
+					`Either a tunnel name/UUID or --token must be provided.\n\n` +
 						`Usage:\n` +
-						`  wrangler tunnel run <tunnel>                 # Fetch token via API\n` +
-						`  wrangler tunnel run --token <token>          # Use provided token\n` +
-						`  wrangler tunnel run --token-file <file>      # Read token from file`
+						`  wrangler tunnel run <tunnel>            # Fetch token via API\n` +
+						`  wrangler tunnel run --token <token>     # Use provided token`
 				);
 			}
 			const accountId = await requireAuth(config);
