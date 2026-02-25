@@ -1030,14 +1030,14 @@ function generateTypeStrings(
 /**
  * Construct a type key, if it's not a valid identifier, wrap it in quotes with proper escaping
  */
-function constructTypeKey(key: string) {
+export function constructTypeKey(key: string) {
 	if (isValidIdentifier(key)) {
 		return `${key}`;
 	}
 	return `"${escapeTypeScriptString(key)}"`;
 }
 
-function constructTSModuleGlob(glob: string) {
+export function constructTSModuleGlob(glob: string) {
 	// Exact module reference, don't transform
 	if (!glob.includes("*")) {
 		return glob;
@@ -1053,7 +1053,7 @@ function constructTSModuleGlob(glob: string) {
 /**
  * Generate a import specifier from one module to another
  */
-function generateImportSpecifier(from: string, to: string) {
+export function generateImportSpecifier(from: string, to: string) {
 	// Use unix-style paths on Windows
 	const relativePath = relative(dirname(from), dirname(to)).replace(/\\/g, "/");
 	const filename = basename(to, extname(to));
