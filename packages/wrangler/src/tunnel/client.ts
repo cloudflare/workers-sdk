@@ -33,16 +33,6 @@ function isTunnelPermissionError(error: unknown): boolean {
 		if (error.status === 403 || error.status === 401) {
 			return true;
 		}
-		// Check for specific error codes related to permissions
-		for (const err of error.errors) {
-			if (
-				err.code === 10000 || // Authentication error
-				err.code === 1003 || // Invalid auth headers
-				err.code === 9109 // Forbidden
-			) {
-				return true;
-			}
-		}
 	}
 	return false;
 }
