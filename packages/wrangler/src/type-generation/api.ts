@@ -2,8 +2,8 @@ import { stat } from "node:fs/promises";
 import { UserError } from "@cloudflare/workers-utils";
 import { readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
+import { generateEnvTypes } from "./env";
 import { generateRuntimeTypes } from "./runtime";
-import { generateEnvTypes } from ".";
 import type { Entry } from "../deployment-bundle/entry";
 import type { Config } from "@cloudflare/workers-utils";
 

@@ -8,8 +8,8 @@ import { version } from "workerd";
 import yargs from "yargs";
 import { getEntry } from "../deployment-bundle/entry";
 import { logger } from "../logger";
+import { generateEnvTypes } from "./env";
 import { generateRuntimeTypes } from "./runtime";
-import { generateEnvTypes } from ".";
 import type { Entry } from "../deployment-bundle/entry";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -440,3 +440,17 @@ export const validateEnvInterfaceNames = (envNames: Array<string>): void => {
 		interfaceNames.set(interfaceName, envName);
 	}
 };
+
+/**
+ * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
+ */
+export function isValidIdentifier(key: string) {
+	return /^[a-zA-Z_$][\w$]*$/.test(key);
+}
+
+/**
+ * Escapes special characters in a string for use in a TypeScript string literal.
+ */
+export function escapeTypeScriptString(str: string): string {
+	return JSON.stringify(str).slice(1, -1);
+}
