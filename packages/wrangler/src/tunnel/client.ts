@@ -17,8 +17,9 @@ To use tunnel commands, please authenticate using an API token:
 1. Create an API token at https://dash.cloudflare.com/profile/api-tokens
 2. Use the "Edit Cloudflare Tunnel" template, or create a custom token with:
    - Account > Cloudflare Tunnel > Edit
-3. Set the token as an environment variable:
+3. Set the token and account ID as environment variables:
    export CLOUDFLARE_API_TOKEN=<your-token>
+   export CLOUDFLARE_ACCOUNT_ID=<your-account-id>
 
 Then run your tunnel command again.
 `.trim();
