@@ -584,7 +584,8 @@ export async function getCloudflaredPath(): Promise<string> {
 	const binPath = getCloudflaredBinPath(versionInfo.version);
 
 	// Check if this version is already cached and valid
-	if (isBinaryExecutable(binPath)) {
+	let needsDownload = !isBinaryExecutable(binPath);
+	if (!needsDownload) {
 		try {
 			validateBinary(binPath);
 			logger.debug(
@@ -593,7 +594,7 @@ export async function getCloudflaredPath(): Promise<string> {
 			return binPath;
 		} catch (e) {
 			logger.debug("Cached cloudflared failed validation; re-downloading", e);
-			removeCloudflaredCache(versionInfo.version);
+			needsDownload = true;
 		}
 	}
 
@@ -609,6 +610,11 @@ export async function getCloudflaredPath(): Promise<string> {
 				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n\n` +
 				`Then either add it to your PATH or set WRANGLER_CLOUDFLARED_PATH.`
 		);
+	}
+
+	// Remove corrupted cache only after user has confirmed re-download
+	if (existsSync(binPath)) {
+		removeCloudflaredCache(versionInfo.version);
 	}
 
 	// Download cloudflared

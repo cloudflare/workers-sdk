@@ -15,7 +15,7 @@ OAuth login (via 'wrangler login') does not currently include tunnel permissions
 To use tunnel commands, please authenticate using an API token:
 
 1. Create an API token at https://dash.cloudflare.com/profile/api-tokens
-2. Use the "Edit Cloudflare Tunnel" template, or create a custom token with:
+2. Create a custom token with:
    - Account > Cloudflare Tunnel > Edit
 3. Set the token and account ID as environment variables:
    export CLOUDFLARE_API_TOKEN=<your-token>

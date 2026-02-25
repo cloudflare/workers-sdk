@@ -1,4 +1,8 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { join } from "node:path";
+import {
+	getGlobalWranglerConfigPath,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";
 import { spawnCloudflared } from "./cloudflared";
@@ -119,7 +123,7 @@ export const tunnelQuickStartCommand = createCommand({
 						`\n\nThe cloudflared binary could not be executed.\n` +
 						`This might be a permissions issue or the binary is corrupted.\n\n` +
 						`Try removing the cache and running again:\n` +
-						`  rm -rf ~/.wrangler/cloudflared\n` +
+						`  rm -rf ${join(getGlobalWranglerConfigPath(), "cloudflared")}\n` +
 						`  wrangler tunnel quick-start ${args.url}`;
 				}
 
