@@ -40,6 +40,7 @@ import type { Binding } from "../types";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
+	CacheOptions,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -1934,6 +1935,14 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"observability",
 			validateObservability,
+			undefined
+		),
+		cache: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"cache",
+			validateCache,
 			undefined
 		),
 		compliance_region: inheritable(
@@ -4911,6 +4920,38 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
 		);
 	}
+
+	return isValid;
+};
+
+const validateCache: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as CacheOptions;
+	let isValid = true;
+
+	isValid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			val.enabled,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+		]) && isValid;
 
 	return isValid;
 };

@@ -222,7 +222,7 @@ export interface StudioResultHeader {
 
 export type StudioResultValue<T = unknown> = T | undefined | null;
 
-type StudioResultRow = Record<string, unknown>;
+export type StudioResultRow = Record<string, unknown>;
 
 export interface StudioResultSet {
 	headers: StudioResultHeader[];

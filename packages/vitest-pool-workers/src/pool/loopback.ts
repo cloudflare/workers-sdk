@@ -314,8 +314,24 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 	);
 	await fs.cp(stackFramePath, persistPath, { recursive: true });
 
-	// Remove the stack frame
-	await fs.rm(stackFramePath, { recursive: true, force: true });
+	// Remove the stack frame.
+	//
+	// Note: this is intentionally inlined rather than importing `removeDir` from
+	// `@cloudflare/workers-utils`. That package's barrel export pulls in CJS
+	// dependencies (e.g. `xdg-app-paths`) that break when esbuild bundles them
+	// into our ESM output — the shimmed `require()` calls throw
+	// "Dynamic require of 'path' is not supported" at runtime.
+	// If the bundling setup for this package changes in the future (e.g.
+	// tree-shaking improves or a sub-path export is added), this could be
+	// replaced with a direct import from `@cloudflare/workers-utils`.
+	// Keep aligned with `removeDir()` in `packages/workers-utils/src/fs-helpers.ts`.
+	// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- see comment above: barrel import breaks ESM bundle
+	await fs.rm(stackFramePath, {
+		recursive: true,
+		force: true,
+		maxRetries: 5,
+		retryDelay: 100,
+	});
 }
 
 const PLUGIN_PRODUCT_NAMES: Record<string, string | undefined> = {

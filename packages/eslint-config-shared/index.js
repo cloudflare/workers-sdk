@@ -6,6 +6,7 @@ import turbo from "eslint-plugin-turbo";
 import unusedImports from "eslint-plugin-unused-imports";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
+import noDirectRecursiveRm from "./rules/no-direct-recursive-rm.mjs";
 import noUnsafeCommandExecution from "./rules/no-unsafe-command-execution.mjs";
 import noVitestImportExpect from "./rules/no-vitest-import-expect.mjs";
 
@@ -34,6 +35,7 @@ export default defineConfig(
 			"no-only-tests": noOnlyTests,
 			"workers-sdk": {
 				rules: {
+					"no-direct-recursive-rm": noDirectRecursiveRm,
 					"no-unsafe-command-execution": noUnsafeCommandExecution,
 					"no-vitest-import-expect": noVitestImportExpect,
 				},
@@ -87,6 +89,7 @@ export default defineConfig(
 					argsIgnorePattern: "^_",
 				},
 			],
+			"workers-sdk/no-direct-recursive-rm": "error",
 			"workers-sdk/no-unsafe-command-execution": "error",
 
 			// Enforce default import for ci-info so that test mocks work correctly.

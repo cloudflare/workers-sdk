@@ -1,7 +1,7 @@
 import { BinocularsIcon, PencilIcon, TableIcon } from "@phosphor-icons/react";
 import { StudioCreateUpdateTableTab } from "./CreateUpdateTableTab";
 import { StudioQueryTab } from "./QueryTab";
-import { StudioTableExplorerTab } from "./TableExplorerTab";
+import { StudioTableExplorerTab } from "./Tabs/TableExplorer";
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
@@ -51,12 +51,7 @@ const NewTableTab: TabDefinition<{
 	type: "create-table",
 };
 
-const RegisteredTabDefinition = [
-	QueryTab,
-	TableTab,
-	EditTableTab,
-	NewTableTab,
-] satisfies Array<TabDefinition<any>>;
+const RegisteredTabDefinition = [QueryTab, TableTab, EditTableTab, NewTableTab];
 
 export interface TabDefinition<T extends { type: string }> {
 	icon: Icon;

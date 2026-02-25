@@ -67,7 +67,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(
-				createRequestHandler(ctx, (request) => {
+				createRequestHandler((request) => {
 					return ctx.miniflare.dispatchFetch(request, { redirect: "manual" });
 				})
 			);

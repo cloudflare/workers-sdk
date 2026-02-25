@@ -125,6 +125,7 @@ describe("normalizeAndValidateConfig()", () => {
 			keep_names: undefined,
 			assets: undefined,
 			observability: undefined,
+			cache: undefined,
 			compliance_region: undefined,
 			images: undefined,
 			media: undefined,
@@ -7481,6 +7482,189 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - Unexpected fields found in observability field: "invalid_key_1","invalid_key_2""
 				`);
+			});
+		});
+
+		describe("[cache]", () => {
+			it("should error when cache is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: "enabled",
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache" should be an object but got "enabled"."
+				`);
+			});
+
+			it("should error when cache is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: null,
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache" should be an object but got null."
+				`);
+			});
+
+			it("should error when cache.enabled is missing", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache.enabled" is a required field."
+				`);
+			});
+
+			it("should error when cache.enabled is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.enabled" to be of type boolean but got "true"."
+				`);
+			});
+
+			it("should not error on valid cache config with enabled true", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: true });
+			});
+
+			it("should not error on valid cache config with enabled false", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: false });
+			});
+
+			it("should warn on unexpected fields in cache config", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							invalid_key: "hello",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in cache field: "invalid_key""
+				`);
+			});
+
+			it("should inherit cache from top-level config to environment", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+						env: {
+							production: {},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "production" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: true });
+			});
+
+			it("should allow environment to override top-level cache", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+						env: {
+							staging: {
+								cache: {
+									enabled: false,
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: false });
 			});
 		});
 

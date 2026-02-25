@@ -190,5 +190,3 @@ if (!commitMessage) {
 		},
 	],
 });
-
-console.log("✅ All tests passed!");

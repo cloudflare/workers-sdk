@@ -31,10 +31,10 @@ interface StudioProps {
 	 */
 	initialTable?: string;
 	/**
-	 * Callback when the selected table changes (e.g., when a table tab is selected or closed).
-	 * Called with the table name, or `null` when no table is selected.
+	 * Callback fired when the selected table changes (e.g., when switching tabs).
+	 * Receives `undefined` if the selected tab is not a table tab.
 	 */
-	onTableChange?: (tableName: string | null) => void;
+	onTableChange?: (tableName: string | undefined) => void;
 	/**
 	 * Metadata about the current studio resource.
 	 */
@@ -47,7 +47,6 @@ export function Studio({
 	onTableChange,
 	resource,
 }: StudioProps): JSX.Element {
-	// Track the last table we opened to detect changes
 	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
@@ -131,7 +130,6 @@ export function Studio({
 	 */
 	const openStudioTab = useCallback<StudioContextValue["openStudioTab"]>(
 		(data: StudioTabDefinitionMetadata, isTemporary?: boolean) => {
-			// Getting tab setting
 			const tabTypeDefinition = StudioTabDefinitionList[data.type];
 			if (!tabTypeDefinition) {
 				console.error("Trying to open unknown tab type", data);
@@ -140,7 +138,6 @@ export function Studio({
 
 			const identifier = tabTypeDefinition.makeIdentifier(data);
 
-			// Generate the key upfront so we can select it after updating tabs
 			const newTabKey = window.crypto.randomUUID();
 
 			setTabs((prevTabs) => {
@@ -184,8 +181,6 @@ export function Studio({
 				];
 			});
 
-			// Select the tab after updating tabs state
-			// Check if tab already exists and select it, otherwise select the new tab
 			const existingTab = tabs.find((tab) => tab.identifier === identifier);
 			setSelectedTabKey(existingTab ? existingTab.key : newTabKey);
 		},
@@ -217,27 +212,12 @@ export function Studio({
 		});
 	}, []);
 
-	// Open table from URL param after schemas load, and when initialTable changes.
-	// When no table is specified, select the first Query tab.
+	// Open table from URL param after schemas load, and when initialTable changes
 	useEffect((): void => {
-		if (!schemas || loadingSchema) {
+		if (!initialTable || !schemas || loadingSchema) {
 			return;
 		}
 
-		// When no table is specified, select the first Query tab
-		if (!initialTable) {
-			// Only switch if we were previously viewing a table
-			if (lastOpenedTable.current !== null) {
-				const queryTab = tabs.find((tab) => tab.type === "query");
-				if (queryTab) {
-					setSelectedTabKey(queryTab.key);
-				}
-				lastOpenedTable.current = null;
-			}
-			return;
-		}
-
-		// Skip if we've already opened this specific table
 		if (lastOpenedTable.current === initialTable) {
 			return;
 		}
@@ -261,45 +241,31 @@ export function Studio({
 			`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
 		);
 		lastOpenedTable.current = initialTable;
-	}, [
-		initialTable,
-		loadingSchema,
-		openStudioTab,
-		schemas,
-		tabs,
-		setSelectedTabKey,
-	]);
+	}, [initialTable, loadingSchema, openStudioTab, schemas]);
 
-	/**
-	 * Extracts the table name from a tab, if it's a table tab.
-	 * Table tab identifiers have the format: "table/{schemaName}.{tableName}"
-	 */
-	const getTableNameFromTab = useCallback(
-		(tab: StudioWindowTabItem): string | null => {
-			const tableMatch = tab.identifier.match(/^table\/[^.]+\.(.+)$/);
-			return tableMatch?.[1] ?? null;
-		},
-		[]
-	);
+	useEffect((): void => {
+		if (!onTableChange) {
+			return;
+		}
 
-	/**
-	 * Wrapper around `setSelectedTabKey` that also notifies the parent
-	 * when the user changes tabs (for syncing URL state).
-	 */
-	const handleUserTabChange = useCallback(
-		(newKey: string) => {
-			setSelectedTabKey(newKey);
+		// Don't clear the table during initial load when we're expecting to open a table.
+		// Wait for schemas to load and the initialTable to be processed first.
+		if (
+			loadingSchema ||
+			(initialTable && lastOpenedTable.current !== initialTable)
+		) {
+			return;
+		}
 
-			if (onTableChange) {
-				const newTab = tabs.find((tab) => tab.key === newKey);
-				if (newTab) {
-					const tableName = getTableNameFromTab(newTab);
-					onTableChange(tableName);
-				}
-			}
-		},
-		[tabs, onTableChange, getTableNameFromTab]
-	);
+		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
+		if (!selectedTab) {
+			onTableChange(undefined);
+			return;
+		}
+
+		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
+		onTableChange(tableMatch ? tableMatch[1] : undefined);
+	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
 	/**
 	 * Replaces an existing studio tab with a new one built from the provided
@@ -378,7 +344,6 @@ export function Studio({
 		() => ({
 			closeStudioTab,
 			driver,
-			handleUserTabChange,
 			loadingSchema,
 			openStudioTab,
 			refreshSchema,
@@ -394,7 +359,6 @@ export function Studio({
 		[
 			closeStudioTab,
 			driver,
-			handleUserTabChange,
 			loadingSchema,
 			openStudioTab,
 			refreshSchema,

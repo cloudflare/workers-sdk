@@ -1,13 +1,16 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
 import * as recast from "recast";
+import semiver from "semiver";
 import dedent from "ts-dedent";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
+import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 import type { types } from "recast";
@@ -21,10 +24,12 @@ export class Waku extends Framework {
 		projectPath,
 		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		validateMinimumWakuVersion(projectPath);
+
 		if (!dryRun) {
 			await installPackages(
 				packageManager,
-				["hono", "@hiogawa/node-loader-cloudflare"],
+				["hono", "@cloudflare/vite-plugin"],
 				{
 					dev: true,
 					startText: "Installing additional dependencies",
@@ -32,14 +37,13 @@ export class Waku extends Framework {
 				}
 			);
 
-			await createCloudflareMiddleware(projectPath);
 			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);
 		}
 
 		return {
 			wranglerConfig: {
-				main: "./dist/server/serve-cloudflare.js",
+				main: "./src/waku.server",
 				assets: {
 					binding: "ASSETS",
 					directory: "./dist/public",
@@ -47,6 +51,24 @@ export class Waku extends Framework {
 				},
 			},
 		};
+	}
+}
+
+/**
+ * Checks whether the version of the Waku package is less than the minimum one we support, in that case a warning is presented
+ * to the user without blocking them.
+ *
+ * TODO: We should standardize and define a better approach for this type of check and apply it to all the frameworks we support.
+ *
+ * @param projectPath The path to the project
+ */
+function validateMinimumWakuVersion(projectPath: string) {
+	const wakuVersion = getInstalledPackageVersion("waku", projectPath);
+	const minumumWakuVersion = "1.0.0-alpha.4";
+	if (wakuVersion && semiver(wakuVersion, minumumWakuVersion) < 0) {
+		throw new AutoConfigFrameworkConfigurationError(
+			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported by the Wrangler automatic configuration. Please update the Waku version to at least ${JSON.stringify(minumumWakuVersion)} and try again.`
+		);
 	}
 }
 
@@ -85,58 +107,7 @@ async function createWakuServerFile(projectPath: string) {
 }
 
 /**
- * Created the middleware/cloudflare.ts file
- *
- * @param projectPath The path for the project
- */
-async function createCloudflareMiddleware(projectPath: string) {
-	const middlewareDir = `${projectPath}/src/middleware`;
-
-	await mkdir(middlewareDir, { recursive: true });
-
-	await writeFile(
-		`${middlewareDir}/cloudflare.ts`,
-		dedent`
-					import type { Context, MiddlewareHandler } from 'hono';
-
-					function isWranglerDev(c: Context): boolean {
-						// This header seems to only be set for production cloudflare workers
-						return !c.req.header('cf-visitor');
-					}
-
-					const cloudflareMiddleware = (): MiddlewareHandler => {
-						return async (c, next) => {
-							await next();
-							if (!import.meta.env?.PROD) {
-								return;
-							}
-							if (!isWranglerDev(c)) {
-								return;
-							}
-							const contentType = c.res.headers.get('content-type');
-							if (
-								!contentType ||
-								contentType.includes('text/html') ||
-								contentType.includes('text/plain')
-							) {
-								const headers = new Headers(c.res.headers);
-								headers.set('content-encoding', 'Identity');
-								c.res = new Response(c.res.body, {
-									status: c.res.status,
-									statusText: c.res.statusText,
-									headers: c.res.headers,
-								});
-							}
-						};
-					};
-
-					export default cloudflareMiddleware;
-				`
-	);
-}
-
-/**
- * Updated the waku.config.ts file to import and use the @hiogawa/node-loader-cloudflare plugin
+ * Updated the waku.config.ts file to import and use the Cloudflare Vite plugin
  *
  * @param projectPath Path to the project
  */
@@ -151,9 +122,9 @@ async function updateWakuConfig(projectPath: string) {
 
 	transformFile(wakuConfigPath, {
 		visitProgram(n) {
-			// Add an import of the @hiogawa/node-loader-cloudflare/vite
+			// Add an import of the @cloudflare/vite-plugin
 			// ```
-			// import nodeLoaderCloudflare from '@hiogawa/node-loader-cloudflare/vite;
+			// import { cloudflare } from '@cloudflare/vite-plugin';
 			// ```
 			const lastImportIndex = n.node.body.findLastIndex(
 				(statement) => statement.type === "ImportDeclaration"
@@ -165,12 +136,12 @@ async function updateWakuConfig(projectPath: string) {
 				!n.node.body.some(
 					(s) =>
 						s.type === "ImportDeclaration" &&
-						s.source.value === "@hiogawa/node-loader-cloudflare/vite"
+						s.source.value === "@cloudflare/vite-plugin"
 				)
 			) {
 				const importAst = b.importDeclaration(
-					[b.importDefaultSpecifier(b.identifier("nodeLoaderCloudflare"))],
-					b.stringLiteral("@hiogawa/node-loader-cloudflare/vite")
+					[b.importSpecifier(b.identifier("cloudflare"))],
+					b.stringLiteral("@cloudflare/vite-plugin")
 				);
 				lastImport.insertAfter(importAst);
 			}
@@ -200,30 +171,28 @@ async function updateWakuConfig(projectPath: string) {
 					(el) =>
 						el?.type === "CallExpression" &&
 						el.callee.type === "Identifier" &&
-						el.callee.name === "nodeLoaderCloudflare"
+						el.callee.name === "cloudflare"
 				)
 			) {
 				pluginsProp.value.elements.push(
-					b.callExpression(b.identifier("nodeLoaderCloudflare"), [
+					b.callExpression(b.identifier("cloudflare"), [
 						b.objectExpression([
 							b.objectProperty(
-								b.identifier("environments"),
-								b.arrayExpression([b.stringLiteral("rsc")])
-							),
-							b.objectProperty(b.identifier("build"), b.booleanLiteral(true)),
-							b.objectProperty(
-								b.identifier("getPlatformProxyOptions"),
+								b.identifier("viteEnvironment"),
 								b.objectExpression([
 									b.objectProperty(
-										b.identifier("persist"),
-										b.objectExpression([
-											b.objectProperty(
-												b.identifier("path"),
-												b.stringLiteral(".wrangler/state/v3")
-											),
-										])
+										b.identifier("name"),
+										b.stringLiteral("rsc")
+									),
+									b.objectProperty(
+										b.identifier("childEnvironments"),
+										b.arrayExpression([b.stringLiteral("ssr")])
 									),
 								])
+							),
+							b.objectProperty(
+								b.identifier("inspectorPort"),
+								b.booleanLiteral(false)
 							),
 						]),
 					])

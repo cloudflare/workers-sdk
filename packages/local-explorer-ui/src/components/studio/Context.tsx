@@ -23,11 +23,6 @@ export interface StudioContextValue {
 
 	// Tab management
 	closeStudioTab: (identifier: string) => void;
-	/**
-	 * Handles user-initiated tab selection changes (e.g., clicking a tab).
-	 * This also notifies the parent to sync URL state.
-	 */
-	handleUserTabChange: (newKey: string) => void;
 	openStudioTab: (data: StudioTabDefinitionMetadata, isTemp?: boolean) => void;
 	replaceStudioTab: (
 		identifier: string,

@@ -6,7 +6,7 @@ import {
 	TableIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
 import { LocalD1Driver } from "../../drivers/d1";
@@ -37,6 +37,8 @@ function DatabaseView(): JSX.Element {
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 
+	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
+
 	const driver = useMemo<LocalD1Driver>(
 		() => new LocalD1Driver(params.databaseId),
 		[params.databaseId]
@@ -51,10 +53,18 @@ function DatabaseView(): JSX.Element {
 	);
 
 	const handleTableChange = useCallback(
-		(tableName: string | null) => {
+		(tableName: string | undefined) => {
+			// Skip if the table hasn't changed to avoid unnecessary navigation
+			if (lastSyncedTable.current === tableName) {
+				return;
+			}
+
+			lastSyncedTable.current = tableName;
+
 			void navigate({
+				replace: true,
 				search: {
-					table: tableName ?? undefined,
+					table: tableName,
 				},
 				to: ".",
 			});

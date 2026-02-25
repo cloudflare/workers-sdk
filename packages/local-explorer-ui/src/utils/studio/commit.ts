@@ -1,8 +1,7 @@
-import type { StudioResultHeaderMetadata } from "../../components/studio/Table/StateHelpers";
 import type {
 	StudioTableState,
 	StudioTableStateRow,
-} from "../../components/studio/Table/TableState";
+} from "../../components/studio/Table/State";
 import type {
 	IStudioDriver,
 	StudioTableRowMutationRequest,
@@ -14,20 +13,25 @@ interface StudioExecutePlan {
 	plan: StudioTableRowMutationRequest;
 }
 
+// TODO: Re-add in a later PR from `components/studio/Table/StateHelpers`
+type StudioResultHeaderMetadata = object;
+
 export async function commitStudioTableChanges({
+	data,
 	driver,
 	tableName,
 	tableSchema,
-	data,
 }: {
+	data: StudioTableState<StudioResultHeaderMetadata>;
 	driver: IStudioDriver;
 	tableName: string;
 	tableSchema: StudioTableSchema;
-	data: StudioTableState<StudioResultHeaderMetadata>;
-}): Promise<{ errorMessage?: string }> {
+}): Promise<{
+	errorMessage?: string;
+}> {
 	const plans = buildStudioMutationPlans({
-		tableSchema,
 		data,
+		tableSchema,
 	});
 
 	try {
@@ -39,30 +43,30 @@ export async function commitStudioTableChanges({
 		);
 
 		data.applyChanges(
-			plans.map((p, idx) => {
-				return {
-					row: p.row,
-					updated: result[idx]?.record ?? {},
-				};
-			})
+			plans.map((p, idx) => ({
+				row: p.row,
+				updated: result[idx]?.record ?? {},
+			}))
 		);
 	} catch (e) {
-		return { errorMessage: (e as Error).message };
+		return {
+			errorMessage: e instanceof Error ? e.message : String(e),
+		};
 	}
 
 	return {};
 }
 
 export function buildStudioMutationPlans({
-	tableSchema,
 	data,
+	tableSchema,
 }: {
-	tableSchema: StudioTableSchema;
 	data: StudioTableState<StudioResultHeaderMetadata>;
+	tableSchema: StudioTableSchema;
 }): StudioExecutePlan[] {
 	const rowChangeList = data.getChangedRows();
-	const plans: StudioExecutePlan[] = [];
 
+	const plans = new Array<StudioExecutePlan>();
 	for (const row of rowChangeList) {
 		const rowChange = row.change;
 		if (rowChange) {
@@ -78,31 +82,38 @@ export function buildStudioMutationPlans({
 
 			if (row.isNewRow) {
 				plans.push({
-					row,
 					plan: {
-						operation: "INSERT",
-						values: rowChange,
 						autoIncrementPkColumn: tableSchema.autoIncrement
 							? tableSchema.pk[0]
 							: undefined,
+						operation: "INSERT",
 						pk: tableSchema.pk,
-					},
-				});
-			} else if (row.isRemoved) {
-				plans.push({
-					row,
-					plan: { operation: "DELETE", where: wherePrimaryKey },
-				});
-			} else {
-				plans.push({
-					row,
-					plan: {
-						operation: "UPDATE",
-						where: wherePrimaryKey,
 						values: rowChange,
 					},
+					row,
 				});
+				continue;
 			}
+
+			if (row.isRemoved) {
+				plans.push({
+					plan: {
+						operation: "DELETE",
+						where: wherePrimaryKey,
+					},
+					row,
+				});
+				continue;
+			}
+
+			plans.push({
+				plan: {
+					operation: "UPDATE",
+					where: wherePrimaryKey,
+					values: rowChange,
+				},
+				row,
+			});
 		}
 	}
 
