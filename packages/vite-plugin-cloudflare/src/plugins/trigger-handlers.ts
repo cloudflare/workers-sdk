@@ -15,7 +15,7 @@ export const triggerHandlersPlugin = createPlugin("trigger-handlers", (ctx) => {
 			}
 
 			const entryWorkerName = entryWorkerConfig.name;
-			const requestHandler = createRequestHandler(ctx, (request) => {
+			const requestHandler = createRequestHandler((request) => {
 				request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 				return ctx.miniflare.dispatchFetch(request, {
 					redirect: "manual",

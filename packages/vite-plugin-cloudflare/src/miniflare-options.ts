@@ -21,6 +21,7 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
+	PROXY_SHARED_SECRET,
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
@@ -426,7 +427,7 @@ export async function getDevMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
-			unsafeProxySharedSecret: ctx.proxySharedSecret,
+			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			logRequests: false,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
@@ -620,7 +621,7 @@ export async function getPreviewMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
-			unsafeProxySharedSecret: ctx.proxySharedSecret,
+			unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),

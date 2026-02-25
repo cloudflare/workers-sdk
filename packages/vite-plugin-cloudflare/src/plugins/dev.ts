@@ -166,16 +166,13 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					const includeRulesMatcher = generateStaticRoutingRuleMatcher(
 						staticRouting.user_worker
 					);
-					const userWorkerHandler = createRequestHandler(
-						ctx,
-						async (request) => {
-							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+					const userWorkerHandler = createRequestHandler(async (request) => {
+						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 
-							return ctx.miniflare.dispatchFetch(request, {
-								redirect: "manual",
-							});
-						}
-					);
+						return ctx.miniflare.dispatchFetch(request, {
+							redirect: "manual",
+						});
+					});
 
 					preMiddleware = async (req, res, next) => {
 						assert(req.url, `req.url not defined`);
@@ -268,7 +265,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				// post middleware
 				viteDevServer.middlewares.use(
-					createRequestHandler(ctx, async (request, req) => {
+					createRequestHandler(async (request, req) => {
 						if (req[kRequestType] === "asset") {
 							request.headers.set(
 								CoreHeaders.ROUTE_OVERRIDE,
