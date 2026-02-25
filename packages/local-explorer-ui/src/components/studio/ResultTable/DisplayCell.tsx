@@ -2,7 +2,7 @@ import { cn } from "@cloudflare/kumo";
 import { forwardRef, useMemo } from "react";
 import { createStudioEditableCell } from "./EditableCell";
 import type { StudioTableHeaderProps } from "../Table/BaseTable";
-import type { StudioResultHeaderMetadata } from "../Table/StateHelpers";
+import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 
 interface TableCellProps<T = unknown> {
 	align?: "left" | "right";

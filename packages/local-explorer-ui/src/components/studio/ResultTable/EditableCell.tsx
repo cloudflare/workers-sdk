@@ -10,13 +10,13 @@ import {
 } from "@floating-ui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { StudioCodeMirror } from "../CodeMirror";
+import { StudioCodeMirror } from "../Code/Mirror";
 import { StudioTableDisplayCell } from "./DisplayCell";
 import type { StudioResultValue } from "../../../types/studio";
-import type { StudioCodeMirrorReference } from "../CodeMirror";
+import type { StudioCodeMirrorReference } from "../Code/Mirror";
 import type { StudioTableHeaderProps } from "../Table/BaseTable";
-import type { StudioResultHeaderMetadata } from "../Table/StateHelpers";
-import type { StudioTableState } from "../Table/TableState";
+import type { StudioTableState } from "../Table/State";
+import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 import type { ReactNode } from "react";
 
 export type StudioTableCellEditorType = "input" | "json" | "text";

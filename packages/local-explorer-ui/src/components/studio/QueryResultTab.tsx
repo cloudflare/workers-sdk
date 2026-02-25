@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import StudioQueryResultStats from "./QueryResultStats";
+import { StudioQueryResultStats } from "./Query/ResultStats";
 import { StudioResultTable } from "./ResultTable";
-import { createStudioTableStateFromResult } from "./Table/StateHelpers";
+import { createStudioTableStateFromResult } from "./Table/State/Helpers";
 import type { StudioMultipleQueryResult } from "../../types/studio";
 
 interface StudioQueryResultTabProps {

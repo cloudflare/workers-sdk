@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { StudioTableHeaderProps } from "./BaseTable";
-import type { StudioTableState } from "./TableState";
+import type { StudioTableState } from "./State";
 
 /**
  * Giving the container, we calculate visible rows and column

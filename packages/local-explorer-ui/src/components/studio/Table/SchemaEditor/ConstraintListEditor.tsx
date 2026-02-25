@@ -9,7 +9,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { produce } from "immer";
 import { useCallback } from "react";
-import type { StudioTableSchemaChange } from "../../../types/studio";
+import type { StudioTableSchemaChange } from "../../../../types/studio";
 import type { DragEndEvent } from "@dnd-kit/core";
 
 export function StudioConstraintListEditor({

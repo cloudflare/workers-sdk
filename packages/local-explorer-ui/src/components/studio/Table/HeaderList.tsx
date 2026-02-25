@@ -1,7 +1,7 @@
 import { cn } from "@cloudflare/kumo";
-import { StudioTableHeaderResizer } from "./TableHeaderResizer";
+import { StudioTableHeaderResizer } from "./HeaderResizer";
 import type { StudioTableHeaderProps } from "./BaseTable";
-import type { StudioTableState } from "./TableState";
+import type { StudioTableState } from "./State";
 import type { ReactElement } from "react";
 
 export function StudioTableHeaderList<HeaderMetadata = unknown>({

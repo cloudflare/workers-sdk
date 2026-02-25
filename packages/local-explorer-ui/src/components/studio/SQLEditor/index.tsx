@@ -12,7 +12,7 @@ import { keymap, lineNumbers } from "@codemirror/view";
 import { classHighlighter } from "@lezer/highlight";
 import { forwardRef, useMemo } from "react";
 import { beautifySQLQuery } from "../../../utils/studio/formatter";
-import { StudioCodeMirror } from "../CodeMirror";
+import { StudioCodeMirror } from "../Code/Mirror";
 import { StudioSQLiteDialect } from "./SQLiteDialect";
 import { createSQLTableNameHighlightPlugin } from "./SQLiteTableNameHighlightPlugin";
 import { StudioSQLBaseTheme, StudioSQLTheme } from "./SQLThemePlugin";
@@ -21,7 +21,7 @@ import type { StudioDialect } from "../../../types/studio";
 import type {
 	StudioCodeMirrorProps,
 	StudioCodeMirrorReference,
-} from "../CodeMirror";
+} from "../Code/Mirror";
 import type { Extension, StateField } from "@codemirror/state";
 import type { DecorationSet, KeyBinding } from "@codemirror/view";
 

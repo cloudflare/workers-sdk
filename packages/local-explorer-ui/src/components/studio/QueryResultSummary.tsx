@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { CodeBlock } from "./CodeBlock";
-import StudioQueryResultStats from "./QueryResultStats";
+import { CodeBlock } from "./Code/Block";
+import { StudioQueryResultStats } from "./Query/ResultStats";
 import type {
 	StudioMultipleQueryProgress,
 	StudioResultStat,
 } from "../../types/studio";
+import type { JSX } from "react";
 
 interface StudioQueryResultSummaryProps {
 	progress: StudioMultipleQueryProgress;

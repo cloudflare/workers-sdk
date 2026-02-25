@@ -17,8 +17,9 @@ import type {
 	StudioMultipleQueryProgress,
 	StudioMultipleQueryResult,
 } from "../../types/studio";
-import type { StudioCodeMirrorReference } from "./CodeMirror";
-import type { StudioWindowTabItem } from "./WindowTab";
+import type { StudioCodeMirrorReference } from "./Code/Mirror";
+import type { StudioWindowTabItem } from "./WindowTab/types";
+import type { JSX } from "react";
 
 interface StudioQueryTabProps {
 	query?: string;

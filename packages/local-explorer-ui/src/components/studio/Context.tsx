@@ -4,8 +4,8 @@ import type {
 	StudioResource,
 	StudioSchemas,
 } from "../../types/studio";
-import type { StudioTabDefinitionMetadata } from "./tab-register";
-import type { StudioWindowTabItem } from "./WindowTab";
+import type { StudioTabDefinitionMetadata } from "./TabRegister";
+import type { StudioWindowTabItem } from "./WindowTab/types";
 import type { PropsWithChildren } from "react";
 
 export interface StudioContextValue {

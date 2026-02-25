@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { SkeletonBlock } from "../../utils/studio/stubs/ui/SkeletonBlock";
 import { useStudioContext } from "./Context";
-import { StudioTableSchemaEditor } from "./TableSchemaEditor";
-import { useStudioCurrentWindowTab } from "./WindowTab";
+import { StudioTableSchemaEditor } from "./Table/SchemaEditor";
+import { useStudioCurrentWindowTab } from "./WindowTab/Context";
 import type {
 	StudioTableSchema,
 	StudioTableSchemaChange,

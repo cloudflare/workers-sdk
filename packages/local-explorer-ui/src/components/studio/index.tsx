@@ -13,8 +13,9 @@ import type {
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
-import type { StudioTabDefinitionMetadata, TabDefinition } from "./TabRegister";
+import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
+import type { JSX } from "react";
 
 /**
  * Default schema name for SQLite/D1 databases
@@ -286,11 +287,7 @@ export function Studio({
 					return prev;
 				}
 
-				// Getting tab setting
-				// TODO: Remove assertion once tab definitions are registered
-				const tabTypeDefinition = StudioTabDefinitionList[
-					data.type
-				] as TabDefinition<StudioTabDefinitionMetadata>;
+				const tabTypeDefinition = StudioTabDefinitionList[data.type];
 				const newIdentifier = tabTypeDefinition.makeIdentifier(data);
 				const newKey = window.crypto.randomUUID();
 

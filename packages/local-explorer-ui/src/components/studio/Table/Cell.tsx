@@ -4,7 +4,7 @@ import type {
 	StudioTableCellRendererProps,
 	StudioTableHeaderProps,
 } from "./BaseTable";
-import type { StudioTableState } from "./TableState";
+import type { StudioTableState } from "./State";
 import type { ReactElement } from "react";
 
 export function StudioTableCell<HeaderMetadata = unknown>({

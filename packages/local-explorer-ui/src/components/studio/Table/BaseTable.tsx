@@ -1,13 +1,13 @@
 import { cn } from "@cloudflare/kumo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StudioTableCell } from "./TableCell";
+import { StudioTableCell } from "./Cell";
 import {
 	StudioTableFakeBodyPadding,
 	StudioTableFakeRowPadding,
-} from "./TableFakePadding";
-import { StudioTableHeaderList } from "./TableHeaderList";
+} from "./FakePadding";
+import { StudioTableHeaderList } from "./HeaderList";
 import { useStudioTableVisibility } from "./useVisibilityCalculation";
-import type { StudioTableHeaderInput, StudioTableState } from "./TableState";
+import type { StudioTableHeaderInput, StudioTableState } from "./State";
 import type { ReactElement } from "react";
 
 /**

@@ -2166,20 +2166,14 @@ importers:
         specifier: ^1.158.0
         version: 1.159.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       immer:
-        specifier: ^10.0.0
-        version: 10.2.0
-      lodash:
-        specifier: ^4.17.0
-        version: 4.17.23
+        specifier: ^11.1.4
+        version: 11.1.4
       react:
         specifier: ^19.2.0
         version: 19.2.4
       react-dom:
         specifier: ^19.2.0
         version: 19.2.4(react@19.2.4)
-      react-split-pane:
-        specifier: ^0.1.92
-        version: 0.1.92(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       tailwindcss:
         specifier: ^4.0.15
         version: 4.1.18
@@ -2199,9 +2193,6 @@ importers:
       '@tanstack/router-plugin':
         specifier: ^1.158.0
         version: 1.159.5(@tanstack/react-router@1.159.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
-      '@types/lodash':
-        specifier: ^4.17.0
-        version: 4.17.23
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.13
@@ -11499,8 +11490,8 @@ packages:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
 
-  immer@10.2.0:
-    resolution: {integrity: sha512-d/+XTN3zfODyjr89gM3mPq1WNX2B8pYsu7eORitdwyA2sBubnTl3laYlBk4sXY5FUa5qTZGBDPJICVbvqzjlbw==}
+  immer@11.1.4:
+    resolution: {integrity: sha512-XREFCPo6ksxVzP4E0ekD5aMdf8WMwmdNaz6vuvxgI40UaEiu6q3p8X52aU6GdyvLY3XXX/8R7JOTXStz/nBbRw==}
 
   import-fresh@3.3.0:
     resolution: {integrity: sha512-veYYhQa+D1QBKznvhUHxb8faxlrwUnxseDAbAp457E0wLNio2bOSKnjYDhMj+YiAq61xrMGhQk9iXVk5FzgQMw==}
@@ -23308,7 +23299,7 @@ snapshots:
 
   ignore@7.0.5: {}
 
-  immer@10.2.0: {}
+  immer@11.1.4: {}
 
   import-fresh@3.3.0:
     dependencies:

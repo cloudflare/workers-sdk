@@ -25,8 +25,8 @@ import type {
 	StudioTableCellRendererProps,
 	StudioTableHeaderProps,
 } from "../Table/BaseTable";
-import type { StudioResultHeaderMetadata } from "../Table/StateHelpers";
-import type { StudioTableState } from "../Table/TableState";
+import type { StudioTableState } from "../Table/State";
+import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 import type { ReactNode } from "react";
 
 interface StudioResultTableProps {

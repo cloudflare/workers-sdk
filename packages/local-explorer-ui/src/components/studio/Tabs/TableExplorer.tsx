@@ -18,7 +18,9 @@ import { useModal } from "../Modal";
 import { StudioCommitConfirmation } from "../Modal/CommitConfirmation";
 import { StudioDeleteConfirmationModal } from "../Modal/DeleteConfirmation";
 import { StudioQueryResultStats } from "../Query/ResultStats";
+import { StudioResultTable } from "../ResultTable";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
+import { StudioWhereFilterInput } from "../WhereFilterInput";
 import { useStudioCurrentWindowTab } from "../WindowTab/Context";
 import type {
 	StudioResultStat,
@@ -27,7 +29,27 @@ import type {
 } from "../../../types/studio";
 import type { StudioTableState } from "../Table/State";
 import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
-import type { JSX } from "react";
+
+// import {
+// 	buildStudioMutationPlans,
+// 	commitStudioTableChanges,
+// } from "../../utils/studio/commit";
+// import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
+// import { StudioCommitConfirmation } from "./CommitConfirmation";
+// import { useStudioContext } from "./Context";
+// import { useModal } from "./Modal";
+// import StudioQueryResultStats from "./QueryResultStats";
+// import { StudioResultTable } from "./ResultTable";
+// import { createStudioTableStateFromResult } from "./Table/StateHelpers";
+// import { StudioWhereFilterInput } from "./WhereFilterInput";
+// import { useStudioCurrentWindowTab } from "./WindowTab";
+// import type {
+// 	StudioResultStat,
+// 	StudioSortDirection,
+// 	StudioTableSchema,
+// } from "../../types/studio";
+// import type { StudioResultHeaderMetadata } from "./Table/StateHelpers";
+// import type { StudioTableState } from "./Table/TableState";
 
 interface StudioTableExplorerTabProps {
 	schemaName: string;
@@ -39,7 +61,7 @@ const DEFAULT_PAGE_SIZE = 50;
 export function StudioTableExplorerTab({
 	schemaName,
 	tableName,
-}: StudioTableExplorerTabProps): JSX.Element {
+}: StudioTableExplorerTabProps) {
 	const { driver, schemas } = useStudioContext();
 
 	const [changeNumber, setChangeNumber] = useState<number>(0);
@@ -64,8 +86,7 @@ export function StudioTableExplorerTab({
 
 	const { openModal } = useModal();
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _filterAutoCompleteColumns = useMemo<string[]>(() => {
+	const filterAutoCompleteColumns = useMemo(() => {
 		if (!schema) {
 			return [];
 		}
@@ -180,8 +201,7 @@ export function StudioTableExplorerTab({
 		void onRefreshClicked();
 	}, [onRefreshClicked]);
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _headerIndexList = useMemo((): number[] => {
+	const headerIndexList = useMemo((): number[] => {
 		if (!schema) {
 			return [];
 		}
@@ -295,8 +315,7 @@ export function StudioTableExplorerTab({
 		});
 	}, [pageOffset, pageLimit, guardUnsavedChanges]);
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _onWhereRawApplied = useCallback(
+	const onWhereRawApplied = useCallback(
 		(newWhereRaw: string): void => {
 			guardUnsavedChanges(() => {
 				setWhereRaw(newWhereRaw);
@@ -370,8 +389,7 @@ export function StudioTableExplorerTab({
 		}
 	}, [driver, tableName, schema, state, openModal]);
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _onOrderByColumnChange = useCallback(
+	const onOrderByColumnChange = useCallback(
 		(columName: string, direction: StudioSortDirection) => {
 			guardUnsavedChanges(() => {
 				setOrderBy({ columName, direction });
@@ -385,7 +403,6 @@ export function StudioTableExplorerTab({
 			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
 				<Button
 					aria-label="Refresh"
-					className="hover:bg-border! transition"
 					onClick={onRefreshClicked}
 					shape="square"
 					variant="ghost"
@@ -393,32 +410,23 @@ export function StudioTableExplorerTab({
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
-				<Button
-					className="hover:bg-border! transition"
-					onClick={onAddRowClick}
-					variant="ghost"
-				>
+				<Button onClick={onAddRowClick} variant="ghost">
 					<PlusIcon />
 					<span className="text-xs">Add row</span>
 				</Button>
-				<Button
-					className="hover:bg-border! transition"
-					onClick={onDeleteRowClick}
-					variant="ghost"
-				>
+				<Button onClick={onDeleteRowClick} variant="ghost">
 					<TrashIcon />
 					<span className="text-xs">Delete row</span>
 				</Button>
 
 				<div className="grow text-xs">
-					{/* TODO: Re-add in a later PR */}
-					{/* <StudioWhereFilterInput
+					<StudioWhereFilterInput
 						columnNameList={filterAutoCompleteColumns}
 						driver={driver}
 						loading={loading}
 						onApply={onWhereRawApplied}
 						value={whereRaw}
-					/> */}
+					/>
 				</div>
 
 				{changeNumber > 0 && (
@@ -449,8 +457,7 @@ export function StudioTableExplorerTab({
 				)}
 			</div>
 			<div className="grow overflow-hidden relative">
-				{/* TODO: Re-add in a later PR */}
-				{/* {schema && state && !error && (
+				{schema && state && !error && (
 					<StudioResultTable
 						arrangeHeaderIndex={headerIndexList}
 						onOrderByColumnChange={onOrderByColumnChange}
@@ -458,7 +465,7 @@ export function StudioTableExplorerTab({
 						orderByDirection={orderBy?.direction}
 						state={state}
 					/>
-				)} */}
+				)}
 
 				{error && <div className="p-4 text-red-500 text-base">{error}</div>}
 

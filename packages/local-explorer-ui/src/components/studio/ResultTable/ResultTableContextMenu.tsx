@@ -2,9 +2,8 @@ import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useCallback } from "react";
 import { useStudioContextMenu } from "../ContextMenu";
 import { exportStudioDataAsDelimitedText } from "../utils-export";
-import type { DropdownItemBuilderProps } from "../../../types/studio";
-import type { StudioResultHeaderMetadata } from "../Table/StateHelpers";
-import type { StudioTableState } from "../Table/TableState";
+import type { StudioTableState } from "../Table/State";
+import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 
 export function useStudioResultTableContextMenu(
 	state: StudioTableState<StudioResultHeaderMetadata>

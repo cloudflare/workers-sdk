@@ -12,6 +12,7 @@ import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { Studio } from "../../../components/studio";
 import { LocalDODriver } from "../../../drivers/do";
 import type { StudioResource } from "../../../types/studio";
+import type { JSX } from "react";
 
 export const Route = createFileRoute("/do/$className/$objectId")({
 	component: ObjectView,
@@ -68,10 +69,10 @@ function ObjectView(): JSX.Element {
 	);
 
 	const handleTableChange = useCallback(
-		(tableName: string | null) => {
+		(tableName: string | undefined) => {
 			void navigate({
 				search: {
-					table: tableName ?? undefined,
+					table: tableName,
 				},
 				to: ".",
 			});

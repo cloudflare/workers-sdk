@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
+import { StudioDeleteConfirmationModal } from "./Modal/DeleteConfirmation";
 
 interface StudioDropTableModalProps {
 	closeModal: () => void;
@@ -18,7 +18,7 @@ export function StudioDropTableModal({
 	const [errorMessage, setErrorMessage] = useState("");
 
 	return (
-		<DeleteConfirmationModal
+		<StudioDeleteConfirmationModal
 			challenge={tableName}
 			title="Drop Table"
 			isOpen={isOpen}

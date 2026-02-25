@@ -17,13 +17,13 @@ import {
 } from "@phosphor-icons/react";
 import { produce } from "immer";
 import { useCallback, useState } from "react";
-import { useModal } from "../../../utils/studio/stubs/modal";
-import { Drawer } from "../../../utils/studio/stubs/ui/Drawer";
+import { useModal } from "../../../../utils/studio/stubs/modal";
+import { Drawer } from "../../../../utils/studio/stubs/ui/Drawer";
 import type {
 	StudioTableColumn,
 	StudioTableConstraintChange,
 	StudioTableSchemaChange,
-} from "../../../types/studio";
+} from "../../../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
 import type { PropsWithChildren } from "react";
 

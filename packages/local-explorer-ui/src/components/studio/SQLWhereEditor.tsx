@@ -4,12 +4,12 @@ import { syntaxHighlighting } from "@codemirror/language";
 import { keymap } from "@codemirror/view";
 import { classHighlighter } from "@lezer/highlight";
 import { forwardRef, useMemo } from "react";
-import { StudioCodeMirror } from "./CodeMirror";
+import { StudioCodeMirror } from "./Code/Mirror";
 import { StudioSQLBaseTheme, StudioSQLTheme } from "./SQLEditor/SQLThemePlugin";
 import type {
 	StudioCodeMirrorProps,
 	StudioCodeMirrorReference,
-} from "./CodeMirror";
+} from "./Code/Mirror";
 import type { Extension } from "@codemirror/state";
 
 export const StudioSQLWhereEditor = forwardRef<

@@ -2,23 +2,20 @@ import { Button } from "@cloudflare/kumo";
 import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { KeyIcon } from "@phosphor-icons/react";
 import { produce } from "immer";
-import { isEqual } from "lodash";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useModal } from "../../../utils/studio/stubs/modal";
-import { StudioCommitConfirmation } from "../CommitConfirmation";
-import { StudioSQLEditor } from "../SQLEditor";
-import {
-	StudioColumnEditiorDrawer,
-	StudioColumnSchemaEditor,
-} from "./ColumnSchemaEditor";
+import { isEqual } from "../../../../utils/is-equal";
+import { useModal } from "../../../../utils/studio/stubs/modal";
+import { StudioCommitConfirmation } from "../../Modal/CommitConfirmation";
+import { StudioSQLEditor } from "../../SQLEditor";
+import { StudioColumnEditiorDrawer, StudioColumnSchemaEditor } from "./Column";
 import { StudioConstraintListEditor } from "./ConstraintListEditor";
 import type {
 	IStudioDriver,
 	StudioTableColumn,
 	StudioTableIndex,
 	StudioTableSchemaChange,
-} from "../../../types/studio";
-import type { StudioCodeMirrorReference } from "../CodeMirror";
+} from "../../../../types/studio";
+import type { StudioCodeMirrorReference } from "../../Code/Mirror";
 
 interface StudioTableSchemaEditorProps {
 	value: StudioTableSchemaChange;

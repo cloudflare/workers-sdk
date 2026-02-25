@@ -71,7 +71,7 @@ export function Drawer({
 			{/* Overlay */}
 			<div
 				className={cn(
-					"fixed inset-0 z-[1200] bg-surface/40 transition-opacity duration-300",
+					"fixed inset-0 z-1200 bg-surface/40 transition-opacity duration-300",
 					isOpen ? "opacity-100" : "pointer-events-none opacity-0"
 				)}
 				onClick={onClose}
@@ -81,7 +81,7 @@ export function Drawer({
 			<div
 				aria-modal="true"
 				className={cn(
-					"fixed bottom-0 right-0 top-0 z-[99999] flex flex-col border-l border-border bg-surface shadow-xl transition-transform duration-300 ease-in-out",
+					"fixed bottom-0 right-0 top-0 z-99999 flex flex-col border-l border-border bg-surface shadow-xl transition-transform duration-300 ease-in-out",
 					isOpen ? "translate-x-0" : "translate-x-full"
 				)}
 				ref={containerRef}
