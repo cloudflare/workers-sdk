@@ -12,6 +12,13 @@ import type {
 } from "./Code/Mirror";
 import type { Extension } from "@codemirror/state";
 
+interface SutdioSQLWhereEditor
+	extends Omit<StudioCodeMirrorProps, "extensions"> {
+	columnNames?: string[];
+	functionNames?: string[];
+	onEnterPressed?: () => void;
+}
+
 export const StudioSQLWhereEditor = forwardRef<
 	StudioCodeMirrorReference,
 	SutdioSQLWhereEditor
@@ -72,10 +79,3 @@ export const StudioSQLWhereEditor = forwardRef<
 		<StudioCodeMirror {...props} extensions={whereEditorExtensions} ref={ref} />
 	);
 });
-
-interface SutdioSQLWhereEditor
-	extends Omit<StudioCodeMirrorProps, "extensions"> {
-	onEnterPressed?: () => void;
-	columnNames?: string[];
-	functionNames?: string[];
-}
