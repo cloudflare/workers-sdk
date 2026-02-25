@@ -221,6 +221,7 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
+import ci from "ci-info";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -1287,9 +1288,11 @@ export async function getAccountId(
 	} catch (e) {
 		// Did we try to select an account in CI or a non-interactive terminal?
 		if (e instanceof NoDefaultValueProvided) {
-			// Redact account names (which may contain email addresses) in non-interactive mode
-			// to avoid leaking sensitive information in CI logs
-			const redactAccountName = isNonInteractiveOrCI();
+			// Redact account names (which may contain email addresses) in CI
+			// to avoid leaking sensitive information in public CI logs.
+			// Non-interactive terminals (agents, piped commands) still need
+			// to see account names to identify which account to configure.
+			const redactAccountName = ci.isCI;
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
 Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
