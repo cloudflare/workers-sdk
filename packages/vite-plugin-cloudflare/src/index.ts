@@ -33,10 +33,12 @@ import type * as vite from "vite";
  * Note: the function's signature is as is because it needs to be backward compatibly with
  *       a previous iteration of this, it will be simplified in the next major version of this package.
  *
- * @param _projectPath Unused argument (present only for backward compatibility)
+ * @param _options Unused argument (present only for backward compatibility)
  * @returns Object containing the compatibility date (this is not the date directly for backward compatibility)
  */
-export function getLocalWorkerdCompatibilityDate(_projectPath: string): {
+export function getLocalWorkerdCompatibilityDate(_options?: {
+	projectPath?: string;
+}): {
 	date: CompatDate;
 	source: "workerd";
 } {
