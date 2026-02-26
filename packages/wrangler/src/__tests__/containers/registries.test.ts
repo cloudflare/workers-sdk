@@ -660,6 +660,74 @@ describe("containers registries delete", () => {
 	});
 });
 
+describe("containers registries credentials", () => {
+	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
+	mockAccountId();
+	mockApiToken();
+	beforeEach(() => {
+		mockAccount();
+	});
+
+	afterEach(() => {
+		msw.resetHandlers();
+	});
+
+	it("should require --push or --pull", async () => {
+		setIsTTY(false);
+		await expect(
+			runWrangler("containers registries credentials registry.example.com")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: You have to specify either --push or --pull in the command.]`
+		);
+	});
+
+	it("should generate credentials with --push", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.example.com", "test-password");
+
+		await runWrangler(
+			"containers registries credentials registry.example.com --push"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should generate credentials with --pull", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.example.com", "test-password");
+
+		await runWrangler(
+			"containers registries credentials registry.example.com --pull"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should generate credentials with both --push and --pull", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.example.com", "jwt-token");
+
+		await runWrangler(
+			"containers registries credentials registry.example.com --push --pull"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"jwt-token"`);
+	});
+
+	it("should support custom expiration-minutes", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.example.com", "custom-expiry-token", 30);
+
+		await runWrangler(
+			"containers registries credentials registry.example.com --push --expiration-minutes=30"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
+	});
+});
+
+
 const mockPutRegistry = (expected?: object) => {
 	msw.use(
 		http.post(
@@ -698,6 +766,31 @@ const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 					createFetchResult({
 						domain: domain,
 						secrets_store_ref: secretsStoreRef,
+					})
+				);
+			}
+		)
+	);
+};
+
+const mockGenerateCredentials = (
+	domain: string,
+	password: string,
+	expectedExpirationMinutes?: number
+) => {
+	msw.use(
+		http.post(
+			`*/accounts/:accountId/containers/registries/${domain}/credentials`,
+			async ({ request }) => {
+				if (expectedExpirationMinutes !== undefined) {
+					const body = (await request.json()) as {
+						expiration_minutes: number;
+					};
+					expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						password: password,
 					})
 				);
 			}
