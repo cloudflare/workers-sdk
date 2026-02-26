@@ -1,5 +1,70 @@
 # wrangler
 
+## 4.69.0
+
+### Minor Changes
+
+- [#12625](https://github.com/cloudflare/workers-sdk/pull/12625) [`c0e9e08`](https://github.com/cloudflare/workers-sdk/commit/c0e9e08356b45243b752af937f463105a58f9a0e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add `cache` configuration option for enabling worker cache (experimental)
+
+  You can now enable cache before worker execution using the new `cache` configuration:
+
+  ```jsonc
+  {
+  	"cache": {
+  		"enabled": true,
+  	},
+  }
+  ```
+
+  This setting is environment-inheritable and opt-in. When enabled, cache behavior is applied before your worker runs.
+
+  Note: This feature is experimental. The runtime API is not yet generally available.
+
+### Patch Changes
+
+- [#12661](https://github.com/cloudflare/workers-sdk/pull/12661) [`99037e3`](https://github.com/cloudflare/workers-sdk/commit/99037e3d645026cd44d6127af3592898a390c97a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260302.0 | 1.20260303.0 |
+
+- [#12680](https://github.com/cloudflare/workers-sdk/pull/12680) [`295297a`](https://github.com/cloudflare/workers-sdk/commit/295297afe8433b6f304d7355b0ade857a9a30538) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260303.0 | 1.20260305.0 |
+
+- [#12671](https://github.com/cloudflare/workers-sdk/pull/12671) [`f765244`](https://github.com/cloudflare/workers-sdk/commit/f7652442e040a7dbc0760235422f4da198905b43) Thanks [@MattieTK](https://github.com/MattieTK)! - fix: Only redact account names in CI environments, not all non-interactive contexts
+
+  The multi-account selection error in `getAccountId` now only redacts account names
+  when running in a CI environment (detected via `ci-info`). Non-interactive terminals
+  such as coding agents and piped commands can now see account names, which they need
+  to identify which account to configure. CI logs remain protected.
+
+- Updated dependencies [[`99037e3`](https://github.com/cloudflare/workers-sdk/commit/99037e3d645026cd44d6127af3592898a390c97a), [`295297a`](https://github.com/cloudflare/workers-sdk/commit/295297afe8433b6f304d7355b0ade857a9a30538)]:
+  - miniflare@4.20260305.0
+
+## 4.68.1
+
+### Patch Changes
+
+- [#12648](https://github.com/cloudflare/workers-sdk/pull/12648) [`3d6e421`](https://github.com/cloudflare/workers-sdk/commit/3d6e421dcd03fad1837c52c0e677d91678c6eed7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Angular scaffolding to allow localhost SSR in development mode
+
+  Recent versions of Angular's `AngularAppEngine` block serving SSR on `localhost` by default. This caused `wrangler dev` / `wrangler pages dev` to fail with `URL with hostname "localhost" is not allowed.`
+
+  The fix passes `allowedHosts: ["localhost"]` to the `AngularAppEngine` constructor in `server.ts`, which is safe to do even in production since Cloudflare will already restrict which host is allowed.
+
+- [#12657](https://github.com/cloudflare/workers-sdk/pull/12657) [`294297e`](https://github.com/cloudflare/workers-sdk/commit/294297e8e5bb90e71a6db15278e3ab0a9345cacf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update Waku autoconfig logic
+
+  As of `1.0.0-alpha.4`, Waku projects can be built on top of the Cloudflare Vite plugin, and the changes here allow Wrangler autoconfig to support this. Running autoconfig on older versions of Waku will result in an error.
+
+- Updated dependencies []:
+  - miniflare@4.20260302.0
+
 ## 4.68.0
 
 ### Minor Changes

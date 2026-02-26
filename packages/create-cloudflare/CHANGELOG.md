@@ -1,5 +1,23 @@
 # create-cloudflare
 
+## 2.64.4
+
+### Patch Changes
+
+- [#12657](https://github.com/cloudflare/workers-sdk/pull/12657) [`294297e`](https://github.com/cloudflare/workers-sdk/commit/294297e8e5bb90e71a6db15278e3ab0a9345cacf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.3-0 | 0.12.5-1.0.0-alpha.4-0 |
+
+- [#12648](https://github.com/cloudflare/workers-sdk/pull/12648) [`3d6e421`](https://github.com/cloudflare/workers-sdk/commit/3d6e421dcd03fad1837c52c0e677d91678c6eed7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Angular scaffolding to allow localhost SSR in development mode
+
+  Recent versions of Angular's `AngularAppEngine` block serving SSR on `localhost` by default. This caused `wrangler dev` / `wrangler pages dev` to fail with `URL with hostname "localhost" is not allowed.`
+
+  The fix passes `allowedHosts: ["localhost"]` to the `AngularAppEngine` constructor in `server.ts`, which is safe to do even in production since Cloudflare will already restrict which host is allowed.
+
 ## 2.64.3
 
 ### Patch Changes

@@ -125,6 +125,7 @@ describe("normalizeAndValidateConfig()", () => {
 			keep_names: undefined,
 			assets: undefined,
 			observability: undefined,
+			cache: undefined,
 			compliance_region: undefined,
 			images: undefined,
 			media: undefined,
@@ -6089,6 +6090,169 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[secrets]", () => {
+			it("should accept valid secrets config", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					secrets: {
+						required: ["API_KEY", "DATABASE_PASSWORD"],
+					},
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.secrets).toEqual({
+					required: ["API_KEY", "DATABASE_PASSWORD"],
+				});
+				expect(diagnostics.hasErrors()).toBe(false);
+				// Expect experimental warning
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toContain(
+					'"secrets" fields are experimental'
+				);
+			});
+
+			it("should error if secrets is not an object", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: "invalid",
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "secrets" should be an object'
+				);
+			});
+
+			it("should error if secrets.required is not an array", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: { required: "API_KEY" },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.required" to be an array of strings'
+				);
+			});
+
+			it("should error if secrets.required contains non-strings", ({
+				expect,
+			}) => {
+				const rawConfig: RawConfig = {
+					// @ts-expect-error purposely using an invalid value
+					secrets: { required: ["VALID_KEY", 123, true] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.required.[1]" to be of type string'
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "secrets.required.[2]" to be of type string'
+				);
+			});
+
+			it("should error on duplicate secret names", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					secrets: { required: ["API_KEY", "API_KEY"] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"API_KEY assigned to multiple Secret bindings"
+				);
+			});
+
+			it("should error on secret name conflicting with var", ({ expect }) => {
+				const rawConfig: RawConfig = {
+					vars: { API_KEY: "not-a-secret" },
+					secrets: { required: ["API_KEY"] },
+				};
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"API_KEY assigned to Environment Variable and Secret bindings"
+				);
+			});
+
+			describe("per-environment overrides", () => {
+				it("should accept valid secrets in environment", ({ expect }) => {
+					const rawConfig: RawConfig = {
+						env: {
+							production: {
+								secrets: { required: ["PROD_API_KEY"] },
+							},
+						},
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+
+					expect(config.secrets).toEqual({ required: ["PROD_API_KEY"] });
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("should warn when secrets exists at top level but not in environment", ({
+					expect,
+				}) => {
+					const rawConfig: RawConfig = {
+						secrets: { required: ["API_KEY"] },
+						env: {
+							production: {},
+						},
+					};
+					const { diagnostics } = normalizeAndValidateConfig(
+						rawConfig,
+						undefined,
+						undefined,
+						{ env: "production" }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.renderWarnings()).toContain(
+						'"secrets" exists at the top level, but not on "env.production"'
+					);
+				});
+			});
+		});
+
 		describe("[durable_objects]", () => {
 			it("should error if durable_objects is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -7481,6 +7645,189 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - Unexpected fields found in observability field: "invalid_key_1","invalid_key_2""
 				`);
+			});
+		});
+
+		describe("[cache]", () => {
+			it("should error when cache is not an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: "enabled",
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache" should be an object but got "enabled"."
+				`);
+			});
+
+			it("should error when cache is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: null,
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache" should be an object but got null."
+				`);
+			});
+
+			it("should error when cache.enabled is missing", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "cache.enabled" is a required field."
+				`);
+			});
+
+			it("should error when cache.enabled is not a boolean", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: "true",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected "cache.enabled" to be of type boolean but got "true"."
+				`);
+			});
+
+			it("should not error on valid cache config with enabled true", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: true });
+			});
+
+			it("should not error on valid cache config with enabled false", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: false,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: false });
+			});
+
+			it("should warn on unexpected fields in cache config", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+							invalid_key: "hello",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in cache field: "invalid_key""
+				`);
+			});
+
+			it("should inherit cache from top-level config to environment", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+						env: {
+							production: {},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "production" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: true });
+			});
+
+			it("should allow environment to override top-level cache", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						cache: {
+							enabled: true,
+						},
+						env: {
+							staging: {
+								cache: {
+									enabled: false,
+								},
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(config.cache).toEqual({ enabled: false });
 			});
 		});
 

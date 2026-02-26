@@ -2,6 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { removeDir } from "@cloudflare/workers-utils";
 import {
 	DeferredPromise,
 	kUnsafeEphemeralUniqueKey,
@@ -134,7 +135,7 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 	// reload here as `workerd` keeps a copy of the SQLite database in-memory,
 	// we also need to `dispose()` to avoid `EBUSY` error on Windows)
 	await mf.dispose();
-	await fs.rm(path.join(tmp, names[0]), { force: true, recursive: true });
+	await removeDir(path.join(tmp, names[0]));
 
 	const mf2 = new Miniflare(opts);
 	useDispose(mf2);

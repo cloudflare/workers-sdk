@@ -91,6 +91,7 @@ async function createDraftWorker({
 					assets: undefined,
 					containers: undefined,
 					observability: undefined,
+					cache: undefined,
 				},
 				{}
 			),

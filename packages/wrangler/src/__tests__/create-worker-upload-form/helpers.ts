@@ -44,6 +44,7 @@ export function createEsmWorker(
 		tail_consumers: undefined,
 		limits: undefined,
 		observability: undefined,
+		cache: undefined,
 		...overrides,
 	};
 }
@@ -77,6 +78,7 @@ export function createCjsWorker(
 		tail_consumers: undefined,
 		limits: undefined,
 		observability: undefined,
+		cache: undefined,
 		...overrides,
 	};
 }

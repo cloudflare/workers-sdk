@@ -1,5 +1,15 @@
 # @cloudflare/local-explorer-ui
 
+## 0.6.0
+
+### Minor Changes
+
+- [#12599](https://github.com/cloudflare/workers-sdk/pull/12599) [`3649d3e`](https://github.com/cloudflare/workers-sdk/commit/3649d3e408bf352468a59e47f05f42c9bd69c736) Thanks [@NuroDev](https://github.com/NuroDev)! - Adds the tab definition for the table explorer.
+
+  This serves as another stepping stone for adding the complete data studio to the local explorer.
+
+  This is a WIP experimental feature.
+
 ## 0.5.0
 
 ### Minor Changes

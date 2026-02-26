@@ -1,5 +1,29 @@
 # @cloudflare/vite-plugin
 
+## 1.25.6
+
+### Patch Changes
+
+- [#12673](https://github.com/cloudflare/workers-sdk/pull/12673) [`a04f6f1`](https://github.com/cloudflare/workers-sdk/commit/a04f6f1c0649530809793c3e73542f8e0325d5c3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move proxy shared secret to a constant that is reused across restarts.
+
+- [#12684](https://github.com/cloudflare/workers-sdk/pull/12684) [`53025f9`](https://github.com/cloudflare/workers-sdk/commit/53025f96ce307aa97c4efc1948dff6701dc526df) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix Miniflare being incorrectly disposed during rapid dev server restarts
+
+- Updated dependencies [[`99037e3`](https://github.com/cloudflare/workers-sdk/commit/99037e3d645026cd44d6127af3592898a390c97a), [`295297a`](https://github.com/cloudflare/workers-sdk/commit/295297afe8433b6f304d7355b0ade857a9a30538), [`f765244`](https://github.com/cloudflare/workers-sdk/commit/f7652442e040a7dbc0760235422f4da198905b43), [`c0e9e08`](https://github.com/cloudflare/workers-sdk/commit/c0e9e08356b45243b752af937f463105a58f9a0e)]:
+  - miniflare@4.20260305.0
+  - wrangler@4.69.0
+
+## 1.25.5
+
+### Patch Changes
+
+- [#12628](https://github.com/cloudflare/workers-sdk/pull/12628) [`494ee7b`](https://github.com/cloudflare/workers-sdk/commit/494ee7b61cab3151d3c0ec1f0fddc9c2e47d83c5) Thanks [@Master-Hash](https://github.com/Master-Hash)! - Append Cloudflare defaults to existing `.assetsignore` files during build output
+
+  When a project includes a `PUBLIC_DIR/.assetsignore`, the plugin now preserves those rules and appends the required `wrangler.json` and `.dev.vars` entries instead of replacing the file content.
+
+- Updated dependencies [[`3d6e421`](https://github.com/cloudflare/workers-sdk/commit/3d6e421dcd03fad1837c52c0e677d91678c6eed7), [`294297e`](https://github.com/cloudflare/workers-sdk/commit/294297e8e5bb90e71a6db15278e3ab0a9345cacf)]:
+  - wrangler@4.68.1
+  - miniflare@4.20260302.0
+
 ## 1.25.4
 
 ### Patch Changes
