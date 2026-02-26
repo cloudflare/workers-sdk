@@ -11,7 +11,6 @@ import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { PagesConfigCache, Project } from "./types";
 
@@ -38,8 +37,7 @@ export const pagesProjectListCommand = createCommand({
 			PAGES_CONFIG_CACHE_FILENAME
 		);
 
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
+		const accountId = await requireAuth(config);
 
 		const projects: Array<Project> = await listProjects({ accountId });
 
@@ -137,8 +135,7 @@ export const pagesProjectCreateCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
+		const accountId = await requireAuth(config);
 
 		const isInteractive = process.stdin.isTTY;
 		if (!projectName && isInteractive) {
@@ -259,8 +256,7 @@ export const pagesProjectDeleteCommand = createCommand({
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
-		const accountId =
-			getCloudflareAccountIdFromEnv() ?? (await requireAuth(config));
+		const accountId = await requireAuth(config);
 
 		const confirmed =
 			args.yes ||
