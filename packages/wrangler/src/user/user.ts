@@ -247,7 +247,7 @@ import {
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
 } from "./auth-variables";
-import { getAccountChoices } from "./choose-account";
+import { fetchAllAccounts } from "./fetch-accounts";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
@@ -1253,23 +1253,58 @@ export function listScopes(message = "💁 Available scopes:"): void {
 }
 
 /**
+ * Returns the active account ID without side effects.
  *
- * Returns account_id preferentially from config.account_id > CLOUDFLARE_ACCOUNT_ID env var > cache > or user selection.
+ * Resolves the account ID from static sources only — no API calls, no
+ * interactive prompts. Tries the following sources in order:
+ * 1. `config.account_id` from the wrangler configuration file
+ * 2. `CLOUDFLARE_ACCOUNT_ID` environment variable
+ * 3. Cached account from a previous interactive selection
+ *
+ * @param config - The config object potentially containing an `account_id`
+ * @returns The active account ID, or `undefined` if none can be determined
  */
-export async function getAccountId(
-	config: ComplianceConfig & { account_id?: string }
-): Promise<string> {
-	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
+export function getActiveAccountId(config: {
+	account_id?: string;
+}): string | undefined {
 	if (config.account_id) {
 		return config.account_id;
 	}
-	// check if we have a cached value
-	const cachedAccount = getAccountFromCache();
-	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
-		return cachedAccount.id;
+	const envAccountId = getCloudflareAccountIdFromEnv();
+	if (envAccountId) {
+		return envAccountId;
+	}
+	return getAccountFromCache()?.id;
+}
+
+/**
+ * Resolves the account ID to use for API requests.
+ *
+ * First tries static sources via {@link getActiveAccountId} (config, env var,
+ * cache). If none are available, falls back to fetching accounts from the API:
+ * - Auto-selects if only one account is available
+ * - Prompts the user to select an account interactively if multiple are available
+ *
+ * When an account is resolved via API fetch or interactive prompt,
+ * it is cached for subsequent calls.
+ *
+ * @param config - Configuration containing an optional `account_id` and compliance settings
+ * @returns The resolved account ID
+ * @throws {UserError} If in a non-interactive environment and multiple accounts are
+ *   available (the user must set `account_id` in config or `CLOUDFLARE_ACCOUNT_ID` env var)
+ * @throws {UserError} If no accounts are found for the authenticated user
+ */
+export async function getOrSelectAccountId(
+	config: ComplianceConfig & { account_id?: string }
+): Promise<string> {
+	// TODO: v5 we should prioritise the env var instead of the config value here,
+	// for consistency with other env vars.
+	const activeAccountId = getActiveAccountId(config);
+	if (activeAccountId) {
+		return activeAccountId;
 	}
 
-	const accounts = await getAccountChoices(config);
+	const accounts = await fetchAllAccounts(config);
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 		return accounts[0].id;
@@ -1277,12 +1312,14 @@ export async function getAccountId(
 
 	try {
 		const accountID = await select("Select an account", {
-			choices: accounts.map((account) => ({
+			choices: accounts.map((account: Account) => ({
 				title: account.name,
 				value: account.id,
 			})),
 		});
-		const account = accounts.find((a) => a.id === accountID) as Account;
+		const account = accounts.find(
+			(a: Account) => a.id === accountID
+		) as Account;
 		saveAccountToCache({ id: account.id, name: account.name });
 		return accountID;
 	} catch (e) {
@@ -1299,7 +1336,7 @@ Please set the appropriate \`account_id\` in your ${configFileName(undefined)} f
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
-		(account) =>
+		(account: Account) =>
 			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
 	)
 	.join("\n")}`
@@ -1310,7 +1347,15 @@ ${accounts
 }
 
 /**
- * Ensure that a user is logged in, and a valid account_id is available.
+ * Ensures the user is logged in and resolves a valid account ID.
+ *
+ * First checks/refreshes authentication, then delegates to
+ * {@link getOrSelectAccountId} to resolve the account.
+ *
+ * @param config - Configuration containing an optional `account_id` and compliance settings
+ * @returns The resolved account ID
+ * @throws {UserError} If the user is not logged in and cannot authenticate
+ * @throws {UserError} If no account ID can be resolved (see {@link getOrSelectAccountId})
  */
 export async function requireAuth(
 	config: ComplianceConfig & {
@@ -1328,7 +1373,7 @@ export async function requireAuth(
 			throw new UserError("Did not login, quitting...");
 		}
 	}
-	const accountId = await getAccountId(config);
+	const accountId = await getOrSelectAccountId(config);
 	if (!accountId) {
 		throw new UserError("No account id found, quitting...");
 	}
