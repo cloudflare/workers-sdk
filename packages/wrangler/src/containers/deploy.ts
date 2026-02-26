@@ -38,7 +38,7 @@ import {
 } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { buildContainer } from "../containers/build";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
@@ -390,7 +390,7 @@ export async function apply(
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 
-	const accountId = config.account_id || (await getAccountId(config));
+	const accountId = await getOrSelectAccountId(config);
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
