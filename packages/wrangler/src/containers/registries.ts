@@ -511,7 +511,6 @@ async function registryCredentialsCommand(credentialsArgs: {
 	logger.log(credentials.password);
 }
 
-
 export const containersRegistriesNamespace = createNamespace({
 	metadata: {
 		description: "Configure and manage non-Cloudflare registries",

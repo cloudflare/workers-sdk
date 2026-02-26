@@ -727,7 +727,6 @@ describe("containers registries credentials", () => {
 	});
 });
 
-
 const mockPutRegistry = (expected?: object) => {
 	msw.use(
 		http.post(
