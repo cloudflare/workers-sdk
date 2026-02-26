@@ -86,11 +86,7 @@ export function StudioContextMenuProvider({
 					}
 				/>
 
-				<DropdownMenu.Content
-					align="start"
-					side="bottom"
-					style={{ width: 250 }}
-				>
+				<DropdownMenu.Content align="start" className="w-62.5" side="bottom">
 					{/* TODO: Add stub implementation of this dropdown using the new Kumo components */}
 					{/* <DropdownMenuItemsBuilder items={menuItems} /> */}
 				</DropdownMenu.Content>
