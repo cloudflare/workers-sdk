@@ -24,8 +24,8 @@ export interface SharedContext {
 	miniflare?: Miniflare;
 	workerNameToExportTypesMap?: Map<string, ExportTypes>;
 	hasShownWorkerConfigWarnings: boolean;
-	/** Used to track whether hooks are being called because of a server restart or a server close event */
-	isRestartingDevServer: boolean;
+	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
+	restartingDevServerCount: number;
 }
 
 /**
@@ -108,12 +108,16 @@ export class PluginContext {
 		return this.#sharedContext.hasShownWorkerConfigWarnings;
 	}
 
-	setIsRestartingDevServer(isRestartingDevServer: boolean): void {
-		this.#sharedContext.isRestartingDevServer = isRestartingDevServer;
+	beginRestartingDevServer(): void {
+		this.#sharedContext.restartingDevServerCount++;
+	}
+
+	endRestartingDevServer(): void {
+		this.#sharedContext.restartingDevServerCount--;
 	}
 
 	get isRestartingDevServer(): boolean {
-		return this.#sharedContext.isRestartingDevServer;
+		return this.#sharedContext.restartingDevServerCount > 0;
 	}
 
 	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {

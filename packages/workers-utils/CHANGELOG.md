@@ -1,5 +1,27 @@
 # @cloudflare/workers-utils
 
+## 0.12.0
+
+### Minor Changes
+
+- [#12677](https://github.com/cloudflare/workers-sdk/pull/12677) [`eccd014`](https://github.com/cloudflare/workers-sdk/commit/eccd0149000a689d37dfaacdfa6db0989b24bae6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add experimental `secrets` property to config validation
+
+- [#12625](https://github.com/cloudflare/workers-sdk/pull/12625) [`c0e9e08`](https://github.com/cloudflare/workers-sdk/commit/c0e9e08356b45243b752af937f463105a58f9a0e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add `cache` configuration option for enabling worker cache (experimental)
+
+  You can now enable cache before worker execution using the new `cache` configuration:
+
+  ```jsonc
+  {
+  	"cache": {
+  		"enabled": true,
+  	},
+  }
+  ```
+
+  This setting is environment-inheritable and opt-in. When enabled, cache behavior is applied before your worker runs.
+
+  Note: This feature is experimental. The runtime API is not yet generally available.
+
 ## 0.11.2
 
 ### Patch Changes
