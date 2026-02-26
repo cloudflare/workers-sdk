@@ -15,6 +15,7 @@ import {
 } from "./helpers";
 import type { ParseError } from "@cloudflare/workers-utils";
 
+
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {
 		description: "Apply any unapplied D1 migrations",
@@ -65,7 +66,7 @@ export const d1MigrationsApplyCommand = createCommand({
 				"Specify directory to use for local persistence (you must use --local with this flag)",
 			requiresArg: true,
 		},
-		"force-non-interactive": {
+		force: {
 			type: "boolean",
 			description: "Automatically apply all pending migrations without prompt",
 			default: false,
@@ -73,7 +74,7 @@ export const d1MigrationsApplyCommand = createCommand({
 	},
 	positionalArgs: ["database"],
 	async handler(
-		{ database, local, remote, persistTo, preview, forceNonInteractive },
+		{ database, local, remote, persistTo, preview, force },
 		{ config }
 	) {
 		if (!config.configPath) {
@@ -145,7 +146,7 @@ export const d1MigrationsApplyCommand = createCommand({
 		logger.log("Migrations to be applied:");
 		logger.table(unappliedMigrations.map((m) => ({ name: m.name })));
 
-		if (!forceNonInteractive) {
+		if (!force) {
 			const ok = await confirm(
 				`About to apply ${unappliedMigrations.length} migration(s)
 Your database may not be available to serve requests during the migration, continue?`
@@ -156,7 +157,7 @@ Your database may not be available to serve requests during the migration, conti
 			}
 		} else {
 			logger.log(
-				`--force-non-interactive passed, applying ${unappliedMigrations.length} migration(s) without prompt`
+				`--force passed, applying ${unappliedMigrations.length} migration(s) without prompt`
 			);
 		}
 

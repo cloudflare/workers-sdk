@@ -15,6 +15,7 @@ import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { getMswSuccessMembershipHandlers, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
+
 describe("migrate", () => {
 	runInTempDir();
 	const mockStd = mockConsoleMethods();
@@ -724,7 +725,7 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
-		it("should not prompt when --force-non-interactive is passed", async () => {
+		it("should not prompt when --force is passed", async () => {
 			setIsTTY(false);
 			const std = mockConsoleMethods();
 
@@ -791,12 +792,10 @@ Your database may not be available to serve requests during the migration, conti
 
 			await runWrangler("d1 migrations create db test");
 
-			await runWrangler(
-				"d1 migrations apply db --remote --force-non-interactive"
-			);
+			await runWrangler("d1 migrations apply db --remote --force");
 
 			expect(std.out).toContain(
-				"--force-non-interactive passed, applying 1 migration(s) without prompt"
+				"--force passed, applying 1 migration(s) without prompt"
 			);
 		});
 	});
