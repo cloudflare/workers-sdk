@@ -365,7 +365,7 @@ describe("wrangler pipelines setup", () => {
 					if (!exists) {
 						return HttpResponse.json(
 							createFetchResult(null, false, [
-								{ code: 10006, message: "catalog not found" },
+								{ code: 40401, message: "Warehouse not found" },
 							]),
 							{ status: 404 }
 						);
