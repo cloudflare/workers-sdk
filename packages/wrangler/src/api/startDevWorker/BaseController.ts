@@ -40,6 +40,7 @@ export abstract class Controller {
 		if (this.#tearingDown) {
 			logger.debug("Suppressing error event during teardown");
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			debugger;
 			logger.debug("=> Error contextual data:", JSON.stringify(event.data));
 			return;
 		}

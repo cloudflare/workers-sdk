@@ -65,6 +65,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			debugger;
 			logger.debug("=> Error contextual data:", JSON.stringify(event.data));
 		});
 	}
@@ -146,6 +147,7 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 				event.reason.startsWith("Could not connect to InspectorProxyWorker"))
 		) {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			debugger;
 			logger.debug("=> Error contextual data:", JSON.stringify(event.data));
 		}
 		// Parse errors are recoverable by changing your Wrangler configuration file and saving
