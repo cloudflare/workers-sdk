@@ -1,12 +1,6 @@
 import { cn } from "@cloudflare/kumo";
-import { useEffect, useRef } from "react";
-import * as React from "react";
-import type { PropsWithChildren, ReactNode } from "react";
-
-/**
- * Stub for Drawer component
- * Simplified version using native HTML/CSS with Tailwind
- */
+import { createContext, useContext, useEffect, useRef } from "react";
+import type { JSX, PropsWithChildren, ReactNode } from "react";
 
 interface DrawerProps {
 	children?: ReactNode;
@@ -30,7 +24,7 @@ interface DrawerHeaderProps extends PropsWithChildren {
 type DrawerBodyProps = PropsWithChildren;
 type DrawerFooterProps = PropsWithChildren;
 
-const DrawerContext = React.createContext<{
+const DrawerContext = createContext<{
 	onClose?: () => void;
 }>({});
 
@@ -39,7 +33,7 @@ export function Drawer({
 	isOpen,
 	onClose,
 	width = 400,
-}: DrawerProps) {
+}: DrawerProps): JSX.Element {
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// Close on escape key
@@ -81,15 +75,12 @@ export function Drawer({
 			<div
 				aria-modal="true"
 				className={cn(
-					"fixed bottom-0 right-0 top-0 z-99999 flex flex-col border-l border-border bg-surface shadow-xl transition-transform duration-300 ease-in-out",
+					"fixed bottom-0 right-0 top-0 z-99999 max-w-[75%] flex flex-col border-l border-border bg-surface shadow-xl transition-transform duration-300 ease-in-out",
 					isOpen ? "translate-x-0" : "translate-x-full"
 				)}
 				ref={containerRef}
 				role="dialog"
-				style={{
-					width: typeof width === "number" ? `${width}px` : width,
-					maxWidth: "75%",
-				}}
+				style={{ width: typeof width === "number" ? `${width}px` : width }}
 			>
 				{children}
 			</div>
@@ -100,8 +91,8 @@ export function Drawer({
 Drawer.Header = function DrawerHeader({
 	children,
 	description,
-}: DrawerHeaderProps) {
-	const { onClose } = React.useContext(DrawerContext);
+}: DrawerHeaderProps): JSX.Element {
+	const { onClose } = useContext(DrawerContext);
 
 	return (
 		// TODO: Only one position class is required.
@@ -127,7 +118,7 @@ Drawer.Header = function DrawerHeader({
 	);
 };
 
-Drawer.Body = function DrawerBody({ children }: DrawerBodyProps) {
+Drawer.Body = function DrawerBody({ children }: DrawerBodyProps): JSX.Element {
 	return (
 		<div className="flex-1 overflow-y-auto border-y border-border p-4">
 			{children}
@@ -135,17 +126,8 @@ Drawer.Body = function DrawerBody({ children }: DrawerBodyProps) {
 	);
 };
 
-Drawer.Footer = function DrawerFooter({ children }: DrawerFooterProps) {
+Drawer.Footer = function DrawerFooter({
+	children,
+}: DrawerFooterProps): JSX.Element {
 	return <div className="sticky bottom-0 bg-surface p-4">{children}</div>;
 };
-
-export function FooterActions({
-	children,
-	...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-	return (
-		<div className="flex justify-end gap-2" {...props}>
-			{children}
-		</div>
-	);
-}

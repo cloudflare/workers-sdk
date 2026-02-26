@@ -23,10 +23,15 @@ export const StudioSQLWhereEditor = forwardRef<
 	StudioCodeMirrorReference,
 	SutdioSQLWhereEditor
 >(function StudioSQLWhereEditor(props, ref) {
-	const { columnNames, functionNames, onEnterPressed } = props;
+	const {
+		//
+		columnNames,
+		functionNames,
+		onEnterPressed,
+	} = props;
 
 	const whereEditorExtensions = useMemo(() => {
-		const extensions: Extension[] = [
+		const extensions = [
 			keymap.of([
 				{
 					key: "Enter",
@@ -47,7 +52,7 @@ export const StudioSQLWhereEditor = forwardRef<
 			syntaxHighlighting(classHighlighter),
 			StudioSQLBaseTheme,
 			StudioSQLTheme,
-		];
+		] satisfies Extension[];
 
 		if (columnNames && columnNames.length > 0) {
 			extensions.push(

@@ -130,16 +130,21 @@ export async function runStudioMultipleSQLStatements(
 	statements: string[],
 	onProgress?: (progress: StudioMultipleQueryProgress) => void
 ): Promise<{
-	result: StudioMultipleQueryResult[];
 	logs: StudioMultipleQueryProgress["logs"];
+	result: StudioMultipleQueryResult[];
 }> {
-	const logs: StudioMultipleQueryProgress["logs"] = [];
-	const result: StudioMultipleQueryResult[] = [];
+	const logs = new Array<StudioMultipleQueryProgress["logs"][number]>();
+	const result = new Array<StudioMultipleQueryResult>();
 	const total = statements.length;
 
-	const reportProgress = (progress: number, error = false) => {
-		onProgress?.({ logs, progress, total, error });
-	};
+	function reportProgress(progress: number, error = false): void {
+		onProgress?.({
+			error,
+			logs,
+			progress,
+			total,
+		});
+	}
 
 	for (let i = 0; i < statements.length; i++) {
 		const statement = statements[i] as string;
@@ -187,5 +192,8 @@ export async function runStudioMultipleSQLStatements(
 		}
 	}
 
-	return { result, logs };
+	return {
+		logs,
+		result,
+	};
 }

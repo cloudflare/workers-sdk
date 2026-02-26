@@ -1,7 +1,7 @@
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useCallback } from "react";
+import { exportStudioDataAsDelimitedText } from "../../../utils/studio/export";
 import { useStudioContextMenu } from "../ContextMenu";
-import { exportStudioDataAsDelimitedText } from "../utils-export";
 import type { StudioTableState } from "../Table/State";
 import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 

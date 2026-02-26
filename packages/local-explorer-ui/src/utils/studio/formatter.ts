@@ -6,7 +6,10 @@ import { sqliteBuiltinFunctionList } from "../../components/studio/SQLEditor/SQL
 import { tokenizeSQL } from "./sql";
 import type { StudioDialect, StudioSQLToken } from "../../types/studio";
 
-export function beautifySQLQuery(statement: string, _dialect: StudioDialect) {
+export function beautifySQLQuery(
+	statement: string,
+	_dialect: StudioDialect
+): string {
 	// Split the token and remove the whietspace
 	const tokens = tokenizeSQL(statement, "sqlite").filter(
 		(token) => token.type !== "WHITESPACE"
@@ -44,22 +47,22 @@ export function beautifySQLQuery(statement: string, _dialect: StudioDialect) {
 }
 
 type IndentFrame = (
-	| "SELECT"
-	| "WHERE"
 	| "JOIN"
-	| "SET"
-	| "LPAREN"
 	| "LPAREN-INLINE"
+	| "LPAREN"
+	| "SELECT"
+	| "SET"
+	| "WHERE"
 )[];
 
 function formatInternal(
 	tokens: StudioSQLToken[],
 	functionList: string[]
 ): StudioSQLToken[] {
-	const result: StudioSQLToken[] = [];
+	const result = new Array<StudioSQLToken>();
 	const functionSet = new Set(functionList.map((f) => f.toUpperCase()));
 
-	let indentStack: IndentFrame = [];
+	let indentStack = new Array<IndentFrame[number]>();
 
 	for (let i = 0; i < tokens.length; i++) {
 		const token = tokens[i] as StudioSQLToken;
@@ -229,8 +232,10 @@ function formatInternal(
 	return result;
 }
 
-// Peek top of stack; previous defaults to 1 (top)
-function peek<T>(arr: T[], previous = 1) {
+/**
+ * Peek top of stack; previous defaults to 1 (top)
+ */
+function peek<T>(arr: T[], previous = 1): T | undefined {
 	return arr.length - previous >= 0 ? arr[arr.length - previous] : undefined;
 }
 
@@ -238,11 +243,12 @@ function peek<T>(arr: T[], previous = 1) {
  * Emit a newline + indentation proportional to block scopes.
  * LPAREN-INLINE does not contribute to indentation depth.
  */
-function pushNewline(result: StudioSQLToken[], indentStack: IndentFrame) {
+function pushNewline(result: StudioSQLToken[], indentStack: IndentFrame): void {
 	const depth = indentStack.reduce((acc, i) => {
 		if (i === "LPAREN-INLINE") {
 			return acc;
 		}
+
 		return acc + 1;
 	}, 0);
 
@@ -257,11 +263,12 @@ function lookBehind(
 	tokens: StudioSQLToken[],
 	i: number,
 	previousTokenCount = 1
-) {
+): StudioSQLToken | undefined {
 	const offset = i - previousTokenCount;
 	if (i - previousTokenCount < 0) {
 		return;
 	}
+
 	return tokens[offset];
 }
 
@@ -269,24 +276,28 @@ function lookBehindValue(
 	tokens: StudioSQLToken[],
 	i: number,
 	previousTokenCount = 1
-) {
+): string {
 	return (lookBehind(tokens, i, previousTokenCount)?.value ?? "").toUpperCase();
 }
 
-function needsSpace(result: StudioSQLToken[]) {
+function needsSpace(result: StudioSQLToken[]): boolean {
 	if (result.length === 0) {
 		return false;
 	}
+
 	const last = result[result.length - 1] as StudioSQLToken;
 	if (last.type === "WHITESPACE") {
 		return false;
 	}
+
 	if (last.value === ".") {
 		return false;
 	}
+
 	if (last.value === "(") {
 		return false;
 	}
+
 	return true;
 }
 
@@ -295,9 +306,10 @@ function needsSpace(result: StudioSQLToken[]) {
  * Not reliable for complex queries - used only for query tab display names.
  *
  * @param sql - The SQL statement to parse
+ *
  * @returns The table name if found, otherwise an empty string
  */
-export function getStudioTableNameFromSQL(sql: string) {
+export function getStudioTableNameFromSQL(sql: string): string {
 	try {
 		const tokens = tokenizeSQL(sql, "sqlite").filter(
 			(token) => token.type !== "WHITESPACE"

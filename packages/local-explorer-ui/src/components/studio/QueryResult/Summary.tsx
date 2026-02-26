@@ -24,8 +24,9 @@ export function StudioQueryResultSummary({
 	}, [progress]);
 
 	const last3 = progress.logs.slice(-3).reverse();
-	const value = progress.progress;
 	const total = progress.total;
+	const value = progress.progress;
+
 	const isEnded = total === value || !!progress.error;
 
 	return (
@@ -43,42 +44,38 @@ export function StudioQueryResultSummary({
 			</div>
 
 			<div className="flex flex-col gap-4 mt-4">
-				{last3.map((detail) => {
-					return (
-						<div key={detail.order}>
-							{!detail.end && (
-								<div className="text-xs">
-									Executing this query&nbsp;
-									<strong>
-										{formatTimeAgo(currentTime - detail.start)}
-									</strong>{" "}
-									ago.
+				{last3.map((detail) => (
+					<div key={detail.order}>
+						{!detail.end && (
+							<div className="text-xs">
+								Executing this query&nbsp;
+								<strong>
+									{formatTimeAgo(currentTime - detail.start)}
+								</strong>{" "}
+								ago.
+							</div>
+						)}
+
+						<div className="mt-3" />
+
+						<CodeBlock language="sql" code={detail.sql} />
+
+						{!!detail.error && (
+							<div className="mt-2 mb-2 ml-2 text-red-500 font-mono text-xs">
+								{detail.error}
+							</div>
+						)}
+
+						{detail.end &&
+							!detail.error &&
+							detail.stats &&
+							!isEmptyResultStats(detail.stats) && (
+								<div className="-ml-1.25">
+									<StudioQueryResultStats stats={detail.stats} />
 								</div>
 							)}
-
-							<div className="mt-3" />
-							<CodeBlock language="sql" code={detail.sql} />
-
-							{!!detail.error && (
-								<div
-									className="mt-2 mb-2 text-red-500 font-mono text-xs"
-									style={{ marginLeft: 8 }}
-								>
-									{detail.error}
-								</div>
-							)}
-
-							{detail.end &&
-								!detail.error &&
-								detail.stats &&
-								!isEmptyResultStats(detail.stats) && (
-									<div style={{ marginLeft: -5 }}>
-										<StudioQueryResultStats stats={detail.stats} />
-									</div>
-								)}
-						</div>
-					);
-				})}
+					</div>
+				))}
 			</div>
 		</div>
 	);

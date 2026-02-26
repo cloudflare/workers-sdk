@@ -1,31 +1,27 @@
-/**
- * Stub for SkeletonBlock loading component
- * Simplified version using Tailwind CSS
- */
-
 import { cn } from "@cloudflare/kumo";
+import type { JSX } from "react";
 
 interface SkeletonBlockProps extends React.HTMLAttributes<HTMLDivElement> {
 	height?: number | string;
-	width?: number | string;
 	mb?: number;
 	p?: number;
+	width?: number | string;
 }
 
-export const SkeletonBlock = ({
+export function SkeletonBlock({
 	className,
 	height,
-	width,
 	mb,
 	p,
 	style,
+	width,
 	...props
-}: SkeletonBlockProps) => {
+}: SkeletonBlockProps) {
 	return (
 		<div
 			className={cn(
 				"relative overflow-hidden rounded-md bg-surface-tertiary",
-				"before:absolute before:inset-0 before:animate-pulse before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
+				"before:absolute before:inset-0 before:animate-pulse before:bg-linear-to-r before:from-transparent before:via-white/20 before:to-transparent",
 				className
 			)}
 			style={{
@@ -41,13 +37,15 @@ export const SkeletonBlock = ({
 			&nbsp;
 		</div>
 	);
-};
+}
 
-export const LoadingWorkersSkeleton = () => (
-	<>
-		<SkeletonBlock mb={3} p={3} height={160} />
-		<SkeletonBlock mb={3} p={3} height={160} />
-		<SkeletonBlock mb={3} p={3} height={160} />
-		<SkeletonBlock mb={3} p={3} height={160} />
-	</>
-);
+export function LoadingWorkersSkeleton(): JSX.Element {
+	return (
+		<>
+			<SkeletonBlock mb={3} p={3} height={160} />
+			<SkeletonBlock mb={3} p={3} height={160} />
+			<SkeletonBlock mb={3} p={3} height={160} />
+			<SkeletonBlock mb={3} p={3} height={160} />
+		</>
+	);
+}

@@ -39,10 +39,10 @@ Supported grammar:
 import type { StudioSQLToken } from "../../types/studio";
 
 export class StudioWhereParser {
-	private pos = 0;
-	private tokens: StudioSQLToken[];
 	private functionNames: string[];
 	private identifiers: string[];
+	private pos = 0;
+	private tokens: StudioSQLToken[];
 
 	constructor(options: {
 		tokens: StudioSQLToken[];
@@ -84,44 +84,48 @@ export class StudioWhereParser {
 			.flat();
 	}
 
-	public parse() {
+	public parse(): unknown {
 		const expr = this.parseExpression();
 		if (this.pos < this.tokens.length) {
 			throw new Error("Invalid");
 		}
+
 		return expr;
 	}
 
 	// <expression> ::= <or_expr>
-	parseExpression() {
+	parseExpression(): unknown {
 		return this.parseOrExpr();
 	}
 
 	// <or_expr> ::= <and_expr> ( "OR" <and_expr> )*
-	private parseOrExpr() {
+	private parseOrExpr(): unknown {
 		let node = this.parseAndExpr();
 		while (this.match("OR")) {
 			const right = this.parseAndExpr();
 			node = { type: "or", left: node, right };
 		}
+
 		return node;
 	}
 
 	// <and_expr> ::= <not_expr> ( "AND" <not_expr> )*
-	private parseAndExpr() {
+	private parseAndExpr(): unknown {
 		let node = this.parseNotExpr();
 		while (this.match("AND")) {
 			const right = this.parseNotExpr();
 			node = { type: "and", left: node, right };
 		}
+
 		return node;
 	}
 
 	// <not_expr> ::= [ "NOT" ] <comp_expr>
-	private parseNotExpr() {
+	private parseNotExpr(): unknown {
 		if (this.match("NOT")) {
 			return { type: "not", expr: this.parseComparison() };
 		}
+
 		return this.parseComparison();
 	}
 
@@ -132,19 +136,28 @@ export class StudioWhereParser {
         | <arith_expr> "IS" [ "NOT" ] "NULL"
         | "(" <expression> ")"
    */
-	private parseComparison() {
+	private parseComparison(): unknown {
 		const left = this.parseArithmetic();
 
 		if (this.match("BETWEEN")) {
 			const low = this.parseArithmetic();
 			this.expect("AND", "Expected 'AND' after 'BETWEEN'");
 			const high = this.parseArithmetic();
-			return { type: "between", expr: left, low, high };
+			return {
+				expr: left,
+				high,
+				low,
+				type: "between",
+			};
 		}
 
 		if (this.match("LIKE")) {
 			const pattern = this.parseArithmetic();
-			return { type: "like", expr: left, pattern };
+			return {
+				expr: left,
+				pattern,
+				type: "like",
+			};
 		}
 
 		if (this.match("IS")) {
@@ -155,33 +168,38 @@ export class StudioWhereParser {
 			);
 
 			return {
-				type: "is",
 				expr: left,
-				value: isValue,
 				not: isNot,
+				type: "is",
+				value: isValue,
 			};
 		}
 
 		if (this.peek().type === "OPERATOR") {
 			const op = this.consume().value;
 			const right = this.parseArithmetic();
-			return { type: "binary", op, left, right };
+			return {
+				left,
+				op,
+				right,
+				type: "binary",
+			};
 		}
 
 		return left;
 	}
 
 	// <arith_expr> ::= <term> ( ("+" | "-") <term> )*
-	private parseArithmetic() {
+	private parseArithmetic(): unknown {
 		let expr = this.parseTerm();
 
 		while (this.match(["+", "-"])) {
 			const op = this.prev().value;
 			expr = {
-				type: "arith",
-				operator: op,
 				left: expr,
+				operator: op,
 				right: this.parseTerm(),
+				type: "arith",
 			};
 		}
 
@@ -189,7 +207,7 @@ export class StudioWhereParser {
 	}
 
 	// <term> ::= <factor> ( ("*" | "/") <factor> )*
-	private parseTerm() {
+	private parseTerm(): unknown {
 		let expr = this.parseFactor();
 		while (this.match(["*", "/"])) {
 			const op = this.prev().value;
@@ -200,13 +218,17 @@ export class StudioWhereParser {
 				right: this.parseFactor(),
 			};
 		}
+
 		return expr;
 	}
 
 	// <factor> ::= [ "-" ] <primary>
-	private parseFactor() {
+	private parseFactor(): unknown {
 		if (this.match("-")) {
-			return { type: "neg", expr: this.parsePrimary() };
+			return {
+				expr: this.parsePrimary(),
+				type: "neg",
+			};
 		}
 
 		return this.parsePrimary();
@@ -274,7 +296,11 @@ export class StudioWhereParser {
 		}
 
 		this.expect(")", "Expected closing ')' to end function call");
-		return { type: "call", name, args };
+		return {
+			args,
+			name,
+			type: "call",
+		};
 	}
 
 	// Utility methods
@@ -302,20 +328,24 @@ export class StudioWhereParser {
 				errorMessage ??
 					"Expecting " + keywords.toString() + " but got " + token.value
 			);
-		} else if (Array.isArray(keywords) && !keywords.includes(token.value)) {
+		}
+
+		if (Array.isArray(keywords) && !keywords.includes(token.value)) {
 			throw new Error(errorMessage ?? "Unable to parse");
 		}
 
 		return token;
 	}
 
-	private match(keywords: string | string[]) {
+	private match(keywords: string | string[]): boolean {
 		const token = this.peek();
 
 		if (typeof keywords === "string" && keywords === token.value) {
 			this.consume();
 			return true;
-		} else if (Array.isArray(keywords) && keywords.includes(token.value)) {
+		}
+
+		if (Array.isArray(keywords) && keywords.includes(token.value)) {
 			this.consume();
 			return true;
 		}

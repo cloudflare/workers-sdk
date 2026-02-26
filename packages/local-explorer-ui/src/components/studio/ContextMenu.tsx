@@ -19,7 +19,7 @@ type OpenContextMenuHandler = (
 	onOpenChange?: OnOpenChangeHandler
 ) => void;
 
-export const StudioContextMenu = createContext<{
+const StudioContextMenu = createContext<{
 	openContextMenu: OpenContextMenuHandler;
 } | null>(null);
 

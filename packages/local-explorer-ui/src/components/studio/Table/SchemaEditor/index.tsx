@@ -4,7 +4,7 @@ import { KeyIcon } from "@phosphor-icons/react";
 import { produce } from "immer";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isEqual } from "../../../../utils/is-equal";
-import { useModal } from "../../../../utils/studio/stubs/modal";
+import { useModal } from "../../Modal";
 import { StudioCommitConfirmation } from "../../Modal/CommitConfirmation";
 import { StudioSQLEditor } from "../../SQLEditor";
 import { StudioColumnEditiorDrawer, StudioColumnSchemaEditor } from "./Column";

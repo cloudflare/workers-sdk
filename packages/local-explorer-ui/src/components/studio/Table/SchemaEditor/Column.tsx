@@ -17,8 +17,8 @@ import {
 } from "@phosphor-icons/react";
 import { produce } from "immer";
 import { useCallback, useState } from "react";
-import { useModal } from "../../../../utils/studio/stubs/modal";
-import { Drawer } from "../../../../utils/studio/stubs/ui/Drawer";
+import { useModal } from "../../Modal";
+import { Drawer } from "./Drawer";
 import type {
 	StudioTableColumn,
 	StudioTableConstraintChange,
@@ -364,7 +364,6 @@ export function StudioColumnEditiorDrawer({
 
 	return (
 		<Drawer
-			title="Add Column"
 			footer={({ onClose }) => {
 				return (
 					<Button
@@ -379,6 +378,7 @@ export function StudioColumnEditiorDrawer({
 					</Button>
 				);
 			}}
+			title="Add Column"
 		>
 			<div className="flex flex-col gap-2">
 				<div>

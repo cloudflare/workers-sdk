@@ -1,9 +1,10 @@
-import * as React from "react";
+import { memo } from "react";
 
 interface HighlightTextProps {
-	text: string;
 	highlight?: string;
+	text: string;
 }
+
 /**
  * Renders a text string with all case-insensitive occurrences
  * of the `highlight` substring visually emphasized.
@@ -11,9 +12,10 @@ interface HighlightTextProps {
  *
  * @param text - The full text content to render.
  * @param highlight - The substring to highlight within the text (optional).
+ *
  * @returns A JSX element with all matching substrings highlighted.
  */
-export const StudioHighlightText = React.memo(
+export const StudioHighlightText = memo(
 	({ text, highlight }: HighlightTextProps) => {
 		// Avoid highlighting if the input is falsy (e.g., null, undefined, or empty string).
 		// This also prevents an infinite loop when highlight === "".
@@ -27,7 +29,6 @@ export const StudioHighlightText = React.memo(
 
 		let i = 0;
 		let key = 0;
-
 		while (i < text.length) {
 			const matchIndex = lowerText.indexOf(lowerHighlight, i);
 			if (matchIndex === -1) {

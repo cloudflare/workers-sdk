@@ -41,8 +41,8 @@ export function StudioWhereFilterInput({
 }: StudioWhereFilterInputProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
-	const [currentValue, setCurrentValue] = useState("");
-	const [parsingError, setParsingError] = useState("");
+	const [currentValue, setCurrentValue] = useState<string>("");
+	const [parsingError, setParsingError] = useState<string>("");
 
 	const availableFunctionList = useMemo<string[]>(
 		() => SQLiteScalarFunctions,
@@ -105,7 +105,7 @@ export function StudioWhereFilterInput({
 		}
 	}, [editorRef]);
 
-	const applyButtonContent = useMemo<JSX.Element>(() => {
+	const applyButtonContent = useMemo<JSX.Element>((): JSX.Element => {
 		if (loading) {
 			return (
 				<>
