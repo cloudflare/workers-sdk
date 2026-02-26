@@ -31,9 +31,9 @@ export const tunnelCreateCommand = createCommand({
 		logger.log(`Created tunnel.`);
 		logger.log(`ID: ${tunnel.id}`);
 		logger.log(`Name: ${tunnel.name}`);
-		logger.log(`\nTo run this tunnel:`);
 		logger.log(
-			`   wrangler tunnel run ${tunnel.id} --url http://localhost:3000`
+			`\nTo run this tunnel, configure its ingress rules in the Cloudflare dashboard, then run:`
 		);
+		logger.log(`   wrangler tunnel run ${tunnel.id}`);
 	},
 });

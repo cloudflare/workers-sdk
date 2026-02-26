@@ -142,8 +142,8 @@ describe("tunnel commands", () => {
 				ID: f70ff985-a4ef-4643-bbbc-4a0ed4fc8415
 				Name: my-new-tunnel
 
-				To run this tunnel:
-				   wrangler tunnel run f70ff985-a4ef-4643-bbbc-4a0ed4fc8415 --url http://localhost:3000"
+				To run this tunnel, configure its ingress rules in the Cloudflare dashboard, then run:
+				   wrangler tunnel run f70ff985-a4ef-4643-bbbc-4a0ed4fc8415"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

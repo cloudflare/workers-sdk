@@ -26,10 +26,6 @@ export const tunnelRunCommand = createCommand({
 			description:
 				"The tunnel token to use (skips API auth, useful for running on remote machines)",
 		},
-		url: {
-			type: "string",
-			description: "The local URL to expose (e.g., http://localhost:3000)",
-		},
 		"log-level": {
 			type: "string",
 			default: "info",
@@ -96,17 +92,9 @@ export const tunnelRunCommand = createCommand({
 			"run",
 		];
 
-		// Add URL if provided
-		if (args.url) {
-			cloudflaredArgs.push("--url", args.url);
-		}
-
 		logger.log(`\nStarting cloudflared...`);
 		if (tunnelId) {
 			logger.log(`   Tunnel ID: ${tunnelId}`);
-		}
-		if (args.url) {
-			logger.log(`   Local URL: ${args.url}`);
 		}
 		logger.log(`\nPress Ctrl+C to stop the tunnel.\n`);
 
