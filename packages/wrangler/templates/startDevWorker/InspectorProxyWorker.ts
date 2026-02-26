@@ -224,7 +224,7 @@ export class InspectorProxyWorker implements DurableObject {
 		const msg = JSON.parse(event.data) as
 			| DevToolsCommandResponses
 			| DevToolsEvents;
-		this.sendDebugLog("RUNTIME INCOMING MESSAGE", msg);
+		this.sendDebugLog("RUNTIME INCOMING MESSAGE", JSON.stringify(msg));
 
 		if (isDevToolsEvent(msg, "Runtime.exceptionThrown")) {
 			this.sendProxyControllerMessage(event.data);
