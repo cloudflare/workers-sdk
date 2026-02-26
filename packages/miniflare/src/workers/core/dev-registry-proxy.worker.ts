@@ -124,12 +124,16 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 
 	tail(events: TraceItem[]) {
 		try {
+			const fetcher = this._resolve();
+			if (!fetcher) {
+				return;
+			}
 			const serializedEvents = JSON.parse(
 				JSON.stringify(events, tailEventsReplacer),
 				tailEventsReviver
 			);
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
-			return this._resolve().tail(serializedEvents);
+			return fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
 				`[dev-registry] Failed to forward tail events to "${this._props.service}": ${e instanceof Error ? e.message : String(e)}`
