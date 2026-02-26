@@ -1,5 +1,25 @@
 # miniflare
 
+## 4.20260305.0
+
+### Patch Changes
+
+- [#12661](https://github.com/cloudflare/workers-sdk/pull/12661) [`99037e3`](https://github.com/cloudflare/workers-sdk/commit/99037e3d645026cd44d6127af3592898a390c97a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260302.0 | 1.20260303.0 |
+
+- [#12680](https://github.com/cloudflare/workers-sdk/pull/12680) [`295297a`](https://github.com/cloudflare/workers-sdk/commit/295297afe8433b6f304d7355b0ade857a9a30538) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260303.0 | 1.20260305.0 |
+
 ## 4.20260302.0
 
 ### Patch Changes

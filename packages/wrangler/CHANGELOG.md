@@ -1,5 +1,53 @@
 # wrangler
 
+## 4.69.0
+
+### Minor Changes
+
+- [#12625](https://github.com/cloudflare/workers-sdk/pull/12625) [`c0e9e08`](https://github.com/cloudflare/workers-sdk/commit/c0e9e08356b45243b752af937f463105a58f9a0e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add `cache` configuration option for enabling worker cache (experimental)
+
+  You can now enable cache before worker execution using the new `cache` configuration:
+
+  ```jsonc
+  {
+  	"cache": {
+  		"enabled": true,
+  	},
+  }
+  ```
+
+  This setting is environment-inheritable and opt-in. When enabled, cache behavior is applied before your worker runs.
+
+  Note: This feature is experimental. The runtime API is not yet generally available.
+
+### Patch Changes
+
+- [#12661](https://github.com/cloudflare/workers-sdk/pull/12661) [`99037e3`](https://github.com/cloudflare/workers-sdk/commit/99037e3d645026cd44d6127af3592898a390c97a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260302.0 | 1.20260303.0 |
+
+- [#12680](https://github.com/cloudflare/workers-sdk/pull/12680) [`295297a`](https://github.com/cloudflare/workers-sdk/commit/295297afe8433b6f304d7355b0ade857a9a30538) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260303.0 | 1.20260305.0 |
+
+- [#12671](https://github.com/cloudflare/workers-sdk/pull/12671) [`f765244`](https://github.com/cloudflare/workers-sdk/commit/f7652442e040a7dbc0760235422f4da198905b43) Thanks [@MattieTK](https://github.com/MattieTK)! - fix: Only redact account names in CI environments, not all non-interactive contexts
+
+  The multi-account selection error in `getAccountId` now only redacts account names
+  when running in a CI environment (detected via `ci-info`). Non-interactive terminals
+  such as coding agents and piped commands can now see account names, which they need
+  to identify which account to configure. CI logs remain protected.
+
+- Updated dependencies [[`99037e3`](https://github.com/cloudflare/workers-sdk/commit/99037e3d645026cd44d6127af3592898a390c97a), [`295297a`](https://github.com/cloudflare/workers-sdk/commit/295297afe8433b6f304d7355b0ade857a9a30538)]:
+  - miniflare@4.20260305.0
+
 ## 4.68.1
 
 ### Patch Changes
