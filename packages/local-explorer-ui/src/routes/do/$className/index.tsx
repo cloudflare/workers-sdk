@@ -134,9 +134,7 @@ function NamespaceView() {
 										<th className="text-left px-4 py-3 font-medium text-text-secondary border-b border-border">
 											Object ID
 										</th>
-										<th className="text-right px-4 py-3 font-medium text-text-secondary border-b border-border">
-											Actions
-										</th>
+										<th className="text-right px-4 py-3 font-medium text-text-secondary border-b border-border" />
 									</tr>
 								</thead>
 								<tbody>
