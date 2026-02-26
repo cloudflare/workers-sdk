@@ -8,6 +8,7 @@ import {
 import {
 	ApiError,
 	getAndValidateRegistryType,
+	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import {
@@ -491,6 +492,13 @@ async function registryCredentialsCommand(credentialsArgs: {
 	push?: boolean;
 	pull?: boolean;
 }) {
+	const cloudflareRegistry = getCloudflareContainerRegistry();
+	if (credentialsArgs.DOMAIN !== cloudflareRegistry) {
+		throw new UserError(
+			`The credentials command only works with the Cloudflare managed registry (${cloudflareRegistry}).`
+		);
+	}
+
 	if (!credentialsArgs.pull && !credentialsArgs.push) {
 		throw new UserError(
 			"You have to specify either --push or --pull in the command."

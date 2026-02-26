@@ -673,10 +673,19 @@ describe("containers registries credentials", () => {
 		msw.resetHandlers();
 	});
 
+	it("should reject non-Cloudflare registry domains", async () => {
+		setIsTTY(false);
+		await expect(
+			runWrangler("containers registries credentials example.com --push")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The credentials command only works with the Cloudflare managed registry (registry.cloudflare.com).]`
+		);
+	});
+
 	it("should require --push or --pull", async () => {
 		setIsTTY(false);
 		await expect(
-			runWrangler("containers registries credentials registry.example.com")
+			runWrangler("containers registries credentials registry.cloudflare.com")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: You have to specify either --push or --pull in the command.]`
 		);
@@ -684,10 +693,10 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with --push", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.example.com", "test-password");
+		mockGenerateCredentials("registry.cloudflare.com", "test-password");
 
 		await runWrangler(
-			"containers registries credentials registry.example.com --push"
+			"containers registries credentials registry.cloudflare.com --push"
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
@@ -695,10 +704,10 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with --pull", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.example.com", "test-password");
+		mockGenerateCredentials("registry.cloudflare.com", "test-password");
 
 		await runWrangler(
-			"containers registries credentials registry.example.com --pull"
+			"containers registries credentials registry.cloudflare.com --pull"
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
@@ -706,10 +715,10 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with both --push and --pull", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.example.com", "jwt-token");
+		mockGenerateCredentials("registry.cloudflare.com", "jwt-token");
 
 		await runWrangler(
-			"containers registries credentials registry.example.com --push --pull"
+			"containers registries credentials registry.cloudflare.com --push --pull"
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`"jwt-token"`);
@@ -717,10 +726,14 @@ describe("containers registries credentials", () => {
 
 	it("should support custom expiration-minutes", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.example.com", "custom-expiry-token", 30);
+		mockGenerateCredentials(
+			"registry.cloudflare.com",
+			"custom-expiry-token",
+			30
+		);
 
 		await runWrangler(
-			"containers registries credentials registry.example.com --push --expiration-minutes=30"
+			"containers registries credentials registry.cloudflare.com --push --expiration-minutes=30"
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
