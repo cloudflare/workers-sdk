@@ -382,9 +382,14 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		// The magic proxy client (used by getPlatformProxy) will always specify an operation
-		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
-		if (isProxy) return handleProxy(request, env);
+		// The magic proxy client (used by getPlatformProxy)
+		if (new URL(request.url).pathname === CorePaths.PLATFORM_PROXY) {
+			if (request.headers.get(CoreHeaders.OP) !== null) {
+				return handleProxy(request, env);
+			}
+
+			return new Response("Invalid proxy request", { status: 400 });
+		}
 
 		// `dispatchFetch()` will always inject this header. When
 		// calling this function, we never want to display the pretty-error page.
