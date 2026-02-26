@@ -7,9 +7,25 @@ import {
 	useRef,
 	useState,
 } from "react";
-import type { ComponentProps, PropsWithChildren } from "react";
+import type { Icon } from "@phosphor-icons/react";
+import type { PropsWithChildren, ReactNode } from "react";
 
-type DropdownItemBuilderProps = ComponentProps<typeof DropdownMenu.Content>;
+interface DropdownButtonItem {
+	destructiveAction?: boolean;
+	disabled?: boolean;
+	icon?: Icon;
+	label: ReactNode;
+	onClick?: () => void;
+	shortcut?: string;
+	sub?: DropdownItemBuilderProps[];
+	type: "button";
+}
+
+interface DropdownDividerItem {
+	type: "divider";
+}
+
+export type DropdownItemBuilderProps = DropdownButtonItem | DropdownDividerItem;
 
 type OnOpenChangeHandler = (open: boolean) => void;
 
