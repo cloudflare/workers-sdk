@@ -197,8 +197,11 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		path: string // Including query parameters
 	) {
 		// Reconstruct URL using runtime origin specified with `dispatchFetch()`
-		const originalURL = this.userRuntimeOrigin + path;
-		headers.set(CoreHeaders.ORIGINAL_URL, originalURL);
+		// Only set if not already present (e.g., set by #fetcherFetchCall in proxy client)
+		if (!headers.has(CoreHeaders.ORIGINAL_URL)) {
+			const originalURL = this.userRuntimeOrigin + path;
+			headers.set(CoreHeaders.ORIGINAL_URL, originalURL);
+		}
 		headers.set(CoreHeaders.DISABLE_PRETTY_ERROR, "true");
 		if (this.cfBlobJson !== undefined) {
 			// Only add this header if a `cf` override was set
