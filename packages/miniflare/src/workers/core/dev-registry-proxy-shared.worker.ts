@@ -6,20 +6,18 @@ import { DurableObject } from "cloudflare:workers";
 // These interfaces mirror the workerd debug port RPC API.
 // See https://github.com/cloudflare/workerd/blob/main/src/workerd/server/server.c++
 export interface WorkerdDebugPortConnector {
-	connect(address: string): Promise<WorkerdDebugPortClient>;
+	connect(address: string): WorkerdDebugPortClient;
 }
 
 export interface WorkerdDebugPortClient {
+	// These return sync Fetchers via Cap'n Proto pipelining — the actual RPC
+	// resolution is deferred until the Fetcher is first used (e.g. fetch()).
 	getEntrypoint(
 		service: string,
 		entrypoint?: string,
 		props?: Record<string, unknown>
-	): Promise<Fetcher>;
-	getActor(
-		service: string,
-		entrypoint: string,
-		actorId: string
-	): Promise<Fetcher>;
+	): Fetcher;
+	getActor(service: string, entrypoint: string, actorId: string): Fetcher;
 }
 
 export interface RegistryEntry {
@@ -28,131 +26,43 @@ export interface RegistryEntry {
 	userWorkerService: string;
 }
 
-export interface ProxyEnv {
-	DEV_REGISTRY: Fetcher;
-	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
+// Module-level registry map. Populated and kept current via setRegistry()
+// when Miniflare pushes data through the entry socket.
+let registry = new Map<string, RegistryEntry>();
+
+/**
+ * Replace the in-memory registry map with new data. Called by the proxy
+ * worker's default fetch handler when Miniflare pushes an update.
+ */
+export function setRegistry(data: Record<string, RegistryEntry>): void {
+	registry = new Map(Object.entries(data));
 }
 
 /**
- * Resolve a worker name to its registry entry by fetching from the
- * DiskDirectory service that exposes the dev registry directory.
- * Returns null if the worker is not registered (404) or if the
- * registry file is unreadable (e.g. mid-write, corrupted, stale format).
+ * Resolve a worker name to its registry entry.
  */
-export async function resolveTarget(
-	env: ProxyEnv,
-	service: string
-): Promise<RegistryEntry | null> {
-	const resp = await env.DEV_REGISTRY.fetch(`http://dummy/${service}`);
-	if (resp.status === 404) {
-		return null;
-	}
-	if (!resp.ok) {
-		console.warn(
-			`[dev-registry] Unexpected status ${resp.status} resolving service "${service}"`
-		);
-		return null;
-	}
-
-	let entry: RegistryEntry;
-	try {
-		entry = await resp.json();
-	} catch {
-		// File may be mid-write or corrupted — treat as not yet available.
-		console.warn(
-			`[dev-registry] Failed to parse registry entry for service "${service}"`
-		);
-		return null;
-	}
-
-	// Validate shape and required fields — the JSON comes from disk and may
-	// be stale, corrupted, or from an older version that doesn't include all fields.
-	if (
-		!entry ||
-		typeof entry !== "object" ||
-		!entry.debugPortAddress ||
-		!entry.defaultEntrypointService ||
-		!entry.userWorkerService
-	) {
-		return null;
-	}
-
-	return entry;
+export function resolveTarget(service: string): RegistryEntry | null {
+	return registry.get(service) ?? null;
 }
 
 /**
  * Connect to a Durable Object actor on a remote workerd instance via the debug port.
- * Returns the Fetcher for the actor, or null if the target worker is not registered.
+ * All calls are synchronous via Cap'n Proto pipelining — the actual network
+ * round-trip is deferred until the returned Fetcher is first used.
  */
-export async function connectToActor(
-	env: ProxyEnv,
+export function connectToActor(
+	debugPort: WorkerdDebugPortConnector,
 	scriptName: string,
 	className: string,
 	actorId: string
-): Promise<Fetcher | null> {
-	const target = await resolveTarget(env, scriptName);
+): Fetcher | null {
+	const target = resolveTarget(scriptName);
 	if (!target) {
 		return null;
 	}
-	const client = await env.DEV_REGISTRY_DEBUG_PORT.connect(
-		target.debugPortAddress
-	);
+	const client = debugPort.connect(target.debugPortAddress);
 	// DOs are defined on the user worker, not behind the assets/vite proxy.
 	return client.getActor(target.userWorkerService, className, actorId);
-}
-
-/**
- * Creates a Proxy handler that forwards arbitrary RPC method calls and property
- * access through an async fetcher. Each property access returns a callable+thenable
- * value to support both `stub.method()` and `await stub.property`.
- *
- * The async fetcher is needed because the remote is resolved via the debug port
- * at call time — there's no static target to Reflect.get against.
- */
-export function createRpcProxyHandler<T extends object>(
-	getFetcher: () => Promise<Fetcher>,
-	errorContext: string
-): ProxyHandler<T> {
-	return {
-		get(target, prop) {
-			if (Reflect.has(target, prop)) {
-				const value = Reflect.get(target, prop);
-				if (typeof value === "function") {
-					return value.bind(target);
-				}
-				return value;
-			}
-			if (typeof prop === "string") {
-				const methodName = prop;
-				const rpcCall = async function (...args: unknown[]) {
-					const fetcher = await getFetcher();
-					const method = (
-						fetcher as unknown as Record<string, (...a: unknown[]) => unknown>
-					)[methodName];
-					if (typeof method !== "function") {
-						throw new Error(
-							`Method "${methodName}" not found on ${errorContext}`
-						);
-					}
-					return Reflect.apply(method, fetcher, args);
-				};
-				rpcCall.then = (
-					resolve: (v: unknown) => void,
-					reject: (e: unknown) => void
-				) => {
-					getFetcher()
-						.then((fetcher) =>
-							Promise.resolve(
-								(fetcher as unknown as Record<string, unknown>)[methodName]
-							)
-						)
-						.then(resolve, reject);
-				};
-				return rpcCall;
-			}
-			return undefined;
-		},
-	};
 }
 
 export function createProxyDurableObjectClass({
@@ -163,37 +73,46 @@ export function createProxyDurableObjectClass({
 	className: string;
 }): typeof DurableObject {
 	return class extends DurableObject {
-		constructor(ctx: DurableObjectState, env: ProxyEnv) {
+		_debugPort: WorkerdDebugPortConnector;
+		_actorId: string;
+
+		constructor(
+			ctx: DurableObjectState,
+			env: { DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector }
+		) {
 			super(ctx, env);
-			const getFetcher = async (): Promise<Fetcher> => {
-				const fetcher = await connectToActor(
-					env,
-					scriptName,
-					className,
-					ctx.id.toString()
-				);
-				if (!fetcher) {
-					throw new Error(
-						`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`
+			this._debugPort = env.DEV_REGISTRY_DEBUG_PORT;
+			this._actorId = ctx.id.toString();
+
+			return new Proxy(this, {
+				get(target, prop) {
+					if (Reflect.has(target, prop)) {
+						return Reflect.get(target, prop);
+					}
+					const fetcher = connectToActor(
+						target._debugPort,
+						scriptName,
+						className,
+						target._actorId
 					);
-				}
-				return fetcher;
-			};
-			return new Proxy(
-				this,
-				createRpcProxyHandler(
-					getFetcher,
-					`remote Durable Object "${className}" of service "${scriptName}"`
-				)
-			);
+					if (!fetcher) {
+						return () => {
+							throw new Error(
+								`Cannot access "${String(prop)}" as we couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to.`
+							);
+						};
+					}
+					return Reflect.get(fetcher, prop);
+				},
+			});
 		}
 
 		async fetch(request: Request): Promise<Response> {
-			const fetcher = await connectToActor(
-				this.env as ProxyEnv,
+			const fetcher = connectToActor(
+				this._debugPort,
 				scriptName,
 				className,
-				this.ctx.id.toString()
+				this._actorId
 			);
 			if (!fetcher) {
 				return new Response(
@@ -201,14 +120,7 @@ export function createProxyDurableObjectClass({
 					{ status: 503 }
 				);
 			}
-			try {
-				return await fetcher.fetch(request);
-			} catch (e) {
-				return new Response(
-					`Error connecting to Durable Object "${className}" of "${scriptName}": ${e instanceof Error ? e.message : String(e)}`,
-					{ status: 502 }
-				);
-			}
+			return fetcher.fetch(request);
 		}
 	} as unknown as typeof DurableObject;
 }

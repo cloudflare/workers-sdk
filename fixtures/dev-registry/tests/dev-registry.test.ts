@@ -373,7 +373,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 			expect(response.status).toBe(500);
 			expect(await response.text()).toContain(
-				`Couldn't find a local dev session for Durable Object "TestObject" of service "internal-durable-object" to proxy to`
+				`couldn't find a local dev session for Durable Object "TestObject" of service "internal-durable-object" to proxy to.`
 			);
 		}, waitForTimeout);
 

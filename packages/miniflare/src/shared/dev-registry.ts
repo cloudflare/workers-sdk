@@ -71,7 +71,12 @@ export class DevRegistry {
 
 		if (!this.watcher) {
 			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
-			this.refresh();
+			// Do the initial refresh silently (without triggering onUpdate).
+			// The caller (Miniflare) reads getRegistry() right after watch() to
+			// populate JSON bindings, so the cache must be up-to-date. But we
+			// don't want to fire onUpdate here — that would queue a redundant
+			// config reassembly since the caller is already assembling config.
+			this.refresh(/* silent */ true);
 		}
 	}
 
@@ -129,6 +134,12 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
+	/** Returns the current cached registry state. Used to populate JSON bindings
+	 * on the proxy worker so it can resolve targets synchronously. */
+	public getRegistry(): WorkerRegistry {
+		return this.registry;
+	}
+
 	/** Returns the filesystem path for the dev registry directory, or undefined if disabled. */
 	public getRegistryPath(): string | undefined {
 		return this.registryPath;
@@ -180,7 +191,7 @@ export class DevRegistry {
 		}
 	}
 
-	private refresh(): void {
+	private refresh(silent = false): void {
 		if (!this.registryPath) {
 			return;
 		}
@@ -189,14 +200,19 @@ export class DevRegistry {
 			this.unregister(workerName);
 		});
 
-		// Only trigger callback if there are actual changes to services we care about
-		if (this.onUpdate) {
-			// Check only external services (ones we're bound to) for changes
-			// This prevents unnecessary callback triggers for unrelated registry updates
+		// Check if any external services we depend on have changed
+		const previousRegistry = this.registry;
+
+		// Update the cached registry *before* calling onUpdate, so that
+		// getRegistry() returns the new state during config reassembly
+		// (which reads the registry to populate JSON bindings).
+		this.registry = registry;
+
+		if (!silent && this.onUpdate) {
 			for (const [service] of this.externalServices) {
 				if (
 					JSON.stringify(registry[service]) !==
-					JSON.stringify(this.registry[service])
+					JSON.stringify(previousRegistry[service])
 				) {
 					// A service we depend on has changed, notify listeners
 					// Provide a deep copy to prevent accidental mutations by consumers
@@ -205,9 +221,6 @@ export class DevRegistry {
 				}
 			}
 		}
-
-		// Update our cached registry state
-		this.registry = registry;
 	}
 }
 

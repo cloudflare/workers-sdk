@@ -1001,6 +1001,8 @@ export interface GlobalServicesOptions {
 	proxyBindings: Worker_Binding[];
 	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
 	durableObjectClassNames: DurableObjectClassNames;
+	/** Service name for the dev registry proxy worker, if external services are configured */
+	devRegistryProxyServiceName?: string;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1010,6 +1012,7 @@ export function getGlobalServices({
 	log,
 	proxyBindings,
 	durableObjectClassNames,
+	devRegistryProxyServiceName,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1082,6 +1085,12 @@ export function getGlobalServices({
 		serviceEntryBindings.push({
 			name: CoreBindings.DATA_LIVE_RELOAD_SCRIPT,
 			data: encoder.encode(liveReloadScript),
+		});
+	}
+	if (devRegistryProxyServiceName) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_DEV_REGISTRY_PROXY,
+			service: { name: devRegistryProxyServiceName },
 		});
 	}
 	const services: Service[] = [

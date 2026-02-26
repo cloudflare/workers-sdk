@@ -238,7 +238,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -271,7 +271,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+					`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -309,7 +309,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to`
+			`Cannot access "ping" as we couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -341,7 +341,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to`
+					`Cannot access "ping" as we couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -462,7 +462,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+						`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 					);
 				}
 			},
@@ -500,7 +500,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+						`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 					);
 				}
 			},
@@ -753,7 +753,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toContain(
-			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+			`couldn't find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -1005,7 +1005,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -1034,7 +1034,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+					`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 				);
 				expect(res.status).toBe(500);
 			},

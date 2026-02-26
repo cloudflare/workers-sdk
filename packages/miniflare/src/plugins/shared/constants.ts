@@ -20,20 +20,8 @@ export function getDirectSocketName(workerIndex: number, entrypoint: string) {
 // Service looping back to Miniflare's Node.js process (for storage, etc)
 export const SERVICE_LOOPBACK = "loopback";
 
-// Service for the dev registry proxy worker (routes cross-process service bindings)
-export const SERVICE_DEV_REGISTRY_PROXY = "core:dev-registry-proxy";
-
-// Disk service exposing the dev registry directory for direct file reads
-export const SERVICE_DEV_REGISTRY_DISK = "core:dev-registry-disk";
-
-// Binding name for the dev registry disk service on proxy workers
-export const BINDING_DEV_REGISTRY_DISK = "DEV_REGISTRY";
-
-// Worker_Binding for the dev registry disk service (reusable across proxy workers)
-export const WORKER_BINDING_DEV_REGISTRY_DISK: Worker_Binding = {
-	name: BINDING_DEV_REGISTRY_DISK,
-	service: { name: SERVICE_DEV_REGISTRY_DISK },
-};
+// Service for the dev registry proxy worker (routes cross-process service bindings and DO proxies).
+export const SERVICE_DEV_REGISTRY_PROXY = "core:user:dev-registry-proxy";
 
 // Special host to use for Cap'n Proto connections. This is required to use
 // JS RPC over `external` services in Wrangler's service registry.
