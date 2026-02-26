@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { useStudioContext } from "../Context";
 import { StudioWindowTab } from ".";
 import type { StudioWindowTabItem } from "./types";
-import type { JSX } from "react";
 
 export function StudioWindowTabPane(): JSX.Element {
 	const {

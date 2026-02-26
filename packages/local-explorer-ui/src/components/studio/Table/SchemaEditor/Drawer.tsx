@@ -1,6 +1,6 @@
 import { cn } from "@cloudflare/kumo";
 import { createContext, useContext, useEffect, useRef } from "react";
-import type { JSX, PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 
 interface DrawerProps {
 	children?: ReactNode;

@@ -1,5 +1,3 @@
-import type { JSX } from "react";
-
 interface CodeBlockProps {
 	code: string;
 	language?: string;

@@ -15,7 +15,6 @@ import type {
 import type { StudioContextValue } from "./Context";
 import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
-import type { JSX } from "react";
 
 /**
  * Default schema name for SQLite/D1 databases

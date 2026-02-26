@@ -3,7 +3,6 @@ import { StudioTabContentWrapper } from "./ContentWrapper";
 import { StudioWindowTabItemRenderer } from "./ItemRenderer";
 import { StudioWindowTabMenu } from "./MenuProps";
 import type { BeforeTabClosingHandler, StudioWindowTabItem } from "./types";
-import type { JSX } from "react";
 
 export interface StudioWindowTabProps {
 	onDoubleClick?: (tab: StudioWindowTabItem) => void;

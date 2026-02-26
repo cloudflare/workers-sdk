@@ -2,7 +2,6 @@ import { cn } from "@cloudflare/kumo";
 import { useCallback } from "react";
 import { StudioCurrentWindowTabContext } from "./Context";
 import type { BeforeTabClosingHandler, StudioWindowTabItem } from "./types";
-import type { JSX } from "react";
 
 interface StudioTabContentWrapperProps {
 	beforeClosingHandlersRef: React.RefObject<

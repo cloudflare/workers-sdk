@@ -6,7 +6,6 @@ import { StudioWhereParser } from "../../utils/studio/where-parser";
 import { StudioSQLWhereEditor } from "./SQLWhereEditor";
 import type { IStudioDriver } from "../../types/studio";
 import type { StudioCodeMirrorReference } from "./Code/Mirror";
-import type { JSX } from "react";
 
 const SQLiteScalarFunctions = [
 	"abs",

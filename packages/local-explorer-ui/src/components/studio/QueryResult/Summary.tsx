@@ -5,7 +5,6 @@ import type {
 	StudioMultipleQueryProgress,
 	StudioResultStat,
 } from "../../../types/studio";
-import type { JSX } from "react";
 
 interface StudioQueryResultSummaryProps {
 	progress: StudioMultipleQueryProgress;

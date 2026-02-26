@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useState } from "react";
-import type { ComponentType, JSX, PropsWithChildren } from "react";
+import type { ComponentType, PropsWithChildren } from "react";
 
 interface ModalInjectedProps {
 	closeModal: () => void;

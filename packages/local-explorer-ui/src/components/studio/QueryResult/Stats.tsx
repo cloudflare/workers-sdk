@@ -2,7 +2,7 @@ import { Tooltip } from "@cloudflare/kumo";
 import { QuestionIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import type { StudioResultStat } from "../../../types/studio";
-import type { JSX, ReactElement } from "react";
+import type { ReactElement } from "react";
 
 function formatDuration(duration: number): string {
 	if (duration < 1000) {

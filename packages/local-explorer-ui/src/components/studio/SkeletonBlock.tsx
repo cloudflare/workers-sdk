@@ -1,5 +1,4 @@
 import { cn } from "@cloudflare/kumo";
-import type { JSX } from "react";
 
 interface SkeletonBlockProps extends React.HTMLAttributes<HTMLDivElement> {
 	height?: number | string;

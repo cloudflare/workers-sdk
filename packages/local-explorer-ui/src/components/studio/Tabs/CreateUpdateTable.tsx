@@ -7,7 +7,6 @@ import type {
 	StudioTableSchema,
 	StudioTableSchemaChange,
 } from "../../../types/studio";
-import type { JSX } from "react";
 
 interface StudioEditTableTabProps {
 	schemaName?: string;
