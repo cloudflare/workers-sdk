@@ -60,11 +60,13 @@ export const StudioDeleteConfirmationModal = ({
 		>
 			<Dialog className="p-6">
 				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
 					<Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
 				</div>
 
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
+						{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
 						<Dialog.Description className="text-kumo-subtle">
 							{body}
 						</Dialog.Description>

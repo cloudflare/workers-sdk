@@ -45,11 +45,13 @@ export function StudioCommitConfirmation({
 		>
 			<Dialog className="p-6">
 				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
 					<Dialog.Title className="text-2xl font-semibold">
 						Review and Confirm Changes
 					</Dialog.Title>
 				</div>
 
+				{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
 				<Dialog.Description className="text-kumo-subtle">
 					<div className="flex flex-col gap-4 text-sm">
 						{!!errorMessage && (
