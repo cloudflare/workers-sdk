@@ -1,3 +1,4 @@
+import { formatSqlError } from "./formatter";
 import type {
 	StudioTableState,
 	StudioTableStateRow,
@@ -50,7 +51,7 @@ export async function commitStudioTableChanges({
 		);
 	} catch (e) {
 		return {
-			errorMessage: e instanceof Error ? e.message : String(e),
+			errorMessage: formatSqlError(e),
 		};
 	}
 

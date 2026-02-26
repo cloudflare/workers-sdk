@@ -1,4 +1,4 @@
-import { getStudioTableNameFromSQL } from "./formatter";
+import { formatSqlError, getStudioTableNameFromSQL } from "./formatter";
 import type {
 	IStudioDriver,
 	StudioMultipleQueryProgress,
@@ -185,7 +185,7 @@ export async function runStudioMultipleSQLStatements(
 			reportProgress(i + 1);
 		} catch (e) {
 			logEntry.end = Date.now();
-			logEntry.error = (e as Error).toString();
+			logEntry.error = formatSqlError(e);
 
 			reportProgress(i + 1, true);
 			break;

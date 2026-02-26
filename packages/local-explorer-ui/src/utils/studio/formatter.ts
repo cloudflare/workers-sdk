@@ -332,3 +332,53 @@ export function getStudioTableNameFromSQL(sql: string): string {
 		return "";
 	}
 }
+
+/**
+ * Extracts a human-readable error message from various error types.
+ *
+ * Handles:
+ * - Cloudflare API error responses (D1, KV, Workers) with `errors` array
+ * - Plain strings
+ * - Standard Error instances
+ * - Unknown values (falls back to String conversion)
+ *
+ * @param e - The caught error value
+ *
+ * @returns A human-readable error message string
+ */
+export function formatSqlError(e: unknown): string {
+	if (e instanceof Error) {
+		return e.message;
+	}
+
+	// Handle Cloudflare API error responses (D1ApiResponseCommonFailure, etc.)
+	// These have the structure: { errors: Array<{ code: number; message: string }>, ... }
+	if (typeof e === "object" && e !== null && "errors" in e) {
+		const errors = (
+			e as {
+				errors: Array<{
+					message: string;
+				}>;
+			}
+		).errors;
+		if (Array.isArray(errors) && errors.length > 0 && errors[0]?.message) {
+			return errors[0].message;
+		}
+	}
+
+	if (typeof e === "string") {
+		return e;
+	}
+
+	// Fallback: attempt to stringify, but avoid "[object Object]"
+	try {
+		const str = String(e);
+		if (str === "[object Object]") {
+			return JSON.stringify(e);
+		}
+
+		return str;
+	} catch {
+		return "Unknown error";
+	}
+}

@@ -1,6 +1,7 @@
 import { Button, Dialog } from "@cloudflare/kumo";
 import { PlayIcon, SpinnerIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { formatSqlError } from "../../../utils/studio/formatter";
 import { CodeBlock } from "../Code/Block";
 
 interface StudioCommitConfirmationProps {
@@ -27,11 +28,7 @@ export function StudioCommitConfirmation({
 			await onConfirm();
 			closeModal();
 		} catch (err) {
-			if (err instanceof Error) {
-				setErrorMessage(err.message);
-			} else {
-				setErrorMessage(String(err));
-			}
+			setErrorMessage(formatSqlError(err));
 		} finally {
 			setIsRequesting(false);
 		}

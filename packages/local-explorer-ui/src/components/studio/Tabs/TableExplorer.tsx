@@ -13,6 +13,7 @@ import {
 	buildStudioMutationPlans,
 	commitStudioTableChanges,
 } from "../../../utils/studio/commit";
+import { formatSqlError } from "../../../utils/studio/formatter";
 import { useStudioContext } from "../Context";
 import { useModal } from "../Modal";
 import { StudioCommitConfirmation } from "../Modal/CommitConfirmation";
@@ -182,7 +183,7 @@ export function StudioTableExplorerTab({
 
 			setSchema(fetchedSchema);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
+			setError(formatSqlError(err));
 		} finally {
 			setLoading(false);
 		}
@@ -381,11 +382,7 @@ export function StudioTableExplorerTab({
 				),
 			});
 		} catch (e) {
-			if (e instanceof Error) {
-				alert(e.message);
-			} else {
-				alert(String(e));
-			}
+			alert(formatSqlError(e));
 		}
 	}, [driver, tableName, schema, state, openModal]);
 
