@@ -29,6 +29,8 @@ type BaseErrorEvent<Source = string, Data = undefined> = {
 };
 
 export function castErrorCause(cause: unknown) {
+	debugger;
+
 	if (cause instanceof Error) {
 		return cause;
 	}
