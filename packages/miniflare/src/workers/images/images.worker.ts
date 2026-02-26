@@ -1,4 +1,5 @@
-// In-memory mock for Images binding CRUD operations
+// KV-backed mock for Images binding CRUD operations
+// Image data is stored as KV values, metadata as KV metadata
 // Transforms and info operations are handled via HTTP loopback to Node.js Sharp
 
 import { WorkerEntrypoint } from "cloudflare:workers";
@@ -44,14 +45,9 @@ interface ImageList {
 }
 
 interface Env {
+	IMAGES_STORE: KVNamespace;
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 }
-
-// In-memory store for mock images (per-isolate, not persisted)
-const imageStore = new Map<
-	string,
-	{ metadata: ImageMetadata; data: Uint8Array }
->();
 
 function base64DecodeArrayBuffer(buffer: ArrayBuffer): ArrayBuffer {
 	const decoder = new TextDecoder();
@@ -67,8 +63,6 @@ function base64DecodeArrayBuffer(buffer: ArrayBuffer): ArrayBuffer {
 async function base64DecodeStream(
 	stream: ReadableStream<Uint8Array>
 ): Promise<ArrayBuffer> {
-	// Simple buffered approach: read entire stream, then decode
-	// Could be optimized with streaming decode if memory becomes a concern
 	const response = new Response(stream);
 	const buffer = await response.arrayBuffer();
 	return base64DecodeArrayBuffer(buffer);
@@ -76,16 +70,19 @@ async function base64DecodeStream(
 
 export default class ImagesService extends WorkerEntrypoint<Env> {
 	async details(imageId: string): Promise<ImageMetadata | null> {
-		const image = imageStore.get(imageId);
-		return image?.metadata ?? null;
+		const result = await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+			imageId,
+			"arrayBuffer"
+		);
+		return result.metadata ?? null;
 	}
 
 	async image(imageId: string): Promise<ReadableStream<Uint8Array> | null> {
-		const image = imageStore.get(imageId);
-		if (!image) {
+		const data = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
+		if (data === null) {
 			return null;
 		}
-		return new Blob([image.data]).stream();
+		return new Blob([data]).stream();
 	}
 
 	async upload(
@@ -105,7 +102,6 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 				? imageData
 				: await new Response(imageData).arrayBuffer();
 
-		const data = new Uint8Array(buffer);
 		const id = options?.id ?? crypto.randomUUID();
 
 		const metadata: ImageMetadata = {
@@ -119,7 +115,7 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 			creator: options?.creator,
 		};
 
-		imageStore.set(id, { metadata, data });
+		await this.env.IMAGES_STORE.put(id, buffer, { metadata });
 		return metadata;
 	}
 
@@ -127,93 +123,86 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		imageId: string,
 		options: ImageUpdateOptions
 	): Promise<ImageMetadata> {
-		const image = imageStore.get(imageId);
-		if (!image) {
+		const existing = await this.env.IMAGES_STORE.getWithMetadata<ImageMetadata>(
+			imageId,
+			"arrayBuffer"
+		);
+		if (existing.value === null || existing.metadata === null) {
 			throw new Error(`Image not found: ${imageId}`);
 		}
 
 		const updatedMetadata: ImageMetadata = {
-			...image.metadata,
+			...existing.metadata,
 			requireSignedURLs:
-				options.requireSignedURLs ?? image.metadata.requireSignedURLs,
-			meta: options.metadata ?? image.metadata.meta,
-			creator: options.creator ?? image.metadata.creator,
+				options.requireSignedURLs ?? existing.metadata.requireSignedURLs,
+			meta: options.metadata ?? existing.metadata.meta,
+			creator: options.creator ?? existing.metadata.creator,
 		};
 
-		imageStore.set(imageId, { ...image, metadata: updatedMetadata });
+		await this.env.IMAGES_STORE.put(imageId, existing.value, {
+			metadata: updatedMetadata,
+		});
 		return updatedMetadata;
 	}
 
 	async delete(imageId: string): Promise<boolean> {
-		return imageStore.delete(imageId);
+		const existing = await this.env.IMAGES_STORE.get(imageId, "arrayBuffer");
+		if (existing === null) {
+			return false;
+		}
+		await this.env.IMAGES_STORE.delete(imageId);
+		return true;
 	}
 
 	async list(options?: ImageListOptions): Promise<ImageList> {
-		let images = Array.from(imageStore.values()).map((i) => i.metadata);
+		const limit = options?.limit ?? 50;
+
+		// Fetch all keys so we can filter and sort accurately
+		const allImages: ImageMetadata[] = [];
+		let kvCursor: string | undefined;
+		do {
+			const kvResult = await this.env.IMAGES_STORE.list<ImageMetadata>({
+				cursor: kvCursor,
+			});
+			for (const key of kvResult.keys) {
+				if (key.metadata) {
+					allImages.push(key.metadata);
+				}
+			}
+			kvCursor = kvResult.list_complete ? undefined : kvResult.cursor;
+		} while (kvCursor);
 
 		if (options?.creator) {
-			images = images.filter((i) => i.creator === options.creator);
+			allImages.splice(
+				0,
+				allImages.length,
+				...allImages.filter((i) => i.creator === options.creator)
+			);
 		}
-		// Sort by uploaded date, then by ID as a tie-breaker for deterministic ordering
-		// This matches production behavior while ensuring stable sort order in tests
-		images.sort((a, b) => {
+
+		allImages.sort((a, b) => {
 			const dateA = a.uploaded ?? "";
 			const dateB = b.uploaded ?? "";
-			const dateCompare =
-				options?.sortOrder === "desc"
-					? dateB.localeCompare(dateA)
-					: dateA.localeCompare(dateB);
-
-			// Use ID as tie-breaker when dates are equal
-			if (dateCompare === 0) {
-				return options?.sortOrder === "desc"
-					? b.id.localeCompare(a.id)
-					: a.id.localeCompare(b.id);
-			}
-			return dateCompare;
+			const cmp = dateA.localeCompare(dateB) || a.id.localeCompare(b.id);
+			return options?.sortOrder === "desc" ? -cmp : cmp;
 		});
 
-		// Handle pagination
-		const limit = options?.limit ?? 50;
+		// Handle cursor-based pagination over the sorted/filtered results
 		let startIndex = 0;
-
 		if (options?.cursor) {
-			try {
-				// Decode cursor: base64(timestamp_ms:id)
-				// Format matches production's (created_at, id) tuple, encoded compactly
-				const decoded = atob(options.cursor);
-				const separatorIndex = decoded.indexOf(":");
-				if (separatorIndex === -1) {
-					throw new Error("Invalid cursor format");
-				}
-				const timestampStr = decoded.substring(0, separatorIndex);
-				const id = decoded.substring(separatorIndex + 1);
-				const timestamp = parseInt(timestampStr, 10);
-				const uploadedDate = new Date(timestamp).toISOString();
-
-				const cursorIndex = images.findIndex(
-					(i) => i.uploaded === uploadedDate && i.id === id
-				);
-				if (cursorIndex >= 0) {
-					startIndex = cursorIndex + 1;
-				}
-			} catch {
-				// if invalid cursor, start from beginning
+			const cursorIndex = allImages.findIndex((i) => i.id === options.cursor);
+			if (cursorIndex >= 0) {
+				startIndex = cursorIndex + 1;
 			}
 		}
 
-		const paginatedImages = images.slice(startIndex, startIndex + limit);
-		const hasMore = startIndex + limit < images.length;
-		const lastImage = paginatedImages[paginatedImages.length - 1];
+		const page = allImages.slice(startIndex, startIndex + limit);
+		const hasMore = startIndex + limit < allImages.length;
+		const lastImage = page[page.length - 1];
 
 		return {
-			images: paginatedImages,
-			cursor:
-				hasMore && lastImage
-					? btoa(
-							`${new Date(lastImage.uploaded ?? 0).getTime()}:${lastImage.id}`
-						)
-					: undefined,
+			images: page,
+			cursor: hasMore && lastImage ? lastImage.id : undefined,
 			listComplete: !hasMore,
 		};
 	}

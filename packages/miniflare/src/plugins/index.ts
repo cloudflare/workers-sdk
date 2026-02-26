@@ -144,6 +144,7 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
 	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
+	z.input<typeof IMAGES_PLUGIN.sharedOptions> &
 	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
