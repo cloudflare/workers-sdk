@@ -66,7 +66,10 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			debugger;
-			logger.debug("=> Error contextual data:", JSON.stringify(event.data));
+			logger.debug(
+				"=> Error contextual data:",
+				JSON.stringify(event.data, undefined, 2)
+			);
 		});
 	}
 
@@ -148,7 +151,10 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		) {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			debugger;
-			logger.debug("=> Error contextual data:", JSON.stringify(event.data));
+			logger.debug(
+				"=> Error contextual data:",
+				JSON.stringify(event.data, undefined, 2)
+			);
 		}
 		// Parse errors are recoverable by changing your Wrangler configuration file and saving
 		// All other errors from the ConfigController are non-recoverable
