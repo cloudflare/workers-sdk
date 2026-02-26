@@ -1,3 +1,4 @@
+import { CorePaths } from "../../workers";
 import type {
 	DoRawQueryResult,
 	DoSqlWithParams,
@@ -12,9 +13,9 @@ export const SERVICE_LOCAL_EXPLORER = `${CORE_PLUGIN_NAME}:local-explorer`;
 // Disk service for local explorer UI assets
 export const LOCAL_EXPLORER_DISK = `${CORE_PLUGIN_NAME}:local-explorer-disk`;
 // URL path prefix where the local explorer UI is served
-export const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer";
+export const LOCAL_EXPLORER_BASE_PATH = CorePaths.EXPLORER;
 // URL path prefix for the local explorer API endpoints
-export const LOCAL_EXPLORER_API_PATH = `${LOCAL_EXPLORER_BASE_PATH}/api`;
+export const LOCAL_EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
 // Service prefix for all regular user workers
 const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for `workerd`'s builtin services (network, external, disk)
