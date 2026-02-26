@@ -130,7 +130,11 @@ export const tunnelRunCommand = createCommand({
 
 		process.on("SIGINT", shutdownHandler);
 		process.on("SIGTERM", shutdownHandler);
-		process.on("exit", shutdownHandler);
+
+		const cleanup = () => {
+			process.removeListener("SIGINT", shutdownHandler);
+			process.removeListener("SIGTERM", shutdownHandler);
+		};
 
 		// Handle stderr for cloudflared output
 		if (cloudflared.stderr) {
@@ -144,6 +148,7 @@ export const tunnelRunCommand = createCommand({
 		// This avoids calling process.exit() and lets the command infrastructure handle exit.
 		return new Promise<void>((resolve, reject) => {
 			cloudflared.on("error", (error) => {
+				cleanup();
 				if (isShuttingDown) {
 					resolve();
 					return;
@@ -164,6 +169,7 @@ export const tunnelRunCommand = createCommand({
 			});
 
 			cloudflared.on("exit", (code, signal) => {
+				cleanup();
 				if (isShuttingDown) {
 					logger.log("Tunnel stopped.");
 					resolve();
