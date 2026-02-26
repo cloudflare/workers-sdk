@@ -24,7 +24,7 @@ export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
 	}, [result.result.headers]);
 
 	return (
-		<div className="w-full h-full flex flex-col border-t border-border">
+		<div className="w-full h-full flex flex-col">
 			<div className="grow overflow-hidden">
 				<StudioResultTable state={state} arrangeHeaderIndex={headerIndexList} />
 			</div>
