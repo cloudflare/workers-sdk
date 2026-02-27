@@ -47,6 +47,12 @@
 				"trailingComma": "all",
 				"plugins": []
 			}
+		},
+		{
+			"files": ".changeset/*.md",
+			"options": {
+				"proseWrap": "never"
+			}
 		}
 	]
 }

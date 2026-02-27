@@ -4,11 +4,13 @@ import {
 	deleteDatabase,
 	deleteKVNamespace,
 	deleteProject,
+	deleteR2Bucket,
 	deleteWorker,
 	listTmpDatabases,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
 	listTmpKVNamespaces,
+	listTmpR2Buckets,
 } from "../common";
 
 const originalAccountID = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -344,5 +346,61 @@ describe("deleteWorker()", () => {
 			})
 			.reply(200, JSON.stringify({ result: [] }));
 		await deleteWorker(MOCK_WORKER);
+	});
+});
+
+describe("listTmpR2Buckets()", () => {
+	it("makes a REST request and returns a filtered list of R2 buckets", async () => {
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/r2/buckets`,
+				method: "GET",
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: {
+						buckets: [
+							{ name: "my-bucket-1", creation_date: nowStr },
+							{ name: "my-bucket-2", creation_date: oldTimeStr },
+							{
+								name: "tmp-e2e-abc123-next--workers-opennext-cache",
+								creation_date: nowStr,
+							},
+							{
+								name: "tmp-e2e-def456-next--workers-opennext-cache",
+								creation_date: oldTimeStr,
+							},
+							{ name: "tmp-e2e-project-1", creation_date: nowStr },
+							{ name: "tmp-e2e-project-2", creation_date: oldTimeStr },
+						],
+					},
+					success: true,
+				})
+			);
+
+		const result = await listTmpR2Buckets();
+
+		expect(result.map((b) => b.name)).toMatchInlineSnapshot(`
+			[
+			  "tmp-e2e-def456-next--workers-opennext-cache",
+			  "tmp-e2e-project-2",
+			]
+		`);
+	});
+});
+
+describe("deleteR2Bucket()", () => {
+	it("makes a REST request to delete the given R2 bucket", async () => {
+		const MOCK_BUCKET = "tmp-e2e-abc123-next--workers-opennext-cache";
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/r2/buckets/${MOCK_BUCKET}`,
+				method: "DELETE",
+			})
+			.reply(200, JSON.stringify({ result: [] }));
+		await deleteR2Bucket(MOCK_BUCKET);
 	});
 });
