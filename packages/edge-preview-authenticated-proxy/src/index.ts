@@ -129,15 +129,15 @@ async function handleRequest(
 	const url = new URL(request.url);
 
 	if (isTokenExchangeRequest(request, url, env)) {
-		return handleTokenExchange(url);
+		return await handleTokenExchange(url);
 	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, env, ctx);
+		return await updatePreviewToken(url, env, ctx);
 	}
 
 	if (isRawHttpRequest(url, env)) {
-		return handleRawHttp(request, url);
+		return await handleRawHttp(request, url);
 	}
 
 	/**
