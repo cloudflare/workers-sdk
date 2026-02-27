@@ -14,7 +14,7 @@
 		"@octokit/webhooks-types": "^7.6.1",
 		"@types/semver": "^7.5.1",
 		"empathic": "^2.0.0",
-		"glob": "^11.0.3",
+		"tinyglobby": "^0.2.12",
 		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
 		"undici": "catalog:default",

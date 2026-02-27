@@ -30,7 +30,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
-		"glob": "^10.5.0",
+
 		"html-rewriter-wasm": "^0.4.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
