@@ -5,45 +5,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { CoreBindings, CoreHeaders } from "../core/constants";
 
-interface ImageMetadata {
-	id: string;
-	filename?: string;
-	uploaded?: string;
-	requireSignedURLs: boolean;
-	meta?: Record<string, unknown>;
-	variants: string[];
-	draft?: boolean;
-	creator?: string;
-}
-
-interface ImageUploadOptions {
-	id?: string;
-	filename?: string;
-	requireSignedURLs?: boolean;
-	metadata?: Record<string, unknown>;
-	creator?: string;
-	encoding?: "base64";
-}
-
-interface ImageUpdateOptions {
-	requireSignedURLs?: boolean;
-	metadata?: Record<string, unknown>;
-	creator?: string;
-}
-
-interface ImageListOptions {
-	limit?: number;
-	cursor?: string;
-	sortOrder?: "asc" | "desc";
-	creator?: string;
-}
-
-interface ImageList {
-	images: ImageMetadata[];
-	cursor?: string;
-	listComplete: boolean;
-}
-
 interface Env {
 	IMAGES_STORE: KVNamespace;
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;

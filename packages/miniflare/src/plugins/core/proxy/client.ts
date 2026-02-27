@@ -342,13 +342,16 @@ class ProxyStubHandler<T extends object>
 				},
 			};
 		};
+		const proxy = this.bridge.getProxy(target) as any;
 		const binding = {
 			info: (stream: ReadableStream<Uint8Array>) => {
-				// @ts-expect-error The stream types are mismatched
-				return (this.bridge.getProxy(target) as ImagesBinding)["info"](stream);
+				return proxy["info"](stream);
 			},
 			input: (stream: ReadableStream<Uint8Array>) => {
-				return transformer(this.bridge.getProxy(target), stream, []);
+				return transformer(proxy, stream, []);
+			},
+			get hosted(): ImagesBinding["hosted"] {
+				return proxy["hosted"];
 			},
 		};
 		return binding;
