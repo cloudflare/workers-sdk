@@ -729,13 +729,40 @@ function getWorkerRoutes(
 	return allRoutes;
 }
 
-async function isLocalhostSubdomainSupported(): Promise<boolean> {
-	try {
-		const result = await dns.lookup("test.domain.localhost");
-		return result.address === "127.0.0.1" || result.address === "::1";
-	} catch {
-		return false;
+/**
+ * Checks all actual worker/entrypoint hostnames via DNS lookup (in parallel).
+ * Returns the list of hostnames that don't resolve to loopback.
+ */
+async function getUnresolvedSubdomains(
+	allEntrypointSubdomains: Record<string, Record<string, EntrypointEntry>>
+): Promise<string[]> {
+	const hostnames: string[] = [];
+	for (const [workerName, entrypoints] of Object.entries(
+		allEntrypointSubdomains
+	)) {
+		hostnames.push(`${workerName}.localhost`);
+		for (const alias of Object.keys(entrypoints)) {
+			hostnames.push(`${alias}.${workerName}.localhost`);
+		}
 	}
+
+	const results = await Promise.all(
+		hostnames.map<Promise<[string, string | null]>>(async (hostname) => {
+			try {
+				const result = await dns.lookup(hostname);
+				return [hostname, result.address];
+			} catch {
+				return [hostname, null];
+			}
+		})
+	);
+	return results.reduce<string[]>((unresolved, [hostname, address]) => {
+		if (address !== "127.0.0.1" && address !== "::1") {
+			unresolved.push(hostname);
+		}
+
+		return unresolved;
+	}, []);
 }
 
 type EntrypointEntry = {
@@ -2037,11 +2064,24 @@ export class Miniflare {
 
 		if (allEntrypointSubdomains && !this.#localhostSubdomainChecked) {
 			this.#localhostSubdomainChecked = true;
-			if (!(await isLocalhostSubdomainSupported())) {
+			const unresolved = await getUnresolvedSubdomains(allEntrypointSubdomains);
+			if (unresolved.length > 0) {
+				const maxEntries = 5;
+				const hostsEntries =
+					unresolved
+						.slice(0, maxEntries)
+						.map((h) => `  127.0.0.1 ${h}`)
+						.join("\n") +
+					(unresolved.length > maxEntries
+						? `\n  ... and ${unresolved.length - maxEntries} more`
+						: "");
 				this.#log.warn(
-					"Your system's DNS resolver does not support *.localhost subdomains.\n" +
-						"Localhost entrypoint URLs like http://{entrypoint}.{worker}.localhost will work in\n" +
-						"some browsers (e.g. Chrome, Edge, Firefox) but might not resolve for other tools like curl."
+					`Some .localhost subdomains do not resolve on your system.\n` +
+						`These URLs work in browsers (Chrome, Edge, Firefox) but not in tools like curl or Node.js.\n\n` +
+						`To fix this for all tools, add to /etc/hosts:\n` +
+						`${hostsEntries}\n\n` +
+						`Or for one-off requests, set the Host header manually:\n` +
+						`  curl -H "Host: ${unresolved[0]}" http://localhost:<port>/`
 				);
 			}
 		}
