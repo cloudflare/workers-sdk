@@ -40,23 +40,22 @@ it("mocks POST requests", async () => {
 	server.use(
 		http.post("https://cloudflare.com/path", async ({ request }) => {
 			const text = await request.text();
-			console.log(text);
 			if (text !== "✨") {
-				return HttpResponse.error();
+				return HttpResponse.text("Bad request body", { status: 400 });
 			}
 			return HttpResponse.text("✅");
 		})
 	);
 
-	// Sending a request without the expected body shouldn't match...
+	// Sending a request without the expected body returns an error response...
 	let response = await SELF.fetch("https://example.com/path", {
 		method: "POST",
 		body: "🙃",
 	});
-	expect(response.status).toBe(500);
-	expect(await response.text()).toMatch("TypeError: Failed to fetch");
+	expect(response.status).toBe(400);
+	expect(await response.text()).toBe("Bad request body");
 
-	// ...but the correct body should
+	// ...but the correct body should succeed
 	response = await SELF.fetch("https://example.com/path", {
 		method: "POST",
 		body: "✨",

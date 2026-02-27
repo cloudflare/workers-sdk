@@ -1,7 +1,4 @@
 import assert from "node:assert";
-import { Buffer } from "node:buffer";
-import events from "node:events";
-import process from "node:process";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
@@ -25,8 +22,6 @@ function structuredSerializableParse(value: string): unknown {
 	return devalue.parse(value, structuredSerializableRevivers);
 }
 
-globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
-
 // Mock Service Worker needs this — stub with no-op methods since workerd
 // doesn't provide BroadcastChannel
 globalThis.BroadcastChannel = class {
@@ -39,21 +34,11 @@ globalThis.BroadcastChannel = class {
 	onmessageerror: ((event: unknown) => void) | null = null;
 } as unknown as typeof BroadcastChannel;
 
-globalThis.process = process; // Required by `vite-node`
-process.argv = []; // Required by `@vitest/utils`
 let cwd: string | undefined;
 process.cwd = () => {
 	assert(cwd !== undefined, "Expected cwd to be set");
 	return cwd;
 };
-// Required by vitest/worker
-// @ts-expect-error We don't actually implement `process.memoryUsage()`
-process.memoryUsage = () => ({});
-Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `vitest`
-
-// Vitest needs this
-// @ts-expect-error Apparently this is read-only
-process.versions = { ...process.versions, node: "20.0.0" };
 
 globalThis.__console = console;
 

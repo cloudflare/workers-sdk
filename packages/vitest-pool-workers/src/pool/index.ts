@@ -353,6 +353,8 @@ async function buildProjectWorkerOptions(
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_perf_hooks_module");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_v8_module");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_process_v2");
 
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
@@ -507,11 +509,6 @@ async function buildProjectWorkerOptions(
 			type: "ESModule",
 			path: path.join(modulesRoot, "node:vm"),
 			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/vm.mjs`)),
-		},
-		{
-			type: "ESModule",
-			path: path.join(modulesRoot, "node:v8"),
-			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/v8.mjs`)),
 		},
 	];
 

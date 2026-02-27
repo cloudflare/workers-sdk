@@ -157,7 +157,7 @@ export async function runDurableObjectAlarm(
 			"Failed to execute 'runDurableObjectAlarm': parameter 1 is not of type 'DurableObjectStub'."
 		);
 	}
-	return runInDurableObject(stub, runAlarm);
+	return await runInDurableObject(stub, runAlarm);
 }
 
 /**
