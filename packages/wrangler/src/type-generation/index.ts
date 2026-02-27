@@ -381,7 +381,7 @@ export async function generateEnvTypes(
 
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
 
-	// Determine secrets source: if any config level declares `secrets.required`,
+	// Determine secrets source: if any config level declares `secrets`,
 	// the project is opted into config-based secrets (replaces .dev.vars inference).
 	let secrets: Record<string, string> = {};
 	let perEnvSecrets: Map<string, Record<string, string>> | undefined;
