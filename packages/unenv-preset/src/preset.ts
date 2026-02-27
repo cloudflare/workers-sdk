@@ -121,7 +121,7 @@ export function getCloudflarePreset({
 		alias: {
 			// Alias each native module (and its `node:...` equivalent) to itself to ensure we override any polyfills from the base unenv presets.
 			...Object.fromEntries(
-				nativeModules.map((p) => [
+				nativeModules.flatMap((p) => [
 					[p, p],
 					[`node:${p}`, `node:${p}`],
 				])
@@ -129,19 +129,19 @@ export function getCloudflarePreset({
 
 			// Alias each hybrid module (and its `node:...` equivalent) to its unenv polyfill implementation.
 			...Object.fromEntries(
-				hybridModules.map((m) => [
+				hybridModules.flatMap((m) => [
 					[m, `@cloudflare/unenv-preset/node/${m}`],
 					[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 				])
 			),
 		},
 		inject: {
-			// Set globals, implemented natively by workerd, to `false` to prevent the polyfills from the base unenv presets from being used.
+			// Do not inject globals implemented natively by workerd, by setting the value to `false`.
 			Buffer: false,
 			global: false,
 			clearImmediate: false,
 			setImmediate: false,
-			// Any additional globals that may will be provided by unenv for the current compat date and flags.
+			// Inject globals provided by unenv for the current compat date and flags.
 			...hybridInjects,
 		},
 		polyfill: [...hybridPolyfills],
@@ -157,7 +157,7 @@ export function getCloudflarePreset({
  * - can be enabled with the "enable_nodejs_http_modules" flag
  * - can be disabled with the "disable_nodejs_http_modules" flag
  *
- * The native http server APIS implementation:
+ * The native http server APIs implementation:
  * - is enabled starting from 2025-09-15
  * - can be enabled with the "enable_nodejs_http_server_modules" flag
  * - can be disabled with the "disable_nodejs_http_server_modules" flag
