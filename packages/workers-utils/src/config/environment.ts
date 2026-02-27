@@ -621,6 +621,14 @@ interface EnvironmentInheritable {
 	observability: Observability | undefined;
 
 	/**
+	 * Specify the cache behavior of the Worker.
+	 *
+	 * @inheritable
+	 * @hidden
+	 */
+	cache: CacheOptions | undefined;
+
+	/**
 	 * Specify the compliance region mode of the Worker.
 	 *
 	 * Although if the user does not specify a compliance region, the default is `public`,
@@ -699,6 +707,26 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	vars: Record<string, string | Json>;
+
+	/**
+	 * Secrets configuration.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default undefined
+	 * @nonInheritable
+	 */
+	secrets?: {
+		/**
+		 * List of secret names that are required by your Worker.
+		 * When defined, this property:
+		 * - Replaces .dev.vars/.env inference for type generation
+		 * - Enables deploy-time validation to ensure secrets are configured
+		 * - Enables local dev validation with warnings for missing secrets
+		 */
+		required?: string[];
+	};
 
 	/**
 	 * A list of durable objects that your Worker should be bound to.
@@ -1426,6 +1454,11 @@ export interface Observability {
 		 */
 		destinations?: string[];
 	};
+}
+
+export interface CacheOptions {
+	/** If cache is enabled for this Worker */
+	enabled: boolean;
 }
 
 export type DockerConfiguration = {

@@ -728,8 +728,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							run_worker_first: props.assetsOptions.run_worker_first,
 						}
 					: undefined,
-			logpush: undefined, // both logpush and observability are not supported in versions upload
+			logpush: undefined, // logpush and observability are non-versioned settings
 			observability: undefined,
+			cache: config.cache, // cache is a versioned setting
 		};
 
 		if (config.containers && config.containers.length > 0) {
