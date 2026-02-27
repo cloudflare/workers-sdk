@@ -25,8 +25,9 @@ interface StudioQueryTabProps {
 }
 
 export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
-	const editorRef = useRef<StudioCodeMirrorReference>(null);
 	const { driver, schemas, refreshSchema } = useStudioContext();
+
+	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
 	const [columnNumber, setColumnNumber] = useState<number>(1);
 	const [lineNumber, setLineNumber] = useState<number>(1);
@@ -169,7 +170,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	}, [progress, results, driver]);
 
 	// Select the first result tab when query tabs change
-	useEffect(() => {
+	useEffect((): void => {
 		if (queryTabs && queryTabs.length > 0) {
 			// Synchronizes tab selection after query results change; length check guarantees this exists
 			const [tab] = queryTabs as [StudioWindowTabItem];

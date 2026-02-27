@@ -31,27 +31,6 @@ import type {
 import type { StudioTableState } from "../Table/State";
 import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 
-// import {
-// 	buildStudioMutationPlans,
-// 	commitStudioTableChanges,
-// } from "../../utils/studio/commit";
-// import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
-// import { StudioCommitConfirmation } from "./CommitConfirmation";
-// import { useStudioContext } from "./Context";
-// import { useModal } from "./Modal";
-// import StudioQueryResultStats from "./QueryResultStats";
-// import { StudioResultTable } from "./ResultTable";
-// import { createStudioTableStateFromResult } from "./Table/StateHelpers";
-// import { StudioWhereFilterInput } from "./WhereFilterInput";
-// import { useStudioCurrentWindowTab } from "./WindowTab";
-// import type {
-// 	StudioResultStat,
-// 	StudioSortDirection,
-// 	StudioTableSchema,
-// } from "../../types/studio";
-// import type { StudioResultHeaderMetadata } from "./Table/StateHelpers";
-// import type { StudioTableState } from "./Table/TableState";
-
 interface StudioTableExplorerTabProps {
 	schemaName: string;
 	tableName: string;
@@ -62,7 +41,7 @@ const DEFAULT_PAGE_SIZE = 50;
 export function StudioTableExplorerTab({
 	schemaName,
 	tableName,
-}: StudioTableExplorerTabProps) {
+}: StudioTableExplorerTabProps): JSX.Element {
 	const { driver, schemas } = useStudioContext();
 
 	const [changeNumber, setChangeNumber] = useState<number>(0);

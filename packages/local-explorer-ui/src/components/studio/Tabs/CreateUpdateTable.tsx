@@ -20,7 +20,7 @@ export function StudioCreateUpdateTableTab({
 	const { driver, refreshSchema, replaceStudioTab } = useStudioContext();
 	const { identifier: tabIdentifier } = useStudioCurrentWindowTab();
 
-	const [loading, setLoading] = useState(!!schemaName && !!tableName);
+	const [loading, setLoading] = useState<boolean>(!!schemaName && !!tableName);
 
 	const [value, setValue] = useState<StudioTableSchemaChange>({
 		columns: [],
