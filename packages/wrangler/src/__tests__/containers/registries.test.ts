@@ -693,12 +693,9 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with --push", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials(
-			"registry.cloudflare.com",
-			"test-password",
-			undefined,
-			["push"]
-		);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push"
@@ -709,12 +706,9 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with --pull", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials(
-			"registry.cloudflare.com",
-			"test-password",
-			undefined,
-			["pull"]
-		);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"pull",
+		]);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --pull"
@@ -725,7 +719,7 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with both --push and --pull", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "jwt-token", undefined, [
+		mockGenerateCredentials("registry.cloudflare.com", "jwt-token", 15, [
 			"push",
 			"pull",
 		]);
@@ -755,12 +749,9 @@ describe("containers registries credentials", () => {
 
 	it("should output valid JSON when --json flag is used", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials(
-			"registry.cloudflare.com",
-			"test-password",
-			undefined,
-			["push"]
-		);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push --json"
@@ -825,28 +816,19 @@ const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 const mockGenerateCredentials = (
 	domain: string,
 	password: string,
-	expectedExpirationMinutes?: number,
-	expectedPermissions?: string[]
+	expectedExpirationMinutes: number,
+	expectedPermissions: string[]
 ) => {
 	msw.use(
 		http.post(
 			`*/accounts/:accountId/containers/registries/${domain}/credentials`,
 			async ({ request, params }) => {
-				if (
-					expectedExpirationMinutes !== undefined ||
-					expectedPermissions !== undefined
-				) {
-					const body = (await request.json()) as {
-						expiration_minutes: number;
-						permissions: string[];
-					};
-					if (expectedExpirationMinutes !== undefined) {
-						expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
-					}
-					if (expectedPermissions !== undefined) {
-						expect(body.permissions).toEqual(expectedPermissions);
-					}
-				}
+				const body = (await request.json()) as {
+					expiration_minutes: number;
+					permissions: string[];
+				};
+				expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
+				expect(body.permissions).toEqual(expectedPermissions);
 				return HttpResponse.json(
 					createFetchResult({
 						account_id: params.accountId,
