@@ -491,6 +491,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 	expirationMinutes: number;
 	push?: boolean;
 	pull?: boolean;
+	json?: boolean;
 }) {
 	const cloudflareRegistry = getCloudflareContainerRegistry();
 	if (credentialsArgs.DOMAIN !== cloudflareRegistry) {
@@ -516,7 +517,11 @@ async function registryCredentialsCommand(credentialsArgs: {
 				] as ImageRegistryPermissions[],
 			}
 		);
-	logger.log(credentials.password);
+	if (credentialsArgs.json) {
+		logger.json(credentials);
+	} else {
+		logger.log(credentials.password);
+	}
 }
 
 export const containersRegistriesNamespace = createNamespace({
@@ -650,7 +655,7 @@ export const containersRegistriesCredentialsCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
-		printBanner: () => !isNonInteractiveOrCI(),
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
 		DOMAIN: {
@@ -670,6 +675,11 @@ export const containersRegistriesCredentialsCommand = createCommand({
 		pull: {
 			type: "boolean",
 			description: "If you want these credentials to be able to pull",
+		},
+		json: {
+			type: "boolean",
+			description: "Format output as JSON",
+			default: false,
 		},
 	},
 	positionalArgs: ["DOMAIN"],

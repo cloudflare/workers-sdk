@@ -738,6 +738,24 @@ describe("containers registries credentials", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
 	});
+
+	it("should output valid JSON when --json flag is used", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password");
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --json"
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "account_id": "some-account-id",
+			  "password": "test-password",
+			  "registry_host": "registry.cloudflare.com",
+			  "username": "test-username",
+			}
+		`);
+	});
 });
 
 const mockPutRegistry = (expected?: object) => {
@@ -793,7 +811,7 @@ const mockGenerateCredentials = (
 	msw.use(
 		http.post(
 			`*/accounts/:accountId/containers/registries/${domain}/credentials`,
-			async ({ request }) => {
+			async ({ request, params }) => {
 				if (expectedExpirationMinutes !== undefined) {
 					const body = (await request.json()) as {
 						expiration_minutes: number;
@@ -802,6 +820,9 @@ const mockGenerateCredentials = (
 				}
 				return HttpResponse.json(
 					createFetchResult({
+						account_id: params.accountId,
+						registry_host: domain,
+						username: "test-username",
 						password: password,
 					})
 				);
