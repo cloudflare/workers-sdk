@@ -69,35 +69,37 @@ function getVisibleCellRange(
 	};
 }
 
+interface useStudioTableVisibilityOptions {
+	containerRef: React.RefObject<HTMLDivElement | null>;
+	headers: StudioTableHeaderProps[];
+	renderAhead: number;
+	rowHeight: number;
+	state: StudioTableState;
+	totalRowCount: number;
+}
+
 export function useStudioTableVisibility({
 	containerRef,
-	totalRowCount,
-	rowHeight,
-	renderAhead,
 	headers,
+	renderAhead,
+	rowHeight,
 	state,
-}: {
-	containerRef: React.RefObject<HTMLDivElement | null>;
-	totalRowCount: number;
-	rowHeight: number;
-	renderAhead: number;
-	headers: StudioTableHeaderProps[];
-	state: StudioTableState;
-}) {
+	totalRowCount,
+}: useStudioTableVisibilityOptions) {
 	const [visibleDebounce, setVisibleDebounce] = useState<{
-		rowStart: number;
-		rowEnd: number;
-		colStart: number;
 		colEnd: number;
+		colStart: number;
+		rowEnd: number;
+		rowStart: number;
 	}>({
-		rowStart: 0,
-		rowEnd: 0,
-		colStart: 0,
 		colEnd: 0,
+		colStart: 0,
+		rowEnd: 0,
+		rowStart: 0,
 	});
 
 	const recalculateVisible = useCallback(
-		(e: HTMLDivElement) => {
+		(e: HTMLDivElement): void => {
 			const headerSizes = state.getHeaderWidth();
 			setVisibleDebounce(
 				getVisibleCellRange(
@@ -114,7 +116,7 @@ export function useStudioTableVisibility({
 	);
 
 	const onHeaderResize = useCallback(
-		(idx: number, newWidth: number) => {
+		(idx: number, newWidth: number): void => {
 			if (containerRef.current) {
 				state.setHeaderWidth(idx, newWidth);
 				recalculateVisible(containerRef.current);
@@ -141,14 +143,17 @@ export function useStudioTableVisibility({
 
 	useStudioElementResize<HTMLDivElement>(recalculateVisible, containerRef);
 
-	return { visibileRange: visibleDebounce, onHeaderResize };
+	return {
+		onHeaderResize,
+		visibileRange: visibleDebounce,
+	};
 }
 
 function useStudioElementResize<T extends Element = Element>(
 	callback: (element: T) => void,
 	ref: React.RefObject<T | null>
-) {
-	useEffect(() => {
+): void {
+	useEffect((): void => {
 		if (ref.current) {
 			callback(ref.current);
 		}

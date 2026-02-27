@@ -18,35 +18,33 @@ import type { ReactElement } from "react";
  * navigation, and range selection, while remaining adaptable to various use cases.
  */
 export function StudioBaseTable<HeaderMetadata = unknown>({
-	stickyHeaderIndex,
-	state,
-	renderHeader,
-	renderCell,
-	rowHeight,
-	renderAhead,
+	arrangeHeaderIndex,
+	onCellMouseDown,
 	onContextMenu,
+	onGutterClick,
 	onKeyDown,
 	onKeyUp,
-	onGutterClick,
-	onCellMouseDown,
-	arrangeHeaderIndex,
+	renderAhead,
+	renderCell,
+	renderHeader,
+	rowHeight,
+	state,
+	stickyHeaderIndex,
 }: StudioTableProps<HeaderMetadata>) {
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// This is our trigger re-render the whole table
-	const [revision, setRevision] = useState(1);
+	const [revision, setRevision] = useState<number>(1);
 
-	const rerender = useCallback(() => {
+	const rerender = useCallback((): void => {
 		setRevision((prev) => prev + 1);
 	}, [setRevision]);
 
-	useEffect(() => {
+	useEffect((): void => {
 		state.setContainer(containerRef.current);
 	}, [state, containerRef]);
 
-	useEffect(() => {
-		return state.addChangeListener(rerender);
-	}, [state, rerender]);
+	useEffect(() => state.addChangeListener(rerender), [state, rerender]);
 
 	const headerWithIndex = useMemo(() => {
 		// Attach the actual index
@@ -57,10 +55,10 @@ export function StudioBaseTable<HeaderMetadata = unknown>({
 		}));
 
 		// We will rearrange the index based on specified index
-		const headerAfterArranged = arrangeHeaderIndex.map((arrangedIndex) => {
-			// `arrangeHeaderIndex` contains valid indices into headers
-			return headers[arrangedIndex] as (typeof headers)[number];
-		});
+		// `arrangeHeaderIndex` contains valid indices into headers
+		const headerAfterArranged = arrangeHeaderIndex.map(
+			(arrangedIndex) => headers[arrangedIndex] as (typeof headers)[number]
+		);
 
 		// Sticky will also alter the specified index
 		return [
@@ -72,80 +70,77 @@ export function StudioBaseTable<HeaderMetadata = unknown>({
 		] as StudioTableHeaderProps<HeaderMetadata>[];
 	}, [state, arrangeHeaderIndex, stickyHeaderIndex]);
 
-	const { visibileRange, onHeaderResize } = useStudioTableVisibility({
+	const { onHeaderResize, visibileRange } = useStudioTableVisibility({
 		containerRef,
 		headers: headerWithIndex,
 		renderAhead,
 		rowHeight,
-		totalRowCount: state.getRowsCount(),
 		state: state,
+		totalRowCount: state.getRowsCount(),
 	});
 
-	const { rowStart, rowEnd, colEnd, colStart } = visibileRange;
+	const { colEnd, colStart, rowEnd, rowStart } = visibileRange;
 
 	const tableBody = useMemo(() => {
 		const common = {
-			headers: headerWithIndex,
-			renderCell,
-			rowEnd,
-			rowStart,
 			colEnd,
 			colStart,
-			rowHeight,
-			onHeaderResize,
 			hasSticky: stickyHeaderIndex !== undefined,
-			state,
-			revision,
-			onContextMenu,
+			headers: headerWithIndex,
 			onCellMouseDown,
+			onContextMenu,
 			onGutterClick,
+			onHeaderResize,
+			renderCell,
 			renderHeader,
+			revision,
+			rowEnd,
+			rowHeight,
+			rowStart,
+			state,
 		};
 
 		return (
-			<div
-				style={{
-					height: (state.getRowsCount() + 1) * rowHeight + 10,
-				}}
-			>
+			<div style={{ height: (state.getRowsCount() + 1) * rowHeight + 10 }}>
 				{renderCellList(common)}
 			</div>
 		);
 	}, [
-		rowEnd,
-		rowStart,
 		colEnd,
 		colStart,
-		rowHeight,
 		headerWithIndex,
-		onHeaderResize,
-		stickyHeaderIndex,
-		state,
+		onCellMouseDown,
 		onContextMenu,
 		onGutterClick,
-		onCellMouseDown,
-		revision,
-		renderHeader,
+		onHeaderResize,
 		renderCell,
+		renderHeader,
+		revision,
+		rowEnd,
+		rowHeight,
+		rowStart,
+		state,
+		stickyHeaderIndex,
 	]);
 
 	return (
 		<div
-			tabIndex={-1}
-			onKeyDown={onKeyDown}
-			onKeyUp={onKeyUp}
-			ref={containerRef}
-			style={{
-				outline: "none",
-			}}
 			className={"relative h-full w-full overflow-auto text-[12px] select-none"}
 			onContextMenu={(e) => {
 				if (onContextMenu) {
-					onContextMenu({ state: state, event: e });
+					onContextMenu({
+						event: e,
+						state: state,
+					});
 				}
 
 				e.preventDefault();
 			}}
+			onKeyDown={onKeyDown}
+			onKeyUp={onKeyUp}
+			ref={containerRef}
+			style={{ outline: "none" }}
+			tabIndex={-1}
 		>
 			{tableBody}
 		</div>
@@ -159,80 +154,80 @@ export interface StudioTableHeaderProps<MetadataType = unknown>
 }
 
 export interface StudioTableCellRendererProps<MetadataType = unknown> {
-	y: number;
-	x: number;
-	state: StudioTableState<MetadataType>;
 	header: StudioTableHeaderProps<MetadataType>;
 	isFocus: boolean;
+	state: StudioTableState<MetadataType>;
+	x: number;
+	y: number;
 }
 
 interface TableCellListCommonProps<MetadataType = unknown> {
-	state: StudioTableState<MetadataType>;
-	renderHeader: (props: StudioTableHeaderProps<MetadataType>) => ReactElement;
-	renderCell: (
-		props: StudioTableCellRendererProps<MetadataType>
-	) => ReactElement;
-	rowHeight: number;
-	onHeaderContextMenu?: (
-		e: React.MouseEvent,
-		header: StudioTableHeaderProps<MetadataType>
+	onCellMouseDown?: (
+		event: React.MouseEvent,
+		data: { x: number; y: number }
 	) => void;
 	onContextMenu?: (props: {
 		state: StudioTableState<MetadataType>;
 		event: React.MouseEvent;
 	}) => void;
+	onGutterClick?: (event: React.MouseEvent, rowNumber: number) => void;
+	onHeaderContextMenu?: (
+		e: React.MouseEvent,
+		header: StudioTableHeaderProps<MetadataType>
+	) => void;
 	onKeyDown?: (event: React.KeyboardEvent) => void;
 	onKeyUp?: (event: React.KeyboardEvent) => void;
-	onCellMouseDown?: (
-		event: React.MouseEvent,
-		data: { x: number; y: number }
-	) => void;
-	onGutterClick?: (event: React.MouseEvent, rowNumber: number) => void;
+	renderCell: (
+		props: StudioTableCellRendererProps<MetadataType>
+	) => ReactElement;
+	renderHeader: (props: StudioTableHeaderProps<MetadataType>) => ReactElement;
+	rowHeight: number;
+	state: StudioTableState<MetadataType>;
 }
 
 export interface StudioTableProps<HeaderMetadata = unknown>
 	extends TableCellListCommonProps<HeaderMetadata> {
 	arrangeHeaderIndex: number[];
-	stickyHeaderIndex?: number;
 	renderAhead: number;
+	stickyHeaderIndex?: number;
 }
 
 interface RenderCellListProps<HeaderMetadata = unknown>
 	extends TableCellListCommonProps<HeaderMetadata> {
-	hasSticky: boolean;
-	onHeaderResize: (idx: number, newWidth: number) => void;
-	customStyles?: React.CSSProperties;
-	headers: StudioTableHeaderProps<HeaderMetadata>[];
-	rowEnd: number;
-	rowStart: number;
 	colEnd: number;
 	colStart: number;
+	customStyles?: React.CSSProperties;
+	hasSticky: boolean;
+	headers: StudioTableHeaderProps<HeaderMetadata>[];
+	onHeaderResize: (idx: number, newWidth: number) => void;
+	rowEnd: number;
+	rowStart: number;
 }
 
 function renderCellList<HeaderMetadata = unknown>({
-	hasSticky,
-	customStyles,
-	renderCell,
-	headers,
-	rowEnd,
-	rowStart,
 	colEnd,
 	colStart,
-	rowHeight,
-	onHeaderResize,
-	renderHeader,
-	state,
-	onHeaderContextMenu: _onHeaderContextMenu,
-	onGutterClick,
+	customStyles,
+	hasSticky,
+	headers,
 	onCellMouseDown,
-}: RenderCellListProps<HeaderMetadata>) {
+	onGutterClick,
+	onHeaderContextMenu: _onHeaderContextMenu,
+	onHeaderResize,
+	renderCell,
+	renderHeader,
+	rowEnd,
+	rowHeight,
+	rowStart,
+	state,
+}: RenderCellListProps<HeaderMetadata>): JSX.Element {
 	const headerSizes = state.getHeaderWidth();
 
 	const templateSizes =
 		`${state.gutterColumnWidth}px ` +
 		headers.map((header) => headerSizes[header.index] + "px").join(" ");
 
-	const onHeaderSizeWithRemap = (idx: number, newWidth: number) => {
+	const onHeaderSizeWithRemap = (idx: number, newWidth: number): void => {
 		onHeaderResize(headers[idx]?.index ?? 0, newWidth);
 	};
 
@@ -268,13 +263,12 @@ function renderCellList<HeaderMetadata = unknown>({
 
 		return (
 			<tr
-				key={absoluteRowIndex}
-				data-row={absoluteRowIndex}
 				className="contents"
+				data-row={absoluteRowIndex}
+				key={absoluteRowIndex}
 			>
 				<td
-					className={tdClass}
-					style={{ zIndex: 15 }}
+					className={cn(tdClass, "z-15")}
 					onMouseDown={(e) => {
 						if (onGutterClick) {
 							onGutterClick(e, absoluteRowIndex);
@@ -288,12 +282,9 @@ function renderCellList<HeaderMetadata = unknown>({
 
 				{hasSticky && headers[0] && (
 					<StudioTableCell
-						key={-1}
-						state={state}
 						colIndex={headers[0].index}
-						rowIndex={absoluteRowIndex}
 						header={headers[0]}
-						renderCell={renderCell}
+						key={-1}
 						onMouseDown={(e) => {
 							if (onCellMouseDown) {
 								onCellMouseDown(e, {
@@ -303,12 +294,15 @@ function renderCellList<HeaderMetadata = unknown>({
 								});
 							}
 						}}
+						renderCell={renderCell}
+						rowIndex={absoluteRowIndex}
+						state={state}
 					/>
 				)}
 
 				<StudioTableFakeRowPadding
-					colEnd={colStart}
 					colStart={0 + (hasSticky ? 1 : 0)}
+					colEnd={colStart}
 				/>
 
 				{row.slice(colStart, colEnd + 1).map((_, cellIndex) => {
@@ -330,12 +324,9 @@ function renderCellList<HeaderMetadata = unknown>({
 
 					return (
 						<StudioTableCell
-							key={actualIndex}
-							state={state}
 							colIndex={header.index}
-							rowIndex={absoluteRowIndex}
 							header={header}
-							renderCell={renderCell}
+							key={actualIndex}
 							onMouseDown={(e) => {
 								if (onCellMouseDown) {
 									onCellMouseDown(e, {
@@ -344,9 +335,13 @@ function renderCellList<HeaderMetadata = unknown>({
 									});
 								}
 							}}
+							renderCell={renderCell}
+							rowIndex={absoluteRowIndex}
+							state={state}
 						/>
 					);
 				})}
+
 				<StudioTableFakeRowPadding
 					colStart={colEnd}
 					colEnd={headers.length - 1}

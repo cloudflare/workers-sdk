@@ -7,24 +7,26 @@ import type {
 import type { StudioTableState } from "./State";
 import type { ReactElement } from "react";
 
-export function StudioTableCell<HeaderMetadata = unknown>({
-	state,
-	header,
-	rowIndex,
-	colIndex,
-	renderCell,
-	onMouseDown,
-}: {
-	state: StudioTableState<HeaderMetadata>;
-	rowIndex: number;
+interface StudioTableCellProps<HeaderMetadata> {
 	colIndex: number;
 	header: StudioTableHeaderProps<HeaderMetadata>;
 	onMouseDown: (e: React.MouseEvent) => void;
 	renderCell: (
 		props: StudioTableCellRendererProps<HeaderMetadata>
 	) => ReactElement;
-}) {
-	const { isFocus, isSelected, isBorderBottom, isBorderRight } =
+	rowIndex: number;
+	state: StudioTableState<HeaderMetadata>;
+}
+
+export function StudioTableCell<HeaderMetadata = unknown>({
+	colIndex,
+	header,
+	onMouseDown,
+	renderCell,
+	rowIndex,
+	state,
+}: StudioTableCellProps<HeaderMetadata>) {
+	const { isBorderBottom, isBorderRight, isFocus, isSelected } =
 		state.getCellStatus(rowIndex, colIndex);
 
 	const isRemoved = state.isRemovedRow(rowIndex);
@@ -36,7 +38,11 @@ export function StudioTableCell<HeaderMetadata = unknown>({
 		if (!isSticky) {
 			return undefined;
 		}
-		return { zIndex: 15, left: state.gutterColumnWidth + "px" };
+
+		return {
+			left: `${state.gutterColumnWidth}px`,
+			zIndex: 15,
+		};
 	}, [state.gutterColumnWidth, isSticky]);
 
 	let cellBackgroundColor = "bg-transparent";
@@ -59,30 +65,30 @@ export function StudioTableCell<HeaderMetadata = unknown>({
 		cellBackgroundColor = "bg-red-100 dark:bg-red-900";
 	}
 
-	const cellClassName = cn(
-		"overflow-hidden border-r border-b box-border hover:bg-accent border-border",
-		isSelected && "border-neutral-900 dark:border-neutral-100",
-		isBorderBottom && "border-b border-b-neutral-900 dark:border-b-neutral-100",
-		isBorderRight && "border-r border-r-neutral-900 dark:border-r-neutral-100",
-		isFocus &&
-			"shadow-[0_0_0_1px_rgba(0,0,0,0.5)_inset] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.5)_inset]",
-		isSticky && "sticky",
-		cellBackgroundColor
-	);
-
 	return (
 		<td
-			className={cellClassName}
-			style={additionalStyles}
+			className={cn(
+				"overflow-hidden border-r border-b box-border hover:bg-accent border-border",
+				isSelected && "border-neutral-900 dark:border-neutral-100",
+				isBorderBottom &&
+					"border-b border-b-neutral-900 dark:border-b-neutral-100",
+				isBorderRight &&
+					"border-r border-r-neutral-900 dark:border-r-neutral-100",
+				isFocus &&
+					"shadow-[0_0_0_1px_rgba(0,0,0,0.5)_inset] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.5)_inset]",
+				isSticky && "sticky",
+				cellBackgroundColor
+			)}
 			onMouseDown={onMouseDown}
+			style={additionalStyles}
 		>
 			<div className={"flex-1 overflow-hidden whitespace-nowrap"}>
 				{renderCell({
-					x: colIndex,
-					y: rowIndex,
-					state: state,
 					header: header,
 					isFocus,
+					state: state,
+					x: colIndex,
+					y: rowIndex,
 				})}
 			</div>
 		</td>

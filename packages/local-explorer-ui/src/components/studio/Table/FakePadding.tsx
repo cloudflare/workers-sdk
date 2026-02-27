@@ -1,5 +1,13 @@
 import type { PropsWithChildren } from "react";
 
+type StudioTableFakeBodyPaddingProps = PropsWithChildren<{
+	colCount: number;
+	rowCount: number;
+	rowEnd: number;
+	rowHeight: number;
+	rowStart: number;
+}>;
+
 /**
  * Renders a `<tbody>` element with fake padding rows at the top and bottom of the table.
  * These padding rows represent the areas of the table that are outside of the viewport.
@@ -30,17 +38,11 @@ import type { PropsWithChildren } from "react";
 export function StudioTableFakeBodyPadding({
 	children,
 	colCount,
-	rowHeight,
 	rowCount,
-	rowStart,
 	rowEnd,
-}: PropsWithChildren<{
-	rowHeight: number;
-	colCount: number;
-	rowCount: number;
-	rowStart: number;
-	rowEnd: number;
-}>) {
+	rowHeight,
+	rowStart,
+}: StudioTableFakeBodyPaddingProps): JSX.Element {
 	const paddingTop = rowStart * rowHeight;
 	const paddingBottom = (rowCount - rowEnd) * rowHeight;
 
@@ -73,6 +75,11 @@ export function StudioTableFakeBodyPadding({
 	);
 }
 
+interface StudioTableFakeRowPaddingProps {
+	colStart: number;
+	colEnd: number;
+}
+
 /**
  * Renders a fake padding cell in the table header.
  *
@@ -85,16 +92,9 @@ export function StudioTableFakeBodyPadding({
 export function StudioTableFakeRowPadding({
 	colStart,
 	colEnd,
-}: {
-	colEnd: number;
-	colStart: number;
-}) {
+}: StudioTableFakeRowPaddingProps) {
 	return colEnd - colStart > 0 ? (
-		<td
-			style={{
-				gridColumn: `span ${colEnd - colStart}`,
-			}}
-		/>
+		<td style={{ gridColumn: `span ${colEnd - colStart}` }} />
 	) : (
 		<></>
 	);

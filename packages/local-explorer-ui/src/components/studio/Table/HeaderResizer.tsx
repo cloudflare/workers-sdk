@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
+interface StudioTableHeaderResizerProps {
+	idx: number;
+	onResize: (idx: number, newSize: number) => void;
+}
+
 export function StudioTableHeaderResizer({
 	idx,
 	onResize,
-}: {
-	idx: number;
-	onResize: (idx: number, newSize: number) => void;
-}) {
+}: StudioTableHeaderResizerProps): JSX.Element {
 	const handlerRef = useRef<HTMLDivElement>(null);
-	const [resizing, setResizing] = useState(false);
+
+	const [resizing, setResizing] = useState<boolean>(false);
 
 	useEffect(() => {
 		if (handlerRef.current && resizing) {
@@ -88,11 +91,9 @@ export function StudioTableHeaderResizer({
 
 	return (
 		<div
-			className={
-				"absolute top-0 right-0 bottom-0 w-2.5 cursor-col-resize opacity-0 hover:opacity-50"
-			}
-			ref={handlerRef}
+			className="absolute top-0 right-0 bottom-0 w-2.5 cursor-col-resize opacity-0 hover:opacity-50"
 			onMouseDown={() => setResizing(true)}
+			ref={handlerRef}
 		></div>
 	);
 }

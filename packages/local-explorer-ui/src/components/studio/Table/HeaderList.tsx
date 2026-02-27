@@ -4,19 +4,21 @@ import type { StudioTableHeaderProps } from "./BaseTable";
 import type { StudioTableState } from "./State";
 import type { ReactElement } from "react";
 
+interface StudioTableHeaderListProps<HeaderMetadata> {
+	headers: StudioTableHeaderProps<HeaderMetadata>[];
+	onHeaderResize: (idx: number, newWidth: number) => void;
+	renderHeader: (props: StudioTableHeaderProps<HeaderMetadata>) => ReactElement;
+	state: StudioTableState<HeaderMetadata>;
+	sticky: boolean;
+}
+
 export function StudioTableHeaderList<HeaderMetadata = unknown>({
 	headers,
 	onHeaderResize,
 	renderHeader,
-	sticky,
 	state,
-}: {
-	headers: StudioTableHeaderProps<HeaderMetadata>[];
-	renderHeader: (props: StudioTableHeaderProps<HeaderMetadata>) => ReactElement;
-	onHeaderResize: (idx: number, newWidth: number) => void;
-	sticky: boolean;
-	state: StudioTableState<HeaderMetadata>;
-}) {
+	sticky,
+}: StudioTableHeaderListProps<HeaderMetadata>): JSX.Element {
 	return (
 		<thead className="contents">
 			<tr className="contents">
@@ -27,13 +29,13 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 				{headers.map((header, idx) => {
 					return (
 						<StudioTableHeader
-							key={header.name}
-							sticky={sticky && idx === 0}
 							header={header}
-							renderHeader={renderHeader}
 							idx={idx}
+							key={header.name}
 							onHeaderResize={onHeaderResize}
+							renderHeader={renderHeader}
 							state={state}
+							sticky={sticky && idx === 0}
 						/>
 					);
 				})}
@@ -43,36 +45,32 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 }
 
 function StudioTableHeader<HeaderMetadata = unknown>({
-	idx,
 	header,
-	onHeaderResize,
+	idx,
 	onContextMenu,
-	sticky,
+	onHeaderResize,
 	renderHeader,
 	state,
+	sticky,
 }: {
-	idx: number;
-	sticky: boolean;
 	header: StudioTableHeaderProps<HeaderMetadata>;
-	state: StudioTableState<HeaderMetadata>;
-	onHeaderResize: (idx: number, newWidth: number) => void;
+	idx: number;
 	onContextMenu?: React.MouseEventHandler;
+	onHeaderResize: (idx: number, newWidth: number) => void;
 	renderHeader: (props: StudioTableHeaderProps<HeaderMetadata>) => ReactElement;
-}) {
-	const className = cn(
-		sticky ? "z-30" : undefined,
-		"bg-background border-r border-b overflow-hidden sticky top-0 h-[35px] leading-[35px] flex text-left z-10 p-0 border-border"
-	);
-
+	state: StudioTableState<HeaderMetadata>;
+	sticky: boolean;
+}): JSX.Element {
 	return (
 		<th
+			className={cn(
+				{ "z-30": sticky },
+				"bg-background border-r border-b overflow-hidden sticky top-0 h-8.75 leading-8.75 flex text-left z-10 p-0 border-border"
+			)}
 			key={header.name}
-			title={header.display.tooltip}
-			className={className}
 			onContextMenu={onContextMenu}
-			style={{
-				left: sticky ? state.gutterColumnWidth : undefined,
-			}}
+			style={{ left: sticky ? state.gutterColumnWidth : undefined }}
+			title={header.display.tooltip}
 		>
 			{renderHeader(header)}
 			{header.setting.resizable && (

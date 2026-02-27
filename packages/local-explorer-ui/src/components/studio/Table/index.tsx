@@ -2,17 +2,19 @@ import { useCallback, useRef } from "react";
 import { StudioBaseTable } from "./BaseTable";
 import type { StudioTableProps } from "./BaseTable";
 
-export function StudioTable<T = unknown>(props: StudioTableProps<T>) {
+export function StudioTable<T = unknown>(
+	props: StudioTableProps<T>
+): JSX.Element {
 	const {
-		state,
 		onKeyDown: customKeyDownHandler,
 		onKeyUp: customKeyUpHandler,
+		state,
 	} = props;
 
 	const shiftSelectionPosition = useRef<{ x: number; y: number } | null>(null);
 
 	const onShiftKeyDownCallBack = useCallback(
-		(e: React.KeyboardEvent) => {
+		(e: React.KeyboardEvent): void => {
 			const focus = state.getFocus();
 
 			if (e.shiftKey && focus) {
@@ -71,7 +73,7 @@ export function StudioTable<T = unknown>(props: StudioTableProps<T>) {
 
 	// Provide key navigation
 	const onKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
+		(e: React.KeyboardEvent): void => {
 			if (state.isInEditMode()) {
 				return;
 			}
@@ -159,7 +161,7 @@ export function StudioTable<T = unknown>(props: StudioTableProps<T>) {
 	);
 
 	const onKeyUp = useCallback(
-		(e: React.KeyboardEvent) => {
+		(e: React.KeyboardEvent): void => {
 			if (state.isInEditMode()) {
 				return;
 			}
@@ -176,7 +178,7 @@ export function StudioTable<T = unknown>(props: StudioTableProps<T>) {
 	);
 
 	const onGutterClick = useCallback(
-		(e: React.MouseEvent, rowNumber: number) => {
+		(e: React.MouseEvent, rowNumber: number): void => {
 			const focusCell = state.getFocus();
 			if (e.shiftKey && focusCell) {
 				state.selectRowRange(focusCell.y, rowNumber);
@@ -192,7 +194,7 @@ export function StudioTable<T = unknown>(props: StudioTableProps<T>) {
 	);
 
 	const onCellMouseDown = useCallback(
-		(e: React.MouseEvent, { x, y }: { x: number; y: number }) => {
+		(e: React.MouseEvent, { x, y }: { x: number; y: number }): void => {
 			const shiftKey = e.shiftKey;
 			const focusedCell = state.getFocus();
 
@@ -216,10 +218,10 @@ export function StudioTable<T = unknown>(props: StudioTableProps<T>) {
 	return (
 		<StudioBaseTable
 			{...props}
+			onCellMouseDown={onCellMouseDown}
+			onGutterClick={onGutterClick}
 			onKeyDown={onKeyDown}
 			onKeyUp={onKeyUp}
-			onGutterClick={onGutterClick}
-			onCellMouseDown={onCellMouseDown}
 		/>
 	);
 }
