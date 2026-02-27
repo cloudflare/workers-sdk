@@ -155,7 +155,7 @@ export class BundlerController extends Controller {
 						doBindings,
 						workflowBindings,
 						jsxFactory: config.build.jsxFactory,
-						jsxFragment: config.build.jsxFactory,
+						jsxFragment: config.build.jsxFragment,
 						tsconfig: config.build.tsconfig,
 						minify: config.build.minify,
 						keepNames: config.build.keepNames ?? true,
