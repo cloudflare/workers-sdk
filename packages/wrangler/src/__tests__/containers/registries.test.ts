@@ -693,7 +693,12 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with --push", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password");
+		mockGenerateCredentials(
+			"registry.cloudflare.com",
+			"test-password",
+			undefined,
+			["push"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push"
@@ -704,7 +709,12 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with --pull", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password");
+		mockGenerateCredentials(
+			"registry.cloudflare.com",
+			"test-password",
+			undefined,
+			["pull"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --pull"
@@ -715,7 +725,10 @@ describe("containers registries credentials", () => {
 
 	it("should generate credentials with both --push and --pull", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "jwt-token");
+		mockGenerateCredentials("registry.cloudflare.com", "jwt-token", undefined, [
+			"push",
+			"pull",
+		]);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push --pull"
@@ -729,7 +742,8 @@ describe("containers registries credentials", () => {
 		mockGenerateCredentials(
 			"registry.cloudflare.com",
 			"custom-expiry-token",
-			30
+			30,
+			["push"]
 		);
 
 		await runWrangler(
@@ -741,7 +755,12 @@ describe("containers registries credentials", () => {
 
 	it("should output valid JSON when --json flag is used", async () => {
 		setIsTTY(false);
-		mockGenerateCredentials("registry.cloudflare.com", "test-password");
+		mockGenerateCredentials(
+			"registry.cloudflare.com",
+			"test-password",
+			undefined,
+			["push"]
+		);
 
 		await runWrangler(
 			"containers registries credentials registry.cloudflare.com --push --json"
@@ -806,17 +825,27 @@ const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 const mockGenerateCredentials = (
 	domain: string,
 	password: string,
-	expectedExpirationMinutes?: number
+	expectedExpirationMinutes?: number,
+	expectedPermissions?: string[]
 ) => {
 	msw.use(
 		http.post(
 			`*/accounts/:accountId/containers/registries/${domain}/credentials`,
 			async ({ request, params }) => {
-				if (expectedExpirationMinutes !== undefined) {
+				if (
+					expectedExpirationMinutes !== undefined ||
+					expectedPermissions !== undefined
+				) {
 					const body = (await request.json()) as {
 						expiration_minutes: number;
+						permissions: string[];
 					};
-					expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
+					if (expectedExpirationMinutes !== undefined) {
+						expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
+					}
+					if (expectedPermissions !== undefined) {
+						expect(body.permissions).toEqual(expectedPermissions);
+					}
 				}
 				return HttpResponse.json(
 					createFetchResult({
