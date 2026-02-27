@@ -276,8 +276,10 @@ export const listTmpR2Buckets = async () => {
 	if (!response || !response.ok) {
 		return [];
 	}
-	const json = (await response.json()) as { buckets: R2Bucket[] };
-	return json.buckets.filter(
+	const json = (await response.json()) as {
+		result: { buckets: R2Bucket[] };
+	};
+	return json.result.buckets.filter(
 		(bucket) =>
 			bucket.name.startsWith("tmp-e2e-") &&
 			// Buckets are more than an hour old

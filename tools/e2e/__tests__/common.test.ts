@@ -360,20 +360,23 @@ describe("listTmpR2Buckets()", () => {
 			.reply(
 				200,
 				JSON.stringify({
-					buckets: [
-						{ name: "my-bucket-1", creation_date: nowStr },
-						{ name: "my-bucket-2", creation_date: oldTimeStr },
-						{
-							name: "tmp-e2e-abc123-next--workers-opennext-cache",
-							creation_date: nowStr,
-						},
-						{
-							name: "tmp-e2e-def456-next--workers-opennext-cache",
-							creation_date: oldTimeStr,
-						},
-						{ name: "tmp-e2e-project-1", creation_date: nowStr },
-						{ name: "tmp-e2e-project-2", creation_date: oldTimeStr },
-					],
+					result: {
+						buckets: [
+							{ name: "my-bucket-1", creation_date: nowStr },
+							{ name: "my-bucket-2", creation_date: oldTimeStr },
+							{
+								name: "tmp-e2e-abc123-next--workers-opennext-cache",
+								creation_date: nowStr,
+							},
+							{
+								name: "tmp-e2e-def456-next--workers-opennext-cache",
+								creation_date: oldTimeStr,
+							},
+							{ name: "tmp-e2e-project-1", creation_date: nowStr },
+							{ name: "tmp-e2e-project-2", creation_date: oldTimeStr },
+						],
+					},
+					success: true,
 				})
 			);
 
