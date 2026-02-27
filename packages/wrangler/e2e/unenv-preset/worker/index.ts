@@ -28,12 +28,10 @@ export default {
 					return generateTestListResponse(testName);
 				}
 
-				try {
-					await test();
-					return new Response("passed");
-				} catch (e) {
-					return new Response(`failed\n${e}`);
-				}
+				return test().then(
+					() => new Response("passed"),
+					(e) => new Response(`failed\n${e}`)
+				);
 			}
 		}
 	},
@@ -58,7 +56,7 @@ function generateTestListResponse(testName: string): Response {
 
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
-export const WorkerdTests: Record<string, () => void> = {
+export const WorkerdTests: Record<string, () => Promise<void>> = {
 	async testConsole() {
 		const importNamespace = await import("node:console");
 		const globalObject = globalThis.console;
