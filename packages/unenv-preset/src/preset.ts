@@ -1082,28 +1082,25 @@ function getPerfHooksOverrides({
 }: {
 	compatibilityDate: string;
 	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[]; polyfills: string[] } {
-	const disabledModulesByFlag = compatibilityFlags.includes(
+}): { nativeModules: string[]; hybridModules: string[]; polyfills?: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_perf_hooks_module"
 	);
 
-	const enabledModulesByFlag =
+	const enabledByFlag =
 		compatibilityFlags.includes("enable_nodejs_perf_hooks_module") &&
 		compatibilityFlags.includes("experimental");
 
-	const enabledModules = enabledModulesByFlag && !disabledModulesByFlag;
+	const enabled = enabledByFlag && !disabledByFlag;
 
-	const nativeModules = enabledModules ? ["perf_hooks"] : [];
-	const hybridModules: string[] = [];
-	const polyfills = !enabledModules
-		? ["@cloudflare/unenv-preset/polyfill/performance"]
-		: [];
-
-	// The native perf_hooks module should implement all the APIs.
-	// It can then be used as a native module.
-	return {
-		nativeModules,
-		hybridModules,
-		polyfills,
-	};
+	return enabled
+		? {
+				nativeModules: ["perf_hooks"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+				polyfills: ["@cloudflare/unenv-preset/polyfill/performance"],
+			};
 }
