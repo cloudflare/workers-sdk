@@ -1,11 +1,11 @@
 import { version } from "../package.json";
 import type { Preset } from "unenv";
 
-// Built-in APIs provided by workerd.
+// Built-in APIs provided by workerd that do not need individual compatibility flags or dates.
 //
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-const standardNativeModules = [
+const defaultNativeModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
 	"_stream_readable",
@@ -63,84 +63,54 @@ export function getCloudflarePreset({
 		compatibilityFlags,
 	};
 
-	const httpOverrides = getHttpOverrides(compat);
-	const http2Overrides = getHttp2Overrides(compat);
-	const osOverrides = getOsOverrides(compat);
-	const fsOverrides = getFsOverrides(compat);
-	const punycodeOverrides = getPunycodeOverrides(compat);
-	const clusterOverrides = getClusterOverrides(compat);
-	const traceEventsOverrides = getTraceEventsOverrides(compat);
-	const domainOverrides = getDomainOverrides(compat);
-	const wasiOverrides = getWasiOverrides(compat);
-	const consoleOverrides = getConsoleOverrides(compat);
-	const vmOverrides = getVmOverrides(compat);
-	const inspectorOverrides = getInspectorOverrides(compat);
-	const sqliteOverrides = getSqliteOverrides(compat);
-	const dgramOverrides = getDgramOverrides(compat);
-	const streamWrapOverrides = getStreamWrapOverrides(compat);
-	const replOverrides = getReplOverrides(compat);
-	const processOverrides = getProcessOverrides(compat);
-	const v8Overrides = getV8Overrides(compat);
-	const ttyOverrides = getTtyOverrides(compat);
-	const childProcessOverrides = getChildProcessOverrides(compat);
-	const workerThreadsOverrides = getWorkerThreadsOverrides(compat);
-	const readlineOverrides = getReadlineOverrides(compat);
-	const performanceOverrides = getPerfHooksOverrides(compat);
-
-	// "dynamic" as they depend on the compatibility date and flags
-	const dynamicNativeModules = [
-		...standardNativeModules,
-		...httpOverrides.nativeModules,
-		...http2Overrides.nativeModules,
-		...osOverrides.nativeModules,
-		...fsOverrides.nativeModules,
-		...punycodeOverrides.nativeModules,
-		...clusterOverrides.nativeModules,
-		...traceEventsOverrides.nativeModules,
-		...domainOverrides.nativeModules,
-		...wasiOverrides.nativeModules,
-		...consoleOverrides.nativeModules,
-		...vmOverrides.nativeModules,
-		...inspectorOverrides.nativeModules,
-		...sqliteOverrides.nativeModules,
-		...dgramOverrides.nativeModules,
-		...streamWrapOverrides.nativeModules,
-		...replOverrides.nativeModules,
-		...processOverrides.nativeModules,
-		...v8Overrides.nativeModules,
-		...ttyOverrides.nativeModules,
-		...childProcessOverrides.nativeModules,
-		...workerThreadsOverrides.nativeModules,
-		...readlineOverrides.nativeModules,
-		...performanceOverrides.nativeModules,
+	const overrides: {
+		nativeModules: string[];
+		hybridModules: string[];
+		inject?: Record<string, string | false>;
+		polyfills?: string[];
+	}[] = [
+		getHttpOverrides(compat),
+		getHttp2Overrides(compat),
+		getOsOverrides(compat),
+		getFsOverrides(compat),
+		getPunycodeOverrides(compat),
+		getClusterOverrides(compat),
+		getTraceEventsOverrides(compat),
+		getDomainOverrides(compat),
+		getWasiOverrides(compat),
+		getConsoleOverrides(compat),
+		getVmOverrides(compat),
+		getInspectorOverrides(compat),
+		getSqliteOverrides(compat),
+		getDgramOverrides(compat),
+		getStreamWrapOverrides(compat),
+		getReplOverrides(compat),
+		getProcessOverrides(compat),
+		getV8Overrides(compat),
+		getTtyOverrides(compat),
+		getChildProcessOverrides(compat),
+		getWorkerThreadsOverrides(compat),
+		getReadlineOverrides(compat),
+		getPerfHooksOverrides(compat),
 	];
 
-	// "dynamic" as they depend on the compatibility date and flags
-	const dynamicHybridModules = [
-		...httpOverrides.hybridModules,
-		...http2Overrides.hybridModules,
-		...osOverrides.hybridModules,
-		...fsOverrides.hybridModules,
-		...punycodeOverrides.hybridModules,
-		...clusterOverrides.hybridModules,
-		...traceEventsOverrides.hybridModules,
-		...domainOverrides.hybridModules,
-		...wasiOverrides.hybridModules,
-		...consoleOverrides.hybridModules,
-		...vmOverrides.hybridModules,
-		...inspectorOverrides.hybridModules,
-		...sqliteOverrides.hybridModules,
-		...dgramOverrides.hybridModules,
-		...streamWrapOverrides.hybridModules,
-		...replOverrides.hybridModules,
-		...processOverrides.hybridModules,
-		...v8Overrides.hybridModules,
-		...ttyOverrides.hybridModules,
-		...childProcessOverrides.hybridModules,
-		...workerThreadsOverrides.hybridModules,
-		...readlineOverrides.hybridModules,
-		...performanceOverrides.hybridModules,
+	// The native workerd modules that are enabled for the current compat date and flags.
+	const nativeModules = [
+		...defaultNativeModules,
+		...overrides.flatMap((o) => o.nativeModules),
 	];
+
+	// The modules are are provided by unenv for the current compat date and flags.
+	const hybridModules = overrides.flatMap((o) => o.hybridModules);
+
+	// The globals that are injected from unenv for the current compat date and flags.
+	const hybridInjects = Object.assign(
+		{},
+		...overrides.map((o) => o.inject ?? {})
+	);
+
+	// The side-effect polyfill modules that are provided from unenv for the current compat date and flags.
+	const hybridPolyfills = overrides.flatMap((o) => o.polyfills ?? []);
 
 	return {
 		meta: {
@@ -149,34 +119,33 @@ export function getCloudflarePreset({
 			url: __filename,
 		},
 		alias: {
-			// `nodeCompatModules` are implemented in workerd.
-			// Create aliases to override polyfills defined in based environments.
+			// Alias each native module (and its `node:...` equivalent) to itself to ensure we override any polyfills from the base unenv presets.
 			...Object.fromEntries(
-				dynamicNativeModules.flatMap((p) => [
+				nativeModules.map((p) => [
 					[p, p],
 					[`node:${p}`, `node:${p}`],
 				])
 			),
 
-			// `hybridNodeCompatModules` are implemented by the cloudflare preset.
+			// Alias each hybrid module (and its `node:...` equivalent) to its unenv polyfill implementation.
 			...Object.fromEntries(
-				dynamicHybridModules.flatMap((m) => [
+				hybridModules.map((m) => [
 					[m, `@cloudflare/unenv-preset/node/${m}`],
 					[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 				])
 			),
 		},
 		inject: {
-			// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
+			// Set globals, implemented natively by workerd, to `false` to prevent the polyfills from the base unenv presets from being used.
 			Buffer: false,
 			global: false,
 			clearImmediate: false,
 			setImmediate: false,
-			...consoleOverrides.inject,
-			...processOverrides.inject,
+			// Any additional globals that may will be provided by unenv for the current compat date and flags.
+			...hybridInjects,
 		},
-		polyfill: [...performanceOverrides.polyfills],
-		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
+		polyfill: [...hybridPolyfills],
+		external: nativeModules.flatMap((p) => [p, `node:${p}`]),
 	};
 }
 
