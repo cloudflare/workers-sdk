@@ -977,7 +977,7 @@ function getReadlineOverrides({ compatibilityFlags }: Compatibility): Override {
  * Returns the overrides for `node:perf_hooks` (unenv or workerd)
  *
  * The native performance implementation:
- * - is enabled starting from 2025-09-21
+ * - is experimental and has no default enable date
  * - can be enabled with the "enable_nodejs_perf_hooks_module" flag
  * - can be disabled with the "disable_nodejs_perf_hooks_module" flag
  */
