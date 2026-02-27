@@ -1735,6 +1735,42 @@ describe("generate types", () => {
 		`);
 	});
 
+	it("should ignore .env when config `secrets` is defined", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: { required: ["API_KEY"] },
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(".env", 'DOT_ENV_SECRET="should not appear"\n', "utf8");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					API_KEY: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
 	it("should generate types for per-env config `secrets`", async ({
 		expect,
 	}) => {
