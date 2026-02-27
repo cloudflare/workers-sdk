@@ -8,7 +8,7 @@ import {
 	SortDescendingIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
-import { StudioTable } from "../Table";
+import { StudioTable } from "..";
 import {
 	StudioEditableNumberCell,
 	StudioEditableTextCell,
@@ -19,13 +19,13 @@ import type {
 	StudioColumnTypeHint,
 	StudioResultValue,
 	StudioSortDirection,
-} from "../../../types/studio";
+} from "../../../../types/studio";
 import type {
 	StudioTableCellRendererProps,
 	StudioTableHeaderProps,
-} from "../Table/BaseTable";
-import type { StudioTableState } from "../Table/State";
-import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
+} from "../BaseTable";
+import type { StudioTableState } from "../State";
+import type { StudioResultHeaderMetadata } from "../State/Helpers";
 import type { PropsWithChildren, ReactNode } from "react";
 
 interface StudioResultTableProps {

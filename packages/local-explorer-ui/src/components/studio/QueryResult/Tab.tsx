@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { StudioResultTable } from "../ResultTable";
+import { StudioResultTable } from "../Table/Result";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
 import { StudioQueryResultStats } from "./Stats";
 import type { StudioMultipleQueryResult } from "../../../types/studio";
