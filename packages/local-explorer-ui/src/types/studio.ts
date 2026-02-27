@@ -1,5 +1,4 @@
 import type { Icon } from "@phosphor-icons/react";
-import type { JSX } from "react";
 
 export interface IStudioConnection {
 	batch?(statements: string[]): Promise<StudioResultSet[]>; // Optimize for connection that support batch

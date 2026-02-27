@@ -12,7 +12,6 @@ import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { Studio } from "../../../components/studio";
 import { LocalDODriver } from "../../../drivers/do";
 import type { StudioResource } from "../../../types/studio";
-import type { JSX } from "react";
 
 export const Route = createFileRoute("/do/$className/$objectId")({
 	component: ObjectView,

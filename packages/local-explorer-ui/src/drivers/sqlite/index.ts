@@ -20,7 +20,6 @@ import type {
 	StudioTableSchemaChange,
 } from "../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
-import type { JSX } from "react";
 
 /**
  * Represents a row from SQLite's `sqlite_master` system table.

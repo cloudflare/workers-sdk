@@ -78,6 +78,7 @@ export class LocalD1Connection implements IStudioConnection {
 	 */
 	private transformResult(result: D1RawResultResponse): StudioResultSet {
 		const rows = (result.results?.rows ?? []) as unknown[][];
+
 		return {
 			...transformStudioArrayBasedResult({
 				headers: result.results?.columns ?? [],

@@ -33,12 +33,12 @@ function NamespaceView() {
 	const loaderData = Route.useLoaderData();
 	const { namespaceId } = loaderData;
 
-	const [objects, setObjects] = useState<WorkersObject[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
 	const [cursor, setCursor] = useState<string | null>(null);
-	const [hasMore, setHasMore] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [hasMore, setHasMore] = useState<boolean>(false);
+	const [loading, setLoading] = useState<boolean>(true);
+	const [loadingMore, setLoadingMore] = useState<boolean>(false);
+	const [objects, setObjects] = useState<WorkersObject[]>([]);
 
 	const fetchObjects = useCallback(
 		async (nextCursor?: string): Promise<void> => {
