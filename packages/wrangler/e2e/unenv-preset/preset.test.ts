@@ -253,14 +253,7 @@ const localTestConfigs: TestConfig[] = [
 		},
 		{
 			name: "process v2 by date",
-			// TODO:
-			// - adjust the date to when `fetch_iterable_type_support` is enabled by default
-			// - remove setting `fetch_iterable_type_support*` flags from this test case
-			compatibilityDate: "2025-09-15",
-			compatibilityFlags: [
-				"fetch_iterable_type_support",
-				"fetch_iterable_type_support_override_adjustment",
-			],
+			compatibilityDate: "2026-02-19",
 			expectRuntimeFlags: {
 				enable_nodejs_process_v2: true,
 				fetch_iterable_type_support: true,
@@ -287,7 +280,6 @@ const localTestConfigs: TestConfig[] = [
 		{
 			name: "punycode enabled by date",
 			compatibilityDate: "2025-12-04",
-			compatibilityFlags: ["enable_nodejs_punycode_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_punycode_module: true,
 			},
@@ -634,6 +626,17 @@ const localTestConfigs: TestConfig[] = [
 			],
 			expectRuntimeFlags: {
 				enable_nodejs_worker_threads_module: true,
+			},
+		},
+		{
+			name: "worker_threads disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"disable_nodejs_worker_threads_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: false,
 			},
 		},
 	],
