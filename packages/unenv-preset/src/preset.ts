@@ -96,13 +96,10 @@ export function getCloudflarePreset({
 	const hybridModules = overrides.flatMap((o) => o.hybridModules);
 
 	// The globals that are injected from unenv for the current compat date and flags.
-	const hybridInjects = Object.assign(
-		{},
-		...overrides.map((o) => o.inject ?? {})
-	);
+	const injects = Object.assign({}, ...overrides.map((o) => o.inject ?? {}));
 
 	// The side-effect polyfill modules that are provided from unenv for the current compat date and flags.
-	const hybridPolyfills = overrides.flatMap((o) => o.polyfills ?? []);
+	const polyfills = overrides.flatMap((o) => o.polyfills ?? []);
 
 	return {
 		meta: {
@@ -134,9 +131,9 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			// Inject globals provided by unenv for the current compat date and flags.
-			...hybridInjects,
+			...injects,
 		},
-		polyfill: [...hybridPolyfills],
+		polyfill: [...polyfills],
 		external: nativeModules.flatMap((p) => [p, `node:${p}`]),
 	};
 }
