@@ -28,10 +28,12 @@ export default {
 					return generateTestListResponse(testName);
 				}
 
-				return test().then(
-					() => new Response("passed"),
-					(e) => new Response(`failed\n${e}`)
-				);
+				try {
+					await test();
+					return new Response("passed");
+				} catch (e) {
+					return new Response(`failed\n${e}`);
+				}
 			}
 		}
 	},
