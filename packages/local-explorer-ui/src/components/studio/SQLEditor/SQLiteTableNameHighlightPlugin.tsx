@@ -6,17 +6,14 @@ import type { DecorationSet, EditorView, ViewUpdate } from "@codemirror/view";
 const underlineMark = Decoration.mark({ class: "cm-table-name" });
 
 export function createSQLTableNameHighlightPlugin(tableNameList: string[]) {
-	const tableNameSet = new Set(
+	const tableNameSet = new Set<string>(
 		tableNameList.map((table) => table.toLowerCase())
 	);
 
-	function highlightTableName(view: EditorView) {
-		const decorationList: Range<Decoration>[] = [];
-
+	function highlightTableName(view: EditorView): DecorationSet {
+		const decorationList = new Array<Range<Decoration>>();
 		for (const { from, to } of view.visibleRanges) {
 			syntaxTree(view.state).iterate({
-				from,
-				to,
 				enter: (node) => {
 					if (node.name == "Identifier") {
 						const word = view.state.doc
@@ -37,6 +34,8 @@ export function createSQLTableNameHighlightPlugin(tableNameList: string[]) {
 						}
 					}
 				},
+				from,
+				to,
 			});
 		}
 
@@ -55,6 +54,8 @@ export function createSQLTableNameHighlightPlugin(tableNameList: string[]) {
 				this.decorations = highlightTableName(update.view);
 			}
 		},
-		{ decorations: (v) => v.decorations }
+		{
+			decorations: (v) => v.decorations,
+		}
 	);
 }

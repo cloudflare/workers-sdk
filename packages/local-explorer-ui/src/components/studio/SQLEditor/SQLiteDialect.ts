@@ -44,32 +44,32 @@ export const sqliteBuiltinFunctionList = [
 	"total_changes",
 	"trim",
 	"typeof",
-	"unicode",
 	"unhex",
-	"unistr",
+	"unicode",
 	"unistr_quote",
+	"unistr",
 	"unlikely",
 	"upper",
 	"zeroblob",
 
 	// Date & time functions
 	"date",
-	"time",
 	"datetime",
 	"julianday",
-	"unixepoch",
 	"strftime",
+	"time",
 	"timediff",
+	"unixepoch",
 
 	// Aggregate functions
 	"avg",
+	"count",
 	"count",
 	"group_concat",
 	"max",
 	"min",
 	"sum",
 	"total",
-	"count",
 
 	// Math functions
 	"acos",
@@ -101,18 +101,18 @@ export const sqliteBuiltinFunctionList = [
 	"trunc",
 
 	// JSON1 extension functions
-	"json",
 	"json_array_length",
 	"json_extract",
 	"json_insert",
-	"json_remove",
-	"json_set",
-	"json_replace",
-	"json_type",
-	"json_valid",
 	"json_patch",
 	"json_quote",
-];
+	"json_remove",
+	"json_replace",
+	"json_set",
+	"json_type",
+	"json_valid",
+	"json",
+] satisfies string[];
 
 const sqliteKeywords = [
 	"ABORT",
@@ -147,8 +147,8 @@ const sqliteKeywords = [
 	"CURRENT_TIMESTAMP",
 	"DATABASE",
 	"DEFAULT",
-	"DEFERRED",
 	"DEFERRABLE",
+	"DEFERRED",
 	"DELETE",
 	"DESC",
 	"DETACH",
@@ -232,46 +232,46 @@ const sqliteKeywords = [
 	"VIRTUAL",
 	"WHEN",
 	"WHERE",
-];
+] satisfies string[];
 
 const sqliteDataTypes = [
 	// Integer affinity
-	"INT",
-	"INTEGER",
-	"TINYINT",
-	"SMALLINT",
-	"MEDIUMINT",
 	"BIGINT",
-	"UNSIGNED BIG INT",
+	"INT",
 	"INT2",
 	"INT8",
+	"INTEGER",
+	"MEDIUMINT",
+	"SMALLINT",
+	"TINYINT",
+	"UNSIGNED BIG INT",
 
 	// Text affinity
 	"CHARACTER",
-	"VARCHAR",
-	"VARYING CHARACTER",
-	"NCHAR",
+	"CLOB",
 	"NATIVE CHARACTER",
+	"NCHAR",
 	"NVARCHAR",
 	"TEXT",
-	"CLOB",
+	"VARCHAR",
+	"VARYING CHARACTER",
 
 	// Real affinity
-	"REAL",
-	"DOUBLE",
 	"DOUBLE PRECISION",
+	"DOUBLE",
 	"FLOAT",
+	"REAL",
 
 	// Numeric affinity
-	"NUMERIC",
-	"DECIMAL",
 	"BOOLEAN",
 	"DATE",
 	"DATETIME",
+	"DECIMAL",
+	"NUMERIC",
 
 	// Blob affinity
 	"BLOB",
-];
+] satisfies string[];
 
 // https://github.com/codemirror/lang-sql/blob/87e090931a20b67194ae6bf59d374b9afc8a7447/src/sql.ts#L324
 // Based on this definition except we are swapping our own keyword and built-in functions

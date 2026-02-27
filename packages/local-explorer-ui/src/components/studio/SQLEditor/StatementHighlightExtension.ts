@@ -14,6 +14,7 @@ import { syntaxTree } from "@codemirror/language";
 import { StateField } from "@codemirror/state";
 import { Decoration, EditorView } from "@codemirror/view";
 import type { EditorState, Range } from "@codemirror/state";
+import type { DecorationSet } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 
 const statementLineHighlight = Decoration.line({
@@ -22,11 +23,11 @@ const statementLineHighlight = Decoration.line({
 
 export interface StudioStatementSegment {
 	from: number;
-	to: number;
 	text: string;
+	to: number;
 }
 
-function toNodeString(state: EditorState, node: SyntaxNode) {
+function toNodeString(state: EditorState, node: SyntaxNode): string {
 	return state.doc.sliceString(node.from, node.to);
 }
 
@@ -42,6 +43,7 @@ function toNodeString(state: EditorState, node: SyntaxNode) {
  *
  * @param state - The current editor state used for extracting node content.
  * @param node - The syntax node representing the SQL statement.
+ *
  * @returns The number of BEGIN keywords found in the statement.
  */
 function requiresStatementEnd(state: EditorState, node: SyntaxNode): number {
@@ -84,13 +86,15 @@ function requiresStatementEnd(state: EditorState, node: SyntaxNode): number {
  *
  * @param state - The current editor state used to extract token content.
  * @param node - The syntax node to inspect.
+ *
  * @returns True if the node matches `END;`, otherwise false.
  */
-function isEndStatement(state: EditorState, node: SyntaxNode) {
+function isEndStatement(state: EditorState, node: SyntaxNode): boolean {
 	let ptr = node.firstChild;
 	if (!ptr) {
 		return false;
 	}
+
 	if (toNodeString(state, ptr).toLowerCase() !== "end") {
 		return false;
 	}
@@ -99,6 +103,7 @@ function isEndStatement(state: EditorState, node: SyntaxNode) {
 	if (!ptr) {
 		return false;
 	}
+
 	if (toNodeString(state, ptr) !== ";") {
 		return false;
 	}
@@ -115,6 +120,7 @@ function isEndStatement(state: EditorState, node: SyntaxNode) {
  *
  * @param state - The current editor state containing the SQL syntax tree.
  * @param generateText - If true, includes the text content of each statement segment in the result.
+ *
  * @returns An array of statement segments with their position (from, to),
  *          and optionally the text content if `generateText` is true.
  */
@@ -127,13 +133,12 @@ export function splitStudioSQLStatements(
 	// Get all the statements
 	let pendingEndCount = 0;
 	const statements = topNode.getChildren("Statement");
-
 	if (statements.length === 0) {
 		return [];
 	}
 
-	const statementGroups: SyntaxNode[][] = [];
-	let accumulateNodes: SyntaxNode[] = [];
+	const statementGroups = new Array<Array<SyntaxNode>>();
+	let accumulateNodes = new Array<SyntaxNode>();
 
 	for (let i = 0; i < statements.length; i++) {
 		const statement = statements[i] as SyntaxNode;
@@ -163,8 +168,8 @@ export function splitStudioSQLStatements(
 		const last = r[r.length - 1] as SyntaxNode;
 		return {
 			from: first.from,
-			to: last.to,
 			text: generateText ? state.doc.sliceString(first.from, last.to) : "",
+			to: last.to,
 		};
 	});
 }
@@ -172,11 +177,13 @@ export function splitStudioSQLStatements(
 export function resolveStudioToNearestStatement(
 	state: EditorState,
 	position?: number
-): { from: number; to: number } | null {
+): {
+	from: number;
+	to: number;
+} | null {
 	// Breakdown and grouping the statement
 	const cursor = position ?? state.selection.main.from;
 	const statements = splitStudioSQLStatements(state, false);
-
 	if (statements.length === 0) {
 		return null;
 	}
@@ -188,9 +195,11 @@ export function resolveStudioToNearestStatement(
 		if (cursor < statement.from) {
 			break;
 		}
+
 		if (cursor > statement.to) {
 			continue;
 		}
+
 		if (cursor >= statement.from && cursor <= statement.to) {
 			return statement;
 		}
@@ -199,6 +208,7 @@ export function resolveStudioToNearestStatement(
 	if (i === 0) {
 		return statements[0] ?? null;
 	}
+
 	if (i === statements.length) {
 		return statements[i - 1] ?? null;
 	}
@@ -212,12 +222,12 @@ export function resolveStudioToNearestStatement(
 
 	if (cursorLine - topLine >= bottomLine - cursorLine) {
 		return nextStatement;
-	} else {
-		return prevStatement;
 	}
+
+	return prevStatement;
 }
 
-function getDecorationFromState(state: EditorState) {
+function getDecorationFromState(state: EditorState): DecorationSet {
 	const statement = resolveStudioToNearestStatement(state);
 	if (!statement) {
 		return Decoration.none;
@@ -227,7 +237,7 @@ function getDecorationFromState(state: EditorState) {
 	const fromLineNumber = state.doc.lineAt(statement.from).number;
 	const toLineNumber = state.doc.lineAt(statement.to).number;
 
-	const d: Range<Decoration>[] = [];
+	const d = new Array<Range<Decoration>>();
 	for (let i = fromLineNumber; i <= toLineNumber; i++) {
 		d.push(statementLineHighlight.range(state.doc.line(i).from));
 	}
