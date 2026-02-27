@@ -12,13 +12,15 @@ import { useCallback } from "react";
 import type { StudioTableSchemaChange } from "../../../../types/studio";
 import type { DragEndEvent } from "@dnd-kit/core";
 
-export function StudioConstraintListEditor({
-	value,
-	onChange,
-}: {
-	value: StudioTableSchemaChange;
+interface StudioConstraintListEditorProps {
 	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
-}) {
+	value: StudioTableSchemaChange;
+}
+
+export function StudioConstraintListEditor({
+	onChange,
+	value,
+}: StudioConstraintListEditorProps): JSX.Element | null {
 	if (value.constraints.length === 0) {
 		return null;
 	}
@@ -29,18 +31,12 @@ export function StudioConstraintListEditor({
 			<table className="border-collapse w-full">
 				<thead>
 					<tr>
-						<th className="p-2 border border-border" style={{ width: 40 }}>
-							#
-						</th>
-						<th
-							className="p-2 border border-border text-left"
-							style={{ width: 100 }}
-						>
-							Type
-						</th>
+						<th className="p-2 border border-border h-10">#</th>
+						<th className="p-2 border border-border text-left h-25">Type</th>
 						<th className="p-2 border border-border text-left"></th>
 					</tr>
 				</thead>
+
 				<tbody>
 					{(value.constraints ?? []).map(
 						(constraintChange, constriantIndex) => {
@@ -101,7 +97,6 @@ export function StudioConstraintListEditor({
 										{constraint.primaryKey && (
 											<SortableColumnList
 												disabledRearrange={!!value.name.old}
-												value={constraint.primaryColumns ?? []}
 												onChange={(newPrimaryColumns) => {
 													onChange(
 														produce(value, (draft) => {
@@ -116,6 +111,7 @@ export function StudioConstraintListEditor({
 														})
 													);
 												}}
+												value={constraint.primaryColumns ?? []}
 											/>
 										)}
 									</td>
@@ -129,23 +125,22 @@ export function StudioConstraintListEditor({
 	);
 }
 
-function SortableColumnList({
-	value,
-	onChange,
-	disabledRearrange,
-}: {
+interface SortableColumnListProps {
 	value: string[];
 	onChange: (newValue: string[]) => void;
 	disabledRearrange?: boolean;
-}) {
+}
+
+function SortableColumnList({
+	disabledRearrange,
+	onChange,
+	value,
+}: SortableColumnListProps): JSX.Element {
 	const handleDragEnd = useCallback(
-		(event: DragEndEvent) => {
+		(event: DragEndEvent): void => {
 			const { active, over } = event;
 
-			if (!active) {
-				return;
-			}
-			if (!over) {
+			if (!active || !over) {
 				return;
 			}
 
@@ -162,9 +157,9 @@ function SortableColumnList({
 		<div className="flex gap-2">
 			<DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
 				<SortableContext
+					disabled={disabledRearrange}
 					items={value}
 					strategy={verticalListSortingStrategy}
-					disabled={disabledRearrange}
 				>
 					{value.map((columnName) => (
 						<SortableColumnItem key={columnName} id={columnName} />
@@ -175,20 +170,22 @@ function SortableColumnList({
 	);
 }
 
-function SortableColumnItem({ id }: { id: string }) {
+interface SortableColumnItemProps {
+	id: string;
+}
+
+function SortableColumnItem({ id }: SortableColumnItemProps): JSX.Element {
 	const { attributes, listeners, setNodeRef, transform, transition } =
 		useSortable({ id });
-
-	const style = {
-		transform: CSS.Transform.toString(transform),
-		transition,
-	};
 
 	return (
 		<div
 			className="p-1 px-2 rounded bg-accent inline-block font-mono border border-color cursor-pointer select-none hover:border-active"
 			ref={setNodeRef}
-			style={style}
+			style={{
+				transform: CSS.Transform.toString(transform),
+				transition,
+			}}
 			{...attributes}
 			{...listeners}
 		>

@@ -18,30 +18,30 @@ import type {
 import type { StudioCodeMirrorReference } from "../../Code/Mirror";
 
 interface StudioTableSchemaEditorProps {
-	value: StudioTableSchemaChange;
-	driver: IStudioDriver;
-	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
-	highlightSchemaChanges?: boolean;
-	readOnlyExistingColumns?: boolean;
 	disabledAddColumn?: boolean;
+	driver: IStudioDriver;
+	highlightSchemaChanges?: boolean;
+	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
 	onSaveChange: (statements: string[]) => Promise<void>;
+	readOnlyExistingColumns?: boolean;
+	value: StudioTableSchemaChange;
 }
 
 export function StudioTableSchemaEditor({
-	value,
-	onChange,
+	disabledAddColumn,
 	driver,
 	highlightSchemaChanges,
-	readOnlyExistingColumns,
+	onChange,
 	onSaveChange,
-	disabledAddColumn,
-}: StudioTableSchemaEditorProps) {
+	readOnlyExistingColumns,
+	value,
+}: StudioTableSchemaEditorProps): JSX.Element {
 	const { openModal } = useModal();
 
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
 	const handleNameChange = useCallback(
-		(newName: string) => {
+		(newName: string): void => {
 			onChange((prev) =>
 				produce(prev, (draft) => {
 					draft.name.new = newName;
@@ -51,22 +51,23 @@ export function StudioTableSchemaEditor({
 		[onChange]
 	);
 
-	const isSchemaDirty = useMemo(() => {
-		return (
+	const isSchemaDirty = useMemo(
+		(): boolean =>
 			value.name.new !== value.name.old ||
 			value.columns.some((change) => !isEqual(change.new, change.old)) ||
-			value.constraints.some((change) => !isEqual(change.new, change.old))
-		);
-	}, [value]);
+			value.constraints.some((change) => !isEqual(change.new, change.old)),
+		[value]
+	);
 
-	const isSaveEnabled = useMemo(() => {
+	const isSaveEnabled = useMemo(
 		// Enable save only if there's at least one column, a table name, and some change detected
-		return isSchemaDirty && value.name.new && value.columns.length > 0;
-	}, [isSchemaDirty, value]);
+		(): boolean =>
+			isSchemaDirty && !!value.name.new && value.columns.length > 0,
+		[isSchemaDirty, value]
+	);
 
-	const handleAddColumn = useCallback(() => {
+	const handleAddColumn = useCallback((): void => {
 		openModal(StudioColumnEditiorDrawer, {
-			schemaChanges: value,
 			onConfirm: (newColumn: StudioTableColumn) => {
 				onChange((prev) =>
 					produce(prev, (draft) => {
@@ -78,10 +79,11 @@ export function StudioTableSchemaEditor({
 					})
 				);
 			},
+			schemaChanges: value,
 		});
 	}, [onChange, value, openModal]);
 
-	useEffect(() => {
+	useEffect((): void => {
 		if (!editorRef.current) {
 			return;
 		}
@@ -95,21 +97,21 @@ export function StudioTableSchemaEditor({
 		}
 	}, [driver, value, editorRef]);
 
-	const handleSaveChange = useCallback(() => {
+	const handleSaveChange = useCallback((): void => {
 		try {
 			const previewStatements = driver.generateTableSchemaStatement(value);
 			openModal(StudioCommitConfirmation, {
-				statements: previewStatements,
 				onConfirm: async () => {
 					await onSaveChange(previewStatements);
 				},
+				statements: previewStatements,
 			});
 		} catch {
 			console.log("Cannot generate statements");
 		}
 	}, [driver, value, openModal, onSaveChange]);
 
-	const handleDiscard = useCallback(() => {
+	const handleDiscard = useCallback((): void => {
 		onChange((prev) =>
 			produce(prev, (draft) => {
 				draft.name.new = draft.name.old;
@@ -132,21 +134,20 @@ export function StudioTableSchemaEditor({
 
 	return (
 		<SplitPane
-			split="horizontal"
-			minSize={150}
 			defaultSize={250}
+			minSize={150}
 			primary="second"
+			split="horizontal"
 		>
 			<div className="flex flex-col w-full h-full overflow-hidden text-xs bg-surface">
 				<div className="flex gap-2 p-4 py-2 border-b border-color shadow-xs">
 					<input
 						autoFocus
-						style={{ width: "250px" }}
-						placeholder="Table name"
-						className="h-9 rounded-lg border border-gray-300 px-3 text-base bg-transparent"
-						value={value.name.new ?? ""}
-						onChange={(e) => handleNameChange(e.target.value)}
+						className="w-62.5 h-9 rounded-lg border border-gray-300 px-3 text-base bg-transparent"
 						disabled={readOnlyExistingColumns}
+						onChange={(e) => handleNameChange(e.target.value)}
+						placeholder="Table name"
+						value={value.name.new ?? ""}
 					/>
 					<div className="grow" />
 					<div className="flex gap-2">
@@ -156,9 +157,9 @@ export function StudioTableSchemaEditor({
 							</Button>
 						)}
 						<Button
+							disabled={!isSaveEnabled}
 							onClick={handleSaveChange}
 							variant={isSaveEnabled ? "primary" : "secondary"}
-							disabled={!isSaveEnabled}
 						>
 							Save Change
 						</Button>
@@ -170,88 +171,69 @@ export function StudioTableSchemaEditor({
 						<table className="border-collapse w-full">
 							<thead className="sticky top-0">
 								<tr>
-									<th
-										className="p-2 border border-border text-center"
-										style={{ width: 40 }}
-									>
+									<th className="w-10 p-2 border border-border text-center">
 										#
 									</th>
-									<th
-										className="p-2 border border-border text-center"
-										style={{ width: 40 }}
-									>
+									<th className="w-10 p-2 border border-border text-center">
 										<KeyIcon />
 									</th>
-									<th
-										className="p-2 border border-border text-left"
-										style={{ width: "200px" }}
-									>
+									<th className="w-50 p-2 border border-border text-left">
 										Column Name
 									</th>
-									<th
-										className="p-2 border border-border text-left"
-										style={{ width: "100px" }}
-									>
+									<th className="w-25 p-2 border border-border text-left">
 										Type
 									</th>
-									<th
-										className="p-2 border border-border text-left"
-										style={{ width: "50px" }}
-									>
+									<th className="w-12.5 p-2 border border-border text-left">
 										NULL
 									</th>
-									<th
-										className="p-2 border border-border text-left"
-										style={{ width: "125px" }}
-									>
+									<th className="w-31.25 p-2 border border-border text-left">
 										Default Value
 									</th>
 									<th className="p-2 border border-border"></th>
-									<th
-										className="p-2 border border-border"
-										style={{ width: 40 }}
-									></th>
+									<th className="w-10 p-2 border border-border"></th>
 								</tr>
 							</thead>
 							<tbody>
-								{value.columns.map((_, columnIndex) => {
-									return (
-										<StudioColumnSchemaEditor
-											columnIndex={columnIndex}
-											highlightSchemaChanges={highlightSchemaChanges}
-											key={columnIndex}
-											onChange={onChange}
-											readOnlyExistingColumns={readOnlyExistingColumns}
-											value={value}
-										/>
-									);
-								})}
+								{value.columns.map((_, columnIndex) => (
+									<StudioColumnSchemaEditor
+										columnIndex={columnIndex}
+										highlightSchemaChanges={highlightSchemaChanges}
+										key={columnIndex}
+										onChange={onChange}
+										readOnlyExistingColumns={readOnlyExistingColumns}
+										value={value}
+									/>
+								))}
 							</tbody>
 						</table>
 
 						{!disabledAddColumn && (
-							<Button onClick={handleAddColumn} className="my-2">
+							<Button className="my-2" onClick={handleAddColumn}>
 								Add Column
 							</Button>
 						)}
 
-						<StudioConstraintListEditor value={value} onChange={onChange} />
+						<StudioConstraintListEditor onChange={onChange} value={value} />
 						<IndexList indexList={value.indexes ?? []} />
 					</div>
 				</div>
 			</div>
 			<div className="overflow-hidden grow bg-surface">
 				<StudioSQLEditor
-					ref={editorRef}
-					readOnly
 					className="h-full w-full grow"
+					readOnly
+					ref={editorRef}
 				/>
 			</div>
 		</SplitPane>
 	);
 }
 
-function IndexList({ indexList }: { indexList: StudioTableIndex[] }) {
+function IndexList({
+	indexList,
+}: {
+	indexList: StudioTableIndex[];
+}): JSX.Element | null {
 	if (indexList.length === 0) {
 		return null;
 	}
@@ -262,21 +244,11 @@ function IndexList({ indexList }: { indexList: StudioTableIndex[] }) {
 			<table className="border-collapse w-full">
 				<thead>
 					<tr>
-						<th className="p-2 border border-border" style={{ width: 40 }}>
-							#
-						</th>
-						<th
-							className="p-2 border border-border text-left"
-							style={{ width: 200 }}
-						>
+						<th className="w-10 p-2 border border-border">#</th>
+						<th className="w-50 p-2 border border-border text-left">
 							Index Name
 						</th>
-						<th
-							className="p-2 border border-border text-left"
-							style={{ width: 100 }}
-						>
-							Type
-						</th>
+						<th className="w-25 p-2 border border-border text-left">Type</th>
 						<th className="p-2 border border-border text-left"></th>
 					</tr>
 				</thead>

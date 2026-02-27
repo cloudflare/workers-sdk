@@ -28,11 +28,11 @@ import type { Icon } from "@phosphor-icons/react";
 import type { PropsWithChildren } from "react";
 
 interface StudioColumnSchemaEditorProps {
-	value: StudioTableSchemaChange;
-	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
 	columnIndex: number;
 	highlightSchemaChanges?: boolean;
+	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
 	readOnlyExistingColumns?: boolean;
+	value: StudioTableSchemaChange;
 }
 
 /**
@@ -47,12 +47,12 @@ interface StudioColumnSchemaEditorProps {
  * It uses immutable updates with `produce` to keep the parent schema state consistent.
  */
 export function StudioColumnSchemaEditor({
-	value,
-	onChange,
 	columnIndex,
 	highlightSchemaChanges,
+	onChange,
 	readOnlyExistingColumns,
-}: StudioColumnSchemaEditorProps) {
+	value,
+}: StudioColumnSchemaEditorProps): JSX.Element | null {
 	const { openModal } = useModal();
 	const column = value.columns[columnIndex];
 
@@ -64,7 +64,7 @@ export function StudioColumnSchemaEditor({
 
 	const editableColumn = column?.new;
 
-	const onPrimaryKeyClicked = useCallback(() => {
+	const onPrimaryKeyClicked = useCallback((): void => {
 		if (!editableColumn) {
 			return;
 		}
@@ -87,30 +87,32 @@ export function StudioColumnSchemaEditor({
 							);
 						}
 					}
-				} else {
-					// Add column to primary key list or create constraint if none exists
-					if (pkConstraint?.new) {
-						pkConstraint.new.primaryColumns = [
-							...(pkConstraint.new.primaryColumns ?? []),
-							editableColumn.name,
-						];
-					} else {
-						draft.constraints.push({
-							new: {
-								primaryKey: true,
-								primaryColumns: [editableColumn.name],
-							},
-							old: null,
-							key: window.crypto.randomUUID(),
-						});
-					}
+					return;
 				}
+
+				// Add column to primary key list or create constraint if none exists
+				if (pkConstraint?.new) {
+					pkConstraint.new.primaryColumns = [
+						...(pkConstraint.new.primaryColumns ?? []),
+						editableColumn.name,
+					];
+					return;
+				}
+
+				draft.constraints.push({
+					new: {
+						primaryKey: true,
+						primaryColumns: [editableColumn.name],
+					},
+					old: null,
+					key: window.crypto.randomUUID(),
+				});
 			})
 		);
 	}, [editableColumn, onChange, isPrimaryKey]);
 
 	const onNullClicked = useCallback(
-		(checkedState: boolean) => {
+		(checkedState: boolean): void => {
 			if (!column) {
 				return;
 			}
@@ -133,14 +135,13 @@ export function StudioColumnSchemaEditor({
 		[column, onChange]
 	);
 
-	const handleEditColumn = useCallback(() => {
+	const handleEditColumn = useCallback((): void => {
 		if (!column?.new) {
 			return;
 		}
 
 		openModal(StudioColumnEditiorDrawer, {
 			defaultValue: column.new,
-			schemaChanges: value,
 			onConfirm: (newColumnDef: StudioTableColumn) => {
 				onChange((prev) =>
 					produce(prev, (draft) => {
@@ -155,10 +156,11 @@ export function StudioColumnSchemaEditor({
 					})
 				);
 			},
+			schemaChanges: value,
 		});
 	}, [onChange, value, column, openModal]);
 
-	const handleRemoveColumn = useCallback(() => {
+	const handleRemoveColumn = useCallback((): void => {
 		onChange((prev) =>
 			produce(prev, (draft) => {
 				draft.columns = draft.columns.filter((c) => c.key !== column?.key);
@@ -172,17 +174,14 @@ export function StudioColumnSchemaEditor({
 
 	return (
 		<tr
-			key={column.key}
 			className={
 				highlightSchemaChanges && column.new && !column.old
 					? "bg-green-100 dark:bg-green-800"
 					: ""
 			}
+			key={column.key}
 		>
-			<td
-				className={"p-2 border border-border text-center"}
-				style={{ height: 40 }}
-			>
+			<td className="p-2 border border-border text-center h-10">
 				{columnIndex + 1}
 			</td>
 			<td
@@ -208,7 +207,7 @@ export function StudioColumnSchemaEditor({
 				<Checkbox
 					checked={!editableColumn.constraint?.notNull}
 					className="mx-auto"
-					onValueChange={
+					onCheckedChange={
 						readOnlyExistingColumns && column.old ? undefined : onNullClicked
 					}
 				/>
@@ -218,8 +217,8 @@ export function StudioColumnSchemaEditor({
 			</td>
 			<td className="p-2 border border-border">
 				<ColumnConstraintDescription
-					constraints={value.constraints}
 					column={editableColumn}
+					constraints={value.constraints}
 				/>
 			</td>
 			<td className="p-2 border border-border text-center">
@@ -228,9 +227,9 @@ export function StudioColumnSchemaEditor({
 						render={
 							<Button
 								aria-label="Column options"
-								variant="ghost"
-								size="sm"
 								shape="square"
+								size="sm"
+								variant="ghost"
 							>
 								<DotsThreeOutlineIcon weight="fill" size={16} />
 							</Button>
@@ -245,8 +244,8 @@ export function StudioColumnSchemaEditor({
 							Edit column
 						</DropdownMenu.Item>
 						<DropdownMenu.Item
-							icon={TrashIcon}
 							disabled={!!column.old}
+							icon={TrashIcon}
 							onClick={handleRemoveColumn}
 						>
 							Remove column
@@ -256,6 +255,11 @@ export function StudioColumnSchemaEditor({
 			</td>
 		</tr>
 	);
+}
+
+interface ColumnConstraintDescriptionProps {
+	column: StudioTableColumn;
+	constraints: StudioTableConstraintChange[];
 }
 
 /**
@@ -270,10 +274,7 @@ export function StudioColumnSchemaEditor({
 function ColumnConstraintDescription({
 	column,
 	constraints,
-}: {
-	column: StudioTableColumn;
-	constraints: StudioTableConstraintChange[];
-}) {
+}: ColumnConstraintDescriptionProps): JSX.Element {
 	// Check if it contains foreign key
 	let referenceTableName = column.constraint?.foreignKey?.foreignTableName;
 	let referenceColumnName = column.constraint?.foreignKey?.foreignColumns?.[0];
@@ -307,11 +308,13 @@ function ColumnConstraintDescription({
 					{column.constraint.generatedExpression}
 				</ColumnConstraintBadge>
 			)}
+
 			{column.constraint?.checkExpression && (
 				<ColumnConstraintBadge icon={CheckIcon} name="Check">
 					{column.constraint.checkExpression}
 				</ColumnConstraintBadge>
 			)}
+
 			{referenceTableName && referenceColumnName && (
 				<ColumnConstraintBadge icon={ArrowLineDownRightIcon} name="Reference">
 					{referenceTableName}.{referenceColumnName}
@@ -321,16 +324,22 @@ function ColumnConstraintDescription({
 	);
 }
 
+type ColumnConstraintBadgeProps = PropsWithChildren<{
+	icon?: Icon;
+	name: string;
+}>;
+
 function ColumnConstraintBadge({
 	children,
 	icon: IconComponent,
 	name,
-}: PropsWithChildren<{ icon?: Icon; name: string }>) {
+}: ColumnConstraintBadgeProps): JSX.Element {
 	return (
 		<div className="inline-flex items-center gap-1 border border-border rounded overflow-hidden">
 			<div className="bg-accent p-1 border-r border-border flex items-center">
 				{IconComponent && <IconComponent className="mr-1" />} {name}
 			</div>
+
 			<div className="p-1 font-mono">{children}</div>
 		</div>
 	);
@@ -338,14 +347,14 @@ function ColumnConstraintBadge({
 
 interface StudioColumnEditiorDrawerProps {
 	defaultValue?: StudioTableColumn;
-	schemaChanges: StudioTableSchemaChange;
 	onConfirm: (value: StudioTableColumn) => void;
+	schemaChanges: StudioTableSchemaChange;
 }
 
 export function StudioColumnEditiorDrawer({
 	defaultValue,
-	schemaChanges,
 	onConfirm,
+	schemaChanges,
 }: StudioColumnEditiorDrawerProps) {
 	const [value, setValue] = useState<StudioTableColumn>(() => {
 		return defaultValue
@@ -364,20 +373,18 @@ export function StudioColumnEditiorDrawer({
 
 	return (
 		<Drawer
-			footer={({ onClose }) => {
-				return (
-					<Button
-						disabled={!value.name || !value.type || isColumnNameDuplicated}
-						variant="primary"
-						onClick={() => {
-							onConfirm(value);
-							void onClose();
-						}}
-					>
-						{defaultValue ? "Save column" : "Add column"}
-					</Button>
-				);
-			}}
+			footer={({ onClose }) => (
+				<Button
+					disabled={!value.name || !value.type || isColumnNameDuplicated}
+					onClick={() => {
+						onConfirm(value);
+						void onClose();
+					}}
+					variant="primary"
+				>
+					{defaultValue ? "Save column" : "Add column"}
+				</Button>
+			)}
 			title="Add Column"
 		>
 			<div className="flex flex-col gap-2">
@@ -391,34 +398,35 @@ export function StudioColumnEditiorDrawer({
 					</Label>
 					<input
 						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
-						placeholder="e.g., user_id"
-						value={value.name}
-						onChange={(e) => {
+						onChange={(e): void => {
 							setValue(
 								produce(value, (draft) => {
 									draft.name = e.target.value;
 								})
 							);
 						}}
+						placeholder="e.g., user_id"
+						value={value.name}
 					/>
 				</div>
 
 				<div className="w-full">
 					<Label>Data type</Label>
 					<Select
-						placeholder="Select a type"
 						className="w-full"
-						value={value.type}
-						onValueChange={(newType) => {
+						placeholder="Select a type"
+						onValueChange={(newType): void => {
 							if (!newType) {
 								return;
 							}
+
 							setValue((prev) =>
 								produce(prev, (draft) => {
 									draft.type = newType;
 								})
 							);
 						}}
+						value={value.type}
 					>
 						{[
 							...(["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
@@ -431,10 +439,22 @@ export function StudioColumnEditiorDrawer({
 											value: value.type,
 										},
 									]),
-							{ label: "Text", value: "TEXT" },
-							{ label: "Integer", value: "INTEGER" },
-							{ label: "Real", value: "REAL" },
-							{ label: "Blob", value: "BLOB" },
+							{
+								label: "Text",
+								value: "TEXT",
+							},
+							{
+								label: "Integer",
+								value: "INTEGER",
+							},
+							{
+								label: "Real",
+								value: "REAL",
+							},
+							{
+								label: "Blob",
+								value: "BLOB",
+							},
 						].map((option) => (
 							<Select.Option key={option.value} value={option.value}>
 								{option.label}

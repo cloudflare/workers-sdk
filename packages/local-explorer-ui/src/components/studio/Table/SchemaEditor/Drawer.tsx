@@ -95,8 +95,7 @@ Drawer.Header = function DrawerHeader({
 	const { onClose } = useContext(DrawerContext);
 
 	return (
-		// TODO: Only one position class is required.
-		<div className="relative sticky top-0 bg-surface p-4">
+		<div className="relative top-0 bg-surface p-4">
 			<div className="grid grid-cols-[1fr_min-content] gap-x-3 gap-y-2">
 				<div className="text-lg font-semibold">{children}</div>
 				<button
