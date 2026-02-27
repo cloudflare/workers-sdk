@@ -3,19 +3,23 @@ import { StudioResultTable } from "../ResultTable";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
 import { StudioQueryResultStats } from "./Stats";
 import type { StudioMultipleQueryResult } from "../../../types/studio";
+import type { StudioTableState } from "../Table/State";
+import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 
 interface StudioQueryResultTabProps {
 	result: StudioMultipleQueryResult;
 }
 
 export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
-	const state = useMemo(() => {
-		return createStudioTableStateFromResult({
-			result: result.result,
-		});
-	}, [result]);
+	const state = useMemo(
+		(): StudioTableState<StudioResultHeaderMetadata> =>
+			createStudioTableStateFromResult({
+				result: result.result,
+			}),
+		[result]
+	);
 
-	const headerIndexList = useMemo(() => {
+	const headerIndexList = useMemo((): number[] => {
 		if (!result.result.headers) {
 			return [];
 		}

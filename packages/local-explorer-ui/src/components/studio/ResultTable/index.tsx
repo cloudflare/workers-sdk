@@ -7,8 +7,7 @@ import {
 	SortAscendingIcon,
 	SortDescendingIcon,
 } from "@phosphor-icons/react";
-import { useCallback } from "react";
-import * as React from "react";
+import { useCallback, useState } from "react";
 import { StudioTable } from "../Table";
 import {
 	StudioEditableNumberCell,
@@ -27,18 +26,10 @@ import type {
 } from "../Table/BaseTable";
 import type { StudioTableState } from "../Table/State";
 import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
-import type { ReactNode } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 
 interface StudioResultTableProps {
-	state: StudioTableState<StudioResultHeaderMetadata>;
 	arrangeHeaderIndex: number[];
-
-	/** The column currently used for sorting */
-	orderByColumn?: string;
-
-	/** Sort direction for the current column ('ASC' or 'DESC') */
-	orderByDirection?: StudioSortDirection;
-
 	/**
 	 * If provided, enables sort options in the header context menu.
 	 * Called when the sort column or direction changes.
@@ -47,21 +38,28 @@ interface StudioResultTableProps {
 		columnName: string,
 		direction: StudioSortDirection
 	) => void;
+	/** The column currently used for sorting */
+	orderByColumn?: string;
+	/** Sort direction for the current column ('ASC' or 'DESC') */
+	orderByDirection?: StudioSortDirection;
+	state: StudioTableState<StudioResultHeaderMetadata>;
 }
 
 export function StudioResultTable({
-	state,
 	arrangeHeaderIndex,
+	onOrderByColumnChange,
 	orderByColumn,
 	orderByDirection,
-	onOrderByColumnChange,
-}: StudioResultTableProps) {
-	const { copyCallback, pasteCallback, onContextMenu } =
+	state,
+}: StudioResultTableProps): JSX.Element {
+	const { copyCallback, onContextMenu, pasteCallback } =
 		useStudioResultTableContextMenu(state);
 
 	const renderCell = useCallback(
-		(props: StudioTableCellRendererProps<StudioResultHeaderMetadata>) => {
-			const { x, y, header, isFocus } = props;
+		(
+			props: StudioTableCellRendererProps<StudioResultHeaderMetadata>
+		): JSX.Element => {
+			const { header, isFocus, x, y } = props;
 
 			const align = header.metadata?.typeHint === "NUMBER" ? "right" : "left";
 			const value = props.state.getValue(y, x);
@@ -80,32 +78,34 @@ export function StudioResultTable({
 			if (columnType === "NUMBER") {
 				return (
 					<StudioEditableNumberCell
-						header={header}
-						state={props.state}
-						value={value as StudioResultValue<number>}
 						editMode={editMode}
 						focus={isFocus}
+						header={header}
 						onChange={(newValue) => {
 							props.state.changeValue(y, x, newValue);
 						}}
+						state={props.state}
+						value={value as StudioResultValue<number>}
 					/>
 				);
-			} else if (columnType === "TEXT") {
+			}
+
+			if (columnType === "TEXT") {
 				const shouldUsePopoverEditor =
 					typeof value === "string" &&
 					(value.length > 100 || value.includes("\n"));
 
 				return (
 					<StudioEditableTextCell
-						header={header}
-						state={props.state}
-						value={value as StudioResultValue<string>}
 						editMode={editMode}
 						editor={shouldUsePopoverEditor ? "text" : "input"}
 						focus={isFocus}
+						header={header}
 						onChange={(newValue) => {
 							props.state.changeValue(y, x, newValue);
 						}}
+						state={props.state}
+						value={value as StudioResultValue<string>}
 					/>
 				);
 			}
@@ -118,7 +118,9 @@ export function StudioResultTable({
 	);
 
 	const renderHeader = useCallback(
-		(header: StudioTableHeaderProps<StudioResultHeaderMetadata>) => {
+		(
+			header: StudioTableHeaderProps<StudioResultHeaderMetadata>
+		): JSX.Element => {
 			const hasColumnInfo =
 				(header.metadata.indexes && header.metadata.indexes.length > 0) ||
 				header.metadata.isPrimaryKey ||
@@ -136,14 +138,15 @@ export function StudioResultTable({
 					orderByColumn={orderByColumn}
 					orderByDirection={orderByDirection}
 				>
-					<DropdownMenu.Content side="bottom" align="start" sideOffset={2}>
+					<DropdownMenu.Content align="start" side="bottom" sideOffset={2}>
 						<DropdownMenu.Item
 							className="text-sm"
 							onClick={() => navigator.clipboard.writeText(header.name || "")}
 						>
 							<CopyIcon className="size-4 mr-1" />
-							Copy column name
+							<span>Copy column name</span>
 						</DropdownMenu.Item>
+
 						{onOrderByColumnChange && (
 							<>
 								<DropdownMenu.Separator />
@@ -152,14 +155,14 @@ export function StudioResultTable({
 									onClick={() => onOrderByColumnChange(header.name, "ASC")}
 								>
 									<SortAscendingIcon className="size-4 mr-1" />
-									Sort A → Z
+									<span>Sort A → Z</span>
 								</DropdownMenu.Item>
 								<DropdownMenu.Item
 									className="text-sm"
 									onClick={() => onOrderByColumnChange(header.name, "DESC")}
 								>
 									<SortDescendingIcon className="size-4 mr-1" />
-									Sort Z → A
+									<span>Sort Z → A</span>
 								</DropdownMenu.Item>
 							</>
 						)}
@@ -175,6 +178,7 @@ export function StudioResultTable({
 
 						{header.metadata.isPrimaryKey && (
 							<DropdownMenuColumnInfo
+								description={primaryColumnList}
 								icon={
 									<KeyIcon
 										weight="duotone"
@@ -182,13 +186,12 @@ export function StudioResultTable({
 									/>
 								}
 								title={"Primary Key"}
-								description={primaryColumnList}
 							/>
 						)}
 
 						{header.metadata.indexes?.map((idx) => (
 							<DropdownMenuColumnInfo
-								key={idx.name}
+								description={idx.columns.join(", ")}
 								icon={
 									<KeyIcon
 										weight="duotone"
@@ -199,13 +202,14 @@ export function StudioResultTable({
 										})}
 									/>
 								}
+								key={idx.name}
 								title={idx.name}
-								description={idx.columns.join(", ")}
 							/>
 						))}
 
 						{header.metadata.referenceTo && (
 							<DropdownMenuColumnInfo
+								description={`${header.metadata.referenceTo.table}.${header.metadata.referenceTo.column}`}
 								icon={
 									<FlowArrowIcon
 										weight="duotone"
@@ -213,19 +217,18 @@ export function StudioResultTable({
 									/>
 								}
 								title={"Reference To"}
-								description={`${header.metadata.referenceTo.table}.${header.metadata.referenceTo.column}`}
 							/>
 						)}
 
 						{header.metadata.columnSchema?.constraint?.generatedExpression && (
 							<DropdownMenuColumnInfo
+								description={
+									header.metadata.columnSchema.constraint.generatedExpression
+								}
 								icon={
 									<SigmaIcon className="size-5 text-purple-600 dark:text-purple-400" />
 								}
 								title={"Generated Expression"}
-								description={
-									header.metadata.columnSchema.constraint.generatedExpression
-								}
 							/>
 						)}
 					</DropdownMenu.Content>
@@ -236,14 +239,17 @@ export function StudioResultTable({
 	);
 
 	const onKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
+		(e: React.KeyboardEvent): void => {
 			// Detect the "modifier" key: Command (⌘) on macOS, Control (Ctrl) on Windows/Linux
 			const isModifierPressed = e.metaKey || e.ctrlKey;
 
 			if (isModifierPressed && e.key === "c") {
 				copyCallback();
 				e.preventDefault();
-			} else if (isModifierPressed && e.key === "v") {
+				return;
+			}
+
+			if (isModifierPressed && e.key === "v") {
 				pasteCallback();
 				e.preventDefault();
 			}
@@ -253,17 +259,23 @@ export function StudioResultTable({
 
 	return (
 		<StudioTable
-			state={state}
-			rowHeight={36}
+			arrangeHeaderIndex={arrangeHeaderIndex}
+			onContextMenu={onContextMenu}
+			onKeyDown={onKeyDown}
+			renderAhead={3}
 			renderCell={renderCell}
 			renderHeader={renderHeader}
-			onKeyDown={onKeyDown}
-			arrangeHeaderIndex={arrangeHeaderIndex}
-			renderAhead={3}
-			onContextMenu={onContextMenu}
+			rowHeight={36}
+			state={state}
 		/>
 	);
 }
+
+type HeaderDropdownMenuProps = PropsWithChildren<{
+	header: StudioTableHeaderProps<StudioResultHeaderMetadata>;
+	orderByColumn?: string;
+	orderByDirection?: "ASC" | "DESC";
+}>;
 
 /**
  * Dropdown menu component that supports both click and right-click context menu triggers
@@ -273,12 +285,8 @@ function HeaderDropdownMenu({
 	header,
 	orderByColumn,
 	orderByDirection,
-}: React.PropsWithChildren<{
-	header: StudioTableHeaderProps<StudioResultHeaderMetadata>;
-	orderByColumn?: string;
-	orderByDirection?: "ASC" | "DESC";
-}>) {
-	const [open, setOpen] = React.useState(false);
+}: HeaderDropdownMenuProps): JSX.Element {
+	const [open, setOpen] = useState<boolean>(false);
 
 	const orderIconPart =
 		orderByColumn === header.name ? (
@@ -295,9 +303,8 @@ function HeaderDropdownMenu({
 				render={(props) => (
 					<div
 						{...props}
-						className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-surface"
-						style={{ height: 36 }}
-						onContextMenu={(e) => {
+						className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-surface h-9"
+						onContextMenu={(e): void => {
 							e.preventDefault();
 							e.stopPropagation();
 
@@ -309,7 +316,9 @@ function HeaderDropdownMenu({
 						) : (
 							header.display.iconElement
 						)}
+
 						<div className="grow line-clamp-1">{header.display.text}</div>
+
 						{orderIconPart}
 					</div>
 				)}
@@ -319,15 +328,17 @@ function HeaderDropdownMenu({
 	);
 }
 
-function DropdownMenuColumnInfo({
-	title,
-	description,
-	icon,
-}: {
-	title: string;
+interface DropdownMenuColumnInfoProps {
 	description: string;
 	icon: ReactNode;
-}) {
+	title: string;
+}
+
+function DropdownMenuColumnInfo({
+	description,
+	icon,
+	title,
+}: DropdownMenuColumnInfoProps) {
 	return (
 		<DropdownMenu.Item className="text-sm py-1.5 px-3 flex items-center gap-2">
 			{icon}

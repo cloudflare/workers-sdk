@@ -17,54 +17,58 @@ import type { StudioCodeMirrorReference } from "../Code/Mirror";
 import type { StudioTableHeaderProps } from "../Table/BaseTable";
 import type { StudioTableState } from "../Table/State";
 import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
+import type { Extension } from "@codemirror/state";
 import type { ReactNode } from "react";
 
 export type StudioTableCellEditorType = "input" | "json" | "text";
 
 const POPOVER_WIDTH = 500;
 const POPOVER_HEIGHT = 200;
+
 export interface TableEditableCell<T = unknown> {
-	value: StudioResultValue<T>;
-	isChanged?: boolean;
-	focus?: boolean;
 	editMode?: boolean;
-	state: StudioTableState<StudioResultHeaderMetadata>;
-	onChange?: (newValue: StudioResultValue<T>) => void;
 	editor?: StudioTableCellEditorType;
+	focus?: boolean;
 	header: StudioTableHeaderProps<StudioResultHeaderMetadata>;
+	isChanged?: boolean;
+	onChange?: (newValue: StudioResultValue<T>) => void;
+	state: StudioTableState<StudioResultHeaderMetadata>;
+	value: StudioResultValue<T>;
 }
 
 interface TabeEditableCellProps<T = unknown> {
+	align?: "left" | "right";
 	toString: (v: unknown) => StudioResultValue<string>;
 	toValue: (v: StudioResultValue<string>) => StudioResultValue<T>;
-	align?: "left" | "right";
 }
 
-function InputCellEditor({
-	value,
-	align,
-	discardChange,
-	readOnly,
-	applyChange,
-	onChange,
-	state,
-	popover,
-	popoverPlaceholder,
-}: Readonly<{
+interface InputCellEditorProps {
 	align?: "left" | "right";
 	applyChange: (v: StudioResultValue<string>, shouldExit?: boolean) => void;
 	discardChange: () => void;
-	value: StudioResultValue<string>;
 	onChange: (v: string) => void;
-	state: StudioTableState<StudioResultHeaderMetadata>;
-	readOnly?: boolean;
 	popover?: boolean;
 	popoverPlaceholder?: ReactNode;
-}>) {
-	const inputRef = useRef<HTMLInputElement>(null);
-	const shouldExit = useRef(true);
+	readOnly?: boolean;
+	state: StudioTableState<StudioResultHeaderMetadata>;
+	value: StudioResultValue<string>;
+}
 
-	useEffect(() => {
+function InputCellEditor({
+	align,
+	applyChange,
+	discardChange,
+	onChange,
+	popover,
+	popoverPlaceholder,
+	readOnly,
+	state,
+	value,
+}: Readonly<InputCellEditorProps>): JSX.Element {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const shouldExit = useRef<boolean>(true);
+
+	useEffect((): void => {
 		if (inputRef.current) {
 			inputRef.current.select();
 			inputRef.current.focus();
@@ -72,14 +76,14 @@ function InputCellEditor({
 	}, [inputRef]);
 
 	const { refs, floatingStyles, context } = useFloating({
-		open: popover,
-		onOpenChange: (open) => {
+		middleware: [offset(10), flip(), shift()],
+		onOpenChange: (open): void => {
 			if (!open) {
 				state.exitEditMode();
 			}
 		},
+		open: popover,
 		placement: "bottom-start",
-		middleware: [offset(10), flip(), shift()],
 	});
 
 	const dismiss = useDismiss(context);
@@ -117,13 +121,15 @@ function InputCellEditor({
 				</div>
 			) : (
 				<input
-					ref={inputRef}
-					autoFocus
-					readOnly={readOnly}
+					autoCapitalize="off"
 					autoComplete="off"
 					autoCorrect="off"
-					autoCapitalize="off"
-					spellCheck="false"
+					autoFocus
+					className={
+						align === "right"
+							? "h-full w-full border-0 bg-inherit pr-2 pl-2 text-right text-xs font-mono! outline-hidden"
+							: "h-full w-full border-0 bg-inherit pr-2 pl-2 text-xs font-mono! outline-hidden"
+					}
 					onBlur={() => {
 						applyChange(value, shouldExit.current);
 					}}
@@ -158,12 +164,10 @@ function InputCellEditor({
 							}
 						}
 					}}
+					readOnly={readOnly}
+					ref={inputRef}
+					spellCheck="false"
 					type="text"
-					className={
-						align === "right"
-							? "h-full w-full border-0 bg-inherit pr-2 pl-2 text-right text-xs font-mono! outline-hidden"
-							: "h-full w-full border-0 bg-inherit pr-2 pl-2 text-xs font-mono! outline-hidden"
-					}
 					value={value ?? ""}
 				/>
 			)}
@@ -171,40 +175,43 @@ function InputCellEditor({
 	);
 }
 
+interface PopoverEditorProps {
+	defaultValue: StudioResultValue<string>;
+	onApply: (value: StudioResultValue<string>) => void;
+	readOnly?: boolean;
+}
+
 function PopoverEditor({
 	defaultValue,
-	readOnly,
 	onApply,
-}: {
-	defaultValue: StudioResultValue<string>;
-	readOnly?: boolean;
-	onApply: (value: StudioResultValue<string>) => void;
-}) {
+	readOnly,
+}: PopoverEditorProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 
-	const extensions = useMemo(() => {
-		return [lineNumbers(), EditorView.lineWrapping];
-	}, []);
+	const extensions = useMemo(
+		(): Extension[] => [lineNumbers(), EditorView.lineWrapping],
+		[]
+	);
 
 	return (
 		<>
 			<div className="grow overflow-hidden">
 				<StudioCodeMirror
-					ref={editorRef}
+					autoFocus
 					className="h-full"
 					defaultValue={defaultValue ?? ""}
 					extensions={extensions}
-					autoFocus
 					readOnly={readOnly}
+					ref={editorRef}
 				/>
 			</div>
 			<div className="p-2 border-t border-border flex justify-end">
 				<Button
-					variant="primary"
-					size="sm"
 					onClick={() => {
 						onApply(editorRef.current?.getValue());
 					}}
+					size="sm"
+					variant="primary"
 				>
 					Apply
 				</Button>
@@ -214,17 +221,17 @@ function PopoverEditor({
 }
 
 export function createStudioEditableCell<T = unknown>({
+	align,
 	toString,
 	toValue,
-	align,
 }: TabeEditableCellProps<T>): React.FC<TableEditableCell<T>> {
 	return function GenericEditableCell({
-		value,
+		editMode,
+		editor,
+		header,
 		onChange,
 		state,
-		editor,
-		editMode,
-		header,
+		value,
 	}: TableEditableCell<T>) {
 		const [editValue, setEditValue] = useState<StudioResultValue<string>>(
 			toString(value)
@@ -232,12 +239,12 @@ export function createStudioEditableCell<T = unknown>({
 
 		const editorType = state.getForcedEditorType() ?? editor;
 
-		useEffect(() => {
+		useEffect((): void => {
 			setEditValue(toString(value));
 		}, [value]);
 
 		const applyChange = useCallback(
-			(v: StudioResultValue<string>, shouldExitEdit = true) => {
+			(v: StudioResultValue<string>, shouldExitEdit = true): void => {
 				if (onChange) {
 					onChange(toValue(v));
 				}
@@ -248,7 +255,7 @@ export function createStudioEditableCell<T = unknown>({
 			[onChange, state]
 		);
 
-		const discardChange = useCallback(() => {
+		const discardChange = useCallback((): void => {
 			setEditValue(toString(value));
 			state.exitEditMode();
 		}, [setEditValue, state, value]);
@@ -257,13 +264,10 @@ export function createStudioEditableCell<T = unknown>({
 			return (
 				<div className="flex" style={{ height: "35px", lineHeight: "35px" }}>
 					<InputCellEditor
-						state={state}
-						readOnly={header.setting.readonly || state.getReadOnlyMode()}
 						align={align}
 						applyChange={applyChange}
 						discardChange={discardChange}
 						onChange={setEditValue}
-						value={editValue}
 						popover={editorType === "text"}
 						popoverPlaceholder={
 							<StudioTableDisplayCell
@@ -272,6 +276,9 @@ export function createStudioEditableCell<T = unknown>({
 								align={align}
 							/>
 						}
+						readOnly={header.setting.readonly || state.getReadOnlyMode()}
+						state={state}
+						value={editValue}
 					/>
 				</div>
 			);
@@ -279,12 +286,12 @@ export function createStudioEditableCell<T = unknown>({
 
 		return (
 			<StudioTableDisplayCell
-				header={header}
-				value={toValue(editValue)}
 				align={align}
+				header={header}
 				onDoubleClick={() => {
 					state.enterEditMode();
 				}}
+				value={toValue(editValue)}
 			/>
 		);
 	};

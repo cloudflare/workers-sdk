@@ -11,7 +11,7 @@ export function useStudioResultTableContextMenu(
 ) {
 	const { openContextMenu } = useStudioContextMenu();
 
-	const copyCallback = useCallback(() => {
+	const copyCallback = useCallback((): void => {
 		const focus = state.getFocus();
 		if (!focus) {
 			return;
@@ -44,7 +44,7 @@ export function useStudioResultTableContextMenu(
 		}
 	}, [state]);
 
-	const pasteCallback = useCallback(() => {
+	const pasteCallback = useCallback((): void => {
 		const focus = state.getFocus();
 		if (focus) {
 			const y = focus.y;
@@ -75,11 +75,11 @@ export function useStudioResultTableContextMenu(
 
 	const onContextMenu = useCallback(
 		({
-			state: tableState,
 			event,
+			state: tableState,
 		}: {
-			state: StudioTableState<StudioResultHeaderMetadata>;
 			event: React.MouseEvent<Element, MouseEvent>;
+			state: StudioTableState<StudioResultHeaderMetadata>;
 		}) => {
 			const uuid = window.crypto.randomUUID();
 			const selectedRowIndex = tableState.getSelectedRowIndex();
@@ -182,5 +182,9 @@ export function useStudioResultTableContextMenu(
 		[openContextMenu, copyCallback, pasteCallback]
 	);
 
-	return { onContextMenu, copyCallback, pasteCallback };
+	return {
+		copyCallback,
+		onContextMenu,
+		pasteCallback,
+	};
 }

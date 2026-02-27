@@ -6,12 +6,32 @@ import type { StudioResultHeaderMetadata } from "../Table/State/Helpers";
 
 interface TableCellProps<T = unknown> {
 	align?: "left" | "right";
-	value: T;
 	header: StudioTableHeaderProps<StudioResultHeaderMetadata>;
 	onDoubleClick?: () => void;
+	value: T;
 }
 
-export function prettifyBytes(bytes: Uint8Array) {
+/**
+ * Converts a byte array into a human-readable string representation.
+ *
+ * This function transforms binary data for display purposes by:
+ * - Escaping backslash characters as `\\` to prevent ambiguity
+ * - Rendering printable ASCII characters (0x20-0x7E, excluding DEL) as-is
+ * - Representing non-printable bytes as hex escape sequences (e.g., `\x00`, `\x1F`)
+ *
+ * Used by `BlobCellValue` to display binary BLOB data in the result table.
+ *
+ * @param bytes - The byte array to convert
+ * @returns A string representation of the bytes, suitable for display in UI
+ *
+ * @example
+ * ```ts
+ * prettifyBytes(new Uint8Array([72, 101, 108, 108, 111])); // "Hello"
+ * prettifyBytes(new Uint8Array([0x00, 0x1F, 0x7F])); // "\\x00\\x1F\\x7F"
+ * prettifyBytes(new Uint8Array([0x5C])); // "\\\\"
+ * ```
+ */
+export function prettifyBytes(bytes: Uint8Array): string {
 	return [...bytes]
 		.map((b) =>
 			b === 0x5c
@@ -23,13 +43,12 @@ export function prettifyBytes(bytes: Uint8Array) {
 		.join("");
 }
 
-function BlobCellValue({
-	value,
-	vector,
-}: {
+interface BlobCellValueProps {
 	value: Uint8Array | ArrayBuffer | number[];
 	vector?: boolean;
-}) {
+}
+
+function BlobCellValue({ value, vector }: BlobCellValueProps): JSX.Element {
 	if (vector) {
 		const floatArray = new Float32Array(new Uint8Array(value).buffer);
 		const floatArrayText = floatArray.join(", ");
@@ -44,113 +63,109 @@ function BlobCellValue({
 				<div className="text-orange-600">[{floatArrayText}]</div>
 			</div>
 		);
-	} else {
-		const bytes = new Uint8Array(value);
-
-		return (
-			<div className="flex w-full">
-				<span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-orange-600 dark:text-orange-400">
-					{prettifyBytes(bytes.subarray(0, 64))}
-				</span>
-				<div className="ml-2 flex-col items-center justify-center">
-					<span className="inline rounded bg-blue-500 p-1 pr-2 pl-2 text-white">
-						{bytes.length.toLocaleString(undefined, {
-							maximumFractionDigits: 0,
-						})}
-						{" bytes"}
-					</span>
-				</div>
-			</div>
-		);
 	}
+
+	const bytes = new Uint8Array(value);
+
+	return (
+		<div className="flex w-full">
+			<span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-orange-600 dark:text-orange-400">
+				{prettifyBytes(bytes.subarray(0, 64))}
+			</span>
+			<div className="ml-2 flex-col items-center justify-center">
+				<span className="inline rounded bg-blue-500 p-1 pr-2 pl-2 text-white">
+					{bytes.length.toLocaleString(undefined, {
+						maximumFractionDigits: 0,
+					})}
+					{" bytes"}
+				</span>
+			</div>
+		</div>
+	);
 }
 
-export const StudioTableDisplayCell = forwardRef(
-	(
-		{ value, align, header, onDoubleClick }: TableCellProps,
-		ref: React.ForwardedRef<HTMLDivElement>
-	) => {
-		const className = cn("h-[35px] leading-[35px] font-mono flex", "pl-2 pr-2");
-		const isAlignRight = align === "right";
+export const StudioTableDisplayCell = forwardRef<
+	HTMLDivElement,
+	TableCellProps
+>(({ align, header, onDoubleClick, value }, ref) => {
+	const className = cn("h-[35px] leading-[35px] font-mono flex", "pl-2 pr-2");
+	const isAlignRight = align === "right";
 
-		const textBaseStyle = cn(
-			"flex grow text-muted",
-			isAlignRight ? "justify-end" : ""
-		);
+	const textBaseStyle = cn(
+		"flex grow text-muted",
+		isAlignRight ? "justify-end" : ""
+	);
 
-		const content = useMemo(() => {
-			if (value === null) {
-				return <span className={textBaseStyle}>NULL</span>;
-			}
+	const content = useMemo(() => {
+		if (value === null) {
+			return <span className={textBaseStyle}>NULL</span>;
+		}
 
-			if (value === undefined) {
-				return (
-					<span className={textBaseStyle}>
-						{header.metadata.columnSchema?.constraint?.generatedExpression ??
-							"DEFAULT"}
-					</span>
-				);
-			}
+		if (value === undefined) {
+			return (
+				<span className={textBaseStyle}>
+					{header.metadata.columnSchema?.constraint?.generatedExpression ??
+						"DEFAULT"}
+				</span>
+			);
+		}
 
-			if (typeof value === "string") {
-				const newlineIndex = value.indexOf("\n");
-				const hasLineBreak = newlineIndex !== -1;
-				const firstLine = hasLineBreak ? value.slice(0, newlineIndex) : value;
+		if (typeof value === "string") {
+			const newlineIndex = value.indexOf("\n");
+			const hasLineBreak = newlineIndex !== -1;
+			const firstLine = hasLineBreak ? value.slice(0, newlineIndex) : value;
 
-				return (
-					<span
-						className={cn(
-							"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-							"text-text"
-						)}
-					>
-						{firstLine}
-						{hasLineBreak && (
-							<span className="ml-1 text-muted font-sans">⏎</span>
-						)}
-					</span>
-				);
-			}
+			return (
+				<span
+					className={cn(
+						"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+						"text-text"
+					)}
+				>
+					{firstLine}
+					{hasLineBreak && <span className="ml-1 text-muted font-sans">⏎</span>}
+				</span>
+			);
+		}
 
-			if (typeof value === "number" || typeof value === "bigint") {
-				return (
-					<span
-						className={cn(
-							"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-							"block grow text-right text-blue-700 dark:text-blue-300"
-						)}
-					>
-						{value.toString()}
-					</span>
-				);
-			}
+		if (typeof value === "number" || typeof value === "bigint") {
+			return (
+				<span
+					className={cn(
+						"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+						"block grow text-right text-blue-700 dark:text-blue-300"
+					)}
+				>
+					{value}
+				</span>
+			);
+		}
 
-			if (
-				value instanceof ArrayBuffer ||
-				value instanceof Uint8Array ||
-				Array.isArray(value)
-			) {
-				return (
-					<BlobCellValue
-						value={value}
-						vector={
-							header.metadata.originalType?.includes("F32_BLOB") ||
-							header.metadata.originalType?.includes("FLOAT32 ")
-						}
-					/>
-				);
-			}
+		if (
+			value instanceof ArrayBuffer ||
+			value instanceof Uint8Array ||
+			Array.isArray(value)
+		) {
+			return (
+				<BlobCellValue
+					value={value}
+					vector={
+						header.metadata.originalType?.includes("F32_BLOB") ||
+						header.metadata.originalType?.includes("FLOAT32 ")
+					}
+				/>
+			);
+		}
 
-			return <span>{value.toString()}</span>;
-		}, [value, textBaseStyle, header]);
+		return <span>{value.toString()}</span>;
+	}, [value, textBaseStyle, header]);
 
-		return (
-			<div ref={ref} className={className} onDoubleClick={onDoubleClick}>
-				<div className="flex grow overflow-hidden">{content}</div>
-			</div>
-		);
-	}
-);
+	return (
+		<div ref={ref} className={className} onDoubleClick={onDoubleClick}>
+			<div className="flex grow overflow-hidden">{content}</div>
+		</div>
+	);
+});
 
 StudioTableDisplayCell.displayName = "StudioTableDisplayCell";
 
