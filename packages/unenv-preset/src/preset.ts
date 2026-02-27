@@ -1086,23 +1086,16 @@ function getPerfHooksOverrides({
 	const disabledModulesByFlag = compatibilityFlags.includes(
 		"disable_nodejs_perf_hooks_module"
 	);
-	const disabledGlobalsByFlag = compatibilityFlags.includes(
-		"disable_global_performance_classes"
-	);
 
 	const enabledModulesByFlag =
 		compatibilityFlags.includes("enable_nodejs_perf_hooks_module") &&
 		compatibilityFlags.includes("experimental");
-	const enabledGlobalsByFlag =
-		compatibilityFlags.includes("enable_global_performance_classes") &&
-		compatibilityFlags.includes("experimental");
 
 	const enabledModules = enabledModulesByFlag && !disabledModulesByFlag;
-	const enabledGlobals = enabledGlobalsByFlag && !disabledGlobalsByFlag;
 
 	const nativeModules = enabledModules ? ["perf_hooks"] : [];
 	const hybridModules: string[] = [];
-	const polyfills = !enabledGlobals
+	const polyfills = !enabledModules
 		? ["@cloudflare/unenv-preset/polyfill/performance"]
 		: [];
 
