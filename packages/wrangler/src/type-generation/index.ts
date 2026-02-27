@@ -413,13 +413,13 @@ export async function generateEnvTypes(
 		// Fall back to .dev.vars/.env inference.
 		// We pass an empty vars object because we only want the secret keys,
 		// not merged with config vars.
-		const secretBindings = getVarsForDev(
-			config.userConfigPath,
-			args.envFile,
-			{},
-			args.env,
-			true
-		);
+		const secretBindings = getVarsForDev({
+			configPath: config.userConfigPath,
+			envFiles: args.envFile,
+			vars: {},
+			env: args.env,
+			silent: true,
+		});
 		// Extract just the keys as a Record<string, string> for compatibility
 		// (type generation only needs the names, not the values)
 		for (const key of Object.keys(secretBindings)) {

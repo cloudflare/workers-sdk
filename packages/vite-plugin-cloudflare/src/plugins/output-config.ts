@@ -75,7 +75,8 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 				if (inputWorkerConfig.configPath) {
 					const localDevVars = getLocalDevVarsForPreview(
 						inputWorkerConfig.configPath,
-						ctx.resolvedPluginConfig.cloudflareEnv
+						ctx.resolvedPluginConfig.cloudflareEnv,
+						inputWorkerConfig.secrets
 					);
 					// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
 					if (localDevVars) {
