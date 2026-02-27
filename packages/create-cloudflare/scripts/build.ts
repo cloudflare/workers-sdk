@@ -1,6 +1,6 @@
 import { cp } from "fs/promises";
 import { build, BuildOptions, context } from "esbuild";
-import * as glob from "glob";
+import { globSync } from "tinyglobby";
 
 const run = async () => {
 	const argv = process.argv.slice(2);
@@ -28,7 +28,7 @@ const run = async () => {
 		// The latter has been added to the project's .gitignore file
 		// This renaming will be reversed when each template is used
 		// We can continue to author ".gitignore" files in each template
-		for (const filepath of glob.sync("templates*/**/.gitignore")) {
+		for (const filepath of globSync("templates*/**/.gitignore")) {
 			await cp(filepath, filepath.replace(".gitignore", "__dot__gitignore"));
 		}
 	};
