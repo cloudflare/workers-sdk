@@ -1,8 +1,11 @@
 import { logger } from "../logger";
 import { getStream } from "../pipelines/client";
 import { getAPIToken } from "../user";
-import { toPascalCase } from "./helpers";
-import { escapeTypeScriptString, isValidIdentifier } from "./index";
+import {
+	escapeTypeScriptString,
+	isValidIdentifier,
+	toPascalCase,
+} from "./helpers";
 import type { SchemaField, Stream } from "../pipelines/types";
 import type { Config } from "@cloudflare/workers-utils";
 

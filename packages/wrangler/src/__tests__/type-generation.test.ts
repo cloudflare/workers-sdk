@@ -4,13 +4,13 @@ import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
-	escapeTypeScriptString,
 	generateImportSpecifier,
-	isValidIdentifier,
-} from "../type-generation";
+} from "../type-generation/env";
 import {
 	ENV_HEADER_COMMENT_PREFIX,
+	escapeTypeScriptString,
 	getEnvHeader,
+	isValidIdentifier,
 	throwMissingBindingError,
 	toEnvInterfaceName,
 	TOP_LEVEL_ENV_NAME,
