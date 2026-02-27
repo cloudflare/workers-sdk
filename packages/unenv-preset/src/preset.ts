@@ -147,7 +147,7 @@ export function getCloudflarePreset({
  * - can be disabled with the "disable_nodejs_http_modules" flag
  *
  * The native http server APIs implementation:
- * - is enabled starting from 2025-09-15
+ * - is enabled starting from 2025-09-01
  * - can be enabled with the "enable_nodejs_http_server_modules" flag
  * - can be disabled with the "disable_nodejs_http_server_modules" flag
  */
