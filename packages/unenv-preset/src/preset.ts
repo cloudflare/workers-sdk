@@ -54,7 +54,7 @@ const defaultNativeModules = [
 export function getCloudflarePreset({
 	compatibilityDate = "2024-09-03",
 	compatibilityFlags = [],
-}: Compatibility): Preset {
+}: Partial<Compatibility>): Preset {
 	const compat = {
 		compatibilityDate,
 		compatibilityFlags,
