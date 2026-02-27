@@ -6,10 +6,6 @@ import {
 } from "./dev-registry-proxy-shared.worker";
 import type { WorkerdDebugPortConnector } from "./dev-registry-proxy-shared.worker";
 
-// Re-export for the dynamic main module (which generates DO proxy classes
-// and the registry update handler). Since esbuild bundles the shared module
-// into this file, the dynamic module imports these from here so everything
-// shares the same module-level registry Map.
 export {
 	createProxyDurableObjectClass,
 	setRegistry,
@@ -26,23 +22,37 @@ interface Props {
 	entrypoint: string | null;
 }
 
+function resolve(props: Props, env: Env): Fetcher | null {
+	const { service, entrypoint } = props;
+	const target = resolveTarget(service);
+	if (!target) {
+		return null;
+	}
+	const serviceName =
+		entrypoint === null || entrypoint === "default"
+			? target.defaultEntrypointService
+			: target.userWorkerService;
+	const client = env.DEV_REGISTRY_DEBUG_PORT.connect(target.debugPortAddress);
+	return client.getEntrypoint(serviceName, entrypoint ?? undefined);
+}
+
 export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
-	_props: Props;
+	#props: Props;
 
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
-		this._props = (ctx as unknown as { props: Props }).props;
+		this.#props = (ctx as unknown as { props: Props }).props;
 
 		return new Proxy(this, {
 			get(target, prop) {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
-				const fetcher = target._resolve();
+				const fetcher = resolve(target.#props, target.env);
 				if (!fetcher) {
 					if (prop === "fetch") {
 						return () => {
-							const { service, entrypoint } = target._props;
+							const { service, entrypoint } = target.#props;
 							return new Response(
 								`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`,
 								{ status: 503 }
@@ -50,7 +60,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 						};
 					}
 					return () => {
-						const { service, entrypoint } = target._props;
+						const { service, entrypoint } = target.#props;
 						throw new Error(
 							`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to.`
 						);
@@ -61,49 +71,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		});
 	}
 
-	_resolve(): Fetcher | null {
-		const { service, entrypoint } = this._props;
-		const target = resolveTarget(service);
-		if (!target) {
-			return null;
-		}
-		const serviceName =
-			entrypoint === null || entrypoint === "default"
-				? target.defaultEntrypointService
-				: target.userWorkerService;
-		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
-			target.debugPortAddress
-		);
-		return client.getEntrypoint(serviceName, entrypoint ?? undefined);
-	}
-
-	async fetch(request: Request): Promise<Response> {
-		const fetcher = this._resolve();
-		if (!fetcher) {
-			const { service, entrypoint } = this._props;
-			return new Response(
-				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`,
-				{ status: 503 }
-			);
-		}
-		return fetcher.fetch(request);
-	}
-
 	async scheduled(controller: ScheduledController) {
-		// Fetcher.scheduled() is a protocol method not available over debug port RPC,
-		// so we forward via HTTP to the entry service's /cdn-cgi/handler/scheduled route.
-		const { service, entrypoint } = this._props;
-		const target = resolveTarget(service);
-		if (!target) {
-			throw new Error(
-				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`
-			);
-		}
-
-		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
-			target.debugPortAddress
-		);
-		const fetcher = client.getEntrypoint(ENTRY_SERVICE_NAME);
 		const params = new URLSearchParams();
 		if (controller.cron) {
 			params.set("cron", controller.cron);
@@ -111,6 +79,17 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		if (controller.scheduledTime) {
 			params.set("time", String(controller.scheduledTime));
 		}
+		const target = resolveTarget(this.#props.service);
+		if (!target) {
+			const { service, entrypoint } = this.#props;
+			throw new Error(
+				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`
+			);
+		}
+		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
+			target.debugPortAddress
+		);
+		const fetcher = client.getEntrypoint(ENTRY_SERVICE_NAME);
 		const response = await fetcher.fetch(
 			`http://localhost/cdn-cgi/handler/scheduled?${params}`
 		);
@@ -124,7 +103,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 
 	tail(events: TraceItem[]) {
 		try {
-			const fetcher = this._resolve();
+			const fetcher = resolve(this.#props, this.env);
 			if (!fetcher) {
 				return;
 			}
@@ -136,7 +115,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			return fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
-				`[dev-registry] Failed to forward tail events to "${this._props.service}": ${e instanceof Error ? e.message : String(e)}`
+				`[dev-registry] Failed to forward tail events to "${this.#props.service}": ${e instanceof Error ? e.message : String(e)}`
 			);
 		}
 	}

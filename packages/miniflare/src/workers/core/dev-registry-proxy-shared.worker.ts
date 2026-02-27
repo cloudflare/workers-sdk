@@ -1,6 +1,3 @@
-/**
- * Shared utilities for the dev-registry proxy workers.
- */
 import { DurableObject } from "cloudflare:workers";
 
 // These interfaces mirror the workerd debug port RPC API.
@@ -30,26 +27,14 @@ export interface RegistryEntry {
 // when Miniflare pushes data through the entry socket.
 let registry = new Map<string, RegistryEntry>();
 
-/**
- * Replace the in-memory registry map with new data. Called by the proxy
- * worker's default fetch handler when Miniflare pushes an update.
- */
 export function setRegistry(data: Record<string, RegistryEntry>): void {
 	registry = new Map(Object.entries(data));
 }
 
-/**
- * Resolve a worker name to its registry entry.
- */
-export function resolveTarget(service: string): RegistryEntry | null {
-	return registry.get(service) ?? null;
+export function resolveTarget(service: string): RegistryEntry | undefined {
+	return registry.get(service);
 }
 
-/**
- * Connect to a Durable Object actor on a remote workerd instance via the debug port.
- * All calls are synchronous via Cap'n Proto pipelining — the actual network
- * round-trip is deferred until the returned Fetcher is first used.
- */
 export function connectToActor(
 	debugPort: WorkerdDebugPortConnector,
 	scriptName: string,
@@ -72,17 +57,14 @@ export function createProxyDurableObjectClass({
 	scriptName: string;
 	className: string;
 }): typeof DurableObject {
-	return class extends DurableObject {
-		_debugPort: WorkerdDebugPortConnector;
-		_actorId: string;
-
+	return class extends DurableObject<{
+		DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
+	}> {
 		constructor(
 			ctx: DurableObjectState,
 			env: { DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector }
 		) {
 			super(ctx, env);
-			this._debugPort = env.DEV_REGISTRY_DEBUG_PORT;
-			this._actorId = ctx.id.toString();
 
 			return new Proxy(this, {
 				get(target, prop) {
@@ -90,10 +72,10 @@ export function createProxyDurableObjectClass({
 						return Reflect.get(target, prop);
 					}
 					const fetcher = connectToActor(
-						target._debugPort,
+						target.env.DEV_REGISTRY_DEBUG_PORT,
 						scriptName,
 						className,
-						target._actorId
+						target.ctx.id.toString()
 					);
 					if (!fetcher) {
 						return () => {
@@ -109,10 +91,10 @@ export function createProxyDurableObjectClass({
 
 		async fetch(request: Request): Promise<Response> {
 			const fetcher = connectToActor(
-				this._debugPort,
+				this.env.DEV_REGISTRY_DEBUG_PORT,
 				scriptName,
 				className,
-				this._actorId
+				this.ctx.id.toString()
 			);
 			if (!fetcher) {
 				return new Response(

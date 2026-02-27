@@ -388,10 +388,7 @@ export default <ExportedHandler<Env>>{
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
 
-		// Dev registry push: Miniflare POSTs updated registry data to this
-		// route, which forwards it to the proxy worker via service binding.
-		// Workers without external bindings won't have the proxy service — return
-		// 204 so the push doesn't fall through to the user worker.
+		// Dev registry push: forward to the proxy worker, or 204 if not present.
 		if (
 			request.method === "POST" &&
 			new URL(request.url).pathname === "/cdn-cgi/dev-registry/update"

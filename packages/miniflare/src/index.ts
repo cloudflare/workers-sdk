@@ -86,7 +86,6 @@ import {
 	NameSourceOptions,
 	reviveError,
 	ServiceDesignatorSchema,
-	stripUserServicePrefix,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
@@ -101,7 +100,6 @@ import {
 	RuntimeOptions,
 	serializeConfig,
 	Service,
-	ServiceDesignator,
 	Socket,
 	SocketIdentifier,
 	SocketPorts,
@@ -456,18 +454,6 @@ function getDurableObjectClassNames(
 	return serviceClassNames;
 }
 
-/**
- * Collects all external service bindings, tail workers, and durable objects
- * from all workers. Returns the map of external services (for creating proxy
- * services and watching the registry) and a set of external worker names
- * (for the plugin system to redirect bindings to the dev registry proxy).
- *
- * Service bindings and tails are NOT mutated here — the redirect to the
- * dev registry proxy happens in the plugin system's getCustomServiceDesignator()
- * which receives the externalWorkerNames set. Durable objects ARE still
- * rewritten here because they use a different proxy mechanism (outbound DO
- * proxy service) that works with the standard designator format.
- */
 function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	const externalServices = new Map<
 		string,
@@ -492,9 +478,8 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	};
 
 	for (const workerOpts of allWorkerOpts) {
-		// Identify external service bindings (don't mutate — the plugin handles redirection)
 		if (workerOpts.core.serviceBindings) {
-			for (const [, service] of Object.entries(
+			for (const [name, service] of Object.entries(
 				workerOpts.core.serviceBindings
 			)) {
 				const { serviceName, entrypoint, remoteProxyConnectionString } =
@@ -505,8 +490,12 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
-					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.entrypoints.add(entrypoint);
+					getEntrypoints(serviceName).entrypoints.add(entrypoint);
+					workerOpts.core.serviceBindings[name] = {
+						name: "dev-registry-proxy",
+						entrypoint: "ExternalServiceProxy",
+						props: { service: serviceName, entrypoint: entrypoint ?? null },
+					};
 				}
 			}
 		}
@@ -544,13 +533,11 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 						unsafePreventEviction,
 					};
 
-					const entrypoints = getEntrypoints(scriptName);
-					entrypoints.classNames.add(className);
+					getEntrypoints(scriptName).classNames.add(className);
 				}
 			}
 		}
 
-		// Identify external tail workers (don't mutate — the plugin handles redirection)
 		if (workerOpts.core.tails) {
 			for (let i = 0; i < workerOpts.core.tails.length; i++) {
 				const {
@@ -564,8 +551,12 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
-					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.entrypoints.add(entrypoint);
+					getEntrypoints(serviceName).entrypoints.add(entrypoint);
+					workerOpts.core.tails[i] = {
+						name: "dev-registry-proxy",
+						entrypoint: "ExternalServiceProxy",
+						props: { service: serviceName, entrypoint: entrypoint ?? null },
+					};
 				}
 			}
 		}
@@ -1022,16 +1013,11 @@ export class Miniflare {
 			}
 		});
 
-		const externalOnUpdate =
-			this.#sharedOpts.core.unsafeHandleDevRegistryUpdate;
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.core.unsafeDevRegistryPath,
 			(registry) => {
-				// Push updated registry to the proxy worker via the entry socket.
-				// This updates the in-memory Map without restarting workerd.
 				void this.#pushRegistryUpdate(registry);
-				// Also call the external callback (e.g. Wrangler re-prints bindings)
-				externalOnUpdate?.(registry);
+				this.#sharedOpts.core.unsafeHandleDevRegistryUpdate?.(registry);
 			},
 			this.#log
 		);
@@ -1881,79 +1867,6 @@ export class Miniflare {
 						capnpConnectHost: HOST_CAPNP_CONNECT,
 					},
 				});
-			}
-		}
-
-		// Redirect service bindings and tails that point to external workers
-		// to the dev registry proxy. This runs after plugin processing so the
-		// plugin system doesn't need to know about the dev registry at all.
-		// IMPORTANT: This mutates the already-assembled Worker_Binding and Service
-		// objects in-place. Any code that runs after this point will see the
-		// rewritten designators (pointing to core:dev-registry-proxy) rather than
-		// the original target service names.
-		if (externalServices && externalServices.size > 0) {
-			const externalUserServiceNames = new Set(
-				[...externalServices.keys()].map(getUserServiceName)
-			);
-			const proxyDesignator = (
-				workerName: string,
-				entrypoint?: string
-			): ServiceDesignator => ({
-				name: SERVICE_DEV_REGISTRY_PROXY,
-				entrypoint: "ExternalServiceProxy",
-				props: {
-					json: JSON.stringify({
-						service: workerName,
-						entrypoint: entrypoint ?? null,
-					}),
-				},
-			});
-
-			// Rewrite service bindings
-			for (const bindings of allWorkerBindings.values()) {
-				for (const binding of bindings) {
-					if (
-						"service" in binding &&
-						binding.service?.name &&
-						externalUserServiceNames.has(binding.service.name)
-					) {
-						const workerName = stripUserServicePrefix(binding.service.name);
-						binding.service = proxyDesignator(
-							workerName,
-							binding.service.entrypoint
-						);
-					}
-				}
-			}
-
-			// Rewrite proxy bindings
-			for (const binding of proxyBindings) {
-				if (
-					"service" in binding &&
-					binding.service?.name &&
-					externalUserServiceNames.has(binding.service.name)
-				) {
-					const workerName = stripUserServicePrefix(binding.service.name);
-					binding.service = proxyDesignator(
-						workerName,
-						binding.service.entrypoint
-					);
-				}
-			}
-
-			// Rewrite tails inside worker service definitions
-			for (const service of services.values()) {
-				const tails = "worker" in service ? service.worker?.tails : undefined;
-				if (!tails) {
-					continue;
-				}
-				for (let i = 0; i < tails.length; i++) {
-					const tail = tails[i];
-					if (tail.name && externalUserServiceNames.has(tail.name)) {
-						const workerName = stripUserServicePrefix(tail.name);
-						tails[i] = proxyDesignator(workerName, tail.entrypoint);
-					}
-				}
 			}
 		}
 
