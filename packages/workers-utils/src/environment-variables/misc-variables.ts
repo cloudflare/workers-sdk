@@ -392,3 +392,19 @@ export const getCfFetchPathFromEnv = getEnvironmentVariableFactory({
 export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CACHE_DIR",
 });
+
+/**
+ * `TELEMETRY_DATA_CATALOG_WORKER_URL` specifies the URL for the telemetry data catalog worker.
+ *
+ * Defaults to `""` (disabling the data collection) when running in vitest (i.e. when `typeof vitest !== "undefined"`),
+ * otherwise defaults to the production data collector worker's URL.
+ *
+ * When the value is falsy, telemetry data catalog collection is disabled.
+ */
+export const getTelemetryDataCatalogWorkerURL = getEnvironmentVariableFactory({
+	variableName: "TELEMETRY_DATA_CATALOG_WORKER_URL",
+	defaultValue: () =>
+		typeof vitest !== "undefined"
+			? ""
+			: "https://telemetry-data-catalog-collector.devprod.workers.dev",
+});

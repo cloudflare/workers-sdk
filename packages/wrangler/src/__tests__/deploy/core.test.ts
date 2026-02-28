@@ -10,12 +10,12 @@ import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Static } from "../../autoconfig/frameworks/static";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../../autoconfig/run";
 import { clearOutputFilePath } from "../../output";
 import { NpmPackageManager } from "../../package-manager";
 import { writeAuthConfigFile } from "../../user";
 import { fetchSecrets } from "../../utils/fetch-secrets";
+import { getInstalledPackageVersion } from "../../utils/packages";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockAuthDomain } from "../helpers/mock-auth-domain";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -77,7 +77,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 }));
 
 vi.mock("../../autoconfig/run");
-vi.mock("../../autoconfig/frameworks/utils/packages");
+vi.mock("../../utils/packages");
 vi.mock("../../autoconfig/c3-vendor/command");
 
 describe("deploy", () => {

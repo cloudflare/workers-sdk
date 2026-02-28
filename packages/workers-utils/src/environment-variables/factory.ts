@@ -131,7 +131,10 @@ type VariableNames =
 	| "DOCKER_HOST"
 
 	/** Environment variable used to signal that the current process is being run by the open-next deploy command. */
-	| "OPEN_NEXT_DEPLOY";
+	| "OPEN_NEXT_DEPLOY"
+
+	/** URL for the telemetry data catalog worker (defaults to `""` in vitest, the production data collector worker otherwise; falsy disables collection). */
+	| "TELEMETRY_DATA_CATALOG_WORKER_URL";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"
