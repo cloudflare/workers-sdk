@@ -415,6 +415,13 @@ export default <ExportedHandler<Env>>{
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
 				}
 			}
+			if (url.pathname === "/cdn-cgi/analytics-engine/flush") {
+				return env[CoreBindings.SERVICE_LOOPBACK].fetch(
+					"http://localhost/analytics-engine/flush",
+					{ method: "POST" }
+				);
+			}
+
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
 					url.pathname === "/cdn-cgi/handler/scheduled" ||

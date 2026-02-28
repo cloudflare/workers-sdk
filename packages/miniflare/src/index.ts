@@ -40,6 +40,7 @@ import {
 	Response,
 } from "./http";
 import {
+	ANALYTICS_ENGINE_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -149,6 +150,19 @@ import type {
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
 import type { Process } from "@puppeteer/browsers";
+
+// RFC 4180 CSV escaping: quote fields containing commas, quotes, or newlines
+function csvEscape(value: string): string {
+	if (
+		value.includes(",") ||
+		value.includes('"') ||
+		value.includes("\n") ||
+		value.includes("\r")
+	) {
+		return `"${value.replace(/"/g, '""')}"`;
+	}
+	return value;
+}
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -956,6 +970,19 @@ export class Miniflare {
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController();
 
+	// Analytics Engine write buffer: dataset name → array of row objects
+	#analyticsEngineBuffers: Map<
+		string,
+		{
+			dataset: string;
+			timestamp: string;
+			index1: string;
+			blobs: string[];
+			doubles: number[];
+		}[]
+	> = new Map();
+	#analyticsEngineFlushTimer?: ReturnType<typeof setInterval>;
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -1216,6 +1243,88 @@ export class Miniflare {
 		}
 	}
 
+	async #handleAnalyticsEngineWrite(request: Request): Promise<Response> {
+		const payload = (await request.json()) as {
+			dataset: string;
+			timestamp: string;
+			index1: string;
+			blobs: string[];
+			doubles: number[];
+		};
+
+		let buffer = this.#analyticsEngineBuffers.get(payload.dataset);
+		if (!buffer) {
+			buffer = [];
+			this.#analyticsEngineBuffers.set(payload.dataset, buffer);
+		}
+		buffer.push(payload);
+
+		// Start the flush timer on first write
+		if (this.#analyticsEngineFlushTimer === undefined) {
+			this.#analyticsEngineFlushTimer = setInterval(() => {
+				void this.#flushAnalyticsEngine();
+			}, 30_000);
+			// Don't prevent the process from exiting
+			this.#analyticsEngineFlushTimer.unref();
+		}
+
+		return new Response(null, { status: 204 });
+	}
+
+	async #flushAnalyticsEngine(): Promise<void> {
+		const aeSharedOpts = this.#sharedOpts["analytics-engine"];
+		const coreSharedOpts = this.#sharedOpts.core;
+		const persistPath = getPersistPath(
+			ANALYTICS_ENGINE_PLUGIN_NAME,
+			this.#tmpPath,
+			coreSharedOpts.defaultPersistRoot,
+			aeSharedOpts.analyticsEngineDatasetsPersist
+		);
+
+		for (const [dataset, rows] of this.#analyticsEngineBuffers) {
+			if (rows.length === 0) {
+				continue;
+			}
+
+			const csvPath = path.join(persistPath, `${dataset}.csv`);
+			await fs.promises.mkdir(path.dirname(csvPath), { recursive: true });
+
+			// Check if file exists to determine whether to write header
+			const fileExists = fs.existsSync(csvPath);
+
+			const header = [
+				"dataset",
+				"timestamp",
+				"index1",
+				...Array.from({ length: 20 }, (_, i) => `blob${i + 1}`),
+				...Array.from({ length: 20 }, (_, i) => `double${i + 1}`),
+				"_sample_interval",
+			];
+
+			let csvContent = "";
+			if (!fileExists) {
+				csvContent += header.join(",") + "\n";
+			}
+
+			for (const row of rows) {
+				const fields = [
+					csvEscape(row.dataset),
+					csvEscape(row.timestamp),
+					csvEscape(row.index1),
+					...row.blobs.map(csvEscape),
+					...row.doubles.map(String),
+					"1", // _sample_interval
+				];
+				csvContent += fields.join(",") + "\n";
+			}
+
+			await fs.promises.appendFile(csvPath, csvContent);
+		}
+
+		// Clear all buffers after flushing
+		this.#analyticsEngineBuffers.clear();
+	}
+
 	get #workerSrcOpts(): NameSourceOptions[] {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
@@ -1344,6 +1453,11 @@ export class Miniflare {
 				response = new Response(filePath, { status: 200 });
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
+			} else if (url.pathname === "/analytics-engine/write") {
+				response = await this.#handleAnalyticsEngineWrite(request);
+			} else if (url.pathname === "/analytics-engine/flush") {
+				await this.#flushAnalyticsEngine();
+				response = new Response(null, { status: 204 });
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -2771,6 +2885,14 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
+
+		// Flush any buffered analytics engine writes before shutdown
+		if (this.#analyticsEngineFlushTimer !== undefined) {
+			clearInterval(this.#analyticsEngineFlushTimer);
+			this.#analyticsEngineFlushTimer = undefined;
+		}
+		await this.#flushAnalyticsEngine();
+
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
 		// invalidating all existing native references. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but

@@ -2,6 +2,7 @@ import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
+import { SERVICE_LOOPBACK } from "../shared/constants";
 
 const AnalyticsEngineSchema = z.record(
 	z.object({
@@ -41,6 +42,10 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 						{
 							name: "dataset",
 							json: JSON.stringify(config.dataset),
+						},
+						{
+							name: "persistence",
+							service: { name: SERVICE_LOOPBACK },
 						},
 					],
 				},
