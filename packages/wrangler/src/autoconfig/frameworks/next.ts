@@ -1,7 +1,7 @@
 import semiver from "semiver";
+import { getInstalledPackageVersion } from "../../utils/packages";
 import { runCommand } from "../c3-vendor/command";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
