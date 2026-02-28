@@ -5,11 +5,10 @@ import {
 	configFileName,
 	getDisableConfigWatching,
 	getDockerPath,
-	getLocalWorkerdCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
-import { getWorkerRegistry } from "miniflare";
+import { getWorkerRegistry, supportedCompatibilityDate } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
@@ -310,11 +309,7 @@ async function resolveConfig(
 		name:
 			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
 		config: config.configPath,
-		compatibilityDate: getDevCompatibilityDate(
-			entry.projectRoot,
-			config,
-			input.compatibilityDate
-		),
+		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		pythonModules: {
@@ -471,13 +466,10 @@ async function resolveConfig(
  * @returns the compatibility date to use in development
  */
 function getDevCompatibilityDate(
-	projectPath: string,
 	config: Config | undefined,
 	compatibilityDate = config?.compatibility_date
 ): string {
-	const { date: workerdDate } = getLocalWorkerdCompatibilityDate({
-		projectPath,
-	});
+	const workerdDate = supportedCompatibilityDate;
 
 	if (config?.configPath && compatibilityDate === undefined) {
 		logger.warn(

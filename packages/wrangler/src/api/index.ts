@@ -71,7 +71,10 @@ export type {
 	PlatformProxy,
 	SourcelessWorkerOptions,
 	Unstable_MiniflareWorkerOptions,
+	CompatDate,
 } from "./integrations";
+
+export { supportedCompatibilityDate, isCompatDate } from "./integrations";
 
 // Exports from ./remoteBindings
 export {
