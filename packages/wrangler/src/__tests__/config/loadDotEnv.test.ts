@@ -118,4 +118,100 @@ describe("loadDotEnv()", () => {
 
 		expect(result).toEqual({ FOO: "bar", TEST_ENV_VAR: "test_value" });
 	});
+
+	it("should ignore .env files containing # WRANGLER_IGNORE comment at the start", async ({
+		expect,
+	}) => {
+		await seed({
+			".env": "# WRANGLER_IGNORE\nFOO=bar\n",
+			".env.local": "BAZ=qux\n",
+		});
+		const envPaths = ["./.env", "./.env.local"];
+		const result = loadDotEnv(envPaths, {
+			includeProcessEnv: false,
+			silent: false,
+		});
+
+		expect(result).toEqual({ BAZ: "qux" });
+		expect(std.info).toContain("Ignoring .env file");
+		expect(std.info).toContain("WRANGLER_IGNORE");
+	});
+
+	it("should ignore .env files with # WRANGLER_IGNORE anywhere in file", async ({
+		expect,
+	}) => {
+		await seed({
+			".env": "FOO=bar\n# WRANGLER_IGNORE\nBAZ=qux\n",
+		});
+		const envPaths = ["./.env"];
+		const result = loadDotEnv(envPaths, {
+			includeProcessEnv: false,
+			silent: false,
+		});
+
+		expect(result).toEqual({});
+		expect(std.info).toContain("Ignoring .env file");
+	});
+
+	it("should ignore .env files with # WRANGLER_IGNORE at end of file without newline", async ({
+		expect,
+	}) => {
+		await seed({
+			".env": "FOO=bar\n# WRANGLER_IGNORE",
+		});
+		const envPaths = ["./.env"];
+		const result = loadDotEnv(envPaths, {
+			includeProcessEnv: false,
+			silent: false,
+		});
+
+		expect(result).toEqual({});
+		expect(std.info).toContain("Ignoring .env file");
+	});
+
+	it("should not ignore .env files with partial WRANGLER_IGNORE match", async ({
+		expect,
+	}) => {
+		await seed({
+			".env": "# This is not WRANGLER_IGNORE\nFOO=bar\n",
+		});
+		const envPaths = ["./.env"];
+		const result = loadDotEnv(envPaths, {
+			includeProcessEnv: false,
+			silent: true,
+		});
+
+		expect(result).toEqual({ FOO: "bar" });
+	});
+
+	it("should not ignore .env files with WRANGLER_IGNORE without hash prefix", async ({
+		expect,
+	}) => {
+		await seed({
+			".env": "WRANGLER_IGNORE\nFOO=bar\n",
+		});
+		const envPaths = ["./.env"];
+		const result = loadDotEnv(envPaths, {
+			includeProcessEnv: false,
+			silent: true,
+		});
+
+		expect(result).toEqual({ FOO: "bar" });
+	});
+
+	it("should handle all whitespace variations in WRANGLER_IGNORE comment", async ({
+		expect,
+	}) => {
+		await seed({
+			".env": "  #      WRANGLER_IGNORE   \nFOO=bar\n",
+		});
+		const envPaths = ["./.env"];
+		const result = loadDotEnv(envPaths, {
+			includeProcessEnv: false,
+			silent: false,
+		});
+
+		expect(result).toEqual({});
+		expect(std.info).toContain("Ignoring .env file");
+	});
 });
