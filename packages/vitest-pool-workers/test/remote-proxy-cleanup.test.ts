@@ -53,7 +53,9 @@ test.skipIf(
 			flags: ["--reporter=hanging-process", "--reporter=verbose"],
 		});
 
-		expect(result.stderr).not.toContain("something prevents Vite server from exiting");
+		expect(result.stderr).not.toContain(
+			"something prevents Vite server from exiting"
+		);
 	},
 	20_000
 );
