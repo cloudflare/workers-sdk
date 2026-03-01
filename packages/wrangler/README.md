@@ -10,7 +10,7 @@
 
 > [!WARNING]
 >
-> Wrangler v2 is **only receiving critical security updates.** We recommend you [migrate to Wrangler v3](https://developers.cloudflare.com/workers/wrangler/migration/update-v2-to-v3/) if you can.
+> Wrangler v3 is **only receiving critical security updates.** We recommend you update to the latest version of wrangler (wrangler@latest).
 
 ## Quick Start
 
