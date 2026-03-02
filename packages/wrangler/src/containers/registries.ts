@@ -508,16 +508,13 @@ async function registryCredentialsCommand(credentialsArgs: {
 	}
 
 	const credentials =
-		await ImageRegistriesService.generateImageRegistryCredentials(
-			domain,
-			{
-				expiration_minutes: credentialsArgs.expirationMinutes,
-				permissions: [
-					...(credentialsArgs.push ? ["push"] : []),
-					...(credentialsArgs.pull ? ["pull"] : []),
-				] as ImageRegistryPermissions[],
-			}
-		);
+		await ImageRegistriesService.generateImageRegistryCredentials(domain, {
+			expiration_minutes: credentialsArgs.expirationMinutes,
+			permissions: [
+				...(credentialsArgs.push ? ["push"] : []),
+				...(credentialsArgs.pull ? ["pull"] : []),
+			] as ImageRegistryPermissions[],
+		});
 	if (credentialsArgs.json) {
 		logger.json(credentials);
 	} else {
