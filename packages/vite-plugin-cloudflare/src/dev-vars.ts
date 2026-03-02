@@ -17,12 +17,14 @@ export function getLocalDevVarsForPreview(
 	cloudflareEnv: string | undefined,
 	secrets: Unstable_Config["secrets"]
 ): string | undefined {
-	const dotDevDotVars = wrangler.unstable_getVarsForDev({
+	const dotDevDotVars = wrangler.unstable_getVarsForDev(
 		configPath,
-		vars: {}, // Don't pass actual vars since these will be loaded from the wrangler.json.
-		env: cloudflareEnv,
-		secrets,
-	});
+		undefined, // We don't currently support setting a list of custom `.env` files.
+		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.
+		cloudflareEnv,
+		false,
+		secrets
+	);
 	const dotDevDotVarsEntries = Array.from(Object.entries(dotDevDotVars));
 	if (dotDevDotVarsEntries.length > 0) {
 		const dotDevDotVarsContent = dotDevDotVarsEntries

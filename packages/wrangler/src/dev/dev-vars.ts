@@ -43,17 +43,24 @@ export type VarBinding = Extract<
  * When `secrets` is defined in the config, only the declared secret keys are loaded from
  * `.dev.vars`/`.env`/`process.env`. All other keys in those files are excluded. A warning
  * is emitted for any required secrets that are missing.
+ *
+ * @param configPath - The path to the Wrangler configuration file, if defined.
+ * @param envFiles - An array of paths to .env files to load; if `undefined` the default .env files will be used (see `getDefaultEnvFiles()`).
+ * The `envFiles` paths are resolved against the directory of the Wrangler configuration file, if there is one, otherwise against the current working directory.
+ * @param vars - The existing `vars` bindings from the Wrangler configuration.
+ * @param env - The specific environment name (e.g., "staging") or `undefined` if no specific environment is set.
+ * @param silent - If true, will not log any messages about the loaded .dev.vars files or .env files.
+ * @param secrets - If defined, only the declared secret keys are loaded from `.dev.vars` or `.env`/`process.env`.
+ * @returns The merged `vars` as typed bindings. Config vars are `plain_text`/`json`, while `.dev.vars`/`.env` vars are `secret_text`.
  */
-export function getVarsForDev(options: {
-	configPath: string | undefined;
-	envFiles?: string[];
-	vars: Config["vars"];
-	env: string | undefined;
-	secrets?: Config["secrets"];
-	silent?: boolean;
-}): Record<string, VarBinding> {
-	const { configPath, envFiles, vars, env, secrets, silent = false } = options;
-
+export function getVarsForDev(
+	configPath: string | undefined,
+	envFiles: string[] | undefined,
+	vars: Config["vars"],
+	env: string | undefined,
+	silent = false,
+	secrets?: Config["secrets"]
+): Record<string, VarBinding> {
 	// Start with config vars (plain_text or json, not secret)
 	const result: Record<string, VarBinding> = {};
 	for (const [key, value] of Object.entries(vars)) {
