@@ -21,6 +21,9 @@ export function getDirectSocketName(workerIndex: number, entrypoint: string) {
 export const SERVICE_LOOPBACK = "loopback";
 
 // Service for the dev registry proxy worker (routes cross-process service bindings and DO proxies).
+// Uses the `core:user:` prefix so workerd treats it as a user worker service — this is required
+// because Durable Object namespace designators reference it as a `scriptName` and workerd resolves
+// those through the user service naming convention (getUserServiceName).
 export const SERVICE_DEV_REGISTRY_PROXY = "core:user:dev-registry-proxy";
 
 // Special host to use for Cap'n Proto connections. This is required to use

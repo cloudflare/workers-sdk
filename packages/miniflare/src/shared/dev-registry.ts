@@ -69,6 +69,11 @@ export class DevRegistry {
 		// Track external services we depend on to detect relevant registry changes
 		this.externalServices = new Map(services);
 
+		// Ensure the registry directory exists before watching — chokidar
+		// needs an existing directory, and other sessions may not have
+		// created it yet.
+		mkdirSync(this.registryPath, { recursive: true });
+
 		if (!this.watcher) {
 			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
 			// Do the initial refresh silently (without triggering onUpdate).
@@ -134,8 +139,7 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
-	/** Returns the current cached registry state. Used to populate JSON bindings
-	 * on the proxy worker so it can resolve targets synchronously. */
+	/** Returns the current cached registry state. */
 	public getRegistry(): WorkerRegistry {
 		return this.registry;
 	}

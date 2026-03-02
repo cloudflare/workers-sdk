@@ -64,6 +64,8 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				await vi.waitFor(async () => {
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 					let text = await response.text();
+					if (response.status !== 200)
+						throw new Error(`Got ${response.status}: ${text}`);
 					expect(response.status).toBe(200);
 					expect(text).toContain(
 						`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`

@@ -382,7 +382,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 
-		// Test RPC after internal durable object is started (should now succeed via debug port)
+		// Test RPC after internal durable object is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "durable-object",

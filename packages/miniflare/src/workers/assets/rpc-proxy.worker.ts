@@ -26,6 +26,9 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		return this.env.ROUTER_WORKER.fetch(request);
 	}
 
+	// Explicit scheduled() is needed because the Proxy get trap forwards
+	// unknown props to USER_WORKER, but scheduled() requires special handling
+	// to invoke the user worker's scheduled handler via its Fetcher API.
 	async scheduled(controller: ScheduledController) {
 		const result = await (this.env.USER_WORKER as Fetcher).scheduled({
 			scheduledTime: new Date(controller.scheduledTime),
@@ -36,15 +39,6 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 				`User worker scheduled handler failed: ${result.outcome}`
 			);
 		}
-	}
-
-	async queue(_batch: MessageBatch): Promise<void> {
-		// Not implemented yet: forwarding queue messages requires a way to get a
-		// remote `Queue` object over the debug port RPC, which isn't possible yet.
-		// For now, this will fail with an error if called.
-		throw new Error(
-			`Calling "queue" on a cross-process service binding is not yet supported`
-		);
 	}
 
 	tail(events: TraceItem[]) {

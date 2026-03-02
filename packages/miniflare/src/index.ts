@@ -103,7 +103,6 @@ import {
 	Socket,
 	SocketIdentifier,
 	SocketPorts,
-	supportedCompatibilityDate,
 	Worker_Binding,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
@@ -454,6 +453,12 @@ function getDurableObjectClassNames(
 	return serviceClassNames;
 }
 
+/**
+ * Collects all external service bindings from all workers and overrides
+ * them to point to the dev registry proxy worker's ExternalServiceProxy
+ * entrypoint. Returns a map of external service names to the entrypoints
+ * and DO classes that are referenced.
+ */
 function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	const externalServices = new Map<
 		string,
@@ -486,13 +491,15 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 					normaliseServiceDesignator(service);
 
 				if (
+					// Skip if it is a remote service
 					remoteProxyConnectionString === undefined &&
+					// Skip if the service is bound to another Worker defined in the Miniflare config
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
 					getEntrypoints(serviceName).entrypoints.add(entrypoint);
 					workerOpts.core.serviceBindings[name] = {
-						name: "dev-registry-proxy",
+						name: OUTBOUND_DO_PROXY_SERVICE_NAME,
 						entrypoint: "ExternalServiceProxy",
 						props: { service: serviceName, entrypoint: entrypoint ?? null },
 					};
@@ -547,13 +554,15 @@ function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
 
 				if (
+					// Skip if it is a remote service
 					remoteProxyConnectionString === undefined &&
+					// Skip if the service is bound to the existing workers
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
 					getEntrypoints(serviceName).entrypoints.add(entrypoint);
 					workerOpts.core.tails[i] = {
-						name: "dev-registry-proxy",
+						name: OUTBOUND_DO_PROXY_SERVICE_NAME,
 						entrypoint: "ExternalServiceProxy",
 						props: { service: serviceName, entrypoint: entrypoint ?? null },
 					};
@@ -1091,22 +1100,22 @@ export class Miniflare {
 	 * This updates the in-memory registry Map without restarting workerd.
 	 * Called when the dev registry detects changes to external services.
 	 */
-	#pushRegistryUpdate(registry: WorkerRegistry): Promise<void> {
+	async #pushRegistryUpdate(registry: WorkerRegistry): Promise<void> {
 		if (!this.#runtimeEntryURL) {
-			return Promise.resolve();
+			return;
 		}
 		const url = new URL("/cdn-cgi/dev-registry/update", this.#runtimeEntryURL);
-		return fetch(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(registry),
-		})
-			.then(() => {})
-			.catch((e) => {
-				this.#log.debug(
-					`Failed to push registry update: ${e instanceof Error ? e.message : String(e)}`
-				);
+		try {
+			await fetch(url, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(registry),
 			});
+		} catch (e) {
+			this.#log.debug(
+				`Failed to push registry update: ${e instanceof Error ? e.message : String(e)}`
+			);
+		}
 	}
 
 	async #handleLoopbackCustomFetchService(
@@ -1875,11 +1884,6 @@ export class Miniflare {
 			externalServices &&
 			externalServices.size > 0
 		) {
-			// Ensure the registry directory exists for cross-process registration.
-			const registryPath = this.#devRegistry.getRegistryPath();
-			assert(registryPath !== undefined);
-			fs.mkdirSync(registryPath, { recursive: true });
-
 			// Start watching the dev registry for changes.
 			await this.#devRegistry.watch(externalServices);
 
@@ -1900,8 +1904,7 @@ export class Miniflare {
 			// inlines the shared code — so they share the same module-level
 			// registry Map.
 			const mainModuleSource = [
-				`import { ExternalServiceProxy, setRegistry } from "./dev-registry-proxy.worker.js";`,
-				`import { createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
 				`export { ExternalServiceProxy };`,
 				// Default fetch handler accepts registry push updates
 				`export default {`,
@@ -1928,11 +1931,8 @@ export class Miniflare {
 			services.set(SERVICE_DEV_REGISTRY_PROXY, {
 				name: SERVICE_DEV_REGISTRY_PROXY,
 				worker: {
-					compatibilityDate: supportedCompatibilityDate,
-					compatibilityFlags: [
-						"nodejs_compat",
-						"service_binding_extra_handlers",
-					],
+					compatibilityDate: "2025-01-01",
+					compatibilityFlags: ["service_binding_extra_handlers"],
 					modules: [
 						{
 							name: "main.mjs",
@@ -1952,6 +1952,8 @@ export class Miniflare {
 					// In-memory storage for DO proxy stubs — they don't persist
 					// anything, just forward requests to remote workers.
 					durableObjectStorage: { inMemory: kVoid },
+					// uniqueKey must match the key generated in the target session
+					// so workerd produces identical Durable Object IDs across processes.
 					durableObjectNamespaces:
 						externalObjects.map<Worker_DurableObjectNamespace>(
 							([scriptName, className]) => ({

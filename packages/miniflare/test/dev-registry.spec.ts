@@ -565,7 +565,6 @@ describe.sequential("DevRegistry", () => {
 		});
 		useDispose(local);
 
-		// DO fetch now works natively via the debug port
 		await vi.waitFor(
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
@@ -633,7 +632,6 @@ describe.sequential("DevRegistry", () => {
 		});
 		useDispose(local);
 
-		// DO RPC now works natively via the debug port
 		await vi.waitFor(
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
