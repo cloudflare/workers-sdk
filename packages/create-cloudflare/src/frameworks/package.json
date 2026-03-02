@@ -21,7 +21,7 @@
 		"create-waku": "0.12.5-1.0.0-alpha.5-0",
 		"@tanstack/create-start": "0.59.8",
 		"gatsby": "5.16.1",
-		"sv": "0.12.2",
+		"sv": "0.12.4",
 		"nuxi": "3.33.1"
 	}
 }
