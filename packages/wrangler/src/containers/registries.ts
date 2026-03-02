@@ -121,6 +121,14 @@ async function registryConfigureCommand(
 
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
 
+	if (registryType.type === "cloudflare") {
+		log(
+			"You do not need to configure credentials for Cloudflare managed registries.\n"
+		);
+		endSection("No configuration required");
+		return;
+	}
+
 	const publicCredential =
 		configureArgs.awsAccessKeyId ??
 		configureArgs.dockerhubUsername ??
@@ -136,14 +144,6 @@ async function registryConfigureCommand(
 	}
 
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
-
-	if (registryType.type === "cloudflare") {
-		log(
-			"You do not need to configure credentials for Cloudflare managed registries.\n"
-		);
-		endSection("No configuration required");
-		return;
-	}
 
 	const isFedRAMPHigh =
 		getCloudflareComplianceRegion(config) === "fedramp_high";

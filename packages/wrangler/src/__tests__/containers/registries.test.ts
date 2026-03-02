@@ -132,12 +132,10 @@ describe("containers registries configure", () => {
 
 	it("should no-op on cloudflare registry (default)", async () => {
 		await runWrangler(
-			`containers registries configure registry.cloudflare.com --public-credential=test-id`
+			`containers registries configure registry.cloudflare.com`
 		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Configure a container registry
-			│
-			│ Configuring Cloudflare Containers Managed Registry registry: registry.cloudflare.com
 			│
 			│ You do not need to configure credentials for Cloudflare managed registries.
 			│
