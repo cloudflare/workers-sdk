@@ -11,6 +11,19 @@ export {
 	setRegistry,
 } from "./dev-registry-proxy-shared.worker";
 
+const HANDLER_RESERVED_KEYS = new Set([
+	"alarm",
+	"scheduled",
+	"self",
+	"tail",
+	"tailStream",
+	"test",
+	"trace",
+	"webSocketClose",
+	"webSocketError",
+	"webSocketMessage",
+]);
+
 interface Env {
 	DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 }
@@ -57,6 +70,9 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 								{ status: 503 }
 							);
 						};
+					}
+					if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
+						return undefined;
 					}
 					const { service, entrypoint } = props;
 					throw new Error(
