@@ -12,14 +12,9 @@ detailed_reviewers = true
 suppress_unowned_warning = true
 
 [enforcement]
-# Phase 1 (observation mode):
-#   approval = false — the bot does NOT approve PRs yet
-#   fail_check = true — the check runs for visibility but is NOT a required check
-#
-# Phase 2 (enforcement mode) — update these values when ready:
-#   approval = true — workers-devprod bot approves when all rules are satisfied
-#   fail_check = true — the check fails when rules are not satisfied
-approval = false
+# Enforcement is via a required GitHub status check ("Run Codeowners Plus").
+# The check fails when ownership rules are not satisfied, blocking merge.
+# No bot approval is used — the status check is the sole enforcement mechanism.
 fail_check = true
 
 [admin_bypass]

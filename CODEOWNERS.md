@@ -7,30 +7,25 @@ This repository uses [Codeowners Plus](https://github.com/multimediallc/codeowne
 ### Overview
 
 ```
-PR opened/updated
+PR opened/updated/reviewed
         │
         ▼
-┌─────────────────────────────┐
-│  Codeowners Plus GHA runs   │  Reads .codeowners + codeowners.toml
-│  Evaluates AND/OR rules     │  from the BASE branch (not the PR)
-│  Posts comment with status   │
-└──────────┬──────────────────┘
+┌──────────────────────────────────┐
+│  Codeowners Plus GHA runs        │  Reads .codeowners + codeowners.toml
+│  Evaluates AND/OR rules          │  from the BASE branch (not the PR)
+│  Posts comment listing reviewers  │
+│  Requests reviews from owners    │
+└──────────┬───────────────────────┘
            │
            ▼
-┌─────────────────────────────┐
-│  All rules satisfied?       │
-│  YES → bot approves PR      │  @workers-devprod approves
-│  NO  → check fails          │  Comment lists who still needs to approve
-└─────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────┐
-│  Native GitHub CODEOWNERS   │  * @workers-devprod
-│  requires bot approval      │  Branch protection enforces this
-└─────────────────────────────┘
+┌──────────────────────────────────┐
+│  All rules satisfied?            │
+│  YES → status check passes ✅    │
+│  NO  → status check fails  ❌    │  Comment lists who still needs to approve
+└──────────────────────────────────┘
 ```
 
-The native GitHub `CODEOWNERS` file contains a single rule (`* @workers-devprod`) making the bot the sole required reviewer. Codeowners Plus approves on the bot's behalf only when all ownership rules in `.codeowners` are satisfied. This gives us AND enforcement through GitHub's existing branch protection.
+The "Run Codeowners Plus" check is configured as a **required status check** in branch protection. It fails when ownership rules are not satisfied, blocking merge. The native GitHub `CODEOWNERS` file is not involved in enforcement.
 
 ### Key Difference from Native CODEOWNERS
 
@@ -66,25 +61,20 @@ Located at the repo root. Defines who owns what.
 
 **Current ownership structure:**
 
-| Path                                       | Primary Owner          | AND Requirement               |
-| ------------------------------------------ | ---------------------- | ----------------------------- |
-| Everything (`*`)                           | `@cloudflare/wrangler` | —                             |
-| `packages/workers-shared/**`               | `@cloudflare/wrangler` | + `@cloudflare/deploy-config` |
-| `packages/pages-shared/**`                 | `@cloudflare/wrangler` | + `@cloudflare/pages`         |
-| `packages/wrangler/pages/**`               | `@cloudflare/wrangler` | + `@cloudflare/pages`         |
-| `packages/wrangler/src/api/pages/**`       | `@cloudflare/wrangler` | + `@cloudflare/pages`         |
-| `packages/wrangler/src/pages/**`           | `@cloudflare/wrangler` | + `@cloudflare/pages`         |
-| `packages/wrangler/src/__tests__/pages/**` | `@cloudflare/wrangler` | + `@cloudflare/pages`         |
-| `packages/wrangler/src/api/d1/**`          | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
-| `packages/wrangler/src/d1/**`              | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
-| `packages/wrangler/src/__tests__/d1/**`    | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
-| `packages/wrangler/src/cloudchamber/**`    | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
-| `packages/wrangler/src/containers/**`      | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
-| `packages/containers-shared/**`            | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
-| `packages/wrangler/src/kv/**`              | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
-| `packages/miniflare/src/workers/kv/**`     | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
-| `packages/miniflare/test/plugins/kv/**`    | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
-| `packages/workflows-shared/**`             | `@cloudflare/wrangler` | + `@cloudflare/workflows`     |
+| Path                                    | Primary Owner          | AND Requirement               |
+| --------------------------------------- | ---------------------- | ----------------------------- |
+| Everything (`*`)                        | `@cloudflare/wrangler` | —                             |
+| `packages/workers-shared/**`            | `@cloudflare/wrangler` | + `@cloudflare/deploy-config` |
+| `packages/wrangler/src/api/d1/**`       | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
+| `packages/wrangler/src/d1/**`           | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
+| `packages/wrangler/src/__tests__/d1/**` | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
+| `packages/wrangler/src/cloudchamber/**` | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
+| `packages/wrangler/src/containers/**`   | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
+| `packages/containers-shared/**`         | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
+| `packages/wrangler/src/kv/**`           | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
+| `packages/miniflare/src/workers/kv/**`  | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
+| `packages/miniflare/test/plugins/kv/**` | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
+| `packages/workflows-shared/**`          | `@cloudflare/wrangler` | + `@cloudflare/workflows`     |
 
 Paths not listed above (e.g. `packages/create-cloudflare/`, `packages/vite-plugin-cloudflare/`, `packages/miniflare/`) fall through to the default `* @cloudflare/wrangler` rule and require only wrangler team approval.
 
@@ -99,19 +89,12 @@ Key settings:
 | `ignore`                   | Directories excluded from ownership checks (e.g. `.changeset`, `fixtures`) |
 | `detailed_reviewers`       | Show per-file owner breakdown in PR comments                               |
 | `suppress_unowned_warning` | Don't warn about files with no owner                                       |
-| `enforcement.approval`     | When `true`, the bot approves PRs that satisfy all rules                   |
 | `enforcement.fail_check`   | When `true`, the GHA check fails if rules aren't satisfied                 |
 | `admin_bypass.enabled`     | Allow admins to bypass by approving with "Codeowners Bypass" text          |
 
 ### `CODEOWNERS` — Native GitHub File
 
-The native GitHub `CODEOWNERS` file is intentionally simplified to a single rule:
-
-```
-* @workers-devprod
-```
-
-This exists only so that GitHub branch protection can gate merging on the bot's approval. **Do not add rules to this file** — all ownership logic lives in `.codeowners`.
+The native GitHub `CODEOWNERS` file is kept for reference but is **not the enforcement mechanism**. Enforcement is handled by the Codeowners Plus required status check. All ownership logic lives in `.codeowners`.
 
 ### `.github/workflows/codeowners.yml` — GitHub Actions Workflow
 
@@ -134,7 +117,7 @@ Only `@cloudflare/wrangler` approval is required.
 
 Example: changes to `packages/wrangler/src/d1/`.
 
-**Both** `@cloudflare/wrangler` AND `@cloudflare/d1` must approve. The codeowners-plus bot will post a comment listing who still needs to approve and request reviews from both teams.
+**Both** `@cloudflare/wrangler` AND `@cloudflare/d1` must approve. Codeowners Plus will post a comment listing who still needs to approve and request reviews from both teams.
 
 ### PR touches multiple product areas
 
@@ -219,9 +202,9 @@ Rules in `.codeowners` are relative to the file's directory. Check that:
 - The path doesn't have a leading `/` (leading slashes are ignored but can be confusing)
 - The `&` prefix is present (without it, the rule sets the primary owner instead of adding an AND requirement)
 
-### Bot not approving even though all reviews are in
+### Check passes but PR still can't merge
 
-Check that `enforcement.approval = true` in `codeowners.toml`. During Phase 1 (observation mode), this is set to `false`.
+Ensure "Run Codeowners Plus" is configured as a **required status check** in branch protection settings.
 
 ## References
 

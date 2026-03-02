@@ -26,15 +26,6 @@
 & packages/workers-shared/** @cloudflare/deploy-config
 
 # ----------------------------------------------------------
-# Pages ownership (AND: requires wrangler + pages)
-# ----------------------------------------------------------
-& packages/pages-shared/** @cloudflare/pages
-& packages/wrangler/pages/** @cloudflare/pages
-& packages/wrangler/src/api/pages/** @cloudflare/pages
-& packages/wrangler/src/pages/** @cloudflare/pages
-& packages/wrangler/src/__tests__/pages/** @cloudflare/pages
-
-# ----------------------------------------------------------
 # D1 ownership (AND: requires wrangler + d1)
 # ----------------------------------------------------------
 & packages/wrangler/src/api/d1/** @cloudflare/d1
