@@ -187,12 +187,12 @@ For this to work, the branch protection setting **"Dismiss stale pull request ap
 The workflow may not have triggered. Check that:
 
 - The PR event type is in the workflow's trigger list
-- The `GH_ACCESS_TOKEN` secret is valid and has org read access
+- The `READ_ONLY_ORG_GITHUB_TOKEN` secret is valid and has org read access
 - For fork PRs, the workflow uses `pull_request_target` (not `pull_request`)
 
 ### Team not resolving
 
-The GitHub token (`GH_ACCESS_TOKEN`) needs organization **read access for Members and Administration** to resolve `@cloudflare/*` team memberships. If teams aren't resolving, verify the token's permissions.
+The GitHub token (`READ_ONLY_ORG_GITHUB_TOKEN`) needs organization **read access for Members and Administration** to resolve `@cloudflare/*` team memberships. If teams aren't resolving, verify the token's permissions.
 
 ### AND rule not firing
 
