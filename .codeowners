@@ -46,8 +46,7 @@
 # Workers KV ownership (AND: requires wrangler + workers-kv)
 # ----------------------------------------------------------
 & packages/wrangler/src/kv/** @cloudflare/workers-kv
-& packages/wrangler/src/__tests__/kv.local.test.ts @cloudflare/workers-kv
-& packages/wrangler/src/__tests__/kv.test.ts @cloudflare/workers-kv
+& packages/wrangler/src/__tests__/kv/** @cloudflare/workers-kv
 & packages/miniflare/src/workers/kv/** @cloudflare/workers-kv
 & packages/miniflare/test/plugins/kv/** @cloudflare/workers-kv
 
