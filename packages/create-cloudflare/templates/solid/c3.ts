@@ -1,6 +1,5 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
-import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
@@ -21,41 +20,31 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	usesTypescript(ctx);
-	const filePath = `app.config.${usesTypescript(ctx) ? "ts" : "js"}`;
-
-	const { date: compatDate } = getLocalWorkerdCompatibilityDate({
-		projectPath: ctx.project.path,
-	});
+	const filePath = `vite.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
 	transformFile(filePath, {
 		visitCallExpression: function (n) {
 			const callee = n.node.callee as recast.types.namedTypes.Identifier;
-			if (callee.name !== "defineConfig") {
+			if (callee.name !== "nitro") {
 				return this.traverse(n);
 			}
 
 			const b = recast.types.builders;
-			mergeObjectProperties(
-				n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-				[
-					b.objectProperty(
-						b.identifier("server"),
-						b.objectExpression([
-							// preset: "cloudflare_module"
-							b.objectProperty(
-								b.identifier("preset"),
-								b.stringLiteral("cloudflare_module"),
-							),
-							b.objectProperty(
-								b.identifier("compatibilityDate"),
-								b.stringLiteral(compatDate),
-							),
-						]),
-					),
-				],
+			const presetProp = b.objectProperty(
+				b.identifier("preset"),
+				b.stringLiteral("cloudflare-module"),
 			);
+
+			if (n.node.arguments.length === 0) {
+				n.node.arguments.push(b.objectExpression([presetProp]));
+			} else {
+				mergeObjectProperties(
+					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
+					[presetProp],
+				);
+			}
 
 			return false;
 		},
