@@ -1,5 +1,4 @@
-import { BinocularsIcon, PencilIcon, TableIcon } from "@phosphor-icons/react";
-import { StudioCreateUpdateTableTab } from "./Tabs/CreateUpdateTable";
+import { BinocularsIcon, TableIcon } from "@phosphor-icons/react";
 import { StudioQueryTab } from "./Tabs/Query";
 import { StudioTableExplorerTab } from "./Tabs/TableExplorer";
 import type { Icon } from "@phosphor-icons/react";
@@ -27,31 +26,7 @@ const TableTab: TabDefinition<{
 	type: "table",
 };
 
-const EditTableTab: TabDefinition<{
-	schemaName: string;
-	tableName: string;
-	type: "edit-table";
-}> = {
-	icon: PencilIcon,
-	makeComponent: ({ schemaName, tableName }) => (
-		<StudioCreateUpdateTableTab schemaName={schemaName} tableName={tableName} />
-	),
-	makeIdentifier: (tab) => `edit-table/${tab.schemaName}.${tab.tableName}`,
-	makeTitle: ({ tableName }) => tableName,
-	type: "edit-table",
-};
-
-const NewTableTab: TabDefinition<{
-	type: "create-table";
-}> = {
-	icon: PencilIcon,
-	makeComponent: () => <StudioCreateUpdateTableTab />,
-	makeIdentifier: () => `create-table`,
-	makeTitle: () => "Create table",
-	type: "create-table",
-};
-
-const RegisteredTabDefinition = [QueryTab, TableTab, EditTableTab, NewTableTab];
+const RegisteredTabDefinition = [QueryTab, TableTab];
 
 export interface TabDefinition<T extends { type: string }> {
 	icon: Icon;
