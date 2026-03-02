@@ -199,7 +199,7 @@ function filterTails(
 }
 
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
-const remoteProxySessionsDataMap = new Map<
+export const remoteProxySessionsDataMap = new Map<
 	string,
 	{
 		session: RemoteProxySession;

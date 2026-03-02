@@ -1,0 +1,45 @@
+name: "Code Owners"
+
+# Re-evaluate when PRs are opened/updated, and when reviews are submitted/dismissed.
+# Using pull_request_target (not pull_request) so the workflow has access to secrets
+# for fork PRs. This is safe because:
+#   - The checkout is the BASE branch (ownership rules come from the protected branch)
+#   - PR head commits are fetched as git objects only (never checked out or executed)
+#   - The action only reads config files and calls the GitHub API
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+concurrency:
+  group: codeowners-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  codeowners:
+    name: "Run Codeowners Plus"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Base Branch"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Fetch PR Head (for diff computation)"
+        run: git fetch origin +refs/pull/${{ github.event.pull_request.number }}/head
+        env:
+          GITHUB_TOKEN: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"
+
+      - name: "Codeowners Plus"
+        uses: multimediallc/codeowners-plus@ff02aa993a92e8efe01642916d0877beb9439e9f # v1.9.0
+        with:
+          github-token: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"
+          pr: "${{ github.event.pull_request.number }}"
+          verbose: true
+          quiet: ${{ github.event.pull_request.draft }}
