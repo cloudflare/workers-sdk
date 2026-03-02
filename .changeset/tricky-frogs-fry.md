@@ -16,6 +16,6 @@ wrangler containers registries credentials registry.cloudflare.com --pull
 # Generate credentials with both permissions
 wrangler containers registries credentials registry.cloudflare.com --push --pull
 
-# Custom expiration (default varies)
+# Custom expiration (default 15)
 wrangler containers registries credentials registry.cloudflare.com --push --expiration-minutes=30
 ```
