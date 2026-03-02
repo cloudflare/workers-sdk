@@ -298,7 +298,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 								</DropdownMenu.Item>
 
 								<DropdownMenu.Item onClick={onRunAllClicked}>
-									Run all statement
+									Run all statements
 									<DropdownMenu.Shortcut>⇧+⌘+⏎</DropdownMenu.Shortcut>
 								</DropdownMenu.Item>
 
