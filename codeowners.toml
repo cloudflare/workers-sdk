@@ -1,0 +1,28 @@
+# Codeowners Plus - Advanced Configuration
+# See: https://github.com/multimediallc/codeowners-plus
+# See: CODEOWNERS.md for full documentation
+
+# Directories to ignore (no ownership checks, reduces review noise)
+ignore = [".changeset", "fixtures"]
+
+# Show detailed file-to-owner mapping in PR comments
+detailed_reviewers = true
+
+# Suppress warnings for intentionally unowned files (e.g. pnpm-lock.yaml)
+suppress_unowned_warning = true
+
+[enforcement]
+# Phase 1 (observation mode):
+#   approval = false — the bot does NOT approve PRs yet
+#   fail_check = true — the check runs for visibility but is NOT a required check
+#
+# Phase 2 (enforcement mode) — update these values when ready:
+#   approval = true — workers-devprod bot approves when all rules are satisfied
+#   fail_check = true — the check fails when rules are not satisfied
+approval = false
+fail_check = true
+
+[admin_bypass]
+# Allow repo admins to bypass codeowner requirements in emergencies
+# by submitting an approval review containing "Codeowners Bypass" text
+enabled = true
