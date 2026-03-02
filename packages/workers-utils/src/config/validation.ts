@@ -2602,17 +2602,22 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 				if (
 					typeof limits.steps !== "number" ||
 					!Number.isInteger(limits.steps) ||
-					limits.steps < 1 ||
-					limits.steps > 100_000
+					limits.steps < 1
 				) {
 					diagnostics.errors.push(
-						`"${field}" bindings "limits.steps" field must be an integer between 1 and 100,000 but got ${JSON.stringify(
+						`"${field}" bindings "limits.steps" field must be a positive integer but got ${JSON.stringify(
 							limits.steps
 						)}.`
 					);
 					isValid = false;
 				}
 			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.limits`,
+				Object.keys(limits),
+				["steps"]
+			);
 		}
 	}
 

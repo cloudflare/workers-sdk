@@ -23,7 +23,7 @@ export const WorkflowsOptionsSchema = z.object({
 				remoteProxyConnectionString: z
 					.custom<RemoteProxyConnectionString>()
 					.optional(),
-				stepLimit: z.number().int().min(1).max(100_000).optional(),
+				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
 		.optional(),

@@ -993,27 +993,6 @@ describe("wrangler workflows", () => {
 			expect(std.err).toBe("");
 		});
 
-		it("should accept workflow binding with limits.steps at boundary value 100000", async () => {
-			fs.writeFileSync(
-				"index.js",
-				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
-			);
-			writeWranglerConfig({
-				main: "index.js",
-				workflows: [
-					{
-						binding: "MY_WORKFLOW",
-						name: "my-workflow",
-						class_name: "MyWorkflow",
-						limits: { steps: 100_000 },
-					},
-				],
-			});
-
-			await runWrangler("deploy --dry-run");
-			expect(std.err).toBe("");
-		});
-
 		it("should reject workflow binding with limits.steps of 0", async () => {
 			writeWranglerConfig({
 				workflows: [
@@ -1028,25 +1007,7 @@ describe("wrangler workflows", () => {
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
-				'"limits.steps" field must be an integer between 1 and 100,000'
-			);
-		});
-
-		it("should reject workflow binding with limits.steps above 100000", async () => {
-			writeWranglerConfig({
-				workflows: [
-					{
-						binding: "MY_WORKFLOW",
-						name: "my-workflow",
-						class_name: "MyWorkflow",
-						limits: { steps: 100_001 },
-					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-				],
-			});
-
-			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
-			expect(std.err).toContain(
-				'"limits.steps" field must be an integer between 1 and 100,000'
+				'"limits.steps" field must be a positive integer'
 			);
 		});
 
@@ -1064,7 +1025,7 @@ describe("wrangler workflows", () => {
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
-				'"limits.steps" field must be an integer between 1 and 100,000'
+				'"limits.steps" field must be a positive integer'
 			);
 		});
 
@@ -1082,7 +1043,7 @@ describe("wrangler workflows", () => {
 
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
-				'"limits.steps" field must be an integer between 1 and 100,000'
+				'"limits.steps" field must be a positive integer'
 			);
 		});
 
@@ -1119,6 +1080,31 @@ describe("wrangler workflows", () => {
 			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
 			expect(std.err).toContain(
 				'should, optionally, have an object "limits" field'
+			);
+		});
+
+		it("should warn on unexpected fields in workflow binding limits", async () => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+						limits: {
+							steps: 10,
+							// @ts-expect-error Testing unexpected fields in limits
+							unknownProp: "foo",
+						},
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.warn).toContain(
+				'Unexpected fields found in workflows[0].limits field: "unknownProp"'
 			);
 		});
 

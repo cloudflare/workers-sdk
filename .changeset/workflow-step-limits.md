@@ -25,4 +25,4 @@ You can now set a maximum number of steps for a Workflow instance via the `limit
 }
 ```
 
-The `steps` value must be an integer between 1 and 100,000. If not specified, the default limit of 10,000 steps is used. Step limits are also enforced in local development via `wrangler dev`.
+The `steps` value must be an integer between 1 and 25,000. If not specified, the default limit of 10,000 steps is used. Step limits are also enforced in local development via `wrangler dev`.

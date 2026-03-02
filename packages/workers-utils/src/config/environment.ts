@@ -677,7 +677,7 @@ export type WorkflowBinding = {
 	remote?: boolean;
 	/** Optional limits for the Workflow */
 	limits?: {
-		/** Maximum number of steps a Workflow instance can execute (1–100,000) */
+		/** Maximum number of steps a Workflow instance can execute */
 		steps?: number;
 	};
 };
