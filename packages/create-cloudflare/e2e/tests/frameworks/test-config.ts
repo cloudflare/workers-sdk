@@ -813,6 +813,8 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "solid",
+			// quarantined: SolidStart moved from app.config to vite.config with Nitro plugin
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,

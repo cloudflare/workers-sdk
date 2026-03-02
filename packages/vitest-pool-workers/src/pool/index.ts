@@ -29,7 +29,11 @@ import { experimental_readRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
-import { OPTIONS_PATH, parseProjectOptions } from "./config";
+import {
+	OPTIONS_PATH,
+	parseProjectOptions,
+	remoteProxySessionsDataMap,
+} from "./config";
 import { guessWorkerExports } from "./guess-exports";
 import {
 	getProjectPath,
@@ -1284,6 +1288,14 @@ export default function (ctx: Vitest): ProcessPool {
 				}
 			}
 			allProjects.clear();
+			// Dispose remote proxy sessions to prevent handle leaks
+			log.debug("Disposing remote proxy sessions...");
+			for (const sessionData of remoteProxySessionsDataMap.values()) {
+				if (sessionData?.session?.dispose) {
+					promises.push(sessionData.session.dispose());
+				}
+			}
+			remoteProxySessionsDataMap.clear();
 			await Promise.all(promises);
 		},
 	};
