@@ -54,12 +54,6 @@ export function getVarsForDev(options: {
 }): Record<string, VarBinding> {
 	const { configPath, envFiles, vars, env, secrets, silent = false } = options;
 
-	// When secrets is defined, always include process.env as a fallback.
-	// Otherwise, respect the CLOUDFLARE_INCLUDE_PROCESS_ENV env var.
-	const includeProcessEnv = secrets
-		? true
-		: getCloudflareIncludeProcessEnvFromEnv();
-
 	// Start with config vars (plain_text or json, not secret)
 	const result: Record<string, VarBinding> = {};
 	for (const [key, value] of Object.entries(vars)) {
@@ -90,7 +84,9 @@ export function getVarsForDev(options: {
 			(p) => path.resolve(configDir, p)
 		);
 		loadedSecrets = loadDotEnv(resolvedEnvFilePaths, {
-			includeProcessEnv,
+			// When secrets is defined, include process.env as a fallback for .env files.
+			// Otherwise, respect the CLOUDFLARE_INCLUDE_PROCESS_ENV env var.
+			includeProcessEnv: !!secrets || getCloudflareIncludeProcessEnvFromEnv(),
 			silent,
 		});
 	}
