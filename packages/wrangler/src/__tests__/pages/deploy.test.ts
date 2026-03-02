@@ -5774,6 +5774,125 @@ and that at least one include rule is provided.
 				"Test commit"
 			);
 		});
+
+		it("should normalize multi-line commit message line endings to CRLF before truncation", async () => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let deploymentFormData: Record<string, unknown> | null = null;
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request }) => {
+						const formData = await request.formData();
+						const formDataObj: Record<string, unknown> = {};
+						for (const [key, value] of formData.entries()) {
+							formDataObj[key] = value;
+						}
+						deploymentFormData = formDataObj;
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			// This multi-line commit message is 383 bytes with LF but would be
+			// 385 bytes with CRLF. If the server normalizes to CRLF and truncates
+			// at 384 bytes, it could split the multi-byte "あ" character.
+			// The fix normalizes to CRLF client-side before truncation.
+			const multiLineMessage = "a\n\n" + "a".repeat(378) + "あ";
+
+			await runWrangler(
+				`pages deploy public --project-name=foo --commit-hash=abc123def456 --commit-message='${multiLineMessage}'`
+			);
+
+			expect(deploymentFormData).not.toBeNull();
+			const sentMessage = deploymentFormData?.[
+				"commit_message"
+			] as unknown as string;
+
+			// The sent message should have CRLF line endings
+			expect(sentMessage).toContain("\r\n");
+			// The sent message should be valid UTF-8 and within byte limit
+			expect(Buffer.byteLength(sentMessage, "utf8")).toBeLessThanOrEqual(384);
+			expect(Buffer.from(sentMessage, "utf8").toString()).toBe(sentMessage);
+		});
 	});
 
 	describe("git detection debug logging", () => {
