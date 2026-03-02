@@ -13,17 +13,16 @@ import type { Unstable_Config } from "wrangler";
  * When `secrets` is defined in the Worker config, only declared secrets are loaded.
  */
 export function getLocalDevVarsForPreview(
-	configPath: string | undefined,
-	cloudflareEnv: string | undefined,
-	secrets: Unstable_Config["secrets"]
+	config: Unstable_Config,
+	cloudflareEnv: string | undefined
 ): string | undefined {
 	const dotDevDotVars = wrangler.unstable_getVarsForDev(
-		configPath,
+		config.configPath,
 		undefined, // We don't currently support setting a list of custom `.env` files.
 		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.
 		cloudflareEnv,
 		false,
-		secrets
+		config.secrets
 	);
 	const dotDevDotVarsEntries = Array.from(Object.entries(dotDevDotVars));
 	if (dotDevDotVarsEntries.length > 0) {
