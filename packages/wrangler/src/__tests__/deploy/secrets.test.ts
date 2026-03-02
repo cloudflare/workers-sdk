@@ -271,4 +271,121 @@ SECRET3=value3`
 			runWrangler(`deploy --secrets-file ${secretsFile}`)
 		).rejects.toThrowError();
 	});
+
+	describe("interaction with secrets.required", () => {
+		it("should deploy when --secrets-file satisfies all required secrets even if the worker does not exist", async () => {
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["SECRET1", "SECRET2"] },
+			});
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+					SECRET2: "value2",
+				})
+			);
+
+			// Worker does not exist
+			mockServiceScriptData({});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "SECRET1",
+						text: "value1",
+					},
+					{
+						type: "secret_text",
+						name: "SECRET2",
+						text: "value2",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: true,
+				// Worker doesn't exist so the old upload API is used
+				useOldUploadApi: true,
+			});
+
+			await runWrangler(`deploy --secrets-file ${secretsFile}`);
+		});
+
+		it("should error listing only the secrets not provided by --secrets-file when the worker does not exist", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["SECRET1", "SECRET2", "SECRET3"] },
+			});
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			// Worker does not exist
+			mockServiceScriptData({});
+
+			await expect(
+				runWrangler(`deploy --secrets-file ${secretsFile}`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The following required secrets have not been set: SECRET2, SECRET3
+Use \`wrangler secret put <NAME>\` to set secrets before deploying.]`
+			);
+		});
+
+		it("should use inherit bindings only for required secrets not provided by --secrets-file", async () => {
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["SECRET1", "SECRET2", "SECRET3"] },
+			});
+
+			const secretsFile = "secrets.json";
+			fs.writeFileSync(
+				secretsFile,
+				JSON.stringify({
+					SECRET1: "value1",
+				})
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "SECRET1",
+						text: "value1",
+					},
+					{
+						type: "inherit",
+						name: "SECRET2",
+					},
+					{
+						type: "inherit",
+						name: "SECRET3",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: true,
+			});
+
+			await runWrangler(`deploy --secrets-file ${secretsFile}`);
+		});
+	});
 });
