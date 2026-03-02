@@ -824,6 +824,24 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			};
 		}
 
+		// When secrets are declared in config, validate they exist on the Worker.
+		// If the Worker doesn't exist yet, fail immediately — the user needs to
+		// run `wrangler secret put` first.
+		// If the Worker exists, add explicit inherit bindings so the API validates
+		// each secret is present on the previous version.
+		if (config.secrets?.required?.length) {
+			if (!workerExists) {
+				throw new UserError(
+					`The following required secrets have not been set: ${config.secrets.required.join(", ")}\n` +
+						`Use \`wrangler secret put <NAME>\` to set secrets before deploying.`
+				);
+			}
+
+			for (const secretName of config.secrets.required) {
+				bindings[secretName] = { type: "inherit" };
+			}
+		}
+
 		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
@@ -1012,7 +1030,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								method: "POST",
 								body: workerBundle,
 								headers: await getMetricsUsageHeaders(config.send_metrics),
-							}
+							},
+							new URLSearchParams({ bindings_inherit: "strict" })
 						)
 					);
 
@@ -1079,6 +1098,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								// pass excludeScript so the whole body of the
 								// script doesn't get included in the response
 								excludeScript: "true",
+								bindings_inherit: "strict",
 							})
 						)
 					);
