@@ -42,7 +42,7 @@ export function StudioTableExplorerTab({
 	schemaName,
 	tableName,
 }: StudioTableExplorerTabProps): JSX.Element {
-	const { driver, schemas } = useStudioContext();
+	const { closeStudioTab, driver, schemas } = useStudioContext();
 
 	const [changeNumber, setChangeNumber] = useState<number>(0);
 	const [error, setError] = useState<string>("");
@@ -82,7 +82,7 @@ export function StudioTableExplorerTab({
 		return autoCompleteColumns;
 	}, [schema]);
 
-	const { setDirtyState, setBeforeTabClosingHandler } =
+	const { identifier, setDirtyState, setBeforeTabClosingHandler } =
 		useStudioCurrentWindowTab();
 
 	// This effect subscribes to the external table state's change event and syncs
@@ -121,6 +121,23 @@ export function StudioTableExplorerTab({
 			return true;
 		});
 	}, [setBeforeTabClosingHandler]);
+
+	// Close the tab if the table no longer exists after a schema refresh
+	useEffect((): void => {
+		if (!schemas) {
+			return;
+		}
+
+		const schemaItems = schemas[schemaName];
+		const tableExists = schemaItems?.some(
+			(item) =>
+				(item.type === "table" || item.type === "view") &&
+				item.name === tableName
+		);
+		if (!tableExists) {
+			closeStudioTab(identifier);
+		}
+	}, [closeStudioTab, identifier, schemaName, schemas, tableName]);
 
 	const onRefreshClicked = useCallback(async (): Promise<void> => {
 		if (!schemas) {

@@ -1,5 +1,13 @@
 import { BinocularsIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
@@ -21,6 +29,13 @@ import type { StudioWindowTabItem } from "./WindowTab/types";
  */
 const DEFAULT_SCHEMA_NAME = "main";
 
+export interface StudioRef {
+	/**
+	 * Refreshes the database schema, re-fetching table and view information.
+	 */
+	refreshSchema: () => Promise<void>;
+}
+
 interface StudioProps {
 	/**
 	 * The studio driver used to make requests to the database.
@@ -41,12 +56,10 @@ interface StudioProps {
 	resource: StudioResource;
 }
 
-export function Studio({
-	driver,
-	initialTable,
-	onTableChange,
-	resource,
-}: StudioProps): JSX.Element {
+export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
+	{ driver, initialTable, onTableChange, resource },
+	ref
+) {
 	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
@@ -82,6 +95,8 @@ export function Studio({
 			setLoadingSchema(false);
 		}
 	}, [driver]);
+
+	useImperativeHandle(ref, () => ({ refreshSchema }), [refreshSchema]);
 
 	useEffect((): void => {
 		void refreshSchema();
@@ -384,4 +399,4 @@ export function Studio({
 			</StudioContextMenuProvider>
 		</ModalProvider>
 	);
-}
+});

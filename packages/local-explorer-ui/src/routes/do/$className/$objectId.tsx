@@ -1,16 +1,24 @@
 import { Select } from "@base-ui/react/select";
+import { Button } from "@cloudflare/kumo";
 import {
+	ArrowsCounterClockwiseIcon,
 	CaretUpDownIcon,
 	CheckIcon,
 	CubeIcon,
 	TableIcon,
 } from "@phosphor-icons/react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useRouter,
+} from "@tanstack/react-router";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { Studio } from "../../../components/studio";
 import { LocalDODriver } from "../../../drivers/do";
+import type { StudioRef } from "../../../components/studio";
 import type { StudioResource } from "../../../types/studio";
 
 export const Route = createFileRoute("/do/$className/$objectId")({
@@ -50,6 +58,12 @@ function ObjectView(): JSX.Element {
 	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
+	const router = useRouter();
+
+	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
+	const studioRef = useRef<StudioRef>(null);
+
+	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
 	const { namespaceId } = loaderData;
 
@@ -69,7 +83,15 @@ function ObjectView(): JSX.Element {
 
 	const handleTableChange = useCallback(
 		(tableName: string | undefined) => {
+			// Skip if the table hasn't changed to avoid unnecessary navigation
+			if (lastSyncedTable.current === tableName) {
+				return;
+			}
+
+			lastSyncedTable.current = tableName;
+
 			void navigate({
+				replace: true,
 				search: {
 					table: tableName,
 				},
@@ -78,6 +100,21 @@ function ObjectView(): JSX.Element {
 		},
 		[navigate]
 	);
+
+	const handleTableRefresh = useCallback(async (): Promise<void> => {
+		setIsRefreshing(true);
+		try {
+			// Route invalidation can often be so quick the loading state doesn't show
+			// so we add an artificial delay to ensure the user see's something happen.
+			await Promise.all([
+				router.invalidate(),
+				studioRef.current?.refreshSchema(),
+				new Promise((resolve) => setTimeout(resolve, 250)),
+			]);
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, [router]);
 
 	// Truncate the object ID for display
 	const shortObjectId =
@@ -108,7 +145,20 @@ function ObjectView(): JSX.Element {
 					<TableSelect key="table-selector" />,
 				]}
 				title="Durable Objects"
-			/>
+			>
+				<Button
+					aria-label="Refresh tables"
+					disabled={isRefreshing}
+					onClick={handleTableRefresh}
+					shape="square"
+					variant="ghost"
+				>
+					<ArrowsCounterClockwiseIcon
+						className={isRefreshing ? "animate-spin" : undefined}
+						size={14}
+					/>
+				</Button>
+			</Breadcrumbs>
 
 			<div className="flex-1 overflow-hidden">
 				<Studio
@@ -116,6 +166,7 @@ function ObjectView(): JSX.Element {
 					initialTable={searchParams.table}
 					key={`${namespaceId}-${params.objectId}`}
 					onTableChange={handleTableChange}
+					ref={studioRef}
 					resource={resource}
 				/>
 			</div>
