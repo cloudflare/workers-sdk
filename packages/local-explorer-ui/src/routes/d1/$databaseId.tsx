@@ -137,7 +137,7 @@ function TableSelect(): JSX.Element {
 			onValueChange={handleTableChange}
 			value={searchParams.table ?? null}
 		>
-			<Select.Trigger className="inline-flex items-center gap-1 px-2 py-1 -mx-1.5 rounded-md bg-transparent text-sm text-text cursor-pointer border-none transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
+			<Select.Trigger className="inline-flex items-center gap-1 p-2 -mx-1.5 rounded-md bg-transparent text-sm text-text cursor-pointer border-none transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
 				<Select.Value placeholder="Select table" />
 				<Select.Icon>
 					<CaretUpDownIcon className="w-3.5 h-3.5 text-text-secondary" />
