@@ -58,12 +58,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 							);
 						};
 					}
-					return () => {
-						const { service, entrypoint } = props;
-						throw new Error(
-							`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to.`
-						);
-					};
+					const { service, entrypoint } = props;
+					throw new Error(
+						`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to.`
+					);
 				}
 				return Reflect.get(fetcher, prop);
 			},
