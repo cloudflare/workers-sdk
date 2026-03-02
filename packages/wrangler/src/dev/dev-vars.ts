@@ -91,7 +91,7 @@ export function getVarsForDev(
 			(p) => path.resolve(configDir, p)
 		);
 		loadedSecrets = loadDotEnv(resolvedEnvFilePaths, {
-			// When secrets is defined, include process.env as a fallback for .env files.
+			// When secrets is defined, always include `process.env`.
 			// Otherwise, respect the CLOUDFLARE_INCLUDE_PROCESS_ENV env var.
 			includeProcessEnv: !!secrets || getCloudflareIncludeProcessEnvFromEnv(),
 			silent,
