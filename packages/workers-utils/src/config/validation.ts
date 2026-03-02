@@ -2585,7 +2585,11 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	if (hasProperty(value, "limits") && value.limits !== undefined) {
-		if (typeof value.limits !== "object" || value.limits === null) {
+		if (
+			typeof value.limits !== "object" ||
+			value.limits === null ||
+			Array.isArray(value.limits)
+		) {
 			diagnostics.errors.push(
 				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
 					value

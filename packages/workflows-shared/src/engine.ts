@@ -43,7 +43,6 @@ export type DatabaseVersion = {
 	modified_on: string;
 	workflow_id: string;
 	mutable_pipeline_id: string;
-	step_limit?: number;
 };
 
 export type DatabaseInstance = {

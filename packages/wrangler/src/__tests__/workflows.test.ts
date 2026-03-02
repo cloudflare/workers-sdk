@@ -1104,6 +1104,24 @@ describe("wrangler workflows", () => {
 			);
 		});
 
+		it("should reject workflow binding with array limits", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: [1, 2, 3],
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'should, optionally, have an object "limits" field'
+			);
+		});
+
 		it("should reject workflows binding with same name", async () => {
 			writeWorkerSource({ format: "ts" });
 			writeWranglerConfig({
