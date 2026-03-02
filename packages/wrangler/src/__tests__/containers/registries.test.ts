@@ -678,8 +678,19 @@ describe("containers registries credentials", () => {
 		await expect(
 			runWrangler("containers registries credentials example.com --push")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: The credentials command only works with the Cloudflare managed registry (registry.cloudflare.com).]`
+			`[Error: The credentials command only accepts the Cloudflare managed registry (registry.cloudflare.com).]`
 		);
+	});
+
+	it("should default to Cloudflare registry when DOMAIN is omitted", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler("containers registries credentials --push");
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
 	});
 
 	it("should require --push or --pull", async () => {

@@ -487,16 +487,17 @@ async function registryDeleteCommand(
 }
 
 async function registryCredentialsCommand(credentialsArgs: {
-	DOMAIN: string;
+	DOMAIN?: string;
 	expirationMinutes: number;
 	push?: boolean;
 	pull?: boolean;
 	json?: boolean;
 }) {
 	const cloudflareRegistry = getCloudflareContainerRegistry();
-	if (credentialsArgs.DOMAIN !== cloudflareRegistry) {
+	const domain = credentialsArgs.DOMAIN || cloudflareRegistry;
+	if (domain !== cloudflareRegistry) {
 		throw new UserError(
-			`The credentials command only works with the Cloudflare managed registry (${cloudflareRegistry}).`
+			`The credentials command only accepts the Cloudflare managed registry (${cloudflareRegistry}).`
 		);
 	}
 
@@ -508,7 +509,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 
 	const credentials =
 		await ImageRegistriesService.generateImageRegistryCredentials(
-			credentialsArgs.DOMAIN,
+			domain,
 			{
 				expiration_minutes: credentialsArgs.expirationMinutes,
 				permissions: [
@@ -660,7 +661,6 @@ export const containersRegistriesCredentialsCommand = createCommand({
 	args: {
 		DOMAIN: {
 			type: "string",
-			demandOption: true,
 			describe: "Domain to get credentials for",
 		},
 		"expiration-minutes": {
