@@ -15,6 +15,9 @@
 # Rules are relative to this file's directory (repo root).
 # Unlike GitHub CODEOWNERS, `*.js` only matches in this directory;
 # use `**/*.js` for recursive matching.
+#
+# Paths not matching any specific rule fall through to the default
+# primary owner (currently @cloudflare/wrangler).
 # ============================================================
 
 # Default owner - ANT/Wrangler team owns everything

@@ -6,26 +6,13 @@ This repository uses [Codeowners Plus](https://github.com/multimediallc/codeowne
 
 ### Overview
 
-```
-PR opened/updated/reviewed
-        │
-        ▼
-┌──────────────────────────────────┐
-│  Codeowners Plus GHA runs        │  Reads .codeowners + codeowners.toml
-│  Evaluates AND/OR rules          │  from the BASE branch (not the PR)
-│  Posts comment listing reviewers  │
-│  Requests reviews from owners    │
-└──────────┬───────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────┐
-│  All rules satisfied?            │
-│  YES → status check passes ✅    │
-│  NO  → status check fails  ❌    │  Comment lists who still needs to approve
-└──────────────────────────────────┘
-```
+When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action runs. It reads `.codeowners` and `codeowners.toml` from the **base branch** (not the PR), evaluates the ownership rules, and:
 
-The "Run Codeowners Plus" check is configured as a **required status check** in branch protection. It fails when ownership rules are not satisfied, blocking merge. The native GitHub `CODEOWNERS` file is not involved in enforcement.
+- Posts a PR comment listing which teams need to approve
+- Requests reviews from those teams
+- Sets a **required status check** ("Run Codeowners Plus") that passes only when all ownership rules are satisfied
+
+The native GitHub `CODEOWNERS` file is not involved in enforcement.
 
 ### Key Difference from Native CODEOWNERS
 
@@ -41,42 +28,7 @@ The "Run Codeowners Plus" check is configured as a **required status check** in 
 
 ### `.codeowners` — Ownership Rules
 
-Located at the repo root. Defines who owns what.
-
-**Syntax:**
-
-```bash
-# Primary owner (no prefix) — highest-priority match wins
-* @cloudflare/wrangler
-
-# AND rule (& prefix) — additional required reviewer on top of primary owner
-& packages/wrangler/src/d1/** @cloudflare/d1
-
-# Optional reviewer (? prefix) — notified but not required to approve
-? packages/wrangler/src/d1/** @cloudflare/d1-observers
-
-# OR rule — multiple teams on same line, either can satisfy
-& packages/wrangler/src/d1/** @cloudflare/d1 @cloudflare/d1-contractors
-```
-
-**Current ownership structure:**
-
-| Path                                    | Primary Owner          | AND Requirement               |
-| --------------------------------------- | ---------------------- | ----------------------------- |
-| Everything (`*`)                        | `@cloudflare/wrangler` | —                             |
-| `packages/workers-shared/**`            | `@cloudflare/wrangler` | + `@cloudflare/deploy-config` |
-| `packages/wrangler/src/api/d1/**`       | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
-| `packages/wrangler/src/d1/**`           | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
-| `packages/wrangler/src/__tests__/d1/**` | `@cloudflare/wrangler` | + `@cloudflare/d1`            |
-| `packages/wrangler/src/cloudchamber/**` | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
-| `packages/wrangler/src/containers/**`   | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
-| `packages/containers-shared/**`         | `@cloudflare/wrangler` | + `@cloudflare/cloudchamber`  |
-| `packages/wrangler/src/kv/**`           | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
-| `packages/miniflare/src/workers/kv/**`  | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
-| `packages/miniflare/test/plugins/kv/**` | `@cloudflare/wrangler` | + `@cloudflare/workers-kv`    |
-| `packages/workflows-shared/**`          | `@cloudflare/wrangler` | + `@cloudflare/workflows`     |
-
-Paths not listed above (e.g. `packages/create-cloudflare/`, `packages/vite-plugin-cloudflare/`, `packages/miniflare/`) fall through to the default `* @cloudflare/wrangler` rule and require only wrangler team approval.
+Located at the repo root. Defines who owns what using path patterns and team handles. See the comments in the file itself for syntax details and a template for adding new product teams.
 
 ### `codeowners.toml` — Advanced Configuration
 
@@ -179,32 +131,6 @@ R2, Queues, AI, Hyperdrive, Vectorize, Pipelines, SSL/Secrets Store, WVPC.
 Codeowners Plus uses **smart dismissal**: when new commits are pushed to a PR, it only dismisses an approval if the files owned by that reviewer were changed. This avoids the frustration of GitHub's all-or-nothing stale review dismissal.
 
 For this to work, the branch protection setting **"Dismiss stale pull request approvals when new commits are pushed"** must be **disabled**. Codeowners Plus handles dismissal itself.
-
-## Troubleshooting
-
-### The check is stuck as "pending"
-
-The workflow may not have triggered. Check that:
-
-- The PR event type is in the workflow's trigger list
-- The `READ_ONLY_ORG_GITHUB_TOKEN` secret is valid and has org read access
-- For fork PRs, the workflow uses `pull_request_target` (not `pull_request`)
-
-### Team not resolving
-
-The GitHub token (`READ_ONLY_ORG_GITHUB_TOKEN`) needs organization **read access for Members and Administration** to resolve `@cloudflare/*` team memberships. If teams aren't resolving, verify the token's permissions.
-
-### AND rule not firing
-
-Rules in `.codeowners` are relative to the file's directory. Check that:
-
-- The path pattern uses `**` for recursive matching (not just `*`)
-- The path doesn't have a leading `/` (leading slashes are ignored but can be confusing)
-- The `&` prefix is present (without it, the rule sets the primary owner instead of adding an AND requirement)
-
-### Check passes but PR still can't merge
-
-Ensure "Run Codeowners Plus" is configured as a **required status check** in branch protection settings.
 
 ## References
 
