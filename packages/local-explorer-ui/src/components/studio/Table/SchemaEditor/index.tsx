@@ -140,10 +140,10 @@ export function StudioTableSchemaEditor({
 			split="horizontal"
 		>
 			<div className="flex flex-col w-full h-full overflow-hidden text-xs bg-surface">
-				<div className="flex gap-2 p-4 py-2 border-b border-color shadow-xs">
+				<div className="flex gap-2 p-4 py-2 border-b border-border shadow-xs">
 					<input
 						autoFocus
-						className="w-62.5 h-9 rounded-lg border border-gray-300 px-3 text-base bg-transparent"
+						className="w-62.5 h-9 rounded-lg border border-border px-3 text-base bg-transparent"
 						disabled={readOnlyExistingColumns}
 						onChange={(e) => handleNameChange(e.target.value)}
 						placeholder="Table name"
