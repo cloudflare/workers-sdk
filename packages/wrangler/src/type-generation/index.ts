@@ -508,6 +508,7 @@ async function generateSimpleEnvTypes(
 	const collectedVars = collectAllVars(collectionArgs);
 	const collectedWorkflows = collectAllWorkflows(collectionArgs);
 	const collectedPipelines = collectAllPipelines(collectionArgs);
+	const collectedCrons = collectAllCrons(collectionArgs);
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
@@ -753,7 +754,8 @@ async function generateSimpleEnvTypes(
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
 			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
-			typeDefinitions
+			typeDefinitions,
+			collectedCrons
 		);
 
 		const hash = createHash("sha256")
@@ -825,6 +827,7 @@ async function generatePerEnvironmentTypes(
 	const workflowsPerEnv = collectWorkflowsPerEnvironment(collectionArgs);
 	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
 	const pipelinesPerEnv = collectPipelinesPerEnvironment(collectionArgs);
+	const collectedCrons = collectAllCrons(collectionArgs);
 
 	// Track all binding names and their types across all environments for aggregation
 	const aggregatedBindings = new Map<
@@ -1199,7 +1202,8 @@ async function generatePerEnvironmentTypes(
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
 		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
-		[...typeDefinitions]
+		[...typeDefinitions],
+		collectedCrons
 	);
 
 	const hash = createHash("sha256")
@@ -1230,6 +1234,8 @@ async function generatePerEnvironmentTypes(
  * @param compatibilityFlags - Compatibility flags for the worker
  * @param entrypointModule - The import specifier for the main entrypoint module
  * @param configuredDurableObjects - Array of configured Durable Object class names
+ * @param typeDefinitions - Array of type definition strings
+ * @param crons - Array of cron trigger expressions
  *
  * @returns An object containing the complete file content and console output strings
  */
@@ -1248,7 +1254,8 @@ function generatePerEnvTypeStrings(
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
 	configuredDurableObjects: string[],
-	typeDefinitions: string[] = []
+	typeDefinitions: string[] = [],
+	crons: string[] = []
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let processEnv = "";
@@ -1258,6 +1265,12 @@ function generatePerEnvTypeStrings(
 		typeDefinitions.length > 0
 			? typeDefinitions.map((def) => `\t${def}`).join("\n")
 			: "";
+
+	// Generate crons type: literal union if crons exist, otherwise string
+	const cronsType =
+		crons.length > 0
+			? crons.map((c) => `"${escapeTypeScriptString(c)}"`).join(" | ")
+			: "string";
 
 	if (formatType === "modules") {
 		if (
@@ -1273,9 +1286,21 @@ function generatePerEnvTypeStrings(
 			.map((b) => `\t\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
-		const globalPropsContent = entrypointModule
-			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
-			: "";
+		// Build GlobalProps content - always include crons
+		const globalPropsLines: string[] = [];
+		if (entrypointModule) {
+			globalPropsLines.push(
+				`\t\tmainModule: typeof import("${entrypointModule}");`
+			);
+		}
+		if (configuredDurableObjects.length > 0) {
+			globalPropsLines.push(
+				`\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};`
+			);
+		}
+		globalPropsLines.push(`\t\tcrons: ${cronsType};`);
+
+		const globalPropsContent = `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`;
 
 		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
@@ -1342,6 +1367,8 @@ const validateTypesFile = (path: string): void => {
  * @param compatibilityFlags - Compatibility flags for the worker
  * @param entrypointModule - The entrypoint module path
  * @param configuredDurableObjects - Array of configured durable object names
+ * @param typeDefinitions - Array of type definition strings
+ * @param crons - Array of cron trigger expressions
  *
  * @returns An object containing the complete file content and console output strings
  */
@@ -1355,7 +1382,8 @@ function generateTypeStrings(
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
 	configuredDurableObjects: string[],
-	typeDefinitions: string[] = []
+	typeDefinitions: string[] = [],
+	crons: string[] = []
 ): {
 	consoleOutput: string;
 	fileContent: string;
@@ -1369,6 +1397,12 @@ function generateTypeStrings(
 			? typeDefinitions.map((def) => `\t${def}`).join("\n")
 			: "";
 
+	// Generate crons type: literal union if crons exist, otherwise string
+	const cronsType =
+		crons.length > 0
+			? crons.map((c) => `"${escapeTypeScriptString(c)}"`).join(" | ")
+			: "string";
+
 	if (formatType === "modules") {
 		if (
 			isProcessEnvPopulated(compatibilityDate, compatibilityFlags) &&
@@ -1377,7 +1411,24 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+
+		// Build GlobalProps content - always include crons
+		const globalPropsLines: string[] = [];
+		if (entrypointModule) {
+			globalPropsLines.push(
+				`\t\tmainModule: typeof import("${entrypointModule}");`
+			);
+		}
+		if (configuredDurableObjects.length > 0) {
+			globalPropsLines.push(
+				`\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};`
+			);
+		}
+		globalPropsLines.push(`\t\tcrons: ${cronsType};`);
+
+		const globalPropsContent = `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`;
+
+		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
 		// For service worker format, type definitions still go at the top level since there's no namespace
 		const globalTypeDefsContent =
@@ -2325,6 +2376,45 @@ const logHorizontalRule = () => {
 	const screenWidth = process.stdout.columns;
 	logger.log(chalk.dim("─".repeat(Math.min(screenWidth, 60))));
 };
+
+/**
+ * Collects all cron trigger expressions across environments.
+ *
+ * Behavior:
+ * - If `args.env` is specified: only collect crons from that specific environment
+ * - Otherwise: collect crons from top-level AND all named environments
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of unique cron expressions
+ */
+function collectAllCrons(
+	args: Partial<(typeof typesCommand)["args"]>
+): string[] {
+	const crons = new Set<string>();
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		for (const cron of envConfig.triggers?.crons ?? []) {
+			crons.add(cron);
+		}
+	} else {
+		// Collect from top-level
+		for (const cron of rawConfig.triggers?.crons ?? []) {
+			crons.add(cron);
+		}
+		// Collect from all named environments
+		for (const env of Object.values(rawConfig.env ?? {})) {
+			for (const cron of env.triggers?.crons ?? []) {
+				crons.add(cron);
+			}
+		}
+	}
+
+	return [...crons];
+}
 
 interface PerEnvBinding {
 	bindingCategory: string;
