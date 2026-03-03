@@ -89,43 +89,6 @@
 	--text-color-kumo-link: var(--color-primary);
 }
 
-/*
- * Map @cloudflare/kumo component tokens to our brand theme.
- * Kumo components reference --color-kumo-* and --text-color-kumo-* variables.
- * Without these mappings, backgrounds and text colors may not render correctly.
- */
-:root {
-	/* Background tokens */
-	--color-kumo-base: var(--color-background);
-	--color-kumo-control: var(--color-surface);
-	--color-kumo-elevated: var(--color-surface-secondary);
-	--color-kumo-overlay: var(--color-accent);
-	--color-kumo-recessed: var(--color-surface-tertiary);
-	--color-kumo-tint: var(--color-surface-secondary);
-
-	/* Interactive / brand tokens */
-	--color-kumo-brand: var(--color-primary);
-	--color-kumo-brand-hover: var(--color-primary-hover);
-	--color-kumo-interact: var(--color-surface-tertiary);
-	--color-kumo-danger: var(--color-danger);
-
-	/* Border / line tokens */
-	--color-kumo-fill: var(--color-border);
-	--color-kumo-line: var(--color-border);
-	--color-kumo-ring: var(--color-muted);
-
-	/* Tooltip tokens */
-	--color-kumo-tip-shadow: rgba(0, 0, 0, 0.08);
-	--color-kumo-tip-stroke: transparent;
-
-	/* Text color tokens */
-	--text-color-kumo-default: var(--color-text);
-	--text-color-kumo-subtle: var(--color-muted);
-	--text-color-kumo-inactive: var(--color-muted);
-	--text-color-kumo-danger: var(--color-danger);
-	--text-color-kumo-link: var(--color-primary);
-}
-
 /* Dark mode color overrides */
 @media (prefers-color-scheme: dark) {
 	:root {
