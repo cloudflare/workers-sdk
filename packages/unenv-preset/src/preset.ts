@@ -92,7 +92,7 @@ export function getCloudflarePreset({
 		...overrides.flatMap((o) => o.nativeModules),
 	];
 
-	// The modules are are provided by unenv for the current compat date and flags.
+	// Hybrid modules are provided by unenv but use some native workerd APIs.
 	const hybridModules = overrides.flatMap((o) => o.hybridModules);
 
 	// The globals that are injected from unenv for the current compat date and flags.
