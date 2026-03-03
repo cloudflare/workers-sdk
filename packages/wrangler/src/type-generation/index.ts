@@ -2332,6 +2332,40 @@ interface PerEnvBinding {
 	type: string;
 }
 
+interface InheritableBindingDefinition {
+	/**
+	 * The category name for this binding (used for identification)
+	 */
+	bindingCategory: string;
+
+	/**
+	 * Extract the binding name from the raw environment config
+	 */
+	getBindingName: (env: RawEnvironment | undefined) => string | undefined;
+
+	/**
+	 * The TypeScript type for this binding
+	 */
+	type: string;
+}
+
+/**
+ * List of bindings that come from inheritable config properties.
+ *
+ * These bindings, when defined at the top-level config, are inherited by
+ * all named environments.
+ *
+ * The type generation needs to account for this inheritance when determining
+ * if a binding should be required or optional in the aggregated `Env` interface.
+ */
+const INHERITABLE_BINDINGS = [
+	{
+		bindingCategory: "assets",
+		getBindingName: (env) => env?.assets?.binding,
+		type: "Fetcher",
+	},
+] satisfies InheritableBindingDefinition[];
+
 /**
  * Collects vars per environment, returning a map from environment name to vars.
  *
@@ -2823,6 +2857,20 @@ function collectCoreBindingsPerEnvironment(
 
 	const { rawConfig } = experimental_readRawConfig(args);
 
+	const topLevelInheritableBindings = new Array<PerEnvBinding>();
+	for (const inheritableDef of INHERITABLE_BINDINGS) {
+		const bindingName = inheritableDef.getBindingName(rawConfig);
+		if (!bindingName) {
+			continue;
+		}
+
+		topLevelInheritableBindings.push({
+			bindingCategory: inheritableDef.bindingCategory,
+			name: bindingName,
+			type: inheritableDef.type,
+		});
+	}
+
 	const topLevelBindings = collectEnvironmentBindings(
 		rawConfig,
 		TOP_LEVEL_ENV_NAME
@@ -2833,6 +2881,20 @@ function collectCoreBindingsPerEnvironment(
 
 	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 		const envBindings = collectEnvironmentBindings(env, envName);
+
+		// Add top-level inheritable bindings if not already present in this environment
+		// (i.e., the environment doesn't override the inheritable property)
+		for (const inheritableBinding of topLevelInheritableBindings) {
+			const alreadyHasBinding = envBindings.some(
+				(b) => b.bindingCategory === inheritableBinding.bindingCategory
+			);
+			if (alreadyHasBinding) {
+				continue;
+			}
+
+			envBindings.push(inheritableBinding);
+		}
+
 		if (envBindings.length > 0) {
 			result.set(envName, envBindings);
 		}
