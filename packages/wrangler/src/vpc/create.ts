@@ -19,6 +19,7 @@ export const vpcServiceCreateCommand = createCommand({
 		validateRequest({
 			name: args.name,
 			type: args.type as ServiceType,
+			tcpPort: args.tcpPort,
 			httpPort: args.httpPort,
 			httpsPort: args.httpsPort,
 			ipv4: args.ipv4,
@@ -34,6 +35,7 @@ export const vpcServiceCreateCommand = createCommand({
 		const request = buildRequest({
 			name: args.name,
 			type: args.type as ServiceType,
+			tcpPort: args.tcpPort,
 			httpPort: args.httpPort,
 			httpsPort: args.httpsPort,
 			ipv4: args.ipv4,
@@ -50,7 +52,9 @@ export const vpcServiceCreateCommand = createCommand({
 		logger.log(`   Type: ${service.type}`);
 
 		// Display service-specific details
-		if (service.type === ServiceType.Http) {
+		if (service.type === ServiceType.Tcp) {
+			logger.log(`   TCP Port: ${service.tcp_port}`);
+		} else if (service.type === ServiceType.Http) {
 			if (service.http_port) {
 				logger.log(`   HTTP Port: ${service.http_port}`);
 			}

@@ -712,6 +712,80 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should create a hyperdrive config with a VPC service ID", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --service-id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --database=neondb --user=test --password=password"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "password": "password",
+			    "scheme": "postgresql",
+			    "service_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should create a hyperdrive config with a VPC service ID and mysql scheme", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --service-id=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --database=mydb --user=test --password=password --origin-scheme=mysql"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "password": "password",
+			    "scheme": "mysql",
+			    "service_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────��───────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
 	it("should reject a create hyperdrive over access command if access client ID is set but not access client secret", async ({
 		expect,
 	}) => {
@@ -1242,6 +1316,79 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should handle updating a hyperdrive config to use a VPC service ID", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveUpdate();
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --service-id=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "origin": {
+			    "service_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "database": "neondb",
+			    "user": "test",
+			    "service_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+			  },
+			  "origin_connection_limit": 25
+			}"
+		`);
+	});
+
+	it("should handle updating a hyperdrive config to use a VPC service ID with database credentials", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveUpdate();
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --service-id=yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy --database=newdb --origin-user=newuser --origin-password='passw0rd!'"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "origin": {
+			    "database": "newdb",
+			    "password": "passw0rd!",
+			    "service_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+			    "user": "newuser",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "database": "newdb",
+			    "user": "newuser",
+			    "service_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy"
+			  },
+			  "origin_connection_limit": 25
+			}"
+		`);
+	});
+
 	it("should throw an exception when updating a hyperdrive config's origin but neither port nor access credentials are provided", async ({
 		expect,
 	}) => {
@@ -1464,7 +1611,12 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						} = reqBody.origin as any;
 						origin = { ...origin, ...reqOrigin };
-						if (reqOrigin.port) {
+						if (reqOrigin.service_id) {
+							delete origin.host;
+							delete origin.port;
+							delete origin.access_client_id;
+							delete origin.access_client_secret;
+						} else if (reqOrigin.port) {
 							delete origin.access_client_id;
 							delete origin.access_client_secret;
 						} else if (
@@ -1513,18 +1665,21 @@ function mockHyperdriveCreate(): Promise<CreateUpdateHyperdriveBody> {
 
 					resolve(reqBody);
 
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const reqOrigin = reqBody.origin as any;
 					return HttpResponse.json(
 						createFetchResult(
 							{
 								id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 								name: reqBody.name,
 								origin: {
-									host: reqBody.origin.host,
-									port: reqBody.origin.port,
-									database: reqBody.origin.database,
-									scheme: reqBody.origin.scheme,
-									user: reqBody.origin.user,
-									access_client_id: reqBody.origin.access_client_id,
+									host: reqOrigin.host,
+									port: reqOrigin.port,
+									database: reqOrigin.database,
+									scheme: reqOrigin.scheme,
+									user: reqOrigin.user,
+									access_client_id: reqOrigin.access_client_id,
+									service_id: reqOrigin.service_id,
 								},
 								caching: reqBody.caching,
 								mtls: reqBody.mtls,
