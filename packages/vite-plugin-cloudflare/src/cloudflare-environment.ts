@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { EventEmitter } from "node:events";
 import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
 import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
@@ -35,6 +36,8 @@ function createHotChannel(
 	webSocketContainer: WebSocketContainer
 ): vite.HotChannel {
 	const listenersMap = new Map<string, Set<vite.HotChannelListener>>();
+	const innerEmitter = new EventEmitter();
+	const outsideEmitter = new EventEmitter();
 
 	const client: vite.HotChannelClient = {
 		send(payload) {
@@ -60,6 +63,7 @@ function createHotChannel(
 			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.send(JSON.stringify(payload));
+			outsideEmitter.emit("send", payload);
 		},
 		on(event: string, listener: vite.HotChannelListener) {
 			const listeners = listenersMap.get(event) ?? new Set();
@@ -75,12 +79,19 @@ function createHotChannel(
 			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.addEventListener("message", onMessage);
+			innerEmitter.emit("connection");
 		},
 		close() {
 			const webSocket = webSocketContainer.webSocket;
 			assert(webSocket, webSocketUndefinedError);
 
 			webSocket.removeEventListener("message", onMessage);
+			innerEmitter.removeAllListeners();
+			outsideEmitter.removeAllListeners();
+		},
+		api: {
+			innerEmitter,
+			outsideEmitter,
 		},
 	};
 }
