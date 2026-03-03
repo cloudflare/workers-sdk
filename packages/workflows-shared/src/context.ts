@@ -8,7 +8,12 @@ import {
 	WorkflowTimeoutError,
 } from "./lib/errors";
 import { calcRetryDuration } from "./lib/retries";
-import { isValidStepName, MAX_STEP_NAME_LENGTH } from "./lib/validators";
+import {
+	isValidStepConfig,
+	isValidStepName,
+	MAX_INSTANCE_STEPS,
+	MAX_STEP_NAME_LENGTH,
+} from "./lib/validators";
 import type { Engine } from "./engine";
 import type { InstanceMetadata } from "./instance";
 import type {
@@ -47,6 +52,8 @@ export class Context extends RpcTarget {
 	#state: DurableObjectState;
 
 	#counters: Map<string, number> = new Map();
+
+	#stepCounter = 0;
 
 	constructor(engine: Engine, state: DurableObjectState) {
 		super();
@@ -97,6 +104,18 @@ export class Context extends RpcTarget {
 			throw error;
 		}
 
+		if (!isValidStepConfig(stepConfig)) {
+			// NOTE(lduarte): marking errors as user error allows the observability layer to avoid leaking
+			// user errors to sentry while making everything more observable. `isUserError` is not serialized
+			// into userland code due to how workerd serialzises errors over RPC - we also set it as undefined
+			// in the obs layer in case changes to workerd happen
+			const error = new WorkflowFatalError(
+				`Step config for "${name}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
+			) as Error & UserErrorField;
+			error.isUserError = true;
+			throw error;
+		}
+
 		let config: ResolvedStepConfig = {
 			...defaultConfig,
 			...stepConfig,
@@ -117,6 +136,33 @@ export class Context extends RpcTarget {
 		const stepStateKey = `${cacheKey}-metadata`;
 
 		const maybeMap = await this.#state.storage.get([valueKey, configKey]);
+
+		const instanceMetadata =
+			await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		if (!instanceMetadata) {
+			throw new Error("instanceMetadata is undefined");
+		}
+		const { accountId, instance } = instanceMetadata;
+
+		if (this.#stepCounter >= MAX_INSTANCE_STEPS) {
+			const error: WorkflowFatalError & UserErrorField = new WorkflowFatalError(
+				`The limit of ${MAX_INSTANCE_STEPS} steps has been reached`
+			);
+			this.#engine.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
+				error,
+			});
+
+			await this.#engine.setStatus(
+				accountId,
+				instance.id,
+				InstanceStatus.Errored
+			);
+			await this.#engine.abort("Max steps reached");
+			error.isUserError = true;
+			throw error;
+		}
+
+		this.#stepCounter++;
 
 		// Check cache
 		const maybeResult = maybeMap.get(valueKey);
@@ -189,6 +235,30 @@ export class Context extends RpcTarget {
 			);
 
 			await this.#state.storage.put(stepStateKey, stepState);
+
+			// if this was the last attempt we don't want to retry
+			if (stepState.attemptedCount > config.retries.limit) {
+				// maybe we want to have a custom `WorkflowStepRetryLimitError` ??
+				const error = new WorkflowInternalError(
+					`Attempt failed due to internal workflows error`
+				);
+
+				this.#engine.writeLog(
+					InstanceEvent.STEP_FAILURE,
+					cacheKey,
+					stepNameWithCounter,
+					{ error: { name: error.name, message: error.message } }
+				);
+
+				await this.#state.storage.put(errorKey, error);
+				// NOTE(lduarte): marking errors as user error allows the observability layer to avoid leaking
+				// user errors to sentry while making everything more observable. `isUserError` is not serialized
+				// into userland code due to how workerd serialzises errors over RPC - we also set it as undefined
+				// in the obs layer in case changes to workerd happen
+				const reportableError = error as Error & UserErrorField;
+				reportableError.isUserError = true;
+				throw error;
+			}
 		}
 
 		const doWrapper = async (
@@ -231,13 +301,6 @@ export class Context extends RpcTarget {
 			}
 
 			let result;
-
-			const instanceMetadata =
-				await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
-			if (!instanceMetadata) {
-				throw new Error("instanceMetadata is undefined");
-			}
-			const { accountId, instance } = instanceMetadata;
 
 			try {
 				const timeoutPromise = async () => {
@@ -362,10 +425,16 @@ export class Context extends RpcTarget {
 						);
 						await this.#engine.timeoutHandler.release(this.#engine);
 						await this.#engine.abort("Value is not serialisable");
-					} else {
-						// TODO (WOR-77): Send this to Sentry
+					} else if (
+						e instanceof Error &&
+						e.message.includes("string or blob too big: SQLITE_TOOBIG")
+					) {
 						throw new WorkflowInternalError(
-							`Storage failure for ${valueKey}: ${e} `
+							`Step ${stepNameWithCounter} output is too large. Maximum allowed size is 1MiB.`
+						);
+					} else {
+						throw new WorkflowInternalError(
+							`Storage failure for ${stepNameWithCounter} due to internal error.`
 						);
 					}
 					return;
@@ -399,9 +468,7 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{
 							attempt: stepState.attemptedCount,
-							error: new WorkflowFatalError(
-								`Step threw a NonRetryableError with message "${e.message}"`
-							),
+							error: { name: e.name, message: e.message },
 						}
 					);
 					this.#engine.writeLog(
@@ -676,8 +743,10 @@ export class Context extends RpcTarget {
 				cacheKey,
 				waitForEventNameWithCounter,
 				{
-					name: timeoutError.name,
-					message: timeoutError.message,
+					error: {
+						name: timeoutError.name,
+						message: timeoutError.message,
+					},
 				}
 			);
 			await this.#state.storage.put(errorKey, timeoutError);
@@ -750,7 +819,12 @@ export class Context extends RpcTarget {
 					InstanceEvent.WAIT_TIMED_OUT,
 					cacheKey,
 					waitForEventNameWithCounter,
-					error
+					{
+						error: {
+							name: error.name,
+							message: error.message,
+						},
+					}
 				);
 				await this.#state.storage.put(errorKey, error);
 				throw error;
