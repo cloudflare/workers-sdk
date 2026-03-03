@@ -151,6 +151,18 @@ export type StudioColumnTypeHint = "TEXT" | "NUMBER" | "BLOB" | null;
 
 export type StudioDialect = "sqlite";
 
+export interface StudioExportOption {
+	batchSize: number;
+	filename: string;
+	includeColumnName: boolean;
+	lineTerminator: "CRLF" | "LF";
+	maxStatementLength: number;
+	nullValue: "EMPTY_STRING" | "NULL";
+	separator: "COMMA" | "SEMICOLON" | "TAB";
+	tableName: string;
+	type: "CSV" | "SQL";
+}
+
 type StudioForeignKeyAction =
 	| "CASCADE"
 	| "NO_ACTION"

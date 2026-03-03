@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import { Button } from "@cloudflare/kumo";
+import { ExportIcon } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import { StudioExportModal } from "../Modal/Export";
 import { StudioResultTable } from "../Table/Result";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
 import { StudioQueryResultStats } from "./Stats";
@@ -11,6 +14,8 @@ interface StudioQueryResultTabProps {
 }
 
 export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
+	const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+
 	const state = useMemo(
 		(): StudioTableState<StudioResultHeaderMetadata> =>
 			createStudioTableStateFromResult({
@@ -29,10 +34,28 @@ export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
 
 	return (
 		<div className="w-full h-full flex flex-col">
+			<StudioExportModal
+				closeModal={() => setIsExportModalOpen(false)}
+				isOpen={isExportModalOpen}
+				result={result}
+			/>
+
 			<div className="grow overflow-hidden">
 				<StudioResultTable state={state} arrangeHeaderIndex={headerIndexList} />
 			</div>
+
 			<div className="shrink-0 h-11 flex items-center border-t border-border">
+				<div className="grow text-base px-4">
+					<Button
+						aria-label="Export query results"
+						icon={ExportIcon}
+						onClick={(): void => setIsExportModalOpen(true)}
+						size="sm"
+						variant="primary"
+					>
+						Export
+					</Button>
+				</div>
 				<div>
 					<StudioQueryResultStats stats={result.result.stat} />
 				</div>
