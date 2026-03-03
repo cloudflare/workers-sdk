@@ -30,9 +30,10 @@ describe("containers registries --help", () => {
 			Configure and manage non-Cloudflare registries [open beta]
 
 			COMMANDS
-			  wrangler containers registries configure <DOMAIN>  Configure credentials for a non-Cloudflare container registry [open beta]
-			  wrangler containers registries list                List all configured container registries [open beta]
-			  wrangler containers registries delete <DOMAIN>     Delete a configured container registry [open beta]
+			  wrangler containers registries configure <DOMAIN>    Configure credentials for a non-Cloudflare container registry [open beta]
+			  wrangler containers registries list                  List all configured container registries [open beta]
+			  wrangler containers registries delete <DOMAIN>       Delete a configured container registry [open beta]
+			  wrangler containers registries credentials [DOMAIN]  Get a temporary password for a specific domain [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
