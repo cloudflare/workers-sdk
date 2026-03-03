@@ -709,20 +709,18 @@ export interface EnvironmentNonInheritable {
 	vars: Record<string, string | Json>;
 
 	/**
-	 * Secrets configuration.
+	 * Secrets configuration (experimental).
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default undefined
 	 * @nonInheritable
 	 */
 	secrets?: {
 		/**
 		 * List of secret names that are required by your Worker.
 		 * When defined, this property:
-		 * - Replaces .dev.vars/.env inference for type generation
-		 * - Enables deploy-time validation to ensure secrets are configured
+		 * - Replaces .dev.vars/.env/process.env inference for type generation
 		 * - Enables local dev validation with warnings for missing secrets
 		 */
 		required?: string[];
