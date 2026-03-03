@@ -8,6 +8,7 @@ import {
 import {
 	ApiError,
 	getAndValidateRegistryType,
+	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import {
@@ -39,7 +40,10 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
+import type {
+	DeleteImageRegistryResponse,
+	ImageRegistryPermissions,
+} from "@cloudflare/containers-shared";
 import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -482,6 +486,42 @@ async function registryDeleteCommand(
 	}
 }
 
+async function registryCredentialsCommand(credentialsArgs: {
+	DOMAIN?: string;
+	expirationMinutes: number;
+	push?: boolean;
+	pull?: boolean;
+	json?: boolean;
+}) {
+	const cloudflareRegistry = getCloudflareContainerRegistry();
+	const domain = credentialsArgs.DOMAIN || cloudflareRegistry;
+	if (domain !== cloudflareRegistry) {
+		throw new UserError(
+			`The credentials command only accepts the Cloudflare managed registry (${cloudflareRegistry}).`
+		);
+	}
+
+	if (!credentialsArgs.pull && !credentialsArgs.push) {
+		throw new UserError(
+			"You have to specify either --push or --pull in the command."
+		);
+	}
+
+	const credentials =
+		await ImageRegistriesService.generateImageRegistryCredentials(domain, {
+			expiration_minutes: credentialsArgs.expirationMinutes,
+			permissions: [
+				...(credentialsArgs.push ? ["push"] : []),
+				...(credentialsArgs.pull ? ["pull"] : []),
+			] as ImageRegistryPermissions[],
+		});
+	if (credentialsArgs.json) {
+		logger.json(credentials);
+	} else {
+		logger.log(credentials.password);
+	}
+}
+
 export const containersRegistriesNamespace = createNamespace({
 	metadata: {
 		description: "Configure and manage non-Cloudflare registries",
@@ -603,5 +643,45 @@ export const containersRegistriesDeleteCommand = createCommand({
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
 		await registryDeleteCommand(args, config);
+	},
+});
+
+export const containersRegistriesCredentialsCommand = createCommand({
+	metadata: {
+		description: "Get a temporary password for a specific domain",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
+	},
+	args: {
+		DOMAIN: {
+			type: "string",
+			describe: "Domain to get credentials for",
+		},
+		"expiration-minutes": {
+			type: "number",
+			default: 15,
+			description: "How long the credentials should be valid for (in minutes)",
+		},
+		push: {
+			type: "boolean",
+			description: "If you want these credentials to be able to push",
+		},
+		pull: {
+			type: "boolean",
+			description: "If you want these credentials to be able to pull",
+		},
+		json: {
+			type: "boolean",
+			description: "Format output as JSON",
+			default: false,
+		},
+	},
+	positionalArgs: ["DOMAIN"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await registryCredentialsCommand(args);
 	},
 });
