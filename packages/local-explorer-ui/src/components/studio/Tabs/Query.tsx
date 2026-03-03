@@ -53,7 +53,11 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 
 				const hasAlterSchema = r.logs.some((log) => {
 					const sql = log.sql.trim().toLowerCase();
-					return sql.startsWith("create ") || sql.startsWith("drop ");
+					return (
+						sql.startsWith("create ") ||
+						sql.startsWith("drop ") ||
+						sql.startsWith("alter ")
+					);
 				});
 
 				if (hasAlterSchema) {
