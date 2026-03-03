@@ -708,7 +708,7 @@ describe("getNormalizedContainerOptions", () => {
 				containers: [
 					{
 						class_name: "TestContainer",
-						image: "docker.io/test:latest",
+						image: "unsupported.domain/test:latest",
 						instance_type: "standard",
 						name: "test-container",
 						max_instances: 3,
@@ -727,7 +727,7 @@ describe("getNormalizedContainerOptions", () => {
 			const result = await getNormalizedContainerOptions(config, {});
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({
-				image_uri: "docker.io/test:latest",
+				image_uri: "unsupported.domain/test:latest",
 			});
 		});
 		it("should not try and add an account id to non containers registry uris", async () => {

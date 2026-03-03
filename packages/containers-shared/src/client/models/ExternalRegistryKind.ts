@@ -7,4 +7,5 @@
  */
 export enum ExternalRegistryKind {
 	ECR = "ECR",
+	DOCKER_HUB = "DockerHub",
 }
