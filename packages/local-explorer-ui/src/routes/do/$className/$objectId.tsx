@@ -148,7 +148,7 @@ function ObjectView(): JSX.Element {
 			>
 				<Button
 					aria-label="Refresh tables"
-					disabled={isRefreshing}
+					loading={isRefreshing}
 					onClick={handleTableRefresh}
 					shape="square"
 					variant="ghost"
