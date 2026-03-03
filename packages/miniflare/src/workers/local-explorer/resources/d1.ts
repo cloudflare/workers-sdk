@@ -1,8 +1,6 @@
 import { z } from "zod";
 import {
 	aggregateListResults,
-	getAggregationContext,
-	getPeerUrlsIfAggregating,
 	proxyToFirstAvailablePeer,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
@@ -77,28 +75,12 @@ function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
  * @returns A JSON response containing all databases from all instances
  */
 export async function listD1Databases(c: AppContext): Promise<Response> {
-	// Get local databases
 	const localDatabases = getLocalD1Databases(c.env);
-
-	// Check if we should aggregate from peers
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	const allDatabases = await aggregateListResults(
+		c,
+		localDatabases,
+		"/d1/database"
 	);
-
-	let allDatabases = localDatabases;
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			allDatabases = await aggregateListResults(
-				localDatabases,
-				peerUrls,
-				"/d1/database"
-			);
-		}
-	}
 
 	return c.json({
 		...wrapResponse(allDatabases),
@@ -145,29 +127,18 @@ export async function rawD1Database(
 		return executeD1Query(c, db, body);
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
-	);
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			const peerResponse = await proxyToFirstAvailablePeer(
-				peerUrls,
-				`/d1/database/${encodeURIComponent(databaseId)}/raw`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(body),
-				}
-			);
-			if (peerResponse) {
-				return peerResponse;
-			}
+	// Try peers
+	const peerResponse = await proxyToFirstAvailablePeer(
+		c,
+		`/d1/database/${encodeURIComponent(databaseId)}/raw`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
 		}
+	);
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10000, "Database not found");

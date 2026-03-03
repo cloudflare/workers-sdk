@@ -4,10 +4,7 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-	cloudflareD1ListDatabases,
-	workersKvNamespaceListNamespaces,
-} from "../api";
+import { d1ListDatabases, workersKvNamespaceListNamespaces } from "../api";
 import { Sidebar } from "../components/Sidebar";
 import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 
@@ -29,7 +26,7 @@ function RootLayout() {
 		async function fetchData() {
 			const [kvResponse, d1Response] = await Promise.allSettled([
 				workersKvNamespaceListNamespaces(),
-				cloudflareD1ListDatabases(),
+				d1ListDatabases(),
 			]);
 
 			if (kvResponse.status === "fulfilled") {

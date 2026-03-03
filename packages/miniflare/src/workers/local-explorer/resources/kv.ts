@@ -1,8 +1,6 @@
 import z from "zod";
 import {
 	aggregateListResults,
-	getAggregationContext,
-	getPeerUrlsIfAggregating,
 	proxyToFirstAvailablePeer,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
@@ -55,28 +53,12 @@ function getLocalKVNamespaces(env: Env) {
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/list/
  */
 export async function listKVNamespaces(c: AppContext) {
-	// Get local namespaces
 	const localNamespaces = getLocalKVNamespaces(c.env);
-
-	// Check if we should aggregate from peers
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	const allNamespaces = await aggregateListResults(
+		c,
+		localNamespaces,
+		"/storage/kv/namespaces"
 	);
-
-	let allNamespaces = localNamespaces;
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			allNamespaces = await aggregateListResults(
-				localNamespaces,
-				peerUrls,
-				"/storage/kv/namespaces"
-			);
-		}
-	}
 
 	return c.json({
 		...wrapResponse(allNamespaces),
@@ -110,29 +92,17 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 		return executeListKeys(c, kv, { cursor, limit, prefix });
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
-	);
+	// Try peers
+	const params = new URLSearchParams();
+	if (cursor) params.set("cursor", cursor);
+	if (limit !== undefined) params.set("limit", String(limit));
+	if (prefix) params.set("prefix", prefix);
+	const queryString = params.toString();
+	const path = `/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/keys${queryString ? `?${queryString}` : ""}`;
 
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			// Build query string from params
-			const params = new URLSearchParams();
-			if (cursor) params.set("cursor", cursor);
-			if (limit !== undefined) params.set("limit", String(limit));
-			if (prefix) params.set("prefix", prefix);
-			const queryString = params.toString();
-			const path = `/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/keys${queryString ? `?${queryString}` : ""}`;
-
-			const peerResponse = await proxyToFirstAvailablePeer(peerUrls, path);
-			if (peerResponse) {
-				return peerResponse;
-			}
-		}
+	const peerResponse = await proxyToFirstAvailablePeer(c, path);
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10000, "Namespace not found");
@@ -186,24 +156,13 @@ export async function getKVValue(c: AppContext) {
 		return new Response(value);
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	// Try peers
+	const peerResponse = await proxyToFirstAvailablePeer(
+		c,
+		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`
 	);
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			const peerResponse = await proxyToFirstAvailablePeer(
-				peerUrls,
-				`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`
-			);
-			if (peerResponse) {
-				return peerResponse;
-			}
-		}
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10000, "Namespace not found");
@@ -226,34 +185,22 @@ export async function putKVValue(c: AppContext) {
 		return executePutKVValue(c, kv, key_name);
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
-	);
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			// Clone the request body for proxying
-			const body = await c.req.arrayBuffer();
-			const peerResponse = await proxyToFirstAvailablePeer(
-				peerUrls,
-				`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
-				{
-					method: "PUT",
-					headers: {
-						"Content-Type":
-							c.req.header("content-type") || "application/octet-stream",
-					},
-					body,
-				}
-			);
-			if (peerResponse) {
-				return peerResponse;
-			}
+	// Try peers
+	const body = await c.req.arrayBuffer();
+	const peerResponse = await proxyToFirstAvailablePeer(
+		c,
+		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+		{
+			method: "PUT",
+			headers: {
+				"Content-Type":
+					c.req.header("content-type") || "application/octet-stream",
+			},
+			body,
 		}
+	);
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10000, "Namespace not found");
@@ -333,25 +280,14 @@ export async function deleteKVValue(c: AppContext) {
 		return c.json(wrapResponse({}));
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	// Try peers
+	const peerResponse = await proxyToFirstAvailablePeer(
+		c,
+		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+		{ method: "DELETE" }
 	);
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			const peerResponse = await proxyToFirstAvailablePeer(
-				peerUrls,
-				`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
-				{ method: "DELETE" }
-			);
-			if (peerResponse) {
-				return peerResponse;
-			}
-		}
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10000, "Namespace not found");
@@ -386,29 +322,18 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 		return c.json(wrapResponse({ values }));
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
-	);
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			const peerResponse = await proxyToFirstAvailablePeer(
-				peerUrls,
-				`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/bulk/get`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(body),
-				}
-			);
-			if (peerResponse) {
-				return peerResponse;
-			}
+	// Try peers
+	const peerResponse = await proxyToFirstAvailablePeer(
+		c,
+		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/bulk/get`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
 		}
+	);
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10000, "Namespace not found");

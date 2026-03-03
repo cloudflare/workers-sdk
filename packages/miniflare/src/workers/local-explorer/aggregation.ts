@@ -7,29 +7,31 @@
 
 import { LOCAL_EXPLORER_API_PATH } from "../../plugins/core/constants";
 import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { AppContext } from "./common";
 
 /**
  * Header that indicates a request should not trigger further aggregation.
  * Used to prevent infinite recursion when instance A fetches from instance B.
  */
-export const NO_AGGREGATE_HEADER = "X-Miniflare-Explorer-No-Aggregate";
+const NO_AGGREGATE_HEADER = "X-Miniflare-Explorer-No-Aggregate";
 
 /**
- * Check if the current request should trigger cross-instance aggregation.
- * Returns false if the no-aggregate header is present (indicating this is
- * already a peer-to-peer request).
+ * Check if aggregation should be attempted for this request/context.
  */
-export function shouldAggregate(request: Request): boolean {
-	return !request.headers.has(NO_AGGREGATE_HEADER);
+function shouldAggregate(c: AppContext): boolean {
+	return (
+		!c.req.raw.headers.has(NO_AGGREGATE_HEADER) &&
+		c.env.MINIFLARE_LOOPBACK !== undefined &&
+		Array.isArray(c.env.LOCAL_EXPLORER_WORKER_NAMES) &&
+		c.env.LOCAL_EXPLORER_WORKER_NAMES.length > 0
+	);
 }
 
 /**
  * Fetch the current dev registry from the loopback service.
  * Returns an empty registry if the fetch fails.
  */
-export async function fetchRegistry(
-	loopback: Fetcher
-): Promise<WorkerRegistry> {
+async function fetchRegistry(loopback: Fetcher): Promise<WorkerRegistry> {
 	try {
 		const response = await loopback.fetch("http://localhost/core/dev-registry");
 		if (!response.ok) {
@@ -45,7 +47,7 @@ export async function fetchRegistry(
  * Get the base URLs of peer instances from the registry,
  * excluding the current instance (identified by worker names).
  */
-export function getPeerUrls(
+function getPeerUrls(
 	registry: WorkerRegistry,
 	selfWorkerNames: string[]
 ): string[] {
@@ -56,6 +58,20 @@ export function getPeerUrls(
 }
 
 /**
+ * Get peer URLs if aggregation is enabled for this context.
+ */
+async function getPeerUrlsIfAggregating(c: AppContext): Promise<string[]> {
+	if (!shouldAggregate(c)) {
+		return [];
+	}
+	// shouldAggregate already verified these exist
+	const loopback = c.env.MINIFLARE_LOOPBACK as Fetcher;
+	const workerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES as string[];
+	const registry = await fetchRegistry(loopback);
+	return getPeerUrls(registry, workerNames);
+}
+
+/**
  * Fetch data from a peer instance's explorer API.
  * Returns null on any error (silent omission policy).
  *
@@ -63,7 +79,7 @@ export function getPeerUrls(
  * @param apiPath - API path relative to the explorer API base (e.g., "/d1/database")
  * @param init - Optional fetch init options
  */
-export async function fetchFromPeer(
+async function fetchFromPeer(
 	peerUrl: string,
 	apiPath: string,
 	init?: RequestInit
@@ -87,15 +103,20 @@ export async function fetchFromPeer(
 /**
  * Aggregate list results from local data and peer instances.
  *
+ * @param c - Hono app context
  * @param localResults - Results from the local instance
- * @param peerUrls - Base URLs of peer instances
  * @param apiPath - API path relative to the explorer API base
  */
 export async function aggregateListResults<T>(
+	c: AppContext,
 	localResults: T[],
-	peerUrls: string[],
 	apiPath: string
 ): Promise<T[]> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+	if (peerUrls.length === 0) {
+		return localResults;
+	}
+
 	const peerResponses = await Promise.all(
 		peerUrls.map((url) => fetchFromPeer(url, apiPath))
 	);
@@ -122,16 +143,18 @@ export async function aggregateListResults<T>(
  * Proxy a request to peer instances until one returns a successful response.
  * Used for detail/mutation endpoints where the resource exists on exactly one instance.
  *
- * @param peerUrls - Base URLs of peer instances
+ * @param c - Hono app context
  * @param apiPath - API path relative to the explorer API base
  * @param init - Optional fetch init options
  * @returns The first successful response, or null if all peers fail/return 404
  */
 export async function proxyToFirstAvailablePeer(
-	peerUrls: string[],
+	c: AppContext,
 	apiPath: string,
 	init?: RequestInit
 ): Promise<Response | null> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+
 	for (const url of peerUrls) {
 		const response = await fetchFromPeer(url, apiPath, init);
 		if (response !== null && response.status !== 404) {
@@ -139,46 +162,6 @@ export async function proxyToFirstAvailablePeer(
 			return response;
 		}
 	}
+
 	return null;
-}
-
-/**
- * Helper type for aggregation context passed to handlers.
- */
-export interface AggregationContext {
-	shouldAggregate: boolean;
-	loopback: Fetcher | undefined;
-	workerNames: string[] | undefined;
-}
-
-/**
- * Build aggregation context from environment and request.
- */
-export function getAggregationContext(
-	request: Request,
-	loopback: Fetcher | undefined,
-	workerNames: string[] | undefined
-): AggregationContext {
-	return {
-		shouldAggregate:
-			shouldAggregate(request) &&
-			loopback !== undefined &&
-			workerNames !== undefined &&
-			workerNames.length > 0,
-		loopback,
-		workerNames,
-	};
-}
-
-/**
- * Get peer URLs if aggregation is enabled, otherwise return empty array.
- */
-export async function getPeerUrlsIfAggregating(
-	ctx: AggregationContext
-): Promise<string[]> {
-	if (!ctx.shouldAggregate || !ctx.loopback || !ctx.workerNames?.length) {
-		return [];
-	}
-	const registry = await fetchRegistry(ctx.loopback);
-	return getPeerUrls(registry, ctx.workerNames);
 }

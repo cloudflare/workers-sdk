@@ -1,8 +1,6 @@
 import { INTROSPECT_SQLITE_METHOD } from "../../../plugins/core/constants";
 import {
 	aggregateListResults,
-	getAggregationContext,
-	getPeerUrlsIfAggregating,
 	proxyToFirstAvailablePeer,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
@@ -72,28 +70,12 @@ function getLocalDONamespaces(env: Env) {
  * @see https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
  */
 export async function listDONamespaces(c: AppContext) {
-	// Get local namespaces
 	const localNamespaces = getLocalDONamespaces(c.env);
-
-	// Check if we should aggregate from peers
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	const allNamespaces = await aggregateListResults(
+		c,
+		localNamespaces,
+		"/workers/durable_objects/namespaces"
 	);
-
-	let allNamespaces = localNamespaces;
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			allNamespaces = await aggregateListResults(
-				localNamespaces,
-				peerUrls,
-				"/workers/durable_objects/namespaces"
-			);
-		}
-	}
 
 	return c.json({
 		...wrapResponse(allNamespaces),
@@ -130,28 +112,16 @@ export async function listDOObjects(
 		return executeListDOObjects(c, namespaceId, { limit, cursor });
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
-	);
+	// Try peers
+	const params = new URLSearchParams();
+	if (cursor) params.set("cursor", cursor);
+	if (limit !== undefined) params.set("limit", String(limit));
+	const queryString = params.toString();
+	const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
 
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			// Build query string from params
-			const params = new URLSearchParams();
-			if (cursor) params.set("cursor", cursor);
-			if (limit !== undefined) params.set("limit", String(limit));
-			const queryString = params.toString();
-			const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
-
-			const peerResponse = await proxyToFirstAvailablePeer(peerUrls, path);
-			if (peerResponse) {
-				return peerResponse;
-			}
-		}
+	const peerResponse = await proxyToFirstAvailablePeer(c, path);
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
@@ -267,29 +237,18 @@ export async function queryDOSqlite(
 		return executeQueryDOSqlite(c, ns, namespaceId, body);
 	}
 
-	// Try peers if aggregation enabled
-	const aggCtx = getAggregationContext(
-		c.req.raw,
-		c.env.MINIFLARE_LOOPBACK,
-		c.env.LOCAL_EXPLORER_WORKER_NAMES
-	);
-
-	if (aggCtx.shouldAggregate) {
-		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
-		if (peerUrls.length > 0) {
-			const peerResponse = await proxyToFirstAvailablePeer(
-				peerUrls,
-				`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(body),
-				}
-			);
-			if (peerResponse) {
-				return peerResponse;
-			}
+	// Try peers
+	const peerResponse = await proxyToFirstAvailablePeer(
+		c,
+		`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
 		}
+	);
+	if (peerResponse) {
+		return peerResponse;
 	}
 
 	return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
