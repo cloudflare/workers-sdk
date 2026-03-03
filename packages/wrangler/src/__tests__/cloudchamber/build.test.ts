@@ -333,6 +333,42 @@ describe("buildAndMaybePush", () => {
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 
+	it("should match digests for images with registry ports", async () => {
+		vi.mocked(runDockerCmd).mockResolvedValueOnce({
+			abort: () => {},
+			ready: Promise.resolve({ aborted: false }),
+		});
+		vi.mocked(dockerImageInspect).mockReset();
+		vi.mocked(dockerImageInspect)
+			.mockResolvedValueOnce(
+				'["localhost:5000/test-app@sha256:three"]'
+			)
+			.mockResolvedValueOnce("53387881 2");
+		vi.mocked(runDockerCmdWithOutput).mockReset();
+		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
+			return '{"Descriptor":{"digest":"sha256:three"}}';
+		});
+
+		await runWrangler(
+			"containers build ./container-context -t localhost:5000/test-app:tag -p"
+		);
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(runDockerCmdWithOutput).toHaveBeenCalledWith("docker", [
+			"manifest",
+			"inspect",
+			"-v",
+			"localhost:5000/test-app@sha256:three",
+		]);
+		expect(runDockerCmd).toHaveBeenCalledTimes(1);
+		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
+			"image",
+			"rm",
+			"localhost:5000/test-app:tag",
+		]);
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
+	});
+
 	it("should be able to build image and not push", async () => {
 		await runWrangler("containers build ./container-context -t test-app");
 		expect(dockerBuild).toHaveBeenCalledTimes(1);
