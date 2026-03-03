@@ -1,4 +1,5 @@
 ---
+"@cloudflare/vite-plugin": minor
 "wrangler": minor
 ---
 
