@@ -1,8 +1,8 @@
 import * as fs from "node:fs/promises";
 import { scheduler } from "node:timers/promises";
-import { LogLevel, Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare, MiniflareOptions } from "miniflare";
 import { test } from "vitest";
-import { TestLog, useDispose, useTmp } from "../../test-shared";
+import { useDispose, useTmp } from "../../test-shared";
 
 const WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
@@ -80,59 +80,4 @@ test("persists Workflow data on file-system between runs", async ({
 	expect(await res.text()).toBe(
 		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
 	);
-});
-
-test("warns when step limit exceeds production maximum", async ({ expect }) => {
-	const log = new TestLog();
-	const mf = new Miniflare({
-		log,
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: WORKFLOW_SCRIPT(),
-		workflows: {
-			MY_WORKFLOW: {
-				className: "MyWorkflow",
-				name: "MY_WORKFLOW",
-				stepLimit: 30_000,
-			},
-		},
-	});
-	useDispose(mf);
-	await mf.ready;
-
-	const warnings = log.logsAtLevel(LogLevel.WARN);
-	expect(warnings).toEqual(
-		expect.arrayContaining([
-			expect.stringContaining(
-				'Workflow "MY_WORKFLOW" has a step limit of 30000'
-			),
-		])
-	);
-});
-
-test("does not warn when step limit is within production maximum", async ({
-	expect,
-}) => {
-	const log = new TestLog();
-	const mf = new Miniflare({
-		log,
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: WORKFLOW_SCRIPT(),
-		workflows: {
-			MY_WORKFLOW: {
-				className: "MyWorkflow",
-				name: "MY_WORKFLOW",
-				stepLimit: 25_000,
-			},
-		},
-	});
-	useDispose(mf);
-	await mf.ready;
-
-	const warnings = log.logsAtLevel(LogLevel.WARN);
-	const stepLimitWarnings = warnings.filter((w) => w.includes("step limit"));
-	expect(stepLimitWarnings).toHaveLength(0);
 });

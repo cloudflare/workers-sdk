@@ -2610,6 +2610,10 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 						)}.`
 					);
 					isValid = false;
+				} else if (limits.steps > 25_000) {
+					diagnostics.warnings.push(
+						`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+					);
 				}
 			}
 			validateAdditionalProperties(

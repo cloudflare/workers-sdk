@@ -2,7 +2,6 @@
 "wrangler": minor
 "miniflare": minor
 "@cloudflare/workflows-shared": minor
-"@cloudflare/workers-utils": minor
 ---
 
 Add configurable step limits for Workflows

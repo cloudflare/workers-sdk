@@ -1108,6 +1108,56 @@ describe("wrangler workflows", () => {
 			);
 		});
 
+		it("should warn when step limit exceeds production maximum", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig(
+				{
+					main: "index.js",
+					workflows: [
+						{
+							binding: "MY_WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							limits: { steps: 30_000 },
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+
+			await runWrangler("deploy --dry-run --config wrangler.json");
+			expect(std.warn).toContain(
+				"has a step limit of 30000, which exceeds the production maximum of 25,000"
+			);
+		});
+
+		it("should not warn when step limit is within production maximum", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig(
+				{
+					main: "index.js",
+					workflows: [
+						{
+							binding: "MY_WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							limits: { steps: 25_000 },
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+
+			await runWrangler("deploy --dry-run --config wrangler.json");
+			expect(std.warn).not.toContain("step limit");
+		});
+
 		it("should reject workflows binding with same name", async () => {
 			writeWorkerSource({ format: "ts" });
 			writeWranglerConfig({
