@@ -1464,6 +1464,8 @@ export interface CacheOptions {
 export type DockerConfiguration = {
 	/** Socket used by miniflare to communicate with Docker */
 	socketPath: string;
+	/** Docker image name for the container egress interceptor sidecar */
+	containerEgressInterceptorImage?: string;
 };
 
 export type ContainerEngine =
