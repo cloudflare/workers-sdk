@@ -5,6 +5,23 @@
 // as possible, with any deviations noted.
 import { SqlStorage } from "@cloudflare/workers-types/experimental";
 
+/** Stats tracking for dumpSql. Will be mutated in place if provided. */
+export interface DumpSqlStats {
+	rows_read: number;
+	rows_written: number;
+	// Stats for tracking INSERT statement sizes (column names are always included)
+	/** Number of INSERT statements over 100KB (current size, with column names) */
+	inserts_over_100kb_with_column_names: number;
+	/** Number of INSERT statements that would be over 100KB without column names (for backward comparison) */
+	inserts_already_over_100kb: number;
+	/** Total number of INSERT statements generated */
+	total_inserts: number;
+	/** Maximum INSERT statement size without column names (hypothetical, for backward comparison) */
+	max_insert_size: number;
+	/** Maximum INSERT statement size (current size, with column names) */
+	max_insert_size_with_column_names: number;
+}
+
 export function* dumpSql(
 	db: SqlStorage,
 	options?: {
@@ -13,7 +30,7 @@ export function* dumpSql(
 		tables?: string[];
 	},
 	/** Optional stats tracking. Will be mutated in place if provided */
-	stats?: { rows_read: number; rows_written: number }
+	stats?: DumpSqlStats
 ) {
 	// WARNING: the caller in D1 assumes non-empty exports, so think carefully before removing this initial yield.
 	yield `PRAGMA defer_foreign_keys=TRUE;`;
@@ -83,6 +100,9 @@ export function* dumpSql(
 
 		const select = `SELECT ${columns.map((c) => escapeId(c.name)).join(", ")} FROM ${escapeId(table)};`;
 		const rows_cursor = db.exec(select);
+		const columnNames = columns.map((c) => escapeId(c.name)).join(",");
+		// The column names portion is: " (" + columnNames + ")" = 3 + columnNames.length
+		const columnNamesOverhead = 3 + columnNames.length;
 		for (const dataRow of rows_cursor.raw()) {
 			const formattedCells = dataRow.map((cell: unknown, i: number) => {
 				const colType = columns[i].type;
@@ -109,7 +129,31 @@ export function* dumpSql(
 				}
 			});
 
-			yield `INSERT INTO ${escapeId(table)} VALUES(${formattedCells.join(",")});`;
+			const insertStmt = `INSERT INTO ${escapeId(table)} (${columnNames}) VALUES(${formattedCells.join(",")});`;
+
+			// Track stats for INSERT statement sizes
+			if (stats) {
+				const currentSize = insertStmt.length;
+				// Calculate what the size would be without column names (for comparison)
+				const sizeWithoutColumnNames = currentSize - columnNamesOverhead;
+				const LIMIT = 100 * 1024; // 100KB
+
+				stats.total_inserts++;
+				if (sizeWithoutColumnNames > LIMIT) {
+					stats.inserts_already_over_100kb++;
+				}
+				if (currentSize > LIMIT) {
+					stats.inserts_over_100kb_with_column_names++;
+				}
+				if (sizeWithoutColumnNames > stats.max_insert_size) {
+					stats.max_insert_size = sizeWithoutColumnNames;
+				}
+				if (currentSize > stats.max_insert_size_with_column_names) {
+					stats.max_insert_size_with_column_names = currentSize;
+				}
+			}
+
+			yield insertStmt;
 		}
 		if (stats) {
 			stats.rows_read += rows_cursor.rowsRead;
