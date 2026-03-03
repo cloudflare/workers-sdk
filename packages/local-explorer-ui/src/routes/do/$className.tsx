@@ -9,7 +9,10 @@ export const Route = createFileRoute("/do/$className")({
 
 		// Find the namespace that matches this class name
 		const namespace = namespaces.find(
-			(ns) => ns.class === params.className || ns.name === params.className
+			(ns) =>
+				ns.class === params.className ||
+				ns.name === params.className ||
+				ns.id === params.className
 		);
 		if (!namespace?.id) {
 			throw new Error(`Durable Object class "${params.className}" not found`);

@@ -28,7 +28,10 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];
 		const namespace = namespaces.find(
-			(ns) => ns.class === params.className || ns.name === params.className
+			(ns) =>
+				ns.class === params.className ||
+				ns.name === params.className ||
+				ns.id === params.className
 		);
 		if (!namespace?.id) {
 			throw new Error(`Durable Object class "${params.className}" not found`);
