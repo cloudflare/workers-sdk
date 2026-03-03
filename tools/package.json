@@ -19,8 +19,8 @@
 		"@typescript-eslint/parser": "catalog:default",
 		"empathic": "^2.0.0",
 		"eslint": "catalog:default",
-		"tinyglobby": "^0.2.12",
 		"semver": "^7.7.1",
+		"tinyglobby": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
