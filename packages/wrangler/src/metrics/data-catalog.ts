@@ -102,6 +102,7 @@ export async function sendDeploymentToTelemetryDataCatalog({
 	try {
 		await fetch(dataCatalogWorkerURL, {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(deploymentData),
 		});
 	} catch (err) {
