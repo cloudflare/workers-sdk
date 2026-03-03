@@ -53,7 +53,12 @@ export class ProxyController extends Controller {
 	private inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
 
 	protected latestConfig?: StartDevWorkerOptions;
-	protected latestBundle?: EsbuildBundle;
+	/**
+	 * Latest bundles from all workers, keyed by worker name.
+	 * Used for inspector source loading - allows DevTools to access
+	 * sources from any worker in a multi-worker setup.
+	 */
+	protected latestBundles = new Map<string, EsbuildBundle>();
 
 	secret = randomUUID();
 
@@ -447,7 +452,10 @@ export class ProxyController extends Controller {
 		this.localServerReady.resolve();
 
 		this.latestConfig = data.config;
-		this.latestBundle = data.bundle;
+		// Store bundle by worker name to support multi-worker inspector source loading
+		if (data.config.name) {
+			this.latestBundles.set(data.config.name, data.bundle);
+		}
 
 		void this.sendMessageToProxyWorker({
 			type: "play",
@@ -542,16 +550,28 @@ export class ProxyController extends Controller {
 				break;
 			case "load-network-resource": {
 				assert(this.latestConfig !== undefined);
-				assert(this.latestBundle !== undefined);
 
 				let maybeContents: string | undefined;
+				let matchedWorker: string | undefined;
 				if (message.url.startsWith("wrangler-file:")) {
-					maybeContents = maybeHandleNetworkLoadResource(
-						message.url.replace("wrangler-file:", "file:"),
-						this.latestBundle,
-						this.latestBundle.sourceMapMetadata?.tmpDir
-					);
+					const fileUrl = message.url.replace("wrangler-file:", "file:");
+					// Try to load the resource from any of the worker bundles
+					for (const [workerName, bundle] of this.latestBundles.entries()) {
+						maybeContents = maybeHandleNetworkLoadResource(
+							fileUrl,
+							bundle,
+							bundle.sourceMapMetadata?.tmpDir
+						);
+						if (maybeContents !== undefined) {
+							matchedWorker = workerName;
+							break;
+						}
+					}
 				}
+
+				logger.debug(
+					`[ProxyController] load-network-resource: ${message.url} -> matched worker: ${matchedWorker ?? "none"}, bundles available: [${[...this.latestBundles.keys()].join(", ")}]`
+				);
 
 				if (maybeContents === undefined) {
 					return new Response(null, { status: 404 });
@@ -624,7 +644,7 @@ export class ProxyController extends Controller {
 				reason: data,
 				data: {
 					config: this.latestConfig,
-					bundle: this.latestBundle,
+					bundles: this.latestBundles,
 				},
 			};
 		}
