@@ -1052,6 +1052,30 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should accept MySQL sslmode in lowercase", async ({ expect }) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=required"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "REQUIRED",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+	});
+
 	it("should allow create MySQL hyperdrive with sslmode=REQUIRED and CA flag set", async ({
 		expect,
 	}) => {

@@ -21,6 +21,14 @@ export const hyperdriveNamespace = createNamespace({
 	},
 });
 
+function normalizeMysqlSslmode(sslmode: string): string {
+	const mysqlSslmode = MySqlSslmode.find(
+		(mode) => mode.toLowerCase() === sslmode.toLowerCase()
+	);
+
+	return mysqlSslmode ?? sslmode;
+}
+
 export const upsertOptions = (
 	defaultOriginScheme: string | undefined = undefined
 ) =>
@@ -131,6 +139,7 @@ export const upsertOptions = (
 		},
 		sslmode: {
 			type: "string",
+			coerce: normalizeMysqlSslmode,
 			choices: [...PostgresSslmode, ...MySqlSslmode],
 			description: `Sets sslmode for connecting to database. For PostgreSQL: '${PostgresSslmode.join(", ")}'. For MySQL: '${MySqlSslmode.join(", ")}'.`,
 		},
@@ -316,7 +325,7 @@ export function getMtlsFromArgs(
 	const mtls = {
 		ca_certificate_id: args.caCertificateId,
 		mtls_certificate_id: args.mtlsCertificateId,
-		sslmode: args.sslmode,
+		sslmode: args.sslmode ? normalizeMysqlSslmode(args.sslmode) : undefined,
 	};
 
 	if (JSON.stringify(mtls) === "{}") {
