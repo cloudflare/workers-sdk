@@ -1,5 +1,52 @@
 # miniflare
 
+## 4.20260301.1
+
+### Minor Changes
+
+- [#12649](https://github.com/cloudflare/workers-sdk/pull/12649) [`35b2c56`](https://github.com/cloudflare/workers-sdk/commit/35b2c56cdef6f4e7d33a885959f4ce8fc01201d0) Thanks [@gabivlj](https://github.com/gabivlj)! - Add experimental support for containers to workers communication with interceptOutboundHttp
+
+  This feature is experimental and requires adding the "experimental" compatibility flag to your Wrangler configuration.
+
+- [#10153](https://github.com/cloudflare/workers-sdk/pull/10153) [`5f7aaf2`](https://github.com/cloudflare/workers-sdk/commit/5f7aaf2a94fe99ec95d318b15ff864a9b07eccd6) Thanks [@mglewis](https://github.com/mglewis)! - Add Hosted Images CRUD operations to Images binding.
+
+  This is an experimental API that only works locally for the moment.
+
+- [#12622](https://github.com/cloudflare/workers-sdk/pull/12622) [`bf9cb3d`](https://github.com/cloudflare/workers-sdk/commit/bf9cb3d32d4710dbefd7d3c412aefe1558ecd57e) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add configurable step limits for Workflows
+
+  You can now set a maximum number of steps for a Workflow instance via the `limits.steps` configuration in your Wrangler config. When a Workflow instance exceeds this limit, it will fail with an error indicating the limit was reached.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"workflows": [
+  		{
+  			"binding": "MY_WORKFLOW",
+  			"name": "my-workflow",
+  			"class_name": "MyWorkflow",
+  			"limits": {
+  				"steps": 5000,
+  			},
+  		},
+  	],
+  }
+  ```
+
+  The `steps` value must be an integer between 1 and 25,000. If not specified, the default limit of 10,000 steps is used. Step limits are also enforced in local development via `wrangler dev`.
+
+### Patch Changes
+
+- [#12698](https://github.com/cloudflare/workers-sdk/pull/12698) [`209b396`](https://github.com/cloudflare/workers-sdk/commit/209b3963ccecbe7c9f96f1c4cc30e4682730f257) Thanks [@penalosa](https://github.com/penalosa)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From         | To           |
+  | ------------------------- | ------------ | ------------ |
+  | workerd                   | 1.20260305.0 | 1.20260226.1 |
+  | @cloudflare/workers-types | 4.20260305.0 | 4.20260226.1 |
+
+- [#12691](https://github.com/cloudflare/workers-sdk/pull/12691) [`596b8a0`](https://github.com/cloudflare/workers-sdk/commit/596b8a0cb2cb2cb5b9f7fefbe1e7fc638c7e934f) Thanks [@penalosa](https://github.com/penalosa)! - Remove temporary AI Search RPC workaround (no user-facing changes)
+
 ## 4.20260305.0
 
 ### Patch Changes
