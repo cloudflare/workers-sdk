@@ -1,5 +1,32 @@
 # @cloudflare/containers-shared
 
+## 0.10.0
+
+### Minor Changes
+
+- [#12649](https://github.com/cloudflare/workers-sdk/pull/12649) [`35b2c56`](https://github.com/cloudflare/workers-sdk/commit/35b2c56cdef6f4e7d33a885959f4ce8fc01201d0) Thanks [@gabivlj](https://github.com/gabivlj)! - Add experimental support for containers to workers communication with interceptOutboundHttp
+
+  This feature is experimental and requires adding the "experimental" compatibility flag to your Wrangler configuration.
+
+### Patch Changes
+
+- [#11332](https://github.com/cloudflare/workers-sdk/pull/11332) [`6a8aa5f`](https://github.com/cloudflare/workers-sdk/commit/6a8aa5f28fdf8e8392b1e279a8f679e9698c4671) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users are now able to configure DockerHub credentials and have containers reference images stored there.
+
+  DockerHub can be configured as follows:
+
+  ```sh
+  echo $PAT_TOKEN | npx wrangler@latest containers registries configure docker.io --dockerhub-username=user --secret-name=DockerHub_PAT_Token
+  ```
+
+  Containers can then specify an image from DockerHub in their `wrangler.jsonc` as follows:
+
+  ```jsonc
+  "containers": {
+    "image": "docker.io/namespace/image:tag",
+    ...
+  }
+  ```
+
 ## 0.9.0
 
 ### Minor Changes
