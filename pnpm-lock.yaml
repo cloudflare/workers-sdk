@@ -51,6 +51,9 @@ catalogs:
     smol-toml:
       specifier: ^1.5.2
       version: 1.5.2
+    tinyglobby:
+      specifier: ^0.2.12
+      version: 0.2.15
     tree-kill:
       specifier: ^1.2.2
       version: 1.2.2
@@ -1768,7 +1771,7 @@ importers:
         specifier: catalog:default
         version: 1.5.2
       tinyglobby:
-        specifier: ^0.2.12
+        specifier: catalog:default
         version: 0.2.15
       tree-kill:
         specifier: catalog:default
@@ -2438,8 +2441,8 @@ importers:
         specifier: ^7.7.1
         version: 7.7.3
       tinyglobby:
-        specifier: ^0.2.12
-        version: 0.2.12
+        specifier: catalog:default
+        version: 0.2.15
       tree-kill:
         specifier: catalog:default
         version: 1.2.2
@@ -4244,7 +4247,7 @@ importers:
         specifier: ^7.7.1
         version: 7.7.3
       tinyglobby:
-        specifier: ^0.2.12
+        specifier: catalog:default
         version: 0.2.15
       ts-dedent:
         specifier: ^2.2.0
@@ -10745,14 +10748,6 @@ packages:
   fd-slicer@1.1.0:
     resolution: {integrity: sha512-cE1qsB/VwyQozZ+q1dGxR8LBYNZeofhEdUNGSMbQD3Gw2lAzX9Zb3uIU6Ebc/Fmyjo9AWWfnn0AUCHqtevs/8g==}
 
-  fdir@6.4.3:
-    resolution: {integrity: sha512-PMXmW2y1hDDfTSRc9gaXIuCCRpuoz3Kaz8cUelp3smouvfT632ozg2vrT6lJsHKKOF59YLbOGfAWGUcKEfRMQw==}
-    peerDependencies:
-      picomatch: ^3 || ^4
-    peerDependenciesMeta:
-      picomatch:
-        optional: true
-
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -12713,10 +12708,6 @@ packages:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
 
-  picomatch@4.0.2:
-    resolution: {integrity: sha512-M7BAV6Rlcy5u+m6oPhAPFgJTzAioX/6B0DxyvDlo9l8+T3nLKbrczg2WLUyzd45L8RqfUMyGPzekbMvX2Ldkwg==}
-    engines: {node: '>=12'}
-
   picomatch@4.0.3:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
@@ -14139,10 +14130,6 @@ packages:
   tinyexec@1.0.2:
     resolution: {integrity: sha512-W/KYk+NFhkmsYpuHq5JykngiOCnxeVL8v8dFnqxSD8qEEdRfXk1SDM6JzNqcERbcGYj9tMrDQBYV9cjgnunFIg==}
     engines: {node: '>=18'}
-
-  tinyglobby@0.2.12:
-    resolution: {integrity: sha512-qkf4trmKSIiMTs/E63cxH+ojC2unam7rJ0WrauAzpT3ECNTxGRMlaXxVbfxMUC/w0LaYk6jQ4y/nGR9uBO3tww==}
-    engines: {node: '>=12.0.0'}
 
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
@@ -21904,10 +21891,6 @@ snapshots:
     dependencies:
       pend: 1.2.0
 
-  fdir@6.4.3(picomatch@4.0.2):
-    optionalDependencies:
-      picomatch: 4.0.2
-
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
@@ -23837,8 +23820,6 @@ snapshots:
 
   picomatch@2.3.1: {}
 
-  picomatch@4.0.2: {}
-
   picomatch@4.0.3: {}
 
   pify@3.0.0: {}
@@ -25503,11 +25484,6 @@ snapshots:
   tinyexec@1.0.1: {}
 
   tinyexec@1.0.2: {}
-
-  tinyglobby@0.2.12:
-    dependencies:
-      fdir: 6.4.3(picomatch@4.0.2)
-      picomatch: 4.0.2
 
   tinyglobby@0.2.15:
     dependencies:
