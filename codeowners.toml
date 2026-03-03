@@ -8,6 +8,9 @@ ignore = [".changeset", "fixtures"]
 # Show detailed file-to-owner mapping in PR comments
 detailed_reviewers = true
 
+# Don't dismiss stale reviews when new changes are pushed
+disable_smart_dismissal = true
+
 # Suppress warnings for intentionally unowned files (e.g. pnpm-lock.yaml)
 suppress_unowned_warning = true
 
