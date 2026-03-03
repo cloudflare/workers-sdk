@@ -1,13 +1,15 @@
 import { z } from "zod";
-import { errorResponse, wrapResponse } from "../common";
 import {
-	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
-} from "../generated/zod.gen";
+	aggregateListResults,
+	getAggregationContext,
+	getPeerUrlsIfAggregating,
+	proxyToFirstAvailablePeer,
+} from "../aggregation";
+import { errorResponse, wrapResponse } from "../common";
+import { zD1RawDatabaseQueryData } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
-	CloudflareD1ListDatabasesResponse,
 	D1DatabaseResponse,
 	D1RawResultResponse,
 	D1SingleQuery,
@@ -40,38 +42,12 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
 	return env[bindingName] as D1Database;
 }
 
-// ============================================================================
-// API Handlers
-// ============================================================================
-
-type ListDatabasesQuery = z.output<
-	ReturnType<typeof zCloudflareD1ListDatabasesData.shape.query.unwrap>
->;
-
 /**
- * Lists all D1 databases available in the local environment.
- *
- * Returns a paginated list of databases with their names and UUIDs.
- * Supports filtering by database name and pagination via query parameters.
- *
- * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/list/
- *
- * @param c - The Hono application context
- * @param query - Query parameters for filtering and pagination
- * @param query.page - The page number for pagination
- * @param query.per_page - The number of results per page
- * @param query.name - Optional filter to search databases by name (case-insensitive)
- *
- * @returns A JSON response containing the list of databases and pagination info
+ * Get local D1 databases from the binding map.
  */
-export async function listD1Databases(
-	c: AppContext,
-	query: ListDatabasesQuery
-): Promise<Response> {
-	const { page, per_page, name } = query;
-
-	const d1BindingMap = c.env.LOCAL_EXPLORER_BINDING_MAP.d1;
-	let databases = Object.entries(d1BindingMap).map(([id, bindingName]) => {
+function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
+	const d1BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
+	return Object.entries(d1BindingMap).map(([id, bindingName]) => {
 		// Use the binding name as the database name since we don't have
 		// the actual name locally. The ID is the `database_id` or generated from binding.
 		const databaseName = bindingName.split(":").pop() || bindingName;
@@ -82,37 +58,58 @@ export async function listD1Databases(
 			version: "production",
 		} satisfies D1DatabaseResponse;
 	});
+}
 
-	const totalCount = databases.length;
+// ============================================================================
+// API Handlers
+// ============================================================================
 
-	// Filter by name if provided
-	if (name) {
-		databases = databases.filter((db) =>
-			db.name?.toLowerCase().includes(name.toLowerCase())
-		);
+/**
+ * Lists all D1 databases available across all connected instances.
+ *
+ * This is an aggregated endpoint - it fetches databases from the local instance
+ * and all peer instances in the dev registry, then merges the results.
+ *
+ * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/list/
+ *
+ * @param c - The Hono application context
+ *
+ * @returns A JSON response containing all databases from all instances
+ */
+export async function listD1Databases(c: AppContext): Promise<Response> {
+	// Get local databases
+	const localDatabases = getLocalD1Databases(c.env);
+
+	// Check if we should aggregate from peers
+	const aggCtx = getAggregationContext(
+		c.req.raw,
+		c.env.MINIFLARE_LOOPBACK,
+		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	);
+
+	let allDatabases = localDatabases;
+
+	if (aggCtx.shouldAggregate) {
+		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
+		if (peerUrls.length > 0) {
+			allDatabases = await aggregateListResults(
+				localDatabases,
+				peerUrls,
+				"/d1/database"
+			);
+		}
 	}
 
-	// Paginate
-	const startIndex = (page - 1) * per_page;
-	const endIndex = startIndex + per_page;
-	databases = databases.slice(startIndex, endIndex);
-
 	return c.json({
-		...wrapResponse(databases),
+		...wrapResponse(allDatabases),
 		result_info: {
-			count: databases.length,
-			page,
-			per_page,
-			total_count: totalCount,
+			count: allDatabases.length,
+			total_count: allDatabases.length,
 		},
-	} satisfies Omit<CloudflareD1ListDatabasesResponse, "result"> & {
-		result: D1DatabaseResponse[];
 	});
 }
 
-type RawDatabaseBody = z.output<
-	typeof zCloudflareD1RawDatabaseQueryData.shape.body
->;
+type RawDatabaseBody = z.output<typeof zD1RawDatabaseQueryData.shape.body>;
 
 /**
  * Executes raw SQL queries against a D1 database.
@@ -121,6 +118,9 @@ type RawDatabaseBody = z.output<
  *
  * Supports both single queries and batch queries. Each query can include
  * parameterized values for safe SQL execution.
+ *
+ * If the database is not found locally, this handler will attempt to proxy
+ * the request to peer instances in the dev registry.
  *
  * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/raw/
  *
@@ -139,11 +139,48 @@ export async function rawD1Database(
 ): Promise<Response> {
 	const databaseId = c.req.param("database_id");
 
+	// Try local first
 	const db = getD1Binding(c.env, databaseId);
-	if (!db) {
-		return errorResponse(404, 10000, "Database not found");
+	if (db) {
+		return executeD1Query(c, db, body);
 	}
 
+	// Try peers if aggregation enabled
+	const aggCtx = getAggregationContext(
+		c.req.raw,
+		c.env.MINIFLARE_LOOPBACK,
+		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	);
+
+	if (aggCtx.shouldAggregate) {
+		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
+		if (peerUrls.length > 0) {
+			const peerResponse = await proxyToFirstAvailablePeer(
+				peerUrls,
+				`/d1/database/${encodeURIComponent(databaseId)}/raw`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(body),
+				}
+			);
+			if (peerResponse) {
+				return peerResponse;
+			}
+		}
+	}
+
+	return errorResponse(404, 10000, "Database not found");
+}
+
+/**
+ * Execute a D1 query against a local database binding.
+ */
+async function executeD1Query(
+	c: AppContext,
+	db: D1Database,
+	body: RawDatabaseBody
+): Promise<Response> {
 	// Normalize to array of queries
 	const queries: D1SingleQuery[] =
 		"batch" in body && body.batch ? body.batch : [body as D1SingleQuery];

@@ -173,6 +173,10 @@ export class DevRegistry {
 		return this.isEnabled() && this.enableDurableObjectProxy;
 	}
 
+	public getRegistryPath(): string | undefined {
+		return this.registryPath;
+	}
+
 	public async updateRegistryPath(
 		registryPath: string | undefined,
 		enableDurableObjectProxy: boolean,

@@ -19,8 +19,6 @@ interface ListNamespacesResponse {
 	result: DONamespace[];
 	result_info: {
 		count: number;
-		page: number;
-		per_page: number;
 		total_count: number;
 	};
 	errors: Array<{ code: number; message: string }>;
@@ -82,7 +80,7 @@ describe("Durable Objects API", () => {
 	});
 
 	describe("GET /workers/durable_objects/namespaces", () => {
-		test("lists available DO namespaces", async ({ expect }) => {
+		test("lists all available DO namespaces", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/workers/durable_objects/namespaces`
 			);
@@ -115,25 +113,6 @@ describe("Durable Objects API", () => {
 			`);
 			expect(data.result_info).toMatchObject({
 				count: 2,
-				page: 1,
-				per_page: 20,
-				total_count: 2,
-			});
-		});
-
-		test("respects pagination parameters", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/workers/durable_objects/namespaces?page=1&per_page=1`
-			);
-
-			expect(response.status).toBe(200);
-			const data = (await response.json()) as ListNamespacesResponse;
-
-			expect(data.result.length).toBe(1);
-			expect(data.result_info).toMatchObject({
-				count: 1,
-				page: 1,
-				per_page: 1,
 				total_count: 2,
 			});
 		});

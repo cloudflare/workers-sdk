@@ -10,14 +10,11 @@ import {
 import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
-	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
-	zDurableObjectsNamespaceListNamespacesData,
+	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
-	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
@@ -35,8 +32,12 @@ export type Env = {
 	[key: string]: unknown;
 	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
 	[CoreBindings.EXPLORER_DISK]: Fetcher;
-	// Loopback service for calling Node.js endpoints (used for DO storage listing)
-	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
+	// Loopback service for calling Node.js endpoints:
+	// - /core/dev-registry for cross-instance aggregation
+	// - /core/do-storage for DO storage listing
+	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	// Worker names for this instance, used to filter self from dev registry during aggregation
+	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 };
 
 export type AppBindings = { Bindings: Env };
@@ -106,15 +107,7 @@ app.get("/*", async (c, next) => {
 // KV Endpoints
 // ============================================================================
 
-app.get(
-	"/api/storage/kv/namespaces",
-	// The query params are optional, so the whole schema is wrapped in an optional,
-	// but hono's validator will always receive an object.
-	// This just unwraps it so we can validate the inner schema.
-	// The inner schema has all the individual params as optional
-	validateQuery(zWorkersKvNamespaceListNamespacesData.shape.query.unwrap()),
-	(c) => listKVNamespaces(c, c.req.valid("query"))
-);
+app.get("/api/storage/kv/namespaces", (c) => listKVNamespaces(c));
 
 app.get(
 	"/api/storage/kv/namespaces/:namespace_id/keys",
@@ -149,15 +142,11 @@ app.post(
 // D1 Endpoints
 // ============================================================================
 
-app.get(
-	"/api/d1/database",
-	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
-	(c) => listD1Databases(c, c.req.valid("query"))
-);
+app.get("/api/d1/database", (c) => listD1Databases(c));
 
 app.post(
 	"/api/d1/database/:database_id/raw",
-	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
+	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
 );
 
@@ -165,13 +154,7 @@ app.post(
 // Durable Objects Endpoints
 // ============================================================================
 
-app.get(
-	"/api/workers/durable_objects/namespaces",
-	validateQuery(
-		zDurableObjectsNamespaceListNamespacesData.shape.query.unwrap()
-	),
-	(c) => listDONamespaces(c, c.req.valid("query"))
-);
+app.get("/api/workers/durable_objects/namespaces", (c) => listDONamespaces(c));
 
 app.get(
 	"/api/workers/durable_objects/namespaces/:namespace_id/objects",

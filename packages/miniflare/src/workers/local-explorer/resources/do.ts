@@ -1,7 +1,12 @@
 import { INTROSPECT_SQLITE_METHOD } from "../../../plugins/core/constants";
+import {
+	aggregateListResults,
+	getAggregationContext,
+	getPeerUrlsIfAggregating,
+	proxyToFirstAvailablePeer,
+} from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import {
-	zDurableObjectsNamespaceListNamespacesData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 } from "../generated/zod.gen";
@@ -10,46 +15,91 @@ import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { z } from "zod";
 
-type ListNamespacesQuery = NonNullable<
-	z.output<typeof zDurableObjectsNamespaceListNamespacesData>["query"]
->;
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+interface DirectoryEntry {
+	name: string;
+	type: "file" | "directory";
+}
+
+interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
+	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
+}
+
+function getDOBinding(
+	env: Env,
+	namespaceId: string
+): {
+	binding: DurableObjectNamespace<IntrospectableDurableObject>;
+	useSQLite: boolean;
+} | null {
+	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
+	if (!info) return null;
+	return {
+		binding: env[
+			info.binding
+		] as DurableObjectNamespace<IntrospectableDurableObject>,
+		useSQLite: info.useSQLite,
+	};
+}
 
 /**
- * List Durable Object Namespaces
- * https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
- *
- * Returns the Durable Object namespaces available locally.
+ * Get local DO namespaces from the binding map.
  */
-export async function listDONamespaces(
-	c: AppContext,
-	query: ListNamespacesQuery
-) {
-	const { page, per_page } = query;
-
-	const doBindingMap = c.env.LOCAL_EXPLORER_BINDING_MAP.do;
-
-	// Convert binding map to array of namespace objects
-	let namespaces = Object.entries(doBindingMap).map(([id, info]) => ({
+function getLocalDONamespaces(env: Env) {
+	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
+	return Object.entries(doBindingMap).map(([id, info]) => ({
 		id, // This is the unsafeUniqueKey - ${scriptName}-${className}
 		name: `${info.scriptName}_${info.className}`, // This is what the API returns...
 		script: info.scriptName,
 		class: info.className,
 		use_sqlite: info.useSQLite,
 	}));
+}
 
-	const totalCount = namespaces.length;
+// ============================================================================
+// API Handlers
+// ============================================================================
 
-	// Paginate results
-	const startIndex = (page - 1) * per_page;
-	namespaces = namespaces.slice(startIndex, startIndex + per_page);
+/**
+ * List Durable Object Namespaces across all connected instances.
+ *
+ * This is an aggregated endpoint - it fetches namespaces from the local instance
+ * and all peer instances in the dev registry, then merges the results.
+ *
+ * @see https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list/
+ */
+export async function listDONamespaces(c: AppContext) {
+	// Get local namespaces
+	const localNamespaces = getLocalDONamespaces(c.env);
+
+	// Check if we should aggregate from peers
+	const aggCtx = getAggregationContext(
+		c.req.raw,
+		c.env.MINIFLARE_LOOPBACK,
+		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	);
+
+	let allNamespaces = localNamespaces;
+
+	if (aggCtx.shouldAggregate) {
+		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
+		if (peerUrls.length > 0) {
+			allNamespaces = await aggregateListResults(
+				localNamespaces,
+				peerUrls,
+				"/workers/durable_objects/namespaces"
+			);
+		}
+	}
 
 	return c.json({
-		...wrapResponse(namespaces),
+		...wrapResponse(allNamespaces),
 		result_info: {
-			count: namespaces.length,
-			page,
-			per_page,
-			total_count: totalCount,
+			count: allNamespaces.length,
+			total_count: allNamespaces.length,
 		},
 	});
 }
@@ -58,17 +108,13 @@ type ListObjectsQuery = NonNullable<
 	z.output<typeof zDurableObjectsNamespaceListObjectsData>["query"]
 >;
 
-interface DirectoryEntry {
-	name: string;
-	type: "file" | "directory";
-}
-
 /**
  * List Durable Objects in a namespace
- * https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list_objects/
  *
- * Returns the Durable Objects in a given namespace.
- * Objects are enumerated by reading the persist directory for .sqlite files.
+ * This endpoint keeps pagination as-is since it operates on a single namespace.
+ * If the namespace is not found locally, it proxies to peer instances.
+ *
+ * @see https://developers.cloudflare.com/api/resources/durable_objects/subresources/namespaces/methods/list_objects/
  */
 export async function listDOObjects(
 	c: AppContext,
@@ -77,13 +123,49 @@ export async function listDOObjects(
 ) {
 	const { limit, cursor } = query;
 
-	if (
-		!c.env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId] ||
-		// No loopback service means we can't list DOs
-		c.env.MINIFLARE_LOOPBACK === undefined
-	) {
-		return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+	// Check if namespace exists locally
+	const namespaceExists = c.env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
+
+	if (namespaceExists) {
+		return executeListDOObjects(c, namespaceId, { limit, cursor });
 	}
+
+	// Try peers if aggregation enabled
+	const aggCtx = getAggregationContext(
+		c.req.raw,
+		c.env.MINIFLARE_LOOPBACK,
+		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	);
+
+	if (aggCtx.shouldAggregate) {
+		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
+		if (peerUrls.length > 0) {
+			// Build query string from params
+			const params = new URLSearchParams();
+			if (cursor) params.set("cursor", cursor);
+			if (limit !== undefined) params.set("limit", String(limit));
+			const queryString = params.toString();
+			const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
+
+			const peerResponse = await proxyToFirstAvailablePeer(peerUrls, path);
+			if (peerResponse) {
+				return peerResponse;
+			}
+		}
+	}
+
+	return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+}
+
+/**
+ * Execute list DO objects on a local namespace.
+ */
+async function executeListDOObjects(
+	c: AppContext,
+	namespaceId: string,
+	options: { limit: number; cursor?: string }
+): Promise<Response> {
+	const { limit, cursor } = options;
 
 	// The DO storage structure is: <persistPath>/<uniqueKey>/<objectId>.sqlite
 	// namespaceId is the uniqueKey (e.g., "my-worker-TestDO")
@@ -163,32 +245,13 @@ type QueryBody = z.output<
 	typeof zDurableObjectsNamespaceQuerySqliteData
 >["body"];
 
-interface IntrospectableDurableObject extends Rpc.DurableObjectBranded {
-	[INTROSPECT_SQLITE_METHOD]: IntrospectSqliteMethod;
-}
-
-function getDOBinding(
-	env: Env,
-	namespaceId: string
-): {
-	binding: DurableObjectNamespace<IntrospectableDurableObject>;
-	useSQLite: boolean;
-} | null {
-	const info = env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
-	if (!info) return null;
-	return {
-		binding: env[
-			info.binding
-		] as DurableObjectNamespace<IntrospectableDurableObject>,
-		useSQLite: info.useSQLite,
-	};
-}
-
 /**
  * Query Durable Object SQLite storage
  *
  * Executes SQL queries against a specific Durable Object's SQLite storage
  * using introspection method that is injected into user DO classes.
+ *
+ * If the namespace is not found locally, it proxies to peer instances.
  *
  * The namespace ID is the uniqueKey: scriptName-className
  */
@@ -197,13 +260,53 @@ export async function queryDOSqlite(
 	namespaceId: string,
 	body: QueryBody
 ): Promise<Response> {
-	// Look up namespace in binding map
+	// Try local first
 	const ns = getDOBinding(c.env, namespaceId);
 
-	if (!ns) {
-		return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+	if (ns) {
+		return executeQueryDOSqlite(c, ns, namespaceId, body);
 	}
 
+	// Try peers if aggregation enabled
+	const aggCtx = getAggregationContext(
+		c.req.raw,
+		c.env.MINIFLARE_LOOPBACK,
+		c.env.LOCAL_EXPLORER_WORKER_NAMES
+	);
+
+	if (aggCtx.shouldAggregate) {
+		const peerUrls = await getPeerUrlsIfAggregating(aggCtx);
+		if (peerUrls.length > 0) {
+			const peerResponse = await proxyToFirstAvailablePeer(
+				peerUrls,
+				`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(body),
+				}
+			);
+			if (peerResponse) {
+				return peerResponse;
+			}
+		}
+	}
+
+	return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+}
+
+/**
+ * Execute query on a local DO namespace.
+ */
+async function executeQueryDOSqlite(
+	c: AppContext,
+	ns: {
+		binding: DurableObjectNamespace<IntrospectableDurableObject>;
+		useSQLite: boolean;
+	},
+	namespaceId: string,
+	body: QueryBody
+): Promise<Response> {
 	if (!ns.useSQLite) {
 		return errorResponse(
 			400,
