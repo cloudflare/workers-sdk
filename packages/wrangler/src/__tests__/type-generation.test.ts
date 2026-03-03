@@ -632,9 +632,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					var: "from wrangler toml";
 				}
@@ -658,9 +655,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					var: "from my-wrangler-config-a";
 				}
@@ -684,9 +678,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					var: "from my-wrangler-config-b";
 				}
@@ -1359,9 +1350,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					SOMETHING: "asdasdfasdf";
 					ANOTHER: "thing";
@@ -1406,9 +1394,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					SOMETHING: "asdasdfasdf";
 					ANOTHER: "thing";
@@ -1466,9 +1451,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					myTomlVarA: "A from wrangler toml";
 					myTomlVarB: "B from wrangler toml";
@@ -1525,9 +1507,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					myTomlVarA: "A from wrangler toml";
 					SECRET_FROM_TEMPLATE: string;
@@ -1580,9 +1559,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					myTomlVarA: "A from wrangler toml";
 					myTomlVarB: "B from wrangler toml";
@@ -1624,9 +1600,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					varStr: string;
 					varArrNum: number[];
@@ -1672,9 +1645,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					MY_VARIABLE_A: string;
 					MY_VARIABLE_B: string;
@@ -1710,9 +1680,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					API_KEY: string;
 					DB_PASSWORD: string;
@@ -1754,9 +1721,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					API_KEY: string;
 				}
@@ -1793,9 +1757,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					API_KEY: string;
 				}
@@ -1842,9 +1803,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface StagingEnv {
 					API_KEY: string;
 					DEBUG_TOKEN: string;
@@ -1900,9 +1858,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface StagingEnv {
 					STAGING_KEY: string;
 				}
@@ -1943,9 +1898,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 				}
 			}
@@ -1986,9 +1938,6 @@ describe("generate types", () => {
 			Generating project types...
 
 			declare namespace Cloudflare {
-				interface GlobalProps {
-
-				}
 				interface Env {
 					"1": 1;
 					"12345": 12345;
@@ -2054,9 +2003,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface ProductionEnv {
 						MY_VAR: "a var";
 						MY_VAR_A: "A (prod)";
@@ -2095,9 +2041,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface ProductionEnv {
 						MY_VAR: string;
 						MY_VAR_A: string;
@@ -2189,9 +2132,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						KV_STAGING: KVNamespace;
 						D1_STAGING: D1Database;
@@ -2269,9 +2209,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface Env {
 						KV_STAGING: KVNamespace;
 						D1_STAGING: D1Database;
@@ -2330,9 +2267,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						MY_KV: KVNamespace;
 					}
@@ -2388,9 +2322,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						CACHE: R2Bucket;
 					}
@@ -2495,9 +2426,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface Env {
 						MY_VAR: "staging";
 						STAGING_ONLY: "staging-only-value";
@@ -2547,9 +2475,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						KV_SHARED: KVNamespace;
 						KV_STAGING_ONLY: KVNamespace;
@@ -2605,9 +2530,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						D1_STAGING: D1Database;
 					}
@@ -2652,9 +2574,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						KV_STAGING: KVNamespace;
 						MY_SECRET: string;
@@ -2702,9 +2621,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface StagingEnv {
 						DEBUG: "true";
 					}
@@ -2746,9 +2662,6 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface GlobalProps {
-
-					}
 					interface Env {
 						MY_KV: KVNamespace;
 						MY_VAR: "value";
@@ -2813,9 +2726,6 @@ describe("generate types", () => {
 					Generating project types...
 
 					declare namespace Cloudflare {
-						interface GlobalProps {
-
-						}
 						interface Env {
 							SOMETHING: "asdasdfasdf";
 							ANOTHER: "thing";
@@ -2924,12 +2834,9 @@ describe("generate types", () => {
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8"))
 					.toMatchInlineSnapshot(`
 						"/* eslint-disable */
-						// Generated by Wrangler by running \`wrangler\` (hash: 661d2e2cd743f5ee1dc8b340ccf50767)
+						// Generated by Wrangler by running \`wrangler\` (hash: 9dfd5cc18984b8cc3421a9e726587833)
 						// Runtime types generated with workerd@
 						declare namespace Cloudflare {
-							interface GlobalProps {
-
-							}
 							interface Env {
 								SOMETHING: "asdasdfasdf";
 								ANOTHER: "thing";
@@ -2989,12 +2896,9 @@ describe("generate types", () => {
 			expect(fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
-					// Generated by Wrangler by running \`wrangler\` (hash: c8be82227dab4773e9c7615e469f09f9)
+					// Generated by Wrangler by running \`wrangler\` (hash: c4701684dd76f087c31740a06b0cbdb6)
 					// Runtime types generated with workerd@
 					declare namespace Cloudflare {
-						interface GlobalProps {
-
-						}
 						interface Env {
 							SOMETHING: "asdasdfasdf";
 							ANOTHER: "thing";

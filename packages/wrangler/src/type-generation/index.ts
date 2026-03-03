@@ -1303,7 +1303,11 @@ function generatePerEnvTypeStrings(
 			globalPropsLines.push(`\t\tcrons: ${cronsType};`);
 		}
 
-		const globalPropsContent = `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`;
+		// Only generate GlobalProps interface if there's content to put in it
+		const globalPropsContent =
+			globalPropsLines.length > 0
+				? `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`
+				: "";
 
 		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
@@ -1432,7 +1436,11 @@ function generateTypeStrings(
 			globalPropsLines.push(`\t\tcrons: ${cronsType};`);
 		}
 
-		const globalPropsContent = `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`;
+		// Only generate GlobalProps interface if there's content to put in it
+		const globalPropsContent =
+			globalPropsLines.length > 0
+				? `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`
+				: "";
 
 		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
