@@ -191,6 +191,46 @@ describe("export", () => {
 			`[Error: Found a database with name or binding D1 but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create D1'.]`
 		);
 	});
+
+	it("should handle multiple tables", async ({ expect }) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		// Fill with data
+		fs.writeFileSync(
+			"data.sql",
+			`
+				CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);
+				CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);
+				CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);
+				INSERT INTO foo (value) VALUES ('xxx'),('yyy'),('zzz');
+				INSERT INTO bar (value) VALUES ('aaa'),('bbb'),('ccc');
+				INSERT INTO baz (value) VALUES ('111'),('222'),('333');
+			`
+		);
+		await runWrangler("d1 execute db --file data.sql");
+
+		await runWrangler(
+			"d1 export db --output test-multiple.sql --table foo --table baz"
+		);
+		expect(fs.readFileSync("test-multiple.sql", "utf8")).toBe(
+			[
+				"PRAGMA defer_foreign_keys=TRUE;",
+				"CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);",
+				"INSERT INTO \"foo\" VALUES(1,'xxx');",
+				"INSERT INTO \"foo\" VALUES(2,'yyy');",
+				"INSERT INTO \"foo\" VALUES(3,'zzz');",
+				"CREATE TABLE baz(id INTEGER PRIMARY KEY, value TEXT);",
+				"INSERT INTO \"baz\" VALUES(1,'111');",
+				"INSERT INTO \"baz\" VALUES(2,'222');",
+				"INSERT INTO \"baz\" VALUES(3,'333');",
+			].join("\n")
+		);
+	});
 });
 
 function mockResponses() {
