@@ -49,6 +49,9 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					onContainerImagePreparationEnd: () => {},
 					logger: vitePreviewServer.config.logger,
 					isVite: true,
+					compatibilityFlags: ctx.allWorkerConfigs.flatMap(
+						(c) => c.compatibility_flags
+					),
 				});
 
 				const containerImageTags = new Set(containerTagToOptionsMap.keys());

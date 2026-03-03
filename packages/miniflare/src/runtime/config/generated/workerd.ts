@@ -2734,7 +2734,7 @@ export class Worker_DockerConfiguration extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DockerConfiguration",
 		id: "e62f96c20d9fb872",
-		size: new $.ObjectSize(0, 1),
+		size: new $.ObjectSize(0, 2),
 	};
 	/**
 	 * Path to the Docker socket.
@@ -2745,6 +2745,19 @@ export class Worker_DockerConfiguration extends $.Struct {
 	}
 	set socketPath(value: string) {
 		$.utils.setText(0, value, this);
+	}
+	/**
+	 * Docker image name for the container egress interceptor sidecar.
+	 * This sidecar intercepts outbound traffic from containers and routes it
+	 * through workerd for egress mappings (setEgressHttp bindings).
+	 * You can find this image in repositories like DockerHub: https://hub.docker.com/r/cloudflare/proxy-everything
+	 *
+	 */
+	get containerEgressInterceptorImage(): string {
+		return $.utils.getText(1, this);
+	}
+	set containerEgressInterceptorImage(value: string) {
+		$.utils.setText(1, value, this);
 	}
 	toString(): string {
 		return "Worker_DockerConfiguration_" + super.toString();

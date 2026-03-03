@@ -796,6 +796,125 @@ describe("containers registries delete", () => {
 	});
 });
 
+describe("containers registries credentials", () => {
+	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
+	mockAccountId();
+	mockApiToken();
+	beforeEach(() => {
+		mockAccount();
+	});
+
+	afterEach(() => {
+		msw.resetHandlers();
+	});
+
+	it("should reject non-Cloudflare registry domains", async () => {
+		setIsTTY(false);
+		await expect(
+			runWrangler("containers registries credentials example.com --push")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The credentials command only accepts the Cloudflare managed registry (registry.cloudflare.com).]`
+		);
+	});
+
+	it("should default to Cloudflare registry when DOMAIN is omitted", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler("containers registries credentials --push");
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should require --push or --pull", async () => {
+		setIsTTY(false);
+		await expect(
+			runWrangler("containers registries credentials registry.cloudflare.com")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: You have to specify either --push or --pull in the command.]`
+		);
+	});
+
+	it("should generate credentials with --push", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should generate credentials with --pull", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"pull",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --pull"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should generate credentials with both --push and --pull", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "jwt-token", 15, [
+			"push",
+			"pull",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --pull"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"jwt-token"`);
+	});
+
+	it("should support custom expiration-minutes", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials(
+			"registry.cloudflare.com",
+			"custom-expiry-token",
+			30,
+			["push"]
+		);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --expiration-minutes=30"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
+	});
+
+	it("should output valid JSON when --json flag is used", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --json"
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "account_id": "some-account-id",
+			  "password": "test-password",
+			  "registry_host": "registry.cloudflare.com",
+			  "username": "test-username",
+			}
+		`);
+	});
+});
+
 const mockPutRegistry = (expected?: object) => {
 	msw.use(
 		http.post(
@@ -834,6 +953,35 @@ const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 					createFetchResult({
 						domain: domain,
 						secrets_store_ref: secretsStoreRef,
+					})
+				);
+			}
+		)
+	);
+};
+
+const mockGenerateCredentials = (
+	domain: string,
+	password: string,
+	expectedExpirationMinutes: number,
+	expectedPermissions: string[]
+) => {
+	msw.use(
+		http.post(
+			`*/accounts/:accountId/containers/registries/${domain}/credentials`,
+			async ({ request, params }) => {
+				const body = (await request.json()) as {
+					expiration_minutes: number;
+					permissions: string[];
+				};
+				expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
+				expect(body.permissions).toEqual(expectedPermissions);
+				return HttpResponse.json(
+					createFetchResult({
+						account_id: params.accountId,
+						registry_host: domain,
+						username: "test-username",
+						password: password,
 					})
 				);
 			}
