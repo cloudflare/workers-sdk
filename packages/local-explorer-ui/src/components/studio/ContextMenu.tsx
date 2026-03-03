@@ -172,7 +172,10 @@ export function StudioContextMenuProvider({
 	return (
 		<StudioContextMenu.Provider value={value}>
 			<DropdownMenu onOpenChange={handleOpenChange} open={open}>
-				<DropdownMenu.Trigger render={<span className="hidden" />} />
+				<DropdownMenu.Trigger
+					nativeButton={false}
+					render={<span className="hidden" />}
+				/>
 
 				<DropdownMenu.Content
 					align="start"

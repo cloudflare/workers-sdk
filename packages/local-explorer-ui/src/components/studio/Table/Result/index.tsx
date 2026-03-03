@@ -300,6 +300,7 @@ function HeaderDropdownMenu({
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<DropdownMenu.Trigger
+				nativeButton={false}
 				render={(props) => (
 					<div
 						{...props}
