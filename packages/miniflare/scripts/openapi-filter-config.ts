@@ -49,6 +49,39 @@ const config = {
 	ignores: {
 		// Query/path parameters not implemented
 		parameters: [
+			// List KV namespaces - pagination not implemented (aggregated endpoint returns all)
+			{
+				path: "/accounts/{account_id}/storage/kv/namespaces",
+				method: "get",
+				name: "page",
+			},
+			{
+				path: "/accounts/{account_id}/storage/kv/namespaces",
+				method: "get",
+				name: "per_page",
+			},
+			// List D1 databases - pagination not implemented (aggregated endpoint returns all)
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				name: "page",
+			},
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				name: "per_page",
+			},
+			// List DO namespaces - pagination not implemented (aggregated endpoint returns all)
+			{
+				path: "/accounts/{account_id}/workers/durable_objects/namespaces",
+				method: "get",
+				name: "page",
+			},
+			{
+				path: "/accounts/{account_id}/workers/durable_objects/namespaces",
+				method: "get",
+				name: "per_page",
+			},
 			// Put value - expiration options not implemented
 			{
 				path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/{key_name}",
