@@ -52,12 +52,26 @@ export const structuredSerializableReducers: ReducersRevivers = {
 	},
 	ArrayBufferView(value) {
 		if (ArrayBuffer.isView(value)) {
-			return [
-				value.constructor.name,
-				value.buffer,
-				value.byteOffset,
-				value.byteLength,
-			];
+			let name = value.constructor.name;
+			// Subclasses like Node.js `Buffer` extend standard typed arrays but
+			// aren't available in all runtimes. Normalise to the parent constructor.
+			if (
+				!ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.some((c) => c.name === name)
+			) {
+				for (const ctor of ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS) {
+					if (value instanceof ctor) {
+						name = ctor.name;
+						break;
+					}
+				}
+			}
+			let buf = value.buffer;
+			let off = value.byteOffset;
+			if (off !== 0 || buf.byteLength !== value.byteLength) {
+				buf = buf.slice(off, off + value.byteLength);
+				off = 0;
+			}
+			return [name, buf, off, value.byteLength];
 		}
 	},
 	RegExp(value) {
