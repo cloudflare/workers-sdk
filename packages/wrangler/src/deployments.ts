@@ -347,7 +347,12 @@ ${
 export async function commonDeploymentCMDSetup(
 	yargs: ArgumentsCamelCase<CommonYargsOptions>
 ) {
-	await printWranglerBanner();
+	const shouldContinue = await printWranglerBanner();
+	if (!shouldContinue) {
+		// User/agent chose to abort (e.g., to update Wrangler first)
+		// Return undefined to signal abort - callers should check for this
+		return undefined;
+	}
 	const config = readConfig(yargs);
 	const accountId = await requireAuth(config);
 	const scriptName = getScriptName(
