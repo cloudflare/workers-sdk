@@ -14,4 +14,6 @@ DATABASE_URL=postgresql://...
 API_KEY=secret
 ```
 
-The comment can appear anywhere in the file and Wrangler will log a debug message when a file is ignored. This applies to `.env`, `.env.local`, `.env.<environment>`, and `.env.<environment>.local` files.
+The comment can appear anywhere in the file and Wrangler will log a message when a file is ignored.
+
+This applies to `.env`, `.env.local`, `.env.<environment>`, and `.env.<environment>.local` files.
