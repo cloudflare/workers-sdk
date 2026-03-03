@@ -173,7 +173,9 @@ export function Sidebar({
 					const className = ns.class ?? ns.name ?? ns.id ?? "Unknown";
 					return {
 						id: ns.id as string,
-						isActive: currentPath.startsWith(`/do/${className}`),
+						isActive:
+							currentPath === `/do/${className}` ||
+							currentPath.startsWith(`/do/${className}/`),
 						label: className,
 						link: {
 							params: { className },
