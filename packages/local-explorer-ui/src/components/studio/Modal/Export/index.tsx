@@ -72,7 +72,7 @@ export function StudioExportModal({
 			}}
 			open={isOpen}
 		>
-			<Dialog className="p-6" size="">
+			<Dialog className="p-6" size="lg">
 				<div className="flex items-start justify-between gap-4 mb-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">Export</Dialog.Title>
