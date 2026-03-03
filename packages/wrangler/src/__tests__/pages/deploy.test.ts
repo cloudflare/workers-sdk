@@ -2889,6 +2889,127 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
+		it("should not deploy Functions projects that provide a malformed _routes.json file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json with malformed JSON (trailing comma)
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"version": 1,
+					"include": ["/*"],
+					"exclude": [],
+				}
+				`
+			);
+
+			// set up /functions
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/hello.js",
+				`
+				export async function onRequest() {
+					return new Response("Hello, world!");
+				}
+				`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await expect(
+				runWrangler("pages deploy public --project-name=foo")
+			).rejects.toThrow(
+				/Malformed JSON in _routes\.json at public\/_routes\.json/
+			);
+			expect(getProjectRequestCount).toEqual(2);
+		});
+
 		it("should fail with the appropriate error message, if the deployment of the project failed", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
@@ -3969,6 +4090,130 @@ Please make sure the JSON object has the following format:
 }
 and that at least one include rule is provided.
 		`);
+			expect(getProjectRequestCount).toEqual(2);
+		});
+
+		it("should not deploy Advanced Mode projects that provide a malformed _routes.json file", async () => {
+			// set up the directory of static files to upload.
+			mkdirSync("public");
+			writeFileSync("public/README.md", "This is a readme");
+
+			// set up _routes.json with malformed JSON (trailing comma)
+			writeFileSync(
+				"public/_routes.json",
+				`
+				{
+					"version": 1,
+					"include": ["/*"],
+					"exclude": [],
+				}
+				`
+			);
+
+			// set up _worker.js
+			writeFileSync(
+				"public/_worker.js",
+				`
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
+				};
+			`
+			);
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let getProjectRequestCount = 0;
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as {
+							hashes: string[];
+						};
+
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+						expect(body).toMatchObject({
+							hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+						});
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: body.hashes,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post(
+					"*/pages/assets/upload",
+					async ({ request }) => {
+						expect(request.headers.get("Authorization")).toBe(
+							"Bearer <<funfetti-auth-jwt>>"
+						);
+
+						expect(await request.json()).toMatchObject([
+							{
+								key: "13a03eaf24ae98378acd36ea00f77f2f",
+								value: Buffer.from("This is a readme").toString("base64"),
+								metadata: {
+									contentType: "text/markdown",
+								},
+								base64: true,
+							},
+						]);
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						getProjectRequestCount++;
+
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await expect(
+				runWrangler("pages deploy public --project-name=foo")
+			).rejects.toThrow(
+				/Malformed JSON in _routes\.json at public\/_routes\.json/
+			);
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
