@@ -86,19 +86,12 @@ export function getCloudflarePreset({
 		getPerfHooksOverrides(compat),
 	];
 
-	// The native workerd modules that are enabled for the current compat date and flags.
 	const nativeModules = [
 		...defaultNativeModules,
 		...overrides.flatMap((o) => o.nativeModules),
 	];
-
-	// Hybrid modules are provided by unenv but use some native workerd APIs.
 	const hybridModules = overrides.flatMap((o) => o.hybridModules);
-
-	// The globals that are injected from unenv for the current compat date and flags.
 	const injects = Object.assign({}, ...overrides.map((o) => o.inject ?? {}));
-
-	// The side-effect polyfill modules that are provided from unenv for the current compat date and flags.
 	const polyfills = overrides.flatMap((o) => o.polyfills ?? []);
 
 	return {
@@ -1007,13 +1000,19 @@ function getPerfHooksOverrides({
 }
 
 export type Compatibility = {
+	/** The compatibility date to be used when computing overrides. */
 	compatibilityDate: string;
+	/** The compatibility flags to be used when computing overrides. */
 	compatibilityFlags: string[];
 };
 
 export type Override = {
+	/** The native workerd modules that are enabled for the current compat date and flags. */
 	nativeModules: string[];
+	/** Hybrid modules are provided by unenv but use some native workerd APIs. */
 	hybridModules: string[];
+	/** The globals that are injected from unenv for the current compat date and flags. */
 	inject?: Record<string, string | false>;
+	/** The side-effect polyfill modules that are provided from unenv for the current compat date and flags. */
 	polyfills?: string[];
 };
