@@ -13,7 +13,9 @@ interface StudioQueryResultTabProps {
 	result: StudioMultipleQueryResult;
 }
 
-export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
+export function StudioQueryResultTab({
+	result,
+}: StudioQueryResultTabProps): JSX.Element {
 	const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
 	const state = useMemo(
