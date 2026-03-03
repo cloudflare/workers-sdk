@@ -1235,7 +1235,7 @@ async function generatePerEnvironmentTypes(
  * @param entrypointModule - The import specifier for the main entrypoint module
  * @param configuredDurableObjects - Array of configured Durable Object class names
  * @param typeDefinitions - Array of type definition strings
- * @param crons - Array of cron trigger expressions
+ * @param crons - Array of cron trigger expressions, or undefined if not defined in config
  *
  * @returns An object containing the complete file content and console output strings
  */
@@ -1255,7 +1255,7 @@ function generatePerEnvTypeStrings(
 	entrypointModule: string | undefined,
 	configuredDurableObjects: string[],
 	typeDefinitions: string[] = [],
-	crons: string[] = []
+	crons: string[] | undefined = undefined
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let processEnv = "";
@@ -1266,9 +1266,10 @@ function generatePerEnvTypeStrings(
 			? typeDefinitions.map((def) => `\t${def}`).join("\n")
 			: "";
 
-	// Generate crons type: literal union if crons exist, otherwise string
+	// Generate crons literal union type if crons are both defined and have values.
+	// If no values are defined, we default to `string`.
 	const cronsType =
-		crons.length > 0
+		crons !== undefined && crons.length > 0
 			? crons.map((c) => `"${escapeTypeScriptString(c)}"`).join(" | ")
 			: "string";
 
@@ -1286,7 +1287,7 @@ function generatePerEnvTypeStrings(
 			.map((b) => `\t\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
-		// Build GlobalProps content - always include crons
+		// Build GlobalProps content - only include crons when defined in config
 		const globalPropsLines: string[] = [];
 		if (entrypointModule) {
 			globalPropsLines.push(
@@ -1298,7 +1299,9 @@ function generatePerEnvTypeStrings(
 				`\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};`
 			);
 		}
-		globalPropsLines.push(`\t\tcrons: ${cronsType};`);
+		if (crons !== undefined) {
+			globalPropsLines.push(`\t\tcrons: ${cronsType};`);
+		}
 
 		const globalPropsContent = `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`;
 
@@ -1368,7 +1371,7 @@ const validateTypesFile = (path: string): void => {
  * @param entrypointModule - The entrypoint module path
  * @param configuredDurableObjects - Array of configured durable object names
  * @param typeDefinitions - Array of type definition strings
- * @param crons - Array of cron trigger expressions
+ * @param crons - Array of cron trigger expressions, or undefined if not defined in config
  *
  * @returns An object containing the complete file content and console output strings
  */
@@ -1383,7 +1386,7 @@ function generateTypeStrings(
 	entrypointModule: string | undefined,
 	configuredDurableObjects: string[],
 	typeDefinitions: string[] = [],
-	crons: string[] = []
+	crons: string[] | undefined = undefined
 ): {
 	consoleOutput: string;
 	fileContent: string;
@@ -1397,9 +1400,10 @@ function generateTypeStrings(
 			? typeDefinitions.map((def) => `\t${def}`).join("\n")
 			: "";
 
-	// Generate crons type: literal union if crons exist, otherwise string
+	// Generate crons literal union type if crons are both defined and have values.
+	// If no values are defined, we default to `string`.
 	const cronsType =
-		crons.length > 0
+		crons !== undefined && crons.length > 0
 			? crons.map((c) => `"${escapeTypeScriptString(c)}"`).join(" | ")
 			: "string";
 
@@ -1412,7 +1416,7 @@ function generateTypeStrings(
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
 
-		// Build GlobalProps content - always include crons
+		// Build GlobalProps content - only include crons when defined in config
 		const globalPropsLines: string[] = [];
 		if (entrypointModule) {
 			globalPropsLines.push(
@@ -1424,7 +1428,9 @@ function generateTypeStrings(
 				`\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};`
 			);
 		}
-		globalPropsLines.push(`\t\tcrons: ${cronsType};`);
+		if (crons !== undefined) {
+			globalPropsLines.push(`\t\tcrons: ${cronsType};`);
+		}
 
 		const globalPropsContent = `\n\tinterface GlobalProps {\n${globalPropsLines.join("\n")}\n\t}`;
 
@@ -2378,19 +2384,64 @@ const logHorizontalRule = () => {
 };
 
 /**
+ * Checks if triggers.crons is defined anywhere in the config.
+ *
+ * This is different from checking if there are any cron expressions - this checks
+ * whether the `triggers.crons` property exists at all. This distinction matters because:
+ * - If `triggers.crons` is not defined: we don't include crons in GlobalProps
+ * - If `triggers.crons` is defined but empty (`[]`): we include `crons: string`
+ * - If `triggers.crons` has values: we include `crons: "expr1" | "expr2" | ...`
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns true if triggers.crons is defined in any relevant environment
+ */
+function hasCronsDefined(
+	args: Partial<(typeof typesCommand)["args"]>
+): boolean {
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		return envConfig.triggers?.crons !== undefined;
+	}
+
+	// Check top-level
+	if (rawConfig.triggers?.crons !== undefined) {
+		return true;
+	}
+
+	// Check all named environments
+	for (const env of Object.values(rawConfig.env ?? {})) {
+		if (env.triggers?.crons !== undefined) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Collects all cron trigger expressions across environments.
  *
  * Behavior:
  * - If `args.env` is specified: only collect crons from that specific environment
  * - Otherwise: collect crons from top-level AND all named environments
  *
+ * Returns `undefined` if no triggers.crons is defined anywhere, which is different
+ * from returning an empty array (which means crons is defined but empty).
+ *
  * @param args - All the CLI arguments passed to the `types` command
  *
- * @returns An array of unique cron expressions
+ * @returns An array of unique cron expressions, or undefined if crons not defined
  */
 function collectAllCrons(
 	args: Partial<(typeof typesCommand)["args"]>
-): string[] {
+): string[] | undefined {
+	if (!hasCronsDefined(args)) {
+		return undefined;
+	}
+
 	const crons = new Set<string>();
 
 	const { rawConfig } = experimental_readRawConfig(args);
