@@ -11,6 +11,7 @@ import {
 	readWorkerConfigFromFile,
 	resolveWorkerType,
 } from "./workers-configs";
+import type { PluginContext } from "./context";
 import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
@@ -51,6 +52,8 @@ interface Experimental {
 	headersAndRedirectsDevModeSupport?: boolean;
 	/** Experimental support for a dedicated prerender Worker */
 	prerenderWorker?: AuxiliaryWorkerConfig;
+	/** Experimental support for extending the cloudflare plugin with additional Vite plugins. */
+	additionalPlugins?: ((ctx: PluginContext) => vite.Plugin)[];
 }
 
 type FilteredEntryWorkerConfig = Omit<

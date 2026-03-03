@@ -26,9 +26,11 @@ import type { PluginConfig } from "./plugin-config";
 import type * as vite from "vite";
 
 export { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+export { createPlugin } from "./utils";
 
 export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "./workers-configs";
+export type { PluginContext } from "./context";
 
 const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
@@ -46,6 +48,10 @@ await assertWranglerVersion();
  */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const ctx = new PluginContext(sharedContext);
+
+	const additionalPlugins = (
+		pluginConfig.experimental?.additionalPlugins ?? []
+	).map((pluginFactory) => pluginFactory(ctx));
 
 	return [
 		{
@@ -90,5 +96,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		nodeJsAlsPlugin(ctx),
 		nodeJsCompatPlugin(ctx),
 		nodeJsCompatWarningsPlugin(ctx),
+		...additionalPlugins,
 	];
 }
