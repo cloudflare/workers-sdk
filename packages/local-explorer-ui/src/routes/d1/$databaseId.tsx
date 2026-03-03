@@ -119,7 +119,7 @@ function DatabaseView(): JSX.Element {
 			>
 				<Button
 					aria-label="Refresh tables disabled:cursor-progress"
-					loading={isRefreshing}
+					disabled={isRefreshing}
 					onClick={handleTableRefresh}
 					shape="square"
 					variant="ghost"
