@@ -829,48 +829,81 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=require and CA flag set", async ({
+	it("should allow create hyperdrive with mtls config sslmode=require and CA flag set", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=1234 --sslmode=require"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'require' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=1234 --sslmode=require"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "1234",
+			    "sslmode": "require",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=verify-ca missing CA", async ({
+	it("should allow create hyperdrive with mtls config sslmode=verify-ca missing CA", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-ca"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'verify-ca' or 'verify-full' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-ca"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "verify-ca",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=verify-full missing CA", async ({
+	it("should allow create hyperdrive with mtls config sslmode=verify-full missing CA", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-full"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'verify-ca' or 'verify-full' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-full"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "verify-full",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
@@ -1019,63 +1052,106 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create MySQL hyperdrive with sslmode=REQUIRED and CA flag set", async ({
+	it("should allow create MySQL hyperdrive with sslmode=REQUIRED and CA flag set", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=1234 --sslmode=REQUIRED"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'REQUIRED' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=1234 --sslmode=REQUIRED"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "1234",
+			    "sslmode": "REQUIRED",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create MySQL hyperdrive with sslmode=VERIFY_CA missing CA", async ({
+	it("should allow create MySQL hyperdrive with sslmode=VERIFY_CA missing CA", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_CA"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_CA"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "VERIFY_CA",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create MySQL hyperdrive with sslmode=VERIFY_IDENTITY missing CA", async ({
+	it("should allow create MySQL hyperdrive with sslmode=VERIFY_IDENTITY missing CA", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_IDENTITY"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_IDENTITY"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "VERIFY_IDENTITY",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create MySQL hyperdrive with invalid sslmode", async ({
+	it("should allow create MySQL hyperdrive with PostgreSQL sslmode value", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --sslmode=verify-full"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid sslmode 'verify-full' for MySQL. Valid options are: REQUIRED, VERIFY_CA, VERIFY_IDENTITY[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --sslmode=verify-full"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "sslmode": "verify-full",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 

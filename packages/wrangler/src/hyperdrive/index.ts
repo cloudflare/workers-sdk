@@ -132,8 +132,7 @@ export const upsertOptions = (
 		sslmode: {
 			type: "string",
 			choices: [...PostgresSslmode, ...MySqlSslmode],
-			description:
-				"Sets sslmode for connecting to database. For PostgreSQL: 'require', 'verify-ca', 'verify-full'. For MySQL: 'REQUIRED', 'VERIFY_CA', 'VERIFY_IDENTITY'.",
+			description: `Sets sslmode for connecting to database. For PostgreSQL: '${PostgresSslmode.join(", ")}'. For MySQL: '${MySqlSslmode.join(", ")}'.`,
 		},
 		"origin-connection-limit": {
 			type: "number",
@@ -309,18 +308,10 @@ export function getCacheOptionsFromArgs(
 	}
 }
 
-function isPostgresScheme(scheme: string | undefined): boolean {
-	// We default to postgres when scheme is undefined for backwards compatibility.
-	return (
-		scheme === "postgres" || scheme === "postgresql" || scheme === undefined
-	);
-}
-
 export function getMtlsFromArgs(
 	args:
 		| typeof hyperdriveCreateCommand.args
-		| typeof hyperdriveUpdateCommand.args,
-	scheme: string | undefined
+		| typeof hyperdriveUpdateCommand.args
 ): Mtls | undefined {
 	const mtls = {
 		ca_certificate_id: args.caCertificateId,
@@ -331,52 +322,16 @@ export function getMtlsFromArgs(
 	if (JSON.stringify(mtls) === "{}") {
 		return undefined;
 	} else {
-		// Validate sslmode based on scheme
-		if (mtls.sslmode) {
-			if (isPostgresScheme(scheme)) {
-				if (!PostgresSslmode.includes(mtls.sslmode)) {
-					throw new UserError(
-						`Invalid sslmode '${mtls.sslmode}' for PostgreSQL. Valid options are: ${PostgresSslmode.join(", ")}`
-					);
-				}
-			} else {
-				// MySQL
-				if (!MySqlSslmode.includes(mtls.sslmode)) {
-					throw new UserError(
-						`Invalid sslmode '${mtls.sslmode}' for MySQL. Valid options are: ${MySqlSslmode.join(", ")}`
-					);
-				}
-			}
-		}
-
-		// CA certificate validation for PostgreSQL
-		if (isPostgresScheme(scheme)) {
-			if (mtls.sslmode === "require" && mtls.ca_certificate_id?.trim()) {
-				throw new UserError("CA not allowed when sslmode = 'require' is set");
-			}
-
-			if (
-				(mtls.sslmode === "verify-ca" || mtls.sslmode === "verify-full") &&
-				!mtls.ca_certificate_id?.trim()
-			) {
-				throw new UserError(
-					"CA required when sslmode = 'verify-ca' or 'verify-full' is set"
-				);
-			}
-		} else {
-			// CA certificate validation for MySQL
-			if (mtls.sslmode === "REQUIRED" && mtls.ca_certificate_id?.trim()) {
-				throw new UserError("CA not allowed when sslmode = 'REQUIRED' is set");
-			}
-
-			if (
-				(mtls.sslmode === "VERIFY_CA" || mtls.sslmode === "VERIFY_IDENTITY") &&
-				!mtls.ca_certificate_id?.trim()
-			) {
-				throw new UserError(
-					"CA required when sslmode = 'VERIFY_CA' or 'VERIFY_IDENTITY' is set"
-				);
-			}
+		if (
+			mtls.sslmode &&
+			!PostgresSslmode.includes(mtls.sslmode) &&
+			!MySqlSslmode.includes(mtls.sslmode)
+		) {
+			throw new UserError(
+				`Invalid sslmode '${mtls.sslmode}'. Valid options are:\n` +
+					`- PostgreSQL: ${PostgresSslmode.join(", ")}\n` +
+					`- MySQL: ${MySqlSslmode.join(", ")}`
+			);
 		}
 		return mtls;
 	}
