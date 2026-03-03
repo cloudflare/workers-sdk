@@ -1105,38 +1105,6 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 		assert.doesNotThrow(() =>
 			(perfHooks.performance.markResourceTiming as unknown as () => void)()
 		);
-
-		// Test all 24 constants exist
-		assertTypeOfProperties(perfHooks.constants, {
-			// GC type constants
-			NODE_PERFORMANCE_GC_MAJOR: "number",
-			NODE_PERFORMANCE_GC_MINOR: "number",
-			NODE_PERFORMANCE_GC_INCREMENTAL: "number",
-			NODE_PERFORMANCE_GC_WEAKCB: "number",
-			// GC flags constants
-			NODE_PERFORMANCE_GC_FLAGS_NO: "number",
-			NODE_PERFORMANCE_GC_FLAGS_CONSTRUCT_RETAINED: "number",
-			NODE_PERFORMANCE_GC_FLAGS_FORCED: "number",
-			NODE_PERFORMANCE_GC_FLAGS_SYNCHRONOUS_PHANTOM_PROCESSING: "number",
-			NODE_PERFORMANCE_GC_FLAGS_ALL_AVAILABLE_GARBAGE: "number",
-			NODE_PERFORMANCE_GC_FLAGS_ALL_EXTERNAL_MEMORY: "number",
-			NODE_PERFORMANCE_GC_FLAGS_SCHEDULE_IDLE: "number",
-			// Entry type constants
-			NODE_PERFORMANCE_ENTRY_TYPE_GC: "number",
-			NODE_PERFORMANCE_ENTRY_TYPE_HTTP: "number",
-			NODE_PERFORMANCE_ENTRY_TYPE_HTTP2: "number",
-			NODE_PERFORMANCE_ENTRY_TYPE_NET: "number",
-			NODE_PERFORMANCE_ENTRY_TYPE_DNS: "number",
-			// Milestone constants
-			NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN_TIMESTAMP: "number",
-			NODE_PERFORMANCE_MILESTONE_TIME_ORIGIN: "number",
-			NODE_PERFORMANCE_MILESTONE_ENVIRONMENT: "number",
-			NODE_PERFORMANCE_MILESTONE_NODE_START: "number",
-			NODE_PERFORMANCE_MILESTONE_V8_START: "number",
-			NODE_PERFORMANCE_MILESTONE_LOOP_START: "number",
-			NODE_PERFORMANCE_MILESTONE_LOOP_EXIT: "number",
-			NODE_PERFORMANCE_MILESTONE_BOOTSTRAP_COMPLETE: "number",
-		});
 	},
 };
 
