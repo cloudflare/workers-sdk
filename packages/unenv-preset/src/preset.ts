@@ -133,7 +133,7 @@ export function getCloudflarePreset({
 			// Inject globals provided by unenv for the current compat date and flags.
 			...injects,
 		},
-		polyfill: [...polyfills],
+		polyfill: polyfills,
 		external: nativeModules.flatMap((p) => [p, `node:${p}`]),
 	};
 }
