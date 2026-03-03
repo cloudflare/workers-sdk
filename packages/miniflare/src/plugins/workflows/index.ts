@@ -34,6 +34,7 @@ export const WorkflowsSharedOptionsSchema = z.object({
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
+const PRODUCTION_MAX_STEP_LIMIT = 25_000;
 
 export const WORKFLOWS_PLUGIN: Plugin<
 	typeof WorkflowsOptionsSchema,
@@ -88,7 +89,13 @@ export const WORKFLOWS_PLUGIN: Plugin<
 		];
 	},
 
-	async getServices({ options, sharedOptions, tmpPath, defaultPersistRoot }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		defaultPersistRoot,
+		log,
+	}) {
 		const persistPath = getPersistPath(
 			WORKFLOWS_PLUGIN_NAME,
 			tmpPath,
@@ -110,6 +117,17 @@ export const WORKFLOWS_PLUGIN: Plugin<
 				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 				// otherwise workerd will crash because there's two equal DO namespaces
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
+
+				if (
+					workflow.stepLimit !== undefined &&
+					workflow.stepLimit > PRODUCTION_MAX_STEP_LIMIT
+				) {
+					log.warn(
+						`Workflow "${bindingName}" has a step limit of ${workflow.stepLimit}, ` +
+							`which exceeds the production maximum of ${PRODUCTION_MAX_STEP_LIMIT}. ` +
+							`This configuration may not work when deployed.`
+					);
+				}
 
 				const workflowsBinding: Service = {
 					name: getUserBindingServiceName(
