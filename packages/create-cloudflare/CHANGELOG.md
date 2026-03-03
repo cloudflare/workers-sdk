@@ -1,5 +1,71 @@
 # create-cloudflare
 
+## 2.64.5
+
+### Patch Changes
+
+- [#12713](https://github.com/cloudflare/workers-sdk/pull/12713) [`f498237`](https://github.com/cloudflare/workers-sdk/commit/f498237074b00d97874cb145b4daf5e5556bbdae) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.1.4 | 21.2.0 |
+
+- [#12715](https://github.com/cloudflare/workers-sdk/pull/12715) [`8d0c835`](https://github.com/cloudflare/workers-sdk/commit/8d0c8350f49638413d1a2359c07fef9b4745619d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.21.1 | 3.22.0 |
+
+- [#12716](https://github.com/cloudflare/workers-sdk/pull/12716) [`1c2d93d`](https://github.com/cloudflare/workers-sdk/commit/1c2d93d28d0e9dac9d98442387686e37b7505b94) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.13.0 | 7.13.1 |
+
+- [#12717](https://github.com/cloudflare/workers-sdk/pull/12717) [`8e738f8`](https://github.com/cloudflare/workers-sdk/commit/8e738f82f4e16f29eb08854f9576ee3132933e00) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.2.3 | 2.3.1 |
+
+- [#12718](https://github.com/cloudflare/workers-sdk/pull/12718) [`62e20c1`](https://github.com/cloudflare/workers-sdk/commit/62e20c19abcb32c6affb8c840a325fbbc2391c71) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.12.2 | 0.12.4 |
+
+- [#12719](https://github.com/cloudflare/workers-sdk/pull/12719) [`554c5f3`](https://github.com/cloudflare/workers-sdk/commit/554c5f3e68170a86a4b77da875b2c33be4151822) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.581 | 0.0.591 |
+
+- [#12720](https://github.com/cloudflare/workers-sdk/pull/12720) [`a3ff7d4`](https://github.com/cloudflare/workers-sdk/commit/a3ff7d48b186a15915859f2069372e96a5cf8707) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.4-0 | 0.12.5-1.0.0-alpha.5-0 |
+
+- [#12728](https://github.com/cloudflare/workers-sdk/pull/12728) [`bbe09b6`](https://github.com/cloudflare/workers-sdk/commit/bbe09b619f9509fb9d392b6984dd066f93217b2f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update SolidStart template for compatibility with v2.
+
+  SolidStart v2 uses the `nitro` Vite plugin so we now update the Nitro config in `vite.config.ts` rather than `app.config.ts`.
+
+- [#12692](https://github.com/cloudflare/workers-sdk/pull/12692) [`f671934`](https://github.com/cloudflare/workers-sdk/commit/f671934de19985285453af15f396b228b4a0858b) Thanks [@roli-lpci](https://github.com/roli-lpci)! - Remove unused `chalk` dependency from create-cloudflare.
+
 ## 2.64.4
 
 ### Patch Changes
