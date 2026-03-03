@@ -90,7 +90,6 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			worker: remoteProxyClientWorker(
 				config.remoteProxyConnectionString,
 				name,
-				undefined,
 				SCRIPT_DISPATCH_NAMESPACE_PROXY
 			),
 		}));

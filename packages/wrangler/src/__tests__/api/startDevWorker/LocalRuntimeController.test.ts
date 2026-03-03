@@ -3,6 +3,7 @@ import fs, { readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -718,7 +719,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -782,7 +783,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1028,7 +1029,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1098,7 +1099,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),

@@ -12,6 +12,7 @@ import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
+import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
@@ -47,6 +48,7 @@ import {
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
+	IMAGES_PLUGIN_NAME,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
@@ -142,6 +144,7 @@ import type {
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
+	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
 	Queue,
@@ -1053,19 +1056,23 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
+			// This exit hook is synchronous — the event loop will never run again
+			// after it returns, so any operation that schedules a microtask (like
+			// fs.promises.rm) will never even be executed, let alone completed.
+			// We must use the sync variant here.
+			// `Runtime#dispose()` should kill the runtime immediately but it might not,
+			// so we only clean up on a best effort basis.
 			try {
-				fs.rmSync(this.#tmpPath, { force: true, recursive: true });
+				removeDirSync(this.#tmpPath);
 			} catch (e) {
-				// `rmSync` may fail on Windows with `EBUSY` if `workerd` is still
-				// running. `Runtime#dispose()` should kill the runtime immediately.
-				// `exitHook`s must be synchronous, so we can only clean up on a best
-				// effort basis.
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
-			// Unregister all workers from the dev registry
-			this.#devRegistry.dispose()?.catch((e) => {
-				this.#log.debug(`Error disposing Dev Registry: ${getErrorMessage(e)}`);
-			});
+			// Unregister all workers from the dev registry. Note that dispose()
+			// does synchronous cleanup (unregistering workers) then returns a
+			// Promise for async cleanup (closing watcher, terminating proxy).
+			// The .catch() will never run since the event loop won't tick again,
+			// but the synchronous portion still executes.
+			this.#devRegistry.dispose();
 		});
 
 		this.#disposeController = new AbortController();
@@ -2730,6 +2737,12 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
 	}
+	getImagesBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<ImagesBinding>> {
+		return this.#getProxy(IMAGES_PLUGIN_NAME, bindingName, workerName);
+	}
 	getHelloWorldBinding(
 		bindingName: string,
 		workerName?: string
@@ -2784,8 +2797,7 @@ export class Miniflare {
 			await this.#runtime?.dispose();
 
 			await this.#stopLoopbackServer();
-			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
-			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
+			await removeDir(this.#tmpPath);
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();

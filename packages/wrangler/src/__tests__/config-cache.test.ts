@@ -70,12 +70,12 @@ describe("config cache", () => {
 			expect,
 		}) => {
 			// Don't create node_modules - this forces .wrangler/cache
-			// Note: findUpSync may find a parent node_modules, but we're testing
-			// the case where there's no existing cache in any found node_modules
+			// Note: wrangler, when looking up the filesystem, may find a parent node_modules,
+			// but we're testing the case where there's no existing cache in any found node_modules
 			const cacheFolder = getCacheFolder();
 			// In a clean temp directory with no node_modules, should use .wrangler/cache
-			// However, findUpSync may find a parent node_modules, so we just verify
-			// that getCacheFolder returns a valid path
+			// However, wrangler, when looking up the filesystem, may find a parent node_modules,
+			// so we just verify that getCacheFolder returns a valid path
 			expect(cacheFolder).toBeTruthy();
 			expect(typeof cacheFolder).toBe("string");
 		});

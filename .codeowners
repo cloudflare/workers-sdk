@@ -1,0 +1,68 @@
+# ============================================================
+# Codeowners Plus - Code Ownership Rules
+# ============================================================
+# This file defines code ownership for the workers-sdk monorepo,
+# enforced by Codeowners Plus (https://github.com/multimediallc/codeowners-plus).
+#
+# See CODEOWNERS.md for full documentation on how ownership works.
+#
+# Syntax:
+#   (no prefix) = primary owner (highest-priority match wins)
+#   & prefix    = AND rule (additional required reviewer)
+#   ? prefix    = optional/CC reviewer (non-blocking)
+#   Multiple teams on one line = OR (either can satisfy)
+#
+# Rules are relative to this file's directory (repo root).
+# Unlike GitHub CODEOWNERS, `*.js` only matches in this directory;
+# use `**/*.js` for recursive matching.
+#
+# Paths not matching any specific rule fall through to the default
+# primary owner (currently @cloudflare/wrangler).
+# ============================================================
+
+# Default owner - ANT/Wrangler team owns everything
+* @cloudflare/wrangler
+
+# ----------------------------------------------------------
+# D&C ownership (AND: requires wrangler + deploy-config)
+# ----------------------------------------------------------
+& packages/workers-shared/** @cloudflare/deploy-config
+
+# ----------------------------------------------------------
+# D1 ownership (AND: requires wrangler + d1)
+# ----------------------------------------------------------
+& packages/wrangler/src/api/d1/** @cloudflare/d1
+& packages/wrangler/src/d1/** @cloudflare/d1
+& packages/wrangler/src/__tests__/d1/** @cloudflare/d1
+
+# ----------------------------------------------------------
+# Cloudchamber ownership (AND: requires wrangler + cloudchamber)
+# ----------------------------------------------------------
+& packages/wrangler/src/cloudchamber/** @cloudflare/cloudchamber
+& packages/wrangler/src/containers/** @cloudflare/cloudchamber
+& packages/containers-shared/** @cloudflare/cloudchamber
+
+# ----------------------------------------------------------
+# Workers KV ownership (AND: requires wrangler + workers-kv)
+# ----------------------------------------------------------
+& packages/wrangler/src/kv/** @cloudflare/workers-kv
+& packages/wrangler/src/__tests__/kv/** @cloudflare/workers-kv
+& packages/miniflare/src/workers/kv/** @cloudflare/workers-kv
+& packages/miniflare/test/plugins/kv/** @cloudflare/workers-kv
+
+# ----------------------------------------------------------
+# Workflows ownership (AND: requires wrangler + workflows)
+# ----------------------------------------------------------
+& packages/workflows-shared/** @cloudflare/workflows
+
+# ----------------------------------------------------------
+# Adding a new product team
+# ----------------------------------------------------------
+# Copy this template and fill in <feature> and <team>:
+#
+# # Product: <Name> (AND: requires wrangler + <team>)
+# & packages/wrangler/src/<feature>/** @cloudflare/<team>
+# & packages/wrangler/src/__tests__/<feature>/** @cloudflare/<team>
+# & packages/miniflare/src/plugins/<feature>/** @cloudflare/<team>
+# & packages/miniflare/src/workers/<feature>/** @cloudflare/<team>
+# & packages/miniflare/test/plugins/<feature>/** @cloudflare/<team>

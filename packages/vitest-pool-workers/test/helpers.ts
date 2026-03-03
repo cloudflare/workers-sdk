@@ -4,6 +4,7 @@ import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
+import { removeDir } from "@cloudflare/workers-utils";
 import { stripAnsi } from "miniflare";
 import treeKill from "tree-kill";
 import { test as baseTest, inject, vi } from "vitest";
@@ -96,7 +97,7 @@ export const test = baseTest.extend<{
 		const tmpPathBase = path.join(tmpPoolInstallationPath, "test-");
 		const tmpPath = await fs.mkdtemp(tmpPathBase);
 		await use(tmpPath);
-		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		await removeDir(tmpPath);
 	},
 	// Fixture for seeding data in the temporary directory
 	async seed({ tmpPath }, use) {

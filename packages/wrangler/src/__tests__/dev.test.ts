@@ -1614,7 +1614,7 @@ describe.sequential("wrangler dev", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Using vars defined in .dev.vars
+				Using secrets defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                               Resource                  Mode
 				env.CONFIG_VAR ("visible value")      Environment Variable      local
@@ -1683,7 +1683,7 @@ describe.sequential("wrangler dev", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Using vars defined in .dev.vars
+				Using secrets defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                                        Resource                  Mode
 				env.VAR_1 ("(hidden)")                         Environment Variable      local
@@ -1725,13 +1725,170 @@ describe.sequential("wrangler dev", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Using vars defined in .dev.vars.custom
+				Using secrets defined in .dev.vars.custom
 				Your Worker has access to the following bindings:
 				Binding                          Resource                  Mode
 				env.CUSTOM_VAR ("(hidden)")      Environment Variable      local
 
 				"
 			`);
+		});
+	});
+
+	describe("secrets config", () => {
+		const processEnv = process.env;
+		beforeEach(() => (process.env = { ...processEnv }));
+		afterEach(() => (process.env = processEnv));
+
+		// --- Resolution: sources in priority order ---
+
+		it("should load declared secrets from .dev.vars", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", `API_KEY=from-dev-dot-vars`);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["API_KEY"] },
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["API_KEY"]).toEqual({
+				type: "secret_text",
+				value: "from-dev-dot-vars",
+			});
+		});
+
+		it("should load declared secrets from .env when no .dev.vars exists", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".env", `API_KEY=from-dot-env`);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["API_KEY"] },
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["API_KEY"]).toEqual({
+				type: "secret_text",
+				value: "from-dot-env",
+			});
+		});
+
+		it("should load declared secrets from process.env when not in .dev.vars or .env", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			process.env.API_KEY = "from-process-env";
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["API_KEY"] },
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["API_KEY"]).toEqual({
+				type: "secret_text",
+				value: "from-process-env",
+			});
+		});
+
+		it("should prefer .dev.vars over .env for declared secrets", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", `API_KEY=from-dev-dot-vars`);
+			fs.writeFileSync(".env", `API_KEY=from-dot-env`);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["API_KEY"] },
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["API_KEY"]).toEqual({
+				type: "secret_text",
+				value: "from-dev-dot-vars",
+			});
+		});
+
+		// --- Validation ---
+
+		it("should warn when a required secret is missing", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["MISSING_KEY"] },
+			});
+			await runWranglerUntilConfig("dev");
+			expect(std.warn).toContain(
+				"Missing required secrets: MISSING_KEY. Add them to .dev.vars, .env, or set as environment variables."
+			);
+		});
+
+		// --- Filtering ---
+
+		it("should only include declared secrets from .dev.vars", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(
+				".dev.vars",
+				dedent`
+					DECLARED=from-dev-dot-vars
+					EXTRA=should-not-appear
+				`
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["DECLARED"] },
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["DECLARED"]).toEqual({
+				type: "secret_text",
+				value: "from-dev-dot-vars",
+			});
+			expect(bindings["EXTRA"]).toBeUndefined();
+		});
+
+		it("should not treat --var values as secrets", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: { required: ["MY_SECRET"] },
+			});
+			const config = await runWranglerUntilConfig(
+				"dev --var MY_SECRET:from-cli"
+			);
+			const bindings = config.bindings ?? {};
+			// --var creates a plain_text binding that overrides via inputBindings
+			expect(bindings["MY_SECRET"]).toMatchObject({
+				type: "plain_text",
+			});
+			// The warning still fires because --var doesn't count as a resolved secret
+			expect(std.warn).toContain("Missing required secrets: MY_SECRET");
+		});
+
+		// --- Edge cases and backward compat ---
+
+		it("should exclude .dev.vars keys when `secrets` is defined", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", `SOME_KEY=from-dev-dot-vars`);
+			writeWranglerConfig({
+				main: "index.js",
+				secrets: {},
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["SOME_KEY"]).toBeUndefined();
+			// No missing secrets warning since no required secrets declared
+			expect(std.warn).not.toContain("Missing required secrets");
+		});
+
+		it("should still read .dev.vars when secrets is not defined (backward compat)", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", `LEGACY_SECRET=from-dev-dot-vars`);
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			const config = await runWranglerUntilConfig("dev");
+			const bindings = config.bindings ?? {};
+			expect(bindings["LEGACY_SECRET"]).toEqual({
+				type: "secret_text",
+				value: "from-dev-dot-vars",
+			});
+			expect(std.out).toContain("Using secrets defined in .dev.vars");
 		});
 	});
 
@@ -1780,7 +1937,7 @@ describe.sequential("wrangler dev", () => {
 		function extractUsingVars(stdout: string) {
 			return stdout
 				.split("\n")
-				.filter((line) => line.startsWith("Using vars"))
+				.filter((line) => line.startsWith("Using secrets"))
 				.sort()
 				.join("\n");
 		}
@@ -1797,8 +1954,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev");
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
-				"Using vars defined in .env
-				Using vars defined in .env.local"
+				"Using secrets defined in .env
+				Using secrets defined in .env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ("(hidden)")          Environment Variable      local
@@ -1819,7 +1976,7 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev");
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
-				"Using vars defined in .dev.vars"
+				"Using secrets defined in .dev.vars"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_1 ("(hidden)")      Environment Variable      local
@@ -1840,10 +1997,10 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev --env custom");
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
-				"Using vars defined in .env
-				Using vars defined in .env.custom
-				Using vars defined in .env.custom.local
-				Using vars defined in .env.local"
+				"Using secrets defined in .env
+				Using secrets defined in .env.custom
+				Using secrets defined in .env.custom.local
+				Using secrets defined in .env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ("(hidden)")          Environment Variable      local
@@ -1857,8 +2014,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev --env noEnv");
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
-				"Using vars defined in .env
-				Using vars defined in .env.local"
+				"Using secrets defined in .env
+				Using secrets defined in .env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ("(hidden)")          Environment Variable      local
@@ -1874,11 +2031,11 @@ describe.sequential("wrangler dev", () => {
 			});
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
-				"Using vars defined in .env
-				Using vars defined in .env.custom
-				Using vars defined in .env.custom.local
-				Using vars defined in .env.local
-				Using vars defined in process.env"
+				"Using secrets defined in .env
+				Using secrets defined in .env.custom
+				Using secrets defined in .env.custom.local
+				Using secrets defined in .env.local
+				Using secrets defined in process.env"
 			`);
 			// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
 			// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
@@ -1908,7 +2065,7 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev --env-file=other/.env");
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(
-				`"Using vars defined in other/.env"`
+				`"Using secrets defined in other/.env"`
 			);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_2 ("(hidden)")      Environment Variable      local
@@ -1939,8 +2096,8 @@ describe.sequential("wrangler dev", () => {
 			);
 			const out = std.out;
 			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
-				"Using vars defined in other/.env
-				Using vars defined in other/.env.local"
+				"Using secrets defined in other/.env
+				Using secrets defined in other/.env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ("(hidden)")          Environment Variable      local
@@ -2216,7 +2373,7 @@ describe.sequential("wrangler dev", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				Using vars defined in .dev.vars
+				Using secrets defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                         Resource                  Mode
 				env.variable (123)              Environment Variable      local

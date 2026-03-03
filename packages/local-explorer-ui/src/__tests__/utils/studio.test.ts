@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
 	escapeSqlValue,
-	tokenizeSQL,
 	transformStudioArrayBasedResult,
 } from "../../utils/studio";
+import { tokenizeSQL } from "../../utils/studio/sql";
 
 describe("escapeSqlValue", () => {
 	test("undefined returns `DEFAULT`", () => {

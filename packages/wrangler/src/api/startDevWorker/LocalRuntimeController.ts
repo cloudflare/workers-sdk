@@ -270,10 +270,12 @@ export class LocalRuntimeController extends RuntimeController {
 					},
 					logger: logger,
 					isVite: false,
+					compatibilityFlags: data.config.compatibilityFlags,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
 				}
+
 				this.#currentContainerBuildId = data.config.dev.containerBuildId;
 				// Miniflare will have logged 'Ready on...' before the containers are built, but that is actually the proxy server :/
 				// The actual user worker's miniflare instance is blocked until the containers are built
