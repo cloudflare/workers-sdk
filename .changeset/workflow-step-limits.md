@@ -7,10 +7,10 @@
 
 Add configurable step limits for Workflows
 
-You can now set a maximum number of steps for a Workflow instance via the `limits.steps` configuration in `wrangler.toml` / `wrangler.json`. When a Workflow instance exceeds this limit, it will fail with an error indicating the limit was reached.
+You can now set a maximum number of steps for a Workflow instance via the `limits.steps` configuration in your Wrangler config. When a Workflow instance exceeds this limit, it will fail with an error indicating the limit was reached.
 
 ```jsonc
-// wrangler.json
+// wrangler.jsonc
 {
 	"workflows": [
 		{
