@@ -125,7 +125,7 @@ export function getCloudflarePreset({
 			),
 		},
 		inject: {
-			// Do not inject globals implemented natively by workerd, by setting the value to `false`.
+			// Do not inject globals implemented natively by workerd. Setting the value to `false` ensures that any base preset inject is not used.
 			Buffer: false,
 			global: false,
 			clearImmediate: false,
