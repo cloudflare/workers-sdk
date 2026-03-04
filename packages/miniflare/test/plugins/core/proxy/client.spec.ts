@@ -57,6 +57,28 @@ describe("ProxyClient", () => {
 		expect(event.data).toBe("echo:hello");
 	});
 
+	test("preserves original URL for service binding fetch", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			script: nullScript,
+			serviceBindings: {
+				CUSTOM(request: Request) {
+					return new Response(request.url);
+				},
+			},
+		});
+		useDispose(mf);
+
+		const { CUSTOM } = await mf.getBindings<{
+			CUSTOM: ReplaceWorkersTypes<Fetcher>;
+		}>();
+
+		const url = "https://placeholder/path?query=value";
+		const res = await CUSTOM.fetch(url);
+		expect(await res.text()).toBe(url);
+	});
+
 	test("supports serialising multiple ReadableStreams, Blobs and Files", async ({
 		expect,
 	}) => {
