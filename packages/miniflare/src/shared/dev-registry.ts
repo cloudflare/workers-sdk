@@ -207,6 +207,10 @@ export class DevRegistry {
 			return;
 		}
 		const previousRegistry = JSON.parse(this.previousJSON);
+		// Update previousJSON *before* checking external services so we don't
+		// re-process the same diff on every subsequent chokidar event when
+		// only non-external services changed.
+		this.previousJSON = json;
 		for (const [service] of this.externalServices) {
 			if (
 				JSON.stringify(registry[service]) !==
@@ -216,7 +220,6 @@ export class DevRegistry {
 				break;
 			}
 		}
-		this.previousJSON = json;
 	}
 }
 

@@ -1104,20 +1104,22 @@ export class Miniflare {
 		registry: WorkerRegistry,
 		retries = 3
 	): Promise<void> {
-		if (!this.#runtimeEntryURL) {
+		if (!this.#runtimeEntryURL || !this.#runtimeDispatcher) {
 			return;
 		}
 		const url = new URL("/cdn-cgi/dev-registry/update", this.#runtimeEntryURL);
 
 		try {
-			const response = await fetch(url, {
+			const response = await this.#runtimeDispatcher.request({
+				origin: this.#runtimeEntryURL,
+				path: url.pathname,
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(registry),
-				signal: AbortSignal.timeout(500),
+				signal: AbortSignal.timeout(2000),
 			});
-			if (!response.ok) {
-				this.#log.debug(`Registry push failed with ${response.status}`);
+			if (response.statusCode < 200 || response.statusCode >= 300) {
+				this.#log.debug(`Registry push failed with ${response.statusCode}`);
 				if (retries > 0) {
 					await new Promise((r) => setTimeout(r, 500));
 					return this.#pushRegistryUpdate(registry, retries - 1);

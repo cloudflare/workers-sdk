@@ -61,23 +61,35 @@ export function createProxyDurableObjectClass({
 		DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 	}> {
 		_cachedFetcher: Fetcher | undefined;
+		_cachedDebugPortAddress: string | undefined;
 
 		// Lazy resolution: the registry may not be populated when the DO
 		// instance is first constructed (e.g. getPlatformProxy creates stubs
 		// before the registry push arrives). Cache on first successful resolve
 		// so we only open one capnp connection per DO instance.
+		// Invalidates the cache if the remote debug port address has changed
+		// (e.g. the remote worker restarted and got a new port).
 		_resolve(): Fetcher | null {
-			if (this._cachedFetcher) {
+			const target = resolveTarget(scriptName);
+			if (
+				this._cachedFetcher &&
+				target?.debugPortAddress === this._cachedDebugPortAddress
+			) {
 				return this._cachedFetcher;
 			}
+			// Address changed or no cache — reconnect
+			this._cachedFetcher = undefined;
+			this._cachedDebugPortAddress = undefined;
+
 			const fetcher = connectToActor(
 				this.env.DEV_REGISTRY_DEBUG_PORT,
 				scriptName,
 				className,
 				this.ctx.id.toString()
 			);
-			if (fetcher) {
+			if (fetcher && target) {
 				this._cachedFetcher = fetcher;
+				this._cachedDebugPortAddress = target.debugPortAddress;
 			}
 			return fetcher;
 		}

@@ -789,6 +789,184 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
+	test("DO RPC survives remote worker restart", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
+			},
+			modules: true,
+			script: `
+				import { DurableObject } from "cloudflare:workers";
+				export class MyDurableObject extends DurableObject {
+					ping() { return "v1"; }
+				}
+				export default { fetch() { return new Response("ok"); } }
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			// Use idFromName so the same DO instance is reused across requests —
+			// this ensures the cached _cachedFetcher is exercised on the second call.
+			script: `
+				export default {
+					async fetch(request, env) {
+						try {
+							const id = env.DO.idFromName("stable");
+							const stub = env.DO.get(id);
+							const result = await stub.ping();
+							return new Response("Response: " + result);
+						} catch (ex) {
+							return new Response(ex.message, { status: 500 });
+						}
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		// First request — caches the fetcher in the DO proxy instance
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v1");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Restart remote — gets a new debug port, registry file updates
+		await remote.setOptions({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
+			},
+			modules: true,
+			script: `
+				import { DurableObject } from "cloudflare:workers";
+				export class MyDurableObject extends DurableObject {
+					ping() { return "v2"; }
+				}
+				export default { fetch() { return new Response("ok"); } }
+			`,
+		});
+
+		// Second request — same DO instance (idFromName("stable")),
+		// but remote debug port has changed. The cached _cachedFetcher
+		// points to the old dead connection.
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v2");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("service binding RPC survives remote worker restart", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export default class extends WorkerEntrypoint {
+					ping() { return "v1"; }
+				}
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			serviceBindings: {
+				SERVICE: "remote-worker",
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				export default {
+					async fetch(request, env) {
+						try {
+							const result = await env.SERVICE.ping();
+							return new Response("Response: " + result);
+						} catch (e) {
+							return new Response(e.message, { status: 500 });
+						}
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		// First request — ExternalServiceProxy resolves from registry
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v1");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Restart remote — gets a new debug port, registry file updates
+		await remote.setOptions({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export default class extends WorkerEntrypoint {
+					ping() { return "v2"; }
+				}
+			`,
+		});
+
+		// Second request — ExternalServiceProxy is re-instantiated per request,
+		// so it reads the updated registry Map and connects to the new debug port.
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v2");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
 	test("scheduled to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
