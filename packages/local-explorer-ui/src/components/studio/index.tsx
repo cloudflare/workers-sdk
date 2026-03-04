@@ -273,11 +273,44 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 	 */
 	const closeTableTabs = useCallback(
 		(schemaName: string, tableName: string): void => {
-			// Close both the table viewer and edit-table tabs for this table
-			closeStudioTab(`table/${schemaName}.${tableName}`);
-			closeStudioTab(`edit-table/${schemaName}.${tableName}`);
+			const identifiersToClose = [
+				`table/${schemaName}.${tableName}`,
+				`edit-table/${schemaName}.${tableName}`,
+			] satisfies string[];
+
+			setTabs((previousTabs) => {
+				const tabsToClose = previousTabs.filter((tab) =>
+					identifiersToClose.includes(tab.identifier)
+				);
+				if (tabsToClose.length === 0) {
+					return previousTabs;
+				}
+
+				const filteredTabs = previousTabs.filter(
+					(tab) => !identifiersToClose.includes(tab.identifier)
+				);
+				const selectedTabIsClosing = tabsToClose.some(
+					(tab) => tab.key === selectedTabKeyRef.current
+				);
+				if (selectedTabIsClosing && filteredTabs.length > 0) {
+					const firstClosedIndex = previousTabs.findIndex((tab) =>
+						identifiersToClose.includes(tab.identifier)
+					);
+					const newSelectedIndex = Math.min(
+						filteredTabs.length - 1,
+						firstClosedIndex
+					);
+
+					const newSelectedTab = filteredTabs[newSelectedIndex];
+					if (newSelectedTab) {
+						setSelectedTabKey(newSelectedTab.key);
+					}
+				}
+
+				return filteredTabs;
+			});
 		},
-		[closeStudioTab]
+		[]
 	);
 
 	useImperativeHandle(
