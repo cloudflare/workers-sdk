@@ -15,6 +15,7 @@ export default defineWorkersConfig({
 				},
 			},
 		},
+		retry: 3,
 	},
 	resolve: {
 		// promjs has broken package.json (main points to lib/index.js but files are at root)
