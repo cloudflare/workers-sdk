@@ -74,11 +74,9 @@ export function StudioExportModal({
 		>
 			<Dialog className="p-6" size="lg">
 				<div className="flex items-start justify-between gap-4 mb-4">
-					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">Export</Dialog.Title>
 				</div>
 
-				{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 				<Dialog.Description className="text-kumo-subtle text-sm">
 					Choose how you want to export your query result:
 				</Dialog.Description>
