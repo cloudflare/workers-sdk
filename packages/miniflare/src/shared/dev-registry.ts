@@ -138,7 +138,6 @@ export class DevRegistry {
 		return getWorkerRegistry(this.registryPath);
 	}
 
-	/** Returns the filesystem path for the dev registry directory, or undefined if disabled. */
 	public getRegistryPath(): string | undefined {
 		return this.registryPath;
 	}
