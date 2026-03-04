@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
+import { MySqlSslmode, PostgresSslmode } from "./client";
 import type {
 	CachingOptions,
 	Mtls,
@@ -19,6 +20,14 @@ export const hyperdriveNamespace = createNamespace({
 		category: "Storage & databases",
 	},
 });
+
+function normalizeMysqlSslmode(sslmode: string): string {
+	const mysqlSslmode = MySqlSslmode.find(
+		(mode) => mode.toLowerCase() === sslmode.toLowerCase()
+	);
+
+	return mysqlSslmode ?? sslmode;
+}
 
 export const upsertOptions = (
 	defaultOriginScheme: string | undefined = undefined
@@ -130,8 +139,9 @@ export const upsertOptions = (
 		},
 		sslmode: {
 			type: "string",
-			choices: ["require", "verify-ca", "verify-full"],
-			description: "Sets CA sslmode for connecting to database.",
+			coerce: normalizeMysqlSslmode,
+			choices: [...PostgresSslmode, ...MySqlSslmode],
+			description: `Sets sslmode for connecting to database. For PostgreSQL: '${PostgresSslmode.join(", ")}'. For MySQL: '${MySqlSslmode.join(", ")}'.`,
 		},
 		"origin-connection-limit": {
 			type: "number",
@@ -157,10 +167,10 @@ export function getOriginFromArgs<
 
 		if (
 			url.port === "" &&
-			(url.protocol == "postgresql:" || url.protocol == "postgres:")
+			(url.protocol == "postgresql:" || url.protocol === "postgres:")
 		) {
 			url.port = "5432";
-		} else if (url.port === "" && url.protocol == "mysql:") {
+		} else if (url.port === "" && url.protocol === "mysql:") {
 			url.port = "3306";
 		}
 
@@ -243,7 +253,7 @@ export function getOriginFromArgs<
 			);
 		}
 
-		if (!args.originHost || args.originHost == "") {
+		if (!args.originHost || args.originHost === "") {
 			throw new UserError(
 				"You must provide an origin hostname for the database"
 			);
@@ -315,22 +325,21 @@ export function getMtlsFromArgs(
 	const mtls = {
 		ca_certificate_id: args.caCertificateId,
 		mtls_certificate_id: args.mtlsCertificateId,
-		sslmode: args.sslmode,
+		sslmode: args.sslmode ? normalizeMysqlSslmode(args.sslmode) : undefined,
 	};
 
 	if (JSON.stringify(mtls) === "{}") {
 		return undefined;
 	} else {
-		if (mtls.sslmode == "require" && mtls.ca_certificate_id?.trim()) {
-			throw new UserError("CA not allowed when sslmode = 'require' is set");
-		}
-
 		if (
-			(mtls.sslmode == "verify-ca" || mtls.sslmode == "verify-full") &&
-			!mtls.ca_certificate_id?.trim()
+			mtls.sslmode &&
+			!PostgresSslmode.includes(mtls.sslmode) &&
+			!MySqlSslmode.includes(mtls.sslmode)
 		) {
 			throw new UserError(
-				"CA required when sslmode = 'verify-ca' or 'verify-full' is set"
+				`Invalid sslmode '${mtls.sslmode}'. Valid options are:\n` +
+					`- PostgreSQL: ${PostgresSslmode.join(", ")}\n` +
+					`- MySQL: ${MySqlSslmode.join(", ")}`
 			);
 		}
 		return mtls;
