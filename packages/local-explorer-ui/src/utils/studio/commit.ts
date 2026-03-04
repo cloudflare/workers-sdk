@@ -1,7 +1,9 @@
+import { formatSqlError } from "./formatter";
 import type {
 	StudioTableState,
 	StudioTableStateRow,
 } from "../../components/studio/Table/State";
+import type { StudioResultHeaderMetadata } from "../../components/studio/Table/State/Helpers";
 import type {
 	IStudioDriver,
 	StudioTableRowMutationRequest,
@@ -13,20 +15,19 @@ interface StudioExecutePlan {
 	plan: StudioTableRowMutationRequest;
 }
 
-// TODO: Re-add in a later PR from `components/studio/Table/StateHelpers`
-type StudioResultHeaderMetadata = object;
+interface commitStudioTableChangesOptions {
+	data: StudioTableState<StudioResultHeaderMetadata>;
+	driver: IStudioDriver;
+	tableName: string;
+	tableSchema: StudioTableSchema;
+}
 
 export async function commitStudioTableChanges({
 	data,
 	driver,
 	tableName,
 	tableSchema,
-}: {
-	data: StudioTableState<StudioResultHeaderMetadata>;
-	driver: IStudioDriver;
-	tableName: string;
-	tableSchema: StudioTableSchema;
-}): Promise<{
+}: commitStudioTableChangesOptions): Promise<{
 	errorMessage?: string;
 }> {
 	const plans = buildStudioMutationPlans({
@@ -50,20 +51,22 @@ export async function commitStudioTableChanges({
 		);
 	} catch (e) {
 		return {
-			errorMessage: e instanceof Error ? e.message : String(e),
+			errorMessage: formatSqlError(e),
 		};
 	}
 
 	return {};
 }
 
+interface buildStudioMutationPlansOptions {
+	data: StudioTableState<StudioResultHeaderMetadata>;
+	tableSchema: StudioTableSchema;
+}
+
 export function buildStudioMutationPlans({
 	data,
 	tableSchema,
-}: {
-	data: StudioTableState<StudioResultHeaderMetadata>;
-	tableSchema: StudioTableSchema;
-}): StudioExecutePlan[] {
+}: buildStudioMutationPlansOptions): StudioExecutePlan[] {
 	const rowChangeList = data.getChangedRows();
 
 	const plans = new Array<StudioExecutePlan>();

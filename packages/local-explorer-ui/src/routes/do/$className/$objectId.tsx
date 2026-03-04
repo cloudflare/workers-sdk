@@ -4,7 +4,7 @@ import {
 	ArrowsCounterClockwiseIcon,
 	CaretUpDownIcon,
 	CheckIcon,
-	DatabaseIcon,
+	CubeIcon,
 	TableIcon,
 } from "@phosphor-icons/react";
 import {
@@ -14,16 +14,31 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Breadcrumbs } from "../../components/Breadcrumbs";
-import { Studio } from "../../components/studio";
-import { LocalD1Driver } from "../../drivers/d1";
-import type { StudioRef } from "../../components/studio";
-import type { StudioResource } from "../../types/studio";
+import { durableObjectsNamespaceListNamespaces } from "../../../api";
+import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { Studio } from "../../../components/studio";
+import { LocalDODriver } from "../../../drivers/do";
+import type { StudioRef } from "../../../components/studio";
+import type { StudioResource } from "../../../types/studio";
 
-export const Route = createFileRoute("/d1/$databaseId")({
-	component: DatabaseView,
-	loader: async (ctx) => {
-		const driver = new LocalD1Driver(ctx.params.databaseId);
+export const Route = createFileRoute("/do/$className/$objectId")({
+	component: ObjectView,
+	loader: async ({ params }) => {
+		// Resolve className to a namespace ID
+		const response = await durableObjectsNamespaceListNamespaces();
+		const namespaces = response.data?.result ?? [];
+		const namespace = namespaces.find(
+			(ns) =>
+				ns.class === params.className ||
+				ns.name === params.className ||
+				ns.id === params.className
+		);
+		if (!namespace?.id) {
+			throw new Error(`Durable Object class "${params.className}" not found`);
+		}
+
+		// Fetch tables using the resolved namespace ID
+		const driver = new LocalDODriver(namespace.id, params.objectId);
 		const schemas = await driver.schemas();
 		const mainSchema = schemas["main"] ?? [];
 		const tables = mainSchema
@@ -32,6 +47,7 @@ export const Route = createFileRoute("/d1/$databaseId")({
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 		return {
+			namespaceId: namespace.id,
 			tables,
 		};
 	},
@@ -40,8 +56,9 @@ export const Route = createFileRoute("/d1/$databaseId")({
 	}),
 });
 
-function DatabaseView(): JSX.Element {
+function ObjectView(): JSX.Element {
 	const params = Route.useParams();
+	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -51,17 +68,20 @@ function DatabaseView(): JSX.Element {
 
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-	const driver = useMemo<LocalD1Driver>(
-		() => new LocalD1Driver(params.databaseId),
-		[params.databaseId]
+	const { namespaceId } = loaderData;
+
+	const driver = useMemo<LocalDODriver>(
+		() => new LocalDODriver(namespaceId, params.objectId),
+		[namespaceId, params.objectId]
 	);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
-			databaseId: params.databaseId,
-			type: "d1",
+			namespaceId,
+			objectId: params.objectId,
+			type: "do",
 		}),
-		[params.databaseId]
+		[namespaceId, params.objectId]
 	);
 
 	const handleTableChange = useCallback(
@@ -99,26 +119,38 @@ function DatabaseView(): JSX.Element {
 		}
 	}, [router]);
 
+	// Truncate the object ID for display
+	const shortObjectId =
+		params.objectId.length > 16
+			? `${params.objectId.slice(0, 8)}...${params.objectId.slice(-8)}`
+			: params.objectId;
+
 	return (
 		<div className="flex flex-col h-full">
 			<Breadcrumbs
-				icon={DatabaseIcon}
-				title="D1"
+				icon={CubeIcon}
 				items={[
 					<Link
 						className="flex items-center gap-1.5"
-						key="database-id"
-						params={{ databaseId: params.databaseId }}
-						search={{ table: undefined }}
-						to="/d1/$databaseId"
+						key="class-name"
+						params={{ className: params.className }}
+						to="/do/$className"
 					>
-						{params.databaseId}
+						{params.className}
 					</Link>,
+					<span
+						className="flex items-center gap-1.5 font-mono text-xs"
+						key="object-id"
+						title={params.objectId}
+					>
+						{shortObjectId}
+					</span>,
 					<TableSelect key="table-selector" />,
 				]}
+				title="Durable Objects"
 			>
 				<Button
-					aria-label="Refresh tables disabled:cursor-progress"
+					aria-label="Refresh tables"
 					disabled={isRefreshing}
 					onClick={handleTableRefresh}
 					shape="square"
@@ -135,7 +167,7 @@ function DatabaseView(): JSX.Element {
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
-					key={params.databaseId}
+					key={`${namespaceId}-${params.objectId}`}
 					onTableChange={handleTableChange}
 					ref={studioRef}
 					resource={resource}
@@ -157,7 +189,9 @@ function TableSelect(): JSX.Element {
 			}
 
 			void navigate({
-				search: { table: tableName },
+				search: {
+					table: tableName,
+				},
 				to: ".",
 			});
 		},
