@@ -5,6 +5,7 @@ import {
 	CaretUpDownIcon,
 	CheckIcon,
 	DatabaseIcon,
+	PlusIcon,
 	TableIcon,
 } from "@phosphor-icons/react";
 import {
@@ -117,17 +118,31 @@ function DatabaseView(): JSX.Element {
 					<TableSelect key="table-selector" />,
 				]}
 			>
+				<div className="flex-1" />
+
+				{/* TODO: Add tooltip */}
 				<Button
-					aria-label="Refresh tables disabled:cursor-progress"
+					aria-label="Refresh tables"
+					className="disabled:cursor-progress"
 					disabled={isRefreshing}
 					onClick={handleTableRefresh}
-					shape="square"
-					variant="ghost"
 				>
 					<ArrowsCounterClockwiseIcon
 						className={isRefreshing ? "animate-spin" : undefined}
 						size={14}
 					/>
+				</Button>
+
+				{/* TODO: Add tooltip */}
+				<Button
+					aria-label="Create a table"
+					disabled={true}
+					icon={PlusIcon}
+					onClick={(): void => {
+						// TODO: Actually open and select the "create-table" tab
+					}}
+				>
+					Create
 				</Button>
 			</Breadcrumbs>
 
