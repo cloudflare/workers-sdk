@@ -46,7 +46,11 @@ Cloudflare will receive the IP address associated with your machine and such inf
 
 ## What happens with sensitive data?
 
-Cloudflare takes your privacy seriously and does not collect any sensitive information including: usernames, raw error logs, stack traces, file names/paths, content of files, and environment variables. Data is never shared with third parties.
+Cloudflare takes your privacy seriously and does not collect any sensitive information about your local use of Wrangler including: usernames, raw error logs, stack traces, file names/paths, content of files, and environment variables. Data is never shared with third parties.
+
+## Capturing application dependencies
+
+On your Worker's deployment, unless you are opted out of telemetry, Cloudflare will capture information about your Worker including your account identifier, your Worker's name, its dependencies array and current dependency version numbers. This information is held securely and used for aggregate dependency analysis only. Individual accounts will only be identified for future security-related products to inform you of high level vulnerabilities in your Worker's packages.
 
 ## How can I view analytics data?
 
