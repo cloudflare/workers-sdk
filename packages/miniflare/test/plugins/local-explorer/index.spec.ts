@@ -26,27 +26,12 @@ describe("Local Explorer API validation", () => {
 	});
 
 	describe("query parameter validation", () => {
-		test("uses default values when optional params not provided", async ({
-			expect,
-		}) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces`
-			);
-
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				success: true,
-				result_info: {
-					page: 1,
-					per_page: 20,
-				},
-			});
-		});
 		test("returns 400 for invalid type in query parameter", async ({
 			expect,
 		}) => {
+			// Test query validation on listKVKeys endpoint which still has query params
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?page=not-a-number`
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?limit=not-a-number`
 			);
 
 			expect(response.status).toBe(400);
@@ -56,7 +41,7 @@ describe("Local Explorer API validation", () => {
 					{
 						code: 10001,
 						message:
-							'page: Expected query param to be number but received "not-a-number"',
+							'limit: Expected query param to be number but received "not-a-number"',
 					},
 				],
 			});
@@ -65,8 +50,9 @@ describe("Local Explorer API validation", () => {
 		test("returns 400 for invalid value (number out of range)", async ({
 			expect,
 		}) => {
+			// Test with limit which has a minimum of 10
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?page=-1`
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?limit=0`
 			);
 
 			expect(response.status).toBe(400);
@@ -75,15 +61,15 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "page: Number must be greater than or equal to 1",
+						message: "limit: Number must be greater than or equal to 10",
 					},
 				],
 			});
 		});
 
-		test("returns 400 for per_page exceeding maximum", async ({ expect }) => {
+		test("returns 400 for limit exceeding maximum", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=1001`
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?limit=1001`
 			);
 
 			expect(response.status).toBe(400);
@@ -92,7 +78,7 @@ describe("Local Explorer API validation", () => {
 				errors: [
 					{
 						code: 10001,
-						message: "per_page: Number must be less than or equal to 1000",
+						message: "limit: Number must be less than or equal to 1000",
 					},
 				],
 			});
@@ -150,7 +136,7 @@ describe("Local Explorer API validation", () => {
 			expect,
 		}) => {
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?page=invalid`
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?limit=invalid`
 			);
 
 			expect(response.status).toBe(400);
@@ -160,7 +146,7 @@ describe("Local Explorer API validation", () => {
 					{
 						code: 10001,
 						message:
-							'page: Expected query param to be number but received "invalid"',
+							'limit: Expected query param to be number but received "invalid"',
 					},
 				],
 				messages: [],
