@@ -3,6 +3,11 @@ import { CopyIcon, TableIcon, TextTIcon } from "@phosphor-icons/react";
 import { useCallback } from "react";
 import type { IStudioDriver } from "../../../types/studio";
 
+export interface TableTarget {
+	schemaName: string;
+	tableName: string;
+}
+
 interface TableActionsDropdownProps {
 	/**
 	 * The currently selected table. When null/undefined, the dropdown trigger is disabled.
