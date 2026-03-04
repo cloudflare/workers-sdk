@@ -53,9 +53,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 	});
 
 	describe("GET /d1/database", () => {
-		test("lists available D1 databases with default pagination", async ({
-			expect,
-		}) => {
+		test("lists all available D1 databases", async ({ expect }) => {
 			const response = await mf.dispatchFetch(`${BASE_URL}/d1/database`);
 
 			expect(response.headers.get("Content-Type")).toBe("application/json");
@@ -77,78 +75,6 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			);
 			expect(data.result_info).toMatchObject({
 				count: 2,
-				page: 1,
-				per_page: 1000,
-				total_count: 2,
-			});
-		});
-
-		test("pagination works", async ({ expect }) => {
-			// D1 has per_page minimum of 10, so use 10 as smallest page size
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/d1/database?per_page=10&page=1`
-			);
-
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-
-			const data = await expectValidResponse(
-				response,
-				zCloudflareD1ListDatabasesResponse
-			);
-
-			expect(data).toMatchObject({
-				result_info: {
-					count: 2,
-					page: 1,
-					per_page: 10,
-					total_count: 2,
-				},
-				success: true,
-			});
-		});
-
-		test("name filter works", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/d1/database?name=TEST`
-			);
-
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-
-			const data = await expectValidResponse(
-				response,
-				zCloudflareD1ListDatabasesResponse
-			);
-
-			expect(data).toMatchObject({
-				result: [expect.objectContaining({ uuid: "test-db-id" })],
-				result_info: {
-					count: 1,
-					total_count: 2,
-				},
-				success: true,
-			});
-		});
-
-		test("returns empty result for page beyond total", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/d1/database?page=100`
-			);
-
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-
-			const data = await expectValidResponse(
-				response,
-				zCloudflareD1ListDatabasesResponse
-			);
-
-			expect(data).toMatchObject({
-				result: [],
-				result_info: {
-					count: 0,
-					page: 100,
-					total_count: 2,
-				},
-				success: true,
 			});
 		});
 
@@ -346,30 +272,6 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 	});
 
 	describe("validation", () => {
-		test("returns 400 for invalid query parameters", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/d1/database?page=invalid`
-			);
-
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-
-			const data = await expectValidResponse(
-				response,
-				zD1ApiResponseCommonFailure,
-				400
-			);
-
-			expect(data).toMatchObject({
-				errors: [
-					expect.objectContaining({
-						code: 10001,
-						message: expect.stringContaining("page"),
-					}),
-				],
-				success: false,
-			});
-		});
-
 		test("returns 400 for invalid batch item", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
