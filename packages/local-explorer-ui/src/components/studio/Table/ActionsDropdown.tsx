@@ -1,7 +1,7 @@
 import { Button, DropdownMenu } from "@cloudflare/kumo";
 import { CopyIcon, TableIcon, TextTIcon } from "@phosphor-icons/react";
 import { useCallback } from "react";
-import type { IStudioDriver } from "../types/studio";
+import type { IStudioDriver } from "../../../types/studio";
 
 interface TableActionsDropdownProps {
 	/**
@@ -22,7 +22,7 @@ interface TableActionsDropdownProps {
 	schemaName?: string;
 }
 
-export function TableActionsDropdown({
+export function StudioTableActionsDropdown({
 	currentTable,
 	driver,
 	schemaName = "main",

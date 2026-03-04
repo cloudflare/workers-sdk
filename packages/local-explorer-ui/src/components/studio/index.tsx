@@ -20,8 +20,8 @@ import type {
 	StudioResource,
 	StudioSchemas,
 } from "../../types/studio";
-import type { TableTarget } from "../TableActionsDropdown";
 import type { StudioContextValue } from "./Context";
+import type { TableTarget } from "./Table/ActionsDropdown";
 import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
 

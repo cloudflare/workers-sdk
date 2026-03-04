@@ -21,7 +21,7 @@ import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
-import { TableActionsDropdown } from "../../../components/TableActionsDropdown";
+import { StudioTableActionsDropdown } from "../../../components/studio/Table/ActionsDropdown";
 import { LocalDODriver } from "../../../drivers/do";
 import type { StudioRef } from "../../../components/studio";
 import type { StudioResource } from "../../../types/studio";
@@ -217,7 +217,10 @@ function ObjectView(): JSX.Element {
 					/>
 				</Button>
 
-				<TableActionsDropdown currentTable={currentTable} driver={driver} />
+				<StudioTableActionsDropdown
+					currentTable={currentTable}
+					driver={driver}
+				/>
 
 				<Button
 					aria-label="Edit table schema"
@@ -355,7 +358,7 @@ function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
 									);
 								})
 							) : (
-								<span className="flex items-center gap-2 w-full py-1.5 px-2 text-sm text-text-secondary">
+								<span className="flex justify-center items-center gap-2 w-full py-1.5 px-2 text-sm text-text-secondary">
 									No tables
 								</span>
 							)}

@@ -488,8 +488,3 @@ export function StudioColumnEditorModal({
 		</Dialog.Root>
 	);
 }
-
-/**
- * @deprecated Use StudioColumnEditorModal instead
- */
-export const StudioColumnEditiorDrawer = StudioColumnEditorModal;
