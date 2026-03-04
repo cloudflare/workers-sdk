@@ -7,15 +7,12 @@ on:
     types: [created]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   bonk:
-    # Skip bot comments and only run on internal PRs/issues
-    if: >-
-      github.event.sender.type != 'Bot' &&
-      (github.event.issue.pull_request.url == null || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event.sender.type != 'Bot' && (contains(github.event.comment.body, '/bonk') || contains(github.event.comment.body, '@ask-bonk'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -36,5 +33,6 @@ jobs:
           CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
         with:
-          model: "cloudflare-ai-gateway/anthropic/claude-opus-4-5"
-          mentions: "/bonk,@ask-bonk"
+          model: "cloudflare-ai-gateway/anthropic/claude-opus-4-6"
+          mentions: "/bonk,ask-bonk"
+          permissions: write
