@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { runWorkflow } from "./utils";
 
 describe("Context", () => {
-	it("should provide attempt count 1 on first successful attempt", async () => {
+	it("should provide attempt count 1 on first successful attempt", async ({
+		expect,
+	}) => {
 		let receivedAttempt: number | undefined;
 
 		await runWorkflow("MOCK-INSTANCE-ID", async (_event, step) => {
@@ -18,7 +20,7 @@ describe("Context", () => {
 		expect(receivedAttempt).toBe(1);
 	});
 
-	it("should provide attempt count to callback", async () => {
+	it("should provide attempt count to callback", async ({ expect }) => {
 		const receivedAttempts: number[] = [];
 
 		await runWorkflow("MOCK-INSTANCE-ID", async (_event, step) => {

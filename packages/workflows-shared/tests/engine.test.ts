@@ -2,7 +2,7 @@ import { env, runInDurableObject } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, it, vi } from "vitest";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
-import { runWorkflow, runWorkflowDefer } from "./utils";
+import { runWorkflow, runWorkflowDefer, setWorkflowEntrypoint } from "./utils";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,

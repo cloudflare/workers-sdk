@@ -135,7 +135,11 @@ export class Context extends RpcTarget {
 		const stepNameWithCounter = `${name}-${count}`;
 		const stepStateKey = `${cacheKey}-metadata`;
 
-		const maybeMap = await this.#state.storage.get([valueKey, configKey]);
+		const maybeMap = await this.#state.storage.get([
+			valueKey,
+			configKey,
+			errorKey,
+		]);
 
 		// Check cache
 		const maybeResult = maybeMap.get(valueKey);
