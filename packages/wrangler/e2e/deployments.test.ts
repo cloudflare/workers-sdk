@@ -266,8 +266,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 	describe("Workers", () => {
 		afterEach(async () => {
-			// clean up user Worker after each test
-			await helper.run(`wrangler delete`);
+			// clean up user Worker after each test (best-effort, don't fail if slow)
+			// afterEach timing out (10s) will cause the test to fail
+			// these are cleaned up anyway in e2eCleanup.ts
+			await Promise.race([
+				helper.run(`wrangler delete`),
+				new Promise((resolve) => setTimeout(resolve, 9_000)),
+			]);
 		});
 
 		it("deploys a Workers + Assets project with assets only", async () => {
@@ -582,11 +587,18 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 		});
 
 		afterEach(async () => {
-			// clean up dispatch Worker
-			await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
-			await helper.run(
-				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
-			);
+			// clean up dispatch Worker (best-effort, don't fail if slow)
+			// afterEach timing out (10s) will cause the test to fail
+			// these are cleaned up anyway in e2eCleanup.ts
+			await Promise.race([
+				(async () => {
+					await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
+					await helper.run(
+						`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
+					);
+				})(),
+				new Promise((resolve) => setTimeout(resolve, 9_000)),
+			]);
 		});
 
 		it("deploys a Workers + Assets project with assets only", async () => {
