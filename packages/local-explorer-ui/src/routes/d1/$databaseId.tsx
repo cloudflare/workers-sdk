@@ -144,7 +144,6 @@ function DatabaseView(): JSX.Element {
 					studioRef={studioRef}
 				/>
 
-				{/* TODO: Add tooltip */}
 				<Button
 					aria-label="Refresh tables"
 					className="disabled:cursor-progress"
@@ -157,7 +156,6 @@ function DatabaseView(): JSX.Element {
 					/>
 				</Button>
 
-				{/* TODO: Add tooltip */}
 				<Button
 					aria-label="Create a table"
 					icon={PlusIcon}
