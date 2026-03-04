@@ -54,6 +54,10 @@
 		},
 		"//#check:format": {
 			"cache": true
+		},
+		"check:format:changesets": {
+			"inputs": [".changeset/*.md"],
+			"cache": true
 		}
 	}
 }
