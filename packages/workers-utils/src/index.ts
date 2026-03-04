@@ -92,3 +92,6 @@ export type { CompatDate } from "./compatibility-date";
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { MetricsRegistry } from "./metrics";
+export type { Counter } from "./metrics";

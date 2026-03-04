@@ -18,10 +18,10 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
 		"itty-router": "^4.0.13",
-		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"

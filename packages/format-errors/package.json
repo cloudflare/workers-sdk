@@ -11,8 +11,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"mustache": "^4.2.0",
-		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",
 		"tsconfig": "*",
 		"vitest": "catalog:default",
