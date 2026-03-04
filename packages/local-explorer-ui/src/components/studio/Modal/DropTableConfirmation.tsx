@@ -1,6 +1,7 @@
 import { Button, Dialog, Text } from "@cloudflare/kumo";
 import { useState } from "react";
 import type { IStudioDriver } from "../../../types/studio";
+import type { SubmitEvent } from "react";
 
 interface DropTableConfirmationModalProps {
 	closeModal: () => void;
@@ -25,7 +26,7 @@ export function DropTableConfirmationModal({
 
 	const isValid = challengeInput === tableName;
 
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setIsDeleting(true);
 		setError(null);

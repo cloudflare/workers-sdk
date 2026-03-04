@@ -25,12 +25,12 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { Icon } from "@phosphor-icons/react";
-import type { PropsWithChildren } from "react";
+import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
 
 interface StudioColumnSchemaEditorProps {
 	columnIndex: number;
 	highlightSchemaChanges?: boolean;
-	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
+	onChange: Dispatch<SetStateAction<StudioTableSchemaChange>>;
 	readOnlyExistingColumns?: boolean;
 	value: StudioTableSchemaChange;
 }

@@ -16,12 +16,13 @@ import type {
 	StudioTableSchemaChange,
 } from "../../../../types/studio";
 import type { StudioCodeMirrorReference } from "../../Code/Mirror";
+import type { Dispatch, SetStateAction } from "react";
 
 interface StudioTableSchemaEditorProps {
 	disabledAddColumn?: boolean;
 	driver: IStudioDriver;
 	highlightSchemaChanges?: boolean;
-	onChange: React.Dispatch<React.SetStateAction<StudioTableSchemaChange>>;
+	onChange: Dispatch<SetStateAction<StudioTableSchemaChange>>;
 	onSaveChange: (statements: string[]) => Promise<void>;
 	readOnlyExistingColumns?: boolean;
 	value: StudioTableSchemaChange;

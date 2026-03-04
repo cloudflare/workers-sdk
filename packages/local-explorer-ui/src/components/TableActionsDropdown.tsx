@@ -9,6 +9,7 @@ import { useCallback, useState } from "react";
 import { DropTableConfirmationModal } from "./studio/Modal/DropTableConfirmation";
 import type { IStudioDriver } from "../types/studio";
 import type { StudioRef } from "./studio";
+import type { RefObject } from "react";
 
 interface TableActionsDropdownProps {
 	/**
@@ -37,7 +38,7 @@ interface TableActionsDropdownProps {
 	/**
 	 * Reference to the Studio component for opening tabs.
 	 */
-	studioRef: React.RefObject<StudioRef | null>;
+	studioRef: RefObject<StudioRef | null>;
 }
 
 export interface TableTarget {
