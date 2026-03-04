@@ -49,6 +49,39 @@ const config = {
 	ignores: {
 		// Query/path parameters not implemented
 		parameters: [
+			// List KV namespaces - pagination not implemented (aggregated endpoint returns all)
+			{
+				path: "/accounts/{account_id}/storage/kv/namespaces",
+				method: "get",
+				name: "page",
+			},
+			{
+				path: "/accounts/{account_id}/storage/kv/namespaces",
+				method: "get",
+				name: "per_page",
+			},
+			// List D1 databases - pagination not implemented (aggregated endpoint returns all)
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				name: "page",
+			},
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				name: "per_page",
+			},
+			// List DO namespaces - pagination not implemented (aggregated endpoint returns all)
+			{
+				path: "/accounts/{account_id}/workers/durable_objects/namespaces",
+				method: "get",
+				name: "page",
+			},
+			{
+				path: "/accounts/{account_id}/workers/durable_objects/namespaces",
+				method: "get",
+				name: "per_page",
+			},
 			// Put value - expiration options not implemented
 			{
 				path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/{key_name}",
@@ -86,7 +119,34 @@ const config = {
 				"served_by_primary",
 				"served_by_region",
 			],
+			// Aggregated list endpoints don't use pagination, so total_count is redundant
+			// (it always equals count since we return all results)
+			// minor hack: we don't remove the type for DO's (WorkersApiResponseCollection) since it
+			// is used by object and namespace listing, and we do need pagination for object listing
+			// but thankfully the pagination fields are optional so we just pretend they are not there
+			"workers-kv_api-response-collection": ["total_count", "page", "per_page"],
+			"workers-kv_result_info": ["total_count", "page", "per_page"],
 		},
+
+		// Properties to remove from inline response schemas (not in named schemas)
+		responseProperties: [
+			// D1 list databases has inline result_info with pagination fields
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				propertyPath: "result_info.total_count",
+			},
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				propertyPath: "result_info.page",
+			},
+			{
+				path: "/accounts/{account_id}/d1/database",
+				method: "get",
+				propertyPath: "result_info.per_page",
+			},
+		],
 	},
 
 	// Local-only extensions (not in upstream Cloudflare API)

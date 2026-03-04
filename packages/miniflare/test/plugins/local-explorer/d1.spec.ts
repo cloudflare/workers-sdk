@@ -2,9 +2,9 @@ import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
 import {
-	zCloudflareD1ListDatabasesResponse,
-	zCloudflareD1RawDatabaseQueryResponse,
 	zD1ApiResponseCommonFailure,
+	zD1ListDatabasesResponse,
+	zD1RawDatabaseQueryResponse,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
@@ -62,7 +62,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1ListDatabasesResponse
+				zD1ListDatabasesResponse
 			);
 
 			expect(data.success).toBe(true);
@@ -172,7 +172,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse
+				zD1RawDatabaseQueryResponse
 			);
 
 			expect(data.success).toBe(true);
@@ -205,7 +205,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse
+				zD1RawDatabaseQueryResponse
 			);
 
 			expect(data).toMatchObject({
@@ -243,7 +243,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse
+				zD1RawDatabaseQueryResponse
 			);
 
 			expect(data).toMatchObject({

@@ -352,18 +352,6 @@ export type WorkersKvResultInfo = {
 	 * Total number of results for the requested service.
 	 */
 	count?: number;
-	/**
-	 * Current page within paginated list of results.
-	 */
-	page?: number;
-	/**
-	 * Number of results per page of results.
-	 */
-	per_page?: number;
-	/**
-	 * Total results available without any search parameters.
-	 */
-	total_count?: number;
 };
 
 export type DoSqlWithParams = {
@@ -455,14 +443,6 @@ export type WorkersKvNamespaceListNamespacesData = {
 	body?: never;
 	path?: never;
 	query?: {
-		/**
-		 * Page number of paginated results.
-		 */
-		page?: number;
-		/**
-		 * Maximum number of results per page.
-		 */
-		per_page?: number;
 		/**
 		 * Field to order results by.
 		 */
@@ -668,7 +648,7 @@ export type WorkersKvNamespaceGetMultipleKeyValuePairsResponses = {
 export type WorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 	WorkersKvNamespaceGetMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceGetMultipleKeyValuePairsResponses];
 
-export type CloudflareD1ListDatabasesData = {
+export type D1ListDatabasesData = {
 	body?: never;
 	path?: never;
 	query?: {
@@ -676,29 +656,21 @@ export type CloudflareD1ListDatabasesData = {
 		 * a database name to search for.
 		 */
 		name?: string;
-		/**
-		 * Page number of paginated results.
-		 */
-		page?: number;
-		/**
-		 * Number of items per page.
-		 */
-		per_page?: number;
 	};
 	url: "/d1/database";
 };
 
-export type CloudflareD1ListDatabasesErrors = {
+export type D1ListDatabasesErrors = {
 	/**
 	 * List D1 databases response failure
 	 */
 	"4XX": D1ApiResponseCommonFailure;
 };
 
-export type CloudflareD1ListDatabasesError =
-	CloudflareD1ListDatabasesErrors[keyof CloudflareD1ListDatabasesErrors];
+export type D1ListDatabasesError =
+	D1ListDatabasesErrors[keyof D1ListDatabasesErrors];
 
-export type CloudflareD1ListDatabasesResponses = {
+export type D1ListDatabasesResponses = {
 	/**
 	 * List D1 databases response
 	 */
@@ -709,26 +681,14 @@ export type CloudflareD1ListDatabasesResponses = {
 			 * Total number of results for the requested service
 			 */
 			count?: number;
-			/**
-			 * Current page within paginated list of results
-			 */
-			page?: number;
-			/**
-			 * Number of results per page of results
-			 */
-			per_page?: number;
-			/**
-			 * Total results available without any search parameters
-			 */
-			total_count?: number;
 		};
 	};
 };
 
-export type CloudflareD1ListDatabasesResponse =
-	CloudflareD1ListDatabasesResponses[keyof CloudflareD1ListDatabasesResponses];
+export type D1ListDatabasesResponse =
+	D1ListDatabasesResponses[keyof D1ListDatabasesResponses];
 
-export type CloudflareD1RawDatabaseQueryData = {
+export type D1RawDatabaseQueryData = {
 	body: D1BatchQuery;
 	path: {
 		database_id: D1DatabaseIdentifier;
@@ -737,17 +697,17 @@ export type CloudflareD1RawDatabaseQueryData = {
 	url: "/d1/database/{database_id}/raw";
 };
 
-export type CloudflareD1RawDatabaseQueryErrors = {
+export type D1RawDatabaseQueryErrors = {
 	/**
 	 * Query response failure
 	 */
 	"4XX": D1ApiResponseCommonFailure;
 };
 
-export type CloudflareD1RawDatabaseQueryError =
-	CloudflareD1RawDatabaseQueryErrors[keyof CloudflareD1RawDatabaseQueryErrors];
+export type D1RawDatabaseQueryError =
+	D1RawDatabaseQueryErrors[keyof D1RawDatabaseQueryErrors];
 
-export type CloudflareD1RawDatabaseQueryResponses = {
+export type D1RawDatabaseQueryResponses = {
 	/**
 	 * Raw query response
 	 */
@@ -756,22 +716,13 @@ export type CloudflareD1RawDatabaseQueryResponses = {
 	};
 };
 
-export type CloudflareD1RawDatabaseQueryResponse =
-	CloudflareD1RawDatabaseQueryResponses[keyof CloudflareD1RawDatabaseQueryResponses];
+export type D1RawDatabaseQueryResponse =
+	D1RawDatabaseQueryResponses[keyof D1RawDatabaseQueryResponses];
 
 export type DurableObjectsNamespaceListNamespacesData = {
 	body?: never;
 	path?: never;
-	query?: {
-		/**
-		 * Current page.
-		 */
-		page?: number;
-		/**
-		 * Items per-page.
-		 */
-		per_page?: number;
-	};
+	query?: never;
 	url: "/workers/durable_objects/namespaces";
 };
 
