@@ -228,6 +228,7 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 
 	/**
 	 * Returns the currently active table context from the selected tab.
+	 *
 	 * Works for both "table" and "edit-table" tab types.
 	 */
 	const getCurrentTable = useCallback((): DeletionTarget | null => {
