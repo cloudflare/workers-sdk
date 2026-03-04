@@ -728,7 +728,7 @@ class ProxyStubHandler<T extends object>
 		const request = new Request(this.bridge.url, userRequest);
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
-		request.headers.set(CoreHeaders.ORIGINAL_URL, userRequest.url);
+		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
 		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
 		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
 		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);
