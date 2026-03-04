@@ -29,11 +29,13 @@ export function StudioConstraintListEditor({
 	return (
 		<>
 			<div className="text-base font-bold my-4">Constraints</div>
-			<table className="border-collapse w-full">
+			<table className="w-full border-collapse">
 				<thead>
 					<tr>
-						<th className="p-2 border border-border h-10">#</th>
-						<th className="p-2 border border-border text-left h-25">Type</th>
+						<th className="p-2 border border-border h-10 w-12">#</th>
+						<th className="p-2 border border-border text-left h-10 w-32">
+							Type
+						</th>
 						<th className="p-2 border border-border text-left"></th>
 					</tr>
 				</thead>
