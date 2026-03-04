@@ -126,8 +126,6 @@ function getRuntimeArgs(options: RuntimeOptions) {
 		args.push(`--inspector-addr=${options.inspectorAddress}`);
 	}
 	if (options.debugPortAddress !== undefined) {
-		// Expose all services via a privileged RPC debug port.
-		// Used by the dev registry proxy worker to connect to remote workerd instances.
 		args.push(`--debug-port=${options.debugPortAddress}`);
 	}
 	if (options.verbose) {

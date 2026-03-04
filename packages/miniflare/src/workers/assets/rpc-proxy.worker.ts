@@ -26,21 +26,6 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 		return this.env.ROUTER_WORKER.fetch(request);
 	}
 
-	// Explicit scheduled() is needed because the Proxy get trap forwards
-	// unknown props to USER_WORKER, but scheduled() requires special handling
-	// to invoke the user worker's scheduled handler via its Fetcher API.
-	async scheduled(controller: ScheduledController) {
-		const result = await (this.env.USER_WORKER as Fetcher).scheduled({
-			scheduledTime: new Date(controller.scheduledTime),
-			cron: controller.cron,
-		});
-		if (result.outcome !== "ok") {
-			throw new Error(
-				`User worker scheduled handler failed: ${result.outcome}`
-			);
-		}
-	}
-
 	tail(events: TraceItem[]) {
 		// Temporary workaround: the tail events is not serializable over capnproto yet
 		// But they are effectively JSON, so we are serializing them to JSON and parsing it back to make it transferable.

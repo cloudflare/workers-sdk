@@ -1904,10 +1904,8 @@ export class Miniflare {
 			externalServices &&
 			externalServices.size > 0
 		) {
-			// Start watching the dev registry for changes.
 			await this.#devRegistry.watch(externalServices);
 
-			// Collect external DO classes for the proxy worker
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
 					Array.from(classNames).map<[string, string]>((className) => [
@@ -1916,24 +1914,13 @@ export class Miniflare {
 					])
 			);
 
-			// Generate a dynamic entrypoint module that combines:
-			// 1. ExternalServiceProxy entrypoint (for service bindings)
-			// 2. DO proxy classes (for external Durable Objects)
-			// 3. Default fetch handler (for registry push updates)
-			// All imports are from the bundled proxy worker module, which
-			// inlines the shared code — so they share the same module-level
-			// registry Map.
-			//
-			// The initial registry state is baked directly into the module
-			// source so the proxy worker has the correct registry from the
-			// moment workerd loads it — no async push needed for bootstrap.
+			// Bake initial registry state into the module source so the proxy
+			// worker has the correct registry from the moment workerd loads it.
 			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
 				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
 				`export { ExternalServiceProxy };`,
-				// Seed the registry immediately at module-load time
 				`setRegistry(${JSON.stringify(initialRegistry)});`,
-				// Default fetch handler accepts registry push updates
 				`export default {`,
 				`  async fetch(request, env) {`,
 				`    if (request.method === "POST") {`,
@@ -1944,17 +1931,12 @@ export class Miniflare {
 				`    return new Response("not found", { status: 404 });`,
 				`  }`,
 				`};`,
-				// DO proxy classes
 				...externalObjects.map(
 					([scriptName, className]) =>
 						`export const ${getOutboundDoProxyClassName(scriptName, className)} = createProxyDurableObjectClass({ scriptName: ${JSON.stringify(scriptName)}, className: ${JSON.stringify(className)} });`
 				),
 			].join("\n");
 
-			// Add the merged dev registry proxy worker service. This single
-			// service hosts both the ExternalServiceProxy entrypoints (for
-			// cross-process service bindings) and DO proxy classes (for
-			// external Durable Objects), plus accepts registry push updates.
 			services.set(SERVICE_DEV_REGISTRY_PROXY, {
 				name: SERVICE_DEV_REGISTRY_PROXY,
 				worker: {
@@ -1976,11 +1958,8 @@ export class Miniflare {
 							workerdDebugPort: kVoid,
 						},
 					],
-					// In-memory storage for DO proxy stubs — they don't persist
-					// anything, just forward requests to remote workers.
 					durableObjectStorage: { inMemory: kVoid },
-					// uniqueKey must match the key generated in the target session
-					// so workerd produces identical Durable Object IDs across processes.
+					// uniqueKey must match the target session's key for identical DO IDs.
 					durableObjectNamespaces:
 						externalObjects.map<Worker_DurableObjectNamespace>(
 							([scriptName, className]) => ({
@@ -2013,8 +1992,6 @@ export class Miniflare {
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
-			// Bind the entry worker to the dev registry proxy so it can
-			// forward registry push updates
 			devRegistryProxyServiceName: services.has(SERVICE_DEV_REGISTRY_PROXY)
 				? SERVICE_DEV_REGISTRY_PROXY
 				: undefined,
@@ -2086,9 +2063,6 @@ export class Miniflare {
 			requiredSockets.push(kInspectorSocket);
 		}
 		if (this.#devRegistry.isEnabled()) {
-			// The debug port reports its allocated port via control-fd.
-			// We need to capture it so we can register it in the dev registry
-			// for other workerd instances to connect to.
 			requiredSockets.push(SOCKET_DEBUG_PORT);
 		}
 
@@ -2122,8 +2096,6 @@ export class Miniflare {
 			loopbackAddress,
 			requiredSockets,
 			inspectorAddress: runtimeInspectorAddress,
-			// Enable the workerd debug port when dev registry is active.
-			// Uses port 0 (random) — the actual port is captured via control-fd.
 			debugPortAddress: this.#devRegistry.isEnabled()
 				? "127.0.0.1:0"
 				: undefined,
@@ -2206,17 +2178,10 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
-		// Register this process's workers in the dev registry (writes files
-		// to the shared registry directory so other dev sessions can discover
-		// them). This must happen before the push below so that the pushed
-		// snapshot includes our own workers.
+		// Must register before push so the snapshot includes our own workers.
 		await this.#registerWorkers();
 
-		// Push current registry state to the proxy worker. The initial
-		// state is baked into the proxy worker module at config assembly
-		// time, but the registry may have changed between then and now
-		// (e.g. another dev session started while workerd was booting).
-		// This push catches any updates that occurred in that window.
+		// Catch any registry updates that occurred while workerd was booting.
 		if (this.#devRegistry.isEnabled()) {
 			await this.#pushRegistryUpdate(this.#devRegistry.getRegistry());
 		}
@@ -2301,9 +2266,6 @@ export class Miniflare {
 			return;
 		}
 
-		// Get the debug port address — captured from the control-fd "listen" event
-		// for the "debug-port" socket. This port provides native Cap'n Proto RPC
-		// access to all services/entrypoints in this workerd process.
 		const debugPort = this.#socketPorts?.get(SOCKET_DEBUG_PORT);
 		if (debugPort === undefined) {
 			this.#log.warn(
@@ -2330,11 +2292,8 @@ export class Miniflare {
 						normaliseDurableObject(designator);
 
 					if (
-						// If the scriptName is undefined, it defaults to the current worker
 						scriptName === undefined ||
-						// If the scriptName matches one of the workers defined, it is internal as well
 						allWorkerNames.includes(scriptName) ||
-						// If it is not a remote durable object
 						remoteProxyConnectionString === undefined
 					) {
 						internalObjects.push({
@@ -2348,21 +2307,14 @@ export class Miniflare {
 				[]
 			);
 
-			// Determine the workerd service name that the debug port should
-			// dispatch to for this worker's default entrypoint. This is stored
-			// in the dev registry so that proxy workers in other miniflare
-			// instances can route requests to the correct service.
 			let defaultEntrypointService: string;
 			if (workerOpts.core.unsafeOverrideDefaultEntrypoint) {
-				// Explicit override (e.g. vite plugin routing through its proxy worker)
 				defaultEntrypointService = getUserServiceName(
 					workerOpts.core.unsafeOverrideDefaultEntrypoint
 				);
 			} else if (workerOpts.assets.assets) {
-				// Workers with assets go through the assets RPC proxy
 				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`;
 			} else {
-				// Plain workers go directly to the user service
 				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
 			}
 

@@ -65,12 +65,8 @@ export class DevRegistry {
 			return;
 		}
 
-		// Track external services we depend on to detect relevant registry changes
 		this.externalServices = new Map(services);
 
-		// Ensure the registry directory exists before watching — chokidar
-		// needs an existing directory, and other sessions may not have
-		// created it yet.
 		mkdirSync(this.registryPath, { recursive: true });
 
 		if (!this.watcher) {
@@ -92,7 +88,6 @@ export class DevRegistry {
 		return (
 			this.watcher
 				?.close()
-				// Ensure we always return a promise
 				.then(() => {})
 				.finally(() => {
 					this.watcher = undefined;
@@ -207,9 +202,6 @@ export class DevRegistry {
 			return;
 		}
 		const previousRegistry = JSON.parse(this.previousJSON);
-		// Update previousJSON *before* checking external services so we don't
-		// re-process the same diff on every subsequent chokidar event when
-		// only non-external services changed.
 		this.previousJSON = json;
 		for (const [service] of this.externalServices) {
 			if (

@@ -7,8 +7,6 @@ export interface WorkerdDebugPortConnector {
 }
 
 export interface WorkerdDebugPortClient {
-	// These return sync Fetchers via Cap'n Proto pipelining — the actual RPC
-	// resolution is deferred until the Fetcher is first used (e.g. fetch()).
 	getEntrypoint(
 		service: string,
 		entrypoint?: string,
@@ -23,8 +21,6 @@ export interface RegistryEntry {
 	userWorkerService: string;
 }
 
-// Module-level registry map. Populated and kept current via setRegistry()
-// when Miniflare pushes data through the entry socket.
 let registry = new Map<string, RegistryEntry>();
 
 export function setRegistry(data: Record<string, RegistryEntry>): void {
@@ -46,7 +42,6 @@ export function connectToActor(
 		return null;
 	}
 	const client = debugPort.connect(target.debugPortAddress);
-	// DOs are defined on the user worker, not behind the assets/vite proxy.
 	return client.getActor(target.userWorkerService, className, actorId);
 }
 
@@ -63,12 +58,7 @@ export function createProxyDurableObjectClass({
 		_cachedFetcher: Fetcher | undefined;
 		_cachedDebugPortAddress: string | undefined;
 
-		// Lazy resolution: the registry may not be populated when the DO
-		// instance is first constructed (e.g. getPlatformProxy creates stubs
-		// before the registry push arrives). Cache on first successful resolve
-		// so we only open one capnp connection per DO instance.
-		// Invalidates the cache if the remote debug port address has changed
-		// (e.g. the remote worker restarted and got a new port).
+		// Lazily resolve and cache. Invalidates when debugPortAddress changes.
 		_resolve(): Fetcher | null {
 			const target = resolveTarget(scriptName);
 			if (
@@ -77,7 +67,6 @@ export function createProxyDurableObjectClass({
 			) {
 				return this._cachedFetcher;
 			}
-			// Address changed or no cache — reconnect
 			this._cachedFetcher = undefined;
 			this._cachedDebugPortAddress = undefined;
 

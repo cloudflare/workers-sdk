@@ -46,25 +46,18 @@ function resolve(props: Props, env: Env): Fetcher | null {
 	return client.getEntrypoint(serviceName, entrypoint ?? undefined);
 }
 
-export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
+export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	_fetcher: Fetcher | null = null;
 	_entryFetcher: Fetcher | null = null;
 
-	// Capture props from ctx in the constructor and close over it in the
-	// Proxy handler. We can't use private fields (#props) because they are
-	// not accessible through a JS Proxy (which the constructor returns).
+	// Can't use private fields (#props) — not accessible through JS Proxy.
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
-		const props = (ctx as unknown as { props: Props }).props;
-		// Resolved once via capnp pipelining (synchronous) and reused
-		// across all requests to this entrypoint instance.
-		this._fetcher = resolve(props, env);
+		this._fetcher = resolve(ctx.props, env);
 
-		// Separate core:entry connection for the scheduled handler.
-		// The debug port's EventDispatcher throws "RPC connections don't
-		// yet support this event type" for runScheduled/runAlarm/queue,
-		// so we forward scheduled via HTTP to core:entry instead.
-		const target = resolveTarget(props.service);
+		// Separate connection for scheduled: the debug port's EventDispatcher
+		// doesn't support runScheduled/runAlarm/queue, so we forward via HTTP.
+		const target = resolveTarget(ctx.props.service);
 		if (target) {
 			const client = env.DEV_REGISTRY_DEBUG_PORT.connect(
 				target.debugPortAddress
@@ -82,9 +75,8 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 				}
 
 				if (!target._fetcher) {
-					const { service, entrypoint } = props;
 					throw new Error(
-						`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to.`
+						`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${ctx.props.entrypoint ?? "default"}" entrypoint of service "${ctx.props.service}" to proxy to.`
 					);
 				}
 				return Reflect.get(target._fetcher, prop);
@@ -92,32 +84,21 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		});
 	}
 
-	// Explicit fetch() is required: without it, fetch falls through to the
-	// Proxy get trap where Reflect.get(fetcher, "fetch") detaches the native
-	// Fetcher method from its `this` context, causing "Illegal invocation".
+	// Explicit fetch() avoids "Illegal invocation" from detached native Fetcher method.
 	async fetch(request: Request): Promise<Response> {
-		const props = (this.ctx as unknown as { props: Props }).props;
 		if (!this._fetcher) {
-			const { service, entrypoint } = props;
 			return new Response(
-				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`,
+				`Couldn't find a local dev session for the "${this.ctx.props.entrypoint ?? "default"}" entrypoint of service "${this.ctx.props.service}" to proxy to`,
 				{ status: 503 }
 			);
 		}
 		return this._fetcher.fetch(request);
 	}
 
-	// The debug port's EventDispatcher throws "RPC connections don't yet
-	// support this event type" for runScheduled, so we forward via HTTP to
-	// core:entry's /cdn-cgi/handler/scheduled route instead.
-	// MF-Route-Override ensures the entry worker dispatches to the user
-	// worker rather than the asset router.
 	async scheduled(controller: ScheduledController) {
-		const props = (this.ctx as unknown as { props: Props }).props;
 		if (!this._entryFetcher) {
-			const { service, entrypoint } = props;
 			throw new Error(
-				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`
+				`Couldn't find a local dev session for the "${this.ctx.props.entrypoint ?? "default"}" entrypoint of service "${this.ctx.props.service}" to proxy to`
 			);
 		}
 		const params = new URLSearchParams();
@@ -129,7 +110,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		}
 		const response = await this._entryFetcher.fetch(
 			new Request(`http://localhost/cdn-cgi/handler/scheduled?${params}`, {
-				headers: { "MF-Route-Override": props.service },
+				headers: { "MF-Route-Override": this.ctx.props.service },
 			})
 		);
 		if (!response.ok) {
@@ -140,10 +121,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	// Forward tail events to the target worker via the cached _fetcher.
-	// Filter out events where event.rpcMethod === "tail" to prevent infinite
-	// recursion: calling .tail() RPC generates a trace event with
-	// rpcMethod:"tail" on this worker, which re-triggers tail().
+	// Filter rpcMethod==="tail" to prevent infinite recursion.
 	tail(events: TraceItem[]) {
 		if (!this._fetcher) {
 			return;
@@ -162,9 +140,8 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
 			return this._fetcher.tail(serializedEvents);
 		} catch (e) {
-			const props = (this.ctx as unknown as { props: Props }).props;
 			console.warn(
-				`[dev-registry] Failed to forward tail events to "${props.service}": ${e instanceof Error ? e.message : String(e)}`
+				`[dev-registry] Failed to forward tail events to "${this.ctx.props.service}": ${e instanceof Error ? e.message : String(e)}`
 			);
 		}
 	}
