@@ -1,12 +1,16 @@
 import { Select } from "@base-ui/react/select";
-import { Button } from "@cloudflare/kumo";
+import { Button, DropdownMenu } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	CaretUpDownIcon,
 	CheckIcon,
+	CopyIcon,
 	DatabaseIcon,
+	DotsThreeIcon,
+	PencilIcon,
 	PlusIcon,
 	TableIcon,
+	TrashIcon,
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
@@ -119,6 +123,60 @@ function DatabaseView(): JSX.Element {
 				]}
 			>
 				<div className="flex-1" />
+
+				<DropdownMenu>
+					<DropdownMenu.Trigger
+						render={
+							<Button
+								aria-label="Table Options"
+								disabled={!searchParams.table}
+								icon={DotsThreeIcon}
+								shape="square"
+							/>
+						}
+					/>
+
+					<DropdownMenu.Content>
+						<DropdownMenu.Item
+							className="space-x-2 cursor-pointer"
+							icon={CopyIcon}
+							onClick={async (): Promise<void> => {
+								await window.navigator.clipboard.writeText("item.data.name");
+							}}
+						>
+							Copy table name
+						</DropdownMenu.Item>
+
+						<DropdownMenu.Item
+							className="space-x-2 cursor-pointer"
+							icon={CopyIcon}
+							onClick={() => console.log("Copy table schema")}
+						>
+							Copy table schema
+						</DropdownMenu.Item>
+
+						<DropdownMenu.Separator />
+
+						<DropdownMenu.Item
+							className="space-x-2 cursor-pointer"
+							icon={PencilIcon}
+							onClick={() => console.log("Edit Schema")}
+						>
+							Edit Schema
+						</DropdownMenu.Item>
+
+						<DropdownMenu.Separator />
+
+						<DropdownMenu.Item
+							className="space-x-2 cursor-pointer"
+							icon={TrashIcon}
+							onClick={() => console.log("Delete Table")}
+							variant="danger"
+						>
+							Delete Table
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu>
 
 				{/* TODO: Add tooltip */}
 				<Button
