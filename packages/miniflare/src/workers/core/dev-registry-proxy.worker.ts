@@ -84,7 +84,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		});
 	}
 
-	// Explicit fetch() avoids "Illegal invocation" from detached native Fetcher method.
 	async fetch(request: Request): Promise<Response> {
 		if (!this._fetcher) {
 			return new Response(
