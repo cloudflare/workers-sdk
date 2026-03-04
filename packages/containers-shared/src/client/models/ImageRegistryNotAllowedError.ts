@@ -3,11 +3,11 @@
 /* eslint-disable */
 
 /**
- * The registry is not allowed to be added
+ * The registry is not allowed to be modified
  */
 export type ImageRegistryNotAllowedError = {
 	/**
-	 * The domain of the registry is not allowed to be added
+	 * The domain of the registry is not allowed to be modified
 	 */
 	error: ImageRegistryNotAllowedError.error;
 	/**
@@ -18,7 +18,7 @@ export type ImageRegistryNotAllowedError = {
 
 export namespace ImageRegistryNotAllowedError {
 	/**
-	 * The domain of the registry is not allowed to be added
+	 * The domain of the registry is not allowed to be modified
 	 */
 	export enum error {
 		IMAGE_REGISTRY_NOT_ALLOWED = "IMAGE_REGISTRY_NOT_ALLOWED",

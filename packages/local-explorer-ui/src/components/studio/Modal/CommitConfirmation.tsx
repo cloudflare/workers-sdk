@@ -1,6 +1,7 @@
 import { Button, Dialog } from "@cloudflare/kumo";
 import { PlayIcon, SpinnerIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { formatSqlError } from "../../../utils/studio/formatter";
 import { CodeBlock } from "../Code/Block";
 
 interface StudioCommitConfirmationProps {
@@ -27,11 +28,7 @@ export function StudioCommitConfirmation({
 			await onConfirm();
 			closeModal();
 		} catch (err) {
-			if (err instanceof Error) {
-				setErrorMessage(err.message);
-			} else {
-				setErrorMessage(String(err));
-			}
+			setErrorMessage(formatSqlError(err));
 		} finally {
 			setIsRequesting(false);
 		}
@@ -46,28 +43,35 @@ export function StudioCommitConfirmation({
 				}
 			}}
 		>
-			<Dialog>
-				{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
-				<Dialog.Title>Review and Confirm Changes</Dialog.Title>
-
-				<div className="flex flex-col gap-4 text-sm">
-					{!!errorMessage && (
-						<div className="font-mono text-red-500">{errorMessage}</div>
-					)}
-
-					<div>
-						The following SQL statements will be executed to apply your changes.
-						Please review them carefully before committing.
-					</div>
-
-					<CodeBlock
-						code={statements.join("\n")}
-						language="sql"
-						maxHeight={500}
-					/>
+			<Dialog className="p-6">
+				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+					<Dialog.Title className="text-2xl font-semibold">
+						Review and Confirm Changes
+					</Dialog.Title>
 				</div>
 
-				<div className="mt-4 flex justify-end gap-2">
+				{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+				<Dialog.Description className="text-kumo-subtle">
+					<div className="flex flex-col gap-4 text-sm">
+						{!!errorMessage && (
+							<div className="font-mono text-red-500">{errorMessage}</div>
+						)}
+
+						<div>
+							The following SQL statements will be executed to apply your
+							changes. Please review them carefully before committing.
+						</div>
+
+						<CodeBlock
+							code={statements.join("\n")}
+							language="sql"
+							maxHeight={500}
+						/>
+					</div>
+				</Dialog.Description>
+
+				<div className="mt-8 flex justify-end gap-2">
 					<Button
 						disabled={isRequesting}
 						onClick={handleConfirm}

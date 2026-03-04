@@ -40,12 +40,17 @@ export type VarBinding = Extract<
  * Any values in these files (all formatted like `.env` files) will add to or override `vars`
  * bindings provided in the Wrangler configuration file.
  *
+ * When `secrets` is defined in the config, only the declared secret keys are loaded from
+ * `.dev.vars`/`.env`/`process.env`. All other keys in those files are excluded. A warning
+ * is emitted for any required secrets that are missing.
+ *
  * @param configPath - The path to the Wrangler configuration file, if defined.
  * @param envFiles - An array of paths to .env files to load; if `undefined` the default .env files will be used (see `getDefaultEnvFiles()`).
  * The `envFiles` paths are resolved against the directory of the Wrangler configuration file, if there is one, otherwise against the current working directory.
  * @param vars - The existing `vars` bindings from the Wrangler configuration.
  * @param env - The specific environment name (e.g., "staging") or `undefined` if no specific environment is set.
  * @param silent - If true, will not log any messages about the loaded .dev.vars files or .env files.
+ * @param secrets - If defined, only the declared secret keys are loaded from `.dev.vars` or `.env`/`process.env`.
  * @returns The merged `vars` as typed bindings. Config vars are `plain_text`/`json`, while `.dev.vars`/`.env` vars are `secret_text`.
  */
 export function getVarsForDev(
@@ -53,7 +58,8 @@ export function getVarsForDev(
 	envFiles: string[] | undefined,
 	vars: Config["vars"],
 	env: string | undefined,
-	silent = false
+	silent = false,
+	secrets?: Config["secrets"]
 ): Record<string, VarBinding> {
 	// Start with config vars (plain_text or json, not secret)
 	const result: Record<string, VarBinding> = {};
@@ -63,6 +69,9 @@ export function getVarsForDev(
 
 	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
 
+	// Load secrets from .dev.vars, .env files, or process.env
+	let loadedSecrets: Record<string, string> | undefined;
+
 	// If envFiles are not explicitly provided, try to load from .dev.vars first
 	if (!envFiles?.length) {
 		const devVarsPath = path.resolve(configDir, ".dev.vars");
@@ -70,34 +79,53 @@ export function getVarsForDev(
 		if (loaded !== undefined) {
 			const devVarsRelativePath = path.relative(process.cwd(), loaded.path);
 			if (!silent) {
-				logger.log(`Using vars defined in ${devVarsRelativePath}`);
+				logger.log(`Using secrets defined in ${devVarsRelativePath}`);
 			}
-			// Merge .dev.vars as secret_text
-			for (const [key, value] of Object.entries(loaded.parsed)) {
-				result[key] = { type: "secret_text", value };
-			}
-			return result;
+			loadedSecrets = loaded.parsed;
 		}
 	}
 
-	// If .dev.vars wasn't loaded (either because envFiles was explicit or .dev.vars doesn't exist),
-	// try loading from .env files
-	if (getCloudflareLoadDevVarsFromDotEnv()) {
+	// If .dev.vars wasn't loaded, try loading from .env files
+	if (loadedSecrets === undefined && getCloudflareLoadDevVarsFromDotEnv()) {
 		const resolvedEnvFilePaths = (envFiles ?? getDefaultEnvFiles(env)).map(
 			(p) => path.resolve(configDir, p)
 		);
-		const dotEnvVars = loadDotEnv(resolvedEnvFilePaths, {
-			includeProcessEnv: getCloudflareIncludeProcessEnvFromEnv(),
+		loadedSecrets = loadDotEnv(resolvedEnvFilePaths, {
+			// When secrets is defined, always include `process.env`.
+			// Otherwise, respect the CLOUDFLARE_INCLUDE_PROCESS_ENV env var.
+			includeProcessEnv: !!secrets || getCloudflareIncludeProcessEnvFromEnv(),
 			silent,
 		});
-		// Merge .env vars as secret_text
-		for (const [key, value] of Object.entries(dotEnvVars)) {
-			result[key] = { type: "secret_text", value: String(value) };
-		}
-		return result;
 	}
 
-	// Just return the vars from the Wrangler configuration.
+	// Merge loaded secrets into result
+	if (secrets) {
+		// Explicit secrets: only declared secret keys
+		const requiredSecrets = secrets.required ?? [];
+		for (const key of requiredSecrets) {
+			if (loadedSecrets !== undefined && key in loadedSecrets) {
+				result[key] = { type: "secret_text", value: loadedSecrets[key] };
+			}
+		}
+		// Warn about missing required secrets
+		if (!silent) {
+			const missing = requiredSecrets.filter(
+				(key) => loadedSecrets === undefined || !(key in loadedSecrets)
+			);
+			if (missing.length > 0) {
+				logger.warn(
+					`Missing required secrets: ${missing.join(", ")}. ` +
+						`Add them to .dev.vars, .env, or set as environment variables.`
+				);
+			}
+		}
+	} else if (loadedSecrets !== undefined) {
+		// Implicit secrets: merge all file vars as secret_text
+		for (const [key, value] of Object.entries(loadedSecrets)) {
+			result[key] = { type: "secret_text", value };
+		}
+	}
+
 	return result;
 }
 

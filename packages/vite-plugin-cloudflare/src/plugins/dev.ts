@@ -208,6 +208,9 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						onContainerImagePreparationEnd: () => {},
 						logger: viteDevServer.config.logger,
 						isVite: true,
+						compatibilityFlags: ctx.allWorkerConfigs.flatMap(
+							(c) => c.compatibility_flags
+						),
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());

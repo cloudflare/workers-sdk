@@ -42,11 +42,16 @@ export type StepState = {
 	attemptedCount: number;
 };
 
+export type WorkflowStepContext = {
+	attempt: number;
+};
+
 export class Context extends RpcTarget {
 	#engine: Engine;
 	#state: DurableObjectState;
 
 	#counters: Map<string, number> = new Map();
+	#lifetimeStepCounter: number = 0;
 
 	constructor(engine: Engine, state: DurableObjectState) {
 		super();
@@ -63,26 +68,40 @@ export class Context extends RpcTarget {
 		return val;
 	}
 
-	do(name: string, callback: () => Promise<unknown>): Promise<unknown>;
+	do(
+		name: string,
+		callback: (ctx: WorkflowStepContext) => Promise<unknown>
+	): Promise<unknown>;
 	do(
 		name: string,
 		config: WorkflowStepConfig,
-		callback: () => Promise<unknown>
+		callback: (ctx: WorkflowStepContext) => Promise<unknown>
 	): Promise<unknown>;
 
 	async do<T>(
 		name: string,
-		configOrCallback: WorkflowStepConfig | (() => Promise<T>),
-		callback?: () => Promise<T>
+		configOrCallback:
+			| WorkflowStepConfig
+			| ((ctx: WorkflowStepContext) => Promise<T>),
+		callback?: (ctx: WorkflowStepContext) => Promise<T>
 	): Promise<unknown | void | undefined> {
-		let closure, stepConfig;
+		let closure: (ctx: WorkflowStepContext) => Promise<T>, stepConfig;
 		// If a user passes in a config, we'd like it to be the second arg so the callback is always last
 		if (callback) {
 			closure = callback;
 			stepConfig = configOrCallback as WorkflowStepConfig;
 		} else {
-			closure = configOrCallback as () => Promise<T>;
+			closure = configOrCallback as (ctx: WorkflowStepContext) => Promise<T>;
 			stepConfig = {};
+		}
+
+		this.#lifetimeStepCounter++;
+
+		const stepLimit = this.#engine.stepLimit;
+		if (this.#lifetimeStepCounter > stepLimit) {
+			throw new WorkflowFatalError(
+				`The limit of ${stepLimit} steps has been reached. This limit can be changed in your worker configuration.`
+			);
 		}
 
 		if (!isValidStepName(name)) {
@@ -116,7 +135,11 @@ export class Context extends RpcTarget {
 		const stepNameWithCounter = `${name}-${count}`;
 		const stepStateKey = `${cacheKey}-metadata`;
 
-		const maybeMap = await this.#state.storage.get([valueKey, configKey]);
+		const maybeMap = await this.#state.storage.get([
+			valueKey,
+			configKey,
+			errorKey,
+		]);
 
 		// Check cache
 		const maybeResult = maybeMap.get(valueKey);
@@ -192,7 +215,7 @@ export class Context extends RpcTarget {
 		}
 
 		const doWrapper = async (
-			doWrapperClosure: () => Promise<unknown>
+			doWrapperClosure: (ctx: WorkflowStepContext) => Promise<unknown>
 		): Promise<unknown | void | undefined> => {
 			const stepState = ((await this.#state.storage.get(
 				stepStateKey
@@ -314,7 +337,10 @@ export class Context extends RpcTarget {
 					await this.#state.storage.delete(`replace-result-${valueKey}`);
 					// if there is a timeout to be forced we dont want to race with closure
 				} else {
-					result = await Promise.race([doWrapperClosure(), timeoutPromise()]);
+					result = await Promise.race([
+						doWrapperClosure({ attempt: stepState.attemptedCount }),
+						timeoutPromise(),
+					]);
 				}
 
 				// if we reach here, means that the clouse ran successfully and we can remove the timeout from the PQ

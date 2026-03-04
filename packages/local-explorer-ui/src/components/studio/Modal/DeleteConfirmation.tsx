@@ -58,13 +58,19 @@ export const StudioDeleteConfirmationModal = ({
 			}}
 			open={isOpen}
 		>
-			<Dialog>
-				{/* @ts-expect-error `@cloudflare/kumo` currently has a type def bug here */}
-				<Dialog.Title>{title}</Dialog.Title>
+			<Dialog className="p-6">
+				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+					<Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
+				</div>
 
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
-						{body}
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Description className="text-kumo-subtle">
+							{body}
+						</Dialog.Description>
+
 						{challenge && (
 							<div className="space-y-2">
 								<Text size="sm">
@@ -79,12 +85,14 @@ export const StudioDeleteConfirmationModal = ({
 								/>
 							</div>
 						)}
+
 						{deleteFailed && (
 							<div className="rounded-md bg-red-50 p-3 text-red-700">
 								{failureText}
 							</div>
 						)}
 					</div>
+
 					<div className="flex gap-2 justify-end mt-4">
 						<Button variant="secondary" onClick={closeModal}>
 							Cancel

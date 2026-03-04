@@ -675,6 +675,11 @@ export type WorkflowBinding = {
 	script_name?: string;
 	/** Whether the Workflow should be remote or not in local development */
 	remote?: boolean;
+	/** Optional limits for the Workflow */
+	limits?: {
+		/** Maximum number of steps a Workflow instance can execute */
+		steps?: number;
+	};
 };
 
 /**
@@ -709,20 +714,18 @@ export interface EnvironmentNonInheritable {
 	vars: Record<string, string | Json>;
 
 	/**
-	 * Secrets configuration.
+	 * Secrets configuration (experimental).
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default undefined
 	 * @nonInheritable
 	 */
 	secrets?: {
 		/**
 		 * List of secret names that are required by your Worker.
 		 * When defined, this property:
-		 * - Replaces .dev.vars/.env inference for type generation
-		 * - Enables deploy-time validation to ensure secrets are configured
+		 * - Replaces .dev.vars/.env/process.env inference for type generation
 		 * - Enables local dev validation with warnings for missing secrets
 		 */
 		required?: string[];
@@ -1464,6 +1467,8 @@ export interface CacheOptions {
 export type DockerConfiguration = {
 	/** Socket used by miniflare to communicate with Docker */
 	socketPath: string;
+	/** Docker image name for the container egress interceptor sidecar */
+	containerEgressInterceptorImage?: string;
 };
 
 export type ContainerEngine =

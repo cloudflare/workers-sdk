@@ -1,7 +1,10 @@
 import assert from "node:assert";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
-import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
+import {
+	getLocalExplorerEnabledFromEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import {
 	extractBindingsOfType,
@@ -301,6 +304,7 @@ function workflowEntry(
 		class_name: className,
 		script_name: scriptName,
 		remote,
+		limits,
 	}: CfWorkflow,
 	remoteProxyConnectionString?: RemoteProxyConnectionString
 ): [
@@ -310,8 +314,11 @@ function workflowEntry(
 		className: string;
 		scriptName?: string;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		stepLimit?: number;
 	},
 ] {
+	const stepLimit = limits?.steps;
+
 	if (!remoteProxyConnectionString || !remote) {
 		return [
 			binding,
@@ -319,6 +326,7 @@ function workflowEntry(
 				name,
 				className,
 				scriptName,
+				...(stepLimit !== undefined && { stepLimit }),
 			},
 		];
 	}
@@ -330,6 +338,7 @@ function workflowEntry(
 			className,
 			scriptName,
 			remoteProxyConnectionString,
+			...(stepLimit !== undefined && { stepLimit }),
 		},
 	];
 }
@@ -714,9 +723,19 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 		workflows: Object.fromEntries(
-			workflows.map((workflow) =>
-				workflowEntry(workflow, remoteProxyConnectionString)
-			)
+			workflows.map((workflow) => {
+				if (
+					workflow.script_name !== undefined &&
+					workflow.script_name !== config.name &&
+					workflow.limits
+				) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+							`Configure limits on the worker that defines the workflow.`
+					);
+				}
+				return workflowEntry(workflow, remoteProxyConnectionString);
+			})
 		),
 		secretsStoreSecrets: Object.fromEntries(
 			secretsStoreSecrets.map((binding) => [binding.binding, binding])

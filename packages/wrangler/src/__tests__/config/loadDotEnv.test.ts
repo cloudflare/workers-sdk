@@ -36,8 +36,8 @@ describe("loadDotEnv()", () => {
 
 		expect(result).toEqual({ FOO: "qux", BAZ: "qux" });
 		expect(std.out).toMatchInlineSnapshot(`
-			"Using vars defined in .env
-			Using vars defined in .env.local"
+			"Using secrets defined in .env
+			Using secrets defined in .env.local"
 		`);
 	});
 
