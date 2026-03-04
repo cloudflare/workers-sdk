@@ -179,6 +179,12 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						// Only the URL pathname is used to match rules
 						const request = new Request(new URL(req.url, UNKNOWN_HOST));
 
+						const { shouldHandle } = ctx.resolvedPluginConfig;
+						if (shouldHandle && !(await shouldHandle(request))) {
+							req[kRequestType] = "skip";
+							return next();
+						}
+
 						if (req[kRequestType] === "asset") {
 							next();
 						} else if (excludeRulesMatcher({ request })) {
@@ -268,7 +274,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				// post middleware
 				viteDevServer.middlewares.use(
-					createRequestHandler(async (request, req) => {
+					createRequestHandler(async (request, req, next) => {
+						if (req[kRequestType] === "skip") {
+							return next();
+						}
+
 						if (req[kRequestType] === "asset") {
 							request.headers.set(
 								CoreHeaders.ROUTE_OVERRIDE,

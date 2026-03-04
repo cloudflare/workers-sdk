@@ -75,6 +75,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
+	shouldHandle?: (request: Request) => boolean | Promise<boolean>;
 }
 
 export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
@@ -97,6 +98,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
+	shouldHandle: ((request: Request) => boolean | Promise<boolean>) | undefined;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -277,6 +279,7 @@ export function resolvePluginConfig(
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
 		},
+		shouldHandle: pluginConfig.shouldHandle,
 	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const prefixedEnv = vite.loadEnv(viteEnv.mode, root, [
