@@ -30,8 +30,11 @@ const DrawerContext = createContext<{
 
 export function Drawer({
 	children,
+	description,
+	footer,
 	isOpen,
 	onClose,
+	title,
 	width = 400,
 }: DrawerProps): JSX.Element {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -82,7 +85,19 @@ export function Drawer({
 				role="dialog"
 				style={{ width: typeof width === "number" ? `${width}px` : width }}
 			>
-				{children}
+				{title && (
+					<Drawer.Header description={description}>{title}</Drawer.Header>
+				)}
+
+				<Drawer.Body>{children}</Drawer.Body>
+
+				{footer && (
+					<Drawer.Footer>
+						{typeof footer === "function"
+							? footer({ onClose: onClose ?? (() => {}) })
+							: footer}
+					</Drawer.Footer>
+				)}
 			</div>
 		</DrawerContext.Provider>
 	);

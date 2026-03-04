@@ -1,11 +1,4 @@
-import {
-	Button,
-	Checkbox,
-	cn,
-	DropdownMenu,
-	Label,
-	Select,
-} from "@cloudflare/kumo";
+import { Button, Checkbox, cn, DropdownMenu, Label } from "@cloudflare/kumo";
 import {
 	ArrowLineDownRightIcon,
 	CheckIcon,
@@ -184,6 +177,7 @@ export function StudioColumnSchemaEditor({
 			<td className="p-2 border border-border text-center h-10">
 				{columnIndex + 1}
 			</td>
+
 			<td
 				className={cn(
 					"p-2 border border-border text-center",
@@ -199,10 +193,13 @@ export function StudioColumnSchemaEditor({
 					)
 				)}
 			</td>
+
 			<td className="p-2 border border-border font-mono">
 				{editableColumn.name}
 			</td>
+
 			<td className="p-2 border border-border">{editableColumn.type}</td>
+
 			<td className="p-2 border border-border text-center">
 				<Checkbox
 					checked={!editableColumn.constraint?.notNull}
@@ -212,15 +209,18 @@ export function StudioColumnSchemaEditor({
 					}
 				/>
 			</td>
+
 			<td className="p-2 border border-border font-mono">
 				{JSON.stringify(editableColumn.constraint?.defaultValue)}
 			</td>
+
 			<td className="p-2 border border-border">
 				<ColumnConstraintDescription
 					column={editableColumn}
 					constraints={value.constraints}
 				/>
 			</td>
+
 			<td className="p-2 border border-border text-center">
 				<DropdownMenu>
 					<DropdownMenu.Trigger
@@ -235,6 +235,7 @@ export function StudioColumnSchemaEditor({
 							</Button>
 						}
 					/>
+
 					<DropdownMenu.Content side="bottom" align="end">
 						<DropdownMenu.Item
 							disabled={!!column.old}
@@ -243,10 +244,12 @@ export function StudioColumnSchemaEditor({
 						>
 							Edit column
 						</DropdownMenu.Item>
+
 						<DropdownMenu.Item
 							disabled={!!column.old}
 							icon={TrashIcon}
 							onClick={handleRemoveColumn}
+							variant="danger"
 						>
 							Remove column
 						</DropdownMenu.Item>
@@ -324,10 +327,10 @@ function ColumnConstraintDescription({
 	);
 }
 
-type ColumnConstraintBadgeProps = PropsWithChildren<{
+interface ColumnConstraintBadgeProps extends PropsWithChildren {
 	icon?: Icon;
 	name: string;
-}>;
+}
 
 function ColumnConstraintBadge({
 	children,
@@ -346,13 +349,17 @@ function ColumnConstraintBadge({
 }
 
 interface StudioColumnEditiorDrawerProps {
+	closeModal?: () => void;
 	defaultValue?: StudioTableColumn;
+	isOpen?: boolean;
 	onConfirm: (value: StudioTableColumn) => void;
 	schemaChanges: StudioTableSchemaChange;
 }
 
 export function StudioColumnEditiorDrawer({
+	closeModal,
 	defaultValue,
+	isOpen,
 	onConfirm,
 	schemaChanges,
 }: StudioColumnEditiorDrawerProps): JSX.Element {
@@ -385,7 +392,9 @@ export function StudioColumnEditiorDrawer({
 					{defaultValue ? "Save column" : "Add column"}
 				</Button>
 			)}
-			title="Add Column"
+			isOpen={isOpen}
+			onClose={closeModal}
+			title={defaultValue ? "Edit Column" : "Add Column"}
 		>
 			<div className="flex flex-col gap-2">
 				<div>
@@ -397,7 +406,7 @@ export function StudioColumnEditiorDrawer({
 						Column name
 					</Label>
 					<input
-						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
+						className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
 						onChange={(e): void => {
 							setValue(
 								produce(value, (draft) => {
@@ -412,55 +421,30 @@ export function StudioColumnEditiorDrawer({
 
 				<div className="w-full">
 					<Label>Data type</Label>
-					<Select
-						className="w-full"
-						placeholder="Select a type"
-						onValueChange={(newType): void => {
-							if (!newType) {
+					<select
+						className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm cursor-pointer"
+						onChange={(e): void => {
+							if (!e.target.value) {
 								return;
 							}
 
 							setValue((prev) =>
 								produce(prev, (draft) => {
-									draft.type = newType;
+									draft.type = e.target.value;
 								})
 							);
 						}}
 						value={value.type}
 					>
-						{[
-							...(["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
-								value.type?.toUpperCase()
-							)
-								? []
-								: [
-										{
-											label: value.type,
-											value: value.type,
-										},
-									]),
-							{
-								label: "Text",
-								value: "TEXT",
-							},
-							{
-								label: "Integer",
-								value: "INTEGER",
-							},
-							{
-								label: "Real",
-								value: "REAL",
-							},
-							{
-								label: "Blob",
-								value: "BLOB",
-							},
-						].map((option) => (
-							<Select.Option key={option.value} value={option.value}>
-								{option.label}
-							</Select.Option>
-						))}
-					</Select>
+						<option value="">Select a type</option>
+						{!["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
+							value.type?.toUpperCase()
+						) && <option value={value.type}>{value.type}</option>}
+						<option value="TEXT">Text</option>
+						<option value="INTEGER">Integer</option>
+						<option value="REAL">Real</option>
+						<option value="BLOB">Blob</option>
+					</select>
 				</div>
 			</div>
 		</Drawer>
