@@ -183,7 +183,7 @@ if (isWindows) {
 
 				expect(await proc.exitCode).not.toBe(0);
 				expect(proc.stderr).toContain(
-					"R2 bucket 'non-existent-r2-bucket' not found. Please use a different name and try again. [code: 10085]"
+					"R2 bucket 'non-existent-r2-bucket' not found. Verify the bucket exists in your account and that the bucket_name in your configuration is correct. [code: 10085]"
 				);
 				expect(proc.stderr).toContain(
 					"Error: Failed to start the remote proxy session. There is likely additional logging output above."

@@ -1,4 +1,4 @@
-import type { Observability, Route } from "./config/environment";
+import type { CacheOptions, Observability, Route } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -181,6 +181,9 @@ export interface CfWorkflow {
 	script_name?: string;
 	remote?: boolean;
 	raw?: boolean;
+	limits?: {
+		steps?: number;
+	};
 }
 
 export interface CfQueue {
@@ -428,6 +431,7 @@ export interface CfWorkerInit {
 		  }
 		| undefined;
 	observability: Observability | undefined;
+	cache: CacheOptions | undefined;
 }
 
 export interface CfWorkerContext {

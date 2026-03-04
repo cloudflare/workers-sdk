@@ -7,7 +7,9 @@ import {
 } from "@cloudflare/cli";
 import {
 	ApiError,
+	ExternalRegistryKind,
 	getAndValidateRegistryType,
+	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import {
@@ -35,78 +37,75 @@ import { getAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { formatError } from "./deploy";
 import { containersScope } from ".";
+import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
-import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
+	DeleteImageRegistryResponse,
+	ImageRegistryAuth,
+	ImageRegistryPermissions,
+} from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
-function _registryConfigureYargs(args: CommonYargsArgv) {
-	return args
-		.positional("DOMAIN", {
-			describe: "Domain to configure for the registry",
-			type: "string",
-			demandOption: true,
-		})
-		.option("public-credential", {
-			type: "string",
-			description:
-				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-			demandOption: true,
-			alias: ["aws-access-key-id"],
-		})
-		.option("secret-store-id", {
-			type: "string",
-			description:
-				"The ID of the secret store to use to store the registry credentials.",
-			demandOption: false,
-			conflicts: ["disable-secrets-store"],
-		})
-		.option("secret-name", {
-			type: "string",
-			description:
-				"The name for the secret the private registry credentials should be stored under.",
-			demandOption: false,
-			conflicts: ["disable-secrets-store"],
-		})
-		.option("disable-secrets-store", {
-			type: "boolean",
-			description:
-				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
-			demandOption: false,
-			conflicts: ["secret-store-id", "secret-name"],
-		})
-		.option("skip-confirmation", {
-			type: "boolean",
-			description: "Skip confirmation prompt",
-			alias: "y",
-			default: false,
-		})
-		.check((yargs) => {
-			if (
-				yargs.skipConfirmation &&
-				!yargs.secretName &&
-				!yargs.disableSecretsStore
-			) {
-				throw new Error(
-					"--secret-name is required when using --skip-confirmation"
-				);
-			}
-			return true;
-		});
-}
+const registryConfigureArgs = {
+	DOMAIN: {
+		describe: "Domain to configure for the registry",
+		type: "string",
+		demandOption: true,
+	},
+	"public-credential": {
+		type: "string",
+		demandOption: false,
+		hidden: true,
+		deprecated: true,
+		conflicts: ["dockerhub-username", "aws-access-key-id"],
+	},
+	"aws-access-key-id": {
+		type: "string",
+		description: "When configuring Amazon ECR, `AWS_ACCESS_KEY_ID`",
+		demandOption: false,
+		conflicts: ["public-credential", "dockerhub-username"],
+	},
+	"dockerhub-username": {
+		type: "string",
+		description: "When configuring DockerHub, the DockerHub username",
+		demandOption: false,
+		conflicts: ["public-credential", "aws-access-key-id"],
+	},
+	"secret-store-id": {
+		type: "string",
+		description:
+			"The ID of the secret store to use to store the registry credentials.",
+		demandOption: false,
+		conflicts: "disable-secrets-store",
+	},
+	"secret-name": {
+		type: "string",
+		description:
+			"The name for the secret the private registry credentials should be stored under.",
+		demandOption: false,
+		conflicts: "disable-secrets-store",
+	},
+	"disable-secrets-store": {
+		type: "boolean",
+		description:
+			"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
+		demandOption: false,
+		conflicts: ["secret-store-id", "secret-name"],
+	},
+	"skip-confirmation": {
+		type: "boolean",
+		description: "Skip confirmation prompts",
+		alias: "y",
+		default: false,
+	},
+} as const satisfies NamedArgDefinitions;
 
 async function registryConfigureCommand(
-	configureArgs: StrictYargsOptionsToInterface<typeof _registryConfigureYargs>,
+	configureArgs: HandlerArgs<typeof registryConfigureArgs>,
 	config: Config
 ) {
 	startSection("Configure a container registry");
 
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
-
-	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
 
 	if (registryType.type === "cloudflare") {
 		log(
@@ -115,6 +114,22 @@ async function registryConfigureCommand(
 		endSection("No configuration required");
 		return;
 	}
+
+	const publicCredential =
+		configureArgs.awsAccessKeyId ??
+		configureArgs.dockerhubUsername ??
+		configureArgs.publicCredential;
+	if (!publicCredential) {
+		const arg =
+			registryType.type === ExternalRegistryKind.DOCKER_HUB
+				? "dockerhub-username"
+				: registryType.type === ExternalRegistryKind.ECR
+					? "aws-access-key-id"
+					: "public-credential";
+		throw new UserError(`Missing required argument: ${arg}`);
+	}
+
+	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
 
 	const isFedRAMPHigh =
 		getCloudflareComplianceRegion(config) === "fedramp_high";
@@ -207,7 +222,7 @@ async function registryConfigureCommand(
 				domain: configureArgs.DOMAIN,
 				is_public: false,
 				auth: {
-					public_credential: configureArgs.publicCredential,
+					public_credential: publicCredential,
 					private_credential,
 				},
 				kind: registryType.type,
@@ -249,7 +264,7 @@ async function promptForSecretName(secretType?: string): Promise<string> {
 }
 
 interface GetOrCreateSecretOptions {
-	configureArgs: StrictYargsOptionsToInterface<typeof _registryConfigureYargs>;
+	configureArgs: HandlerArgs<typeof registryConfigureArgs>;
 	config: Config;
 	accountId: string;
 	storeId: string;
@@ -340,16 +355,16 @@ async function promptForRegistryPrivateCredential(
 	return secret;
 }
 
-function _registryListYargs(args: CommonYargsArgv) {
-	return args.option("json", {
+const registryListArgs = {
+	json: {
 		type: "boolean",
 		description: "Format output as JSON",
 		default: false,
-	});
-}
+	},
+} as const satisfies NamedArgDefinitions;
 
 async function registryListCommand(
-	listArgs: StrictYargsOptionsToInterface<typeof _registryListYargs>
+	listArgs: HandlerArgs<typeof registryListArgs>
 ) {
 	if (!listArgs.json && !isNonInteractiveOrCI()) {
 		startSection("List configured container registries");
@@ -381,23 +396,22 @@ async function registryListCommand(
 	}
 }
 
-// Only used for its type. The underscore prefix prevents unused variable linting errors.
-const _registryDeleteYargs = (yargs: CommonYargsArgv) => {
-	return yargs
-		.positional("DOMAIN", {
-			describe: "domain of the registry to delete",
-			type: "string",
-			demandOption: true,
-		})
-		.option("skip-confirmation", {
-			type: "boolean",
-			description: "Skip confirmation prompt",
-			alias: "y",
-			default: false,
-		});
-};
+const registryDeleteArgs = {
+	DOMAIN: {
+		describe: "Domain of the registry to delete",
+		type: "string",
+		demandOption: true,
+	},
+	"skip-confirmation": {
+		type: "boolean",
+		description: "Skip confirmation prompts for registry and secret deletion",
+		alias: "y",
+		default: false,
+	},
+} as const satisfies NamedArgDefinitions;
+
 async function registryDeleteCommand(
-	deleteArgs: StrictYargsOptionsToInterface<typeof _registryDeleteYargs>,
+	deleteArgs: HandlerArgs<typeof registryDeleteArgs>,
 	config: Config
 ) {
 	startSection(`Delete registry ${deleteArgs.DOMAIN}`);
@@ -482,6 +496,42 @@ async function registryDeleteCommand(
 	}
 }
 
+async function registryCredentialsCommand(credentialsArgs: {
+	DOMAIN?: string;
+	expirationMinutes: number;
+	push?: boolean;
+	pull?: boolean;
+	json?: boolean;
+}) {
+	const cloudflareRegistry = getCloudflareContainerRegistry();
+	const domain = credentialsArgs.DOMAIN || cloudflareRegistry;
+	if (domain !== cloudflareRegistry) {
+		throw new UserError(
+			`The credentials command only accepts the Cloudflare managed registry (${cloudflareRegistry}).`
+		);
+	}
+
+	if (!credentialsArgs.pull && !credentialsArgs.push) {
+		throw new UserError(
+			"You have to specify either --push or --pull in the command."
+		);
+	}
+
+	const credentials =
+		await ImageRegistriesService.generateImageRegistryCredentials(domain, {
+			expiration_minutes: credentialsArgs.expirationMinutes,
+			permissions: [
+				...(credentialsArgs.push ? ["push"] : []),
+				...(credentialsArgs.pull ? ["pull"] : []),
+			] as ImageRegistryPermissions[],
+		});
+	if (credentialsArgs.json) {
+		logger.json(credentials);
+	} else {
+		logger.log(credentials.password);
+	}
+}
+
 export const containersRegistriesNamespace = createNamespace({
 	metadata: {
 		description: "Configure and manage non-Cloudflare registries",
@@ -497,47 +547,7 @@ export const containersRegistriesConfigureCommand = createCommand({
 		status: "open beta",
 		owner: "Product: Cloudchamber",
 	},
-	args: {
-		DOMAIN: {
-			describe: "Domain to configure for the registry",
-			type: "string",
-			demandOption: true,
-		},
-		"public-credential": {
-			type: "string",
-			description:
-				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-			demandOption: true,
-			alias: "aws-access-key-id",
-		},
-		"secret-store-id": {
-			type: "string",
-			description:
-				"The ID of the secret store to use to store the registry credentials.",
-			demandOption: false,
-			conflicts: "disable-secrets-store",
-		},
-		"secret-name": {
-			type: "string",
-			description:
-				"The name for the secret the private registry credentials should be stored under.",
-			demandOption: false,
-			conflicts: "disable-secrets-store",
-		},
-		"disable-secrets-store": {
-			type: "boolean",
-			description:
-				"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
-			demandOption: false,
-			conflicts: ["secret-store-id", "secret-name"],
-		},
-		"skip-confirmation": {
-			type: "boolean",
-			description: "Skip confirmation prompts",
-			alias: "y",
-			default: false,
-		},
-	},
+	args: registryConfigureArgs,
 	positionalArgs: ["DOMAIN"],
 	validateArgs(args) {
 		if (
@@ -561,18 +571,11 @@ export const containersRegistriesListCommand = createCommand({
 		description: "List all configured container registries",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
-		hidden: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
-	args: {
-		json: {
-			type: "boolean",
-			description: "Format output as JSON",
-			default: false,
-		},
-	},
+	args: registryListArgs,
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
 		await registryListCommand(args);
@@ -584,24 +587,51 @@ export const containersRegistriesDeleteCommand = createCommand({
 		description: "Delete a configured container registry",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
-		hidden: true,
+	},
+	args: registryDeleteArgs,
+	positionalArgs: ["DOMAIN"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await registryDeleteCommand(args, config);
+	},
+});
+
+export const containersRegistriesCredentialsCommand = createCommand({
+	metadata: {
+		description: "Get a temporary password for a specific domain",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
 		DOMAIN: {
-			describe: "Domain of the registry to delete",
 			type: "string",
-			demandOption: true,
+			describe: "Domain to get credentials for",
 		},
-		"skip-confirmation": {
+		"expiration-minutes": {
+			type: "number",
+			default: 15,
+			description: "How long the credentials should be valid for (in minutes)",
+		},
+		push: {
 			type: "boolean",
-			description: "Skip confirmation prompts for registry and secret deletion",
-			alias: "y",
+			description: "If you want these credentials to be able to push",
+		},
+		pull: {
+			type: "boolean",
+			description: "If you want these credentials to be able to pull",
+		},
+		json: {
+			type: "boolean",
+			description: "Format output as JSON",
 			default: false,
 		},
 	},
 	positionalArgs: ["DOMAIN"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
-		await registryDeleteCommand(args, config);
+		await registryCredentialsCommand(args);
 	},
 });

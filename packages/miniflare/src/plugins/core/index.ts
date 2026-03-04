@@ -192,7 +192,10 @@ const CoreOptionsSchemaInput = z.intersection(
 		containerEngine: z
 			.union([
 				z.object({
-					localDocker: z.object({ socketPath: z.string() }),
+					localDocker: z.object({
+						socketPath: z.string(),
+						containerEgressInterceptorImage: z.string().optional(),
+					}),
 				}),
 				z.string(),
 			])
@@ -905,7 +908,10 @@ export const CORE_PLUGIN: Plugin<
 							);
 						}
 					),
-					containerEngine: getContainerEngine(options.containerEngine),
+					containerEngine: getContainerEngine(
+						options.containerEngine,
+						options.compatibilityFlags
+					),
 				},
 			});
 		}
@@ -1210,13 +1216,28 @@ function getWorkerScript(
 	}
 }
 
+const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:4dc6c7f@sha256:9621ef445ef120409e5d95bbd845ab2fa0f613636b59a01d998f5704f4096ae2";
+
+/**
+ * Returns the default containerEgressInterceptorImage. It's used for
+ * container network interception for local dev.
+ */
+function getContainerEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
 /**
  * Returns the Container engine configuration
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
 function getContainerEngine(
-	engineOrSocketPath: Worker_ContainerEngine | string | undefined
+	engineOrSocketPath: Worker_ContainerEngine | string | undefined,
+	compatibilityFlags?: string[]
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
 		// TODO: workerd does not support win named pipes
@@ -1226,11 +1247,31 @@ function getContainerEngine(
 				: "unix:///var/run/docker.sock";
 	}
 
+	// TODO: Once the feature becomes GA, we should remove the experimental requirement.
+	// Egress interceptor is to support direct connectivity between the Container and Workers,
+	// it spawns a container in the same network namespace as the local dev container and
+	// intercepts traffic to redirect to Workerd.
+	const egressImage = compatibilityFlags?.includes("experimental")
+		? getContainerEgressInterceptorImage()
+		: undefined;
+
 	if (typeof engineOrSocketPath === "string") {
-		return { localDocker: { socketPath: engineOrSocketPath } };
+		return {
+			localDocker: {
+				socketPath: engineOrSocketPath,
+				containerEgressInterceptorImage: egressImage,
+			},
+		};
 	}
 
-	return engineOrSocketPath;
+	return {
+		localDocker: {
+			...engineOrSocketPath.localDocker,
+			containerEgressInterceptorImage:
+				engineOrSocketPath.localDocker.containerEgressInterceptorImage ??
+				egressImage,
+		},
+	};
 }
 
 export * from "./errors";

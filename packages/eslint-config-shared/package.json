@@ -11,8 +11,8 @@
 	},
 	"scripts": {
 		"deploy": "echo 'no deploy'",
-		"test": "node rules/__tests__/no-unsafe-command-execution.test.mjs",
-		"test:ci": "node rules/__tests__/no-unsafe-command-execution.test.mjs"
+		"test": "node rules/__tests__/no-unsafe-command-execution.test.mjs && node rules/__tests__/no-direct-recursive-rm.test.mjs",
+		"test:ci": "node rules/__tests__/no-unsafe-command-execution.test.mjs && node rules/__tests__/no-direct-recursive-rm.test.mjs"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

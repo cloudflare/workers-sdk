@@ -1,5 +1,6 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
@@ -158,7 +159,7 @@ describe("Durable Objects API", () => {
 
 		beforeAll(async () => {
 			// Clean up any previous test data
-			await rm(persistPath, { recursive: true, force: true });
+			await removeDir(persistPath);
 			await mkdir(persistPath, { recursive: true });
 
 			mf = new Miniflare({
@@ -209,7 +210,7 @@ describe("Durable Objects API", () => {
 		afterAll(async () => {
 			await disposeWithRetry(mf);
 			// Clean up test data
-			await rm(persistPath, { recursive: true, force: true });
+			await removeDir(persistPath);
 		});
 
 		describe("GET /workers/durable_objects/namespaces/:namespace_id/objects", () => {

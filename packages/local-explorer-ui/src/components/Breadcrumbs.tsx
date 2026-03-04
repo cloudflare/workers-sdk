@@ -1,14 +1,15 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { Fragment } from "react";
-import type { FC, ReactNode } from "react";
+import type { FC, PropsWithChildren, ReactNode } from "react";
 
-interface BreadcrumbsProps {
+interface BreadcrumbsProps extends PropsWithChildren {
 	icon: FC;
 	items: Array<ReactNode>;
 	title: string;
 }
 
 export function Breadcrumbs({
+	children,
 	icon: Icon,
 	items,
 	title,
@@ -26,6 +27,8 @@ export function Breadcrumbs({
 					{item}
 				</Fragment>
 			))}
+
+			{children}
 		</div>
 	);
 }

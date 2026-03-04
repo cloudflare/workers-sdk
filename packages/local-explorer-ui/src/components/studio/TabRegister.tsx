@@ -1,16 +1,32 @@
+import { BinocularsIcon, TableIcon } from "@phosphor-icons/react";
+import { StudioQueryTab } from "./Tabs/Query";
+import { StudioTableExplorerTab } from "./Tabs/TableExplorer";
 import type { Icon } from "@phosphor-icons/react";
 import type { ReactElement } from "react";
 
-const RegisteredTabDefinition = [
-	// TODO: Add query, table, edit table and new table tab definitions
-] as Array<
-	TabDefinition<{
-		id?: string;
-		schemaName?: string;
-		tableName?: string;
-		type: string;
-	}>
->;
+const QueryTab: TabDefinition<{ id: string; type: "query" }> = {
+	icon: BinocularsIcon,
+	makeComponent: () => <StudioQueryTab />,
+	makeIdentifier: (tab) => `query/${tab.id}`,
+	makeTitle: () => "Query",
+	type: "query",
+};
+
+const TableTab: TabDefinition<{
+	schemaName: string;
+	tableName: string;
+	type: "table";
+}> = {
+	icon: TableIcon,
+	makeComponent: ({ schemaName, tableName }) => (
+		<StudioTableExplorerTab schemaName={schemaName} tableName={tableName} />
+	),
+	makeIdentifier: (tab) => `table/${tab.schemaName}.${tab.tableName}`,
+	makeTitle: ({ tableName }) => tableName,
+	type: "table",
+};
+
+const RegisteredTabDefinition = [QueryTab, TableTab];
 
 export interface TabDefinition<T extends { type: string }> {
 	icon: Icon;

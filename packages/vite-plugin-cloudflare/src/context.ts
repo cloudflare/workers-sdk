@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
@@ -25,8 +24,8 @@ export interface SharedContext {
 	miniflare?: Miniflare;
 	workerNameToExportTypesMap?: Map<string, ExportTypes>;
 	hasShownWorkerConfigWarnings: boolean;
-	/** Used to track whether hooks are being called because of a server restart or a server close event */
-	isRestartingDevServer: boolean;
+	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
+	restartingDevServerCount: number;
 }
 
 /**
@@ -37,11 +36,9 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
-	#proxySharedSecret: string;
 
 	constructor(sharedContext: SharedContext) {
 		this.#sharedContext = sharedContext;
-		this.#proxySharedSecret = randomUUID();
 	}
 
 	/** Creates a new Miniflare instance or updates the existing instance */
@@ -111,12 +108,16 @@ export class PluginContext {
 		return this.#sharedContext.hasShownWorkerConfigWarnings;
 	}
 
-	setIsRestartingDevServer(isRestartingDevServer: boolean): void {
-		this.#sharedContext.isRestartingDevServer = isRestartingDevServer;
+	beginRestartingDevServer(): void {
+		this.#sharedContext.restartingDevServerCount++;
+	}
+
+	endRestartingDevServer(): void {
+		this.#sharedContext.restartingDevServerCount--;
 	}
 
 	get isRestartingDevServer(): boolean {
-		return this.#sharedContext.isRestartingDevServer;
+		return this.#sharedContext.restartingDevServerCount > 0;
 	}
 
 	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {
@@ -210,10 +211,6 @@ export class PluginContext {
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.#getWorker(environmentName)?.nodeJsCompat;
-	}
-
-	get proxySharedSecret(): string {
-		return this.#proxySharedSecret;
 	}
 }
 

@@ -40,6 +40,7 @@ import type { Binding } from "../types";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
+	CacheOptions,
 	DispatchNamespaceOutbound,
 	Environment,
 	Observability,
@@ -1390,6 +1391,7 @@ function normalizeAndValidateEnvironment(
 	);
 
 	experimental(diagnostics, rawEnv, "unsafe");
+	experimental(diagnostics, rawEnv, "secrets");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1556,6 +1558,16 @@ function normalizeAndValidateEnvironment(
 			"vars",
 			validateVars(envName),
 			{}
+		),
+		secrets: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"secrets",
+			validateSecrets(envName),
+			undefined
 		),
 		define: notInheritable(
 			diagnostics,
@@ -1936,6 +1948,14 @@ function normalizeAndValidateEnvironment(
 			validateObservability,
 			undefined
 		),
+		cache: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"cache",
+			validateCache,
+			undefined
+		),
 		compliance_region: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2223,6 +2243,42 @@ const validateVars =
 				}
 			}
 		}
+		return isValid;
+	};
+
+const validateSecrets =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (value === undefined) {
+			return true;
+		}
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(value)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+
+		// Warn about unexpected properties
+		validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+			"required",
+		]);
+
+		// Validate 'required' property if present
+		isValid =
+			validateOptionalTypedArray(
+				diagnostics,
+				`${fieldPath}.required`,
+				(value as Record<string, unknown>).required,
+				"string"
+			) && isValid;
+
 		return isValid;
 	};
 
@@ -2528,12 +2584,54 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "limits") && value.limits !== undefined) {
+		if (
+			typeof value.limits !== "object" ||
+			value.limits === null ||
+			Array.isArray(value.limits)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const limits = value.limits as Record<string, unknown>;
+			if (limits.steps !== undefined) {
+				if (
+					typeof limits.steps !== "number" ||
+					!Number.isInteger(limits.steps) ||
+					limits.steps < 1
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings "limits.steps" field must be a positive integer but got ${JSON.stringify(
+							limits.steps
+						)}.`
+					);
+					isValid = false;
+				} else if (limits.steps > 25_000) {
+					diagnostics.warnings.push(
+						`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+					);
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.limits`,
+				Object.keys(limits),
+				["steps"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"remote",
+		"limits",
 	]);
 
 	return isValid;
@@ -3912,6 +4010,10 @@ const validateBindingsHaveUniqueNames = (
 		])
 	);
 
+	// Add secrets to binding name validation (secrets is not a CfWorkerInit binding type,
+	// but we want to validate that secret names don't conflict with other bindings)
+	bindingsGroupedByType["Secret"] = config.secrets?.required ?? [];
+
 	const bindingsGroupedByName: Record<string, string[]> = {};
 
 	for (const bindingType in bindingsGroupedByType) {
@@ -4911,6 +5013,38 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 			`"${field}.head_sampling_rate" must be a value between 0 and 1.`
 		);
 	}
+
+	return isValid;
+};
+
+const validateCache: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as CacheOptions;
+	let isValid = true;
+
+	isValid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"enabled",
+			val.enabled,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"enabled",
+		]) && isValid;
 
 	return isValid;
 };

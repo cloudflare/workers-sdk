@@ -3,6 +3,7 @@ import fs, { writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import util from "node:util";
+import { removeDir } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
@@ -108,7 +109,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 			debugLog("After");
 			debugLog(execSync("pnpm config list", { encoding: "utf8" }));
 		}
-		await fs.rm(registryPath, { recursive: true, maxRetries: 10 });
+		await removeDir(registryPath);
 	};
 }
 
@@ -163,7 +164,7 @@ async function getPackagesToPublish(names: string[]) {
 
 		return deployableDeps;
 	} finally {
-		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		await removeDir(tmpPath);
 	}
 }
 

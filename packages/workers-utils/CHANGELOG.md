@@ -1,5 +1,38 @@
 # @cloudflare/workers-utils
 
+## 0.12.0
+
+### Minor Changes
+
+- [#12677](https://github.com/cloudflare/workers-sdk/pull/12677) [`eccd014`](https://github.com/cloudflare/workers-sdk/commit/eccd0149000a689d37dfaacdfa6db0989b24bae6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add experimental `secrets` property to config validation
+
+- [#12625](https://github.com/cloudflare/workers-sdk/pull/12625) [`c0e9e08`](https://github.com/cloudflare/workers-sdk/commit/c0e9e08356b45243b752af937f463105a58f9a0e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Add `cache` configuration option for enabling worker cache (experimental)
+
+  You can now enable cache before worker execution using the new `cache` configuration:
+
+  ```jsonc
+  {
+  	"cache": {
+  		"enabled": true,
+  	},
+  }
+  ```
+
+  This setting is environment-inheritable and opt-in. When enabled, cache behavior is applied before your worker runs.
+
+  Note: This feature is experimental. The runtime API is not yet generally available.
+
+## 0.11.2
+
+### Patch Changes
+
+- [#12629](https://github.com/cloudflare/workers-sdk/pull/12629) [`603fe18`](https://github.com/cloudflare/workers-sdk/commit/603fe181be7c06b9afa1e7741ef8edfc02fa8e22) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `removeDir` and `removeDirSync` helpers with automatic retry logic for Windows EBUSY errors
+
+  These new helpers wrap `fs.rm`/`fs.rmSync` with `maxRetries: 5` and `retryDelay: 100` to handle cases where file handles aren't immediately released (common on Windows with workerd).
+  The async helper also has a `fireAndForget` option to silently swallow errors and not await removal.
+
+  This improves reliability of cleanup operations across the codebase.
+
 ## 0.11.1
 
 ### Patch Changes

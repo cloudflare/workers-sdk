@@ -204,6 +204,7 @@ export async function createRemoteWorkerInit(props: {
 		streaming_tail_consumers: undefined,
 		limits: undefined, // no limits in preview - not supported yet but can be added
 		observability: undefined, // no observability in dev,
+		cache: undefined, // no cache in dev
 	};
 
 	return init;

@@ -11,7 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
+import { Route as DoClassNameRouteImport } from './routes/do/$className'
 import { Route as D1DatabaseIdRouteImport } from './routes/d1/$databaseId'
+import { Route as DoClassNameIndexRouteImport } from './routes/do/$className/index'
+import { Route as DoClassNameObjectIdRouteImport } from './routes/do/$className/$objectId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,39 +26,81 @@ const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
   path: '/kv/$namespaceId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DoClassNameRoute = DoClassNameRouteImport.update({
+  id: '/do/$className',
+  path: '/do/$className',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const D1DatabaseIdRoute = D1DatabaseIdRouteImport.update({
   id: '/d1/$databaseId',
   path: '/d1/$databaseId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DoClassNameIndexRoute = DoClassNameIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DoClassNameRoute,
+} as any)
+const DoClassNameObjectIdRoute = DoClassNameObjectIdRouteImport.update({
+  id: '/$objectId',
+  path: '/$objectId',
+  getParentRoute: () => DoClassNameRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
+  '/do/$className': typeof DoClassNameRouteWithChildren
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
+  '/do/$className/': typeof DoClassNameIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
+  '/do/$className': typeof DoClassNameIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
+  '/do/$className': typeof DoClassNameRouteWithChildren
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
+  '/do/$className/': typeof DoClassNameIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/d1/$databaseId' | '/kv/$namespaceId'
+  fullPaths:
+    | '/'
+    | '/d1/$databaseId'
+    | '/do/$className'
+    | '/kv/$namespaceId'
+    | '/do/$className/$objectId'
+    | '/do/$className/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/d1/$databaseId' | '/kv/$namespaceId'
-  id: '__root__' | '/' | '/d1/$databaseId' | '/kv/$namespaceId'
+  to:
+    | '/'
+    | '/d1/$databaseId'
+    | '/kv/$namespaceId'
+    | '/do/$className/$objectId'
+    | '/do/$className'
+  id:
+    | '__root__'
+    | '/'
+    | '/d1/$databaseId'
+    | '/do/$className'
+    | '/kv/$namespaceId'
+    | '/do/$className/$objectId'
+    | '/do/$className/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   D1DatabaseIdRoute: typeof D1DatabaseIdRoute
+  DoClassNameRoute: typeof DoClassNameRouteWithChildren
   KvNamespaceIdRoute: typeof KvNamespaceIdRoute
 }
 
@@ -75,6 +120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KvNamespaceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/do/$className': {
+      id: '/do/$className'
+      path: '/do/$className'
+      fullPath: '/do/$className'
+      preLoaderRoute: typeof DoClassNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/d1/$databaseId': {
       id: '/d1/$databaseId'
       path: '/d1/$databaseId'
@@ -82,12 +134,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof D1DatabaseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/do/$className/': {
+      id: '/do/$className/'
+      path: '/'
+      fullPath: '/do/$className/'
+      preLoaderRoute: typeof DoClassNameIndexRouteImport
+      parentRoute: typeof DoClassNameRoute
+    }
+    '/do/$className/$objectId': {
+      id: '/do/$className/$objectId'
+      path: '/$objectId'
+      fullPath: '/do/$className/$objectId'
+      preLoaderRoute: typeof DoClassNameObjectIdRouteImport
+      parentRoute: typeof DoClassNameRoute
+    }
   }
 }
+
+interface DoClassNameRouteChildren {
+  DoClassNameObjectIdRoute: typeof DoClassNameObjectIdRoute
+  DoClassNameIndexRoute: typeof DoClassNameIndexRoute
+}
+
+const DoClassNameRouteChildren: DoClassNameRouteChildren = {
+  DoClassNameObjectIdRoute: DoClassNameObjectIdRoute,
+  DoClassNameIndexRoute: DoClassNameIndexRoute,
+}
+
+const DoClassNameRouteWithChildren = DoClassNameRoute._addFileChildren(
+  DoClassNameRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   D1DatabaseIdRoute: D1DatabaseIdRoute,
+  DoClassNameRoute: DoClassNameRouteWithChildren,
   KvNamespaceIdRoute: KvNamespaceIdRoute,
 }
 export const routeTree = rootRouteImport
