@@ -40,7 +40,7 @@ interface TableActionsDropdownProps {
 	studioRef: React.RefObject<StudioRef | null>;
 }
 
-export interface DeletionTarget {
+export interface TableTarget {
 	schemaName: string;
 	tableName: string;
 }
@@ -52,7 +52,7 @@ export function TableActionsDropdown({
 	schemaName = "main",
 	studioRef,
 }: TableActionsDropdownProps): JSX.Element {
-	const [deleteTarget, setDeleteTarget] = useState<DeletionTarget | null>(null);
+	const [deleteTarget, setDeleteTarget] = useState<TableTarget | null>(null);
 
 	const handleCopyTableName = useCallback(async (): Promise<void> => {
 		if (!currentTable) {

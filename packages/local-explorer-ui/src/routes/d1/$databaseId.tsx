@@ -160,10 +160,9 @@ function DatabaseView(): JSX.Element {
 				{/* TODO: Add tooltip */}
 				<Button
 					aria-label="Create a table"
-					disabled={true}
 					icon={PlusIcon}
 					onClick={(): void => {
-						// TODO: Actually open and select the "create-table" tab
+						studioRef.current?.openCreateTableTab();
 					}}
 				>
 					Create

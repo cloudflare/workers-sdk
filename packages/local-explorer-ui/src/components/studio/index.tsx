@@ -20,7 +20,7 @@ import type {
 	StudioResource,
 	StudioSchemas,
 } from "../../types/studio";
-import type { DeletionTarget } from "../TableActionsDropdown";
+import type { TableTarget } from "../TableActionsDropdown";
 import type { StudioContextValue } from "./Context";
 import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
@@ -35,7 +35,12 @@ export interface StudioRef {
 	 * Returns the currently active table context (from table or edit-table tabs),
 	 * or null if no table is selected.
 	 */
-	currentTable: DeletionTarget | null;
+	currentTable: TableTarget | null;
+
+	/**
+	 * Opens the create-table tab.
+	 */
+	openCreateTableTab: () => void;
 
 	/**
 	 * Opens the edit-table tab for the specified table.
@@ -231,7 +236,7 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 	 *
 	 * Works for both "table" and "edit-table" tab types.
 	 */
-	const getCurrentTable = useCallback((): DeletionTarget | null => {
+	const getCurrentTable = useCallback((): TableTarget | null => {
 		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
 		if (!selectedTab) {
 			return null;
@@ -252,16 +257,23 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 		};
 	}, [selectedTabKey, tabs]);
 
+	const openCreateTableTab = useCallback((): void => {
+		openStudioTab({
+			type: "create-table",
+		});
+	}, [openStudioTab]);
+
 	useImperativeHandle(
 		ref,
 		() => ({
 			get currentTable() {
 				return getCurrentTable();
 			},
+			openCreateTableTab,
 			openEditTableTab,
 			refreshSchema,
 		}),
-		[getCurrentTable, openEditTableTab, refreshSchema]
+		[getCurrentTable, openCreateTableTab, openEditTableTab, refreshSchema]
 	);
 
 	/**
