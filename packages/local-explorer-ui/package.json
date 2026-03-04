@@ -18,8 +18,8 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@base-ui/react": "^1.1.0",
-		"@cloudflare/kumo": "^1.9.0",
+		"@base-ui/react": "^1.2.0",
+		"@cloudflare/kumo": "https://pkg.pr.new/@cloudflare/kumo@173",
 		"@cloudflare/workers-editor-shared": "^0.1.1",
 		"@codemirror/autocomplete": "^6.20.0",
 		"@codemirror/commands": "^6.10.2",
