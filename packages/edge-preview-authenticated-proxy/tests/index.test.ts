@@ -18,9 +18,15 @@ function createMockFetchImplementation() {
 		const request = new Request(input, init);
 		const url = new URL(request.url);
 
+		if (url.origin === "https://workers-logging.cfdata.org") {
+			// Ignore prometheus logging requests
+			return new Response("OK", { status: 200 });
+		}
+
 		// Only intercept requests to our mock remote URL
 		if (url.origin !== MOCK_REMOTE_URL) {
-			return new Response("OK", { status: 200 });
+			console.error(`Request to unexpected URL: ${request.url}`);
+			return new Response("BAD", { status: 500 });
 		}
 
 		if (url.pathname === "/exchange") {
@@ -152,9 +158,7 @@ describe("Preview Worker", () => {
 			}
 		);
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
-		const json = (await resp.json()) as any;
-
+		const json = await resp.json();
 		expect(json).toMatchObject({
 			url: `${MOCK_REMOTE_URL}/`,
 			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
