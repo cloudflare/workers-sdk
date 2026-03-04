@@ -7,7 +7,7 @@ import { isEqual } from "../../../../utils/is-equal";
 import { useModal } from "../../Modal";
 import { StudioCommitConfirmation } from "../../Modal/CommitConfirmation";
 import { StudioSQLEditor } from "../../SQLEditor";
-import { StudioColumnEditiorDrawer, StudioColumnSchemaEditor } from "./Column";
+import { StudioColumnEditorModal, StudioColumnSchemaEditor } from "./Column";
 import { StudioConstraintListEditor } from "./ConstraintListEditor";
 import type {
 	IStudioDriver,
@@ -67,7 +67,7 @@ export function StudioTableSchemaEditor({
 	);
 
 	const handleAddColumn = useCallback((): void => {
-		openModal(StudioColumnEditiorDrawer, {
+		openModal(StudioColumnEditorModal, {
 			onConfirm: (newColumn: StudioTableColumn) => {
 				onChange((prev) =>
 					produce(prev, (draft) => {

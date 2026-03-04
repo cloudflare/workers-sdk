@@ -1,4 +1,11 @@
-import { Button, Checkbox, cn, DropdownMenu, Label } from "@cloudflare/kumo";
+import {
+	Button,
+	Checkbox,
+	cn,
+	Dialog,
+	DropdownMenu,
+	Label,
+} from "@cloudflare/kumo";
 import {
 	ArrowLineDownRightIcon,
 	CheckIcon,
@@ -11,7 +18,6 @@ import {
 import { produce } from "immer";
 import { useCallback, useState } from "react";
 import { useModal } from "../../Modal";
-import { Drawer } from "./Drawer";
 import type {
 	StudioTableColumn,
 	StudioTableConstraintChange,
@@ -133,7 +139,7 @@ export function StudioColumnSchemaEditor({
 			return;
 		}
 
-		openModal(StudioColumnEditiorDrawer, {
+		openModal(StudioColumnEditorModal, {
 			defaultValue: column.new,
 			onConfirm: (newColumnDef: StudioTableColumn) => {
 				onChange((prev) =>
@@ -356,7 +362,7 @@ interface StudioColumnEditiorDrawerProps {
 	schemaChanges: StudioTableSchemaChange;
 }
 
-export function StudioColumnEditiorDrawer({
+export function StudioColumnEditorModal({
 	closeModal,
 	defaultValue,
 	isOpen,
@@ -378,75 +384,106 @@ export function StudioColumnEditiorDrawer({
 			column.new?.name.toLowerCase() === value.name.toLocaleLowerCase()
 	);
 
+	const isValid = !!value.name && !!value.type && !isColumnNameDuplicated;
+
+	const handleSubmit = (): void => {
+		if (!isValid) {
+			return;
+		}
+
+		onConfirm(value);
+		closeModal?.();
+	};
+
 	return (
-		<Drawer
-			footer={({ onClose }) => (
-				<Button
-					disabled={!value.name || !value.type || isColumnNameDuplicated}
-					onClick={() => {
-						onConfirm(value);
-						void onClose();
-					}}
-					variant="primary"
-				>
-					{defaultValue ? "Save column" : "Add column"}
-				</Button>
-			)}
-			isOpen={isOpen}
-			onClose={closeModal}
-			title={defaultValue ? "Edit Column" : "Add Column"}
+		<Dialog.Root
+			onOpenChange={(open: boolean) => {
+				if (!open) {
+					closeModal?.();
+				}
+			}}
+			open={isOpen}
 		>
-			<div className="flex flex-col gap-2">
-				<div>
-					<Label
-						tooltip={
-							isColumnNameDuplicated ? "Column name must be unique" : undefined
-						}
-					>
-						Column name
-					</Label>
-					<input
-						className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
-						onChange={(e): void => {
-							setValue(
-								produce(value, (draft) => {
-									draft.name = e.target.value;
-								})
-							);
-						}}
-						placeholder="e.g., user_id"
-						value={value.name}
-					/>
+			<Dialog className="p-6">
+				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+					<Dialog.Title className="text-lg font-semibold">
+						{defaultValue ? "Edit Column" : "Add Column"}
+					</Dialog.Title>
 				</div>
 
-				<div className="w-full">
-					<Label>Data type</Label>
-					<select
-						className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm cursor-pointer"
-						onChange={(e): void => {
-							if (!e.target.value) {
-								return;
-							}
+				{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+				<Dialog.Description className="text-kumo-subtle">
+					<div className="flex flex-col gap-4">
+						<div>
+							<Label
+								tooltip={
+									isColumnNameDuplicated
+										? "Column name must be unique"
+										: undefined
+								}
+							>
+								Column name
+							</Label>
+							<input
+								autoFocus
+								className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
+								onChange={(e): void => {
+									setValue(
+										produce(value, (draft) => {
+											draft.name = e.target.value;
+										})
+									);
+								}}
+								placeholder="e.g., user_id"
+								value={value.name}
+							/>
+						</div>
 
-							setValue((prev) =>
-								produce(prev, (draft) => {
-									draft.type = e.target.value;
-								})
-							);
-						}}
-						value={value.type}
-					>
-						<option value="">Select a type</option>
-						{!["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
-							value.type?.toUpperCase()
-						) && <option value={value.type}>{value.type}</option>}
-						<option value="TEXT">Text</option>
-						<option value="INTEGER">Integer</option>
-						<option value="REAL">Real</option>
-						<option value="BLOB">Blob</option>
-					</select>
+						<div className="w-full">
+							<Label>Data type</Label>
+							<select
+								className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm cursor-pointer"
+								onChange={(e): void => {
+									if (!e.target.value) {
+										return;
+									}
+
+									setValue((prev) =>
+										produce(prev, (draft) => {
+											draft.type = e.target.value;
+										})
+									);
+								}}
+								value={value.type}
+							>
+								<option value="">Select a type</option>
+								{!["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
+									value.type?.toUpperCase()
+								) && <option value={value.type}>{value.type}</option>}
+								<option value="TEXT">Text</option>
+								<option value="INTEGER">Integer</option>
+								<option value="REAL">Real</option>
+								<option value="BLOB">Blob</option>
+							</select>
+						</div>
+					</div>
+				</Dialog.Description>
+
+				<div className="mt-6 flex justify-end gap-2">
+					<Button onClick={closeModal} variant="secondary">
+						Cancel
+					</Button>
+					<Button disabled={!isValid} onClick={handleSubmit} variant="primary">
+						{defaultValue ? "Save column" : "Add column"}
+					</Button>
 				</div>
-			</div>
-		</Drawer>
+			</Dialog>
+		</Dialog.Root>
 	);
 }
+
+/**
+ * @deprecated Use StudioColumnEditorModal instead
+ */
+export const StudioColumnEditiorDrawer = StudioColumnEditorModal;
