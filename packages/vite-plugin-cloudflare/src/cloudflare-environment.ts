@@ -14,7 +14,12 @@ import {
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
-import { debuglog, getOutputDirectory, isRolldown } from "./utils";
+import {
+	debuglog,
+	getChildOutputDirectory,
+	getOutputDirectory,
+	isRolldown,
+} from "./utils";
 import type { ExportTypes } from "./export-types";
 import type {
 	ResolvedWorkerConfig,
@@ -196,7 +201,7 @@ export function createCloudflareEnvironmentOptions({
 	mode,
 	environmentName,
 	isEntryWorker,
-	isParentEnvironment,
+	parentEnvironmentOptions,
 	hasNodeJsCompat,
 }: {
 	workerConfig: ResolvedWorkerConfig;
@@ -204,10 +209,10 @@ export function createCloudflareEnvironmentOptions({
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
 	isEntryWorker: boolean;
-	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
+	parentEnvironmentOptions: vite.EnvironmentOptions | undefined;
 }): vite.EnvironmentOptions {
-	const rollupOptions: vite.Rollup.RollupOptions = isParentEnvironment
+	const rollupOptions: vite.Rollup.RollupOptions = !parentEnvironmentOptions
 		? {
 				input: {
 					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
@@ -254,7 +259,9 @@ export function createCloudflareEnvironmentOptions({
 			target,
 			emitAssets: true,
 			manifest: isEntryWorker,
-			outDir: getOutputDirectory(userConfig, environmentName),
+			outDir: parentEnvironmentOptions
+				? getChildOutputDirectory(parentEnvironmentOptions, environmentName)
+				: getOutputDirectory(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
 			...(isRolldown
