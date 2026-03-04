@@ -88,9 +88,11 @@ export function loadDotEnv(
 
 		// Check if file should be ignored
 		if (shouldIgnoreEnvFile(contents)) {
-			logger.info(
-				`Ignoring .env file "${envPath}" due to WRANGLER_IGNORE comment`
-			);
+			if (!silent) {
+				logger.info(
+					`Ignoring .env file "${envPath}" due to WRANGLER_IGNORE comment`
+				);
+			}
 			continue;
 		}
 
