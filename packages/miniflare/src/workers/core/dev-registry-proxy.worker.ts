@@ -50,7 +50,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	_fetcher: Fetcher | null = null;
 	_entryFetcher: Fetcher | null = null;
 
-	constructor(ctx: ExecutionContext, env: Env) {
+	constructor(ctx: ExecutionContext<Props>, env: Env) {
 		super(ctx, env);
 		this._fetcher = resolve(ctx.props, env);
 
