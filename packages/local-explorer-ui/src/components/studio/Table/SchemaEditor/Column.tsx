@@ -5,6 +5,7 @@ import {
 	Dialog,
 	DropdownMenu,
 	Label,
+	Select,
 } from "@cloudflare/kumo";
 import {
 	ArrowLineDownRightIcon,
@@ -441,31 +442,36 @@ export function StudioColumnEditorModal({
 						</div>
 
 						<div className="w-full">
-							<Label>Data type</Label>
-							<select
-								className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm cursor-pointer"
-								onChange={(e): void => {
-									if (!e.target.value) {
+							<Select
+								className="w-full"
+								hideLabel={false}
+								label="Data type"
+								onValueChange={(newType: string | null): void => {
+									if (!newType) {
 										return;
 									}
-
 									setValue((prev) =>
 										produce(prev, (draft) => {
-											draft.type = e.target.value;
+											draft.type = newType;
 										})
 									);
 								}}
+								placeholder="Select a type"
 								value={value.type}
 							>
-								<option value="">Select a type</option>
-								{!["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
-									value.type?.toUpperCase()
-								) && <option value={value.type}>{value.type}</option>}
-								<option value="TEXT">Text</option>
-								<option value="INTEGER">Integer</option>
-								<option value="REAL">Real</option>
-								<option value="BLOB">Blob</option>
-							</select>
+								{value.type &&
+									!["TEXT", "INTEGER", "REAL", "BLOB"].includes(
+										value.type.toUpperCase()
+									) && (
+										<Select.Option value={value.type}>
+											{value.type}
+										</Select.Option>
+									)}
+								<Select.Option value="TEXT">Text</Select.Option>
+								<Select.Option value="INTEGER">Integer</Select.Option>
+								<Select.Option value="REAL">Real</Select.Option>
+								<Select.Option value="BLOB">Blob</Select.Option>
+							</Select>
 						</div>
 					</div>
 				</Dialog.Description>
