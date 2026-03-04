@@ -1,16 +1,12 @@
 import { Select } from "@base-ui/react/select";
-import { Button, DropdownMenu } from "@cloudflare/kumo";
+import { Button } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	CaretUpDownIcon,
 	CheckIcon,
-	CopyIcon,
 	DatabaseIcon,
-	DotsThreeIcon,
-	PencilIcon,
 	PlusIcon,
 	TableIcon,
-	TrashIcon,
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
@@ -21,6 +17,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
+import { TableActionsDropdown } from "../../components/TableActionsDropdown";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioRef } from "../../components/studio";
 import type { StudioResource } from "../../types/studio";
@@ -54,6 +51,9 @@ function DatabaseView(): JSX.Element {
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
 
+	const [currentTable, setCurrentTable] = useState<string | undefined>(
+		searchParams.table
+	);
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
 	const driver = useMemo<LocalD1Driver>(
@@ -71,7 +71,9 @@ function DatabaseView(): JSX.Element {
 
 	const handleTableChange = useCallback(
 		(tableName: string | undefined) => {
-			// Skip if the table hasn't changed to avoid unnecessary navigation
+			setCurrentTable(tableName);
+
+			// Skip URL navigation if the table hasn't changed
 			if (lastSyncedTable.current === tableName) {
 				return;
 			}
@@ -104,6 +106,17 @@ function DatabaseView(): JSX.Element {
 		}
 	}, [router]);
 
+	const handleTableDeleted = useCallback(async (): Promise<void> => {
+		await handleTableRefresh();
+		void navigate({
+			replace: true,
+			search: {
+				table: undefined,
+			},
+			to: ".",
+		});
+	}, [handleTableRefresh, navigate]);
+
 	return (
 		<div className="flex flex-col h-full">
 			<Breadcrumbs
@@ -124,59 +137,12 @@ function DatabaseView(): JSX.Element {
 			>
 				<div className="flex-1" />
 
-				<DropdownMenu>
-					<DropdownMenu.Trigger
-						render={
-							<Button
-								aria-label="Table Options"
-								disabled={!searchParams.table}
-								icon={DotsThreeIcon}
-								shape="square"
-							/>
-						}
-					/>
-
-					<DropdownMenu.Content>
-						<DropdownMenu.Item
-							className="space-x-2 cursor-pointer"
-							icon={CopyIcon}
-							onClick={async (): Promise<void> => {
-								await window.navigator.clipboard.writeText("item.data.name");
-							}}
-						>
-							Copy table name
-						</DropdownMenu.Item>
-
-						<DropdownMenu.Item
-							className="space-x-2 cursor-pointer"
-							icon={CopyIcon}
-							onClick={() => console.log("Copy table schema")}
-						>
-							Copy table schema
-						</DropdownMenu.Item>
-
-						<DropdownMenu.Separator />
-
-						<DropdownMenu.Item
-							className="space-x-2 cursor-pointer"
-							icon={PencilIcon}
-							onClick={() => console.log("Edit Schema")}
-						>
-							Edit Schema
-						</DropdownMenu.Item>
-
-						<DropdownMenu.Separator />
-
-						<DropdownMenu.Item
-							className="space-x-2 cursor-pointer"
-							icon={TrashIcon}
-							onClick={() => console.log("Delete Table")}
-							variant="danger"
-						>
-							Delete Table
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu>
+				<TableActionsDropdown
+					currentTable={currentTable}
+					driver={driver}
+					onTableDeleted={handleTableDeleted}
+					studioRef={studioRef}
+				/>
 
 				{/* TODO: Add tooltip */}
 				<Button

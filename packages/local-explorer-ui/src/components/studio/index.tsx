@@ -20,6 +20,7 @@ import type {
 	StudioResource,
 	StudioSchemas,
 } from "../../types/studio";
+import type { DeletionTarget } from "../TableActionsDropdown";
 import type { StudioContextValue } from "./Context";
 import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
@@ -30,6 +31,17 @@ import type { StudioWindowTabItem } from "./WindowTab/types";
 const DEFAULT_SCHEMA_NAME = "main";
 
 export interface StudioRef {
+	/**
+	 * Returns the currently active table context (from table or edit-table tabs),
+	 * or null if no table is selected.
+	 */
+	currentTable: DeletionTarget | null;
+
+	/**
+	 * Opens the edit-table tab for the specified table.
+	 */
+	openEditTableTab: (schemaName: string, tableName: string) => void;
+
 	/**
 	 * Refreshes the database schema, re-fetching table and view information.
 	 */
@@ -95,8 +107,6 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 			setLoadingSchema(false);
 		}
 	}, [driver]);
-
-	useImperativeHandle(ref, () => ({ refreshSchema }), [refreshSchema]);
 
 	useEffect((): void => {
 		void refreshSchema();
@@ -203,6 +213,57 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 	);
 
 	/**
+	 * Opens the edit-table tab for a specific table.
+	 */
+	const openEditTableTab = useCallback(
+		(schemaName: string, tableName: string) => {
+			openStudioTab({
+				schemaName,
+				tableName,
+				type: "edit-table",
+			});
+		},
+		[openStudioTab]
+	);
+
+	/**
+	 * Returns the currently active table context from the selected tab.
+	 * Works for both "table" and "edit-table" tab types.
+	 */
+	const getCurrentTable = useCallback((): DeletionTarget | null => {
+		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
+		if (!selectedTab) {
+			return null;
+		}
+
+		// Match both "table" and "edit-table" identifier patterns
+		// Format: "{type}/{schemaName}.{tableName}"
+		const match = selectedTab.identifier.match(
+			/^(?:table|edit-table)\/([^.]+)\.(.+)$/
+		);
+		if (!match || !match[1] || !match[2]) {
+			return null;
+		}
+
+		return {
+			schemaName: match[1],
+			tableName: match[2],
+		};
+	}, [selectedTabKey, tabs]);
+
+	useImperativeHandle(
+		ref,
+		() => ({
+			get currentTable() {
+				return getCurrentTable();
+			},
+			openEditTableTab,
+			refreshSchema,
+		}),
+		[getCurrentTable, openEditTableTab, refreshSchema]
+	);
+
+	/**
 	 * Updates the status properties (e.g. `isDirty`, `isTemp`) of an existing studio tab.
 	 */
 	const updateStudioTabStatus = useCallback<
@@ -279,11 +340,14 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 			return;
 		}
 
-		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
+		// Match both "table" and "edit-table" tab types
+		const tableMatch = selectedTab.identifier.match(
+			/^(?:table|edit-table)\/[^.]+\.(.+)$/
+		);
 		if (!tableMatch) {
 			lastOpenedTable.current = null;
 		}
-		onTableChange(tableMatch ? tableMatch[1] : undefined);
+		onTableChange(tableMatch?.[1]);
 	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
 	/**
