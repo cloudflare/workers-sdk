@@ -10,6 +10,9 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"@cloudflare/workers-utils": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "catalog:default",
@@ -17,7 +20,6 @@
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
 		"eslint": "catalog:default",
-		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

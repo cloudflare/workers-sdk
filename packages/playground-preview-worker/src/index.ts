@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import prom from "promjs";
+import { MetricsRegistry } from "@cloudflare/workers-utils/metrics";
 import {
 	HttpError,
 	PreviewRequestFailed,
@@ -10,7 +10,6 @@ import {
 	UploadFailed,
 } from "./errors";
 import { handleException, setupSentry } from "./sentry";
-import type { RegistryType } from "promjs";
 import type { Toucan } from "toucan-js";
 
 function maybeParseUrl(url: string | undefined) {
@@ -26,7 +25,7 @@ function maybeParseUrl(url: string | undefined) {
 
 const app = new Hono<{
 	Bindings: Env;
-	Variables: { sentry: Toucan; prometheus: RegistryType };
+	Variables: { sentry: Toucan; prometheus: MetricsRegistry };
 }>({
 	// This replaces . with / in url hostnames, which allows for parameter matching in hostnames as well as paths
 	// e.g. https://something.example.com/hello/world -> something/example/com/hello/world
@@ -117,7 +116,7 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 }
 
 app.use("*", async (c, next) => {
-	c.set("prometheus", prom());
+	c.set("prometheus", new MetricsRegistry());
 
 	const registry = c.get("prometheus");
 	const requestCounter = registry.create(

@@ -1,4 +1,4 @@
-import prom from "promjs";
+import { MetricsRegistry } from "@cloudflare/workers-utils/metrics";
 import { Toucan } from "toucan-js";
 import { z } from "zod";
 import Youch from "./Youch";
@@ -127,7 +127,7 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const registry = prom();
+		const registry = new MetricsRegistry();
 		const requestCounter = registry.create(
 			"counter",
 			"devprod_format_errors_request_total",

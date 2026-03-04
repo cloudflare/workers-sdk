@@ -9,12 +9,14 @@
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev"
 	},
+	"dependencies": {
+		"@cloudflare/workers-utils": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"eslint": "catalog:default",
 		"mustache": "^4.2.0",
-		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",
 		"tsconfig": "*",
 		"wrangler": "workspace:*",
