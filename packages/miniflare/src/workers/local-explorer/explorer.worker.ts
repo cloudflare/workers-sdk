@@ -11,7 +11,7 @@ import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
 	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
+	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListNamespacesData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
@@ -157,7 +157,7 @@ app.get(
 
 app.post(
 	"/api/d1/database/:database_id/raw",
-	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
+	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
 );
 

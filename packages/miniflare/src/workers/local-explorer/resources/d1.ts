@@ -2,7 +2,7 @@ import { z } from "zod";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
+	zD1RawDatabaseQueryData,
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
@@ -110,9 +110,7 @@ export async function listD1Databases(
 	});
 }
 
-type RawDatabaseBody = z.output<
-	typeof zCloudflareD1RawDatabaseQueryData.shape.body
->;
+type RawDatabaseBody = z.output<typeof zD1RawDatabaseQueryData.shape.body>;
 
 /**
  * Executes raw SQL queries against a D1 database.
