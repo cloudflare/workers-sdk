@@ -137,6 +137,7 @@ export function StudioTableSchemaEditor({
 			defaultSize={250}
 			minSize={150}
 			primary="second"
+			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
 		>
 			<div className="flex flex-col w-full h-full overflow-hidden text-xs bg-surface">
@@ -144,7 +145,6 @@ export function StudioTableSchemaEditor({
 					<input
 						autoFocus
 						className="w-62.5 h-9 rounded-lg border border-border px-3 text-base bg-transparent"
-						disabled={readOnlyExistingColumns}
 						onChange={(e) => handleNameChange(e.target.value)}
 						placeholder="Table name"
 						value={value.name.new ?? ""}
