@@ -5,6 +5,7 @@ import {
 	CaretUpDownIcon,
 	CheckIcon,
 	CubeIcon,
+	PlusIcon,
 	TableIcon,
 } from "@phosphor-icons/react";
 import {
@@ -17,6 +18,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { Studio } from "../../../components/studio";
+import { TableActionsDropdown } from "../../../components/TableActionsDropdown";
 import { LocalDODriver } from "../../../drivers/do";
 import type { StudioRef } from "../../../components/studio";
 import type { StudioResource } from "../../../types/studio";
@@ -66,6 +68,9 @@ function ObjectView(): JSX.Element {
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
 
+	const [currentTable, setCurrentTable] = useState<string | undefined>(
+		searchParams.table
+	);
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
 	const { namespaceId } = loaderData;
@@ -86,7 +91,9 @@ function ObjectView(): JSX.Element {
 
 	const handleTableChange = useCallback(
 		(tableName: string | undefined) => {
-			// Skip if the table hasn't changed to avoid unnecessary navigation
+			setCurrentTable(tableName);
+
+			// Skip URL navigation if the table hasn't changed
 			if (lastSyncedTable.current === tableName) {
 				return;
 			}
@@ -119,6 +126,17 @@ function ObjectView(): JSX.Element {
 		}
 	}, [router]);
 
+	const handleTableDeleted = useCallback(async (): Promise<void> => {
+		await handleTableRefresh();
+		void navigate({
+			replace: true,
+			search: {
+				table: undefined,
+			},
+			to: ".",
+		});
+	}, [handleTableRefresh, navigate]);
+
 	// Truncate the object ID for display
 	const shortObjectId =
 		params.objectId.length > 16
@@ -149,17 +167,35 @@ function ObjectView(): JSX.Element {
 				]}
 				title="Durable Objects"
 			>
+				<div className="flex-1" />
+
+				<TableActionsDropdown
+					currentTable={currentTable}
+					driver={driver}
+					onTableDeleted={handleTableDeleted}
+					studioRef={studioRef}
+				/>
+
 				<Button
 					aria-label="Refresh tables"
+					className="disabled:cursor-progress"
 					disabled={isRefreshing}
 					onClick={handleTableRefresh}
-					shape="square"
-					variant="ghost"
 				>
 					<ArrowsCounterClockwiseIcon
 						className={isRefreshing ? "animate-spin" : undefined}
 						size={14}
 					/>
+				</Button>
+
+				<Button
+					aria-label="Create a table"
+					icon={PlusIcon}
+					onClick={(): void => {
+						studioRef.current?.openCreateTableTab();
+					}}
+				>
+					Create
 				</Button>
 			</Breadcrumbs>
 
