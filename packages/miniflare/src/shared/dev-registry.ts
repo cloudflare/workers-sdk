@@ -15,19 +15,10 @@ import { SocketPorts } from "../runtime";
 import { getProxyFallbackServiceSocketName } from "./external-service";
 import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
+import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 
-export type WorkerRegistry = Record<string, WorkerDefinition>;
-
-export type WorkerDefinition = {
-	protocol: "http" | "https";
-	host: string;
-	port: number;
-	entrypointAddresses: Record<
-		"default" | string,
-		{ host: string; port: number } | undefined
-	>;
-	durableObjects: { name: string; className: string }[];
-};
+// Re-export types for backwards compatibility
+export type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
@@ -171,6 +162,10 @@ export class DevRegistry {
 
 	public isDurableObjectProxyEnabled(): boolean {
 		return this.isEnabled() && this.enableDurableObjectProxy;
+	}
+
+	public getRegistryPath(): string | undefined {
+		return this.registryPath;
 	}
 
 	public async updateRegistryPath(

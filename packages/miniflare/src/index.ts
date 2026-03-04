@@ -113,7 +113,11 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
-import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
+import {
+	DevRegistry,
+	getWorkerRegistry,
+	WorkerDefinition,
+} from "./shared/dev-registry";
 import {
 	createInboundDoProxyService,
 	createOutboundDoProxyService,
@@ -1346,6 +1350,11 @@ export class Miniflare {
 				response = new Response(filePath, { status: 200 });
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
+			} else if (url.pathname === "/core/dev-registry") {
+				// Used by the local explorer to aggregate resources across instances
+				const registryPath = this.#devRegistry.getRegistryPath();
+				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
+				response = Response.json(registry);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
