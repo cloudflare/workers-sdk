@@ -1100,21 +1100,37 @@ export class Miniflare {
 	 * This updates the in-memory registry Map without restarting workerd.
 	 * Called when the dev registry detects changes to external services.
 	 */
-	async #pushRegistryUpdate(registry: WorkerRegistry): Promise<void> {
+	async #pushRegistryUpdate(
+		registry: WorkerRegistry,
+		retries = 3
+	): Promise<void> {
 		if (!this.#runtimeEntryURL) {
 			return;
 		}
 		const url = new URL("/cdn-cgi/dev-registry/update", this.#runtimeEntryURL);
+
 		try {
-			await fetch(url, {
+			const response = await fetch(url, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(registry),
+				signal: AbortSignal.timeout(500),
 			});
-		} catch (e) {
+			if (!response.ok) {
+				this.#log.debug(`Registry push failed with ${response.status}`);
+				if (retries > 0) {
+					await new Promise((r) => setTimeout(r, 500));
+					return this.#pushRegistryUpdate(registry, retries - 1);
+				}
+			}
+		} catch (e: unknown) {
 			this.#log.debug(
 				`Failed to push registry update: ${e instanceof Error ? e.message : String(e)}`
 			);
+			if (retries > 0) {
+				await new Promise((r) => setTimeout(r, 500));
+				return this.#pushRegistryUpdate(registry, retries - 1);
+			}
 		}
 	}
 
@@ -1903,9 +1919,16 @@ export class Miniflare {
 			// All imports are from the bundled proxy worker module, which
 			// inlines the shared code — so they share the same module-level
 			// registry Map.
+			//
+			// The initial registry state is baked directly into the module
+			// source so the proxy worker has the correct registry from the
+			// moment workerd loads it — no async push needed for bootstrap.
+			const initialRegistry = this.#devRegistry.getRegistry();
 			const mainModuleSource = [
 				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
 				`export { ExternalServiceProxy };`,
+				// Seed the registry immediately at module-load time
+				`setRegistry(${JSON.stringify(initialRegistry)});`,
 				// Default fetch handler accepts registry push updates
 				`export default {`,
 				`  async fetch(request, env) {`,
@@ -2179,10 +2202,17 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
-		// Push current registry state to the proxy worker now that the
-		// runtime is accepting requests. The proxy worker's registry starts
-		// empty and is populated entirely via these pushes. We await here to
-		// ensure the registry is populated before `ready` resolves.
+		// Register this process's workers in the dev registry (writes files
+		// to the shared registry directory so other dev sessions can discover
+		// them). This must happen before the push below so that the pushed
+		// snapshot includes our own workers.
+		await this.#registerWorkers();
+
+		// Push current registry state to the proxy worker. The initial
+		// state is baked into the proxy worker module at config assembly
+		// time, but the registry may have changed between then and now
+		// (e.g. another dev session started while workerd was booting).
+		// This push catches any updates that occurred in that window.
 		if (this.#devRegistry.isEnabled()) {
 			await this.#pushRegistryUpdate(this.#devRegistry.getRegistry());
 		}
@@ -2347,14 +2377,7 @@ export class Miniflare {
 	}
 
 	get ready(): Promise<URL> {
-		return this.#waitForReady().then(async (url) => {
-			assert(this.#socketPorts !== undefined);
-
-			// Register all workers with the dev registry
-			await this.#registerWorkers();
-
-			return url;
-		});
+		return this.#waitForReady();
 	}
 
 	async getCf(): Promise<Record<string, any>> {
@@ -2470,17 +2493,7 @@ export class Miniflare {
 		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
-		return this.#runtimeMutex
-			.runWith(() => this.#setOptions(opts))
-			.then(() => {
-				assert(
-					this.#runtimeEntryURL !== undefined,
-					"The runtime entry URL should be defined at this point"
-				);
-
-				// Register all workers with the dev registry
-				return this.#registerWorkers();
-			});
+		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
 	}
 
 	dispatchFetch: DispatchFetch = async (input, init) => {

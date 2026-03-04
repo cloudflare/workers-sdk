@@ -13,7 +13,6 @@ export {
 
 const HANDLER_RESERVED_KEYS = new Set([
 	"alarm",
-	"scheduled",
 	"self",
 	"tail",
 	"tailStream",
@@ -48,38 +47,47 @@ function resolve(props: Props, env: Env): Fetcher | null {
 }
 
 export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
+	_fetcher: Fetcher | null = null;
+	_entryFetcher: Fetcher | null = null;
+
 	// Capture props from ctx in the constructor and close over it in the
 	// Proxy handler. We can't use private fields (#props) because they are
 	// not accessible through a JS Proxy (which the constructor returns).
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
 		const props = (ctx as unknown as { props: Props }).props;
+		// Resolved once via capnp pipelining (synchronous) and reused
+		// across all requests to this entrypoint instance.
+		this._fetcher = resolve(props, env);
+
+		// Separate core:entry connection for the scheduled handler.
+		// The debug port's EventDispatcher throws "RPC connections don't
+		// yet support this event type" for runScheduled/runAlarm/queue,
+		// so we forward scheduled via HTTP to core:entry instead.
+		const target = resolveTarget(props.service);
+		if (target) {
+			const client = env.DEV_REGISTRY_DEBUG_PORT.connect(
+				target.debugPortAddress
+			);
+			this._entryFetcher = client.getEntrypoint("core:entry");
+		}
 
 		return new Proxy(this, {
 			get(target, prop) {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
 				}
-				const fetcher = resolve(props, target.env);
-				if (!fetcher) {
-					if (prop === "fetch") {
-						return () => {
-							const { service, entrypoint } = props;
-							return new Response(
-								`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`,
-								{ status: 503 }
-							);
-						};
-					}
-					if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
-						return undefined;
-					}
+				if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
+					return undefined;
+				}
+
+				if (!target._fetcher) {
 					const { service, entrypoint } = props;
 					throw new Error(
 						`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to.`
 					);
 				}
-				return Reflect.get(fetcher, prop);
+				return Reflect.get(target._fetcher, prop);
 			},
 		});
 	}
@@ -89,26 +97,24 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 	// Fetcher method from its `this` context, causing "Illegal invocation".
 	async fetch(request: Request): Promise<Response> {
 		const props = (this.ctx as unknown as { props: Props }).props;
-		const fetcher = resolve(props, this.env);
-		if (!fetcher) {
+		if (!this._fetcher) {
 			const { service, entrypoint } = props;
 			return new Response(
 				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`,
 				{ status: 503 }
 			);
 		}
-		return fetcher.fetch(request);
+		return this._fetcher.fetch(request);
 	}
 
-	// Fetcher.scheduled() is not available over debug port RPC, so we
-	// forward via HTTP to core:entry's /cdn-cgi/handler/scheduled route.
-	// We set MF-Route-Override to the script name so the entry worker
-	// resolves to the user worker service rather than the asset router
-	// (which doesn't have a scheduled handler).
+	// The debug port's EventDispatcher throws "RPC connections don't yet
+	// support this event type" for runScheduled, so we forward via HTTP to
+	// core:entry's /cdn-cgi/handler/scheduled route instead.
+	// MF-Route-Override ensures the entry worker dispatches to the user
+	// worker rather than the asset router.
 	async scheduled(controller: ScheduledController) {
 		const props = (this.ctx as unknown as { props: Props }).props;
-		const target = resolveTarget(props.service);
-		if (!target) {
+		if (!this._entryFetcher) {
 			const { service, entrypoint } = props;
 			throw new Error(
 				`Couldn't find a local dev session for the "${entrypoint ?? "default"}" entrypoint of service "${service}" to proxy to`
@@ -121,11 +127,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		if (controller.scheduledTime) {
 			params.set("time", String(controller.scheduledTime));
 		}
-		const client = this.env.DEV_REGISTRY_DEBUG_PORT.connect(
-			target.debugPortAddress
-		);
-		const fetcher = client.getEntrypoint("core:entry");
-		const response = await fetcher.fetch(
+		const response = await this._entryFetcher.fetch(
 			new Request(`http://localhost/cdn-cgi/handler/scheduled?${params}`, {
 				headers: { "MF-Route-Override": props.service },
 			})
@@ -138,19 +140,27 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env> {
 		}
 	}
 
+	// Forward tail events to the target worker via the cached _fetcher.
+	// Filter out events where event.rpcMethod === "tail" to prevent infinite
+	// recursion: calling .tail() RPC generates a trace event with
+	// rpcMethod:"tail" on this worker, which re-triggers tail().
 	tail(events: TraceItem[]) {
+		if (!this._fetcher) {
+			return;
+		}
+		const filtered = events.filter(
+			(e) => (e.event as { rpcMethod?: string } | null)?.rpcMethod !== "tail"
+		);
+		if (filtered.length === 0) {
+			return;
+		}
 		try {
-			const props = (this.ctx as unknown as { props: Props }).props;
-			const fetcher = resolve(props, this.env);
-			if (!fetcher) {
-				return;
-			}
 			const serializedEvents = JSON.parse(
-				JSON.stringify(events, tailEventsReplacer),
+				JSON.stringify(filtered, tailEventsReplacer),
 				tailEventsReviver
 			);
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
-			return fetcher.tail(serializedEvents);
+			return this._fetcher.tail(serializedEvents);
 		} catch (e) {
 			const props = (this.ctx as unknown as { props: Props }).props;
 			console.warn(

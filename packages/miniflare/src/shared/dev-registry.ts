@@ -33,7 +33,6 @@ export type WorkerDefinition = {
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
-	private registry: WorkerRegistry = {};
 	private registeredWorkers: Set<string> = new Set();
 	private externalServices: Map<
 		string,
@@ -75,13 +74,9 @@ export class DevRegistry {
 		mkdirSync(this.registryPath, { recursive: true });
 
 		if (!this.watcher) {
-			this.watcher = watch(this.registryPath).on("all", () => this.refresh());
-			// Do the initial refresh silently (without triggering onUpdate).
-			// The caller (Miniflare) reads getRegistry() right after watch() to
-			// populate JSON bindings, so the cache must be up-to-date. But we
-			// don't want to fire onUpdate here — that would queue a redundant
-			// config reassembly since the caller is already assembling config.
-			this.refresh(/* silent */ true);
+			this.watcher = watch(this.registryPath).on("all", () => {
+				this.refresh();
+			});
 		}
 	}
 
@@ -92,7 +87,6 @@ export class DevRegistry {
 	 */
 	public dispose(): Promise<void> | undefined {
 		this.unregisterWorkers();
-		this.registry = {};
 
 		// Only this step is async and could be awaited
 		return (
@@ -139,9 +133,14 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
-	/** Returns the current cached registry state. */
+	/** Returns the current registry state by reading from the filesystem.
+	 * This avoids stale-cache races where chokidar events haven't fired yet
+	 * (e.g. during setOptions → #assembleAndUpdateConfig). */
 	public getRegistry(): WorkerRegistry {
-		return this.registry;
+		if (!this.registryPath) {
+			return {};
+		}
+		return getWorkerRegistry(this.registryPath);
 	}
 
 	/** Returns the filesystem path for the dev registry directory, or undefined if disabled. */
@@ -193,38 +192,31 @@ export class DevRegistry {
 				}, 30_000)
 			);
 		}
+		this.refresh();
 	}
 
-	private refresh(silent = false): void {
-		if (!this.registryPath) {
+	private previousJSON = "{}";
+	private refresh(): void {
+		if (!this.onUpdate) {
 			return;
 		}
 
-		const registry = getWorkerRegistry(this.registryPath, (workerName) => {
-			this.unregister(workerName);
-		});
-
-		// Check if any external services we depend on have changed
-		const previousRegistry = this.registry;
-
-		// Update the cached registry *before* calling onUpdate, so that
-		// getRegistry() returns the new state during config reassembly
-		// (which reads the registry to populate JSON bindings).
-		this.registry = registry;
-
-		if (!silent && this.onUpdate) {
-			for (const [service] of this.externalServices) {
-				if (
-					JSON.stringify(registry[service]) !==
-					JSON.stringify(previousRegistry[service])
-				) {
-					// A service we depend on has changed, notify listeners
-					// Provide a deep copy to prevent accidental mutations by consumers
-					this.onUpdate(JSON.parse(JSON.stringify(registry)));
-					break;
-				}
+		const registry = this.getRegistry();
+		const json = JSON.stringify(registry);
+		if (json === this.previousJSON) {
+			return;
+		}
+		const previousRegistry = JSON.parse(this.previousJSON);
+		for (const [service] of this.externalServices) {
+			if (
+				JSON.stringify(registry[service]) !==
+				JSON.stringify(previousRegistry[service])
+			) {
+				this.onUpdate(registry);
+				break;
 			}
 		}
+		this.previousJSON = json;
 	}
 }
 

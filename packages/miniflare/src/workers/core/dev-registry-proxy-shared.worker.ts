@@ -60,6 +60,28 @@ export function createProxyDurableObjectClass({
 	return class extends DurableObject<{
 		DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector;
 	}> {
+		_cachedFetcher: Fetcher | undefined;
+
+		// Lazy resolution: the registry may not be populated when the DO
+		// instance is first constructed (e.g. getPlatformProxy creates stubs
+		// before the registry push arrives). Cache on first successful resolve
+		// so we only open one capnp connection per DO instance.
+		_resolve(): Fetcher | null {
+			if (this._cachedFetcher) {
+				return this._cachedFetcher;
+			}
+			const fetcher = connectToActor(
+				this.env.DEV_REGISTRY_DEBUG_PORT,
+				scriptName,
+				className,
+				this.ctx.id.toString()
+			);
+			if (fetcher) {
+				this._cachedFetcher = fetcher;
+			}
+			return fetcher;
+		}
+
 		constructor(
 			ctx: DurableObjectState,
 			env: { DEV_REGISTRY_DEBUG_PORT: WorkerdDebugPortConnector }
@@ -71,12 +93,7 @@ export function createProxyDurableObjectClass({
 					if (Reflect.has(target, prop)) {
 						return Reflect.get(target, prop);
 					}
-					const fetcher = connectToActor(
-						target.env.DEV_REGISTRY_DEBUG_PORT,
-						scriptName,
-						className,
-						target.ctx.id.toString()
-					);
+					const fetcher = target._resolve();
 					if (!fetcher) {
 						return () => {
 							throw new Error(
@@ -90,12 +107,7 @@ export function createProxyDurableObjectClass({
 		}
 
 		async fetch(request: Request): Promise<Response> {
-			const fetcher = connectToActor(
-				this.env.DEV_REGISTRY_DEBUG_PORT,
-				scriptName,
-				className,
-				this.ctx.id.toString()
-			);
+			const fetcher = this._resolve();
 			if (!fetcher) {
 				return new Response(
 					`Couldn't find a local dev session for Durable Object "${className}" of service "${scriptName}" to proxy to`,
