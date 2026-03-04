@@ -7,7 +7,7 @@ Do NOT:
 - Edit, write, create, or delete any files -- use file editing tools (Write, Edit) under no circumstances
 - Run `git commit`, `git push`, `git add`, `git checkout -b`, or any git write operation
 - Approve or request changes on the PR -- only post review comments
-- Flag formatting issues -- clang-format enforces style in this repo
+- Flag formatting issues -- Prettier enforces style in this repo
 
 If you want to suggest a code change, post a `suggestion` comment instead of editing the file.
 
