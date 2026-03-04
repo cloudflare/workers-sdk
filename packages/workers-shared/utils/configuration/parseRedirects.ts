@@ -1,10 +1,10 @@
 import {
-	MAX_DYNAMIC_REDIRECT_RULES,
-	MAX_LINE_LENGTH,
-	MAX_STATIC_REDIRECT_RULES,
-	PERMITTED_STATUS_CODES,
-	PLACEHOLDER_REGEX,
-	SPLAT_REGEX,
+	MAX_REDIRECT_DYNAMIC_RULES,
+	MAX_REDIRECT_LINE_LENGTH,
+	MAX_REDIRECT_STATIC_RULES,
+	REDIRECT_PERMITTED_STATUS_CODES,
+	REDIRECT_PLACEHOLDER_REGEX,
+	REDIRECT_SPLAT_REGEX,
 } from "./constants";
 import { urlHasHost, validateUrl } from "./validateURL";
 import type { AssetConfig } from "../types";
@@ -19,9 +19,9 @@ export function parseRedirects(
 	input: string,
 	{
 		htmlHandling = undefined,
-		maxStaticRules = MAX_STATIC_REDIRECT_RULES,
-		maxDynamicRules = MAX_DYNAMIC_REDIRECT_RULES,
-		maxLineLength = MAX_LINE_LENGTH,
+		maxStaticRules = MAX_REDIRECT_STATIC_RULES,
+		maxDynamicRules = MAX_REDIRECT_DYNAMIC_RULES,
+		maxLineLength = MAX_REDIRECT_LINE_LENGTH,
 	}: {
 		htmlHandling?: AssetConfig["html_handling"];
 		maxStaticRules?: number;
@@ -39,27 +39,30 @@ export function parseRedirects(
 	let canCreateStaticRule = true;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = (lines[i] || "").trim();
-		if (line.length === 0 || line.startsWith("#")) {
+		const sourceLine = lines[i] ?? "";
+		const lineWithoutComment = sourceLine
+			.trim()
+			// Strips # comments but allows # in URLs, e.g. `/from /to#fragment`
+			.replace(/(^|\s+)#.*$/, "");
+
+		if (lineWithoutComment.length === 0) {
 			continue;
 		}
 
-		if (line.length > maxLineLength) {
+		if (lineWithoutComment.length > maxLineLength) {
 			invalid.push({
 				message: `Ignoring line ${
 					i + 1
-				} as it exceeds the maximum allowed length of ${maxLineLength}.`,
+				} as the redirect directive exceeds the maximum allowed length of ${maxLineLength}.`,
 			});
 			continue;
 		}
 
-		// Handle inline comments: strip off from the first `#` token that starts a comment, but not URL fragments.
-		// This allows `/a /b#fragment` but strips `/a /b # comment`
-		const tokens = line.replace(/\s+#.*$/, "").split(/\s+/);
+		const tokens = lineWithoutComment.split(/\s+/);
 
 		if (tokens.length < 2 || tokens.length > 3) {
 			invalid.push({
-				line,
+				line: sourceLine,
 				lineNumber: i + 1,
 				message: `Expected exactly 2 or 3 whitespace-separated tokens. Got ${tokens.length}.`,
 			});
@@ -71,7 +74,7 @@ export function parseRedirects(
 		const fromResult = validateUrl(str_from, true, true, false, false);
 		if (fromResult[0] === undefined) {
 			invalid.push({
-				line,
+				line: sourceLine,
 				lineNumber: i + 1,
 				message: fromResult[1],
 			});
@@ -81,8 +84,8 @@ export function parseRedirects(
 
 		if (
 			canCreateStaticRule &&
-			!from.match(SPLAT_REGEX) &&
-			!from.match(PLACEHOLDER_REGEX)
+			!from.match(REDIRECT_SPLAT_REGEX) &&
+			!from.match(REDIRECT_PLACEHOLDER_REGEX)
 		) {
 			staticRules += 1;
 
@@ -109,7 +112,7 @@ export function parseRedirects(
 		const toResult = validateUrl(str_to, false, false, true, true);
 		if (toResult[0] === undefined) {
 			invalid.push({
-				line,
+				line: sourceLine,
 				lineNumber: i + 1,
 				message: toResult[1],
 			});
@@ -118,9 +121,9 @@ export function parseRedirects(
 		const to = toResult[0];
 
 		const status = Number(str_status);
-		if (isNaN(status) || !PERMITTED_STATUS_CODES.has(status)) {
+		if (isNaN(status) || !REDIRECT_PERMITTED_STATUS_CODES.has(status)) {
 			invalid.push({
-				line,
+				line: sourceLine,
 				lineNumber: i + 1,
 				message: `Valid status codes are 200, 301, 302 (default), 303, 307, or 308. Got ${str_status}.`,
 			});
@@ -143,7 +146,7 @@ export function parseRedirects(
 			(hasWildcardToIndex || (hasRootToIndex && hasHTMLHandling))
 		) {
 			invalid.push({
-				line,
+				line: sourceLine,
 				lineNumber: i + 1,
 				message:
 					"Infinite loop detected in this rule and has been ignored. This will cause a redirect to strip `.html` or `/index` and end up triggering this rule again. Please fix or remove this rule to silence this warning.",
@@ -153,7 +156,7 @@ export function parseRedirects(
 
 		if (seen_paths.has(from)) {
 			invalid.push({
-				line,
+				line: sourceLine,
 				lineNumber: i + 1,
 				message: `Ignoring duplicate rule for path ${from}.`,
 			});
@@ -164,7 +167,7 @@ export function parseRedirects(
 		if (status === 200) {
 			if (urlHasHost(to)) {
 				invalid.push({
-					line,
+					line: sourceLine,
 					lineNumber: i + 1,
 					message: `Proxy (200) redirects can only point to relative paths. Got ${to}`,
 				});
