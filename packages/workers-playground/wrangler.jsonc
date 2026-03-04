@@ -4,7 +4,7 @@
 	"compatibility_date": "2025-07-01",
 	"assets": {
 		"directory": "./dist",
-		"not_found_handling": "single-page-application"
+		"not_found_handling": "single-page-application",
 	},
 
 	// In production, this is an assets-only Worker.
@@ -18,8 +18,8 @@
 				"directory": "./dist",
 				"binding": "ASSETS",
 				"not_found_handling": "single-page-application",
-				"run_worker_first": ["/playground/api/*"]
-			}
-		}
-	}
+				"run_worker_first": ["/playground/api/*"],
+			},
+		},
+	},
 }

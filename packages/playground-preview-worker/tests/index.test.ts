@@ -403,8 +403,7 @@ describe("Preview Worker", () => {
 					// These are forbidden headers, but undici currently allows setting them
 					headers: {
 						"Sec-Fetch-Dest": "iframe",
-						Referer:
-							"https://workers-playground.workers.dev/some/path",
+						Referer: "https://workers-playground.workers.dev/some/path",
 					},
 				}
 			);
@@ -476,8 +475,7 @@ describe("Preview Worker", () => {
 					// These are forbidden headers, but undici currently allows setting them
 					headers: {
 						"Sec-Fetch-Dest": "iframe",
-						Referer:
-							"https://example.com/workers-playground.workers.dev",
+						Referer: "https://example.com/workers-playground.workers.dev",
 					},
 				}
 			);
