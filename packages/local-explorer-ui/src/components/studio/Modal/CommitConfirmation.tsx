@@ -16,7 +16,7 @@ export function StudioCommitConfirmation({
 	isOpen,
 	onConfirm,
 	statements,
-}: StudioCommitConfirmationProps): JSX.Element {
+}: StudioCommitConfirmationProps) {
 	const [errorMessage, setErrorMessage] = useState("");
 	const [isRequesting, setIsRequesting] = useState(false);
 
@@ -45,11 +45,13 @@ export function StudioCommitConfirmation({
 		>
 			<Dialog className="p-6">
 				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-2xl font-semibold">
 						Review and Confirm Changes
 					</Dialog.Title>
 				</div>
 
+				{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 				<Dialog.Description className="text-kumo-subtle">
 					<div className="flex flex-col gap-4 text-sm">
 						{!!errorMessage && (

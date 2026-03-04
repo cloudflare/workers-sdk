@@ -15,7 +15,7 @@ interface StudioDeleteConfirmationModalProps {
 	title: ReactNode;
 }
 
-export function StudioDeleteConfirmationModal({
+export const StudioDeleteConfirmationModal = ({
 	body,
 	challenge,
 	closeModal,
@@ -26,7 +26,7 @@ export function StudioDeleteConfirmationModal({
 	isOpen,
 	onConfirm,
 	title,
-}: StudioDeleteConfirmationModalProps): JSX.Element {
+}: StudioDeleteConfirmationModalProps) => {
 	const [challengeInput, setChallengeInput] = useState<string>("");
 	const [deleteFailed, setDeleteFailed] = useState<boolean>(false);
 	const [isRequesting, setIsRequesting] = useState<boolean>(false);
@@ -60,11 +60,13 @@ export function StudioDeleteConfirmationModal({
 		>
 			<Dialog className="p-6">
 				<div className="flex items-start justify-between gap-4 mb-4">
+					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
 				</div>
 
 				<form onSubmit={handleSubmit}>
 					<div className="space-y-4">
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Description className="text-kumo-subtle">
 							{body}
 						</Dialog.Description>
@@ -108,4 +110,4 @@ export function StudioDeleteConfirmationModal({
 			</Dialog>
 		</Dialog.Root>
 	);
-}
+};
