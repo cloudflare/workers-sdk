@@ -231,17 +231,19 @@ function ObjectView(): JSX.Element {
 							studioRef.current?.openEditTableTab("main", currentTable);
 						}
 					}}
-					shape="square"
-				/>
+				>
+					Edit Schema
+				</Button>
 
 				<Button
 					aria-label="Delete table"
 					disabled={!currentTable}
 					icon={TrashIcon}
 					onClick={handleDeleteClick}
-					shape="square"
 					variant="secondary-destructive"
-				/>
+				>
+					Delete Table
+				</Button>
 			</Breadcrumbs>
 
 			{deleteTarget && (
