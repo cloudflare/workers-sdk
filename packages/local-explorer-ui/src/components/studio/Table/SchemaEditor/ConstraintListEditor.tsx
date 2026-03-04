@@ -79,7 +79,7 @@ export function StudioConstraintListEditor({
 												{(constraint.foreignKey.columns ?? []).map(
 													(column, columnIndex) => (
 														<div
-															className="p-1 px-2 rounded bg-accent inline-block font-mono border border-color select-none gap-2 items-center"
+															className="p-1 px-2 rounded bg-accent inline-block font-mono border border-border select-none gap-2 items-center"
 															key={columnIndex}
 														>
 															{column} <ArrowRightIcon />{" "}
@@ -181,7 +181,7 @@ function SortableColumnItem({ id }: SortableColumnItemProps): JSX.Element {
 
 	return (
 		<div
-			className="p-1 px-2 rounded bg-accent inline-block font-mono border border-color cursor-pointer select-none hover:border-active"
+			className="p-1 px-2 rounded bg-accent inline-block font-mono border border-border cursor-pointer select-none hover:border-active"
 			ref={setNodeRef}
 			style={{
 				transform: CSS.Transform.toString(transform),

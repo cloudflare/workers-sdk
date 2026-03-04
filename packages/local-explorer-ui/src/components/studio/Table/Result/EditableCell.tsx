@@ -94,7 +94,7 @@ function InputCellEditor({
 			{popover &&
 				createPortal(
 					<div
-						className="bg-surface border border-color rounded fixed shadow flex flex-col"
+						className="bg-surface border border-border rounded fixed shadow flex flex-col"
 						ref={refs.setFloating}
 						style={{
 							...(floatingStyles as React.CSSProperties),
