@@ -10,9 +10,8 @@ import {
 import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
-	zCloudflareD1ListDatabasesData,
+	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
-	zDurableObjectsNamespaceListNamespacesData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
@@ -35,8 +34,12 @@ export type Env = {
 	[key: string]: unknown;
 	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
 	[CoreBindings.EXPLORER_DISK]: Fetcher;
-	// Loopback service for calling Node.js endpoints (used for DO storage listing)
-	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
+	// Loopback service for calling Node.js endpoints:
+	// - /core/dev-registry for cross-instance aggregation
+	// - /core/do-storage for DO storage listing
+	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	// Worker names for this instance, used to filter self from dev registry during aggregation
+	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 };
 
 export type AppBindings = { Bindings: Env };
@@ -108,10 +111,6 @@ app.get("/*", async (c, next) => {
 
 app.get(
 	"/api/storage/kv/namespaces",
-	// The query params are optional, so the whole schema is wrapped in an optional,
-	// but hono's validator will always receive an object.
-	// This just unwraps it so we can validate the inner schema.
-	// The inner schema has all the individual params as optional
 	validateQuery(zWorkersKvNamespaceListNamespacesData.shape.query.unwrap()),
 	(c) => listKVNamespaces(c, c.req.valid("query"))
 );
@@ -151,7 +150,7 @@ app.post(
 
 app.get(
 	"/api/d1/database",
-	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
+	validateQuery(zD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
 );
 
@@ -165,13 +164,7 @@ app.post(
 // Durable Objects Endpoints
 // ============================================================================
 
-app.get(
-	"/api/workers/durable_objects/namespaces",
-	validateQuery(
-		zDurableObjectsNamespaceListNamespacesData.shape.query.unwrap()
-	),
-	(c) => listDONamespaces(c, c.req.valid("query"))
-);
+app.get("/api/workers/durable_objects/namespaces", (c) => listDONamespaces(c));
 
 app.get(
 	"/api/workers/durable_objects/namespaces/:namespace_id/objects",

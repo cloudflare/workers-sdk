@@ -140,6 +140,49 @@ describe("KV API", () => {
 				},
 			});
 		});
+
+		test("sorts namespaces by id", async ({ expect }) => {
+			let response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				result: [
+					expect.objectContaining({ id: "another-kv-id" }),
+					expect.objectContaining({ id: "test-kv-id" }),
+					expect.objectContaining({ id: "zebra-kv-id" }),
+				],
+			});
+
+			response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces?direction=desc`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				result: [
+					expect.objectContaining({ id: "zebra-kv-id" }),
+					expect.objectContaining({ id: "test-kv-id" }),
+					expect.objectContaining({ id: "another-kv-id" }),
+				],
+			});
+		});
+
+		test("sorts namespaces by title", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces?order=title&direction=desc`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				result: [
+					expect.objectContaining({ title: "ZEBRA_KV" }),
+					expect.objectContaining({ title: "TEST_KV" }),
+					expect.objectContaining({ title: "ANOTHER_KV" }),
+				],
+			});
+		});
 	});
 
 	describe("GET /storage/kv/namespaces/:namespaceId/keys", () => {

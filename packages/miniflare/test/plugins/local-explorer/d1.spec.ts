@@ -151,6 +151,27 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				success: true,
 			});
 		});
+
+		test("name filter works", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/d1/database?name=TEST`
+			);
+
+			expect(response.headers.get("Content-Type")).toBe("application/json");
+
+			const data = await expectValidResponse(
+				response,
+				zD1ListDatabasesResponse
+			);
+
+			expect(data).toMatchObject({
+				result: [expect.objectContaining({ uuid: "test-db-id" })],
+				result_info: {
+					count: 1,
+				},
+				success: true,
+			});
+		});
 	});
 
 	describe("POST /d1/database/:database_id/raw", () => {
