@@ -388,7 +388,6 @@ export default <ExportedHandler<Env>>{
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
 
-		// Dev registry push: forward to the proxy worker, or 204 if not present.
 		if (
 			request.method === "POST" &&
 			new URL(request.url).pathname === "/cdn-cgi/dev-registry/update"
