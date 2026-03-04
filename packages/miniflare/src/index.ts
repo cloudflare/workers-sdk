@@ -1118,6 +1118,8 @@ export class Miniflare {
 				body: JSON.stringify(registry),
 				signal: AbortSignal.timeout(2000),
 			});
+			// Drain the response body to release the connection back to the pool
+			await response.body.dump();
 			if (response.statusCode < 200 || response.statusCode >= 300) {
 				this.#log.debug(`Registry push failed with ${response.statusCode}`);
 				if (retries > 0) {
