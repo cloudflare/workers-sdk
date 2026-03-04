@@ -50,22 +50,15 @@ let dispatcher;
 
 port.addEventListener("message", async (event) => {
   const { id, method, url, headers, body } = event.data;
-  if (dispatcherUrl !== url) {
-    dispatcherUrl = url;
-    dispatcher = new Pool(url, {
-      connect: { rejectUnauthorized: false },
-      // Disable timeouts for local dev — long-running responses (streaming,
+  try {
+    if (dispatcherUrl !== url) {
+      dispatcherUrl = url;
+      dispatcher = new Pool(new URL(url).origin, {
+        connect: { rejectUnauthorized: false },
+              // Disable timeouts for local dev — long-running responses (streaming,
       // slow uploads, long-polling) should not be killed by undici defaults.
       headersTimeout: 0,
       bodyTimeout: 0,
-    });
-  }
-  headers["${CoreHeaders.OP_SYNC}"] = "true";
-  try {
-    if (dispatcherUrl !== url) {
-	  dispatcherUrl = url;
-      dispatcher = new Pool(new URL(url).origin, {
-        connect: { rejectUnauthorized: false },
       });
     }
     headers["${CoreHeaders.OP_SYNC}"] = "true";
