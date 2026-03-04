@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BinocularsIcon } from "@phosphor-icons/react";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
 import { StudioTabDefinitionList } from "./TabRegister";
+import { StudioQueryTab } from "./Tabs/Query";
 import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
 	IStudioDriver,
@@ -11,13 +21,20 @@ import type {
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
-import type { StudioTabDefinitionMetadata, TabDefinition } from "./TabRegister";
+import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
 
 /**
  * Default schema name for SQLite/D1 databases
  */
 const DEFAULT_SCHEMA_NAME = "main";
+
+export interface StudioRef {
+	/**
+	 * Refreshes the database schema, re-fetching table and view information.
+	 */
+	refreshSchema: () => Promise<void>;
+}
 
 interface StudioProps {
 	/**
@@ -39,18 +56,23 @@ interface StudioProps {
 	resource: StudioResource;
 }
 
-export function Studio({
-	driver,
-	initialTable,
-	onTableChange,
-	resource,
-}: StudioProps): JSX.Element {
+export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
+	{ driver, initialTable, onTableChange, resource },
+	ref
+) {
 	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
 	const [loadingSchema, setLoadingSchema] = useState(true);
 	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => [
-		// TODO: Re-add `StudioQueryTab` default tab
+		{
+			component: <StudioQueryTab />,
+			icon: BinocularsIcon,
+			identifier: "query-1",
+			key: window.crypto.randomUUID(),
+			title: "Query",
+			type: "query",
+		},
 	]);
 
 	const [selectedTabKey, setSelectedTabKey] = useState<string>(
@@ -73,6 +95,8 @@ export function Studio({
 			setLoadingSchema(false);
 		}
 	}, [driver]);
+
+	useImperativeHandle(ref, () => ({ refreshSchema }), [refreshSchema]);
 
 	useEffect((): void => {
 		void refreshSchema();
@@ -155,7 +179,6 @@ export function Studio({
 								isTemp: isTemporary,
 							} as StudioWindowTabItem;
 						}
-
 						return tab;
 					});
 				}
@@ -251,11 +274,15 @@ export function Studio({
 
 		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
 		if (!selectedTab) {
+			lastOpenedTable.current = null;
 			onTableChange(undefined);
 			return;
 		}
 
 		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
+		if (!tableMatch) {
+			lastOpenedTable.current = null;
+		}
 		onTableChange(tableMatch ? tableMatch[1] : undefined);
 	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
@@ -278,11 +305,7 @@ export function Studio({
 					return prev;
 				}
 
-				// Getting tab setting
-				// TODO: Remove assertion once tab definitions are registered
-				const tabTypeDefinition = StudioTabDefinitionList[
-					data.type
-				] as TabDefinition<StudioTabDefinitionMetadata>;
+				const tabTypeDefinition = StudioTabDefinitionList[data.type];
 				const newIdentifier = tabTypeDefinition.makeIdentifier(data);
 				const newKey = window.crypto.randomUUID();
 
@@ -376,4 +399,4 @@ export function Studio({
 			</StudioContextMenuProvider>
 		</ModalProvider>
 	);
-}
+});
