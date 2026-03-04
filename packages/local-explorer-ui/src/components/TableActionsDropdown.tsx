@@ -93,6 +93,17 @@ export function TableActionsDropdown({
 		setDeleteTarget(null);
 	}, []);
 
+	const handleTableDeleted = useCallback((): void => {
+		if (deleteTarget) {
+			// Close any open tabs for the deleted table
+			studioRef.current?.closeTableTabs(
+				deleteTarget.schemaName,
+				deleteTarget.tableName
+			);
+		}
+		onTableDeleted?.();
+	}, [deleteTarget, onTableDeleted, studioRef]);
+
 	return (
 		<>
 			<DropdownMenu>
@@ -152,7 +163,7 @@ export function TableActionsDropdown({
 					closeModal={handleCloseModal}
 					driver={driver}
 					isOpen={true}
-					onSuccess={onTableDeleted}
+					onSuccess={handleTableDeleted}
 					schemaName={deleteTarget.schemaName}
 					tableName={deleteTarget.tableName}
 				/>

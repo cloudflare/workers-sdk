@@ -32,6 +32,11 @@ const DEFAULT_SCHEMA_NAME = "main";
 
 export interface StudioRef {
 	/**
+	 * Closes all tabs (table viewer and edit-table) associated with a specific table.
+	 */
+	closeTableTabs: (schemaName: string, tableName: string) => void;
+
+	/**
 	 * Returns the currently active table context (from table or edit-table tabs),
 	 * or null if no table is selected.
 	 */
@@ -263,9 +268,22 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 		});
 	}, [openStudioTab]);
 
+	/**
+	 * Closes all tabs (table viewer and edit-table) associated with a specific table.
+	 */
+	const closeTableTabs = useCallback(
+		(schemaName: string, tableName: string): void => {
+			// Close both the table viewer and edit-table tabs for this table
+			closeStudioTab(`table/${schemaName}.${tableName}`);
+			closeStudioTab(`edit-table/${schemaName}.${tableName}`);
+		},
+		[closeStudioTab]
+	);
+
 	useImperativeHandle(
 		ref,
 		() => ({
+			closeTableTabs,
 			get currentTable() {
 				return getCurrentTable();
 			},
@@ -273,7 +291,13 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 			openEditTableTab,
 			refreshSchema,
 		}),
-		[getCurrentTable, openCreateTableTab, openEditTableTab, refreshSchema]
+		[
+			closeTableTabs,
+			getCurrentTable,
+			openCreateTableTab,
+			openEditTableTab,
+			refreshSchema,
+		]
 	);
 
 	/**
