@@ -50,7 +50,6 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	_fetcher: Fetcher | null = null;
 	_entryFetcher: Fetcher | null = null;
 
-	// Can't use private fields (#props) — not accessible through JS Proxy.
 	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
 		this._fetcher = resolve(ctx.props, env);
