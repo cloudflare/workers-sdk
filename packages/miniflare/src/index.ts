@@ -2178,7 +2178,6 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
-		// Must register before push so the snapshot includes our own workers.
 		await this.#registerWorkers();
 
 		// Catch any registry updates that occurred while workerd was booting.
