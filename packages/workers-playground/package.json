@@ -4,15 +4,15 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc && vite build",
-		"build:testing": "tsc && vite build -m development",
-		"check": "pnpm exec tsx ./generate-default-hashes.ts check",
+		"build": "git clean -xdf dist && tsc && vite build",
+		"check": "pnpm run check:default-hashes && pnpm run check:lint && pnpm run check:type",
+		"check:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts check",
 		"check:lint": "eslint src --max-warnings=0 --cache",
 		"check:type": "tsc",
-		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy",
+		"deploy": "pnpm run build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy --env=production",
 		"dev": "vite",
-		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.ts",
-		"preview": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler versions upload"
+		"generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.js",
+		"preview": "pnpm run build -m development && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 WRANGLER_OUTPUT_FILE_PATH=\"./.wrangler/tmp/version-upload-info.json\" wrangler versions upload --env=preview --preview-alias=playground-preview"
 	},
 	"dependencies": {
 		"@cloudflare/component-button": "^7.0.11",
@@ -45,6 +45,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/vite-plugin": "workspace:*",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.2.0",
@@ -52,9 +53,8 @@
 		"@vitejs/plugin-react": "^4.3.3",
 		"eslint": "catalog:default",
 		"react-use-websocket": "^4.13.0",
-		"tsx": "^3.12.8",
 		"undici": "catalog:default",
-		"vite": "catalog:default",
+		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:^"
 	},
 	"volta": {
