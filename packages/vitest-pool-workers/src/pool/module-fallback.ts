@@ -437,10 +437,13 @@ function maybeCorrectSubpathCollision(
 				}
 			}
 		}
-		// Fall back to main/module fields
-		const main = pkgJson.module ?? pkgJson.main ?? "index.js";
-		const resolved = posixPath.join(pkgDir, main);
-		return maybeGetTargetFilePath(resolved) ?? resolved;
+		// Fall back to main/module fields (only when no exports field)
+		if (!exports) {
+			const main = pkgJson.module ?? pkgJson.main ?? "index.js";
+			const resolved = posixPath.join(pkgDir, main);
+			return maybeGetTargetFilePath(resolved) ?? resolved;
+		}
+		return undefined;
 	} catch {
 		return undefined;
 	}
