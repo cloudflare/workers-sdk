@@ -148,7 +148,7 @@ function transformTableSchematableSchema(tableSchema: StudioTableSchema) {
 			);
 			if (existingPkConstraint) {
 				existingPkConstraint.primaryColumns?.push(columnCopy.name);
-				return;
+				return columnCopy;
 			}
 
 			constraintsList.unshift({
