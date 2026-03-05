@@ -7,6 +7,7 @@ import {
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
+import { writeDeployConfig } from "../deploy-config";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
@@ -98,41 +99,43 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		buildApp: {
 			order: "post",
 			async handler(builder) {
-				if (ctx.resolvedPluginConfig.type !== "workers") {
-					return;
+				assertIsNotPreview(ctx);
+
+				if (ctx.resolvedPluginConfig.type === "workers") {
+					const workerEnvironments = [
+						...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
+					].map((environmentName) => {
+						const environment = builder.environments[environmentName];
+						assert(environment, `"${environmentName}" environment not found`);
+
+						return environment;
+					});
+
+					// Build any Worker environments that haven't already been built
+					await Promise.all(
+						workerEnvironments
+							.filter((environment) => !environment.isBuilt)
+							.map((environment) => builder.build(environment))
+					);
+
+					const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
+					const entryWorkerEnvironment =
+						builder.environments[entryWorkerEnvironmentName];
+					assert(
+						entryWorkerEnvironment,
+						`No "${entryWorkerEnvironmentName}" environment`
+					);
+					const entryWorkerBuildDirectory = path.resolve(
+						builder.config.root,
+						entryWorkerEnvironment.config.build.outDir
+					);
+
+					if (!builder.environments.client?.isBuilt) {
+						removeAssetsField(entryWorkerBuildDirectory);
+					}
 				}
 
-				const workerEnvironments = [
-					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
-				].map((environmentName) => {
-					const environment = builder.environments[environmentName];
-					assert(environment, `"${environmentName}" environment not found`);
-
-					return environment;
-				});
-
-				// Build any Worker environments that haven't already been built
-				await Promise.all(
-					workerEnvironments
-						.filter((environment) => !environment.isBuilt)
-						.map((environment) => builder.build(environment))
-				);
-
-				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
-				const entryWorkerEnvironment =
-					builder.environments[entryWorkerEnvironmentName];
-				assert(
-					entryWorkerEnvironment,
-					`No "${entryWorkerEnvironmentName}" environment`
-				);
-				const entryWorkerBuildDirectory = path.resolve(
-					builder.config.root,
-					entryWorkerEnvironment.config.build.outDir
-				);
-
-				if (!builder.environments.client?.isBuilt) {
-					removeAssetsField(entryWorkerBuildDirectory);
-				}
+				writeDeployConfig(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 			},
 		},
 	};
