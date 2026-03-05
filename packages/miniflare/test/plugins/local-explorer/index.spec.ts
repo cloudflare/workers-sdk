@@ -164,7 +164,7 @@ describe("Local Explorer API validation", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [{ code: 10000, message: "Namespace not found" }],
+				errors: [{ code: 10013, message: "list keys: 'namespace not found'" }],
 			});
 		});
 	});

@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { aggregateListResults, searchPeers } from "../aggregation";
+import {
+	aggregateListResults,
+	fetchFromPeer,
+	getPeerUrlsIfAggregating,
+} from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zD1ListDatabasesData,
@@ -12,6 +16,13 @@ import type {
 	D1RawResultResponse,
 	D1SingleQuery,
 } from "../generated";
+
+// ============================================================================
+// Error Codes (matching Cloudflare API)
+// ============================================================================
+
+/** Error code for D1 database not found */
+const D1_ERROR_DATABASE_NOT_FOUND = 7404;
 
 // ============================================================================
 // Helper Functions
@@ -56,6 +67,28 @@ function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
 			version: "production",
 		} satisfies D1DatabaseResponse;
 	});
+}
+
+async function findD1DatabaseOwner(
+	c: AppContext,
+	databaseId: string
+): Promise<string | null> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+	if (peerUrls.length === 0) return null;
+
+	const responses = await Promise.all(
+		peerUrls.map(async (url) => {
+			const response = await fetchFromPeer(url, "/d1/database");
+			if (!response?.ok) return null;
+			const data = (await response.json()) as {
+				result?: Array<{ uuid: string }>;
+			};
+			const found = data.result?.some((db) => db.uuid === databaseId);
+			return found ? url : null;
+		})
+	);
+
+	return responses.find((url) => url !== null) ?? null;
 }
 
 // ============================================================================
@@ -146,21 +179,25 @@ export async function rawD1Database(
 		return executeD1Query(c, db, body);
 	}
 
-	// Try peers
-	const peerResponse = await searchPeers(
-		c,
-		`/d1/database/${encodeURIComponent(databaseId)}/raw`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		}
-	);
-	if (peerResponse) {
-		return peerResponse;
+	const ownerMiniflare = await findD1DatabaseOwner(c, databaseId);
+	if (ownerMiniflare) {
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/d1/database/${encodeURIComponent(databaseId)}/raw`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}
+		);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10000, "Database not found");
+	return errorResponse(
+		404,
+		D1_ERROR_DATABASE_NOT_FOUND,
+		`The database ${databaseId} could not be found`
+	);
 }
 
 /**

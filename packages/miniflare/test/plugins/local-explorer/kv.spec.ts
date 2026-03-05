@@ -148,7 +148,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -228,7 +228,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Key not found" })],
+				errors: [expect.objectContaining({ code: 10009 })],
 			});
 		});
 
@@ -240,7 +240,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -308,7 +308,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});
@@ -359,7 +359,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -460,7 +460,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});

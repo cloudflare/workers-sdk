@@ -1,5 +1,9 @@
 import z from "zod";
-import { aggregateListResults, searchPeers } from "../aggregation";
+import {
+	aggregateListResults,
+	fetchFromPeer,
+	getPeerUrlsIfAggregating,
+} from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
@@ -8,6 +12,15 @@ import {
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+
+// ============================================================================
+// Error Codes (matching Cloudflare API)
+// ============================================================================
+
+/** Error code for key not found in KV namespace */
+const KV_ERROR_KEY_NOT_FOUND = 10009;
+/** Error code for KV namespace not found */
+const KV_ERROR_NAMESPACE_NOT_FOUND = 10013;
 
 // ============================================================================
 // Helper Functions
@@ -24,6 +37,28 @@ function getKVBinding(env: Env, namespace_id: string): KVNamespace | null {
 	if (!bindingName) return null;
 
 	return env[bindingName] as KVNamespace;
+}
+
+async function findKVNamespaceOwner(
+	c: AppContext,
+	namespaceId: string
+): Promise<string | null> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+	if (peerUrls.length === 0) return null;
+
+	const responses = await Promise.all(
+		peerUrls.map(async (url) => {
+			const response = await fetchFromPeer(url, "/storage/kv/namespaces");
+			if (!response?.ok) return null;
+			const data = (await response.json()) as {
+				result?: Array<{ id: string }>;
+			};
+			const found = data.result?.some((ns) => ns.id === namespaceId);
+			return found ? url : null;
+		})
+	);
+
+	return responses.find((url) => url !== null) ?? null;
 }
 
 /**
@@ -109,20 +144,24 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 		return executeListKeys(c, kv, { cursor, limit, prefix });
 	}
 
-	// Try peers
-	const params = new URLSearchParams();
-	if (cursor) params.set("cursor", cursor);
-	if (limit !== undefined) params.set("limit", String(limit));
-	if (prefix) params.set("prefix", prefix);
-	const queryString = params.toString();
-	const path = `/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/keys${queryString ? `?${queryString}` : ""}`;
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	if (ownerMiniflare) {
+		const params = new URLSearchParams();
+		if (cursor) params.set("cursor", cursor);
+		if (limit !== undefined) params.set("limit", String(limit));
+		if (prefix) params.set("prefix", prefix);
+		const queryString = params.toString();
+		const path = `/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/keys${queryString ? `?${queryString}` : ""}`;
 
-	const peerResponse = await searchPeers(c, path);
-	if (peerResponse) {
-		return peerResponse;
+		const response = await fetchFromPeer(ownerMiniflare, path);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10000, "Namespace not found");
+	return errorResponse(
+		404,
+		KV_ERROR_NAMESPACE_NOT_FOUND,
+		"list keys: 'namespace not found'"
+	);
 }
 
 /**
@@ -167,22 +206,26 @@ export async function getKVValue(c: AppContext) {
 	if (kv) {
 		const value = await kv.get(key_name, { type: "arrayBuffer" });
 		if (value === null) {
-			return errorResponse(404, 10000, "Key not found");
+			return errorResponse(404, KV_ERROR_KEY_NOT_FOUND, "get: 'key not found'");
 		}
 		// this specific API doesn't wrap the response in the envelope
 		return new Response(value);
 	}
 
-	// Try peers
-	const peerResponse = await searchPeers(
-		c,
-		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`
-	);
-	if (peerResponse) {
-		return peerResponse;
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	if (ownerMiniflare) {
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`
+		);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10000, "Namespace not found");
+	return errorResponse(
+		404,
+		KV_ERROR_NAMESPACE_NOT_FOUND,
+		"get: 'namespace not found'"
+	);
 }
 
 /**
@@ -202,25 +245,29 @@ export async function putKVValue(c: AppContext) {
 		return executePutKVValue(c, kv, key_name);
 	}
 
-	// Try peers
-	const body = await c.req.arrayBuffer();
-	const peerResponse = await searchPeers(
-		c,
-		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
-		{
-			method: "PUT",
-			headers: {
-				"Content-Type":
-					c.req.header("content-type") || "application/octet-stream",
-			},
-			body,
-		}
-	);
-	if (peerResponse) {
-		return peerResponse;
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	if (ownerMiniflare) {
+		const body = await c.req.arrayBuffer();
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+			{
+				method: "PUT",
+				headers: {
+					"Content-Type":
+						c.req.header("content-type") || "application/octet-stream",
+				},
+				body,
+			}
+		);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10000, "Namespace not found");
+	return errorResponse(
+		404,
+		KV_ERROR_NAMESPACE_NOT_FOUND,
+		"put: 'namespace not found'"
+	);
 }
 
 /**
@@ -297,17 +344,21 @@ export async function deleteKVValue(c: AppContext) {
 		return c.json(wrapResponse({}));
 	}
 
-	// Try peers
-	const peerResponse = await searchPeers(
-		c,
-		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
-		{ method: "DELETE" }
-	);
-	if (peerResponse) {
-		return peerResponse;
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	if (ownerMiniflare) {
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+			{ method: "DELETE" }
+		);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10000, "Namespace not found");
+	return errorResponse(
+		404,
+		KV_ERROR_NAMESPACE_NOT_FOUND,
+		"remove key: 'namespace not found'"
+	);
 }
 
 type BulkGetBody = NonNullable<
@@ -339,19 +390,23 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 		return c.json(wrapResponse({ values }));
 	}
 
-	// Try peers
-	const peerResponse = await searchPeers(
-		c,
-		`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/bulk/get`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		}
-	);
-	if (peerResponse) {
-		return peerResponse;
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	if (ownerMiniflare) {
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/bulk/get`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}
+		);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10000, "Namespace not found");
+	return errorResponse(
+		404,
+		KV_ERROR_NAMESPACE_NOT_FOUND,
+		"bulk get keys: 'namespace not found'"
+	);
 }

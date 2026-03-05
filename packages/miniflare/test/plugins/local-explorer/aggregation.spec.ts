@@ -250,8 +250,8 @@ describe("Cross-process aggregation", () => {
 			{
 			  "errors": [
 			    {
-			      "code": 10000,
-			      "message": "Namespace not found",
+			      "code": 10013,
+			      "message": "list keys: 'namespace not found'",
 			    },
 			  ],
 			  "messages": [],

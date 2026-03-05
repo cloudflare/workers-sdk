@@ -1,5 +1,9 @@
 import { INTROSPECT_SQLITE_METHOD } from "../../../plugins/core/constants";
-import { aggregateListResults, searchPeers } from "../aggregation";
+import {
+	aggregateListResults,
+	fetchFromPeer,
+	getPeerUrlsIfAggregating,
+} from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import {
 	zDurableObjectsNamespaceListObjectsData,
@@ -9,6 +13,13 @@ import type { IntrospectSqliteMethod } from "../../../plugins/core/constants";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { z } from "zod";
+
+// ============================================================================
+// Error Codes (matching Cloudflare API)
+// ============================================================================
+
+/** Error code for Durable Object namespace not found */
+const DO_ERROR_NAMESPACE_NOT_FOUND = 10066;
 
 // ============================================================================
 // Helper Functions
@@ -52,6 +63,31 @@ function getLocalDONamespaces(env: Env) {
 		class: info.className,
 		use_sqlite: info.useSQLite,
 	}));
+}
+
+async function findDONamespaceOwner(
+	c: AppContext,
+	namespaceId: string
+): Promise<string | null> {
+	const peerUrls = await getPeerUrlsIfAggregating(c);
+	if (peerUrls.length === 0) return null;
+
+	const responses = await Promise.all(
+		peerUrls.map(async (url) => {
+			const response = await fetchFromPeer(
+				url,
+				"/workers/durable_objects/namespaces"
+			);
+			if (!response?.ok) return null;
+			const data = (await response.json()) as {
+				result?: Array<{ id: string }>;
+			};
+			const found = data.result?.some((ns) => ns.id === namespaceId);
+			return found ? url : null;
+		})
+	);
+
+	return responses.find((url) => url !== null) ?? null;
 }
 
 // ============================================================================
@@ -108,19 +144,23 @@ export async function listDOObjects(
 		return executeListDOObjects(c, namespaceId, { limit, cursor });
 	}
 
-	// Try peers
-	const params = new URLSearchParams();
-	if (cursor) params.set("cursor", cursor);
-	if (limit !== undefined) params.set("limit", String(limit));
-	const queryString = params.toString();
-	const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
+	const ownerMiniflare = await findDONamespaceOwner(c, namespaceId);
+	if (ownerMiniflare) {
+		const params = new URLSearchParams();
+		if (cursor) params.set("cursor", cursor);
+		if (limit !== undefined) params.set("limit", String(limit));
+		const queryString = params.toString();
+		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
 
-	const peerResponse = await searchPeers(c, path);
-	if (peerResponse) {
-		return peerResponse;
+		const response = await fetchFromPeer(ownerMiniflare, path);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+	return errorResponse(
+		404,
+		DO_ERROR_NAMESPACE_NOT_FOUND,
+		`Durable Object namespace ID '${namespaceId}' not found.`
+	);
 }
 
 /**
@@ -238,21 +278,25 @@ export async function queryDOSqlite(
 		return executeQueryDOSqlite(c, ns, namespaceId, body);
 	}
 
-	// Try peers
-	const peerResponse = await searchPeers(
-		c,
-		`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(body),
-		}
-	);
-	if (peerResponse) {
-		return peerResponse;
+	const ownerMiniflare = await findDONamespaceOwner(c, namespaceId);
+	if (ownerMiniflare) {
+		const response = await fetchFromPeer(
+			ownerMiniflare,
+			`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			}
+		);
+		if (response) return response;
 	}
 
-	return errorResponse(404, 10001, `Namespace not found: ${namespaceId}`);
+	return errorResponse(
+		404,
+		DO_ERROR_NAMESPACE_NOT_FOUND,
+		`Durable Object namespace ID '${namespaceId}' not found.`
+	);
 }
 
 /**

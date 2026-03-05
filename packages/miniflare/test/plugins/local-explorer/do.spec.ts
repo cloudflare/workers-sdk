@@ -126,7 +126,7 @@ describe("Durable Objects API", () => {
 			const data = (await response.json()) as ListObjectsResponse;
 
 			expect(data.success).toBe(false);
-			expect(data.errors[0].message).toContain("Namespace not found");
+			expect(data.errors[0].code).toBe(10066);
 		});
 	});
 
@@ -789,7 +789,7 @@ describe("Durable Objects API", () => {
 			const data = (await response.json()) as ErrorResponse;
 
 			expect(data.success).toBe(false);
-			expect(data.errors[0].message).toContain("Namespace not found");
+			expect(data.errors[0].code).toBe(10066);
 		});
 
 		test("returns 400 for non-SQLite namespace", async ({ expect }) => {
