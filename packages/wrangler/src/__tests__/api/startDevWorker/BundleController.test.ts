@@ -255,6 +255,65 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				{ timeout: 5_000, interval: 500 }
 			);
 		});
+
+		test("custom build watcher changes are processed without concurrent custom builds", async () => {
+			await seed({
+				"custom_build_dir/index.ts": dedent/* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello custom build")
+					}
+				} satisfies ExportedHandler
+			`,
+				"custom-build.js": dedent/* javascript */ `
+				const fs = require("node:fs");
+
+				if (fs.existsSync("build.lock")) {
+					console.error("concurrent custom build detected");
+					process.exit(1);
+				}
+
+				fs.writeFileSync("build.lock", "1");
+				setTimeout(() => {
+					fs.cpSync("custom_build_dir/index.ts", "out.ts");
+					fs.rmSync("build.lock");
+				}, 200);
+			`,
+			});
+
+			const config = configDefaults({
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					custom: {
+						command: "node custom-build.js",
+						watch: "custom_build_dir",
+					},
+					moduleRoot: path.resolve("."),
+				},
+			});
+
+			await controller.onConfigUpdate({ type: "configUpdate", config });
+			await bus.waitFor("bundleComplete");
+
+			await seed({
+				"custom_build_dir/changed-1.txt": "a",
+			});
+			await seed({
+				"custom_build_dir/changed-2.txt": "b",
+			});
+
+			await bus.waitFor("bundleComplete");
+			await vi.waitFor(() => {
+				const customBuildErrors = bus.events.filter(
+					(event) =>
+						event.type === "error" &&
+						event.reason === "Custom build failed" &&
+						event.source === "BundlerController"
+				);
+				expect(customBuildErrors).toHaveLength(0);
+			});
+		});
 	});
 
 	test("module aliasing", async () => {

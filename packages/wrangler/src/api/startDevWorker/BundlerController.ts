@@ -30,17 +30,59 @@ export class BundlerController extends Controller {
 	#currentBundle?: EsbuildBundle;
 
 	#customBuildWatcher?: ReturnType<typeof watch>;
+	#pendingCustomBuild?:
+		| {
+				config: StartDevWorkerOptions;
+				filePath: string;
+				buildAborter: AbortController;
+		  }
+		| undefined;
+	#isRunningCustomBuild = false;
 
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
 	#customBuildAborter = new AbortController();
 
-	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
+	#scheduleCustomBuild(config: StartDevWorkerOptions, filePath: string) {
 		// If a new custom build comes in, we need to cancel in-flight builds
 		this.#customBuildAborter.abort();
 		this.#customBuildAborter = new AbortController();
 
-		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
-		const buildAborter = this.#customBuildAborter;
+		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific
+		// AbortController that will be used for this build. We only keep the latest pending request
+		// so we don't run multiple stale builds after bursty file change events.
+		this.#pendingCustomBuild = {
+			config,
+			filePath,
+			buildAborter: this.#customBuildAborter,
+		};
+
+		if (!this.#isRunningCustomBuild) {
+			void this.#runPendingCustomBuilds();
+		}
+	}
+
+	async #runPendingCustomBuilds() {
+		this.#isRunningCustomBuild = true;
+		try {
+			while (this.#pendingCustomBuild) {
+				const nextBuild = this.#pendingCustomBuild;
+				this.#pendingCustomBuild = undefined;
+				await this.#runCustomBuild(
+					nextBuild.config,
+					nextBuild.filePath,
+					nextBuild.buildAborter
+				);
+			}
+		} finally {
+			this.#isRunningCustomBuild = false;
+		}
+	}
+
+	async #runCustomBuild(
+		config: StartDevWorkerOptions,
+		filePath: string,
+		buildAborter: AbortController
+	) {
 		const relativeFile =
 			path.relative(config.projectRoot, config.entrypoint) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
@@ -113,7 +155,7 @@ export class BundlerController extends Controller {
 						doBindings,
 						workflowBindings,
 						jsxFactory: config.build.jsxFactory,
-						jsxFragment: config.build.jsxFactory,
+						jsxFragment: config.build.jsxFragment,
 						tsconfig: config.build.tsconfig,
 						minify: config.build.minify,
 						keepNames: config.build.keepNames ?? true,
@@ -203,12 +245,12 @@ export class BundlerController extends Controller {
 			ignoreInitial: true,
 		});
 		this.#customBuildWatcher.on("ready", () => {
-			void this.#runCustomBuild(config, String(pathsToWatch));
+			this.#scheduleCustomBuild(config, String(pathsToWatch));
 		});
 
 		this.#customBuildWatcher.on(
 			"all",
-			(_event, filePath) => void this.#runCustomBuild(config, filePath)
+			(_event, filePath) => this.#scheduleCustomBuild(config, filePath)
 		);
 	}
 
