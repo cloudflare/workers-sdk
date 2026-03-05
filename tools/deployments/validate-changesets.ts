@@ -36,6 +36,8 @@ export function validateChangesets(
 					"@cloudflare/quick-edit",
 					"@cloudflare/devprod-status-bot",
 					"@cloudflare/workers-playground",
+					"@cloudflare/edge-preview-authenticated-proxy",
+					"@cloudflare/playground-preview-worker",
 				];
 				if (
 					packages.get(release.name)?.["workers-sdk"]?.deploy &&
