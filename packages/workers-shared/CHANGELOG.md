@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.19.1
+
+### Patch Changes
+
+- [#12752](https://github.com/cloudflare/workers-sdk/pull/12752) [`00a4356`](https://github.com/cloudflare/workers-sdk/commit/00a43568d9dc3152befa278cdb61b4c7e89b42fa) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - fix: Normalize backslash characters in `/cdn-cgi` paths
+
+  Requests containing backslash characters in `/cdn-cgi` paths are now redirected to their normalized equivalents with forward slashes. This ensures consistent URL handling across different browsers and HTTP clients.
+
 ## 0.19.0
 
 ### Minor Changes
