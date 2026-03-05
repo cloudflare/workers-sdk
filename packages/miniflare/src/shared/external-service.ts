@@ -354,6 +354,7 @@ const PROXY_ENTRYPOINT_HEADER = "X-Miniflare-Proxy-Entrypoint";
 const CREATE_PROXY_PROTOTYPE_CLASS_HELPER_SCRIPT = `
     const HANDLER_RESERVED_KEYS = new Set([
         "alarm",
+        "connect",
         "scheduled",
         "self",
         "tail",
