@@ -33,7 +33,9 @@ function getPeerUrls(
 	return [...new Set(urls)];
 }
 
-async function getPeerUrlsIfAggregating(c: AppContext): Promise<string[]> {
+export async function getPeerUrlsIfAggregating(
+	c: AppContext
+): Promise<string[]> {
 	if (c.req.raw.headers.has(NO_AGGREGATE_HEADER)) {
 		return [];
 	}
@@ -52,7 +54,7 @@ async function getPeerUrlsIfAggregating(c: AppContext): Promise<string[]> {
  * @param apiPath - API path relative to the explorer API base (e.g., "/d1/database")
  * @param init - Optional fetch init options
  */
-async function fetchFromPeer(
+export async function fetchFromPeer(
 	peerUrl: string,
 	apiPath: string,
 	init?: RequestInit
@@ -110,32 +112,4 @@ export async function aggregateListResults<T>(
 	}
 
 	return allResults;
-}
-
-/**
- * Search through peer instances until one returns a successful response.
- * Used when interacting with a resource that exists on a different instance.
- *
- * @param c - Hono app context
- * @param apiPath - API path relative to the explorer API base
- * @param init - Optional fetch init options
- * @returns The first successful response, or null if all peers fail/return 404
- */
-export async function searchPeers(
-	c: AppContext,
-	apiPath: string,
-	init?: RequestInit
-): Promise<Response | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-
-	for (const url of peerUrls) {
-		const response = await fetchFromPeer(url, apiPath, init);
-		// if its a 404, it means the peer doesn't have the resource, so we keep looking
-		if (response !== null && response.status !== 404) {
-			// Return any non-404 response (success or validation error)
-			return response;
-		}
-	}
-
-	return null;
 }

@@ -237,7 +237,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			);
 
 			expect(data).toMatchObject({
-				errors: [expect.objectContaining({ message: "Database not found" })],
+				errors: [expect.objectContaining({ code: 7404 })],
 				success: false,
 			});
 		});
