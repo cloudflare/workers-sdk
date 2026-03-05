@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.15.0
+
+### Minor Changes
+
+- [#10618](https://github.com/cloudflare/workers-sdk/pull/10618) [`5cc8fcf`](https://github.com/cloudflare/workers-sdk/commit/5cc8fcfdeaf521c33de7df86c011f7059d3d93da) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use the native workerd `node:perf_hooks` module and `Performance` global classes when available
+
+  They are enabled when the `enable_nodejs_perf_hooks_module` compatibility flag is set. This feature is currently experimental and requires the above flag and `experimental` compatibility flag to be set.
+
 ## 2.14.0
 
 ### Minor Changes

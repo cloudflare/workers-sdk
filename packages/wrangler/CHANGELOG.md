@@ -1,5 +1,29 @@
 # wrangler
 
+## 4.71.0
+
+### Minor Changes
+
+- [#11656](https://github.com/cloudflare/workers-sdk/pull/11656) [`ec2459e`](https://github.com/cloudflare/workers-sdk/commit/ec2459ebeae9a1a9f14bf0db1f507e1ea5d2dbb2) Thanks [@prydt](https://github.com/prydt)! - feat(hyperdrive): add MySQL SSL mode and Custom CA support
+
+  Hyperdrive now supports MySQL-specific SSL modes (`REQUIRED`, `VERIFY_CA`, `VERIFY_IDENTITY`) alongside the existing PostgreSQL modes. The `--sslmode` flag now validates the provided value based on the database scheme (PostgreSQL or MySQL) and enforces appropriate CA certificate requirements for each.
+
+  **Usage:**
+
+  ```sh
+  # MySQL with CA verification
+  wrangler hyperdrive create my-config --connection-string="mysql://user:pass@host:3306/db" --sslmode=VERIFY_CA --ca-certificate-id=<cert-id>
+
+  # PostgreSQL (unchanged)
+  wrangler hyperdrive create my-config --connection-string="postgres://user:pass@host:5432/db" --sslmode=verify-full --ca-certificate-id=<cert-id>
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`5cc8fcf`](https://github.com/cloudflare/workers-sdk/commit/5cc8fcfdeaf521c33de7df86c011f7059d3d93da)]:
+  - @cloudflare/unenv-preset@2.15.0
+  - miniflare@4.20260301.1
+
 ## 4.70.0
 
 ### Minor Changes

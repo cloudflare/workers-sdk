@@ -1,5 +1,19 @@
 # @cloudflare/local-explorer-ui
 
+## 0.7.0
+
+### Minor Changes
+
+- [#12453](https://github.com/cloudflare/workers-sdk/pull/12453) [`9764ea0`](https://github.com/cloudflare/workers-sdk/commit/9764ea09e0e106e96a403db8e99d41ad3f00ef98) Thanks [@NuroDev](https://github.com/NuroDev)! - Add initial data studio with D1 and Durable Objects support
+
+  Adds a data studio interface to the local explorer UI, allowing you to browse and interact with D1 databases and Durable Objects during local development. The studio provides table browsing, query execution, and data editing capabilities.
+
+- [#12760](https://github.com/cloudflare/workers-sdk/pull/12760) [`fa88fef`](https://github.com/cloudflare/workers-sdk/commit/fa88fef992bd8e65d00d1e7d279bf62ee9120ce8) Thanks [@NuroDev](https://github.com/NuroDev)! - Add schema editor to data studio
+
+  Adds a visual schema editor to the data studio that allows you to create new database tables and edit existing table schemas. The editor provides column management (add, edit, remove), constraint editing (primary keys, unique constraints), and generates the corresponding SQL statements for review before committing changes.
+
+  This is a WIP experimental feature.
+
 ## 0.6.0
 
 ### Minor Changes
