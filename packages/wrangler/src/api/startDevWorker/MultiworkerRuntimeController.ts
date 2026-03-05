@@ -67,7 +67,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 	// updates were submitted, the second may apply before the first. Therefore,
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
-	#mf?: Miniflare;
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
@@ -202,13 +201,13 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			if (this.#canStartMiniflare()) {
 				const mergedMfOptions = ensureMatchingSql(this.#mergedMfOptions());
 
-				if (this.#mf === undefined) {
+				if (this.mf === undefined) {
 					logger.log(chalk.dim("⎔ Starting local server..."));
-					this.#mf = new Miniflare(mergedMfOptions);
+					this.mf = new Miniflare(mergedMfOptions);
 				} else {
 					logger.log(chalk.dim("⎔ Reloading local server..."));
 
-					await this.#mf.setOptions(mergedMfOptions);
+					await this.mf.setOptions(mergedMfOptions);
 
 					logger.log(chalk.dim("⎔ Local server updated and ready"));
 				}
@@ -217,8 +216,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				// calls to complete before resolving. To ensure we get the `url` and
 				// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 				// so only one update can happen at a time.
-				const userWorkerUrl = await this.#mf.ready;
-				const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
+				const userWorkerUrl = await this.mf.ready;
+				const userWorkerInspectorUrl = await this.mf.getInspectorURL();
 				// If we received a new `bundleComplete` event before we were able to
 				// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 				if (id !== this.#currentBundleId) {
@@ -294,12 +293,12 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#teardown = async (): Promise<void> => {
 		logger.debug("MultiworkerRuntimeController teardown beginning...");
-		if (this.#mf) {
+		if (this.mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
-		await this.#mf?.dispose();
-		this.#mf = undefined;
+		await this.mf?.dispose();
+		this.mf = undefined;
 
 		if (this.#remoteProxySessionsData.size > 0) {
 			logger.log(chalk.dim("⎔ Shutting down remote connections..."));

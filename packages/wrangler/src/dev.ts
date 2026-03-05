@@ -1,5 +1,3 @@
-import assert from "node:assert";
-import events from "node:events";
 import {
 	configFileName,
 	formatConfigSnippet,
@@ -290,15 +288,9 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		const devInstance = await startDev(args);
-		assert(devInstance.devEnv !== undefined);
-		await events.once(devInstance.devEnv, "teardown");
-		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		if (devInstance.teardownRegistryPromise) {
-			const teardownRegistry = await devInstance.teardownRegistryPromise;
-			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-		}
-		devInstance.unregisterHotKeys?.();
+		const server = await startDev(args);
+		await server.waitUntilExit();
+		await server.close();
 	},
 });
 

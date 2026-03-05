@@ -557,6 +557,37 @@ describe("DevEnv", { sequential: true }, () => {
 			);
 		});
 
+		it("outboundService intercepts worker outbound fetch", async () => {
+			await helper.seed({
+				"src/index.ts": dedent`
+					export default {
+						async fetch() {
+							const response = await fetch("https://example.com/outbound");
+							return new Response(await response.text());
+						}
+					}
+				`,
+			});
+
+			const worker = await startWorker({
+				name: "test-worker",
+				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+					outboundService: (request: Request) => {
+						return new Response(`intercepted:${request.url}`);
+					},
+				},
+			});
+			onTestFinished(worker?.dispose);
+
+			const res = await worker.fetch("http://dummy");
+			await expect(res.text()).resolves.toBe(
+				"intercepted:https://example.com/outbound"
+			);
+		});
+
 		it("inflight requests are retried during UserWorker reloads", async () => {
 			// to simulate inflight requests failing during UserWorker reloads,
 			// we will use a UserWorker with a longish `await setTimeout(...)`

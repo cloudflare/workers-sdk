@@ -27,8 +27,8 @@ import type { StartDevOptions } from "../../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
-// Mock the startDev function to capture the devEnv so we can stop it later
-// The `stopWrangler` function will be assigned in the startDev mock implementation where it has access to the `devEnv.teardown()` method.
+// Mock the startDev function to capture the runtime so we can stop it later.
+// The `stopWrangler` function will be assigned in the startDev mock implementation.
 let stopWrangler: () => Promise<void> = async () => {
 	throw new Error("Stop worker not set");
 };
@@ -39,9 +39,9 @@ vi.mock("../../dev/start-dev", async () => {
 	return {
 		...actual,
 		async startDev(args: StartDevOptions) {
-			const result = await actual.startDev(args);
-			stopWrangler = () => result.devEnv.teardown();
-			return result;
+			const server = await actual.startDev(args);
+			stopWrangler = () => server.close();
+			return server;
 		},
 	};
 });

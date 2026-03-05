@@ -1,4 +1,3 @@
-import events from "node:events";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch, Request } from "undici";
 import { startDev } from "../dev/start-dev";
@@ -227,7 +226,7 @@ export async function unstable_dev(
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-	const devServer = await run(
+	const server = await run(
 		{
 			// TODO: can we make this work?
 			MULTIWORKER: false,
@@ -242,11 +241,7 @@ export async function unstable_dev(
 		port,
 		address,
 		stop: async () => {
-			await devServer.devEnv.teardown.bind(devServer.devEnv)();
-			const teardownRegistry = await devServer.teardownRegistryPromise;
-			await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
-
-			devServer.unregisterHotKeys?.();
+			await server.close();
 		},
 		fetch: async (input?: RequestInfo, init?: RequestInit) => {
 			return await fetch(
@@ -254,7 +249,7 @@ export async function unstable_dev(
 			);
 		},
 		waitUntilExit: async () => {
-			await events.once(devServer.devEnv, "teardown");
+			await server.waitUntilExit();
 		},
 	};
 }
