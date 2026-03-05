@@ -31,7 +31,7 @@ export const installPackages = async (
 ) => {
 	const { type } = packageManager;
 	const { force, dev, startText, doneText } = config;
-	const isWorkspaceRoot = !!config.isWorkspaceRoot;
+	const isWorkspaceRoot = config.isWorkspaceRoot ?? false;
 
 	if (packages.length === 0) {
 		let cmd;
