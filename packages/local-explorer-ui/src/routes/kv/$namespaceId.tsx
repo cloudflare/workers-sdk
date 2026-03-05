@@ -75,7 +75,6 @@ function NamespaceView() {
 	const { namespaceId } = Route.useParams();
 	const loaderData = Route.useLoaderData();
 
-	// Initialize state from loader data
 	const [entries, setEntries] = useState<KVEntry[]>(loaderData.entries);
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
 	const [hasMore, setHasMore] = useState(loaderData.hasMore);
@@ -100,7 +99,6 @@ function NamespaceView() {
 	// Search prefix filter
 	const [prefix, setPrefix] = useState<string | undefined>(undefined);
 
-	// Reset state when loader data changes (e.g., when navigating to a different namespace)
 	useEffect(() => {
 		setEntries(loaderData.entries);
 		setCursor(loaderData.cursor);

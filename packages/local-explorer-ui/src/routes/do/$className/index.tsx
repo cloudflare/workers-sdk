@@ -50,7 +50,6 @@ function NamespaceView() {
 	const loaderData = Route.useLoaderData();
 	const { namespaceId } = loaderData;
 
-	// Initialize state from loader data
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
 	const [error, setError] = useState<string | null>(null);
 	const [hasMore, setHasMore] = useState<boolean>(loaderData.hasMore);
@@ -58,7 +57,6 @@ function NamespaceView() {
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	const [objects, setObjects] = useState<WorkersObject[]>(loaderData.objects);
 
-	// Reset state when loader data changes (e.g., when navigating to a different namespace)
 	useEffect((): void => {
 		setObjects(loaderData.objects);
 		setCursor(loaderData.cursor);
