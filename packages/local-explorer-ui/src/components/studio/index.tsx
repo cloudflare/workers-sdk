@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BinocularsIcon } from "@phosphor-icons/react";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { useLeaveGuard } from "../../hooks/leave-guard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { ModalProvider } from "./Modal";
 import { StudioTabDefinitionList } from "./TabRegister";
+import { StudioQueryTab } from "./Tabs/Query";
 import { StudioWindowTabPane } from "./WindowTab/Pane";
 import type {
 	IStudioDriver,
@@ -11,13 +21,42 @@ import type {
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
-import type { StudioTabDefinitionMetadata, TabDefinition } from "./TabRegister";
+import type { TableTarget } from "./Table/ActionsDropdown";
+import type { StudioTabDefinitionMetadata } from "./TabRegister";
 import type { StudioWindowTabItem } from "./WindowTab/types";
 
 /**
  * Default schema name for SQLite/D1 databases
  */
 const DEFAULT_SCHEMA_NAME = "main";
+
+export interface StudioRef {
+	/**
+	 * Closes all tabs (table viewer and edit-table) associated with a specific table.
+	 */
+	closeTableTabs: (schemaName: string, tableName: string) => void;
+
+	/**
+	 * Returns the currently active table context (from table or edit-table tabs),
+	 * or null if no table is selected.
+	 */
+	currentTable: TableTarget | null;
+
+	/**
+	 * Opens the create-table tab.
+	 */
+	openCreateTableTab: () => void;
+
+	/**
+	 * Opens the edit-table tab for the specified table.
+	 */
+	openEditTableTab: (schemaName: string, tableName: string) => void;
+
+	/**
+	 * Refreshes the database schema, re-fetching table and view information.
+	 */
+	refreshSchema: () => Promise<void>;
+}
 
 interface StudioProps {
 	/**
@@ -39,18 +78,23 @@ interface StudioProps {
 	resource: StudioResource;
 }
 
-export function Studio({
-	driver,
-	initialTable,
-	onTableChange,
-	resource,
-}: StudioProps): JSX.Element {
+export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
+	{ driver, initialTable, onTableChange, resource },
+	ref
+) {
 	const lastOpenedTable = useRef<string | null>(null);
 
 	const [schemas, setSchemas] = useState<StudioSchemas | null>(null);
 	const [loadingSchema, setLoadingSchema] = useState(true);
 	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => [
-		// TODO: Re-add `StudioQueryTab` default tab
+		{
+			component: <StudioQueryTab />,
+			icon: BinocularsIcon,
+			identifier: "query-1",
+			key: window.crypto.randomUUID(),
+			title: "Query",
+			type: "query",
+		},
 	]);
 
 	const [selectedTabKey, setSelectedTabKey] = useState<string>(
@@ -155,7 +199,6 @@ export function Studio({
 								isTemp: isTemporary,
 							} as StudioWindowTabItem;
 						}
-
 						return tab;
 					});
 				}
@@ -177,6 +220,117 @@ export function Studio({
 			setSelectedTabKey(existingTab ? existingTab.key : newTabKey);
 		},
 		[setSelectedTabKey, tabs]
+	);
+
+	/**
+	 * Opens the edit-table tab for a specific table.
+	 */
+	const openEditTableTab = useCallback(
+		(schemaName: string, tableName: string) => {
+			openStudioTab({
+				schemaName,
+				tableName,
+				type: "edit-table",
+			});
+		},
+		[openStudioTab]
+	);
+
+	/**
+	 * Returns the currently active table context from the selected tab.
+	 *
+	 * Works for both "table" and "edit-table" tab types.
+	 */
+	const getCurrentTable = useCallback((): TableTarget | null => {
+		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
+		if (!selectedTab) {
+			return null;
+		}
+
+		// Match both "table" and "edit-table" identifier patterns
+		// Format: "{type}/{schemaName}.{tableName}"
+		const match = selectedTab.identifier.match(
+			/^(?:table|edit-table)\/([^.]+)\.(.+)$/
+		);
+		if (!match || !match[1] || !match[2]) {
+			return null;
+		}
+
+		return {
+			schemaName: match[1],
+			tableName: match[2],
+		};
+	}, [selectedTabKey, tabs]);
+
+	const openCreateTableTab = useCallback((): void => {
+		openStudioTab({
+			type: "create-table",
+		});
+	}, [openStudioTab]);
+
+	/**
+	 * Closes all tabs (table viewer and edit-table) associated with a specific table.
+	 */
+	const closeTableTabs = useCallback(
+		(schemaName: string, tableName: string): void => {
+			const identifiersToClose = [
+				`table/${schemaName}.${tableName}`,
+				`edit-table/${schemaName}.${tableName}`,
+			] satisfies string[];
+
+			setTabs((previousTabs) => {
+				const tabsToClose = previousTabs.filter((tab) =>
+					identifiersToClose.includes(tab.identifier)
+				);
+				if (tabsToClose.length === 0) {
+					return previousTabs;
+				}
+
+				const filteredTabs = previousTabs.filter(
+					(tab) => !identifiersToClose.includes(tab.identifier)
+				);
+				const selectedTabIsClosing = tabsToClose.some(
+					(tab) => tab.key === selectedTabKeyRef.current
+				);
+				if (selectedTabIsClosing && filteredTabs.length > 0) {
+					const firstClosedIndex = previousTabs.findIndex((tab) =>
+						identifiersToClose.includes(tab.identifier)
+					);
+					const newSelectedIndex = Math.min(
+						filteredTabs.length - 1,
+						firstClosedIndex
+					);
+
+					const newSelectedTab = filteredTabs[newSelectedIndex];
+					if (newSelectedTab) {
+						setSelectedTabKey(newSelectedTab.key);
+					}
+				}
+
+				return filteredTabs;
+			});
+		},
+		[]
+	);
+
+	useImperativeHandle(
+		ref,
+		() => ({
+			closeTableTabs,
+			get currentTable() {
+				return getCurrentTable();
+			},
+			openCreateTableTab,
+			openEditTableTab,
+			refreshSchema,
+		}),
+		[
+			closeTableTabs,
+			getCurrentTable,
+			openCreateTableTab,
+			openEditTableTab,
+			refreshSchema,
+		]
 	);
 
 	/**
@@ -251,12 +405,17 @@ export function Studio({
 
 		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
 		if (!selectedTab) {
+			lastOpenedTable.current = null;
 			onTableChange(undefined);
 			return;
 		}
 
-		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
-		onTableChange(tableMatch ? tableMatch[1] : undefined);
+		// Match both "table" and "edit-table" tab types
+		const tableMatch = selectedTab.identifier.match(
+			/^(?:table|edit-table)\/[^.]+\.(.+)$/
+		);
+		lastOpenedTable.current = tableMatch ? tableMatch[1] ?? null : null;
+		onTableChange(tableMatch?.[1]);
 	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
 	/**
@@ -278,11 +437,7 @@ export function Studio({
 					return prev;
 				}
 
-				// Getting tab setting
-				// TODO: Remove assertion once tab definitions are registered
-				const tabTypeDefinition = StudioTabDefinitionList[
-					data.type
-				] as TabDefinition<StudioTabDefinitionMetadata>;
+				const tabTypeDefinition = StudioTabDefinitionList[data.type];
 				const newIdentifier = tabTypeDefinition.makeIdentifier(data);
 				const newKey = window.crypto.randomUUID();
 
@@ -376,4 +531,4 @@ export function Studio({
 			</StudioContextMenuProvider>
 		</ModalProvider>
 	);
-}
+});

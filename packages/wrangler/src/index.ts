@@ -58,6 +58,7 @@ import {
 	containersNamespace,
 	containersPushCommand,
 	containersRegistriesConfigureCommand,
+	containersRegistriesCredentialsCommand,
 	containersRegistriesDeleteCommand,
 	containersRegistriesListCommand,
 	containersRegistriesNamespace,
@@ -1533,6 +1534,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler containers registries delete",
 			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers registries credentials",
+			definition: containersRegistriesCredentialsCommand,
 		},
 		{
 			command: "wrangler containers images",

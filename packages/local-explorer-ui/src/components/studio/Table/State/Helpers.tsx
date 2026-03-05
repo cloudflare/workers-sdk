@@ -1,5 +1,6 @@
 import { FlowArrowIcon, KeyIcon, SigmaIcon } from "@phosphor-icons/react";
-import { StudioTableState } from "./index";
+import { StudioTableState } from ".";
+import type { StudioTableHeaderInput } from ".";
 import type {
 	IStudioDriver,
 	StudioColumnTypeHint,
@@ -10,7 +11,6 @@ import type {
 	StudioTableIndex,
 	StudioTableSchema,
 } from "../../../../types/studio";
-import type { StudioTableHeaderInput } from "./index";
 
 export interface StudioResultHeaderMetadata {
 	from?: {

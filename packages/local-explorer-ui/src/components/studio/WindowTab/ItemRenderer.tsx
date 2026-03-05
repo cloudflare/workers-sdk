@@ -32,9 +32,7 @@ export function StudioWindowTabItemRenderer({
 		<div
 			className={cn(
 				"h-10 min-w-42.5 max-w-75  flex gap-2 relative px-2 border-b border-r border-border items-center text-left text-xs cursor-pointer hover:text-text select-none",
-				selected
-					? "border-b-transparent! bg-surface"
-					: "bg-surface-secondary text-muted",
+				selected ? "bg-surface" : "bg-surface-secondary text-muted",
 				isTemp && "italic",
 				isDirty && "not-italic"
 			)}

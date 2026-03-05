@@ -13,7 +13,9 @@ export default defineConfig({
 			},
 		}),
 	],
-	test: {},
+	test: {
+		retry: 2,
+	},
 	resolve: {
 		// promjs has broken package.json (main points to lib/index.js but files are at root)
 		alias: {

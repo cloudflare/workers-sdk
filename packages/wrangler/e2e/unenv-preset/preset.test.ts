@@ -253,14 +253,7 @@ const localTestConfigs: TestConfig[] = [
 		},
 		{
 			name: "process v2 by date",
-			// TODO:
-			// - adjust the date to when `fetch_iterable_type_support` is enabled by default
-			// - remove setting `fetch_iterable_type_support*` flags from this test case
-			compatibilityDate: "2025-09-15",
-			compatibilityFlags: [
-				"fetch_iterable_type_support",
-				"fetch_iterable_type_support_override_adjustment",
-			],
+			compatibilityDate: "2026-02-19",
 			expectRuntimeFlags: {
 				enable_nodejs_process_v2: true,
 				fetch_iterable_type_support: true,
@@ -287,7 +280,6 @@ const localTestConfigs: TestConfig[] = [
 		{
 			name: "punycode enabled by date",
 			compatibilityDate: "2025-12-04",
-			compatibilityFlags: ["enable_nodejs_punycode_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_punycode_module: true,
 			},
@@ -636,6 +628,17 @@ const localTestConfigs: TestConfig[] = [
 				enable_nodejs_worker_threads_module: true,
 			},
 		},
+		{
+			name: "worker_threads disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"disable_nodejs_worker_threads_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: false,
+			},
+		},
 	],
 	// node:repl (experimental, no default enable date)
 	[
@@ -745,6 +748,29 @@ const localTestConfigs: TestConfig[] = [
 			compatibilityFlags: ["disable_nodejs_readline_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_readline_module: false,
+			},
+		},
+	],
+	// node:perf_hooks
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+
+		{
+			name: "perf_hooks enabled by flags",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_perf_hooks_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: true,
+			},
+		},
+		{
+			name: "perf_hooks disabled by flags",
+			// TODO: change the date passed the default enabled date (when defined)
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_perf_hooks_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: false,
 			},
 		},
 	],

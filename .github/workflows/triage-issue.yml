@@ -133,7 +133,7 @@ jobs:
             }')
 
           # POST to dashboard API
-          HTTP_STATUS=$(curl -L -s -o response.json -w "%{http_code}" \
+          HTTP_STATUS=$(curl -L --post302 -s -o response.json -w "%{http_code}" \
             -X POST "${DASHBOARD_URL}/api/report/${ISSUE}" \
             -H "Content-Type: application/json" \
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \

@@ -3,7 +3,7 @@ import path from "node:path";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
-import { parseProjectOptions } from "./config";
+import { parseProjectOptions, remoteProxySessionsDataMap } from "./config";
 import { poolWorkerStarted, poolWorkerStopped } from "./pages";
 import { type WorkerPoolOptionsContext } from "./plugin";
 import {
@@ -111,6 +111,12 @@ export class CloudflarePoolWorker implements PoolWorker {
 		this.socket = undefined;
 		await this.mf?.dispose();
 		this.mf = undefined;
+
+		if (this.parsedPoolOptions?.wrangler?.configPath) {
+			await remoteProxySessionsDataMap
+				.get(this.parsedPoolOptions?.wrangler?.configPath)
+				?.session?.dispose?.();
+		}
 
 		// Decrement the active worker count. When the last worker stops, this
 		// closes file watchers created by buildPagesASSETSBinding() during config

@@ -52,6 +52,7 @@ export interface ServiceDesignator {
 
 export type Worker_DockerConfiguration = {
 	socketPath: string;
+	containerEgressInterceptorImage?: string;
 };
 
 export type Worker_ContainerEngine = {

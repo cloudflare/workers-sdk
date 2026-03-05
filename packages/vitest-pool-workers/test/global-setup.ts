@@ -28,7 +28,7 @@ export default async function ({ provide }: TestProject) {
 		await stop();
 
 		console.log("Cleaning up temporary directory...");
-		removeDir(projectPath, { fireAndForget: true });
+		void removeDir(projectPath, { fireAndForget: true });
 	};
 }
 

@@ -20,10 +20,18 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
-      - name: Checkout PR branch
+      - name: Checkout changesets
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          sparse-checkout: |
+            .changeset
+            .github/opencode.json
+
+      - name: Install OpenCode
+        run: |
+          npm install -g opencode-ai
+          cp .github/opencode.json ./opencode.json
 
       - name: Get changed changeset files
         id: changed-changesets
@@ -36,23 +44,24 @@ jobs:
           # Recover deleted files so Claude can read them (needed for Version Packages PRs)
           recover_deleted_files: ${{ github.event.pull_request.title == 'Version Packages' }}
 
-      - name: Review Changesets with Claude
-        id: claude-review
+      - name: Review Changesets with OpenCode
+        id: opencode-review
         # Run for Version Packages PRs (which delete changesets) or regular PRs with new changesets
         if: github.event.pull_request.title == 'Version Packages' || steps.changed-changesets.outputs.added_files_count > 0
-        uses: anthropics/claude-code-action@v1.0.22
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          allowed_bots: "devin-ai-integration[bot]"
-          use_sticky_comment: true
-          track_progress: true
-          prompt: |
-            Review the changeset files in this PR.
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
+          CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
+          DELETED_FILES: ${{ steps.changed-changesets.outputs.deleted_files }}
+          ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
+        run: |
+          opencode run --print-logs \
+            "Review the changeset files in this PR.
 
-            For "Version Packages" PRs, review: ${{ steps.changed-changesets.outputs.deleted_files }}
-            For regular PRs, review: ${{ steps.changed-changesets.outputs.added_files }}
+            For \"Version Packages\" PRs, review: ${DELETED_FILES}
+            For regular PRs, review: ${ADDED_FILES}
 
-            Read `.changeset/README.md` for guidelines, then validate:
+            Read \`.changeset/README.md\` for guidelines, then validate:
             1. **Version Type**: Accept the author's choice of patch/minor unless clearly incorrect
             2. **Changelog Quality**: Meaningful descriptions (examples encouraged but not required for features)
             3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
@@ -60,15 +69,20 @@ jobs:
             5. **Dependabot**: Do not validate dependency update changesets for create-cloudflare
             6. **Experimental features**: Changesets for experimental features should include note on how users can opt in.
 
-            If all changesets pass, just output "✅ All changesets look good" - no need for a detailed checklist.
+            If all changesets pass, just output \"✅ All changesets look good\" - no need for a detailed checklist.
 
             Do not review other files, only the changesets. This is specifically a changeset review action.
 
-            If there are issues, output "⚠️ Issues found" followed by the specific problems.
+            If there are issues, output \"⚠️ Issues found\" followed by the specific problems.
 
-            If the user has attached an image, use the Read tool to view it. If and only if it's a cute animal, include in your comment a short cuteness report in the style of WeRateDogs (e.g., "This is Barkley. He's wearing a tiny hat and doesn't know why. 13/10"). If it's not an animal, silently ignore the image. If there is more than one image, check each one to find an animal. If you do not find an animal, do not include any reference to a cuteness report.
-          claude_args: |
-            --allowedTools "Read,Glob,Grep"
+            Write your review to changeset-review.md."
+
+      - name: Post review comment
+        if: steps.opencode-review.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: changeset-review
+          path: changeset-review.md
 
       - name: Skip notice
         if: github.event.pull_request.title != 'Version Packages' && steps.changed-changesets.outputs.added_files_count == 0

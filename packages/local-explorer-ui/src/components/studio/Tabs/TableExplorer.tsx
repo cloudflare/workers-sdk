@@ -13,12 +13,15 @@ import {
 	buildStudioMutationPlans,
 	commitStudioTableChanges,
 } from "../../../utils/studio/commit";
+import { formatSqlError } from "../../../utils/studio/formatter";
 import { useStudioContext } from "../Context";
 import { useModal } from "../Modal";
 import { StudioCommitConfirmation } from "../Modal/CommitConfirmation";
 import { StudioDeleteConfirmationModal } from "../Modal/DeleteConfirmation";
-import { StudioQueryResultStats } from "../Query/ResultStats";
+import { StudioQueryResultStats } from "../QueryResult/Stats";
+import { StudioResultTable } from "../Table/Result";
 import { createStudioTableStateFromResult } from "../Table/State/Helpers";
+import { StudioWhereFilterInput } from "../WhereFilterInput";
 import { useStudioCurrentWindowTab } from "../WindowTab/Context";
 import type {
 	StudioResultStat,
@@ -39,7 +42,7 @@ export function StudioTableExplorerTab({
 	schemaName,
 	tableName,
 }: StudioTableExplorerTabProps): JSX.Element {
-	const { driver, schemas } = useStudioContext();
+	const { closeStudioTab, driver, schemas } = useStudioContext();
 
 	const [changeNumber, setChangeNumber] = useState<number>(0);
 	const [error, setError] = useState<string>("");
@@ -63,8 +66,7 @@ export function StudioTableExplorerTab({
 
 	const { openModal } = useModal();
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _filterAutoCompleteColumns = useMemo<string[]>(() => {
+	const filterAutoCompleteColumns = useMemo(() => {
 		if (!schema) {
 			return [];
 		}
@@ -80,7 +82,7 @@ export function StudioTableExplorerTab({
 		return autoCompleteColumns;
 	}, [schema]);
 
-	const { setDirtyState, setBeforeTabClosingHandler } =
+	const { identifier, setDirtyState, setBeforeTabClosingHandler } =
 		useStudioCurrentWindowTab();
 
 	// This effect subscribes to the external table state's change event and syncs
@@ -119,6 +121,23 @@ export function StudioTableExplorerTab({
 			return true;
 		});
 	}, [setBeforeTabClosingHandler]);
+
+	// Close the tab if the table no longer exists after a schema refresh
+	useEffect((): void => {
+		if (!schemas) {
+			return;
+		}
+
+		const schemaItems = schemas[schemaName];
+		const tableExists = schemaItems?.some(
+			(item) =>
+				(item.type === "table" || item.type === "view") &&
+				item.name === tableName
+		);
+		if (!tableExists) {
+			closeStudioTab(identifier);
+		}
+	}, [closeStudioTab, identifier, schemaName, schemas, tableName]);
 
 	const onRefreshClicked = useCallback(async (): Promise<void> => {
 		if (!schemas) {
@@ -160,7 +179,7 @@ export function StudioTableExplorerTab({
 
 			setSchema(fetchedSchema);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
+			setError(formatSqlError(err));
 		} finally {
 			setLoading(false);
 		}
@@ -179,8 +198,7 @@ export function StudioTableExplorerTab({
 		void onRefreshClicked();
 	}, [onRefreshClicked]);
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _headerIndexList = useMemo((): number[] => {
+	const headerIndexList = useMemo((): number[] => {
 		if (!schema) {
 			return [];
 		}
@@ -294,8 +312,7 @@ export function StudioTableExplorerTab({
 		});
 	}, [pageOffset, pageLimit, guardUnsavedChanges]);
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _onWhereRawApplied = useCallback(
+	const onWhereRawApplied = useCallback(
 		(newWhereRaw: string): void => {
 			guardUnsavedChanges(() => {
 				setWhereRaw(newWhereRaw);
@@ -361,16 +378,11 @@ export function StudioTableExplorerTab({
 				),
 			});
 		} catch (e) {
-			if (e instanceof Error) {
-				alert(e.message);
-			} else {
-				alert(String(e));
-			}
+			alert(formatSqlError(e));
 		}
 	}, [driver, tableName, schema, state, openModal]);
 
-	// @ts-expect-error TODO: Re-enable in a later PR
-	const _onOrderByColumnChange = useCallback(
+	const onOrderByColumnChange = useCallback(
 		(columName: string, direction: StudioSortDirection) => {
 			guardUnsavedChanges(() => {
 				setOrderBy({ columName, direction });
@@ -382,42 +394,30 @@ export function StudioTableExplorerTab({
 	return (
 		<div className="w-full h-full flex flex-col bg-surface">
 			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
-				<Button
-					aria-label="Refresh"
-					className="hover:bg-border! transition"
-					onClick={onRefreshClicked}
-					shape="square"
-					variant="ghost"
-				>
+				<Button aria-label="Refresh" onClick={onRefreshClicked} shape="square">
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
-				<Button
-					className="hover:bg-border! transition"
-					onClick={onAddRowClick}
-					variant="ghost"
-				>
-					<PlusIcon />
-					<span className="text-xs">Add row</span>
+				<Button className="text-xs" icon={PlusIcon} onClick={onAddRowClick}>
+					Add row
 				</Button>
 				<Button
-					className="hover:bg-border! transition"
+					className="text-xs"
+					icon={TrashIcon}
 					onClick={onDeleteRowClick}
-					variant="ghost"
+					variant="secondary-destructive"
 				>
-					<TrashIcon />
-					<span className="text-xs">Delete row</span>
+					Delete row
 				</Button>
 
 				<div className="grow text-xs">
-					{/* TODO: Re-add in a later PR */}
-					{/* <StudioWhereFilterInput
+					<StudioWhereFilterInput
 						columnNameList={filterAutoCompleteColumns}
 						driver={driver}
 						loading={loading}
 						onApply={onWhereRawApplied}
 						value={whereRaw}
-					/> */}
+					/>
 				</div>
 
 				{changeNumber > 0 && (
@@ -448,8 +448,7 @@ export function StudioTableExplorerTab({
 				)}
 			</div>
 			<div className="grow overflow-hidden relative">
-				{/* TODO: Re-add in a later PR */}
-				{/* {schema && state && !error && (
+				{schema && state && !error && (
 					<StudioResultTable
 						arrangeHeaderIndex={headerIndexList}
 						onOrderByColumnChange={onOrderByColumnChange}
@@ -457,7 +456,7 @@ export function StudioTableExplorerTab({
 						orderByDirection={orderBy?.direction}
 						state={state}
 					/>
-				)} */}
+				)}
 
 				{error && <div className="p-4 text-red-500 text-base">{error}</div>}
 
@@ -486,7 +485,7 @@ export function StudioTableExplorerTab({
 
 						<input
 							aria-label="Rows per page"
-							className="text-center bg-transparent text-sm outline-none border border-none rounded-r-lg px-1 w-[50px]"
+							className="text-center bg-transparent text-sm outline-none border border-none rounded-r-lg px-1 w-12.5"
 							onBlur={onLimitBlur}
 							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
 							value={pageLimitInput}
@@ -507,7 +506,7 @@ export function StudioTableExplorerTab({
 
 						<input
 							aria-label="Page offset"
-							className="text-center bg-transparent text-sm outline-none w-[50px]"
+							className="text-center bg-transparent text-sm outline-none w-12.5"
 							onBlur={onOffsetBlur}
 							onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
 							value={pageOffsetInput}
