@@ -90,8 +90,9 @@ export function DropTableConfirmationModal({
 						<Button onClick={closeModal} variant="secondary">
 							Cancel
 						</Button>
+
 						<Button
-							disabled={!isValid}
+							disabled={!isValid || isDeleting}
 							loading={isDeleting}
 							type="submit"
 							variant="destructive"
