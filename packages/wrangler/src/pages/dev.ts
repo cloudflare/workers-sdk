@@ -1,5 +1,4 @@
 import { execSync, spawn } from "node:child_process";
-import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path, { dirname, join, normalize, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -942,7 +941,7 @@ export const pagesDevCommand = createCommand({
 
 		const pagesEnvVars = getPagesEnvironmentVariables(projectName);
 
-		const devServer = await run(
+		const server = await run(
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
@@ -1034,11 +1033,8 @@ export const pagesDevCommand = createCommand({
 		process.on("SIGINT", CLEANUP);
 		process.on("SIGTERM", CLEANUP);
 
-		await events.once(devServer.devEnv, "teardown");
-		const teardownRegistry = await devServer.teardownRegistryPromise;
-		await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
-
-		devServer.unregisterHotKeys?.();
+		await server.waitUntilExit();
+		await server.close();
 		CLEANUP();
 		process.exit(0);
 	},

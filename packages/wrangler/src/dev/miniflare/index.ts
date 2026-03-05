@@ -90,6 +90,8 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
+	outboundService: NonNullable<StartDevWorkerInput["dev"]>["outboundService"];
+	mockFetch: NonNullable<StartDevWorkerInput["dev"]>["mockFetch"];
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
@@ -973,6 +975,8 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				outboundService: config.outboundService,
+				fetchMock: config.mockFetch,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",
