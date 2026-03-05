@@ -829,52 +829,85 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=require and CA flag set", async ({
+	it("should allow create hyperdrive with mtls config sslmode=require and CA flag set", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=1234 --sslmode=require"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'require' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=1234 --sslmode=require"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "1234",
+			    "sslmode": "require",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=verify-ca missing CA", async ({
+	it("should allow create hyperdrive with mtls config sslmode=verify-ca missing CA", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-ca"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'verify-ca' or 'verify-full' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-ca"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "verify-ca",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=verify-full missing CA", async ({
+	it("should allow create hyperdrive with mtls config sslmode=verify-full missing CA", async ({
 		expect,
 	}) => {
-		await expect(() =>
-			runWrangler(
-				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-full"
-			)
-		).rejects.toThrow();
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'verify-ca' or 'verify-full' is set[0m
-
-			"
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-full"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "verify-full",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=random", async ({
+	it("should error on create hyperdrive with invalid sslmode", async ({
 		expect,
 	}) => {
 		await expect(() =>
@@ -885,9 +918,264 @@ describe("hyperdrive commands", () => {
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
 
-			    Argument: sslmode, Given: "random", Choices: "require", "verify-ca", "verify-full"
+			    Argument: sslmode, Given: "random", Choices: "require", "verify-ca", "verify-full", "REQUIRED",
+			  "VERIFY_CA", "VERIFY_IDENTITY"
 
 			"
+		`);
+	});
+
+	it("should successfully create a MySQL hyperdrive with mtls config and sslmode=VERIFY_IDENTITY", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=12345 --mtls-certificate-id=1234 --sslmode=VERIFY_IDENTITY"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "12345",
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "VERIFY_IDENTITY",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should successfully create a MySQL hyperdrive with mtls config and sslmode=VERIFY_CA", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=12345 --sslmode=VERIFY_CA"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "12345",
+			    "sslmode": "VERIFY_CA",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should successfully create a MySQL hyperdrive with sslmode=REQUIRED", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=REQUIRED"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "REQUIRED",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
+			{
+			  "hyperdrive": [
+			    {
+			      "binding": "HYPERDRIVE",
+			      "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should accept MySQL sslmode in lowercase", async ({ expect }) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=required"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "REQUIRED",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+	});
+
+	it("should allow create MySQL hyperdrive with sslmode=REQUIRED and CA flag set", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --ca-certificate-id=1234 --sslmode=REQUIRED"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "1234",
+			    "sslmode": "REQUIRED",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+	});
+
+	it("should allow create MySQL hyperdrive with sslmode=VERIFY_CA missing CA", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_CA"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "VERIFY_CA",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+	});
+
+	it("should allow create MySQL hyperdrive with sslmode=VERIFY_IDENTITY missing CA", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --mtls-certificate-id=1234 --sslmode=VERIFY_IDENTITY"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "VERIFY_IDENTITY",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+	});
+
+	it("should allow create MySQL hyperdrive with PostgreSQL sslmode value", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=mydb --user=test --password=password --port=3306 --origin-scheme=mysql --sslmode=verify-full"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "sslmode": "verify-full",
+			  },
+			  "name": "test123",
+			  "origin": {
+			    "database": "mydb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
 		`);
 	});
 
@@ -1358,6 +1646,166 @@ describe("hyperdrive commands", () => {
 			}"
 		`);
 	});
+
+	it("should handle updating a PostgreSQL hyperdrive config's SSL settings without re-specifying origin (verify-ca)", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveUpdate();
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --sslmode=verify-ca --ca-certificate-id=abc123"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "abc123",
+			    "sslmode": "verify-ca",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test123",
+			  "origin": {
+			    "scheme": "postgresql",
+			    "host": "example.com",
+			    "port": 5432,
+			    "database": "neondb",
+			    "user": "test"
+			  },
+			  "mtls": {
+			    "ca_certificate_id": "abc123",
+			    "sslmode": "verify-ca"
+			  },
+			  "origin_connection_limit": 25
+			}"
+		`);
+	});
+
+	it("should handle updating a MySQL hyperdrive config's SSL settings without re-specifying origin (VERIFY_CA)", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveUpdate(defaultMysqlConfig);
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --sslmode=VERIFY_CA --ca-certificate-id=abc123"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "abc123",
+			    "sslmode": "VERIFY_CA",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test-mysql",
+			  "origin": {
+			    "scheme": "mysql",
+			    "host": "mysql.example.com",
+			    "port": 3306,
+			    "database": "mydb",
+			    "user": "test"
+			  },
+			  "mtls": {
+			    "ca_certificate_id": "abc123",
+			    "sslmode": "VERIFY_CA"
+			  },
+			  "origin_connection_limit": 25
+			}"
+		`);
+	});
+
+	it("should handle updating a MySQL hyperdrive config's SSL settings without re-specifying origin (VERIFY_IDENTITY)", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveUpdate(defaultMysqlConfig);
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --sslmode=VERIFY_IDENTITY --ca-certificate-id=abc123"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "ca_certificate_id": "abc123",
+			    "sslmode": "VERIFY_IDENTITY",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test-mysql",
+			  "origin": {
+			    "scheme": "mysql",
+			    "host": "mysql.example.com",
+			    "port": 3306,
+			    "database": "mydb",
+			    "user": "test"
+			  },
+			  "mtls": {
+			    "ca_certificate_id": "abc123",
+			    "sslmode": "VERIFY_IDENTITY"
+			  },
+			  "origin_connection_limit": 25
+			}"
+		`);
+	});
+
+	it("should handle updating a MySQL hyperdrive config's SSL settings without re-specifying origin (REQUIRED)", async ({
+		expect,
+	}) => {
+		const reqProm = mockHyperdriveUpdate(defaultMysqlConfig);
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --sslmode=REQUIRED --mtls-certificate-id=cert123"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "mtls": {
+			    "mtls_certificate_id": "cert123",
+			    "sslmode": "REQUIRED",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+			  "name": "test-mysql",
+			  "origin": {
+			    "scheme": "mysql",
+			    "host": "mysql.example.com",
+			    "port": 3306,
+			    "database": "mydb",
+			    "user": "test"
+			  },
+			  "mtls": {
+			    "mtls_certificate_id": "cert123",
+			    "sslmode": "REQUIRED"
+			  },
+			  "origin_connection_limit": 25
+			}"
+		`);
+	});
 });
 
 const defaultConfig: HyperdriveConfig = {
@@ -1368,6 +1816,19 @@ const defaultConfig: HyperdriveConfig = {
 		host: "example.com",
 		port: 5432,
 		database: "neondb",
+		user: "test",
+	},
+	origin_connection_limit: 25,
+};
+
+const defaultMysqlConfig: HyperdriveConfig = {
+	id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+	name: "test-mysql",
+	origin: {
+		scheme: "mysql",
+		host: "mysql.example.com",
+		port: 3306,
+		database: "mydb",
 		user: "test",
 	},
 	origin_connection_limit: 25,
@@ -1438,13 +1899,16 @@ function mockHyperdriveGetListOrDelete() {
 }
 
 /** Create a mock handler for Hyperdrive API */
-function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
+function mockHyperdriveUpdate(
+	configOverride?: HyperdriveConfig
+): Promise<PatchHyperdriveBody> {
+	const mockConfig = configOverride ?? defaultConfig;
 	return new Promise((resolve) => {
 		msw.use(
 			http.get(
 				"*/accounts/:accountId/hyperdrive/configs/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 				() => {
-					return HttpResponse.json(createFetchResult(defaultConfig, true));
+					return HttpResponse.json(createFetchResult(mockConfig, true));
 				},
 				{ once: true }
 			),
@@ -1455,7 +1919,7 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 
 					resolve(reqBody);
 
-					let origin = defaultConfig.origin;
+					let origin = mockConfig.origin;
 					if (reqBody.origin) {
 						const {
 							password: _,
@@ -1474,7 +1938,7 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 							delete origin.port;
 						}
 					}
-					const mtls = defaultConfig.mtls;
+					const mtls = mockConfig.mtls;
 					if (mtls && reqBody.mtls) {
 						mtls.ca_certificate_id = reqBody.mtls.ca_certificate_id;
 						mtls.mtls_certificate_id = reqBody.mtls.mtls_certificate_id;
@@ -1484,13 +1948,13 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 						createFetchResult(
 							{
 								id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-								name: reqBody.name ?? defaultConfig.name,
+								name: reqBody.name ?? mockConfig.name,
 								origin,
-								caching: reqBody.caching ?? defaultConfig.caching,
+								caching: reqBody.caching ?? mockConfig.caching,
 								mtls: reqBody.mtls,
 								origin_connection_limit:
 									reqBody.origin_connection_limit ??
-									defaultConfig.origin_connection_limit,
+									mockConfig.origin_connection_limit,
 							},
 							true
 						)
