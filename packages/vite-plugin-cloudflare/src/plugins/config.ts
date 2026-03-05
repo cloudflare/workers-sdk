@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp, removeAssetsField } from "../build";
@@ -14,6 +15,7 @@ import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
+import type { Unstable_RawConfig } from "wrangler";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -101,44 +103,91 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			async handler(builder) {
 				assertIsNotPreview(ctx);
 
+				let isAssetsOnly = ctx.resolvedPluginConfig.type === "assets-only";
+
 				if (ctx.resolvedPluginConfig.type === "workers") {
-					const workerEnvironments = [
+					const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
+
+					// Build any non-entry Worker environments that haven't already been built
+					const auxiliaryWorkerEnvironments = [
 						...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
-					].map((environmentName) => {
-						const environment = builder.environments[environmentName];
-						assert(environment, `"${environmentName}" environment not found`);
+					]
+						.filter((name) => name !== entryWorkerEnvironmentName)
+						.map((environmentName) => {
+							const environment = builder.environments[environmentName];
+							assert(environment, `"${environmentName}" environment not found`);
 
-						return environment;
-					});
+							return environment;
+						});
 
-					// Build any Worker environments that haven't already been built
 					await Promise.all(
-						workerEnvironments
+						auxiliaryWorkerEnvironments
 							.filter((environment) => !environment.isBuilt)
 							.map((environment) => builder.build(environment))
 					);
 
-					const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
 					const entryWorkerEnvironment =
 						builder.environments[entryWorkerEnvironmentName];
 					assert(
 						entryWorkerEnvironment,
 						`No "${entryWorkerEnvironmentName}" environment`
 					);
-					const entryWorkerBuildDirectory = path.resolve(
-						builder.config.root,
-						entryWorkerEnvironment.config.build.outDir
-					);
 
-					if (!builder.environments.client?.isBuilt) {
-						removeAssetsField(entryWorkerBuildDirectory);
+					if (entryWorkerEnvironment.isBuilt) {
+						const entryWorkerBuildDirectory = path.resolve(
+							builder.config.root,
+							entryWorkerEnvironment.config.build.outDir
+						);
+
+						if (!builder.environments.client?.isBuilt) {
+							removeAssetsField(entryWorkerBuildDirectory);
+						}
+					} else {
+						isAssetsOnly = true;
+
+						const clientEnvironment = builder.environments.client;
+						assert(clientEnvironment, 'No "client" environment');
+
+						const entryWorkerConfig = ctx.getWorkerConfig(
+							entryWorkerEnvironmentName
+						);
+						assert(
+							entryWorkerConfig,
+							`No config found for "${entryWorkerEnvironmentName}" environment`
+						);
+
+						const outputConfig: Unstable_RawConfig = {
+							...entryWorkerConfig,
+							main: undefined,
+							assets: {
+								...entryWorkerConfig.assets,
+								directory: ".",
+								binding: undefined,
+							},
+						};
+
+						if (
+							outputConfig.unsafe &&
+							Object.keys(outputConfig.unsafe).length === 0
+						) {
+							outputConfig.unsafe = undefined;
+						}
+
+						fs.writeFileSync(
+							path.resolve(
+								builder.config.root,
+								clientEnvironment.config.build.outDir,
+								"wrangler.json"
+							),
+							JSON.stringify(outputConfig)
+						);
 					}
 				}
 
 				writeDeployConfig(
 					ctx.resolvedPluginConfig,
 					ctx.resolvedViteConfig,
-					ctx.resolvedPluginConfig.type === "assets-only"
+					isAssetsOnly
 				);
 			},
 		},
