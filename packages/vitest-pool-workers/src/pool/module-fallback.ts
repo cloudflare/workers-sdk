@@ -302,9 +302,7 @@ async function viteResolve(
 // (e.g. "node:fs", "cloudflare:sockets").
 function isBareSpecifier(specifier: string): boolean {
 	return (
-		specifier[0] !== "." &&
-		specifier[0] !== "/" &&
-		!specifier.includes(":")
+		specifier[0] !== "." && specifier[0] !== "/" && !specifier.includes(":")
 	);
 }
 
@@ -382,10 +380,7 @@ function maybeCorrectSubpathCollision(
 	// that matches — if not, this isn't a collision.
 	try {
 		const referrerPkgJson = JSON.parse(
-			fs.readFileSync(
-				posixPath.join(referrerPkgDir, "package.json"),
-				"utf8"
-			)
+			fs.readFileSync(posixPath.join(referrerPkgDir, "package.json"), "utf8")
 		);
 		const referrerExports = referrerPkgJson.exports;
 		if (
@@ -427,8 +422,8 @@ function maybeCorrectSubpathCollision(
 			} else if (subpath === "." && exports["."] === undefined) {
 				// Top-level condition keys: "exports": { "import": "...", "default": "..." }
 				// (no "." subpath key, keys are conditions not subpaths)
-				const hasSubpathKeys = Object.keys(exports).some(
-					(k: string) => k.startsWith(".")
+				const hasSubpathKeys = Object.keys(exports).some((k: string) =>
+					k.startsWith(".")
 				);
 				if (!hasSubpathKeys) {
 					entry = exports;
