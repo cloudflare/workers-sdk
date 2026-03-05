@@ -101,8 +101,8 @@ export function StudioConstraintListEditor({
 											<SortableColumnList
 												disabledRearrange={!!value.name.old}
 												onChange={(newPrimaryColumns) => {
-													onChange(
-														produce(value, (draft) => {
+													onChange((prev) =>
+														produce(prev, (draft) => {
 															draft.constraints.forEach((c) => {
 																if (
 																	c.key === constraintChange.key &&
