@@ -13,6 +13,6 @@ Adds a new set of commands for managing remotely-managed Cloudflare Tunnels dire
 - `wrangler tunnel run <tunnel>` - Run a tunnel using cloudflared
 - `wrangler tunnel quick-start <url>` - Start a temporary tunnel (Try Cloudflare)
 
-The `run` and `quick-start` commands automatically download and manage the cloudflared binary, caching it in `~/.wrangler/cloudflared/`. Users are prompted before downloading and warned if their PATH-installed cloudflared is outdated. You can override the binary location with the `WRANGLER_CLOUDFLARED_PATH` environment variable.
+The `run` and `quick-start` commands automatically download and manage the cloudflared binary, caching it in `~/.wrangler/cloudflared/`. Users are prompted before downloading and warned if their PATH-installed cloudflared is outdated. You can override the binary location with the `CLOUDFLARED_PATH` environment variable.
 
 All commands are marked as experimental.
