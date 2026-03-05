@@ -382,7 +382,7 @@ export function StudioColumnEditorModal({
 	const isColumnNameDuplicated = !!schemaChanges.columns.find(
 		(column) =>
 			column.new !== defaultValue &&
-			column.new?.name.toLowerCase() === value.name.toLocaleLowerCase()
+			column.new?.name.toLowerCase() === value.name.toLowerCase()
 	);
 
 	const isValid = !!value.name && !!value.type && !isColumnNameDuplicated;

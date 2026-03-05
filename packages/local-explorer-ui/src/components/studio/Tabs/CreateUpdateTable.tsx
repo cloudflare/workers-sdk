@@ -100,7 +100,7 @@ export function StudioCreateUpdateTableTab({
 	return (
 		<div className={LAYOUT_CLASSES}>
 			<StudioTableSchemaEditor
-				disabledAddColumn={!driver.isSupportEditTable}
+				disabledAddColumn={!isCreateMode && !driver.isSupportEditTable}
 				driver={driver}
 				highlightSchemaChanges={!isCreateMode} // Highlight diffs only in edit mode
 				onChange={setValue}
