@@ -439,20 +439,6 @@ function removeSchemaProperties(
 		const props = schema.properties;
 		for (const prop of propsToRemove) {
 			delete props[prop];
-			// Also check nested properties (e.g., result_info.total_count)
-			for (const [key, value] of Object.entries(props)) {
-				if (
-					value &&
-					typeof value === "object" &&
-					"properties" in value &&
-					value.properties
-				) {
-					const nestedProps = value.properties as Record<string, unknown>;
-					for (const propToRemove of propsToRemove) {
-						delete nestedProps[propToRemove];
-					}
-				}
-			}
 		}
 		if (schema.required) {
 			schema.required = schema.required.filter(
