@@ -113,6 +113,9 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
+			// Suppress errors from terminating a WebSocket that hasn't connected yet
+			this.#activeTail?.removeAllListeners("error");
+			this.#activeTail?.on("error", () => {});
 			this.#activeTail?.terminate();
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
@@ -442,6 +445,9 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
+		// Suppress errors from terminating a WebSocket that hasn't connected yet
+		this.#activeTail?.removeAllListeners("error");
+		this.#activeTail?.on("error", () => {});
 		this.#activeTail?.terminate();
 		logger.debug("RemoteRuntimeController teardown complete");
 	}

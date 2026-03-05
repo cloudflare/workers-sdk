@@ -165,15 +165,24 @@ export async function createPreviewSession(
 
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
-		exchange_url: string;
+		exchange_url?: string;
 	}>(complianceConfig, initUrl, undefined, undefined, abortSignal, apiToken);
 
 	let previewSessionToken = token;
 
-	try {
-		previewSessionToken = await tryExpandToken(exchange_url, ctx, abortSignal);
-	} catch {
-		// Ignore failures. This is an expected case with particular zone settings
+	if (exchange_url) {
+		try {
+			previewSessionToken = await tryExpandToken(
+				exchange_url,
+				ctx,
+				abortSignal
+			);
+		} catch (e) {
+			if (e instanceof Error && e.name === "AbortError") {
+				throw e;
+			}
+			// Ignore other failures. This is an expected case with particular zone settings
+		}
 	}
 
 	try {
