@@ -209,6 +209,7 @@ export function StudioColumnSchemaEditor({
 
 			<td className="p-2 border border-border text-center">
 				<Checkbox
+					aria-label="Is nullable"
 					checked={!editableColumn.constraint?.notNull}
 					className="mx-auto"
 					onCheckedChange={
