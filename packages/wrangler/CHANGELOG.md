@@ -1,5 +1,128 @@
 # wrangler
 
+## 4.70.0
+
+### Minor Changes
+
+- [#11332](https://github.com/cloudflare/workers-sdk/pull/11332) [`6a8aa5f`](https://github.com/cloudflare/workers-sdk/commit/6a8aa5f28fdf8e8392b1e279a8f679e9698c4671) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users are now able to configure DockerHub credentials and have containers reference images stored there.
+
+  DockerHub can be configured as follows:
+
+  ```sh
+  echo $PAT_TOKEN | npx wrangler@latest containers registries configure docker.io --dockerhub-username=user --secret-name=DockerHub_PAT_Token
+  ```
+
+  Containers can then specify an image from DockerHub in their `wrangler.jsonc` as follows:
+
+  ```jsonc
+  "containers": {
+    "image": "docker.io/namespace/image:tag",
+    ...
+  }
+  ```
+
+- [#12649](https://github.com/cloudflare/workers-sdk/pull/12649) [`35b2c56`](https://github.com/cloudflare/workers-sdk/commit/35b2c56cdef6f4e7d33a885959f4ce8fc01201d0) Thanks [@gabivlj](https://github.com/gabivlj)! - Add experimental support for containers to workers communication with interceptOutboundHttp
+
+  This feature is experimental and requires adding the "experimental" compatibility flag to your Wrangler configuration.
+
+- [#12701](https://github.com/cloudflare/workers-sdk/pull/12701) [`23a365a`](https://github.com/cloudflare/workers-sdk/commit/23a365a7e578ecb6735c1f05a204f5bf236b24f6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add local dev validation for the experimental `secrets` configuration property
+
+  When the new `secrets` property is defined, `wrangler dev` and `vite dev` now validate secrets declared in `secrets.required`. When required secrets are missing from `.dev.vars` or `.env`/`process.env`, a warning is logged listing the missing secret names.
+
+  When `secrets` is defined, only the keys listed in `secrets.required` are loaded. Additional keys in `.dev.vars` or `.env` are excluded. If you are not using `.dev.vars`, keys listed in `secrets.required` are loaded from `process.env` as well as `.env`. The `CLOUDFLARE_INCLUDE_PROCESS_ENV` environment variable is therefore not needed when using this feature.
+
+  When `secrets` is not defined, the existing behavior is unchanged.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"secrets": {
+  		"required": ["API_KEY", "DB_PASSWORD"],
+  	},
+  }
+  ```
+
+- [#12695](https://github.com/cloudflare/workers-sdk/pull/12695) [`0769056`](https://github.com/cloudflare/workers-sdk/commit/0769056523c43902b14bdd32330deda01acd65c4) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add type generation for the experimental `secrets` configuration property
+
+  When the new `secrets` property is defined, `wrangler types` now generates typed bindings from the names listed in `secrets.required`.
+
+  When `secrets` is defined at any config level, type generation uses it exclusively and no longer infers secret names from `.dev.vars` or `.env` files. This enables running type generation in environments where these files are not present.
+
+  Per-environment secrets are supported. Each named environment produces its own interface, and the aggregated `Env` marks secrets that only appear in some environments as optional.
+
+  When `secrets` is not defined, the existing behavior is unchanged.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"secrets": {
+  		"required": ["API_KEY", "DB_PASSWORD"],
+  	},
+  }
+  ```
+
+- [#12693](https://github.com/cloudflare/workers-sdk/pull/12693) [`150ef7b`](https://github.com/cloudflare/workers-sdk/commit/150ef7bcaa9ad2d2de661200ef87ea8f15c62a36) Thanks [@martinezjandrew](https://github.com/martinezjandrew)! - Add `wrangler containers registries credentials` command for generating temporary push/pull credentials
+
+  This command generates short-lived credentials for authenticating with the Cloudflare managed registry (`registry.cloudflare.com`). Useful for CI/CD pipelines or local Docker authentication.
+
+  ```bash
+  # Generate push credentials (for uploading images)
+  wrangler containers registries credentials registry.cloudflare.com --push
+
+  # Generate pull credentials (for downloading images)
+  wrangler containers registries credentials registry.cloudflare.com --pull
+
+  # Generate credentials with both permissions
+  wrangler containers registries credentials registry.cloudflare.com --push --pull
+
+  # Custom expiration (default 15)
+  wrangler containers registries credentials registry.cloudflare.com --push --expiration-minutes=30
+  ```
+
+- [#12622](https://github.com/cloudflare/workers-sdk/pull/12622) [`bf9cb3d`](https://github.com/cloudflare/workers-sdk/commit/bf9cb3d32d4710dbefd7d3c412aefe1558ecd57e) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add configurable step limits for Workflows
+
+  You can now set a maximum number of steps for a Workflow instance via the `limits.steps` configuration in your Wrangler config. When a Workflow instance exceeds this limit, it will fail with an error indicating the limit was reached.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"workflows": [
+  		{
+  			"binding": "MY_WORKFLOW",
+  			"name": "my-workflow",
+  			"class_name": "MyWorkflow",
+  			"limits": {
+  				"steps": 5000,
+  			},
+  		},
+  	],
+  }
+  ```
+
+  The `steps` value must be an integer between 1 and 25,000. If not specified, the default limit of 10,000 steps is used. Step limits are also enforced in local development via `wrangler dev`.
+
+### Patch Changes
+
+- [#12733](https://github.com/cloudflare/workers-sdk/pull/12733) [`d672e2e`](https://github.com/cloudflare/workers-sdk/commit/d672e2ec47f87ed3403aa291fbb9f671970afbfe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix SolidStart autoconfig for projects using version 2.0.0-alpha or later
+
+  SolidStart v2.0.0-alpha introduced a breaking change where configuration moved from `app.config.(js|ts)` to `vite.config.(js|ts)`. Wrangler's autoconfig now detects the installed SolidStart version and based on it updates the appropriate configuration file
+
+- [#12698](https://github.com/cloudflare/workers-sdk/pull/12698) [`209b396`](https://github.com/cloudflare/workers-sdk/commit/209b3963ccecbe7c9f96f1c4cc30e4682730f257) Thanks [@penalosa](https://github.com/penalosa)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From         | To           |
+  | ------------------------- | ------------ | ------------ |
+  | workerd                   | 1.20260305.0 | 1.20260226.1 |
+  | @cloudflare/workers-types | 4.20260305.0 | 4.20260226.1 |
+
+- [#12691](https://github.com/cloudflare/workers-sdk/pull/12691) [`596b8a0`](https://github.com/cloudflare/workers-sdk/commit/596b8a0cb2cb2cb5b9f7fefbe1e7fc638c7e934f) Thanks [@penalosa](https://github.com/penalosa)! - Remove temporary AI Search RPC workaround (no user-facing changes)
+
+- [#12694](https://github.com/cloudflare/workers-sdk/pull/12694) [`00e729e`](https://github.com/cloudflare/workers-sdk/commit/00e729eaa986b19f5573ed6fd52a3e8d33868378) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - Fix `wrangler pipelines setup` failing for Data Catalog sinks on new buckets by using the correct R2 Catalog API error code (`40401`).
+
+- Updated dependencies [[`35b2c56`](https://github.com/cloudflare/workers-sdk/commit/35b2c56cdef6f4e7d33a885959f4ce8fc01201d0), [`5f7aaf2`](https://github.com/cloudflare/workers-sdk/commit/5f7aaf2a94fe99ec95d318b15ff864a9b07eccd6), [`209b396`](https://github.com/cloudflare/workers-sdk/commit/209b3963ccecbe7c9f96f1c4cc30e4682730f257), [`596b8a0`](https://github.com/cloudflare/workers-sdk/commit/596b8a0cb2cb2cb5b9f7fefbe1e7fc638c7e934f), [`bf9cb3d`](https://github.com/cloudflare/workers-sdk/commit/bf9cb3d32d4710dbefd7d3c412aefe1558ecd57e)]:
+  - miniflare@4.20260301.1
+
 ## 4.69.0
 
 ### Minor Changes

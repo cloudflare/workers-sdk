@@ -1,5 +1,36 @@
 # @cloudflare/vite-plugin
 
+## 1.26.0
+
+### Minor Changes
+
+- [#12649](https://github.com/cloudflare/workers-sdk/pull/12649) [`35b2c56`](https://github.com/cloudflare/workers-sdk/commit/35b2c56cdef6f4e7d33a885959f4ce8fc01201d0) Thanks [@gabivlj](https://github.com/gabivlj)! - Add experimental support for containers to workers communication with interceptOutboundHttp
+
+  This feature is experimental and requires adding the "experimental" compatibility flag to your Wrangler configuration.
+
+- [#12701](https://github.com/cloudflare/workers-sdk/pull/12701) [`23a365a`](https://github.com/cloudflare/workers-sdk/commit/23a365a7e578ecb6735c1f05a204f5bf236b24f6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add local dev validation for the experimental `secrets` configuration property
+
+  When the new `secrets` property is defined, `wrangler dev` and `vite dev` now validate secrets declared in `secrets.required`. When required secrets are missing from `.dev.vars` or `.env`/`process.env`, a warning is logged listing the missing secret names.
+
+  When `secrets` is defined, only the keys listed in `secrets.required` are loaded. Additional keys in `.dev.vars` or `.env` are excluded. If you are not using `.dev.vars`, keys listed in `secrets.required` are loaded from `process.env` as well as `.env`. The `CLOUDFLARE_INCLUDE_PROCESS_ENV` environment variable is therefore not needed when using this feature.
+
+  When `secrets` is not defined, the existing behavior is unchanged.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+  	"secrets": {
+  		"required": ["API_KEY", "DB_PASSWORD"],
+  	},
+  }
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`6a8aa5f`](https://github.com/cloudflare/workers-sdk/commit/6a8aa5f28fdf8e8392b1e279a8f679e9698c4671), [`d672e2e`](https://github.com/cloudflare/workers-sdk/commit/d672e2ec47f87ed3403aa291fbb9f671970afbfe), [`35b2c56`](https://github.com/cloudflare/workers-sdk/commit/35b2c56cdef6f4e7d33a885959f4ce8fc01201d0), [`5f7aaf2`](https://github.com/cloudflare/workers-sdk/commit/5f7aaf2a94fe99ec95d318b15ff864a9b07eccd6), [`209b396`](https://github.com/cloudflare/workers-sdk/commit/209b3963ccecbe7c9f96f1c4cc30e4682730f257), [`23a365a`](https://github.com/cloudflare/workers-sdk/commit/23a365a7e578ecb6735c1f05a204f5bf236b24f6), [`596b8a0`](https://github.com/cloudflare/workers-sdk/commit/596b8a0cb2cb2cb5b9f7fefbe1e7fc638c7e934f), [`00e729e`](https://github.com/cloudflare/workers-sdk/commit/00e729eaa986b19f5573ed6fd52a3e8d33868378), [`0769056`](https://github.com/cloudflare/workers-sdk/commit/0769056523c43902b14bdd32330deda01acd65c4), [`150ef7b`](https://github.com/cloudflare/workers-sdk/commit/150ef7bcaa9ad2d2de661200ef87ea8f15c62a36), [`bf9cb3d`](https://github.com/cloudflare/workers-sdk/commit/bf9cb3d32d4710dbefd7d3c412aefe1558ecd57e)]:
+  - wrangler@4.70.0
+  - miniflare@4.20260301.1
+
 ## 1.25.6
 
 ### Patch Changes

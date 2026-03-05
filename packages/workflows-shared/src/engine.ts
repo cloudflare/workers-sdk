@@ -23,6 +23,7 @@ import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 interface Env {
 	USER_WORKFLOW: WorkflowEntrypoint;
+	STEP_LIMIT?: string; // JSON-encoded number from miniflare binding
 }
 
 export type DatabaseWorkflow = {
@@ -74,6 +75,8 @@ const ENGINE_STATUS_KEY = "ENGINE_STATUS";
 
 const EVENT_MAP_PREFIX = "EVENT_MAP";
 
+export const DEFAULT_STEP_LIMIT = 10_000;
+
 export class Engine extends DurableObject<Env> {
 	logs: Array<unknown> = [];
 
@@ -83,6 +86,7 @@ export class Engine extends DurableObject<Env> {
 	workflowName: string | undefined;
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
+	stepLimit: number;
 
 	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
 		new Map();
@@ -90,6 +94,11 @@ export class Engine extends DurableObject<Env> {
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
+
+		this.stepLimit = env.STEP_LIMIT
+			? JSON.parse(env.STEP_LIMIT)
+			: DEFAULT_STEP_LIMIT;
+
 		void this.ctx.blockConcurrencyWhile(async () => {
 			this.ctx.storage.transactionSync(() => {
 				try {

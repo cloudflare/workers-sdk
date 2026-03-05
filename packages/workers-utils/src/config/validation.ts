@@ -2584,12 +2584,54 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (hasProperty(value, "limits") && value.limits !== undefined) {
+		if (
+			typeof value.limits !== "object" ||
+			value.limits === null ||
+			Array.isArray(value.limits)
+		) {
+			diagnostics.errors.push(
+				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		} else {
+			const limits = value.limits as Record<string, unknown>;
+			if (limits.steps !== undefined) {
+				if (
+					typeof limits.steps !== "number" ||
+					!Number.isInteger(limits.steps) ||
+					limits.steps < 1
+				) {
+					diagnostics.errors.push(
+						`"${field}" bindings "limits.steps" field must be a positive integer but got ${JSON.stringify(
+							limits.steps
+						)}.`
+					);
+					isValid = false;
+				} else if (limits.steps > 25_000) {
+					diagnostics.warnings.push(
+						`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+					);
+				}
+			}
+			validateAdditionalProperties(
+				diagnostics,
+				`${field}.limits`,
+				Object.keys(limits),
+				["steps"]
+			);
+		}
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"name",
 		"class_name",
 		"script_name",
 		"remote",
+		"limits",
 	]);
 
 	return isValid;

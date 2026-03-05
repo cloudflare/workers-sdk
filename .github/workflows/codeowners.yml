@@ -1,6 +1,8 @@
 name: "Code Owners"
 
-# Re-evaluate when PRs are opened/updated, and when reviews are submitted/dismissed.
+# Re-evaluate when PRs are opened/updated.
+# When reviews are submitted/dismissed, the separate rerun_codeowners.yml workflow
+# re-runs this check (rather than creating a second check context).
 # Using pull_request_target (not pull_request) so the workflow has access to secrets
 # for fork PRs. This is safe because:
 #   - The checkout is the BASE branch (ownership rules come from the protected branch)
@@ -9,8 +11,6 @@ name: "Code Owners"
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
-  pull_request_review:
-    types: [submitted, dismissed]
 
 concurrency:
   group: codeowners-${{ github.event.pull_request.number }}
@@ -27,16 +27,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Base Branch"
+        if: github.event.pull_request.head.ref != 'changeset-release/main'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: "Fetch PR Head (for diff computation)"
+        if: github.event.pull_request.head.ref != 'changeset-release/main'
         run: git fetch origin +refs/pull/${{ github.event.pull_request.number }}/head
         env:
           GITHUB_TOKEN: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"
 
       - name: "Codeowners Plus"
+        if: github.event.pull_request.head.ref != 'changeset-release/main'
         uses: multimediallc/codeowners-plus@ff02aa993a92e8efe01642916d0877beb9439e9f # v1.9.0
         with:
           github-token: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"
