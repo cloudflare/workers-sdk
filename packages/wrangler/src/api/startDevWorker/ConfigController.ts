@@ -371,9 +371,7 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 		tailConsumers: config.tail_consumers ?? [],
-		experimental: {
-			tailLogs: !!input.experimental?.tailLogs,
-		},
+		experimental: {},
 		streamingTailConsumers: config.streaming_tail_consumers ?? [],
 	} satisfies StartDevWorkerOptions;
 
