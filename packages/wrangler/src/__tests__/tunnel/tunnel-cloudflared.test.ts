@@ -92,7 +92,7 @@ describe("cloudflared binary management", () => {
 describe("environment variable override", () => {
 	runInTempDir();
 
-	it("should respect WRANGLER_CLOUDFLARED_PATH when set to existing file", async ({
+	it("should respect CLOUDFLARED_PATH when set to existing file", async ({
 		expect,
 	}) => {
 		// Create a temporary file to use as the cloudflared path
@@ -100,7 +100,7 @@ describe("environment variable override", () => {
 		fs.writeFileSync(tempBin, "#!/bin/sh\necho test");
 		fs.chmodSync(tempBin, 0o755);
 
-		vi.stubEnv("WRANGLER_CLOUDFLARED_PATH", tempBin);
+		vi.stubEnv("CLOUDFLARED_PATH", tempBin);
 
 		// Import fresh to pick up env change
 		const { getCloudflaredPath } = await import("../../tunnel/cloudflared");
@@ -110,16 +110,14 @@ describe("environment variable override", () => {
 		expect(binPath).toBe(tempBin);
 	});
 
-	it("should throw error when WRANGLER_CLOUDFLARED_PATH points to non-existent file", async ({
+	it("should throw error when CLOUDFLARED_PATH points to non-existent file", async ({
 		expect,
 	}) => {
-		vi.stubEnv("WRANGLER_CLOUDFLARED_PATH", "/nonexistent/path/to/cloudflared");
+		vi.stubEnv("CLOUDFLARED_PATH", "/nonexistent/path/to/cloudflared");
 
 		// Import fresh to pick up env change
 		const { getCloudflaredPath } = await import("../../tunnel/cloudflared");
 
-		await expect(getCloudflaredPath()).rejects.toThrow(
-			"WRANGLER_CLOUDFLARED_PATH"
-		);
+		await expect(getCloudflaredPath()).rejects.toThrow("CLOUDFLARED_PATH");
 	});
 });

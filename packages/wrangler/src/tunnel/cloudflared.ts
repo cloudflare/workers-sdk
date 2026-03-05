@@ -75,7 +75,7 @@ function getGoArch(): string {
 			throw new UserError(
 				`Unsupported architecture for cloudflared: ${nodeArch}\n\n` +
 					`cloudflared supports: x64 (amd64), arm64, arm\n\n` +
-					`You can manually install cloudflared and set the WRANGLER_CLOUDFLARED_PATH environment variable.\n` +
+					`You can manually install cloudflared and set the CLOUDFLARED_PATH environment variable.\n` +
 					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
 			);
 	}
@@ -97,7 +97,7 @@ function getGoOS(): string {
 			throw new UserError(
 				`Unsupported platform for cloudflared: ${process.platform}\n\n` +
 					`cloudflared supports: darwin (macOS), linux, win32 (Windows)\n\n` +
-					`You can manually install cloudflared and set the WRANGLER_CLOUDFLARED_PATH environment variable.\n` +
+					`You can manually install cloudflared and set the CLOUDFLARED_PATH environment variable.\n` +
 					`Download instructions: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/`
 			);
 	}
@@ -281,7 +281,7 @@ function validateBinary(binPath: string): void {
 		errorMessage += `  1. Deleting the cache directory: rm -rf ${cacheDir}\n`;
 		errorMessage += `  2. Running the command again to re-download\n`;
 		errorMessage += `  3. Manually installing cloudflared: https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n`;
-		errorMessage += `  4. Setting WRANGLER_CLOUDFLARED_PATH to point to your cloudflared binary`;
+		errorMessage += `  4. Setting CLOUDFLARED_PATH to point to your cloudflared binary`;
 
 		throw new UserError(errorMessage);
 	}
@@ -547,7 +547,7 @@ async function downloadBinary(
  * Get cloudflared binary path, installing if necessary.
  *
  * Resolution order:
- * 1. WRANGLER_CLOUDFLARED_PATH environment variable (user override)
+ * 1. CLOUDFLARED_PATH environment variable (user override)
  * 2. cloudflared in system PATH
  * 3. Cached binary in ~/.wrangler/cloudflared/{version}/
  * 4. Download latest from Cloudflare update worker
@@ -558,13 +558,11 @@ export async function getCloudflaredPath(): Promise<string> {
 	if (envPath) {
 		if (!existsSync(envPath)) {
 			throw new UserError(
-				`WRANGLER_CLOUDFLARED_PATH is set to "${envPath}" but the file does not exist.\n\n` +
+				`CLOUDFLARED_PATH is set to "${envPath}" but the file does not exist.\n\n` +
 					`Please ensure the path points to a valid cloudflared binary.`
 			);
 		}
-		logger.debug(
-			`Using cloudflared from WRANGLER_CLOUDFLARED_PATH: ${envPath}`
-		);
+		logger.debug(`Using cloudflared from CLOUDFLARED_PATH: ${envPath}`);
 		// Skip validation — the user explicitly set the path, so trust it.
 		// This also avoids issues on platforms where the binary format
 		// differs (e.g. shell scripts won't pass --version on Windows).
@@ -608,7 +606,7 @@ export async function getCloudflaredPath(): Promise<string> {
 			`cloudflared is required to run this command.\n\n` +
 				`You can install it manually from:\n` +
 				`https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/\n\n` +
-				`Then either add it to your PATH or set WRANGLER_CLOUDFLARED_PATH.`
+				`Then either add it to your PATH or set CLOUDFLARED_PATH.`
 		);
 	}
 

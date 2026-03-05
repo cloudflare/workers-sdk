@@ -394,11 +394,11 @@ export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CLOUDFLARED_PATH` specifies a custom path to a cloudflared binary.
+ * `CLOUDFLARED_PATH` specifies a custom path to a cloudflared binary.
  *
  * If set, Wrangler will use this cloudflared binary instead of downloading one.
  * The path must point to an existing executable file.
  */
 export const getCloudflaredPathFromEnv = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CLOUDFLARED_PATH",
+	variableName: "CLOUDFLARED_PATH",
 });
