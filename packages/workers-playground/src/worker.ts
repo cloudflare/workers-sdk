@@ -36,15 +36,19 @@ export default {
 				"http://dummy"
 			);
 			const asset = await env.ASSETS.fetch(assetUrl.href);
-			return new Response(asset.body, {
+			const setCookie = header[0]?.replace(
+				"playground-testing.devprod.cloudflare.dev",
+				url.host
+			);
+			const response = new Response(asset.body, {
 				headers: {
 					...Object.fromEntries(asset.headers.entries()),
-					"Set-Cookie": header[0].replace(
-						"playground-testing.devprod.cloudflare.dev",
-						url.host
-					),
 				},
 			});
+			if (setCookie) {
+				response.headers.set("Set-Cookie", setCookie);
+			}
+			return response;
 		}
 
 		// All other requests fall through to static assets
