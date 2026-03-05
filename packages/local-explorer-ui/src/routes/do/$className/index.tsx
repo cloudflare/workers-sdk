@@ -12,7 +12,6 @@ import type { WorkersObject } from "../../../api";
 export const Route = createFileRoute("/do/$className/")({
 	component: NamespaceView,
 	loader: async ({ params }) => {
-		// Resolve className to namespaceId
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];
 		const namespace = namespaces.find(
@@ -25,8 +24,23 @@ export const Route = createFileRoute("/do/$className/")({
 			throw new Error(`Durable Object class "${params.className}" not found`);
 		}
 
+		const objectsResponse = await durableObjectsNamespaceListObjects({
+			path: {
+				id: namespace.id,
+			},
+			query: {
+				limit: 50,
+			},
+		});
+
+		const objects = objectsResponse.data?.result ?? [];
+		const cursor = objectsResponse.data?.result_info?.cursor ?? null;
+
 		return {
+			cursor,
+			hasMore: !!cursor,
 			namespaceId: namespace.id,
+			objects,
 		};
 	},
 });
@@ -36,12 +50,22 @@ function NamespaceView() {
 	const loaderData = Route.useLoaderData();
 	const { namespaceId } = loaderData;
 
-	const [cursor, setCursor] = useState<string | null>(null);
+	// Initialize state from loader data
+	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
 	const [error, setError] = useState<string | null>(null);
-	const [hasMore, setHasMore] = useState<boolean>(false);
-	const [loading, setLoading] = useState<boolean>(true);
+	const [hasMore, setHasMore] = useState<boolean>(loaderData.hasMore);
+	const [loading, setLoading] = useState<boolean>(false);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
-	const [objects, setObjects] = useState<WorkersObject[]>([]);
+	const [objects, setObjects] = useState<WorkersObject[]>(loaderData.objects);
+
+	// Reset state when loader data changes (e.g., when navigating to a different namespace)
+	useEffect((): void => {
+		setObjects(loaderData.objects);
+		setCursor(loaderData.cursor);
+		setHasMore(loaderData.hasMore);
+		setError(null);
+		setLoading(false);
+	}, [loaderData]);
 
 	const fetchObjects = useCallback(
 		async (nextCursor?: string): Promise<void> => {
@@ -86,11 +110,6 @@ function NamespaceView() {
 		},
 		[namespaceId]
 	);
-
-	useEffect((): void => {
-		setError(null);
-		void fetchObjects();
-	}, [namespaceId, fetchObjects]);
 
 	function handleLoadMore(): void {
 		if (cursor && !loadingMore) {

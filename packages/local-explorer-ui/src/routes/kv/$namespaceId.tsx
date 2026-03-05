@@ -18,6 +18,38 @@ import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
+	loader: async ({ params }) => {
+		const keysResponse = await workersKvNamespaceListANamespace_SKeys({
+			path: { namespace_id: params.namespaceId },
+			query: { limit: 50 },
+		});
+		const keys = keysResponse.data?.result ?? [];
+
+		let values: Record<string, string | null> = {};
+		if (keys.length > 0) {
+			const valuesResponse = await workersKvNamespaceGetMultipleKeyValuePairs({
+				path: { namespace_id: params.namespaceId },
+				body: { keys: keys.map((k) => k.name) },
+			});
+			values = (valuesResponse.data?.result?.values ?? {}) as Record<
+				string,
+				string | null
+			>;
+		}
+
+		const entries: KVEntry[] = keys.map((key) => ({
+			key,
+			value: values[key.name] ?? null,
+		}));
+
+		const cursor = keysResponse.data?.result_info?.cursor ?? null;
+
+		return {
+			cursor,
+			entries,
+			hasMore: !!cursor,
+		};
+	},
 });
 
 // Helper functions for optimistic entry state updates
@@ -41,28 +73,44 @@ const entryVisible = (entries: KVEntry[], key: string): boolean =>
 
 function NamespaceView() {
 	const { namespaceId } = Route.useParams();
-	const [entries, setEntries] = useState<KVEntry[]>([]);
-	const [loading, setLoading] = useState(true);
+	const loaderData = Route.useLoaderData();
+
+	// Initialize state from loader data
+	const [entries, setEntries] = useState<KVEntry[]>(loaderData.entries);
+	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
+	const [hasMore, setHasMore] = useState(loaderData.hasMore);
+
 	// Global (not individal validation) errors like fetch failures, shown in a
 	// banner. Set by fetchEntries, handleAdd, handleEditSave,
 	// handleConfirmOverwrite, handleConfirmDelete
-	const [error, setError] = useState<string | null>(null);
-	const [cursor, setCursor] = useState<string | null>(null);
-	const [hasMore, setHasMore] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-	const [deleting, setDeleting] = useState(false);
+	const [deleting, setDeleting] = useState<boolean>(false);
+	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState<boolean>(false);
+	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	// State for overwrite confirmation dialog
 	const [overwriteConfirm, setOverwriteConfirm] = useState<{
 		key: string;
 		value: string;
 		originalKey?: string; // undefined for add, set for edit
 	} | null>(null);
-	const [overwriting, setOverwriting] = useState(false);
+	const [overwriting, setOverwriting] = useState<boolean>(false);
 	// Signal to clear AddKVForm after successful overwrite
-	const [clearAddForm, setClearAddForm] = useState(0);
+	const [clearAddForm, setClearAddForm] = useState<number>(0);
 	// Search prefix filter
 	const [prefix, setPrefix] = useState<string | undefined>(undefined);
+
+	// Reset state when loader data changes (e.g., when navigating to a different namespace)
+	useEffect(() => {
+		setEntries(loaderData.entries);
+		setCursor(loaderData.cursor);
+		setHasMore(loaderData.hasMore);
+		setDeleteTarget(null);
+		setOverwriteConfirm(null);
+		setError(null);
+		setPrefix(undefined);
+		setLoading(false);
+	}, [loaderData]);
 
 	const fetchEntries = useCallback(
 		async (nextCursor?: string, prefixParam?: string) => {
@@ -119,14 +167,6 @@ function NamespaceView() {
 		},
 		[namespaceId]
 	);
-
-	useEffect(() => {
-		setDeleteTarget(null);
-		setOverwriteConfirm(null);
-		setError(null);
-		setPrefix(undefined);
-		void fetchEntries(undefined, undefined);
-	}, [namespaceId, fetchEntries]);
 
 	const handleLoadMore = () => {
 		if (cursor && !loadingMore) {
@@ -312,12 +352,12 @@ function NamespaceView() {
 		<>
 			<Breadcrumbs
 				icon={KVIcon}
-				title="KV"
 				items={[
 					<span className="flex items-center gap-1.5" key="namespace-id">
 						{namespaceId}
 					</span>,
 				]}
+				title="KV"
 			/>
 
 			<div className="px-6 py-6">
@@ -328,14 +368,14 @@ function NamespaceView() {
 				)}
 
 				<SearchForm
+					disabled={loading}
 					key={namespaceId}
 					onSearch={handleSearch}
-					disabled={loading}
 				/>
 
 				<hr className="border-border my-4" />
 
-				<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
+				<AddKVForm clearSignal={clearAddForm} onAdd={handleAdd} />
 
 				{loading ? (
 					<div className="text-center p-12 text-text-secondary">Loading...</div>
@@ -359,17 +399,17 @@ function NamespaceView() {
 						<div className="rounded-lg">
 							<KVTable
 								entries={entries}
-								onSave={handleEditSave}
 								onDelete={(key: string) => setDeleteTarget(key)}
+								onSave={handleEditSave}
 							/>
 						</div>
 						{hasMore && (
 							<div className="text-center p-4">
 								<Button
 									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
-									onClick={handleLoadMore}
 									disabled={loadingMore}
 									focusableWhenDisabled
+									onClick={handleLoadMore}
 								>
 									{loadingMore ? "Loading..." : "Load More"}
 								</Button>
@@ -379,8 +419,8 @@ function NamespaceView() {
 				)}
 
 				<AlertDialog.Root
-					open={deleteTarget !== null}
 					onOpenChange={(open) => !open && setDeleteTarget(null)}
+					open={deleteTarget !== null}
 				>
 					<AlertDialog.Portal>
 						<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-1000 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
@@ -394,18 +434,18 @@ function NamespaceView() {
 							</AlertDialog.Description>
 							<div className="flex justify-end gap-2 mt-6">
 								<AlertDialog.Close
+									disabled={deleting}
 									render={
 										<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0" />
 									}
-									disabled={deleting}
 								>
 									Cancel
 								</AlertDialog.Close>
 								<Button
 									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-danger text-bg-tertiary hover:bg-danger-hover data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
-									onClick={handleConfirmDelete}
 									disabled={deleting}
 									focusableWhenDisabled
+									onClick={handleConfirmDelete}
 								>
 									{deleting ? "Deleting..." : "Delete"}
 								</Button>
@@ -415,8 +455,8 @@ function NamespaceView() {
 				</AlertDialog.Root>
 
 				<AlertDialog.Root
-					open={overwriteConfirm !== null}
 					onOpenChange={(open) => !open && setOverwriteConfirm(null)}
+					open={overwriteConfirm !== null}
 				>
 					<AlertDialog.Portal>
 						<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-1000 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
@@ -430,18 +470,18 @@ function NamespaceView() {
 							</AlertDialog.Description>
 							<div className="flex justify-end gap-2 mt-6">
 								<AlertDialog.Close
+									disabled={overwriting}
 									render={
 										<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0" />
 									}
-									disabled={overwriting}
 								>
 									Cancel
 								</AlertDialog.Close>
 								<Button
 									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
-									onClick={handleConfirmOverwrite}
 									disabled={overwriting}
 									focusableWhenDisabled
+									onClick={handleConfirmOverwrite}
 								>
 									{overwriting ? "Overwriting..." : "Overwrite"}
 								</Button>
