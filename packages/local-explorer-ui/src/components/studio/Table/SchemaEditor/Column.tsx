@@ -5,7 +5,6 @@ import {
 	Dialog,
 	DropdownMenu,
 	Label,
-	Select,
 } from "@cloudflare/kumo";
 import {
 	ArrowLineDownRightIcon,
@@ -416,66 +415,66 @@ export function StudioColumnEditorModal({
 
 				{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 				<Dialog.Description className="text-kumo-subtle">
-					<div className="flex flex-col gap-4">
-						<div>
-							<Label
-								tooltip={
-									isColumnNameDuplicated
-										? "Column name must be unique"
-										: undefined
-								}
-							>
-								Column name
-							</Label>
-							<input
-								autoFocus
-								className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
-								onChange={(e): void => {
-									setValue(
-										produce(value, (draft) => {
-											draft.name = e.target.value;
-										})
-									);
-								}}
-								placeholder="e.g., user_id"
-								value={value.name}
-							/>
-						</div>
-
-						<div className="w-full">
-							<Select
-								className="w-full"
-								hideLabel={false}
-								label="Data type"
-								onValueChange={(newType: string | null): void => {
-									if (!newType) {
-										return;
-									}
-									setValue((prev) =>
-										produce(prev, (draft) => {
-											draft.type = newType;
-										})
-									);
-								}}
-								placeholder="Select a type"
-								value={value.type}
-							>
-								{value.type &&
-									!["TEXT", "INTEGER", "REAL", "BLOB"].includes(
-										value.type.toUpperCase()
-									) && (
-										<Select.Option value={value.type}>
-											{value.type}
-										</Select.Option>
-									)}
-								<Select.Option value="TEXT">Text</Select.Option>
-								<Select.Option value="INTEGER">Integer</Select.Option>
-								<Select.Option value="REAL">Real</Select.Option>
-								<Select.Option value="BLOB">Blob</Select.Option>
-							</Select>
-						</div>
-					</div>
+					{defaultValue
+						? "Edit the column details below."
+						: "Enter the column details below."}
 				</Dialog.Description>
+
+				<div className="flex flex-col gap-4 mt-4">
+					<div>
+						<Label
+							tooltip={
+								isColumnNameDuplicated
+									? "Column name must be unique"
+									: undefined
+							}
+						>
+							Column name
+						</Label>
+						<input
+							autoFocus
+							className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
+							onChange={(e): void => {
+								setValue(
+									produce(value, (draft) => {
+										draft.name = e.target.value;
+									})
+								);
+							}}
+							placeholder="e.g., user_id"
+							value={value.name}
+						/>
+					</div>
+
+					<div className="w-full">
+						<Label>Data type</Label>
+						<select
+							className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
+							onChange={(e): void => {
+								const newType = e.target.value;
+								if (!newType) {
+									return;
+								}
+								setValue((prev) =>
+									produce(prev, (draft) => {
+										draft.type = newType;
+									})
+								);
+							}}
+							value={value.type}
+						>
+							<option value="">Select a type</option>
+							{value.type &&
+								!["TEXT", "INTEGER", "REAL", "BLOB"].includes(
+									value.type.toUpperCase()
+								) && <option value={value.type}>{value.type}</option>}
+							<option value="TEXT">Text</option>
+							<option value="INTEGER">Integer</option>
+							<option value="REAL">Real</option>
+							<option value="BLOB">Blob</option>
+						</select>
+					</div>
+				</div>
 
 				<div className="mt-6 flex justify-end gap-2">
 					<Button onClick={closeModal} variant="secondary">
