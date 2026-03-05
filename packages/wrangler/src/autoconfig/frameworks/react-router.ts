@@ -193,6 +193,7 @@ export class ReactRouter extends Framework {
 				dev: true,
 				startText: "Installing the isbot package",
 				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
+				isWorkspaceRoot,
 			});
 
 			if (!existsSync("app/entry.server.tsx")) {
