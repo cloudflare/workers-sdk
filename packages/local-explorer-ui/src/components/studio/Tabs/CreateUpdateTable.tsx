@@ -143,6 +143,14 @@ function transformTableSchematableSchema(tableSchema: StudioTableSchema) {
 			delete columnCopy.constraint.primaryKeyOrder;
 			delete columnCopy.constraint.primaryColumns;
 
+			const existingPkConstraint = constraintsList.find(
+				(constraint) => constraint.primaryKey === true
+			);
+			if (existingPkConstraint) {
+				existingPkConstraint.primaryColumns?.push(columnCopy.name);
+				return;
+			}
+
 			constraintsList.unshift({
 				primaryKey: true,
 				primaryColumns: [columnCopy.name],
