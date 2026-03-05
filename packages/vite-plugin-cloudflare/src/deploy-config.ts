@@ -41,7 +41,8 @@ export function getWorkerConfigs(root: string, isPrerender: boolean) {
 
 export function writeDeployConfig(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	resolvedViteConfig: vite.ResolvedConfig
+	resolvedViteConfig: vite.ResolvedConfig,
+	isAssetsOnly: boolean
 ) {
 	const deployConfigPath = getDeployConfigPath(resolvedViteConfig.root);
 	const deployConfigDirectory = path.dirname(deployConfigPath);
@@ -66,10 +67,14 @@ export function writeDeployConfig(
 	let entryEnvironmentName: string;
 	let auxiliaryEnvironmentNames: string[];
 
-	if (resolvedPluginConfig.type === "assets-only") {
+	if (isAssetsOnly) {
 		entryEnvironmentName = "client";
 		auxiliaryEnvironmentNames = [];
 	} else {
+		assert(
+			resolvedPluginConfig.type === "workers",
+			`Unexpected error: expected workers config but got ${resolvedPluginConfig.type}`
+		);
 		entryEnvironmentName = resolvedPluginConfig.entryWorkerEnvironmentName;
 		auxiliaryEnvironmentNames = [
 			...resolvedPluginConfig.environmentNameToWorkerMap.keys(),
