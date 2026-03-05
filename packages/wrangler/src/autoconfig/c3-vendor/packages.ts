@@ -123,7 +123,7 @@ export const installPackages = async (
  *
  * @param packageManagerType The type of package manager
  * @param isWorkspaceRoot Flag indicating whether the install command is being run at the root of a workspace
- * @returns Either an empty array, or an array containing the flag(/s) to use.
+ * @returns an array containing the flag(/s) to use, or an empty array if not supported or not running in the workspace root.
  */
 const getWorkspaceInstallRootFlag = (
 	packageManagerType: PackageManager["type"],
