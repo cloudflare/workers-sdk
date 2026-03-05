@@ -25,12 +25,12 @@ import type { Icon } from "@phosphor-icons/react";
  * Represents a row from SQLite's `sqlite_master` system table.
  * Each row describes a schema object (table, view, trigger, or index).
  */
-type SQLiteMasterRow = {
+interface SQLiteMasterRow {
 	name: string;
 	sql: string;
 	tbl_name: string;
 	type: string;
-};
+}
 
 /**
  * SQLite-specific driver implementation. Extends {@link StudioDriverCommon}
@@ -110,7 +110,7 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		const result = await this.query(`SELECT * FROM sqlite_master;`);
 
 		let schemaItems = new Array<StudioSchemaItem>();
-		const rows = result.rows as Array<SQLiteMasterRow>;
+		const rows = result.rows as unknown as Array<SQLiteMasterRow>;
 
 		for (const row of rows) {
 			if (row.type === "table") {
@@ -133,14 +133,20 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 						schemaName: defaultSchemaName,
 					});
 				}
-			} else if (row.type === "trigger") {
+				continue;
+			}
+
+			if (row.type === "trigger") {
 				schemaItems.push({
 					type: "trigger",
 					name: row.name,
 					tableName: row.tbl_name,
 					schemaName: defaultSchemaName,
 				});
-			} else if (row.type === "view") {
+				continue;
+			}
+
+			if (row.type === "view") {
 				schemaItems.push({
 					type: "view",
 					name: row.name,
@@ -201,14 +207,14 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		)} AND "type" IN ('table', 'view', 'index');`;
 
 		const result = await this.query(sql);
-		const schemaList = result.rows as SQLiteMasterRow[];
+		const schemaList = result.rows as unknown as SQLiteMasterRow[];
 
 		// Handle collecting all indexes
 		const indexScriptList = schemaList.filter(
 			(schema) => schema.type === "index" && schema.sql !== null
 		);
 
-		const indexList: StudioTableIndex[] = [];
+		const indexList = new Array<StudioTableIndex>();
 		for (const indexScript of indexScriptList) {
 			try {
 				indexList.push(parseSQLiteIndexScript(indexScript.sql));
@@ -278,16 +284,18 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 			type: string;
 		}>;
 
-		const columns: StudioTableColumn[] = rows.map((row) => ({
-			name: row.name,
-			pk: !!row.pk,
-			type: row.type,
-		}));
+		const columns = rows.map(
+			(row): StudioTableColumn => ({
+				name: row.name,
+				pk: !!row.pk,
+				type: row.type,
+			})
+		);
 
 		return {
 			autoIncrement: false,
 			columns,
-			pk: columns.filter((col) => col.pk).map((col) => col.name),
+			pk: columns.filter((col) => col.pk).map((col): string => col.name),
 			schemaName,
 			tableName,
 		};

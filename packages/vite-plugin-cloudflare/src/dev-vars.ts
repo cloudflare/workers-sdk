@@ -4,21 +4,25 @@ import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type { Unstable_Config } from "wrangler";
 
 /**
  * Gets any variables with which to augment the Worker config in preview mode.
  *
- * Calls `unstable_getVarsForDev` with the current Cloudflare environment to get local dev variables from the `.dev.vars` and `.env` files.
+ * Calls `unstable_getVarsForDev` with the current Cloudflare environment to get local dev variables from the .dev.vars/.env/process.env.
+ * When `secrets` is defined in the Worker config, only declared secrets are loaded.
  */
 export function getLocalDevVarsForPreview(
-	configPath: string | undefined,
+	config: Unstable_Config,
 	cloudflareEnv: string | undefined
 ): string | undefined {
 	const dotDevDotVars = wrangler.unstable_getVarsForDev(
-		configPath,
+		config.configPath,
 		undefined, // We don't currently support setting a list of custom `.env` files.
 		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.
-		cloudflareEnv
+		cloudflareEnv,
+		false,
+		config.secrets
 	);
 	const dotDevDotVarsEntries = Array.from(Object.entries(dotDevDotVars));
 	if (dotDevDotVarsEntries.length > 0) {

@@ -17,6 +17,23 @@ import type {
 	WranglerLogger,
 } from "./types";
 
+const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:4dc6c7f@sha256:9621ef445ef120409e5d95bbd845ab2fa0f613636b59a01d998f5704f4096ae2";
+
+export function getEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+export async function pullEgressInterceptorImage(
+	dockerPath: string
+): Promise<void> {
+	const image = getEgressInterceptorImage();
+	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+}
+
 export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
@@ -97,6 +114,7 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	isVite: boolean;
+	compatibilityFlags?: string[];
 }): Promise<void> {
 	const {
 		dockerPath,
@@ -151,6 +169,13 @@ export async function prepareContainerImagesForDev(args: {
 
 			await checkExposedPorts(dockerPath, options);
 		}
+	}
+
+	// Pull the egress interceptor image if experimental flag is enabled.
+	// This image is used to intercept outbound HTTP from containers and
+	// route it back to workerd (e.g. for interceptOutboundHttp).
+	if (!aborted && args.compatibilityFlags?.includes("experimental")) {
+		await pullEgressInterceptorImage(dockerPath);
 	}
 }
 
@@ -233,6 +258,12 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
 			name: "AWS ECR",
 			secretType: "AWS Secret Access Key",
+		},
+		{
+			type: ExternalRegistryKind.DOCKER_HUB,
+			pattern: /^docker\.io$/,
+			name: "DockerHub",
+			secretType: "DockerHub PAT Token",
 		},
 		{
 			type: "cloudflare",

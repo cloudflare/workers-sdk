@@ -173,6 +173,61 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should deploy a workflow with limits", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				async ({ params, request }) => {
+					expect(params.workflowName).toBe("my-workflow");
+					const body = (await request.json()) as Record<string, unknown>;
+					expect(body).toEqual({
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					});
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
 		it("should not call Workflow's API if the workflow binds to another script", async () => {
 			writeWranglerConfig({
 				main: "index.js",
@@ -235,6 +290,180 @@ describe("deploy", () => {
 				  https://this-script.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+
+		it("should error when deploying a workflow with limits that references an external script", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Workflow "my-workflow" has "limits" configured but references external script "another-script"'
+			);
+		});
+
+		describe("workflow script_name validation with environments", () => {
+			it("should error when script_name matches top-level name but not env-suffixed name and limits are set", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "my-app",
+					env: {
+						staging: {
+							workflows: [
+								{
+									binding: "WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "my-app",
+									limits: { steps: 5000 },
+								},
+							],
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", `export default {};`);
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedScriptName: "my-app-staging",
+				});
+
+				await expect(runWrangler("deploy --env staging")).rejects.toThrow(
+					'Workflow "my-workflow" has "limits" configured but references external script "my-app"'
+				);
+			});
+
+			it("should allow limits when script_name matches the env-suffixed name", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "my-app",
+					env: {
+						staging: {
+							workflows: [
+								{
+									binding: "WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "my-app-staging",
+									limits: { steps: 5000 },
+								},
+							],
+						},
+					},
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				const handler = http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					async ({ params, request }) => {
+						expect(params.workflowName).toBe("my-workflow");
+						const body = (await request.json()) as Record<string, unknown>;
+						expect(body).toEqual({
+							script_name: "my-app-staging",
+							class_name: "MyWorkflow",
+							limits: { steps: 5000 },
+						});
+						return HttpResponse.json(
+							createFetchResult({ id: "mock-new-workflow-id" })
+						);
+					}
+				);
+				msw.use(handler);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedScriptName: "my-app-staging",
+				});
+
+				await runWrangler("deploy --env staging");
+
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.out).toContain("workflow: my-workflow");
+			});
+
+			it("should deploy external script_name under env without limits", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					name: "my-app",
+					env: {
+						staging: {
+							workflows: [
+								{
+									binding: "WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "another-script",
+								},
+							],
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", `export default {};`);
+
+				const handler = http.put(
+					"*/accounts/:accountId/workflows/:workflowName",
+					() => {
+						expect(
+							false,
+							"Workflows API should not be called for external bindings."
+						);
+					}
+				);
+				msw.use(handler);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedScriptName: "my-app-staging",
+					expectedBindings: [
+						{
+							type: "workflow",
+							name: "WORKFLOW",
+							workflow_name: "my-workflow",
+							class_name: "MyWorkflow",
+							script_name: "another-script",
+						},
+					],
+				});
+
+				await runWrangler("deploy --env staging");
+
+				expect(std.out).toContain("Uploaded my-app-staging");
+			});
 		});
 
 		describe("workflow conflict detection", () => {

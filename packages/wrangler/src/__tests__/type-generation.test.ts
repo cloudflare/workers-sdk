@@ -1660,6 +1660,257 @@ describe("generate types", () => {
 		`);
 	});
 
+	it("should generate types from config `secrets.required`", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: { required: ["API_KEY", "DB_PASSWORD"] },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					API_KEY: string;
+					DB_PASSWORD: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should ignore .dev.vars when config `secrets` is defined", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: { required: ["API_KEY"] },
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			".dev.vars",
+			'DEV_VARS_SECRET="should not appear"\n',
+			"utf8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					API_KEY: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should ignore .env when config `secrets` is defined", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: { required: ["API_KEY"] },
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(".env", 'DOT_ENV_SECRET="should not appear"\n', "utf8");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					API_KEY: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should generate types for per-env config `secrets`", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: { required: ["API_KEY"] },
+				env: {
+					staging: {
+						secrets: {
+							required: ["API_KEY", "DEBUG_TOKEN"],
+						},
+					},
+					production: {
+						secrets: {
+							required: ["API_KEY", "PROD_DB_PASSWORD"],
+						},
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface StagingEnv {
+					API_KEY: string;
+					DEBUG_TOKEN: string;
+				}
+				interface ProductionEnv {
+					API_KEY: string;
+					PROD_DB_PASSWORD: string;
+				}
+				interface Env {
+					API_KEY: string;
+					DEBUG_TOKEN?: string;
+					PROD_DB_PASSWORD?: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should not fall back to .dev.vars for envs without `secrets` when another env declares `secrets`", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				env: {
+					staging: {
+						secrets: { required: ["STAGING_KEY"] },
+					},
+					production: {},
+				},
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			".dev.vars",
+			'FALLBACK_SECRET="should not appear"\n',
+			"utf8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface StagingEnv {
+					STAGING_KEY: string;
+				}
+				interface ProductionEnv {}
+				interface Env {
+					STAGING_KEY?: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should exclude .dev.vars keys when `secrets` is declared without `required`", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				secrets: {},
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(".dev.vars", 'SHOULD_NOT_APPEAR="hidden"\n', "utf8");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
 	it("various different types of vars", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
@@ -2328,8 +2579,8 @@ describe("generate types", () => {
 						MY_SECRET: string;
 					}
 					interface Env {
-						MY_SECRET: string;
 						KV_STAGING?: KVNamespace;
+						MY_SECRET: string;
 					}
 				}
 				interface Env extends Cloudflare.Env {}

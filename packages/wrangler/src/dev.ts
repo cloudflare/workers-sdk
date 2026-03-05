@@ -505,12 +505,15 @@ export function getBindings(
 
 	// Override vars with .dev.vars (dev-specific)
 	// getVarsForDev returns typed bindings: config vars are plain_text/json,
-	// while .dev.vars/.env vars are secret_text
+	// while .dev.vars/.env vars are secret_text.
+	// When secrets is defined, only declared secret keys are loaded from files.
 	const vars = getVarsForDev(
 		configParam.userConfigPath,
 		envFiles,
 		configParam.vars,
-		env
+		env,
+		false,
+		configParam.secrets
 	);
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace

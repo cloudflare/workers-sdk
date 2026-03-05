@@ -32,7 +32,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		// Set up the shortcut wrapper (after stubs are in place from beforeAll)
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
-			isRestartingDevServer: false,
+			restartingDevServerCount: 0,
 		});
 		mockContext.setResolvedPluginConfig(
 			resolvePluginConfig(
@@ -69,7 +69,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		// Create mock plugin context
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
-			isRestartingDevServer: false,
+			restartingDevServerCount: 0,
 		});
 
 		mockContext.setResolvedPluginConfig(
@@ -125,7 +125,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		// Create mock plugin context
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
-			isRestartingDevServer: false,
+			restartingDevServerCount: 0,
 		});
 
 		mockContext.setResolvedPluginConfig(

@@ -48,6 +48,7 @@ import {
 	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
+	IMAGES_PLUGIN_NAME,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
@@ -143,6 +144,7 @@ import type {
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
+	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
 	Queue,
@@ -2734,6 +2736,12 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
+	}
+	getImagesBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<ImagesBinding>> {
+		return this.#getProxy(IMAGES_PLUGIN_NAME, bindingName, workerName);
 	}
 	getHelloWorldBinding(
 		bindingName: string,

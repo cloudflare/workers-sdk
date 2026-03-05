@@ -130,7 +130,7 @@ async function ensureCatalogEnabled(
 		const catalog = await getR2Catalog(config, accountId, bucketName);
 		catalogEnabled = catalog.status === "active";
 	} catch (err) {
-		if (err instanceof APIError && err.code === 10006) {
+		if (err instanceof APIError && err.code === 40401) {
 			// Catalog not enabled yet
 		} else {
 			throw err;

@@ -55,6 +55,8 @@ type Data = {
 	abuseMitigationURLHost?: string;
 	// blob7 - XSS detection href parameter value
 	xssDetectionImageHref?: string;
+	// blob8 - cdn-cgi backslash bypass attempt URL
+	cdnCgiBackslashBypassUrl?: string;
 };
 
 export class Analytics {
@@ -110,6 +112,7 @@ export class Analytics {
 				this.data.coloRegion, // blob5
 				this.data.abuseMitigationURLHost, // blob6
 				this.data.xssDetectionImageHref, // blob7
+				this.data.cdnCgiBackslashBypassUrl?.substring(0, 256), // blob8 - trim to 256 bytes
 			],
 		});
 	}

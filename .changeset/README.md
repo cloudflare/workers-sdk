@@ -1,6 +1,7 @@
 # Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
+
 We use the [`changesets`](https://github.com/changesets/changesets/blob/main/README.md) tool for creating changesets, publishing versions and updating the changelog.
 
 ## Creating a Changeset
@@ -52,9 +53,7 @@ Add `wrangler d1 export` command for exporting D1 databases to SQL files
 
 You can now export your D1 database to a local SQL file:
 
-` ` `bash
-wrangler d1 export my-database --output backup.sql
-` ` `
+`wrangler d1 export my-database --output backup.sql`
 
 This is useful for creating backups or migrating data between databases.
 ```
@@ -68,8 +67,7 @@ For a bug fix (patch):
 
 Fix `wrangler dev` failing to start when `wrangler.toml` contains Unicode characters
 
-Previously, projects with non-ASCII characters in configuration values would fail with
-"Invalid UTF-8 sequence". This is now handled correctly.
+Previously, projects with non-ASCII characters in configuration values would fail with "Invalid UTF-8 sequence". This is now handled correctly.
 ```
 
 ### Bad Examples (avoid these)
@@ -124,6 +122,5 @@ Here's a complete example of a patch changeset file:
 
 Replace the word "publish" with "deploy" everywhere
 
-We should be consistent with the word that describes how we get a worker to the edge.
-The command is `deploy`, so let's use that everywhere.
+We should be consistent with the word that describes how we get a worker to the edge. The command is `deploy`, so let's use that everywhere.
 ```
