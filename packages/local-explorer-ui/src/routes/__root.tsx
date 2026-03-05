@@ -76,7 +76,6 @@ function RootLayout() {
 				doNamespaces={loaderData.doNamespaces}
 				kvError={loaderData.kvError}
 				kvNamespaces={loaderData.kvNamespaces}
-				loading={false}
 			/>
 			<main className="flex-1 overflow-y-auto flex flex-col">
 				<Outlet />
