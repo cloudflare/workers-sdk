@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,6 +6,13 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig, preview } from "vite";
 
 export default defineConfig({
+	builder: {
+		async buildApp(builder) {
+			const clientEnvironment = builder.environments.client;
+			assert(clientEnvironment, 'No "client" environment');
+			await builder.build(clientEnvironment);
+		},
+	},
 	plugins: [
 		cloudflare({
 			inspectorPort: false,
