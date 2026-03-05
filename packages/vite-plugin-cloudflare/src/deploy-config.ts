@@ -27,8 +27,7 @@ export function getWorkerConfigs(root: string, isPrerender: boolean) {
 	return [
 		...(isPrerender && deployConfig.prerenderWorkerConfigPath
 			? [{ configPath: deployConfig.prerenderWorkerConfigPath }]
-			: []),
-		{ configPath: deployConfig.configPath },
+			: [{ configPath: deployConfig.configPath }]),
 		...deployConfig.auxiliaryWorkers,
 	].map(({ configPath }) => {
 		const resolvedConfigPath = path.resolve(
