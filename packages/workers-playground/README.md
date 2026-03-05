@@ -10,13 +10,14 @@ It is deployed as a Cloudflare Worker with static assets (assets-only in product
 
 - Ensure the rest of the team are aware you're working on the Workers Playground, as there's only one instance of the testing `playground-preview-worker`.
 
-- Run `pnpm run dev` in the root of this package. That will start the local Vite server for the playground frontend, with API calls hitting the testing `playground-preview-worker`.
+- Run `pnpm dev -F @cloudflare/workers-playground` in the root of the repository.
+  That will start the local Vite server for the playground frontend, with API calls hitting the testing `playground-preview-worker`.
 
 - To test changes to the playground preview worker, run `pnpm run deploy:testing` in `packages/playground-preview-worker` to deploy it to the test environment.
 
 ## Building
 
-1. Run `pnpm -F workers-playground build`
+1. Run `pnpm build -F @cloudflare/workers-playground`
 
 This generates the files into the `dist` directory that can then be deployed as a Cloudflare Worker with static assets.
 
