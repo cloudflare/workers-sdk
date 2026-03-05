@@ -199,10 +199,10 @@ describe("tunnel commands", () => {
 		});
 
 		it("should handle non-existent tunnel", async ({ expect }) => {
-			mockTunnelGetNotFound("nonexistent-id");
+			mockTunnelGetNotFound("f70ff985-a4ef-4643-bbbc-4a0ed4fc0000");
 
 			await expect(
-				runWrangler("tunnel info nonexistent-id")
+				runWrangler("tunnel info f70ff985-a4ef-4643-bbbc-4a0ed4fc0000")
 			).rejects.toThrowError(UserError);
 
 			expect(std.err).toContain("ERROR");
