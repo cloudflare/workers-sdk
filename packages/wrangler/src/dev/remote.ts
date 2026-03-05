@@ -94,7 +94,7 @@ export async function createRemoteWorkerInit(props: {
 	modules: CfModule[];
 	complianceConfig: ComplianceConfig;
 	accountId: string;
-	name: string | undefined;
+	name: string;
 	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	isWorkersSite: boolean;
@@ -145,15 +145,14 @@ export async function createRemoteWorkerInit(props: {
 		});
 	}
 
-	const assetsJwt =
-		props.assets && props.name
-			? await syncAssets(
-					props.complianceConfig,
-					props.accountId,
-					props.assets.directory,
-					props.name
-				)
-			: undefined;
+	const assetsJwt = props.assets
+		? await syncAssets(
+				props.complianceConfig,
+				props.accountId,
+				props.assets.directory,
+				props.name
+			)
+		: undefined;
 
 	const bindings = { ...props.bindings };
 

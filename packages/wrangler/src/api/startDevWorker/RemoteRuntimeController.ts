@@ -53,7 +53,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
-			name: string | undefined;
+			name: string;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
@@ -85,12 +85,11 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #previewToken(
-		props: Omit<CreateRemoteWorkerInitProps, "name"> &
+		props: CreateRemoteWorkerInitProps &
 			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
-				name: string | undefined;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
