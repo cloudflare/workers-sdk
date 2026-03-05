@@ -290,6 +290,10 @@ async function buildProjectWorkerOptions(
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
 
+	// Vitest runs all test files within the same Durable Object, so promise
+	// resolution regularly crosses request boundaries (e.g. a promise created
+	// during one test file resolving during another). The default workerd
+	// behaviour would reject these cross-request promises, breaking tests.
 	runnerWorker.compatibilityFlags.push(
 		"no_handle_cross_request_promise_resolution"
 	);

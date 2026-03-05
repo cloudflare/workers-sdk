@@ -83,5 +83,16 @@ export default defineConfig(async () => {
 					JSON.stringify(builtinModules),
 			},
 		},
+		// Codemods — standalone jscodeshift-compatible transforms
+		{
+			...commonOptions,
+			entry: path.join(pkgRoot, "src", "codemods", "vitest-v3-to-v4.ts"),
+			outDir: path.join(pkgRoot, "dist", "codemods"),
+			dts: false,
+			// Codemods run in the user's Node.js environment via jscodeshift,
+			// which provides its own AST manipulation API at runtime.
+			// No bundled dependencies needed.
+			external: [/./],
+		},
 	];
 });

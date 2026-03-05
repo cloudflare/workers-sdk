@@ -1,0 +1,3 @@
+- [x] Extract session conversation from opencode.db.
+- [x] Distill actions, facts, decisions into JSON.
+- [x] End of day memory maintenance (2026-02-26).

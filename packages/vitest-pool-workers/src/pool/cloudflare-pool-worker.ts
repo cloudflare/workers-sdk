@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import path from "node:path";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
@@ -239,8 +240,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 					// Skip if specifier already has query params (e.g. `?raw`), letting Vite handle it.
 					if (maybeRule !== undefined && !specifier.includes("?")) {
 						const externalize =
-							this.options.project.config.root +
-							specifier +
+							path.join(this.options.project.config.root, specifier) +
 							`?mf_vitest_force=${maybeRule.type}`;
 
 						return this.socket.send(
