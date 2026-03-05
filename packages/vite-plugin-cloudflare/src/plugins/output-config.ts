@@ -145,7 +145,11 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 						? ctx.resolvedPluginConfig.entryWorkerEnvironmentName
 						: "client")
 			) {
-				writeDeployConfig(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
+				writeDeployConfig(
+					ctx.resolvedPluginConfig,
+					ctx.resolvedViteConfig,
+					ctx.resolvedPluginConfig.type === "assets-only"
+				);
 			}
 		},
 	};
