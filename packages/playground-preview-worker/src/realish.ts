@@ -21,20 +21,12 @@ const APIResponse = <T extends z.ZodTypeAny>(resultSchema: T) =>
 
 const PreviewSession = APIResponse(
 	z.object({
-		exchange_url: z.string(),
+		exchange_url: z.string().optional(),
 		token: z.string(),
 	})
 );
 
 type PreviewSession = z.infer<typeof PreviewSession>;
-
-const UploadToken = z.object({
-	token: z.string(),
-	inspector_websocket: z.string(),
-	prewarm: z.string(),
-});
-
-type UploadToken = z.infer<typeof UploadToken>;
 
 const UploadResult = APIResponse(
 	z.object({
@@ -45,7 +37,7 @@ const UploadResult = APIResponse(
 export type UploadResult = z.infer<typeof UploadResult>;
 
 export type RealishPreviewConfig = {
-	uploadConfigToken: UploadToken;
+	uploadConfigToken: string;
 	previewSession: PreviewSession["result"];
 };
 
@@ -64,7 +56,7 @@ async function initialiseSubdomainPreview(
 	accountId: string,
 	apiToken: string
 ): Promise<{
-	exchange_url: string;
+	exchange_url?: string;
 	token: string;
 }> {
 	const response = await cloudflareFetch(
@@ -82,10 +74,10 @@ async function initialiseSubdomainPreview(
 	return session.result;
 }
 
-async function exchangeToken(url: string): Promise<UploadToken> {
-	const response = await fetch(url);
-	const json = await response.json();
-	return UploadToken.parse(json);
+async function tryExpandToken(exchangeUrl: string): Promise<string> {
+	const response = await fetch(exchangeUrl);
+	const json = (await response.json()) as { token: string };
+	return json.token;
 }
 
 export async function setupTokens(
@@ -93,7 +85,16 @@ export async function setupTokens(
 	apiToken: string
 ): Promise<RealishPreviewConfig> {
 	const previewSession = await initialiseSubdomainPreview(accountId, apiToken);
-	const uploadConfigToken = await exchangeToken(previewSession.exchange_url);
+	let uploadConfigToken = previewSession.token;
+
+	if (previewSession.exchange_url) {
+		try {
+			uploadConfigToken = await tryExpandToken(previewSession.exchange_url);
+		} catch {
+			// Use initial token if exchange fails
+		}
+	}
+
 	return {
 		previewSession,
 		uploadConfigToken,
@@ -114,7 +115,7 @@ export async function doUpload(
 			method: "POST",
 			headers: {
 				"User-Agent": "workers-playground",
-				"cf-preview-upload-config-token": config.uploadConfigToken?.token ?? "",
+				"cf-preview-upload-config-token": config.uploadConfigToken ?? "",
 			},
 			body: worker,
 		}
