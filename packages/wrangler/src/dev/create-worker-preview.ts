@@ -5,8 +5,8 @@ import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
+import { getWorkersDevSubdomain } from "../routes";
 import { getAccessToken } from "../user/access";
-import { isAbortError } from "../utils/isAbortError";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
@@ -37,10 +37,6 @@ export interface CfAccount {
  */
 export interface CfPreviewSession {
 	/**
-	 * A randomly generated id for this session
-	 */
-	id: string;
-	/**
 	 * A value to use when creating a worker preview under a session
 	 */
 	value: string;
@@ -48,28 +44,6 @@ export interface CfPreviewSession {
 	 * The host where the session is available.
 	 */
 	host: string;
-	/**
-	 * A websocket url to a DevTools inspector.
-	 *
-	 * Workers does not have a fully-featured implementation
-	 * of the Chrome DevTools protocol, but supports the following:
-	 *  * `console.log()` output.
-	 *  * `Error` stack traces.
-	 *  * `fetch()` events.
-	 *
-	 * There is no support for breakpoints, but we want to implement
-	 * this eventually.
-	 *
-	 * @link https://chromedevtools.github.io/devtools-protocol/
-	 */
-	inspectorUrl?: URL;
-	/**
-	 * A url to prewarm the preview session.
-	 *
-	 * @example
-	 * fetch(prewarmUrl, { method: 'POST' })
-	 */
-	prewarmUrl: URL;
 }
 
 /**
@@ -109,32 +83,6 @@ export interface CfPreviewToken {
 	 */
 	host: string;
 	/**
-	 * A websocket url to a DevTools inspector.
-	 *
-	 * Workers does not have a fully-featured implementation
-	 * of the Chrome DevTools protocol, but supports the following:
-	 *  * `console.log()` output.
-	 *  * `Error` stack traces.
-	 *  * `fetch()` events.
-	 *
-	 * There is no support for breakpoints, but we want to implement
-	 * this eventually.
-	 *
-	 * @link https://chromedevtools.github.io/devtools-protocol/
-	 */
-	inspectorUrl?: URL;
-	/**
-	 * A url to prewarm the preview session.
-	 *
-	 * @example
-	 * fetch(prewarmUrl, { method: 'POST',
-	 * 	 headers: {
-	 *     "cf-workers-preview-token": (preview)token.value,
-	 *   }
-	 * })
-	 */
-	prewarmUrl: URL;
-	/**
 	 * A URL that when fetched starts a tail. Essentially, `wrangler tail` for realish previews.
 	 *
 	 * https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/tail/methods/create/
@@ -156,30 +104,15 @@ function switchHost(
 	url.hostname = zonePreview ? host ?? url.hostname : url.hostname;
 	return url;
 }
+
 /**
- * Generates a preview session token.
+ * Try and get a re-encoded token from the edge. This is expected to fail sometimes, depending on zone settings
  */
-export async function createPreviewSession(
-	complianceConfig: ComplianceConfig,
-	account: CfAccount,
+async function tryExpandToken(
+	exchange_url: string,
 	ctx: CfWorkerContext,
-	abortSignal: AbortSignal,
-	tailLogs: boolean
-): Promise<CfPreviewSession> {
-	const { accountId, apiToken } = account;
-	const initUrl = ctx.zone
-		? `/zones/${ctx.zone}/workers/edge-preview`
-		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
-
-	const { exchange_url } = await fetchResult<{ exchange_url: string }>(
-		complianceConfig,
-		initUrl,
-		undefined,
-		undefined,
-		abortSignal,
-		apiToken
-	);
-
+	abortSignal: AbortSignal
+) {
 	const switchedExchangeUrl = switchHost(exchange_url, ctx.host, !!ctx.zone);
 
 	const headers: HeadersInit = {};
@@ -209,23 +142,53 @@ export async function createPreviewSession(
 	logger.debugWithSanitization("RESPONSE:", bodyText);
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
+
+	const { token } = parseJSON(bodyText) as {
+		token: string;
+	};
+	return token;
+}
+/**
+ * Generates a preview session token.
+ */
+export async function createPreviewSession(
+	complianceConfig: ComplianceConfig,
+	account: CfAccount,
+	ctx: CfWorkerContext,
+	abortSignal: AbortSignal,
+	name: string | undefined
+): Promise<CfPreviewSession> {
+	const { accountId, apiToken } = account;
+	const initUrl = ctx.zone
+		? `/zones/${ctx.zone}/workers/edge-preview`
+		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
+
+	const { token, exchange_url } = await fetchResult<{
+		token: string;
+		exchange_url: string;
+	}>(complianceConfig, initUrl, undefined, undefined, abortSignal, apiToken);
+
+	let previewSessionToken = token;
+
 	try {
-		const { inspector_websocket, prewarm, token } = parseJSON(bodyText) as {
-			inspector_websocket: string;
-			token: string;
-			prewarm: string;
-		};
-		let inspectorUrl: URL | undefined;
-		if (!tailLogs) {
-			inspectorUrl = switchHost(inspector_websocket, ctx.host, !!ctx.zone);
-			inspectorUrl.searchParams.append("cf_workers_preview_token", token);
+		previewSessionToken = await tryExpandToken(exchange_url, ctx, abortSignal);
+	} catch {
+		// Ignore failures. This is an expected case with particular zone settings
+	}
+
+	try {
+		let host = ctx.host;
+		if (!host) {
+			const subdomain = await getWorkersDevSubdomain(
+				complianceConfig,
+				account.accountId,
+				undefined
+			);
+			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}
 		return {
-			id: crypto.randomUUID(),
-			value: token,
-			host: ctx.host ?? inspectorUrl?.host ?? switchedExchangeUrl.host,
-			prewarmUrl: switchHost(prewarm, ctx.host, !!ctx.zone),
-			inspectorUrl,
+			value: previewSessionToken,
+			host: host,
 		};
 	} catch (e) {
 		if (!(e instanceof ParseError)) {
@@ -254,7 +217,7 @@ async function createPreviewToken(
 	abortSignal: AbortSignal,
 	minimal_mode?: boolean
 ): Promise<CfPreviewToken> {
-	const { value, host, inspectorUrl, prewarmUrl } = session;
+	const { value, host } = session;
 	const { accountId } = account;
 	const url =
 		ctx.env && ctx.useServiceEnvironments
@@ -303,22 +266,7 @@ async function createPreviewToken(
 
 	return {
 		value: preview_token,
-		host:
-			ctx.host ??
-			(worker.name
-				? `${
-						worker.name
-						// TODO: this should also probably have the env prefix
-						// but it doesn't appear to work yet, instead giving us the
-						// "There is nothing here yet" screen
-						// ctx.env && ctx.useServiceEnvironments
-						//   ? `${ctx.env}.${worker.name}`
-						//   : worker.name
-					}.${host.split(".").slice(1).join(".")}`
-				: host),
-
-		inspectorUrl,
-		prewarmUrl,
+		host,
 		tailUrl: tail_url,
 	};
 }
@@ -346,30 +294,6 @@ export async function createWorkerPreview(
 		session,
 		abortSignal,
 		minimal_mode
-	);
-	const accessToken = await getAccessToken(token.prewarmUrl.hostname);
-
-	const headers: HeadersInit = { "cf-workers-preview-token": token.value };
-	if (accessToken) {
-		headers.cookie = `CF_Authorization=${accessToken}`;
-	}
-
-	// fire and forget the prewarm call
-	fetch(token.prewarmUrl.href, {
-		method: "POST",
-		signal: abortSignal,
-		headers,
-	}).then(
-		(response) => {
-			if (!response.ok) {
-				logger.warn("worker failed to prewarm: ", response.statusText);
-			}
-		},
-		(err) => {
-			if (isAbortError(err)) {
-				logger.warn("worker failed to prewarm: ", err);
-			}
-		}
 	);
 
 	return token;

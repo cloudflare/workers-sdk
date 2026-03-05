@@ -53,7 +53,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
-			tail_logs: boolean;
+			name: string | undefined;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
@@ -65,7 +65,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				workerAccount,
 				workerContext,
 				this.#abortController.signal,
-				props.tail_logs
+				props.name
 			);
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -90,7 +90,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
-				tail_logs: boolean;
+				name: string | undefined;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
@@ -128,12 +128,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				}
 			);
 
-			const scriptId =
-				props.name ||
-				(workerContext.zone
-					? this.#session.id
-					: this.#session.host.split(".")[0]);
-
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (props.bundleId !== this.#currentBundleId) {
@@ -144,7 +138,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bundle: props.bundle,
 				modules: props.modules,
 				accountId: props.accountId,
-				name: scriptId,
+				name: props.name,
 				useServiceEnvironments: props.useServiceEnvironments,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
@@ -171,7 +165,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				props.minimal_mode
 			);
 
-			if (props.tail_logs && workerPreviewToken.tailUrl) {
+			if (workerPreviewToken.tailUrl) {
 				this.#activeTail = new WebSocket(
 					workerPreviewToken.tailUrl,
 					TRACE_VERSION,
@@ -226,7 +220,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			routes,
 			sendMetrics: config.sendMetrics,
 			configPath: config.config,
-			tail_logs: !!config.experimental?.tailLogs,
+			name: config.name,
 		});
 	}
 
@@ -291,7 +285,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			configPath: config.config,
 			bundleId,
 			minimal_mode: config.dev.remote === "minimal",
-			tail_logs: !!config.experimental?.tailLogs,
 		});
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
@@ -312,16 +305,6 @@ export class RemoteRuntimeController extends RuntimeController {
 					hostname: token.host,
 					port: "443",
 				},
-				...(!config.experimental?.tailLogs && token.inspectorUrl
-					? {
-							userWorkerInspectorUrl: {
-								protocol: token.inspectorUrl.protocol,
-								hostname: token.inspectorUrl.hostname,
-								port: token.inspectorUrl.port.toString(),
-								pathname: token.inspectorUrl.pathname,
-							},
-						}
-					: {}),
 				headers: {
 					"cf-workers-preview-token": token.value,
 					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
