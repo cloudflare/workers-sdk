@@ -26,7 +26,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  deploy-pages-projects:
+  deploy-projects:
     # Only run this on PRs that are for the "cloudflare" org and not "from" `main`
     # - non-Cloudflare PRs will not have the secrets needed
     # - PRs "from" main would accidentally do a production deployment
