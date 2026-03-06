@@ -24,8 +24,8 @@ export const tunnelListCommand = createCommand({
 
 		logger.table(
 			tunnels.map((tunnel) => ({
-				id: tunnel.id,
-				name: tunnel.name,
+				id: tunnel.id ?? "",
+				name: tunnel.name ?? "",
 				status: tunnel.status ?? "unknown",
 				created_at: tunnel.created_at
 					? new Date(tunnel.created_at).toLocaleString()

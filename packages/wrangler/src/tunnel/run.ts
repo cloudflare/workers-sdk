@@ -55,6 +55,11 @@ export const tunnelRunCommand = createCommand({
 			try {
 				tokenStr = await getTunnelToken(sdk, accountId, tunnelId);
 			} catch (e) {
+				// Re-throw UserErrors (e.g. permission errors) as-is so the
+				// detailed guidance from withTunnelErrorHandling isn't lost.
+				if (e instanceof UserError) {
+					throw e;
+				}
 				throw new UserError(
 					`Failed to get tunnel token for "${args.tunnel}".\n\n` +
 						`This could mean:\n` +
