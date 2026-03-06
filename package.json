@@ -74,7 +74,7 @@
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
 			"@types/node": "$@types/node",
-			"vitest>vite": "^5.0.0",
+			"vitest>vite": "catalog:default",
 			"@types/node>undici-types": "catalog:default"
 		},
 		"patchedDependencies": {
