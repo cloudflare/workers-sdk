@@ -5,7 +5,7 @@ import {
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
 import { maybeHandleRunRequest, runInRunnerObject } from "./durable-objects";
-import { getResolvedMainPath, stripInternalEnv } from "./env";
+import { getResolvedMainPath } from "./env";
 import { patchAndRunWithHandlerContext } from "./patch-ctx";
 
 // =============================================================================
@@ -17,19 +17,16 @@ import { patchAndRunWithHandlerContext } from "./patch-ctx";
  * execution pipeline. Can be called from any I/O context, and will ensure the
  * request is run from within the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__`.
  */
-function importModule(
-	env: Env,
+async function importModule(
 	specifier: string
 ): Promise<Record<string, unknown>> {
-	return runInRunnerObject(env, (instance) => {
-		if (instance.executor === undefined) {
-			const message =
-				"Expected Vitest to start running before importing modules.\n" +
-				"This usually means you have multiple `vitest` versions installed.\n" +
-				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
-			throw new Error(message);
-		}
-		return instance.executor.executeId(specifier);
+	/**
+	 * We need to run this import inside the Runner Object, or we get errors like:
+	 *  - The Workers runtime canceled this request because it detected that your Worker's code had hung and would never generate a response. Refer to: https://developers.cloudflare.com/workers/observability/errors/
+	 *  - Cannot perform I/O on behalf of a different Durable Object. I/O objects (such as streams, request/response bodies, and others) created in the context of one Durable Object cannot be accessed from a different Durable Object in the same isolate. This is a limitation of Cloudflare Workers which allows us to improve overall performance.
+	 */
+	return runInRunnerObject(() => {
+		return __vitest_mocker__.moduleRunner.import(specifier);
 	});
 }
 
@@ -88,7 +85,9 @@ function createProxyPrototypeClass<
  */
 function getRPCProperty(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
-	instance: WorkerEntrypoint | DurableObjectClass,
+	instance:
+		| WorkerEntrypoint<Record<string, unknown> | Cloudflare.Env>
+		| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>,
 	key: string
 ): unknown {
 	const prototypeHasKey = Reflect.has(ctor.prototype, key);
@@ -156,22 +155,22 @@ function getRPCPropertyCallableThenable(
  * Instead, we define this function to extract these members, and provide type
  * safety for callers.
  */
-function getEntrypointState(instance: WorkerEntrypoint<InternalUserEnv>): {
+function getEntrypointState(instance: WorkerEntrypoint<Cloudflare.Env>): {
 	ctx: ExecutionContext;
-	env: InternalUserEnv;
+	env: Cloudflare.Env;
 };
-function getEntrypointState(instance: DurableObjectClass<InternalUserEnv>): {
+function getEntrypointState(instance: DurableObjectClass<Cloudflare.Env>): {
 	ctx: DurableObjectState;
-	env: InternalUserEnv;
+	env: Cloudflare.Env;
 };
 function getEntrypointState(
 	instance:
-		| WorkerEntrypoint<InternalUserEnv>
-		| DurableObjectClass<InternalUserEnv>
+		| WorkerEntrypoint<Cloudflare.Env>
+		| DurableObjectClass<Cloudflare.Env>
 ) {
 	return instance as unknown as {
 		ctx: ExecutionContext | DurableObjectState;
-		env: InternalUserEnv;
+		env: Cloudflare.Env;
 	};
 }
 
@@ -183,7 +182,6 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"scheduled",
 	"queue",
 	"test",
-	"tailStream",
 	"email",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
@@ -200,10 +198,10 @@ type UnbrandedKeys<T> = Exclude<keyof T, `__${string}_BRAND`>;
 // Check that we've included all possible keys
 // noinspection JSUnusedLocalSymbols
 const _workerEntrypointExhaustive: (typeof WORKER_ENTRYPOINT_KEYS)[number] =
-	undefined as unknown as UnbrandedKeys<WorkerEntrypoint<Env>>;
+	undefined as unknown as UnbrandedKeys<WorkerEntrypoint<Cloudflare.Env>>;
 // noinspection JSUnusedLocalSymbols
 const _durableObjectExhaustive: (typeof DURABLE_OBJECT_KEYS)[number] =
-	undefined as unknown as UnbrandedKeys<DurableObjectClass<Env>>;
+	undefined as unknown as UnbrandedKeys<DurableObjectClass<Cloudflare.Env>>;
 
 // =============================================================================
 // `WorkerEntrypoint` wrappers
@@ -222,11 +220,11 @@ type WorkerEntrypointConstructor = {
  * This requires importing the `main` module with Vite.
  */
 async function getWorkerEntrypointExport(
-	env: Env,
+	env: Cloudflare.Env,
 	entrypoint: string
 ): Promise<{ mainPath: string; entrypointValue: unknown }> {
 	const mainPath = getResolvedMainPath("service");
-	const mainModule = await importModule(env, mainPath);
+	const mainModule = await importModule(mainPath);
 	const entrypointValue =
 		typeof mainModule === "object" &&
 		mainModule !== null &&
@@ -248,7 +246,7 @@ async function getWorkerEntrypointExport(
  * with Vite, so will always return a `Promise.`
  */
 async function getWorkerEntrypointRPCProperty(
-	wrapper: WorkerEntrypoint<InternalUserEnv>,
+	wrapper: WorkerEntrypoint<Cloudflare.Env>,
 	entrypoint: string,
 	key: string
 ): Promise<unknown> {
@@ -257,7 +255,6 @@ async function getWorkerEntrypointRPCProperty(
 		env,
 		entrypoint
 	);
-	const userEnv = stripInternalEnv(env);
 	// Ensure constructor and properties execute with ctx `AsyncLocalStorage` set
 	return patchAndRunWithHandlerContext(ctx, () => {
 		const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\` for RPC`;
@@ -265,7 +262,7 @@ async function getWorkerEntrypointRPCProperty(
 			throw new TypeError(expectedWorkerEntrypointMessage);
 		}
 		const ctor = entrypointValue as WorkerEntrypointConstructor;
-		const instance = new ctor(ctx, userEnv);
+		const instance = new ctor(ctx, env);
 		// noinspection SuspiciousTypeOfGuard
 		if (!(instance instanceof WorkerEntrypoint)) {
 			throw new TypeError(expectedWorkerEntrypointMessage);
@@ -288,7 +285,7 @@ export function createWorkerEntrypointWrapper(
 ): typeof WorkerEntrypoint {
 	const Wrapper = createProxyPrototypeClass(
 		WorkerEntrypoint,
-		function (this: WorkerEntrypoint<InternalUserEnv>, key) {
+		function (this: WorkerEntrypoint<Cloudflare.Env>, key) {
 			// All `ExportedHandler` keys are reserved and cannot be called over RPC
 			if ((DURABLE_OBJECT_KEYS as readonly string[]).includes(key)) {
 				return;
@@ -300,23 +297,22 @@ export function createWorkerEntrypointWrapper(
 	);
 
 	// Add prototype methods for all default handlers
-	// const prototype = Entrypoint.prototype as unknown as Record<string, unknown>;
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (
-			this: WorkerEntrypoint<InternalUserEnv>,
+			this: WorkerEntrypoint<Cloudflare.Env>,
 			thing: unknown
 		) {
 			const { mainPath, entrypointValue } = await getWorkerEntrypointExport(
 				this.env,
 				entrypoint
 			);
-			const userEnv = stripInternalEnv(this.env);
+
 			return patchAndRunWithHandlerContext(this.ctx, () => {
 				if (typeof entrypointValue === "object" && entrypointValue !== null) {
 					// Assuming the user has defined an `ExportedHandler`
 					const maybeFn = (entrypointValue as Record<string, unknown>)[key];
 					if (typeof maybeFn === "function") {
-						return maybeFn.call(entrypointValue, thing, userEnv, this.ctx);
+						return maybeFn.call(entrypointValue, thing, this.env, this.ctx);
 					} else {
 						const message = `Expected ${entrypoint} export of ${mainPath} to define a \`${key}()\` function`;
 						throw new TypeError(message);
@@ -324,7 +320,7 @@ export function createWorkerEntrypointWrapper(
 				} else if (typeof entrypointValue === "function") {
 					// Assuming the user has defined a `WorkerEntrypoint` subclass
 					const ctor = entrypointValue as WorkerEntrypointConstructor;
-					const instance = new ctor(this.ctx, userEnv);
+					const instance = new ctor(this.ctx, this.env);
 					// noinspection SuspiciousTypeOfGuard
 					if (!(instance instanceof WorkerEntrypoint)) {
 						const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\``;
@@ -339,13 +335,12 @@ export function createWorkerEntrypointWrapper(
 					}
 				} else {
 					// Assuming the user has messed up
-					const message = `Expected ${entrypoint} export of ${mainPath}to be an object or a class, got ${entrypointValue}`;
+					const message = `Expected ${entrypoint} export of ${mainPath} to be an object or a class, got ${entrypointValue}`;
 					throw new TypeError(message);
 				}
 			});
 		};
 	}
-
 	return Wrapper;
 }
 
@@ -356,7 +351,7 @@ export function createWorkerEntrypointWrapper(
 type DurableObjectConstructor = {
 	new (
 		...args: ConstructorParameters<typeof DurableObjectClass>
-	): DurableObject | DurableObjectClass<Record<string, unknown>>;
+	): DurableObject | DurableObjectClass;
 };
 
 const kInstanceConstructor = Symbol("kInstanceConstructor");
@@ -364,14 +359,18 @@ const kInstance = Symbol("kInstance");
 const kEnsureInstance = Symbol("kEnsureInstance");
 type DurableObjectWrapperExtraPrototype = {
 	[kInstanceConstructor]: DurableObjectConstructor;
-	[kInstance]: DurableObject | DurableObjectClass<Record<string, unknown>>;
+	[kInstance]:
+		| DurableObject
+		| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>;
 	[kEnsureInstance](): Promise<{
 		mainPath: string;
 		instanceCtor: DurableObjectConstructor;
-		instance: DurableObject | DurableObjectClass<Record<string, unknown>>;
+		instance:
+			| DurableObject
+			| DurableObjectClass<Record<string, unknown> | Cloudflare.Env>;
 	}>;
 };
-type DurableObjectWrapper = DurableObjectClass<InternalUserEnv> &
+type DurableObjectWrapper = DurableObjectClass<Cloudflare.Env> &
 	DurableObjectWrapperExtraPrototype;
 
 async function getDurableObjectRPCProperty(
@@ -416,7 +415,7 @@ export function createDurableObjectWrapper(
 		const mainPath = getResolvedMainPath("Durable Object");
 		// `ensureInstance()` may be called multiple times concurrently.
 		// We're assuming `importModule()` will only import the module once.
-		const mainModule = await importModule(env, mainPath);
+		const mainModule = await importModule(mainPath);
 		const constructor = mainModule[className];
 		if (typeof constructor !== "function") {
 			throw new TypeError(
@@ -440,8 +439,7 @@ export function createDurableObjectWrapper(
 			assert.fail("Unreachable");
 		}
 		if (this[kInstance] === undefined) {
-			const userEnv = stripInternalEnv(env);
-			this[kInstance] = new this[kInstanceConstructor](ctx, userEnv);
+			this[kInstance] = new this[kInstanceConstructor](ctx, env);
 			// Wait for any `blockConcurrencyWhile()`s in the constructor to complete
 			await ctx.blockConcurrencyWhile(async () => {});
 		}
@@ -512,14 +510,14 @@ type WorkflowEntrypointConstructor = {
 export function createWorkflowEntrypointWrapper(entrypoint: string) {
 	const Wrapper = createProxyPrototypeClass(
 		WorkflowEntrypoint,
-		function (this: WorkflowEntrypoint<InternalUserEnv>, key) {
+		function (this: WorkflowEntrypoint<Cloudflare.Env>, key) {
 			// only Workflow `run` should be exposed over RPC
 			if (!["run"].includes(key)) {
 				return;
 			}
 
 			const property = getWorkerEntrypointRPCProperty(
-				this as unknown as WorkerEntrypoint<InternalUserEnv>,
+				this as unknown as WorkerEntrypoint<Cloudflare.Env>,
 				entrypoint,
 				key
 			);
@@ -528,19 +526,18 @@ export function createWorkflowEntrypointWrapper(entrypoint: string) {
 	);
 
 	Wrapper.prototype.run = async function (
-		this: WorkflowEntrypoint<InternalUserEnv>,
+		this: WorkflowEntrypoint<Cloudflare.Env>,
 		...args
 	) {
 		const { mainPath, entrypointValue } = await getWorkerEntrypointExport(
 			this.env,
 			entrypoint
 		);
-		const userEnv = stripInternalEnv(this.env);
 		// workflow entrypoint value should always be a constructor
 		if (typeof entrypointValue === "function") {
 			// Assuming the user has defined a `WorkflowEntrypoint` subclass
 			const ctor = entrypointValue as WorkflowEntrypointConstructor;
-			const instance = new ctor(this.ctx, userEnv);
+			const instance = new ctor(this.ctx, this.env);
 			// noinspection SuspiciousTypeOfGuard
 			if (!(instance instanceof WorkflowEntrypoint)) {
 				const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkflowEntrypoint\``;

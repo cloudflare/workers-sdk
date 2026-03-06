@@ -6,14 +6,14 @@ import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
 import { removeDir } from "@cloudflare/workers-utils";
 import { version } from "../package.json";
-import type { GlobalSetupContext } from "vitest/node";
+import type { TestProject } from "vitest/node";
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const packagesRoot = path.resolve(repoRoot, "packages");
 
 // Using a global setup means we can modify tests without having to re-install
 // packages into our temporary directory
-export default async function ({ provide }: GlobalSetupContext) {
+export default async function ({ provide }: TestProject) {
 	const stop = await startMockNpmRegistry("@cloudflare/vitest-pool-workers");
 
 	// Create temporary directory

@@ -1,13 +1,6 @@
 import { env } from "cloudflare:test";
 import { it } from "vitest";
 
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv {
-		AUXILIARY_WORKER: Fetcher;
-	}
-}
-
 it("uses the correct context exports on the auxiliary worker", async ({
 	expect,
 }) => {
