@@ -78,6 +78,9 @@ type ListKeysQuery = NonNullable<
  */
 export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 	const namespace_id = c.req.param("namespace_id");
+	if (!namespace_id) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
 	const cursor = query.cursor;
 	const limit = query.limit;
 	const prefix = query.prefix;
@@ -112,6 +115,9 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 export async function getKVValue(c: AppContext) {
 	const namespace_id = c.req.param("namespace_id");
 	const key_name = c.req.param("key_name");
+	if (!namespace_id || !key_name) {
+		return errorResponse(400, 10000, "Missing required path parameters");
+	}
 
 	const kv = getKVBinding(c.env, namespace_id);
 	if (!kv) {
@@ -134,6 +140,9 @@ export async function getKVValue(c: AppContext) {
 export async function putKVValue(c: AppContext) {
 	const namespace_id = c.req.param("namespace_id");
 	const key_name = c.req.param("key_name");
+	if (!namespace_id || !key_name) {
+		return errorResponse(400, 10000, "Missing required path parameters");
+	}
 
 	const kv = getKVBinding(c.env, namespace_id);
 	if (!kv) {
@@ -195,6 +204,9 @@ export async function putKVValue(c: AppContext) {
 export async function deleteKVValue(c: AppContext) {
 	const namespace_id = c.req.param("namespace_id");
 	const key_name = c.req.param("key_name");
+	if (!namespace_id || !key_name) {
+		return errorResponse(400, 10000, "Missing required path parameters");
+	}
 
 	const kv = getKVBinding(c.env, namespace_id);
 	if (!kv) {
@@ -214,6 +226,9 @@ type BulkGetBody = NonNullable<
  */
 export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	const namespace_id = c.req.param("namespace_id");
+	if (!namespace_id) {
+		return errorResponse(400, 10000, "Missing namespace_id parameter");
+	}
 	const { keys } = body;
 
 	const kv = getKVBinding(c.env, namespace_id);
