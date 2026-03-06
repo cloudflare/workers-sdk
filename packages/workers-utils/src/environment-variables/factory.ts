@@ -77,6 +77,8 @@ type VariableNames =
 
 	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
 	| "WRANGLER_CACHE_DIR"
+	/** Custom path to cloudflared binary (overrides automatic binary management). */
+	| "CLOUDFLARED_PATH"
 
 	// ## Advanced Configuration
 
