@@ -3991,6 +3991,9 @@ importers:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
         version: link:../eslint-config-shared
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-cloudflare
       '@types/glob-to-regexp':
         specifier: ^0.4.1
         version: 0.4.1
@@ -4005,22 +4008,19 @@ importers:
         version: 9.0.4
       '@vitejs/plugin-react':
         specifier: ^4.3.3
-        version: 4.3.3(vite@5.4.21(@types/node@20.19.9)(lightningcss@1.30.2))
+        version: 4.3.3(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.1))
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
       react-use-websocket:
         specifier: ^4.13.0
         version: 4.13.0
-      tsx:
-        specifier: ^3.12.8
-        version: 3.12.10
       undici:
         specifier: catalog:default
         version: 7.18.2
       vite:
-        specifier: catalog:default
-        version: 5.4.21(@types/node@20.19.9)(lightningcss@1.30.2)
+        specifier: catalog:vite-plugin
+        version: 7.1.12(@types/node@20.19.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.1)
       wrangler:
         specifier: workspace:^
         version: link:../wrangler
@@ -20391,6 +20391,17 @@ snapshots:
       '@types/babel__core': 7.20.5
       react-refresh: 0.14.2
       vite: 5.4.21(@types/node@20.19.9)(lightningcss@1.30.2)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@vitejs/plugin-react@4.3.3(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.1))':
+    dependencies:
+      '@babel/core': 7.26.0
+      '@babel/plugin-transform-react-jsx-self': 7.25.9(@babel/core@7.26.0)
+      '@babel/plugin-transform-react-jsx-source': 7.25.9(@babel/core@7.26.0)
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.14.2
+      vite: 7.1.12(@types/node@20.19.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
