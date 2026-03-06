@@ -11,6 +11,7 @@ import { getMetricsConfig } from "../metrics/metrics-config";
 import { sniffUserAgent } from "../package-manager";
 import { getInstalledPackageJson } from "../utils/packages";
 import type { Binding, StartDevWorkerInput } from "../api";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type TelemetryDataCatalogEntryBase = {
 	/** Schema version for the data entry (this is for allowing us to change the structure later on without breaking anything) */
@@ -65,19 +66,22 @@ export async function sendDeploymentToTelemetryDataCatalog({
 	projectPath,
 	bindings,
 	sendMetrics,
+	complianceConfig,
 }: {
 	accountId: string;
 	workerName: string;
 	projectPath: string;
 	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	sendMetrics?: boolean;
+	complianceConfig: ComplianceConfig;
 }): Promise<void> {
 	const metricsConfig = getMetricsConfig({ sendMetrics });
 	if (!metricsConfig.enabled) {
 		return;
 	}
 
-	const dataCatalogWorkerURL = getTelemetryDataCatalogWorkerURL();
+	const dataCatalogWorkerURL =
+		getTelemetryDataCatalogWorkerURL(complianceConfig);
 	if (!dataCatalogWorkerURL) {
 		// If telemetry data catalog URL is empty do nothing
 		return;

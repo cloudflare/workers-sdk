@@ -1038,6 +1038,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						projectPath,
 						bindings,
 						sendMetrics: config.send_metrics,
+						complianceConfig: config,
 					});
 
 					// Update service and environment tags when using environments
@@ -1102,6 +1103,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						projectPath,
 						bindings,
 						sendMetrics: config.send_metrics,
+						complianceConfig: config,
 					});
 
 					// Update service and environment tags when using environments

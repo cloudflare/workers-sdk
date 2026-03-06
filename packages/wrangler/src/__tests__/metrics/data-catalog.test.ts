@@ -8,12 +8,16 @@ import { getInstalledPackageJson } from "../../utils/packages";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { Binding, StartDevWorkerInput } from "../../api";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 const TEST_DATA_CATALOG_WORKER_URL =
 	"http://test-data-collector.devprod.workers.dev";
 
 const TEST_ACCOUNT_ID = "test-account-123";
 const TEST_WORKER_NAME = "test-worker";
+const TEST_COMPLIANCE_CONFIG: ComplianceConfig = {
+	compliance_region: "public",
+};
 
 vi.mock("../../utils/packages");
 vi.mock("../../package-manager", async (importOriginal) => ({
@@ -63,6 +67,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(requestMade).toBe(false);
@@ -92,6 +97,7 @@ describe("data-catalog", () => {
 				projectPath: ".",
 				bindings: {},
 				sendMetrics: false,
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(requestMade).toBe(false);
@@ -122,6 +128,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(requestMade).toBe(false);
@@ -163,6 +170,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings,
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -214,6 +222,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings,
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -246,6 +255,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -276,6 +286,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -324,6 +335,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -387,6 +399,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -421,6 +434,7 @@ describe("data-catalog", () => {
 					workerName: TEST_WORKER_NAME,
 					projectPath: ".",
 					bindings: {},
+					complianceConfig: TEST_COMPLIANCE_CONFIG,
 				})
 			).resolves.toBeUndefined();
 		});
@@ -439,6 +453,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).toMatchObject({
@@ -497,6 +512,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody.projectDependencies).toHaveProperty("hono");
@@ -546,6 +562,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings,
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody.bindingsCount.ai).toBe(1);
@@ -585,6 +602,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody.type).toBe("deployment");
@@ -622,6 +640,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody).not.toHaveProperty("packageManager");
@@ -644,6 +663,7 @@ describe("data-catalog", () => {
 					workerName: TEST_WORKER_NAME,
 					projectPath: ".",
 					bindings: {},
+					complianceConfig: TEST_COMPLIANCE_CONFIG,
 				});
 
 				expect(capturedBody.packageManager).toBe(pm);
@@ -696,6 +716,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			// Public package should be included
@@ -754,6 +775,7 @@ describe("data-catalog", () => {
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
 				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			// Public npm package should be included
@@ -770,6 +792,88 @@ describe("data-catalog", () => {
 			expect(capturedBody.projectDependencies).not.toHaveProperty(
 				"@myorg/internal-lib"
 			);
+		});
+
+		it("should skip execution for fedramp_high compliance region when env URL is not set", async ({
+			expect,
+		}) => {
+			// Remove the env URL stub so we test the compliance region logic
+			vi.unstubAllEnvs();
+
+			let requestMade = false;
+
+			msw.use(
+				http.post(TEST_DATA_CATALOG_WORKER_URL, () => {
+					requestMade = true;
+					return HttpResponse.json({ success: true });
+				})
+			);
+
+			await sendDeploymentToTelemetryDataCatalog({
+				accountId: TEST_ACCOUNT_ID,
+				workerName: TEST_WORKER_NAME,
+				projectPath: ".",
+				bindings: {},
+				complianceConfig: { compliance_region: "fedramp_high" },
+			});
+
+			expect(requestMade).toBe(false);
+		});
+
+		it("should skip execution for staging environment when env URL is not set", async ({
+			expect,
+		}) => {
+			// Remove the env URL stub and set staging environment
+			vi.unstubAllEnvs();
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+
+			let requestMade = false;
+
+			msw.use(
+				http.post(TEST_DATA_CATALOG_WORKER_URL, () => {
+					requestMade = true;
+					return HttpResponse.json({ success: true });
+				})
+			);
+
+			await sendDeploymentToTelemetryDataCatalog({
+				accountId: TEST_ACCOUNT_ID,
+				workerName: TEST_WORKER_NAME,
+				projectPath: ".",
+				bindings: {},
+				complianceConfig: TEST_COMPLIANCE_CONFIG,
+			});
+
+			expect(requestMade).toBe(false);
+		});
+
+		it("should send data when env URL is explicitly set for compliance region", async ({
+			expect,
+		}) => {
+			// Even with compliance region, if env URL is explicitly set, it should send
+			vi.stubEnv(
+				"TELEMETRY_DATA_CATALOG_WORKER_URL",
+				TEST_DATA_CATALOG_WORKER_URL
+			);
+
+			let requestMade = false;
+
+			msw.use(
+				http.post(TEST_DATA_CATALOG_WORKER_URL, () => {
+					requestMade = true;
+					return HttpResponse.json({ success: true });
+				})
+			);
+
+			await sendDeploymentToTelemetryDataCatalog({
+				accountId: TEST_ACCOUNT_ID,
+				workerName: TEST_WORKER_NAME,
+				projectPath: ".",
+				bindings: {},
+				complianceConfig: { compliance_region: "fedramp_high" },
+			});
+
+			expect(requestMade).toBe(true);
 		});
 	});
 });
