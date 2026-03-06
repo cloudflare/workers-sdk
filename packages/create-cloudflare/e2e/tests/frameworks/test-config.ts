@@ -281,9 +281,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "qwik:pages",
 			argv: ["--platform", "pages"],
-			// quarantined: upstream @eslint/js "latest" now resolves to v10 which
-			// conflicts with the project's eslint 9.x
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
@@ -307,9 +304,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "qwik:workers",
 			argv: ["--platform", "workers"],
-			// quarantined: upstream @eslint/js "latest" now resolves to v10 which
-			// conflicts with the project's eslint 9.x
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
@@ -842,9 +836,6 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "qwik:workers",
 			argv: ["--platform", "workers"],
-			// quarantined: upstream @eslint/js "latest" now resolves to v10 which
-			// conflicts with the project's eslint 9.x
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
