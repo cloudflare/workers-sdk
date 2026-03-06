@@ -2857,7 +2857,7 @@ function collectCoreBindingsPerEnvironment(
 
 	const { rawConfig } = experimental_readRawConfig(args);
 
-	const topLevelInheritableBindings = new Array<PerEnvBinding>();
+	const topLevelInheritableBindings: Array<PerEnvBinding> = [];
 	for (const inheritableDef of INHERITABLE_BINDINGS) {
 		const bindingName = inheritableDef.getBindingName(rawConfig);
 		if (!bindingName) {

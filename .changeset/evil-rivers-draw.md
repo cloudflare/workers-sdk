@@ -4,7 +4,7 @@
 
 Add support for inheritable bindings in type generation
 
-When using `wrangler types` with multiple environments, bindings from inheritable config properties (like `assets`) are now correctly inherited from the top-level config to all named environments. Previously, if you defined `assets.binding` at the top level with named environments, the binding would be marked as optional in the generated `Env` type because the type generation didn't account for inheritance.
+When using `wrangler types` with multiple environments, bindings from inheritable config properties (like `assets`) are now correctly inherited from the top-level config in all named environments. Previously, if you defined `assets.binding` at the top level with named environments, the binding would be marked as optional in the generated `Env` type because the type generation didn't account for inheritance.
 
 Example:
 
