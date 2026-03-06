@@ -19,6 +19,12 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - The build command being used
   - How secrets are managed (e.g. whether secrets are added individually or in bulk, whether input comes from interactive prompts, stdin, or files, and the format used for bulk imports). No secret names, values, or counts are tracked.
 - Information about your connection to Cloudflare's API (e.g. how long it takes Wrangler to deploy your Worker)
+- When running `wrangler deploy`:
+  - The Cloudflare Account ID
+  - The name of the Worker
+  - The Deployment's timestamp
+  - Binding type counts (how many bindings of each type are configured, such as KV namespaces, R2 buckets, D1 databases, Durable Objects, etc... Binding names or values are not collected)
+  - Public project dependency information (package names and version specifiers from the `dependencies` field in `package.json`, and their installed versions. `devDependencies`, `peerDependencies`, and similar are not collected. Neither are `dependencies` that point to private packages.)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
 - The major version of Node.js that the Wrangler client is running on

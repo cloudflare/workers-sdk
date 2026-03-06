@@ -45,6 +45,7 @@ import { getFlag } from "../experimental-flags";
 import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
+import { sendDeploymentToTelemetryDataCatalog } from "../metrics/data-catalog";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
 import {
@@ -815,6 +816,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const bindings = getBindings(config);
 
+		const projectPath = config.userConfigPath
+			? path.dirname(config.userConfigPath)
+			: process.cwd();
+
 		// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
 		for (const [bindingName, value] of Object.entries(props.vars ?? {})) {
 			bindings[bindingName] = {
@@ -1027,6 +1032,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						props.message
 					);
 
+					await sendDeploymentToTelemetryDataCatalog({
+						accountId,
+						workerName: scriptName,
+						projectPath,
+						bindings,
+						sendMetrics: config.send_metrics,
+						complianceConfig: config,
+					});
+
 					// Update service and environment tags when using environments
 					const nextTags = applyServiceAndEnvironmentTags(config, tags);
 
@@ -1082,6 +1096,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							})
 						)
 					);
+
+					await sendDeploymentToTelemetryDataCatalog({
+						accountId,
+						workerName: scriptName,
+						projectPath,
+						bindings,
+						sendMetrics: config.send_metrics,
+						complianceConfig: config,
+					});
 
 					// Update service and environment tags when using environments
 					const nextTags = applyServiceAndEnvironmentTags(config, tags);

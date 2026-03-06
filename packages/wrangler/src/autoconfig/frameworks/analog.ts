@@ -6,8 +6,8 @@ import { blue } from "@cloudflare/cli/colors";
 import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
+import { getInstalledPackageVersion } from "../../utils/packages";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
