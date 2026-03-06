@@ -224,5 +224,11 @@ export async function resolveTunnelId(
 		);
 	}
 
-	return tunnels[0].id ?? "";
+	const tunnelId = tunnels[0].id;
+	if (!tunnelId) {
+		throw new UserError(
+			`Tunnel "${input}" was found but has no ID. This is unexpected — please try again or use the tunnel ID directly.`
+		);
+	}
+	return tunnelId;
 }
