@@ -211,6 +211,13 @@ describe("Local Explorer API validation", () => {
 		});
 		expect(res.status).toBe(403);
 		await res.arrayBuffer();
+
+		// malformed origin blocked
+		res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "not-a-valid-url" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
 	});
 
 	test("handles CORS preflight", async ({ expect }) => {
