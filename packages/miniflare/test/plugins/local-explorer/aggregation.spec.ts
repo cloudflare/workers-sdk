@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
@@ -6,7 +6,6 @@ import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
 import { disposeWithRetry } from "../../test-shared";
-import type { WorkerDefinition } from "../../../src/shared/dev-registry-types";
 
 const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
 
