@@ -132,7 +132,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
-	containersRollout: "immediate" | "gradual" | undefined;
+	containersRollout: "immediate" | "gradual" | "none" | undefined;
 	strict: boolean | undefined;
 	tag: string | undefined;
 	message: string | undefined;
@@ -916,7 +916,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// and we have containers so that we don't get into a
 		// disjointed state where the worker updates but the container
 		// fails.
-		if (normalisedContainerConfig.length) {
+		if (
+			normalisedContainerConfig.length &&
+			props.containersRollout !== "none"
+		) {
 			// if you have a registry url specified, you don't need docker
 			const hasDockerfiles = normalisedContainerConfig.some(
 				(container) => "dockerfile" in container
@@ -1236,7 +1239,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 
-	if (normalisedContainerConfig.length) {
+	if (normalisedContainerConfig.length && props.containersRollout !== "none") {
 		assert(versionId && accountId);
 		await deployContainers(config, normalisedContainerConfig, {
 			versionId,
