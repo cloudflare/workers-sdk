@@ -1,5 +1,5 @@
 ---
-"@cloudflare/local-explorer-ui": minor
+"@cloudflare/local-explorer-ui": patch
 ---
 
 Refactors KV & sidebar to use route loaders.
