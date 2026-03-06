@@ -87,11 +87,12 @@ const defaultWorker = async () => {
 async function serialiseWorker(worker: FormData) {
 	const serialisedWorker = new Response(worker);
 
-	const generatedBoundary = serialisedWorker.headers
-		.get("content-type")
-		.split(";")[1]
-		.split("=")[1]
-		.trim();
+	const generatedBoundary =
+		// content-type is always set for a FormData response, and always has the boundary as a parameter
+		(serialisedWorker.headers.get("content-type") as string)
+			.split(";")[1]
+			.split("=")[1]
+			.trim();
 
 	// This boundary is arbitrary, it's just specified for stability
 	const fixedBoundary = "----formdata-88e2b909-318c-42df-af0d-9077f33c7988";
