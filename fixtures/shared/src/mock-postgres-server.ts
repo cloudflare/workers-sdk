@@ -190,9 +190,10 @@ export async function createMockPostgresServer(
 			}
 		});
 
-		socket.on("error", () => {
-			// Ignore socket errors (e.g., client disconnect)
-		});
+		// Prevent socket errors (e.g. ECONNRESET from abrupt client disconnects)
+		// from becoming uncaught exceptions — Node.js EventEmitters throw if an
+		// 'error' event fires with no listener attached.
+		socket.on("error", () => {});
 	});
 
 	const listeningPromise = events.once(server, "listening");
