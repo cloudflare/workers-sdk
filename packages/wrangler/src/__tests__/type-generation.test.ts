@@ -2605,10 +2605,20 @@ describe("generate types", () => {
 					},
 					env: {
 						staging: {
-							kv_namespaces: [{ binding: "KV_STAGING", id: "staging-kv" }],
+							kv_namespaces: [
+								{
+									binding: "KV_STAGING",
+									id: "staging-kv",
+								},
+							],
 						},
 						production: {
-							kv_namespaces: [{ binding: "KV_PROD", id: "prod-kv" }],
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv",
+								},
+							],
 						},
 					},
 				}),
@@ -2747,6 +2757,66 @@ describe("generate types", () => {
 					interface Env {
 						ASSETS?: Fetcher;
 						KV_PROD?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should not inherit top-level inheritable bindings when env defines the property without a binding", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					assets: {
+						binding: "ASSETS",
+						directory: "/assets",
+					},
+					env: {
+						staging: {
+							// Defines assets but without a `binding` property - should NOT inherit top-level binding
+							assets: {
+								directory: "/staging-assets",
+							},
+						},
+						production: {
+							// Does NOT define `assets` at all - should inherit top-level binding
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {}
+					interface ProductionEnv {
+						KV_PROD: KVNamespace;
+						ASSETS: Fetcher;
+					}
+					interface Env {
+						KV_PROD?: KVNamespace;
+						ASSETS?: Fetcher;
 					}
 				}
 				interface Env extends Cloudflare.Env {}

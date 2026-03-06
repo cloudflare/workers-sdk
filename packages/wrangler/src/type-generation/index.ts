@@ -2344,6 +2344,18 @@ interface InheritableBindingDefinition {
 	getBindingName: (env: RawEnvironment | undefined) => string | undefined;
 
 	/**
+	 * Check if the environment defines this inheritable property at all.
+	 *
+	 * This is used to determine if inheritance should be skipped, even when
+	 * the environment doesn't define a binding.
+	 *
+	 * For example, if an environment defines `assets: { directory: "/path" }`
+	 * without a `binding`, this method returns `true`, indicating the property
+	 * is defined and inheritance should be skipped.
+	 */
+	hasProperty: (env: RawEnvironment | undefined) => boolean;
+
+	/**
 	 * The TypeScript type for this binding
 	 */
 	type: string;
@@ -2362,6 +2374,7 @@ const INHERITABLE_BINDINGS = [
 	{
 		bindingCategory: "assets",
 		getBindingName: (env) => env?.assets?.binding,
+		hasProperty: (env) => env?.assets !== undefined,
 		type: "Fetcher",
 	},
 ] satisfies InheritableBindingDefinition[];
@@ -2857,7 +2870,10 @@ function collectCoreBindingsPerEnvironment(
 
 	const { rawConfig } = experimental_readRawConfig(args);
 
-	const topLevelInheritableBindings: Array<PerEnvBinding> = [];
+	const topLevelInheritableBindings: Array<{
+		binding: PerEnvBinding;
+		definition: InheritableBindingDefinition;
+	}> = [];
 	for (const inheritableDef of INHERITABLE_BINDINGS) {
 		const bindingName = inheritableDef.getBindingName(rawConfig);
 		if (!bindingName) {
@@ -2865,9 +2881,12 @@ function collectCoreBindingsPerEnvironment(
 		}
 
 		topLevelInheritableBindings.push({
-			bindingCategory: inheritableDef.bindingCategory,
-			name: bindingName,
-			type: inheritableDef.type,
+			binding: {
+				bindingCategory: inheritableDef.bindingCategory,
+				name: bindingName,
+				type: inheritableDef.type,
+			},
+			definition: inheritableDef,
 		});
 	}
 
@@ -2884,15 +2903,20 @@ function collectCoreBindingsPerEnvironment(
 
 		// Add top-level inheritable bindings if not already present in this environment
 		// (i.e., the environment doesn't override the inheritable property)
-		for (const inheritableBinding of topLevelInheritableBindings) {
+		for (const inheritable of topLevelInheritableBindings) {
 			const alreadyHasBinding = envBindings.some(
-				(b) => b.bindingCategory === inheritableBinding.bindingCategory
+				(b) => b.bindingCategory === inheritable.binding.bindingCategory
 			);
 			if (alreadyHasBinding) {
 				continue;
 			}
 
-			envBindings.push(inheritableBinding);
+			// Skip inheriting if the env defines the property at all (even without a binding)
+			if (inheritable.definition.hasProperty(env)) {
+				continue;
+			}
+
+			envBindings.push(inheritable.binding);
 		}
 
 		if (envBindings.length > 0) {
