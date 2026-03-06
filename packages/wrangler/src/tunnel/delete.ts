@@ -1,6 +1,5 @@
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { deleteTunnel, resolveTunnelId } from "./client";
 
@@ -39,10 +38,6 @@ export const tunnelDeleteCommand = createCommand({
 		logger.log(`Deleting tunnel "${args.tunnel}"`);
 		const tunnelId = await resolveTunnelId(sdk, accountId, args.tunnel);
 		await deleteTunnel(sdk, accountId, tunnelId);
-
-		metrics.sendMetricsEvent("delete tunnel", {
-			sendMetrics: config.send_metrics,
-		});
 
 		logger.log(`Tunnel deleted.`);
 	},

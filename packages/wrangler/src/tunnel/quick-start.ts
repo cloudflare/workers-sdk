@@ -4,7 +4,6 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import * as metrics from "../metrics";
 import { spawnCloudflared } from "./cloudflared";
 
 /**
@@ -45,13 +44,9 @@ export const tunnelQuickStartCommand = createCommand({
 		},
 	},
 	positionalArgs: ["url"],
-	async handler(args, { config, logger }) {
+	async handler(args, { logger }) {
 		logger.log(`Starting Quick Tunnel (https://try.cloudflare.com)`);
 		logger.log(`Local URL: ${args.url}`);
-
-		metrics.sendMetricsEvent("quick-start tunnel", {
-			sendMetrics: config.send_metrics,
-		});
 
 		// Build cloudflared command for quick tunnel
 		// Using the --url flag without authentication creates a temporary tunnel

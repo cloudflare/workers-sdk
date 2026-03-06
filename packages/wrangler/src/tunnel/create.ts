@@ -1,5 +1,4 @@
 import { createCommand } from "../core/create-command";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { createTunnel } from "./client";
 
@@ -23,10 +22,6 @@ export const tunnelCreateCommand = createCommand({
 		logger.log(`Creating tunnel "${args.name}"`);
 
 		const tunnel = await createTunnel(sdk, accountId, args.name);
-
-		metrics.sendMetricsEvent("create tunnel", {
-			sendMetrics: config.send_metrics,
-		});
 
 		logger.log(`Created tunnel.`);
 		logger.log(`ID: ${tunnel.id}`);

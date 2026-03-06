@@ -10,7 +10,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { CloudflareTunnelResource } from "../../tunnel/client";
+import type { CloudflareTunnel } from "../../tunnel/client";
 
 // Mock spawnCloudflared so `tunnel run` tests don't need a real binary.
 // The mock emits "exit" on next tick so the handler's Promise resolves.
@@ -37,7 +37,7 @@ vi.mock("../../tunnel/cloudflared", async () => {
 });
 
 // Default tunnel for mocking responses
-const defaultTunnel: CloudflareTunnelResource = {
+const defaultTunnel: CloudflareTunnel = {
 	id: "f70ff985-a4ef-4643-bbbc-4a0ed4fc8415",
 	name: "my-tunnel",
 	status: "healthy",
@@ -46,7 +46,7 @@ const defaultTunnel: CloudflareTunnelResource = {
 	account_tag: "some-account-id",
 };
 
-const secondTunnel: CloudflareTunnelResource = {
+const secondTunnel: CloudflareTunnel = {
 	id: "550e8400-e29b-41d4-a716-446655440000",
 	name: "api-tunnel",
 	status: "inactive",
@@ -255,6 +255,33 @@ describe("tunnel commands", () => {
 		});
 	});
 
+	describe("tunnel quick-start", () => {
+		it("should spawn cloudflared with correct args for quick tunnel", async ({
+			expect,
+		}) => {
+			const { spawnCloudflared } = await import("../../tunnel/cloudflared");
+
+			await runWrangler("tunnel quick-start http://localhost:3000");
+
+			expect(spawnCloudflared).toHaveBeenCalledTimes(1);
+			const [calledArgs] = vi.mocked(spawnCloudflared).mock.calls[0] as [
+				string[],
+			];
+
+			// Verify quick tunnel args: no auth, uses --url
+			expect(calledArgs).toContain("tunnel");
+			expect(calledArgs).toContain("--url");
+			expect(calledArgs).toContain("http://localhost:3000");
+			expect(calledArgs).toContain("--no-autoupdate");
+		});
+
+		it("should require a URL argument", async ({ expect }) => {
+			await expect(() => runWrangler("tunnel quick-start")).rejects.toThrow(
+				"Not enough non-option arguments"
+			);
+		});
+	});
+
 	describe("tunnel run", () => {
 		it("should pass token via TUNNEL_TOKEN env var, not CLI args", async ({
 			expect,
@@ -311,7 +338,7 @@ function mockTunnelCreate(): Promise<{
 	});
 }
 
-function mockTunnelList(tunnels: CloudflareTunnelResource[]) {
+function mockTunnelList(tunnels: CloudflareTunnel[]) {
 	msw.use(
 		http.get("*/accounts/:accountId/cfd_tunnel", ({ request }) => {
 			const url = new URL(request.url);
@@ -333,7 +360,7 @@ function mockTunnelList(tunnels: CloudflareTunnelResource[]) {
 	);
 }
 
-function mockTunnelGet(tunnel: CloudflareTunnelResource) {
+function mockTunnelGet(tunnel: CloudflareTunnel) {
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/cfd_tunnel/:tunnelId",

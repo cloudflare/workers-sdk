@@ -4,7 +4,6 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getTunnelToken, resolveTunnelId } from "./client";
 import { spawnCloudflared } from "./cloudflared";
@@ -75,10 +74,6 @@ export const tunnelRunCommand = createCommand({
 		} else {
 			logger.log(`Running tunnel with provided token`);
 		}
-
-		metrics.sendMetricsEvent("run tunnel", {
-			sendMetrics: config.send_metrics,
-		});
 
 		// Build cloudflared command.
 		// The token is passed via TUNNEL_TOKEN env var rather than CLI args

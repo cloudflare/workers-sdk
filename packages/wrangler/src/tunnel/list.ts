@@ -1,5 +1,4 @@
 import { createCommand } from "../core/create-command";
-import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { listTunnels } from "./client";
 
@@ -17,10 +16,6 @@ export const tunnelListCommand = createCommand({
 		logger.log(`Listing Cloudflare Tunnels`);
 
 		const tunnels = await listTunnels(sdk, accountId);
-
-		metrics.sendMetricsEvent("list tunnels", {
-			sendMetrics: config.send_metrics,
-		});
 
 		if (tunnels.length === 0) {
 			logger.log("No tunnels found.");
