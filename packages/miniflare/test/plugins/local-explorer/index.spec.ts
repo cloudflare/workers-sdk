@@ -1,3 +1,4 @@
+import http from "node:http";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
@@ -167,7 +168,6 @@ describe("Local Explorer API validation", () => {
 				result: null,
 			});
 		});
-
 		test("not found responses follow Cloudflare API format", async ({
 			expect,
 		}) => {
@@ -181,5 +181,75 @@ describe("Local Explorer API validation", () => {
 				errors: [{ code: 10000, message: "Namespace not found" }],
 			});
 		});
+	});
+
+	test("allows requests from local origins, blocks external", async ({
+		expect,
+	}) => {
+		// no origin is allowed (non-browser clients)
+		let res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`);
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+
+		// localhost, 127.0.0.1, [::1] all allowed
+		for (const origin of [
+			"http://localhost:8787",
+			"http://127.0.0.1:8787",
+			"http://[::1]:8787",
+		]) {
+			res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+				headers: { Origin: origin },
+			});
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Access-Control-Allow-Origin")).toBe(origin);
+			await res.arrayBuffer();
+		}
+
+		// external origin blocked
+		res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://evil.com" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
+	test("handles CORS preflight", async ({ expect }) => {
+		// allowed origin
+		let res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			method: "OPTIONS",
+			headers: { Origin: "http://localhost:5173" },
+		});
+		expect(res.status).toBe(204);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://localhost:5173"
+		);
+		expect(res.headers.get("Access-Control-Allow-Methods")).toBe(
+			"GET, POST, PUT, DELETE, OPTIONS"
+		);
+		await res.arrayBuffer();
+
+		// blocked origin
+		res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			method: "OPTIONS",
+			headers: { Origin: "https://attacker.com" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
+	test("blocks DNS rebinding attacks via Host header", async ({ expect }) => {
+		const url = await mf.ready;
+		const status = await new Promise<number>((resolve, reject) => {
+			const req = http.get(
+				`${url.origin}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`,
+				{ setHost: false, headers: { Host: "evil.com" } },
+				(res) => {
+					res.resume();
+					resolve(res.statusCode ?? 0);
+				}
+			);
+			req.on("error", reject);
+		});
+		expect(status).toBe(403);
 	});
 });
