@@ -33,7 +33,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: changes
         with:
           filters: |
@@ -52,7 +52,7 @@ jobs:
       - name: List changed files
         if: steps.changes.outputs.everything_but_markdown == 'true'
         id: files
-        uses: Ana06/get-changed-files@v2.3.0
+        uses: Ana06/get-changed-files@25f79e676e7ea1868813e21465014798211fad8c # v2.3.0
         with:
           format: "json"
 
