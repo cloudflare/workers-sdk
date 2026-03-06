@@ -63,6 +63,7 @@ function NamespaceView() {
 		setHasMore(loaderData.hasMore);
 		setError(null);
 		setLoading(false);
+		setLoadingMore(false);
 	}, [loaderData]);
 
 	const fetchObjects = useCallback(

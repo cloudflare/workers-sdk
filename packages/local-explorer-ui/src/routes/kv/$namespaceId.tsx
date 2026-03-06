@@ -113,6 +113,7 @@ function NamespaceView() {
 		setError(null);
 		setPrefix(undefined);
 		setLoading(false);
+		setLoadingMore(false);
 	}, [loaderData]);
 
 	const fetchEntries = useCallback(
