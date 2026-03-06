@@ -1,5 +1,5 @@
+import { MetricsRegistry } from "@cloudflare/workers-utils/metrics";
 import cookie from "cookie";
-import prom from "promjs";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
@@ -397,9 +397,8 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const registry = prom();
-		const requestCounter = registry.create(
-			"counter",
+		const registry = new MetricsRegistry();
+		const requestCounter = registry.createCounter(
 			"devprod_edge_preview_authenticated_proxy_request_total",
 			"Request counter for DevProd's edge-preview-authenticated-proxy service"
 		);
@@ -440,8 +439,7 @@ export default {
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
-				const errorCounter = registry.create(
-					"counter",
+				const errorCounter = registry.createCounter(
 					"devprod_edge_preview_authenticated_proxy_error_total",
 					"Error counter for DevProd's edge-preview-authenticated-proxy service"
 				);
