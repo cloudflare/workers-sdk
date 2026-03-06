@@ -3,7 +3,6 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import {
 	cloudflareD1ListDatabases,
 	durableObjectsNamespaceListNamespaces,
@@ -18,73 +17,65 @@ import type {
 
 export const Route = createRootRoute({
 	component: RootLayout,
+	loader: async () => {
+		const [kvResponse, d1Response, doResponse] = await Promise.allSettled([
+			workersKvNamespaceListNamespaces(),
+			cloudflareD1ListDatabases(),
+			durableObjectsNamespaceListNamespaces(),
+		]);
+
+		let kvNamespaces = new Array<WorkersKvNamespace>();
+		let kvError: string | null = null;
+		if (kvResponse.status === "fulfilled") {
+			kvNamespaces = kvResponse.value.data?.result ?? [];
+		} else {
+			kvError = `KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : JSON.stringify(kvResponse.reason)}`;
+		}
+
+		let databases = new Array<D1DatabaseResponse>();
+		let d1Error: string | null = null;
+		if (d1Response.status === "fulfilled") {
+			databases = d1Response.value.data?.result ?? [];
+		} else {
+			d1Error = `D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : JSON.stringify(d1Response.reason)}`;
+		}
+
+		let doNamespaces = new Array<WorkersNamespace>();
+		let doError: string | null = null;
+		if (doResponse.status === "fulfilled") {
+			// Only show namespaces that use SQLite storage
+			const allDoNamespaces = doResponse.value.data?.result ?? [];
+			doNamespaces = allDoNamespaces.filter((ns) => ns.use_sqlite === true);
+		} else {
+			doError = `DO Error: ${doResponse.reason instanceof Error ? doResponse.reason.message : JSON.stringify(doResponse.reason)}`;
+		}
+
+		return {
+			d1Error,
+			databases,
+			doError,
+			doNamespaces,
+			kvError,
+			kvNamespaces,
+		};
+	},
 });
 
 function RootLayout() {
-	const [loading, setLoading] = useState<boolean>(true);
-
-	const [kvNamespaces, setKvNamespaces] = useState<WorkersKvNamespace[]>([]);
-	const [kvError, setKvError] = useState<string | null>(null);
-
-	const [d1Error, setD1Error] = useState<string | null>(null);
-	const [databases, setDatabases] = useState<D1DatabaseResponse[]>([]);
-
-	const [doNamespaces, setDoNamespaces] = useState<WorkersNamespace[]>([]);
-	const [doError, setDoError] = useState<string | null>(null);
-
+	const loaderData = Route.useLoaderData();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
-
-	useEffect(() => {
-		async function fetchData() {
-			const [kvResponse, d1Response, doResponse] = await Promise.allSettled([
-				workersKvNamespaceListNamespaces(),
-				cloudflareD1ListDatabases(),
-				durableObjectsNamespaceListNamespaces(),
-			]);
-
-			if (kvResponse.status === "fulfilled") {
-				setKvNamespaces(kvResponse.value.data?.result ?? []);
-			} else {
-				setKvError(
-					`KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : JSON.stringify(kvResponse.reason)}`
-				);
-			}
-
-			if (d1Response.status === "fulfilled") {
-				setDatabases(d1Response.value.data?.result ?? []);
-			} else {
-				setD1Error(
-					`D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : JSON.stringify(d1Response.reason)}`
-				);
-			}
-
-			if (doResponse.status === "fulfilled") {
-				// Only show namespaces that use SQLite storage
-				const allDoNamespaces = doResponse.value.data?.result ?? [];
-				setDoNamespaces(allDoNamespaces.filter((ns) => ns.use_sqlite === true));
-			} else {
-				setDoError(
-					`DO Error: ${doResponse.reason instanceof Error ? doResponse.reason.message : JSON.stringify(doResponse.reason)}`
-				);
-			}
-
-			setLoading(false);
-		}
-		void fetchData();
-	}, []);
 
 	return (
 		<div className="flex min-h-screen">
 			<Sidebar
 				currentPath={currentPath}
-				d1Error={d1Error}
-				databases={databases}
-				doError={doError}
-				doNamespaces={doNamespaces}
-				kvError={kvError}
-				kvNamespaces={kvNamespaces}
-				loading={loading}
+				d1Error={loaderData.d1Error}
+				databases={loaderData.databases}
+				doError={loaderData.doError}
+				doNamespaces={loaderData.doNamespaces}
+				kvError={loaderData.kvError}
+				kvNamespaces={loaderData.kvNamespaces}
 			/>
 			<main className="flex-1 overflow-y-auto flex flex-col">
 				<Outlet />
