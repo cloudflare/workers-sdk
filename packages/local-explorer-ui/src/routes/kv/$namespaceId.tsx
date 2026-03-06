@@ -109,7 +109,9 @@ function NamespaceView() {
 		setCursor(loaderData.cursor);
 		setHasMore(loaderData.hasMore);
 		setDeleteTarget(null);
+		setDeleting(false);
 		setOverwriteConfirm(null);
+		setOverwriting(false);
 		setError(null);
 		setPrefix(undefined);
 		setLoading(false);
