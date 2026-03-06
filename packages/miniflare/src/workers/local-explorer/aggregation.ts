@@ -92,24 +92,18 @@ export async function aggregateListResults<T>(
 		return localResults;
 	}
 
-	const peerResponses = await Promise.all(
-		peerUrls.map((url) => fetchFromPeer(url, apiPath))
-	);
-
-	const allResults = [...localResults];
-
-	for (const response of peerResponses) {
-		if (response?.ok) {
+	const peerResults = await Promise.all(
+		peerUrls.map(async (url) => {
+			const response = await fetchFromPeer(url, apiPath);
+			if (!response?.ok) return [];
 			try {
 				const data = (await response.json()) as { result: T[] };
-				if (Array.isArray(data.result)) {
-					allResults.push(...data.result);
-				}
+				return Array.isArray(data.result) ? data.result : [];
 			} catch {
-				// Skip malformed responses
+				return [];
 			}
-		}
-	}
+		})
+	);
 
-	return allResults;
+	return [...localResults, ...peerResults.flat()];
 }

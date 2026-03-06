@@ -17,9 +17,6 @@ import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 
-// Re-export types for backwards compatibility
-export type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
-
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
