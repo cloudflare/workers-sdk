@@ -52,6 +52,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@fixture/shared": "workspace:*",
 		"@types/debug": "^4.1.12",
 		"@types/node": "catalog:vite-plugin",
 		"@types/pg": "^8.15.4",
