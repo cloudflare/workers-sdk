@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request, env) {
 		const url = new URL(request.url);
 		switch (url.pathname) {
 			case "/kv/seed": {
@@ -28,7 +28,7 @@ export default {
 		}
 		return new Response("Hello from Worker B!");
 	},
-};
+} satisfies ExportedHandler<Env>;
 
 export class WorkerBDurableObject extends DurableObject<Env> {
 	async fetch(_request: Request): Promise<Response> {

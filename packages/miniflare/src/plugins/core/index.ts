@@ -77,7 +77,7 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
-import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.

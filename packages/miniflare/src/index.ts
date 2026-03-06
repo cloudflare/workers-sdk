@@ -113,11 +113,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
-import {
-	DevRegistry,
-	getWorkerRegistry,
-	WorkerDefinition,
-} from "./shared/dev-registry";
+import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
 	createInboundDoProxyService,
 	createOutboundDoProxyService,
@@ -143,6 +139,7 @@ import {
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
+import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
 	D1Database,
@@ -2832,9 +2829,11 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	WorkerRegistry,
+	WorkerDefinition,
+} from "./shared/dev-registry-types";
 export {
-	type WorkerRegistry,
-	type WorkerDefinition,
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "./shared/dev-registry";
