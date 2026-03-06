@@ -4,7 +4,7 @@ import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { sendDeploymentToTelemetryDataCatalog } from "../../metrics/data-catalog";
 import { getMetricsConfig } from "../../metrics/metrics-config";
 import { sniffUserAgent } from "../../package-manager";
-import { getInstalledPackageVersion } from "../../utils/packages";
+import { getInstalledPackageJson } from "../../utils/packages";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { Binding, StartDevWorkerInput } from "../../api";
@@ -25,7 +25,7 @@ describe("data-catalog", () => {
 	runInTempDir();
 
 	beforeEach(() => {
-		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
+		vi.mocked(getInstalledPackageJson).mockReturnValue(undefined);
 		vi.mocked(sniffUserAgent).mockReturnValue("npm");
 		vi.stubEnv(
 			"TELEMETRY_DATA_CATALOG_WORKER_URL",
@@ -138,6 +138,13 @@ describe("data-catalog", () => {
 				})
 			);
 
+			vi.mocked(getInstalledPackageJson).mockImplementation((packageName) => {
+				if (packageName === "hono") {
+					return { name: "hono", version: "4.0.0" };
+				}
+				return undefined;
+			});
+
 			await seed({
 				"package.json": JSON.stringify({
 					name: "test-project",
@@ -172,6 +179,7 @@ describe("data-catalog", () => {
 				projectDependencies: {
 					hono: {
 						packageJsonVersion: "^4.0.0",
+						installedVersion: "4.0.0",
 					},
 				},
 			});
@@ -287,6 +295,19 @@ describe("data-catalog", () => {
 				})
 			);
 
+			vi.mocked(getInstalledPackageJson).mockImplementation((packageName) => {
+				if (packageName === "hono") {
+					return { name: "hono", version: "4.0.0" };
+				}
+				if (packageName === "@cloudflare/workers-types") {
+					return { name: "@cloudflare/workers-types", version: "4.20240000.0" };
+				}
+				if (packageName === "wrangler") {
+					return { name: "wrangler", version: "4.0.0" };
+				}
+				return undefined;
+			});
+
 			await seed({
 				"package.json": JSON.stringify({
 					name: "test-project",
@@ -309,24 +330,27 @@ describe("data-catalog", () => {
 				projectDependencies: {
 					hono: {
 						packageJsonVersion: "^4.0.0",
+						installedVersion: "4.0.0",
 					},
 					"@cloudflare/workers-types": {
 						packageJsonVersion: "^4.20240000.0",
+						installedVersion: "4.20240000.0",
 					},
 					wrangler: {
 						packageJsonVersion: "latest",
+						installedVersion: "4.0.0",
 					},
 				},
 			});
 		});
 
-		it("should include installed versions from getInstalledPackageVersion", async ({
+		it("should include installed versions from getInstalledPackageJson", async ({
 			expect,
 		}) => {
 			let capturedBody: {
 				projectDependencies?: Record<
 					string,
-					{ packageJsonVersion: string; installedVersion?: string }
+					{ packageJsonVersion: string; installedVersion: string }
 				>;
 			} = {};
 			msw.use(
@@ -336,17 +360,16 @@ describe("data-catalog", () => {
 				})
 			);
 
-			vi.mocked(getInstalledPackageVersion).mockImplementation(
-				(packageName) => {
-					if (packageName === "hono") {
-						return "4.1.0";
-					}
-					if (packageName === "wrangler") {
-						return "3.50.0";
-					}
-					return undefined;
+			vi.mocked(getInstalledPackageJson).mockImplementation((packageName) => {
+				if (packageName === "hono") {
+					return { name: "hono", version: "4.1.0" };
 				}
-			);
+				if (packageName === "wrangler") {
+					return { name: "wrangler", version: "3.50.0" };
+				}
+				// some-package returns undefined, so it will be filtered out
+				return undefined;
+			});
 
 			await seed({
 				"package.json": JSON.stringify({
@@ -376,14 +399,12 @@ describe("data-catalog", () => {
 						packageJsonVersion: "^3.0.0",
 						installedVersion: "3.50.0",
 					},
-					"some-package": {
-						packageJsonVersion: "1.0.0",
-					},
 				},
 			});
-			expect(
-				capturedBody.projectDependencies?.["some-package"]
-			).not.toHaveProperty("installedVersion");
+			// Packages where getInstalledPackageJson returns undefined are filtered out
+			expect(capturedBody.projectDependencies).not.toHaveProperty(
+				"some-package"
+			);
 		});
 
 		it("should silently fail on fetch errors", async ({ expect }) => {
@@ -450,6 +471,13 @@ describe("data-catalog", () => {
 					return HttpResponse.json({ success: true });
 				})
 			);
+
+			vi.mocked(getInstalledPackageJson).mockImplementation((packageName) => {
+				if (packageName === "hono") {
+					return { name: "hono", version: "4.0.0" };
+				}
+				return undefined;
+			});
 
 			await seed({
 				"package.json": JSON.stringify({
@@ -620,6 +648,128 @@ describe("data-catalog", () => {
 
 				expect(capturedBody.packageManager).toBe(pm);
 			}
+		});
+
+		it("should exclude private packages from projectDependencies", async ({
+			expect,
+		}) => {
+			let capturedBody: { projectDependencies?: Record<string, unknown> } = {};
+			msw.use(
+				http.post(TEST_DATA_CATALOG_WORKER_URL, async ({ request }) => {
+					capturedBody = (await request.json()) as typeof capturedBody;
+					return HttpResponse.json({ success: true });
+				})
+			);
+
+			vi.mocked(getInstalledPackageJson).mockImplementation((packageName) => {
+				if (packageName === "hono") {
+					return { name: "hono", version: "4.0.0" };
+				}
+				if (packageName === "my-private-lib") {
+					// This is a private package - should be excluded
+					return { name: "my-private-lib", version: "1.0.0", private: true };
+				}
+				if (packageName === "another-private-pkg") {
+					// Another private package - should be excluded
+					return {
+						name: "another-private-pkg",
+						version: "2.0.0",
+						private: true,
+					};
+				}
+				return undefined;
+			});
+
+			await seed({
+				"package.json": JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						hono: "^4.0.0",
+						"my-private-lib": "^1.0.0",
+						"another-private-pkg": "^2.0.0",
+					},
+				}),
+			});
+
+			await sendDeploymentToTelemetryDataCatalog({
+				accountId: TEST_ACCOUNT_ID,
+				workerName: TEST_WORKER_NAME,
+				projectPath: ".",
+				bindings: {},
+			});
+
+			// Public package should be included
+			expect(capturedBody.projectDependencies).toHaveProperty("hono");
+			expect(capturedBody.projectDependencies?.hono).toEqual({
+				packageJsonVersion: "^4.0.0",
+				installedVersion: "4.0.0",
+			});
+
+			// Private packages should be excluded
+			expect(capturedBody.projectDependencies).not.toHaveProperty(
+				"my-private-lib"
+			);
+			expect(capturedBody.projectDependencies).not.toHaveProperty(
+				"another-private-pkg"
+			);
+		});
+
+		it("should exclude `workspace:` packages from projectDependencies", async ({
+			expect,
+		}) => {
+			let capturedBody: { projectDependencies?: Record<string, unknown> } = {};
+			msw.use(
+				http.post(TEST_DATA_CATALOG_WORKER_URL, async ({ request }) => {
+					capturedBody = (await request.json()) as typeof capturedBody;
+					return HttpResponse.json({ success: true });
+				})
+			);
+
+			vi.mocked(getInstalledPackageJson).mockImplementation((packageName) => {
+				if (packageName === "hono") {
+					return { name: "hono", version: "4.0.0" };
+				}
+				if (packageName === "@myorg/shared-utils") {
+					return { name: "@myorg/shared-utils", version: "1.0.0" };
+				}
+				if (packageName === "@myorg/internal-lib") {
+					return { name: "@myorg/internal-lib", version: "2.0.0" };
+				}
+				return undefined;
+			});
+
+			await seed({
+				"package.json": JSON.stringify({
+					name: "test-project",
+					dependencies: {
+						hono: "^4.0.0",
+						"@myorg/shared-utils": "workspace:*",
+						"@myorg/internal-lib": "workspace:^1.0.0",
+					},
+				}),
+			});
+
+			await sendDeploymentToTelemetryDataCatalog({
+				accountId: TEST_ACCOUNT_ID,
+				workerName: TEST_WORKER_NAME,
+				projectPath: ".",
+				bindings: {},
+			});
+
+			// Public npm package should be included
+			expect(capturedBody.projectDependencies).toHaveProperty("hono");
+			expect(capturedBody.projectDependencies?.hono).toEqual({
+				packageJsonVersion: "^4.0.0",
+				installedVersion: "4.0.0",
+			});
+
+			// Workspace packages should be excluded
+			expect(capturedBody.projectDependencies).not.toHaveProperty(
+				"@myorg/shared-utils"
+			);
+			expect(capturedBody.projectDependencies).not.toHaveProperty(
+				"@myorg/internal-lib"
+			);
 		});
 	});
 });
