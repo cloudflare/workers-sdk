@@ -394,17 +394,43 @@ export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `TELEMETRY_DATA_CATALOG_WORKER_URL` specifies the URL for the telemetry data catalog worker.
- *
- * Defaults to `""` (disabling the data collection) when running in vitest (i.e. when `typeof vitest !== "undefined"`),
- * otherwise defaults to the production data collector worker's URL.
- *
- * When the value is falsy, telemetry data catalog collection is disabled.
+ * `TELEMETRY_DATA_CATALOG_WORKER_URL` specifies the URL for the telemetry data catalog worker that can be used
+ * to customize where wrangler sends the data. Setting this value to an empty string (`""`) disables the data collection altogether.
  */
-export const getTelemetryDataCatalogWorkerURL = getEnvironmentVariableFactory({
+const getEnvTelemetryDataCatalogWorkerURL = getEnvironmentVariableFactory({
 	variableName: "TELEMETRY_DATA_CATALOG_WORKER_URL",
-	defaultValue: () =>
-		typeof vitest !== "undefined"
-			? ""
-			: "https://telemetry-data-catalog-collector.devprod.workers.dev",
 });
+
+/**
+ * Gets the URL or the worker to send the telemetry catalog data to
+ *
+ * @param complianceConfig Configuration containing the compliance region setting
+ * @returns The telemetry data catalog worker URL, or undefined if the data shouldn't be collected
+ */
+export function getTelemetryDataCatalogWorkerURL(
+	complianceConfig: ComplianceConfig
+): string | undefined {
+	const envUrl = getEnvTelemetryDataCatalogWorkerURL();
+	if (envUrl !== undefined) {
+		// If a value has been specifically set via the `TELEMETRY_DATA_CATALOG_WORKER_URL`
+		// env variable we honor that
+		return envUrl;
+	}
+
+	if (getComplianceRegionSubdomain(complianceConfig)) {
+		// We don't currently collect data for compliance regions
+		return undefined;
+	}
+
+	if (getStagingSubdomain()) {
+		// We don't currently collect data for staging
+		return undefined;
+	}
+
+	if (typeof vitest !== "undefined") {
+		// This function is run in a test suite skip data collecting
+		return undefined;
+	}
+
+	return "https://telemetry-data-catalog-collector.devprod.workers.dev";
+}
