@@ -71,7 +71,7 @@
 		"@vitest/snapshot": "catalog:default",
 		"birpc": "0.2.14",
 		"capnp-es": "catalog:default",
-		"devalue": "^5.3.2",
+		"devalue": "^5.6.3",
 		"eslint": "catalog:default",
 		"get-port": "^7.1.0",
 		"semver": "^7.7.1",

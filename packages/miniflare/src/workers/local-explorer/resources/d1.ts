@@ -138,6 +138,9 @@ export async function rawD1Database(
 	body: RawDatabaseBody
 ): Promise<Response> {
 	const databaseId = c.req.param("database_id");
+	if (!databaseId) {
+		return errorResponse(400, 10000, "Missing database_id parameter");
+	}
 
 	const db = getD1Binding(c.env, databaseId);
 	if (!db) {
