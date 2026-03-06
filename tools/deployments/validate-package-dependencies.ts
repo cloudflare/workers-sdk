@@ -15,7 +15,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { glob } from "glob";
+import { glob } from "tinyglobby";
 
 export interface PackageJSON {
 	name: string;
