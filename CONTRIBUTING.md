@@ -317,7 +317,6 @@ It's also possible to generate preview builds for the applications in the reposi
 
 Once built, you can find the preview link for these applications in the [Deploy Previews](.github/workflows/deploy-previews.yml) action output
 
-
 ## PR Tests
 
 Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages. For documentation on how these testing frameworks work, see:
