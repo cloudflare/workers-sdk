@@ -54,7 +54,13 @@ function getDOBinding(
 /**
  * Get local DO namespaces from the binding map.
  */
-function getLocalDONamespaces(env: Env) {
+function getLocalDONamespaces(env: Env): {
+	id: string;
+	name: string;
+	script: string;
+	class: string;
+	use_sqlite: boolean;
+}[] {
 	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
 	return Object.entries(doBindingMap).map(([id, info]) => ({
 		id, // This is the unsafeUniqueKey - ${scriptName}-${className}

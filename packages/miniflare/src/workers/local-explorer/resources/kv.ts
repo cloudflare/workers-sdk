@@ -64,7 +64,7 @@ async function findKVNamespaceOwner(
 /**
  * Get local KV namespaces from the binding map.
  */
-function getLocalKVNamespaces(env: Env) {
+function getLocalKVNamespaces(env: Env): Array<{ id: string; title: string }> {
 	const kvBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
 	return Object.entries(kvBindingMap).map(([id, bindingName]) => ({
 		id: id,

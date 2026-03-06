@@ -601,6 +601,12 @@ function removePropertyFromSchema(schema: unknown, propertyPath: string): void {
 		if (parts.length === 1) {
 			// Simple property removal
 			delete props[parts[0]];
+			// Also remove from required array if present
+			if (Array.isArray(schemaObj.required)) {
+				schemaObj.required = (schemaObj.required as string[]).filter(
+					(r) => r !== parts[0]
+				);
+			}
 		} else {
 			// Nested property removal: e.g., "result_info.total_count"
 			// Navigate to the parent property's schema and remove from its properties
