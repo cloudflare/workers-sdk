@@ -598,12 +598,7 @@ describe("entrypoints", () => {
 
 		const rpcResponse = await fetch(new URL("/rpc", url));
 		const errors = await rpcResponse.json();
-		expect(errors).toMatchInlineSnapshot(`
-			[
-			  "Error: Cannot access "ThingObject#property" as Durable Object RPC is not yet supported between multiple dev sessions.",
-			  "Error: Cannot access "ThingObject#method" as Durable Object RPC is not yet supported between multiple dev sessions.",
-			]
-		`);
+		expect(errors).toMatchInlineSnapshot(`[]`);
 	});
 
 	test("should support binding to Durable Object in same worker", async ({

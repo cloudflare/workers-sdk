@@ -2,10 +2,10 @@ import assert from "node:assert";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
-import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
 import { CoreBindings } from "../../workers";
 import {
 	DurableObjectClassNames,
+	SERVICE_DEV_REGISTRY_PROXY,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import {
@@ -141,8 +141,8 @@ export function constructExplorerBindingMap(
 	// durableObjectClassNames includes internal and unbound DOs,
 	// but not external ones, which we don't want anyway.
 	for (const [serviceName, classMap] of durableObjectClassNames) {
-		// Skip the outbound DO proxy service (used for external DOs)
-		if (serviceName === getUserServiceName(OUTBOUND_DO_PROXY_SERVICE_NAME)) {
+		// Skip the dev registry proxy service (hosts external DO proxies)
+		if (serviceName === SERVICE_DEV_REGISTRY_PROXY) {
 			continue;
 		}
 		const scriptName = serviceName.replace(/^core:user:/, "");

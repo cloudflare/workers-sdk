@@ -45,8 +45,8 @@ may create an `entry:local` socket if the configured `host` doesn't permit
 access over the local loopback address. Miniflare also supports opening sockets
 directly to user Workers (`core:user:*`) using the `unsafeDirectSockets` option.
 Wrangler uses this option to listen on the well-known inspector port for its
-inspector proxy service, and to expose Cap'n-Proto-over-http-capable sockets for
-RPC between `wrangler dev` sessions.
+inspector proxy service. Cross-worker RPC between `wrangler dev` sessions is
+handled via workerd's native debug port instead.
 
 ![Miniflare Services Architecture](./miniflare.drawio.svg)
 

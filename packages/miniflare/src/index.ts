@@ -22,6 +22,7 @@ import {
 	Pool,
 	Response as UndiciResponse,
 } from "undici";
+import SCRIPT_DEV_REGISTRY_PROXY from "worker:core/dev-registry-proxy";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -66,8 +67,10 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 	SECRET_STORE_PLUGIN_NAME,
+	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
 	SharedOptions,
+	SOCKET_DEBUG_PORT,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	WorkerOptions,
@@ -93,6 +96,7 @@ import {
 	Extension,
 	HttpOptions_Style,
 	kInspectorSocket,
+	kVoid,
 	Runtime,
 	RuntimeOptions,
 	serializeConfig,
@@ -101,6 +105,7 @@ import {
 	SocketIdentifier,
 	SocketPorts,
 	Worker_Binding,
+	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "./runtime";
 import {
@@ -113,17 +118,13 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
-import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
 import {
-	createInboundDoProxyService,
-	createOutboundDoProxyService,
-	createProxyFallbackService,
-	getHttpProxyOptions,
+	DevRegistry,
+	WorkerDefinition,
+	WorkerRegistry,
+} from "./shared/dev-registry";
+import {
 	getOutboundDoProxyClassName,
-	getProtocol,
-	getProxyFallbackServiceSocketName,
-	INBOUND_DO_PROXY_SERVICE_NAME,
-	INBOUND_DO_PROXY_SERVICE_PATH,
 	normaliseServiceDesignator,
 	OUTBOUND_DO_PROXY_SERVICE_NAME,
 } from "./shared/external-service";
@@ -455,14 +456,12 @@ function getDurableObjectClassNames(
 }
 
 /**
- * This collects all external service bindings from all workers and overrides
- * it to point to the dev registry proxy. A fallback service will be created
- * for each of the external service in case the external service is not available.
+ * Collects all external service bindings from all workers and overrides
+ * them to point to the dev registry proxy worker's ExternalServiceProxy
+ * entrypoint. Returns a map of external service names to the entrypoints
+ * and DO classes that are referenced.
  */
-function getExternalServiceEntrypoints(
-	allWorkerOpts: PluginWorkerOptions[],
-	proxyAddress: string
-) {
+function getExternalServiceEntrypoints(allWorkerOpts: PluginWorkerOptions[]) {
 	const externalServices = new Map<
 		string,
 		{
@@ -486,7 +485,6 @@ function getExternalServiceEntrypoints(
 	};
 
 	for (const workerOpts of allWorkerOpts) {
-		// Override service bindings if they point to a worker that doesn't exist
 		if (workerOpts.core.serviceBindings) {
 			for (const [name, service] of Object.entries(
 				workerOpts.core.serviceBindings
@@ -501,17 +499,12 @@ function getExternalServiceEntrypoints(
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
-					// This is a service binding to a worker that doesn't exist
-					// Override it to connect to the dev registry proxy
+					getEntrypoints(serviceName).entrypoints.add(entrypoint);
 					workerOpts.core.serviceBindings[name] = {
-						external: {
-							address: proxyAddress,
-							http: getHttpProxyOptions(serviceName, entrypoint),
-						},
+						name: OUTBOUND_DO_PROXY_SERVICE_NAME,
+						entrypoint: "ExternalServiceProxy",
+						props: { service: serviceName, entrypoint: entrypoint ?? null },
 					};
-
-					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.entrypoints.add(entrypoint);
 				}
 			}
 		}
@@ -549,8 +542,7 @@ function getExternalServiceEntrypoints(
 						unsafePreventEviction,
 					};
 
-					const entrypoints = getEntrypoints(scriptName);
-					entrypoints.classNames.add(className);
+					getEntrypoints(scriptName).classNames.add(className);
 				}
 			}
 		}
@@ -570,17 +562,12 @@ function getExternalServiceEntrypoints(
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
-					// This is a tail worker that doesn't exist
-					// Override it to connect to the dev registry proxy
+					getEntrypoints(serviceName).entrypoints.add(entrypoint);
 					workerOpts.core.tails[i] = {
-						external: {
-							address: proxyAddress,
-							http: getHttpProxyOptions(serviceName, entrypoint),
-						},
+						name: OUTBOUND_DO_PROXY_SERVICE_NAME,
+						entrypoint: "ExternalServiceProxy",
+						props: { service: serviceName, entrypoint: entrypoint ?? null },
 					};
-
-					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.entrypoints.add(entrypoint);
 				}
 			}
 		}
@@ -1039,8 +1026,10 @@ export class Miniflare {
 
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.core.unsafeDevRegistryPath,
-			this.#sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
-			this.#sharedOpts.core.unsafeHandleDevRegistryUpdate,
+			(registry) => {
+				void this.#pushRegistryUpdate(registry);
+				this.#sharedOpts.core.unsafeHandleDevRegistryUpdate?.(registry);
+			},
 			this.#log
 		);
 
@@ -1105,6 +1094,49 @@ export class Miniflare {
 		// Close all existing web sockets on reload
 		for (const ws of this.#webSocketServer.clients) {
 			ws.close(1012, "Service Restart");
+		}
+	}
+
+	/**
+	 * Push updated registry data to the proxy worker via the entry socket.
+	 * This updates the in-memory registry Map without restarting workerd.
+	 * Called when the dev registry detects changes to external services.
+	 */
+	async #pushRegistryUpdate(
+		registry: WorkerRegistry,
+		retries = 3
+	): Promise<void> {
+		if (!this.#runtimeEntryURL || !this.#runtimeDispatcher) {
+			return;
+		}
+		const url = new URL("/cdn-cgi/dev-registry/update", this.#runtimeEntryURL);
+
+		try {
+			const response = await this.#runtimeDispatcher.request({
+				origin: this.#runtimeEntryURL,
+				path: url.pathname,
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(registry),
+				signal: AbortSignal.timeout(2000),
+			});
+			// Drain the response body to release the connection back to the pool
+			await response.body.dump();
+			if (response.statusCode < 200 || response.statusCode >= 300) {
+				this.#log.debug(`Registry push failed with ${response.statusCode}`);
+				if (retries > 0) {
+					await new Promise((r) => setTimeout(r, 500));
+					return this.#pushRegistryUpdate(registry, retries - 1);
+				}
+			}
+		} catch (e: unknown) {
+			this.#log.debug(
+				`Failed to push registry update: ${e instanceof Error ? e.message : String(e)}`
+			);
+			if (retries > 0) {
+				await new Promise((r) => setTimeout(r, 500));
+				return this.#pushRegistryUpdate(registry, retries - 1);
+			}
 		}
 	}
 
@@ -1592,7 +1624,7 @@ export class Miniflare {
 
 	async #assembleConfig(
 		loopbackPort: number,
-		proxyAddress: string | null
+		devRegistryEnabled: boolean
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
@@ -1603,10 +1635,10 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
-		const externalServices =
-			proxyAddress !== null
-				? getExternalServiceEntrypoints(allWorkerOpts, proxyAddress)
-				: null;
+		const externalServices = devRegistryEnabled
+			? getExternalServiceEntrypoints(allWorkerOpts)
+			: null;
+
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -1874,36 +1906,7 @@ export class Miniflare {
 			externalServices &&
 			externalServices.size > 0
 		) {
-			for (const [serviceName, { entrypoints }] of externalServices) {
-				const proxyFallbackService = createProxyFallbackService(
-					serviceName,
-					entrypoints
-				);
-				assert(proxyFallbackService.name !== undefined);
-
-				services.set(proxyFallbackService.name, proxyFallbackService);
-
-				for (const entrypoint of entrypoints) {
-					const socketName = getProxyFallbackServiceSocketName(
-						serviceName,
-						entrypoint
-					);
-					sockets.push({
-						name: socketName,
-						// Reuse the socket address from the previous direct socket if exists
-						address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
-						service: {
-							name: proxyFallbackService.name,
-							entrypoint,
-						},
-						http: {
-							style: HttpOptions_Style.PROXY,
-							cfBlobHeader: CoreHeaders.CF_BLOB,
-							capnpConnectHost: HOST_CAPNP_CONNECT,
-						},
-					});
-				}
-			}
+			await this.#devRegistry.watch(externalServices);
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
@@ -1912,45 +1915,62 @@ export class Miniflare {
 						className,
 					])
 			);
-			const outboundDoProxyService = createOutboundDoProxyService(
-				externalObjects,
-				`http://${proxyAddress}`,
-				this.#devRegistry.isDurableObjectProxyEnabled()
-			);
 
-			assert(outboundDoProxyService.name !== undefined);
-			services.set(outboundDoProxyService.name, outboundDoProxyService);
+			// Bake initial registry state into the module source so the proxy
+			// worker has the correct registry from the moment workerd loads it.
+			const initialRegistry = this.#devRegistry.getRegistry();
+			const mainModuleSource = [
+				`import { ExternalServiceProxy, setRegistry, createProxyDurableObjectClass } from "./dev-registry-proxy.worker.js";`,
+				`export { ExternalServiceProxy };`,
+				`setRegistry(${JSON.stringify(initialRegistry)});`,
+				`export default {`,
+				`  async fetch(request, env) {`,
+				`    if (request.method === "POST") {`,
+				`      const data = await request.json();`,
+				`      setRegistry(data);`,
+				`      return new Response("ok");`,
+				`    }`,
+				`    return new Response("not found", { status: 404 });`,
+				`  }`,
+				`};`,
+				...externalObjects.map(
+					([scriptName, className]) =>
+						`export const ${getOutboundDoProxyClassName(scriptName, className)} = createProxyDurableObjectClass({ scriptName: ${JSON.stringify(scriptName)}, className: ${JSON.stringify(className)} });`
+				),
+			].join("\n");
 
-			// Watch the dev registry for changes
-			await this.#devRegistry.watch(externalServices);
-		}
-
-		// Expose all internal durable object with a proxy service
-		if (this.#devRegistry.isDurableObjectProxyEnabled()) {
-			const internalObjects = allWorkerOpts.flatMap((workerOpts) => {
-				const scriptName = workerOpts.core.name;
-				const serviceName = getUserServiceName(scriptName);
-				const classNames = durableObjectClassNames.get(serviceName);
-
-				if (!classNames || !scriptName) {
-					return [];
-				}
-
-				return Array.from(classNames.keys()).map<[string, string]>(
-					(className) => [scriptName, className]
-				);
+			services.set(SERVICE_DEV_REGISTRY_PROXY, {
+				name: SERVICE_DEV_REGISTRY_PROXY,
+				worker: {
+					compatibilityDate: "2025-01-01",
+					compatibilityFlags: ["service_binding_extra_handlers"],
+					modules: [
+						{
+							name: "main.mjs",
+							esModule: mainModuleSource,
+						},
+						{
+							name: "dev-registry-proxy.worker.js",
+							esModule: SCRIPT_DEV_REGISTRY_PROXY(),
+						},
+					],
+					bindings: [
+						{
+							name: "DEV_REGISTRY_DEBUG_PORT",
+							workerdDebugPort: kVoid,
+						},
+					],
+					durableObjectStorage: { inMemory: kVoid },
+					// uniqueKey must match the target session's key for identical DO IDs.
+					durableObjectNamespaces:
+						externalObjects.map<Worker_DurableObjectNamespace>(
+							([scriptName, className]) => ({
+								className: getOutboundDoProxyClassName(scriptName, className),
+								uniqueKey: `${scriptName}-${className}`,
+							})
+						),
+				},
 			});
-
-			if (internalObjects.length > 0) {
-				const service = createInboundDoProxyService(internalObjects);
-				assert(service.name !== undefined);
-				services.set(service.name, service);
-				// Set up a custom route for the internal durable object proxy service
-				// This is needed for compatibility with the Wrangler Dev Registry implementation
-				allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
-					`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
-				]);
-			}
 		}
 
 		const globalServices = getGlobalServices({
@@ -1974,6 +1994,9 @@ export class Miniflare {
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
+			devRegistryProxyServiceName: services.has(SERVICE_DEV_REGISTRY_PROXY)
+				? SERVICE_DEV_REGISTRY_PROXY
+				: undefined,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2024,8 +2047,10 @@ export class Miniflare {
 			maybeGetLocallyAccessibleHost(configuredHost) ??
 			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
-		const proxyAddress = await this.#devRegistry.initializeProxyWorker();
-		const config = await this.#assembleConfig(loopbackPort, proxyAddress);
+		const config = await this.#assembleConfig(
+			loopbackPort,
+			this.#devRegistry.isEnabled()
+		);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2038,6 +2063,9 @@ export class Miniflare {
 		);
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
 			requiredSockets.push(kInspectorSocket);
+		}
+		if (this.#devRegistry.isEnabled()) {
+			requiredSockets.push(SOCKET_DEBUG_PORT);
 		}
 
 		// Reload runtime
@@ -2070,6 +2098,9 @@ export class Miniflare {
 			loopbackAddress,
 			requiredSockets,
 			inspectorAddress: runtimeInspectorAddress,
+			debugPortAddress: this.#devRegistry.isEnabled()
+				? "127.0.0.1:0"
+				: undefined,
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
@@ -2149,6 +2180,13 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
+		await this.#registerWorkers();
+
+		// Catch any registry updates that occurred while workerd was booting.
+		if (this.#devRegistry.isEnabled()) {
+			await this.#pushRegistryUpdate(this.#devRegistry.getRegistry());
+		}
+
 		if (!this.#runtimeMutex.hasWaiting) {
 			// Only log and trigger reload if there aren't pending updates
 			const ready = initial ? "Ready" : "Updated and ready";
@@ -2224,109 +2262,79 @@ export class Miniflare {
 		return new URL(this.#runtimeEntryURL.toString());
 	}
 
-	async #registerWorkers(url: URL): Promise<void> {
+	async #registerWorkers(): Promise<void> {
 		if (!this.#devRegistry.isEnabled()) {
 			return;
 		}
 
-		const protocol = getProtocol(url);
+		const debugPort = this.#socketPorts?.get(SOCKET_DEBUG_PORT);
+		if (debugPort === undefined) {
+			this.#log.warn(
+				"Debug port not available — skipping dev registry registration"
+			);
+			return;
+		}
+		const debugPortAddress = `127.0.0.1:${debugPort}`;
+
 		const allWorkerNames = this.#workerOpts.map(
 			(workerOpt) => workerOpt.core.name
 		);
-		const entries = await Promise.all(
-			this.#workerOpts.map<Promise<[string, WorkerDefinition] | undefined>>(
-				async (workerOpts) => {
-					if (!workerOpts.core.name) {
-						return;
+		const entries: [string, WorkerDefinition][] = [];
+		for (const workerOpts of this.#workerOpts) {
+			if (!workerOpts.core.name) {
+				continue;
+			}
+
+			const internalObjects = Object.entries(
+				workerOpts.do.durableObjects ?? {}
+			).reduce<WorkerDefinition["durableObjects"]>(
+				(internalObjects, [bindingName, designator]) => {
+					const { className, scriptName, remoteProxyConnectionString } =
+						normaliseDurableObject(designator);
+
+					if (
+						scriptName === undefined ||
+						allWorkerNames.includes(scriptName) ||
+						remoteProxyConnectionString === undefined
+					) {
+						internalObjects.push({
+							name: bindingName,
+							className,
+						});
 					}
 
-					try {
-						const entrypointAddressesEntries = await Promise.all(
-							workerOpts.core.unsafeDirectSockets?.map<
-								Promise<
-									[string, WorkerDefinition["entrypointAddresses"][string]]
-								>
-							>(async (directSocket) => {
-								const directUrl = await this.unsafeGetDirectURL(
-									workerOpts.core.name,
-									directSocket.entrypoint
-								);
+					return internalObjects;
+				},
+				[]
+			);
 
-								return [
-									directSocket.entrypoint ?? "default",
-									{
-										host: directUrl.hostname,
-										port: parseInt(directUrl.port),
-									},
-								];
-							}) ?? []
-						);
-						const internalObjects = Object.entries(
-							workerOpts.do.durableObjects ?? {}
-						).reduce<WorkerDefinition["durableObjects"]>(
-							(internalObjects, [bindingName, designator]) => {
-								const { className, scriptName, remoteProxyConnectionString } =
-									normaliseDurableObject(designator);
+			let defaultEntrypointService: string;
+			if (workerOpts.core.unsafeOverrideDefaultEntrypoint) {
+				defaultEntrypointService = getUserServiceName(
+					workerOpts.core.unsafeOverrideDefaultEntrypoint
+				);
+			} else if (workerOpts.assets.assets) {
+				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`;
+			} else {
+				defaultEntrypointService = getUserServiceName(workerOpts.core.name);
+			}
 
-								if (
-									// If the scriptName is undefined, it defaults to the current worker
-									scriptName === undefined ||
-									// If the scriptName matches one of the workers defined, it is internal as well
-									allWorkerNames.includes(scriptName) ||
-									// If it is not a remote durable object
-									remoteProxyConnectionString === undefined
-								) {
-									internalObjects.push({
-										name: bindingName,
-										className,
-									});
-								}
+			entries.push([
+				workerOpts.core.name,
+				{
+					debugPortAddress,
+					defaultEntrypointService,
+					userWorkerService: getUserServiceName(workerOpts.core.name),
+					durableObjects: internalObjects,
+				},
+			]);
+		}
 
-								return internalObjects;
-							},
-							[]
-						);
-
-						return [
-							workerOpts.core.name,
-							{
-								protocol,
-								// These host and port values are used only when the registered definition
-								// does not include direct entrypoint (i.e. old wrangler version) or uses service-worker syntax.
-								// See https://github.com/cloudflare/workers-sdk/blob/8cdabe23fcc2813f970db02928b016bbf3b155e5/packages/wrangler/src/dev/miniflare.ts#L506-L507
-								host: url.hostname,
-								port: parseInt(url.port),
-								entrypointAddresses: Object.fromEntries(
-									entrypointAddressesEntries
-								),
-								durableObjects: internalObjects,
-							},
-						];
-					} catch (e: any) {
-						// If unsafeGetDirectURL fails to find a socket port, we just log the error and skip this entry.
-						this.#log.error(e);
-						return;
-					}
-				}
-			)
-		);
-
-		this.#devRegistry.register(
-			Object.fromEntries(entries.filter((entry) => entry !== undefined))
-		);
+		this.#devRegistry.register(Object.fromEntries(entries));
 	}
 
 	get ready(): Promise<URL> {
-		return this.#waitForReady().then(async (url) => {
-			assert(this.#socketPorts !== undefined);
-
-			// Update proxy server with the addresses of the fallback services
-			this.#devRegistry.configureProxyWorker(url.toString(), this.#socketPorts);
-			// Register all workers with the dev registry
-			await this.#registerWorkers(url);
-
-			return url;
-		});
+		return this.#waitForReady();
 	}
 
 	async getCf(): Promise<Record<string, any>> {
@@ -2423,10 +2431,13 @@ export class Miniflare {
 			this.#sharedOpts.core.structuredWorkerdLogs ??
 			this.#structuredWorkerdLogs;
 
+		const newExternalOnUpdate = sharedOpts.core.unsafeHandleDevRegistryUpdate;
 		await this.#devRegistry.updateRegistryPath(
 			sharedOpts.core.unsafeDevRegistryPath,
-			sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
-			sharedOpts.core.unsafeHandleDevRegistryUpdate
+			(registry) => {
+				void this.#pushRegistryUpdate(registry);
+				newExternalOnUpdate?.(registry);
+			}
 		);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
@@ -2439,17 +2450,7 @@ export class Miniflare {
 		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
-		return this.#runtimeMutex
-			.runWith(() => this.#setOptions(opts))
-			.then(() => {
-				assert(
-					this.#runtimeEntryURL !== undefined,
-					"The runtime entry URL should be defined at this point"
-				);
-
-				// Register all workers with the dev registry
-				return this.#registerWorkers(this.#runtimeEntryURL);
-			});
+		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
 	}
 
 	dispatchFetch: DispatchFetch = async (input, init) => {
