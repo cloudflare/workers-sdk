@@ -3,11 +3,14 @@
 	"main": "./index.ts",
 	"compatibility_date": "2024-12-30",
 	"compatibility_flags": ["nodejs_compat"],
+	// Default DB connection values point at 127.0.0.1.
+	// Tests override DB_HOSTNAME and DB_PORT at runtime via the vite config
+	// customizer to point at a local mock Postgres server.
 	"vars": {
-		"DB_HOSTNAME": "hh-pgsql-public.ebi.ac.uk",
+		"DB_HOSTNAME": "127.0.0.1",
 		"DB_PORT": "5432",
-		"DB_NAME": "pfmegrnargs",
-		"DB_USERNAME": "reader",
-		"DB_PASSWORD": "NWDMCE5xdipIjRrp",
+		"DB_NAME": "testdb",
+		"DB_USERNAME": "testuser",
+		"DB_PASSWORD": "testpassword",
 	},
 }
