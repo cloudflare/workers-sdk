@@ -49,8 +49,6 @@ describe("handlePrettyErrorRequest", () => {
 			},
 		};
 
-		// With `await`, this rejection is catchable. Without `await`, the
-		// returned promise would silently reject (unhandled rejection).
 		await expect(handlePrettyErrorRequest(payload)).rejects.toThrow(
 			"Youch async error"
 		);
