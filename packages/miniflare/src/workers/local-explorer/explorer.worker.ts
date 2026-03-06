@@ -55,8 +55,9 @@ app.onError((err) => {
 app.use("/api/*", async (c, next) => {
 	const ALLOWED_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
 
-	const host = c.req.header("Host")?.split(":")[0];
-	if (!ALLOWED_HOSTNAMES.includes(host ?? "")) {
+	const hostHeader = c.req.header("Host");
+	const host = hostHeader ? new URL(`http://${hostHeader}`).hostname : "";
+	if (!ALLOWED_HOSTNAMES.includes(host)) {
 		return errorResponse(403, 10000, "Invalid Host header");
 	}
 
