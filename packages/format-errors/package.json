@@ -18,6 +18,7 @@
 		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",
 		"tsconfig": "*",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*",
 		"zod": "^3.22.3"
 	},
