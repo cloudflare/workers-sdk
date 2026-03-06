@@ -1,5 +1,5 @@
 import jscodeshift from "jscodeshift";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import transform from "../src/codemods/vitest-v3-to-v4";
 
 function run(source: string): string {
@@ -10,7 +10,7 @@ function run(source: string): string {
 }
 
 describe("vitest-v3-to-v4 codemod", () => {
-	it("transforms a basic defineWorkersProject config", () => {
+	it("transforms a basic defineWorkersProject config", ({ expect }) => {
 		const input = `
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
@@ -26,18 +26,23 @@ export default defineWorkersProject({
 
 		const output = run(input);
 
-		expect(output).toContain(
-			'import { cloudflareTest } from "@cloudflare/vitest-pool-workers"'
-		);
-		expect(output).toContain('import { defineConfig } from "vitest/config"');
-		expect(output).toContain("defineConfig(");
-		expect(output).toContain("plugins: [cloudflareTest(");
-		expect(output).toContain('configPath: "./wrangler.toml"');
-		expect(output).not.toContain("defineWorkersProject");
-		expect(output).not.toContain("poolOptions");
+		expect(output).toMatchInlineSnapshot(`
+			"
+			import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+
+			import { defineConfig } from "vitest/config";
+
+			export default defineConfig({
+			    plugins: [cloudflareTest({
+			        wrangler: { configPath: "./wrangler.toml" },
+			    })],
+
+			    test: {}
+			});"
+		`);
 	});
 
-	it("preserves non-poolOptions test properties", () => {
+	it("preserves non-poolOptions test properties", ({ expect }) => {
 		const input = `
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
@@ -54,11 +59,25 @@ export default defineWorkersProject({
 
 		const output = run(input);
 
-		expect(output).toContain('include: ["tests/**/*.test.ts"]');
-		expect(output).not.toContain("poolOptions");
+		expect(output).toMatchInlineSnapshot(`
+			"
+			import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+
+			import { defineConfig } from "vitest/config";
+
+			export default defineConfig({
+			    plugins: [cloudflareTest({
+			        wrangler: { configPath: "./wrangler.toml" },
+			    })],
+
+			    test: {
+			        include: ["tests/**/*.test.ts"]
+			    }
+			});"
+		`);
 	});
 
-	it("preserves miniflare options inside workers", () => {
+	it("preserves miniflare options inside workers", ({ expect }) => {
 		const input = `
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
@@ -75,11 +94,24 @@ export default defineWorkersProject({
 
 		const output = run(input);
 
-		expect(output).toContain("cloudflareTest(");
-		expect(output).toContain('d1Databases: ["DB"]');
+		expect(output).toMatchInlineSnapshot(`
+			"
+			import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+
+			import { defineConfig } from "vitest/config";
+
+			export default defineConfig({
+			    plugins: [cloudflareTest({
+			        wrangler: { configPath: "./wrangler.toml" },
+			        miniflare: { d1Databases: ["DB"] },
+			    })],
+
+			    test: {}
+			});"
+		`);
 	});
 
-	it("returns source unchanged if no matching import", () => {
+	it("returns source unchanged if no matching import", ({ expect }) => {
 		const input = `
 import { defineConfig } from "vitest/config";
 
@@ -88,7 +120,7 @@ export default defineConfig({ test: {} });`;
 		expect(run(input)).toBe(input);
 	});
 
-	it("throws for function argument to defineWorkersProject", () => {
+	it("throws for function argument to defineWorkersProject", ({ expect }) => {
 		const input = `
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
@@ -103,7 +135,7 @@ export default defineWorkersProject(() => ({
 		expect(() => run(input)).toThrow("too complex to apply a codemod to");
 	});
 
-	it("prepends to existing plugins array", () => {
+	it("prepends to existing plugins array", ({ expect }) => {
 		const input = `
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
@@ -120,11 +152,24 @@ export default defineWorkersProject({
 
 		const output = run(input);
 
-		expect(output).toContain("plugins: [cloudflareTest(");
-		expect(output).toContain("somePlugin()");
+		expect(output).toMatchInlineSnapshot(`
+			"
+			import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+
+			import { defineConfig } from "vitest/config";
+
+			export default defineConfig({
+				plugins: [cloudflareTest({
+			        wrangler: { configPath: "./wrangler.toml" },
+			    }), somePlugin()],
+				test: {},
+			});"
+		`);
 	});
 
-	it("preserves other import specifiers from the config module", () => {
+	it("preserves other import specifiers from the config module", ({
+		expect,
+	}) => {
 		const input = `
 import { defineWorkersProject, readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
 
@@ -140,8 +185,19 @@ export default defineWorkersProject({
 
 		const output = run(input);
 
-		expect(output).toContain("cloudflareTest");
-		expect(output).toContain("readD1Migrations");
-		expect(output).toContain('from "@cloudflare/vitest-pool-workers"');
+		expect(output).toMatchInlineSnapshot(`
+			"
+			import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
+
+			import { defineConfig } from "vitest/config";
+
+			export default defineConfig({
+			    plugins: [cloudflareTest({
+			        wrangler: { configPath: "./wrangler.toml" },
+			    })],
+
+			    test: {}
+			});"
+		`);
 	});
 });
