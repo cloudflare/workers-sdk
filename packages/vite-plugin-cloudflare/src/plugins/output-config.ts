@@ -1,11 +1,11 @@
 import assert from "node:assert";
-import { existsSync, readFileSync } from "node:fs";
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
-import { createPlugin } from "../utils";
+import { createPlugin, satisfiesViteVersion } from "../utils";
 import type * as vite from "vite";
 import type { Unstable_RawConfig } from "wrangler";
 
@@ -139,20 +139,25 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 			// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 			// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 			if (
+				!satisfiesViteVersion("7.0.0") &&
 				this.environment.name ===
-				(ctx.resolvedPluginConfig.type === "workers"
-					? ctx.resolvedPluginConfig.entryWorkerEnvironmentName
-					: "client")
+					(ctx.resolvedPluginConfig.type === "workers"
+						? ctx.resolvedPluginConfig.entryWorkerEnvironmentName
+						: "client")
 			) {
-				writeDeployConfig(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
+				writeDeployConfig(
+					ctx.resolvedPluginConfig,
+					ctx.resolvedViteConfig,
+					ctx.resolvedPluginConfig.type === "assets-only"
+				);
 			}
 		},
 	};
 });
 
 function readAssetsIgnoreFile(assetsIgnorePath: string): string {
-	const content = existsSync(assetsIgnorePath)
-		? readFileSync(assetsIgnorePath, "utf-8")
+	const content = fs.existsSync(assetsIgnorePath)
+		? fs.readFileSync(assetsIgnorePath, "utf-8")
 		: "";
 	if (content.length === 0) {
 		return "";
