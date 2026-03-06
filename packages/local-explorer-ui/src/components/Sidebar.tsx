@@ -154,7 +154,7 @@ export function Sidebar({
 			/>
 
 			<SidebarItemGroup
-				emptyLabel="No namespaces"
+				emptyLabel="No SQLite namespaces"
 				error={doError}
 				icon={CubeIcon}
 				items={doNamespaces.map((ns) => {

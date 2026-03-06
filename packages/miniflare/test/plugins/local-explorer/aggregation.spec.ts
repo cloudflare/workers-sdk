@@ -2,12 +2,35 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
+import { getWorkerRegistry, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
 import { disposeWithRetry } from "../../test-shared";
 
 const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
+
+/**
+ * Poll the dev registry until all expected workers are registered.
+ * This avoids flakey tests that rely on fixed timeouts.
+ */
+async function waitForWorkersInRegistry(
+	registryPath: string,
+	expectedWorkers: string[],
+	timeoutMs = 5000
+): Promise<void> {
+	const startTime = Date.now();
+	while (Date.now() - startTime < timeoutMs) {
+		const registry = getWorkerRegistry(registryPath);
+		const registeredWorkers = Object.keys(registry);
+		if (expectedWorkers.every((w) => registeredWorkers.includes(w))) {
+			return;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
+	throw new Error(
+		`Timed out waiting for workers to register: ${expectedWorkers.join(", ")}`
+	);
+}
 
 interface ListResponse {
 	result?: Array<{ id?: string; uuid?: string; [key: string]: unknown }>;
@@ -62,7 +85,6 @@ describe("Cross-process aggregation", () => {
 				MY_DO: "MyDO",
 			},
 		});
-		await instanceA.ready;
 
 		instanceB = new Miniflare({
 			name: "worker-b",
@@ -88,10 +110,11 @@ describe("Cross-process aggregation", () => {
 				OTHER_DO: "OtherDO",
 			},
 		});
+		await instanceA.ready;
 		await instanceB.ready;
 
 		// Wait for both instances to register in the dev registry
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);
 	});
 
 	afterAll(async () => {
@@ -411,7 +434,12 @@ describe("Multi-worker peer deduplication", () => {
 		});
 		await instanceB.ready;
 
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		// Wait for all workers to register in the dev registry
+		await waitForWorkersInRegistry(registryPath, [
+			"worker-a",
+			"worker-b1",
+			"worker-b2",
+		]);
 	});
 
 	afterAll(async () => {
@@ -453,5 +481,193 @@ describe("Multi-worker peer deduplication", () => {
 			  },
 			}
 		`);
+	});
+});
+
+describe("Same ID across multiple instances with different persistence directories", () => {
+	let registryPath: string;
+	let instanceA: Miniflare;
+	let instanceB: Miniflare;
+
+	beforeAll(async () => {
+		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-same-id-"));
+
+		// Both instances use the SAME KV and D1 ids
+		// but they have separate storage (different default persistence paths)
+		// Helpfully, DOs require you to specify a script name, which explicitly
+		// ties it to a specific instance.
+		instanceA = new Miniflare({
+			name: "worker-a",
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("Worker A"); } }`,
+			unsafeLocalExplorer: true,
+			unsafeDevRegistryPath: registryPath,
+			kvNamespaces: {
+				MY_KV: "shared-kv-id",
+			},
+			d1Databases: {
+				MY_DB: "shared-db-id",
+			},
+			durableObjects: {
+				MY_DO: {
+					className: "MyDO",
+				},
+			},
+		});
+
+		instanceB = new Miniflare({
+			name: "worker-b",
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("Worker B"); } }`,
+			unsafeLocalExplorer: true,
+			unsafeDevRegistryPath: registryPath,
+			kvNamespaces: {
+				MY_KV: "shared-kv-id",
+			},
+			d1Databases: {
+				MY_DB: "shared-db-id",
+			},
+			durableObjects: {
+				MY_DO: {
+					className: "MyDO",
+					scriptName: "worker-a",
+				},
+			},
+		});
+
+		await instanceA.ready;
+		await instanceB.ready;
+
+		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);
+	});
+
+	afterAll(async () => {
+		await Promise.all([
+			disposeWithRetry(instanceA),
+			disposeWithRetry(instanceB),
+		]);
+		removeDirSync(registryPath);
+	});
+
+	test("listing deduplicates namespaces with the same ID", async ({
+		expect,
+	}) => {
+		let response = await instanceA.dispatchFetch(
+			`${BASE_URL}/storage/kv/namespaces`
+		);
+		let data = (await response.json()) as ListResponse;
+		expect(data.result_info?.count).toBe(1);
+
+		response = await instanceA.dispatchFetch(`${BASE_URL}/d1/database`);
+		data = (await response.json()) as ListResponse;
+		expect(data.result_info?.count).toBe(1);
+
+		response = await instanceA.dispatchFetch(
+			`${BASE_URL}/workers/durable_objects/namespaces`
+		);
+		data = (await response.json()) as ListResponse;
+		expect(data.result_info?.count).toBe(1);
+	});
+
+	// TODO: this is kind of a footgun - we should somehow check persistence paths
+	// and warn if resources with the same id aren't using the same storage
+	test("operations will prioritise local storage when ID exists locally", async ({
+		expect,
+	}) => {
+		// Write different values to the same key in each instance's KV
+		const kvA = await instanceA.getKVNamespace("MY_KV");
+		const kvB = await instanceB.getKVNamespace("MY_KV");
+
+		await kvA.put("test-key", "value-from-A");
+		await kvB.put("test-key", "value-from-B");
+
+		// Query from instance A - should get A's value, not B's
+		const responseA = await instanceA.dispatchFetch(
+			`${BASE_URL}/storage/kv/namespaces/shared-kv-id/values/test-key`
+		);
+		expect(await responseA.text()).toBe("value-from-A");
+
+		// Query from instance B - should get B's value, not A's
+		const responseB = await instanceB.dispatchFetch(
+			`${BASE_URL}/storage/kv/namespaces/shared-kv-id/values/test-key`
+		);
+		expect(await responseB.text()).toBe("value-from-B");
+	});
+});
+
+describe("Same ID across multiple instances with same persistence directories", () => {
+	let registryPath: string;
+
+	let instanceA: Miniflare;
+	let instanceB: Miniflare;
+
+	beforeAll(async () => {
+		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-same-id-"));
+		const persistencePath = path.join(tmpdir(), "mf-persistence-same-id");
+
+		// Both instances use the SAME KV and D1 ids
+		// but they have separate storage (different default persistence paths)
+		// Helpfully, DOs require you to specify a script name, which explicitly
+		// ties it to a specific instance.
+		instanceA = new Miniflare({
+			name: "worker-a",
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("Worker A"); } }`,
+			unsafeLocalExplorer: true,
+			unsafeDevRegistryPath: registryPath,
+			defaultPersistRoot: persistencePath,
+			kvNamespaces: {
+				MY_KV: "shared-kv-id",
+			},
+		});
+
+		instanceB = new Miniflare({
+			name: "worker-b",
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("Worker B"); } }`,
+			unsafeLocalExplorer: true,
+			unsafeDevRegistryPath: registryPath,
+			defaultPersistRoot: persistencePath,
+			kvNamespaces: {
+				MY_KV: "shared-kv-id",
+			},
+		});
+
+		await instanceA.ready;
+		await instanceB.ready;
+
+		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);
+	});
+
+	afterAll(async () => {
+		await Promise.all([
+			disposeWithRetry(instanceA),
+			disposeWithRetry(instanceB),
+		]);
+		removeDirSync(registryPath);
+		removeDirSync(path.join(tmpdir(), "mf-persistence-same-id"));
+	});
+
+	test("operations will prioritise local storage when ID exists locally", async ({
+		expect,
+	}) => {
+		// Write different values to the same key in each instance's KV
+		const kvA = await instanceA.getKVNamespace("MY_KV");
+
+		await kvA.put("test-key", "value-from-A");
+
+		// Query from instance B - should get A's value
+		const responseB = await instanceB.dispatchFetch(
+			`${BASE_URL}/storage/kv/namespaces/shared-kv-id/values/test-key`
+		);
+		expect(await responseB.text()).toBe("value-from-A");
 	});
 });

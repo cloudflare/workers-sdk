@@ -122,10 +122,17 @@ export async function listD1Databases(
 	const { name } = query;
 
 	const localDatabases = getLocalD1Databases(c.env);
-	let allDatabases = await aggregateListResults(
+	const aggregatedDatabases = await aggregateListResults(
 		c,
 		localDatabases,
 		"/d1/database"
+	);
+
+	// deduplicate by id - not totally correct, since local dev can use binding names as an 'id' :/
+	// TODO: check persistence path to properly verify local uniqueness
+	const localIds = new Set(localDatabases.map((db) => db.uuid));
+	let allDatabases = aggregatedDatabases.filter(
+		(db, index) => index < localDatabases.length || !localIds.has(db.uuid)
 	);
 
 	// Filter by name if provided

@@ -64,7 +64,7 @@ async function findKVNamespaceOwner(
 /**
  * Get local KV namespaces from the binding map.
  */
-function getLocalKVNamespaces(env: Env) {
+function getLocalKVNamespaces(env: Env): Array<{ id: string; title: string }> {
 	const kvBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
 	return Object.entries(kvBindingMap).map(([id, bindingName]) => ({
 		id: id,
@@ -99,10 +99,17 @@ export async function listKVNamespaces(
 	const order = query.order ?? "id";
 
 	const localNamespaces = getLocalKVNamespaces(c.env);
-	const allNamespaces = await aggregateListResults(
+	const aggregatedNamespaces = await aggregateListResults(
 		c,
 		localNamespaces,
 		"/storage/kv/namespaces"
+	);
+
+	// deduplicate by id - not totally correct, since local dev can use binding names as an 'id' :/
+	// TODO: check persistence path to properly verify local uniqueness
+	const localIds = new Set(localNamespaces.map((ns) => ns.id));
+	const allNamespaces = aggregatedNamespaces.filter(
+		(ns, index) => index < localNamespaces.length || !localIds.has(ns.id)
 	);
 
 	// Sort results
