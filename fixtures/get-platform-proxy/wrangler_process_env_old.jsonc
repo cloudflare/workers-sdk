@@ -1,0 +1,15 @@
+{
+	// Old compat date (< 2025-04-01) with nodejs_compat
+	// This should NOT auto-enable process.env population
+	"name": "get-platform-proxy-process-env-old",
+	"main": "src/index.ts",
+	"compatibility_date": "2024-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"MY_VAR": "my-var-value",
+		"MY_JSON_VAR": {
+			"test": true,
+			"nested": { "value": 123 },
+		},
+	},
+}

@@ -18,6 +18,7 @@ import {
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
+import { isProcessEnvPopulated } from "../../../process-env";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
@@ -105,6 +106,27 @@ export type GetPlatformProxyOptions = {
 	 * Whether remote bindings should be enabled or not (defaults to `true`)
 	 */
 	remoteBindings?: boolean;
+	/**
+	 * When `true`, side-effectfully populates `process.env` with environment variable
+	 * and secret bindings from the wrangler configuration and .env files.
+	 *
+	 * This mirrors the behavior of workerd with the `nodejs_compat_populate_process_env`
+	 * compatibility flag.
+	 * See: https://developers.cloudflare.com/workers/configuration/compatibility-flags/#enable-auto-populating-processenv.
+	 *
+	 * When `undefined` (the default), the behavior is determined by the wrangler
+	 * configuration's `compatibility_date` and `compatibility_flags`:
+	 * - Enabled by default when `nodejs_compat` is set AND either:
+	 *   - `compatibility_date` is "2025-04-01" or later, OR
+	 *   - `nodejs_compat_populate_process_env` flag is explicitly set
+	 * - Disabled when `nodejs_compat_do_not_populate_process_env` flag is set
+	 *
+	 * When `false`, `process.env` will not be modified regardless of config settings.
+	 *
+	 * JSON values are stringified when added to `process.env`.
+	 * Original `process.env` values are restored when `dispose()` is called.
+	 */
+	populateProcessEnv?: boolean;
 };
 
 /**
@@ -181,12 +203,24 @@ export async function getPlatformProxy<
 	const cf = await mf.getCf();
 	deepFreeze(cf);
 
+	const shouldPopulateProcessEnv =
+		options.populateProcessEnv ??
+		isProcessEnvPopulated(
+			config.compatibility_date,
+			config.compatibility_flags
+		);
+
+	const restoreOriginalProcessEnv = !shouldPopulateProcessEnv
+		? () => {}
+		: populateProcessEnv(config, options);
+
 	return {
 		env: bindings,
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
 		dispose: async () => {
+			restoreOriginalProcessEnv();
 			await remoteProxySession?.dispose();
 			await mf.dispose();
 		},
@@ -528,5 +562,68 @@ export function unstable_getMiniflareWorkerOptions(
 		define: config.define,
 		main: config.main,
 		externalWorkers,
+	};
+}
+
+/**
+ * Populates `process.env` with text, secret, and JSON bindings from the wrangler
+ * configuration and .env files. This mirrors the behavior of workerd with the
+ * `nodejs_compat_populate_process_env` compatibility flag.
+ *
+ * JSON binding values are stringified before being added to `process.env`.
+ *
+ * @param config The wrangler configuration object containing binding definitions
+ * @param options Options for getPlatformProxy, used to determine environment and env files
+ * @returns A cleanup function that restores `process.env` to its original state
+ */
+function populateProcessEnv(
+	config: Config,
+	options: GetPlatformProxyOptions
+): () => void {
+	const originalProcessEnvValues: Record<string, string | undefined> = {};
+
+	const rawBindings = getBindings(
+		config,
+		options.environment,
+		options.envFiles,
+		true,
+		{},
+		{}
+	);
+
+	for (const [key, binding] of Object.entries(rawBindings ?? {})) {
+		if (
+			binding &&
+			typeof binding === "object" &&
+			"type" in binding &&
+			"value" in binding
+		) {
+			const bindingType = binding.type;
+			if (
+				bindingType === "plain_text" ||
+				bindingType === "secret_text" ||
+				bindingType === "json"
+			) {
+				originalProcessEnvValues[key] = process.env[key];
+
+				if (bindingType === "json") {
+					process.env[key] = JSON.stringify(binding.value);
+				} else {
+					process.env[key] = binding.value as string;
+				}
+			}
+		}
+	}
+
+	return () => {
+		for (const [key, originalValue] of Object.entries(
+			originalProcessEnvValues
+		)) {
+			if (originalValue === undefined) {
+				delete process.env[key];
+			} else {
+				process.env[key] = originalValue;
+			}
+		}
 	};
 }
