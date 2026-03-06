@@ -564,10 +564,12 @@ describe("Upload Worker", () => {
 		}).then((response) => response.json());
 		expect(w).toEqual({
 			data: {
-				error: "Uncaught SyntaxError: Unexpected token '{' at index.js:2:15",
+				error:
+					"Uncaught SyntaxError: Unexpected token '{'\n  at index.js:2:15\n",
 			},
 			error: "PreviewError",
-			message: "Uncaught SyntaxError: Unexpected token '{' at index.js:2:15",
+			message:
+				"Uncaught SyntaxError: Unexpected token '{'\n  at index.js:2:15\n",
 		});
 	});
 	it("should reject no token", async ({ expect }) => {
