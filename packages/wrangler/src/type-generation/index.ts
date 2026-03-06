@@ -2332,6 +2332,53 @@ interface PerEnvBinding {
 	type: string;
 }
 
+interface InheritableBindingDefinition {
+	/**
+	 * The category name for this binding (used for identification)
+	 */
+	bindingCategory: string;
+
+	/**
+	 * Extract the binding name from the raw environment config
+	 */
+	getBindingName: (env: RawEnvironment | undefined) => string | undefined;
+
+	/**
+	 * Check if the environment defines this inheritable property at all.
+	 *
+	 * This is used to determine if inheritance should be skipped, even when
+	 * the environment doesn't define a binding.
+	 *
+	 * For example, if an environment defines `assets: { directory: "/path" }`
+	 * without a `binding`, this method returns `true`, indicating the property
+	 * is defined and inheritance should be skipped.
+	 */
+	hasProperty: (env: RawEnvironment | undefined) => boolean;
+
+	/**
+	 * The TypeScript type for this binding
+	 */
+	type: string;
+}
+
+/**
+ * List of bindings that come from inheritable config properties.
+ *
+ * These bindings, when defined at the top-level config, are inherited by
+ * all named environments.
+ *
+ * The type generation needs to account for this inheritance when determining
+ * if a binding should be required or optional in the aggregated `Env` interface.
+ */
+const INHERITABLE_BINDINGS = [
+	{
+		bindingCategory: "assets",
+		getBindingName: (env) => env?.assets?.binding,
+		hasProperty: (env) => env?.assets !== undefined,
+		type: "Fetcher",
+	},
+] satisfies InheritableBindingDefinition[];
+
 /**
  * Collects vars per environment, returning a map from environment name to vars.
  *
@@ -2823,6 +2870,26 @@ function collectCoreBindingsPerEnvironment(
 
 	const { rawConfig } = experimental_readRawConfig(args);
 
+	const topLevelInheritableBindings: Array<{
+		binding: PerEnvBinding;
+		definition: InheritableBindingDefinition;
+	}> = [];
+	for (const inheritableDef of INHERITABLE_BINDINGS) {
+		const bindingName = inheritableDef.getBindingName(rawConfig);
+		if (!bindingName) {
+			continue;
+		}
+
+		topLevelInheritableBindings.push({
+			binding: {
+				bindingCategory: inheritableDef.bindingCategory,
+				name: bindingName,
+				type: inheritableDef.type,
+			},
+			definition: inheritableDef,
+		});
+	}
+
 	const topLevelBindings = collectEnvironmentBindings(
 		rawConfig,
 		TOP_LEVEL_ENV_NAME
@@ -2833,6 +2900,25 @@ function collectCoreBindingsPerEnvironment(
 
 	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 		const envBindings = collectEnvironmentBindings(env, envName);
+
+		// Add top-level inheritable bindings if not already present in this environment
+		// (i.e., the environment doesn't override the inheritable property)
+		for (const inheritable of topLevelInheritableBindings) {
+			const alreadyHasBinding = envBindings.some(
+				(b) => b.bindingCategory === inheritable.binding.bindingCategory
+			);
+			if (alreadyHasBinding) {
+				continue;
+			}
+
+			// Skip inheriting if the env defines the property at all (even without a binding)
+			if (inheritable.definition.hasProperty(env)) {
+				continue;
+			}
+
+			envBindings.push(inheritable.binding);
+		}
+
 		if (envBindings.length > 0) {
 			result.set(envName, envBindings);
 		}
