@@ -24,7 +24,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - The name of the Worker
   - The Deployment's timestamp
   - Binding type counts (how many bindings of each type are configured, such as KV namespaces, R2 buckets, D1 databases, Durable Objects, etc... Binding names or values are not collected)
-  - Project dependency information (package names and version specifiers from the `dependencies` field in `package.json`, and their installed versions. `devDependencies`, `peerDependencies`, and similar are not collected)
+  - Public project dependency information (package names and version specifiers from the `dependencies` field in `package.json`, and their installed versions. `devDependencies`, `peerDependencies`, and similar are not collected. Neither are `dependencies` that point to private packages.)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
 - The major version of Node.js that the Wrangler client is running on

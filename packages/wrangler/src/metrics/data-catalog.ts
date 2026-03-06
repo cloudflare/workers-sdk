@@ -9,7 +9,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { getMetricsConfig } from "../metrics/metrics-config";
 import { sniffUserAgent } from "../package-manager";
-import { getInstalledPackageVersion } from "../utils/packages";
+import { getInstalledPackageJson } from "../utils/packages";
 import type { Binding, StartDevWorkerInput } from "../api";
 
 type TelemetryDataCatalogEntryBase = {
@@ -43,7 +43,7 @@ type DeploymentDataForTelemetryDataCatalog = TelemetryDataCatalogEntryBase & {
 			/** The version specifier from the package.json */
 			packageJsonVersion: string;
 			/** The actual installed version, `undefined` if the installed version detection fails */
-			installedVersion?: string;
+			installedVersion: string;
 		}
 	>;
 };
@@ -83,7 +83,7 @@ export async function sendDeploymentToTelemetryDataCatalog({
 		return;
 	}
 
-	const projectDependencies = getProjectDependencies(projectPath);
+	const projectDependencies = getProjectDependenciesToCollect(projectPath);
 
 	const bindingsCount = getBindingsCount(bindings);
 
@@ -114,36 +114,61 @@ export async function sendDeploymentToTelemetryDataCatalog({
 }
 
 /**
- * Gets the dependencies for the target project
+ * Gets the dependencies that we want to collect for the target project.
+ *
+ * These are the dependencies for the project (from their package.json's dependencies field),
+ * private packages are excluded.
  *
  * @param projectPath Path for the project (where their package.json should be)
  * @returns the project dependencies if successfully detected, `undefined` otherwise
  */
-function getProjectDependencies(
+function getProjectDependenciesToCollect(
 	projectPath: string
 ): DeploymentDataForTelemetryDataCatalog["projectDependencies"] | undefined {
 	const packageJsonPath = path.join(projectPath, "package.json");
 
 	if (fs.existsSync(packageJsonPath)) {
 		try {
-			const projectDependencies: DeploymentDataForTelemetryDataCatalog["projectDependencies"] =
-				{};
 			const content = fs.readFileSync(packageJsonPath, "utf-8");
 			const packageJson = parsePackageJSON(content, packageJsonPath);
 
-			for (const [dependency, packageJsonVersion] of Object.entries(
+			const projectDependencyEntries = Object.entries(
 				packageJson.dependencies ?? {}
-			)) {
-				projectDependencies[dependency] = {
-					packageJsonVersion,
-					installedVersion: getInstalledPackageVersion(
+			)
+				.map(([dependency, packageJsonVersion]) => {
+					if (packageJsonVersion.startsWith("workspace:")) {
+						// If the dependency is an internal one from within the pnpm workspace then
+						// we want to skip it
+						return undefined;
+					}
+
+					const pkgPackageJson = getInstalledPackageJson(
 						dependency,
 						path.dirname(packageJsonPath)
-					),
-				};
-			}
+					);
 
-			return projectDependencies;
+					if (!pkgPackageJson || !pkgPackageJson.version) {
+						// If we can detect the package's package.json or the package's installed version
+						// then to be on the safe side let's not collect this package's data
+						return undefined;
+					}
+
+					if (pkgPackageJson.private === true) {
+						// We don't want to collect data of private packages, so here we skip the package if it is private
+						return undefined;
+					}
+
+					return [
+						dependency,
+						{
+							packageJsonVersion,
+							installedVersion: pkgPackageJson.version,
+						},
+					] as const;
+				})
+				.filter((dependency) => dependency !== undefined);
+
+			return Object.fromEntries(projectDependencyEntries);
 		} catch {
 			// Silently ignore parse errors - package.json may be malformed
 			return undefined;
