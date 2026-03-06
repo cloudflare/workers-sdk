@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.13.113
+
+### Patch Changes
+
+- [#12790](https://github.com/cloudflare/workers-sdk/pull/12790) [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump glob to ^10.5.0 to address command injection vulnerability in glob CLI
+
+- Updated dependencies [[`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f), [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98)]:
+  - miniflare@4.20260306.0
+
 ## 0.13.112
 
 ### Patch Changes

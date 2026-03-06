@@ -1,5 +1,21 @@
 # miniflare
 
+## 4.20260306.0
+
+### Patch Changes
+
+- [#12790](https://github.com/cloudflare/workers-sdk/pull/12790) [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump hono to ^4.12.5 and devalue to ^5.6.3 to address security vulnerabilities
+
+  Hono had multiple advisories including arbitrary file access via serveStatic, JWT algorithm confusion, and XSS through ErrorBoundary. Devalue had denial of service vulnerabilities in devalue.parse. These are bundled dependencies so the fix is delivered via this patch.
+
+- [#12795](https://github.com/cloudflare/workers-sdk/pull/12795) [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260301.1 | 1.20260306.1 |
+
 ## 4.20260301.1
 
 ### Minor Changes
