@@ -97,7 +97,7 @@ describe("Preview Worker", () => {
 			'"/hello?world"'
 		);
 		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+			`"token=7cce0728b35d32e57683bbbdbf1ff64928fa2489dc58371a3649bedd39a13bc2; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 		);
 	});
 	it("shouldn't be redirected with no token", async ({ expect }) => {
@@ -344,7 +344,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+				`"token=7cce0728b35d32e57683bbbdbf1ff64928fa2489dc58371a3649bedd39a13bc2; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 			);
 		});
 		it("should allow workers.cloudflare.com", async ({ expect }) => {
@@ -366,7 +366,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+				`"token=7cce0728b35d32e57683bbbdbf1ff64928fa2489dc58371a3649bedd39a13bc2; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 			);
 		});
 		it("should allow workers-playground.pages.dev", async ({ expect }) => {
@@ -389,7 +389,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+				`"token=7cce0728b35d32e57683bbbdbf1ff64928fa2489dc58371a3649bedd39a13bc2; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 			);
 		});
 		it("should allow workers-playground.workers.dev", async ({ expect }) => {
@@ -411,7 +411,7 @@ describe("Preview Worker", () => {
 				'"/hello?world"'
 			);
 			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
+				`"token=7cce0728b35d32e57683bbbdbf1ff64928fa2489dc58371a3649bedd39a13bc2; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 			);
 		});
 		it("should reject unknown referer", async ({ expect }) => {
