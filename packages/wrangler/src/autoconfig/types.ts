@@ -20,6 +20,8 @@ type AutoConfigDetailsBase = {
 	outputDir: string;
 	/** The detected package manager for the project */
 	packageManager: PackageManager;
+	/** Whether the current path is at the root of a workspace */
+	isWorkspaceRoot?: boolean;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<

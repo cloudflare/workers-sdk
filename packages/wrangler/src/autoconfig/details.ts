@@ -206,6 +206,7 @@ async function detectFramework(
 ): Promise<{
 	detectedFramework: DetectedFramework | undefined;
 	packageManager: PackageManager;
+	isWorkspaceRoot?: boolean;
 }> {
 	const fs = new NodeFS();
 
@@ -220,10 +221,20 @@ async function detectFramework(
 
 	const buildSettings = await project.getBuildSettings();
 
-	if (project.workspace?.isRoot) {
-		throw new UserError(
-			"The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the applications in the workspace and try again."
+	const isWorkspaceRoot = !!project.workspace?.isRoot;
+
+	if (isWorkspaceRoot) {
+		const resolvedProjectPath = resolve(projectPath);
+
+		const workspaceRootIncludesProject = project.workspace?.packages.some(
+			(pkg) => resolve(pkg.path) === resolvedProjectPath
 		);
+
+		if (!workspaceRootIncludesProject) {
+			throw new UserError(
+				"The Wrangler application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again."
+			);
+		}
 	}
 
 	const detectedFramework = findDetectedFramework(buildSettings);
@@ -259,7 +270,7 @@ async function detectFramework(
 		};
 	}
 
-	return { detectedFramework, packageManager };
+	return { detectedFramework, packageManager, isWorkspaceRoot };
 }
 
 /**
@@ -402,10 +413,8 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	const { detectedFramework, packageManager } = await detectFramework(
-		projectPath,
-		wranglerConfig
-	);
+	const { detectedFramework, packageManager, isWorkspaceRoot } =
+		await detectFramework(projectPath, wranglerConfig);
 
 	const framework = getFramework(detectedFramework?.framework?.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -456,6 +465,7 @@ export async function getDetailsForAutoConfig({
 		return {
 			...baseDetails,
 			configured: true,
+			isWorkspaceRoot,
 		};
 	}
 
@@ -498,6 +508,7 @@ export async function getDetailsForAutoConfig({
 		...baseDetails,
 		outputDir,
 		configured: false,
+		isWorkspaceRoot,
 	};
 }
 
