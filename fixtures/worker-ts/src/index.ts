@@ -27,6 +27,7 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
+		console.log("hello");
 		const url = new URL(request.url);
 		if (url.pathname === "/error") throw new Error("Hello Error");
 		return new Response("Hello World!");

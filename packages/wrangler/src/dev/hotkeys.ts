@@ -13,7 +13,6 @@ export default function registerDevHotKeys(
 	devEnvs: DevEnv[],
 	args: {
 		forceLocal?: boolean;
-		experimentalTailLogs: boolean;
 		remote: boolean;
 	},
 	render = true
@@ -33,9 +32,7 @@ export default function registerDevHotKeys(
 				keys: ["d"],
 				label: "open devtools",
 				// Don't display this hotkey if we're in a VSCode debug session
-				disabled:
-					!!process.env.VSCODE_INSPECTOR_OPTIONS ||
-					(args.remote && args.experimentalTailLogs),
+				disabled: !!process.env.VSCODE_INSPECTOR_OPTIONS || args.remote,
 				handler: async () => {
 					const { inspectorUrl } = await primaryDevEnv.proxy.ready.promise;
 
