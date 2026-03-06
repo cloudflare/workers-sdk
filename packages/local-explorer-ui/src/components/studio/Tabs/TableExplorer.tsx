@@ -398,13 +398,16 @@ export function StudioTableExplorerTab({
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
 
-				<Button onClick={onAddRowClick}>
-					<PlusIcon />
-					<span className="text-xs">Add row</span>
+				<Button className="text-xs" icon={PlusIcon} onClick={onAddRowClick}>
+					Add row
 				</Button>
-				<Button onClick={onDeleteRowClick}>
-					<TrashIcon />
-					<span className="text-xs">Delete row</span>
+				<Button
+					className="text-xs"
+					icon={TrashIcon}
+					onClick={onDeleteRowClick}
+					variant="secondary-destructive"
+				>
+					Delete row
 				</Button>
 
 				<div className="grow text-xs">

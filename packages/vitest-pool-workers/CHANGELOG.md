@@ -1,5 +1,13 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.12.20
+
+### Patch Changes
+
+- Updated dependencies [[`ec2459e`](https://github.com/cloudflare/workers-sdk/commit/ec2459ebeae9a1a9f14bf0db1f507e1ea5d2dbb2)]:
+  - wrangler@4.71.0
+  - miniflare@4.20260301.1
+
 ## 0.12.19
 
 ### Patch Changes
