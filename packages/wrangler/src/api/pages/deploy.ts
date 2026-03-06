@@ -274,10 +274,20 @@ export async function deploy({
 	}
 
 	if (commitMessage) {
-		formData.append(
-			"commit_message",
-			truncateUtf8Bytes(commitMessage, MAX_COMMIT_MESSAGE_BYTES)
+		// Normalize line endings to CRLF before truncation to match server-side
+		// normalization. Without this, the server converts LF (1 byte) to CRLF
+		// (2 bytes), increasing the byte count and potentially causing truncation
+		// to split a multi-byte UTF-8 character. See #12679.
+		const normalizedMessage = commitMessage.replace(/\r\n|\r|\n/g, "\r\n");
+		let truncatedMessage = truncateUtf8Bytes(
+			normalizedMessage,
+			MAX_COMMIT_MESSAGE_BYTES
 		);
+		// Ensure truncation didn't split a \r\n pair, leaving a trailing \r
+		if (truncatedMessage.endsWith("\r")) {
+			truncatedMessage = truncatedMessage.slice(0, -1);
+		}
+		formData.append("commit_message", truncatedMessage);
 	}
 
 	if (commitHash) {
