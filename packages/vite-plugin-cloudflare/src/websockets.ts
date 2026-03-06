@@ -23,10 +23,18 @@ export function handleWebSocket(
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
 
-			const url = new URL(request.url ?? "", UNKNOWN_HOST);
+			const rawHost = request.headers.host ?? UNKNOWN_HOST;
+			const base = /^https?:\/\//i.test(rawHost)
+				? rawHost
+				: `http://${rawHost}`;
+			const url = new URL(request.url ?? "", base);
 
-			// Ignore Vite HMR WebSockets
-			if (request.headers["sec-websocket-protocol"]?.startsWith("vite")) {
+			const isViteRequest =
+				request.headers["sec-websocket-protocol"]?.startsWith("vite");
+			const isSandboxRequest = hasSandboxOrigin(url.origin);
+
+			// Ignore Vite HMR WebSockets but forward on all sandbox requests.
+			if (isViteRequest && !isSandboxRequest) {
 				return;
 			}
 
@@ -58,4 +66,17 @@ export function handleWebSocket(
 			);
 		}
 	);
+}
+
+/**
+ * Matches the origin of a Sandbox SDK preview URL.
+ * See: https://developers.cloudflare.com/sandbox/concepts/preview-urls/
+ */
+const SANDBOX_ORIGIN = new URLPattern({
+	protocol: "http{s}?",
+	hostname: ":host(\\d{4,})-:id([^.]+)-:token.localhost",
+});
+
+function hasSandboxOrigin(url: string) {
+	return SANDBOX_ORIGIN.test(url);
 }
