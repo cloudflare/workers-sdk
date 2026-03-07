@@ -184,6 +184,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"queue",
 	"test",
 	"email",
+	"connect",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
 	"fetch",
@@ -191,6 +192,7 @@ const DURABLE_OBJECT_KEYS = [
 	"webSocketMessage",
 	"webSocketClose",
 	"webSocketError",
+	"connect",
 ] as const;
 
 // This type will grab the keys from T and remove "branded" keys
