@@ -300,7 +300,10 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		const accessToken = await getAccessToken(token.host);
+		const accessToken = await getAccessToken(
+			token.host,
+			this.#abortController.signal
+		);
 
 		this.emitReloadCompleteEvent({
 			type: "reloadComplete",

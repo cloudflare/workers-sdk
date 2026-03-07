@@ -1,7 +1,24 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { domainUsesAccess, getAccessToken } from "../user/access";
 import { msw, mswAccessHandlers } from "./helpers/msw";
+
+vi.mock("node:child_process", () => {
+	return {
+		execFile: (
+			_file: string,
+			_args: string[],
+			_opts: unknown,
+			callback: (err: Error | null, stdout?: string, stderr?: string) => void
+		) => {
+			const err = new Error("spawn cloudflared ENOENT") as Error & {
+				code: string;
+			};
+			err.code = "ENOENT";
+			process.nextTick(() => callback(err));
+		},
+	};
+});
 
 describe("access", () => {
 	beforeEach(() => {
