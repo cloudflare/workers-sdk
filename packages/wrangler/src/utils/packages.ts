@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import * as find from "empathic/find";
 import type { PackageJSON } from "@cloudflare/workers-utils";
@@ -73,21 +75,41 @@ export function getInstalledPackageVersion(
 }
 
 /**
- * Gets the path for a package installed by a project (or undefined if the package is not installed)
+ * Gets the path for a package installed by a project (or undefined if the package is not installed or could not be detected)
 
  * @param packageName the name of the target package
  * @param projectPath the path of the project
- * @returns the path for the package if the package is installed, undefined otherwise
+ * @returns the path for the package if the package is installed, undefined otherwise (or if the package detection fails)
  */
 function getPackagePath(
 	packageName: string,
 	projectPath: string
 ): string | undefined {
+	// We try `require.resolve` for the package's `package.json` file first
+	// (this might fail if the `package.json` file is not exported by the package)
 	try {
-		return require.resolve(packageName, {
+		const packageJsonPath = require.resolve(`${packageName}/package.json`, {
 			paths: [projectPath],
 		});
-	} catch {
-		return undefined;
+
+		if (packageJsonPath) {
+			return dirname(packageJsonPath);
+		}
+	} catch {}
+
+	// If `require.resolve` fails we try to walk up from projectPath checking node_modules at each level
+	// looking for the package's package.json file
+	let currentDir = projectPath;
+	while (currentDir !== dirname(currentDir)) {
+		const pkgJsonPath = join(
+			currentDir,
+			"node_modules",
+			packageName,
+			"package.json"
+		);
+		if (existsSync(pkgJsonPath)) {
+			return dirname(pkgJsonPath);
+		}
+		currentDir = dirname(currentDir);
 	}
 }
