@@ -1,6 +1,8 @@
 # Wrangler CLI Telemetry
 
-Cloudflare gathers non-user identifying telemetry data about usage of [Wrangler](https://www.npmjs.com/package/wrangler), the command-line interface for building and deploying Workers and Pages applications.
+Cloudflare gathers telemetry data about usage of [Wrangler](https://www.npmjs.com/package/wrangler), the command-line interface for building and deploying Workers and Pages applications.
+
+The collected data is mostly non-identifying. The only potentially identifying data collected is the user's account ID and project name. If Cloudflare uses this data in the future, it would only be for the user's benefit.
 
 You can [opt out of sharing telemetry data](#how-can-i-configure-wrangler-telemetry) at any time.
 
@@ -24,7 +26,9 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - The name of the Worker
   - The Deployment's timestamp
   - Binding type counts (how many bindings of each type are configured, such as KV namespaces, R2 buckets, D1 databases, Durable Objects, etc... Binding names or values are not collected)
-  - Public project dependency information (package names and version specifiers from the `dependencies` field in `package.json`, and their installed versions. `devDependencies`, `peerDependencies`, and similar are not collected. Neither are `dependencies` that point to private packages.)
+  - Information about public project dependencies (package names, version specifiers, and installed versions):
+    - Only dependencies listed in the project's `dependencies` field are considered (`devDependencies`, `peerDependencies`, and similar are not collected)
+    - A dependency is considered public if it is not a private package (i.e., does not have `"private": true`), is published on the npm registry, and has at least 10,000 yearly downloads
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
 - The major version of Node.js that the Wrangler client is running on
