@@ -204,7 +204,9 @@ const npmPackageUsageYearlyThreshold = 10_000;
 async function isPackageUsedOnNpm(packageName: string): Promise<boolean> {
 	try {
 		const resp = await fetch(
-			`https://api.npmjs.org/downloads/point/last-year/${packageName}`
+			`https://api.npmjs.org/downloads/point/last-year/${packageName}`,
+			// Let's timeout this fetch just in case there's some issue with npm
+			{ signal: AbortSignal.timeout(5000) }
 		);
 		const npmInfo = (await resp.json()) as NpmPackageDownloadsInfo;
 
