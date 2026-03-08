@@ -1032,7 +1032,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						props.message
 					);
 
-					await sendDeploymentToTelemetryDataCatalog({
+					// Note: we don't await this promise since we don't want to block the deployment on this operation
+					void sendDeploymentToTelemetryDataCatalog({
 						accountId,
 						workerName: scriptName,
 						projectPath,
@@ -1097,7 +1098,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						)
 					);
 
-					await sendDeploymentToTelemetryDataCatalog({
+					// Note: we don't await this promise since we don't want to block the deployment on this operation
+					void sendDeploymentToTelemetryDataCatalog({
 						accountId,
 						workerName: scriptName,
 						projectPath,
