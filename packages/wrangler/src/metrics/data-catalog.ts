@@ -154,8 +154,8 @@ async function getProjectDependenciesToCollect(
 				);
 
 				if (!pkgPackageJson || !pkgPackageJson.version) {
-					// If we can detect the package's package.json or the package's installed version
-					// then to be on the safe side let's not collect this package's data
+				// If we can't detect the package's package.json or the package's installed version
+				// then to be on the safe side let's not collect this package's data
 					return undefined;
 				}
 
