@@ -3,7 +3,6 @@ import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { isLocal } from "../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -61,8 +60,10 @@ export const d1MigrationsListCommand = createCommand({
 			);
 		}
 
+		// Migrations config lookup is only for local metadata (folder/table names).
+		// Remote execution resolves the real database UUID separately.
 		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
-			requireDatabaseId: !isLocal({ local, remote }), // Only require database_id for remote operations
+			requireDatabaseId: false,
 		});
 		if (!databaseInfo && remote) {
 			throw new UserError(

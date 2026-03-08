@@ -56,6 +56,81 @@ describe("migrate", () => {
 	describe("apply", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken();
+
+		it("should apply remote migrations when config has database_name but no database_id", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+			]);
+
+			writeWranglerConfig({
+				d1_databases: [{ binding: "DATABASE", database_name: "db" }],
+			});
+
+			const seenDatabaseIds: string[] = [];
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", async () => {
+					return HttpResponse.json(
+						{
+							result: [
+								{
+									file_size: 7421952,
+									name: "db",
+									num_tables: 2,
+									uuid: "resolved-db-id",
+									version: "production",
+								},
+							],
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async ({ params }) => {
+						seenDatabaseIds.push(params.databaseId as string);
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			mockConfirm({
+				text: `No migrations folder found. Set \`migrations_dir\` in your wrangler.toml file to choose a different path.
+Ok to create <cwd>/migrations?`,
+				result: true,
+			});
+			await runWrangler("d1 migrations create DATABASE test");
+
+			mockConfirm({
+				text: `About to apply 1 migration(s)
+Your database may not be available to serve requests during the migration, continue?`,
+				result: true,
+			});
+
+			await runWrangler("d1 migrations apply DATABASE --remote");
+			expect(seenDatabaseIds).toContain("resolved-db-id");
+		});
+
 		it("should not attempt to login in local mode", async ({ expect }) => {
 			setIsTTY(false);
 			writeWranglerConfig({

@@ -180,4 +180,76 @@ describe("getDatabaseByNameOrBinding", () => {
 			getDatabaseByNameOrBinding(config, "123", "db")
 		).resolves.toStrictEqual(mockDb);
 	});
+
+	it("should resolve a config database without database_id via remote lookup", async ({
+		expect,
+	}) => {
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		const mockDb = {
+			file_size: 7421952,
+			name: "db-from-config",
+			num_tables: 2,
+			uuid: "7b0c1d24-ec57-4179-8663-9b82dafe9277",
+			version: "alpha",
+		};
+
+		msw.use(
+			http.get("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json(
+					{
+						result: [mockDb],
+						success: true,
+						errors: [],
+						messages: [],
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		const config = {
+			d1_databases: [
+				{
+					binding: "DB_BINDING",
+					database_name: "db-from-config",
+				},
+			],
+		} as unknown as Config;
+
+		await expect(
+			getDatabaseByNameOrBinding(config, "123", "DB_BINDING")
+		).resolves.toStrictEqual(mockDb);
+	});
+
+	it("should still error when config has no database_id and database_name cannot be resolved", async ({
+		expect,
+	}) => {
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+
+		msw.use(
+			http.get("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json(
+					{
+						result: [],
+						success: true,
+						errors: [],
+						messages: [],
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		const config = {
+			d1_databases: [{ binding: "DB_BINDING" }],
+		} as unknown as Config;
+
+		await expect(
+			getDatabaseByNameOrBinding(config, "123", "DB_BINDING")
+		).rejects.toThrowError("Couldn't find DB with name 'DB_BINDING'");
+	});
 });
