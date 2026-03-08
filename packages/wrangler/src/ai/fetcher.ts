@@ -1,6 +1,6 @@
 import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Request } from "miniflare";
 
@@ -16,7 +16,7 @@ export default function (env) {
 
 export function getAIFetcher(complianceConfig: ComplianceConfig) {
 	return async function (request: Request): Promise<Response> {
-		const accountId = await getAccountId(complianceConfig);
+		const accountId = await getOrSelectAccountId(complianceConfig);
 
 		const reqHeaders = new Headers(request.headers);
 		reqHeaders.delete("Host");

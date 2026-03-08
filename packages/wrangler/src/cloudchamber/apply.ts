@@ -30,7 +30,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { configRolloutStepsToAPI } from "../containers/deploy";
 import { createCommand } from "../core/create-command";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
@@ -375,7 +375,7 @@ export async function apply(
 					`${config.name}-${appConfigNoDefaults.class_name}`
 			];
 
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 		const appConfig = containerAppToCreateApplication(
 			accountId,
 			appConfigNoDefaults,

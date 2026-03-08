@@ -16,7 +16,9 @@ describe("ai", () => {
 
 		describe("local", () => {
 			it("should send x-forwarded header", async ({ expect }) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource, init = {}) => {
 						const headers = new Headers(init.headers);
@@ -44,7 +46,9 @@ describe("ai", () => {
 			});
 
 			it("account id should be set", async ({ expect }) => {
-				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
+				vi.spyOn(user, "getOrSelectAccountId").mockImplementation(
+					async () => "123"
+				);
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
 					async (config, resource) => {
 						return Response.json({
