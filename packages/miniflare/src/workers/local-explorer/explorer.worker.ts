@@ -49,6 +49,61 @@ app.onError((err) => {
 });
 
 // ============================================================================
+// Middleware
+// ============================================================================
+
+app.use("/api/*", async (c, next) => {
+	const ALLOWED_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
+
+	const hostHeader = c.req.header("Host");
+	try {
+		const host = hostHeader ? new URL(`http://${hostHeader}`).hostname : "";
+		if (!ALLOWED_HOSTNAMES.includes(host)) {
+			return errorResponse(403, 10000, "Invalid Host header");
+		}
+	} catch {
+		return errorResponse(403, 10000, "Invalid Host header");
+	}
+
+	const origin = c.req.header("Origin");
+	if (origin) {
+		try {
+			if (!ALLOWED_HOSTNAMES.includes(new URL(origin).hostname)) {
+				return errorResponse(
+					403,
+					10000,
+					"Cross-origin requests to the local explorer API are not allowed"
+				);
+			}
+		} catch {
+			return errorResponse(
+				403,
+				10000,
+				"Cross-origin requests to the local explorer API are not allowed"
+			);
+		}
+	}
+
+	if (c.req.method === "OPTIONS") {
+		return new Response(null, {
+			status: 204,
+			headers: {
+				"Access-Control-Allow-Origin": origin ?? "*",
+				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+				"Access-Control-Allow-Headers": "Content-Type",
+				"Access-Control-Max-Age": "86400",
+			},
+		});
+	}
+
+	await next();
+
+	if (origin) {
+		c.res.headers.set("Access-Control-Allow-Origin", origin);
+	}
+});
+
+// ============================================================================
 // Static Asset Serving
 // ============================================================================
 
