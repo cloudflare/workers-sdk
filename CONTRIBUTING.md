@@ -312,7 +312,6 @@ Every PR will have an associated pre-release build for all releasable packages w
 It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
 
 - `preview:chrome-devtools-patches` for deploying [chrome-devtools-patches](packages/chrome-devtools-patches)
-- `preview:workers-playground` for deploying [workers-playground](packages/workers-playground)
 - `preview:quick-edit` for deploying [quick-edit](packages/quick-edit)
 
 Once built, you can find the preview link for these applications in the [Deploy Previews](.github/workflows/deploy-previews.yml) action output

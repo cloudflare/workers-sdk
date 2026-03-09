@@ -23,11 +23,8 @@ This generates the files into the `dist` directory that can then be deployed as 
 
 ## Deployment
 
-Deployments are managed by GitHub Actions:
+Production deployments are managed by GitHub Actions via the `changesets.yml` workflow:
+when a "Version Packages" PR containing a changeset that touches this package is merged to `main`,
+the package is deployed to production via `wrangler deploy`.
 
-- deploy-pages-previews.yml:
-  - Runs on any PR that has the `preview:workers-playground` label.
-  - Uploads a preview version via `wrangler versions upload`.
-- changesets.yml:
-  - Runs when a "Version Packages" PR, containing a changeset that touches this package, is merged to `main`.
-  - Deploys this package to production via `wrangler deploy`.
+To test changes locally, use `pnpm dev -F @cloudflare/workers-playground` (see "Developing locally" above).
