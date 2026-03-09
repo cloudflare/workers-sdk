@@ -19,8 +19,6 @@
 			"passThroughEnv": ["GITHUB_TOKEN"],
 			"env": [
 				"NODE_DEBUG",
-				"CLOUDFLARE_ACCOUNT_ID",
-				"CLOUDFLARE_API_TOKEN",
 				"E2E_EXPERIMENTAL",
 				"E2E_TEST_FILTER",
 				"E2E_TEST_PM",
