@@ -432,15 +432,41 @@ export function getInferredHost(
  * Checks for CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_* env vars
  * and applies them to the config's hyperdrive bindings.
  */
-function applyHyperdriveEnvVars(config: Config, local: boolean): void {
+function applyHyperdriveEnvVars(
+	config: Config,
+	local: boolean,
+	env: string | undefined,
+	envFiles: string[] | undefined
+): void {
+	// only lookup var file if a hyperdrive binding exists
+	let envFileVars = null;
+	if (config.hyperdrive?.length > 0) {
+		// look up variables from env files
+		envFileVars = getVarsForDev(
+			config.userConfigPath,
+			envFiles,
+			{},
+			env,
+			false
+		);
+	}
+
 	for (const hyperdrive of config.hyperdrive ?? []) {
 		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
-		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
-
 		let varName = `${prefix}${hyperdrive.binding}`;
 		let connectionStringFromEnv = process.env[varName];
+		// local .dev.vars or .env files overrides if binding name matches
+		if (envFileVars && varName in envFileVars) {
+			hyperdrive.localConnectionString = envFileVars[varName].value?.toString();
+			continue; // move on to next binding
+		}
 
-		if (!connectionStringFromEnv) {
+		// fallback to deprecated prefix
+		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
+		if (
+			!connectionStringFromEnv &&
+			hyperdrive.localConnectionString === undefined
+		) {
 			varName = `${deprecatedPrefix}${hyperdrive.binding}`;
 			connectionStringFromEnv = process.env[varName];
 		}
@@ -491,7 +517,7 @@ export function getBindings(
 	inputBindings: StartDevWorkerInput["bindings"],
 	defaultBindings: StartDevWorkerInput["bindings"]
 ): StartDevWorkerInput["bindings"] {
-	applyHyperdriveEnvVars(configParam, local);
+	applyHyperdriveEnvVars(configParam, local, env, envFiles);
 
 	const bindings = convertConfigToBindings(configParam, {
 		usePreviewIds: true,
