@@ -214,9 +214,12 @@ export function createModuleCollector(props: {
 								.createHash("sha1")
 								.update(fileContent)
 								.digest("hex");
+							// Strip query string (e.g. "?module") from the path before
+							// using it as a filename, as "?" is not valid in filenames on Windows.
+							const strippedLegacyPath = args.path.split("?")[0];
 							const fileName = props.preserveFileNames
-								? args.path
-								: `./${fileHash}-${path.basename(args.path)}`;
+								? strippedLegacyPath
+								: `./${fileHash}-${path.basename(strippedLegacyPath)}`;
 
 							const { rule } =
 								rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};
@@ -313,9 +316,14 @@ export function createModuleCollector(props: {
 									.createHash("sha1")
 									.update(fileContent)
 									.digest("hex");
+								// Strip query string (e.g. "?module") from the path before
+								// using it as a filename. Query strings are only meaningful for
+								// matching module rules (e.g. "**/*.wasm?module") and are not
+								// valid in filenames on Windows.
+								const strippedPath = args.path.split("?")[0];
 								const fileName = props.preserveFileNames
-									? args.path
-									: `./${fileHash}-${path.basename(args.path)}`;
+									? strippedPath
+									: `./${fileHash}-${path.basename(strippedPath)}`;
 
 								// add the module to the array
 								modules.push({

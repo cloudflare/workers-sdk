@@ -1,8 +1,12 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
-import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import {
+	findAdditionalModules,
+	writeAdditionalModules,
+} from "../deployment-bundle/find-additional-modules";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { ConfigModuleRuleType } from "@cloudflare/workers-utils";
@@ -393,5 +397,62 @@ describe("Python modules", () => {
 		expect(moduleNames).toContain("python_modules/module.py");
 		expect(moduleNames).not.toContain("python_modules/module.pyc");
 		expect(moduleNames).not.toContain("python_modules/test_module.py");
+	});
+});
+
+describe("writeAdditionalModules", () => {
+	runInTempDir();
+	mockConsoleMethods();
+
+	it("should strip query strings from module names when writing to disk", async ({
+		expect,
+	}) => {
+		const outDir = path.join(process.cwd(), "out");
+		await mkdir(outDir, { recursive: true });
+
+		const modules = [
+			{
+				name: "./abc123-query_compiler_bg.wasm?module",
+				content: Buffer.from("fake wasm content"),
+				filePath: undefined,
+				type: "compiled-wasm" as const,
+			},
+		];
+
+		await writeAdditionalModules(modules, outDir);
+
+		// The file should be written without the query string
+		const expectedPath = path.join(outDir, "abc123-query_compiler_bg.wasm");
+		expect(existsSync(expectedPath)).toBe(true);
+		const content = await readFile(expectedPath);
+		expect(content.toString()).toBe("fake wasm content");
+
+		// The file with the query string should NOT exist
+		const unexpectedPath = path.join(
+			outDir,
+			"abc123-query_compiler_bg.wasm?module"
+		);
+		expect(existsSync(unexpectedPath)).toBe(false);
+	});
+
+	it("should write modules without query strings normally", async ({
+		expect,
+	}) => {
+		const outDir = path.join(process.cwd(), "out");
+		await mkdir(outDir, { recursive: true });
+
+		const modules = [
+			{
+				name: "./abc123-module.wasm",
+				content: Buffer.from("normal wasm"),
+				filePath: undefined,
+				type: "compiled-wasm" as const,
+			},
+		];
+
+		await writeAdditionalModules(modules, outDir);
+
+		const expectedPath = path.join(outDir, "abc123-module.wasm");
+		expect(existsSync(expectedPath)).toBe(true);
 	});
 });

@@ -357,13 +357,18 @@ export async function writeAdditionalModules(
 	destination: string
 ): Promise<void> {
 	for (const module of modules) {
-		const modulePath = path.resolve(destination, module.name);
+		// Strip query strings (e.g. "?module") from module names before writing
+		// to disk. Query strings are used for module rule matching but are not
+		// valid in filenames on Windows.
+		const safeName = module.name.split("?")[0];
+		const modulePath = path.resolve(destination, safeName);
 		logger.debug("Writing additional module to output", modulePath);
 		await mkdir(path.dirname(modulePath), { recursive: true });
 		await writeFile(modulePath, module.content);
 
 		if (module.sourceMap) {
-			const sourcemapPath = path.resolve(destination, module.sourceMap.name);
+			const sourceMapSafeName = module.sourceMap.name.split("?")[0];
+			const sourcemapPath = path.resolve(destination, sourceMapSafeName);
 			await writeFile(sourcemapPath, module.sourceMap.content);
 		}
 	}
