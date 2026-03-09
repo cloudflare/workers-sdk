@@ -48,10 +48,10 @@ describe("getLocalPersistencePath", () => {
 			expect(result).toBe(path.resolve(process.cwd(), "./custom-persist"));
 		});
 
-		it("should resolve absolute path as-is", ({ expect }) => {
+		it("should resolve absolute path from cwd", ({ expect }) => {
 			const absolutePath = "/absolute/persist/path";
 			const result = getLocalPersistencePath(absolutePath, makeConfig());
-			expect(result).toBe(absolutePath);
+			expect(result).toBe(path.resolve(process.cwd(), absolutePath));
 		});
 
 		it("should resolve relative path from cwd even when config path is set", ({
