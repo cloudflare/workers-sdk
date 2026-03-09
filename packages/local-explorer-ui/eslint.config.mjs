@@ -13,7 +13,7 @@ export default defineConfig([
 	{
 		settings: {
 			tailwindcss: {
-				callees: ["classnames", "clsx", "ctl", "cn"],
+				callees: ["cn"],
 				config: dirname(fileURLToPath(import.meta.url)) + "/src/styles/tailwind.css",
 			},
 		},
