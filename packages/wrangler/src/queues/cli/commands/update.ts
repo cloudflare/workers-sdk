@@ -17,6 +17,9 @@ export const queuesUpdateCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		name: {
 			type: "string",

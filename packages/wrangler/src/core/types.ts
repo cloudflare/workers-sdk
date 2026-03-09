@@ -171,6 +171,14 @@ export type CommandDefinition<
 		provideConfig?: boolean;
 
 		/**
+		 * If `true`, config validation errors are demoted to warnings instead of
+		 * throwing a fatal error. Use this for commands that operate on
+		 * account-level resources and don't require a valid worker configuration.
+		 * @default false
+		 */
+		skipConfigValidationErrors?: boolean;
+
+		/**
 		 * By default, wrangler will provide experimental flags in the handler context,
 		 * according to the default values in register-yargs.command.ts
 		 * Use this to override those defaults per command.

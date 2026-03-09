@@ -23,6 +23,7 @@ export const vectorizeInsertCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

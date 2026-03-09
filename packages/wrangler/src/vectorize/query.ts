@@ -33,6 +33,9 @@ export const vectorizeQueryCommand = createCommand({
 			},
 		],
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		name: {
 			type: "string",

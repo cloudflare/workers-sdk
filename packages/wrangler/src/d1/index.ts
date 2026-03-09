@@ -7,4 +7,7 @@ export const d1Namespace = createNamespace({
 		owner: "Product: D1",
 		category: "Storage & databases",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });

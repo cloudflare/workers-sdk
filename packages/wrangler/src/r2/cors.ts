@@ -19,6 +19,9 @@ export const r2BucketCORSNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const r2BucketCORSListCommand = createCommand({
@@ -26,6 +29,9 @@ export const r2BucketCORSListCommand = createCommand({
 		description: "List the CORS rules for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -68,6 +74,9 @@ export const r2BucketCORSSetCommand = createCommand({
 		description: "Set the CORS configuration for an R2 bucket from a JSON file",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -140,6 +149,9 @@ export const r2BucketCORSDeleteCommand = createCommand({
 		description: "Clear the CORS configuration for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
