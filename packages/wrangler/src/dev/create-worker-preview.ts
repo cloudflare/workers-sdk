@@ -44,6 +44,11 @@ export interface CfPreviewSession {
 	 * The host where the session is available.
 	 */
 	host: string;
+	/**
+	 * The worker name used when the session was created.
+	 * Used to detect when the session needs to be recreated.
+	 */
+	name: string | undefined;
 }
 
 /**
@@ -202,6 +207,7 @@ export async function createPreviewSession(
 		return {
 			value: previewSessionToken,
 			host: host,
+			name,
 		};
 	} catch (e) {
 		if (!(e instanceof ParseError)) {

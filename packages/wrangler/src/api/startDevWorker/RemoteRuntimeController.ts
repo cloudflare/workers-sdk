@@ -339,6 +339,12 @@ export class RemoteRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
 			}
 
+			// Recreate session if the worker name changed, since the session
+			// host bakes in the name from creation time.
+			if (this.#session && config.name !== this.#session.name) {
+				this.#session = undefined;
+			}
+
 			this.#session ??= await this.#getPreviewSession(config, auth, routes);
 			await this.#updatePreviewToken(config, bundle, auth, routes, id);
 		} catch (error) {
