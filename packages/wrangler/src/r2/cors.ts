@@ -19,9 +19,6 @@ export const r2BucketCORSNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketCORSListCommand = createCommand({

@@ -32,9 +32,6 @@ export const r2ObjectNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BulkNamespace = createNamespace({
@@ -43,9 +40,6 @@ export const r2BulkNamespace = createNamespace({
 		status: "experimental",
 		owner: "Product: R2",
 		hidden: true,
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });
 

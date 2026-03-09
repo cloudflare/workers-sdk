@@ -188,8 +188,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
 								useRedirectIfAvailable:
 									def.behaviour?.useConfigRedirectIfAvailable,
-								skipValidationErrors:
-									def.behaviour?.skipConfigValidationErrors,
+								skipValidationErrors: def.behaviour?.skipConfigValidationErrors,
 							})
 						: defaultWranglerConfig;
 

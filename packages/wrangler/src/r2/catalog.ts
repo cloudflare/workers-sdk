@@ -30,9 +30,6 @@ export const r2BucketCatalogNamespace = createNamespace({
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketCatalogEnableCommand = createCommand({
@@ -186,9 +183,6 @@ export const r2BucketCatalogCompactionNamespace = createNamespace({
 			"Control settings for automatic file compaction maintenance jobs for your R2 data catalog",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });
 
@@ -377,9 +371,6 @@ export const r2BucketCatalogSnapshotExpirationNamespace = createNamespace({
 			"Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });
 

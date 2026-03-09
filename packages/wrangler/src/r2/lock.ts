@@ -19,9 +19,6 @@ export const r2BucketLockNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketLockListCommand = createCommand({

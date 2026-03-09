@@ -13,9 +13,6 @@ export const r2BucketLocalUploadsNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketLocalUploadsGetConfigCommand = createCommand({

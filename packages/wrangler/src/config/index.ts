@@ -79,7 +79,7 @@ export function readConfig(
 	if (diagnostics.hasErrors()) {
 		if (options?.skipValidationErrors) {
 			logger.warn(
-				`Ignoring the following wrangler.toml validation errors:\n${diagnostics.renderErrors()}`
+				`This command does not require a valid Wrangler configuration, but the following errors were found:\n${diagnostics.renderErrors()}`
 			);
 		} else {
 			throw new UserError(diagnostics.renderErrors());

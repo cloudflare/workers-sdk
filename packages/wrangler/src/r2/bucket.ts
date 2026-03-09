@@ -31,9 +31,6 @@ export const r2BucketNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketCreateCommand = createCommand({
@@ -130,9 +127,6 @@ export const r2BucketUpdateNamespace = createNamespace({
 		description: "Update bucket state",
 		status: "stable",
 		owner: "Product: R2",
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });
 

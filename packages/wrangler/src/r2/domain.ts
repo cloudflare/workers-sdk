@@ -18,9 +18,6 @@ export const r2BucketDomainNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketDomainGetCommand = createCommand({

@@ -6,7 +6,4 @@ export const queuesConsumerWorkerNamespace = createNamespace({
 		owner: "Product: Queues",
 		status: "stable",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });

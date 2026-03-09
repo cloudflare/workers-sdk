@@ -70,9 +70,6 @@ export const r2SqlNamespace = createNamespace({
 		status: "open beta",
 		owner: "Product: R2 SQL",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2SqlQueryCommand = createCommand({

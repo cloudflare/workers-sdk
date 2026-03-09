@@ -21,9 +21,6 @@ export const r2BucketNotificationNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const r2BucketNotificationGetAlias = createAlias({
