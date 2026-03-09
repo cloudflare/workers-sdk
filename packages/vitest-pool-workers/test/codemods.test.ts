@@ -5,7 +5,10 @@ import transform from "../src/codemods/vitest-v3-to-v4";
 function run(source: string): string {
 	return transform(
 		{ path: "vitest.config.ts", source },
-		{ jscodeshift: jscodeshift.withParser("ts") }
+		// Cast needed: @types/jscodeshift's full JSCodeshift type is structurally
+		// incompatible with the codemod's minimal JSCodeshift interface, but they
+		// are compatible at runtime.
+		{ jscodeshift: jscodeshift.withParser("ts") as never }
 	);
 }
 
