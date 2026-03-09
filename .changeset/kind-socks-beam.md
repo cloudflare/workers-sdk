@@ -2,7 +2,7 @@
 "wrangler": minor
 ---
 
-Support disabling persistence in `startWorker()` and `unstable_dev()`
+Support disabling persistence in `unstable_startWorker()` and `unstable_dev()`
 
 You can now disable persistence entirely by setting `persist: false` in the `dev` options:
 
@@ -12,10 +12,10 @@ const worker = await unstable_dev("./src/worker.ts", {
 });
 ```
 
-Or when using `startWorker()`:
+Or when using `unstable_startWorker()`:
 
 ```typescript
-const worker = await startWorker({
+const worker = await unstable_startWorker({
 	entrypoint: "./src/worker.ts",
 	dev: {
 		persist: false,
