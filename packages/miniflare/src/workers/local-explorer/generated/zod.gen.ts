@@ -284,9 +284,6 @@ export const zWorkersKvNamespace = z.object({
 
 export const zWorkersKvResultInfo = z.object({
 	count: z.number().optional(),
-	page: z.number().optional(),
-	per_page: z.number().optional(),
-	total_count: z.number().optional(),
 });
 
 export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
@@ -359,8 +356,6 @@ export const zWorkersKvNamespaceListNamespacesData = z.object({
 	path: z.never().optional(),
 	query: z
 		.object({
-			page: z.number().gte(1).optional().default(1),
-			per_page: z.number().gte(1).lte(1000).optional().default(20),
 			order: z.enum(["id", "title"]).optional(),
 			direction: z.enum(["asc", "desc"]).optional(),
 		})
@@ -468,14 +463,12 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 		})
 	);
 
-export const zCloudflareD1ListDatabasesData = z.object({
+export const zD1ListDatabasesData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
 	query: z
 		.object({
 			name: z.string().optional(),
-			page: z.number().gte(1).optional().default(1),
-			per_page: z.number().gte(10).lte(10000).optional().default(1000),
 		})
 		.optional(),
 });
@@ -483,21 +476,18 @@ export const zCloudflareD1ListDatabasesData = z.object({
 /**
  * List D1 databases response
  */
-export const zCloudflareD1ListDatabasesResponse = zD1ApiResponseCommon.and(
+export const zD1ListDatabasesResponse = zD1ApiResponseCommon.and(
 	z.object({
 		result: z.array(zD1DatabaseResponse).optional(),
 		result_info: z
 			.object({
 				count: z.number().optional(),
-				page: z.number().optional(),
-				per_page: z.number().optional(),
-				total_count: z.number().optional(),
 			})
 			.optional(),
 	})
 );
 
-export const zCloudflareD1RawDatabaseQueryData = z.object({
+export const zD1RawDatabaseQueryData = z.object({
 	body: zD1BatchQuery,
 	path: z.object({
 		database_id: zD1DatabaseIdentifier,
@@ -508,7 +498,7 @@ export const zCloudflareD1RawDatabaseQueryData = z.object({
 /**
  * Raw query response
  */
-export const zCloudflareD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
+export const zD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
 	z.object({
 		result: z.array(zD1RawResultResponse).optional(),
 	})
@@ -517,12 +507,7 @@ export const zCloudflareD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
 export const zDurableObjectsNamespaceListNamespacesData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
-	query: z
-		.object({
-			page: z.number().int().gte(1).optional().default(1),
-			per_page: z.number().int().gte(1).lte(1000).optional().default(20),
-		})
-		.optional(),
+	query: z.never().optional(),
 });
 
 /**

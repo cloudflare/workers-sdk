@@ -91,6 +91,7 @@ export function resetServerLogs() {
 
 beforeAll(async (s) => {
 	let server: ViteDevServer | PreviewServer | undefined;
+	let postServe: (() => Promise<void>) | undefined;
 
 	const suite = s as RunnerTestFile;
 
@@ -172,6 +173,7 @@ beforeAll(async (s) => {
 				const mod = await import(testCustomServe);
 				const serve = mod.serve || mod.default?.serve;
 				const preServe = mod.preServe || mod.default?.preServe;
+				postServe = mod.postServe || mod.default?.postServe;
 				if (preServe) {
 					await preServe();
 				}
@@ -193,6 +195,9 @@ beforeAll(async (s) => {
 		// a timeout with an exception that hides the real error in the console.
 		await page.close();
 		await server?.close();
+		if (postServe) {
+			await postServe();
+		}
 		throw e;
 	}
 
@@ -204,6 +209,9 @@ beforeAll(async (s) => {
 		// @ts-expect-error TODO: fix
 		await watcher?.close();
 		await browser?.close();
+		if (postServe) {
+			await postServe();
+		}
 	};
 }, 40_000);
 
