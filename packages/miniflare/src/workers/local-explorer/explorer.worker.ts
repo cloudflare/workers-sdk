@@ -10,9 +10,8 @@ import {
 import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
-	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
-	zDurableObjectsNamespaceListNamespacesData,
+	zD1ListDatabasesData,
+	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
@@ -35,8 +34,12 @@ export type Env = {
 	[key: string]: unknown;
 	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
 	[CoreBindings.EXPLORER_DISK]: Fetcher;
-	// Loopback service for calling Node.js endpoints (used for DO storage listing)
-	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
+	// Loopback service for calling Node.js endpoints:
+	// - /core/dev-registry for cross-instance aggregation
+	// - /core/do-storage for DO storage listing
+	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	// Worker names for this instance, used to filter self from dev registry during aggregation
+	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 };
 
 export type AppBindings = { Bindings: Env };
@@ -206,13 +209,13 @@ app.post(
 
 app.get(
 	"/api/d1/database",
-	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
+	validateQuery(zD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
 );
 
 app.post(
 	"/api/d1/database/:database_id/raw",
-	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
+	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
 );
 
@@ -220,13 +223,7 @@ app.post(
 // Durable Objects Endpoints
 // ============================================================================
 
-app.get(
-	"/api/workers/durable_objects/namespaces",
-	validateQuery(
-		zDurableObjectsNamespaceListNamespacesData.shape.query.unwrap()
-	),
-	(c) => listDONamespaces(c, c.req.valid("query"))
-);
+app.get("/api/workers/durable_objects/namespaces", (c) => listDONamespaces(c));
 
 app.get(
 	"/api/workers/durable_objects/namespaces/:namespace_id/objects",

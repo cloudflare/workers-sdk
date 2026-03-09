@@ -77,7 +77,7 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
-import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -1144,9 +1144,6 @@ export function getGlobalServices({
 			proxyBindings,
 			durableObjectClassNames
 		);
-		// Add loopback service binding if DOs are configured
-		// The explorer worker uses this to call the /core/do-storage endpoint
-		// which reads the filesystem using Node.js (bypassing workerd disk service issues on Windows)
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 		services.push(
 			...getExplorerServices({
@@ -1154,6 +1151,7 @@ export function getGlobalServices({
 				proxyBindings,
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,
+				workerNames,
 			})
 		);
 	}
