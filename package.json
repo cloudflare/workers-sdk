@@ -86,5 +86,8 @@
 			"@netlify/build-info": "patches/@netlify__build-info.patch",
 			"buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
 		}
+	},
+	"devDependencies": {
+		"jsonc-parser": "catalog:default"
 	}
 }
