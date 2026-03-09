@@ -20,6 +20,7 @@ export interface ExplorerServicesOptions {
 	proxyBindings: Worker_Binding[];
 	bindingIdMap: BindingIdMap;
 	hasDurableObjects: boolean;
+	workerNames: string[];
 }
 
 /**
@@ -33,6 +34,7 @@ export function getExplorerServices(
 		proxyBindings,
 		bindingIdMap,
 		hasDurableObjects,
+		workerNames,
 	} = options;
 
 	const explorerBindings: Worker_Binding[] = [
@@ -46,14 +48,18 @@ export function getExplorerServices(
 			name: CoreBindings.EXPLORER_DISK,
 			service: { name: LOCAL_EXPLORER_DISK },
 		},
+		// Loopback service for accessing Node.js endpoints:
+		// - /core/dev-registry for cross-instance aggregation
+		// - /core/do-storage for using DO storage to list objects
+		WORKER_BINDING_SERVICE_LOOPBACK,
+		// Worker names for this instance, used to filter self from registry during aggregation
+		{
+			name: CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES,
+			json: JSON.stringify(workerNames),
+		},
 	];
 
 	if (hasDurableObjects) {
-		// Add loopback service binding if DOs are configured
-		// The explorer worker uses this to call the /core/do-storage endpoint
-		// which reads the filesystem using Node.js (bypassing workerd disk service issues on Windows)
-		explorerBindings.push(WORKER_BINDING_SERVICE_LOOPBACK);
-
 		// Add Durable Object namespace bindings for the explorer
 		// Yes we are binding to 'unbound' DOs, but that has no effect
 		// on the user's access via ctx.exports

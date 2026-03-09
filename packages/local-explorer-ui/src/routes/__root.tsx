@@ -4,7 +4,7 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import {
-	cloudflareD1ListDatabases,
+	d1ListDatabases,
 	durableObjectsNamespaceListNamespaces,
 	workersKvNamespaceListNamespaces,
 } from "../api";
@@ -20,7 +20,7 @@ export const Route = createRootRoute({
 	loader: async () => {
 		const [kvResponse, d1Response, doResponse] = await Promise.allSettled([
 			workersKvNamespaceListNamespaces(),
-			cloudflareD1ListDatabases(),
+			d1ListDatabases(),
 			durableObjectsNamespaceListNamespaces(),
 		]);
 

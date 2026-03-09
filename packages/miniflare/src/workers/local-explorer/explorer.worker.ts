@@ -10,9 +10,8 @@ import {
 import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
-	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
-	zDurableObjectsNamespaceListNamespacesData,
+	zD1ListDatabasesData,
+	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
@@ -35,8 +34,12 @@ export type Env = {
 	[key: string]: unknown;
 	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
 	[CoreBindings.EXPLORER_DISK]: Fetcher;
-	// Loopback service for calling Node.js endpoints (used for DO storage listing)
-	[CoreBindings.SERVICE_LOOPBACK]?: Fetcher;
+	// Loopback service for calling Node.js endpoints:
+	// - /core/dev-registry for cross-instance aggregation
+	// - /core/do-storage for DO storage listing
+	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	// Worker names for this instance, used to filter self from dev registry during aggregation
+	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 };
 
 export type AppBindings = { Bindings: Env };
@@ -46,6 +49,61 @@ const app = new Hono<AppBindings>().basePath(LOCAL_EXPLORER_BASE_PATH);
 // Global error handler - catches all uncaught errors and wraps them in an error response
 app.onError((err) => {
 	return errorResponse(500, 10000, err.message);
+});
+
+// ============================================================================
+// Middleware
+// ============================================================================
+
+app.use("/api/*", async (c, next) => {
+	const ALLOWED_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
+
+	const hostHeader = c.req.header("Host");
+	try {
+		const host = hostHeader ? new URL(`http://${hostHeader}`).hostname : "";
+		if (!ALLOWED_HOSTNAMES.includes(host)) {
+			return errorResponse(403, 10000, "Invalid Host header");
+		}
+	} catch {
+		return errorResponse(403, 10000, "Invalid Host header");
+	}
+
+	const origin = c.req.header("Origin");
+	if (origin) {
+		try {
+			if (!ALLOWED_HOSTNAMES.includes(new URL(origin).hostname)) {
+				return errorResponse(
+					403,
+					10000,
+					"Cross-origin requests to the local explorer API are not allowed"
+				);
+			}
+		} catch {
+			return errorResponse(
+				403,
+				10000,
+				"Cross-origin requests to the local explorer API are not allowed"
+			);
+		}
+	}
+
+	if (c.req.method === "OPTIONS") {
+		return new Response(null, {
+			status: 204,
+			headers: {
+				"Access-Control-Allow-Origin": origin ?? "*",
+				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+				"Access-Control-Allow-Headers": "Content-Type",
+				"Access-Control-Max-Age": "86400",
+			},
+		});
+	}
+
+	await next();
+
+	if (origin) {
+		c.res.headers.set("Access-Control-Allow-Origin", origin);
+	}
 });
 
 // ============================================================================
@@ -151,13 +209,13 @@ app.post(
 
 app.get(
 	"/api/d1/database",
-	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
+	validateQuery(zD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
 );
 
 app.post(
 	"/api/d1/database/:database_id/raw",
-	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
+	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
 );
 
@@ -165,13 +223,7 @@ app.post(
 // Durable Objects Endpoints
 // ============================================================================
 
-app.get(
-	"/api/workers/durable_objects/namespaces",
-	validateQuery(
-		zDurableObjectsNamespaceListNamespacesData.shape.query.unwrap()
-	),
-	(c) => listDONamespaces(c, c.req.valid("query"))
-);
+app.get("/api/workers/durable_objects/namespaces", (c) => listDONamespaces(c));
 
 app.get(
 	"/api/workers/durable_objects/namespaces/:namespace_id/objects",
