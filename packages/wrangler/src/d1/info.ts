@@ -20,6 +20,7 @@ export const d1InfoCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

@@ -11,6 +11,10 @@ export const workflowsDeleteCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
+
 	args: {
 		...localWorkflowArgs,
 		name: {

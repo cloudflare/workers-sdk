@@ -7,4 +7,7 @@ export const r2Namespace = createNamespace({
 		owner: "Product: R2",
 		category: "Storage & databases",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });

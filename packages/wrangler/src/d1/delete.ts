@@ -18,6 +18,7 @@ export const d1DeleteCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: true,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

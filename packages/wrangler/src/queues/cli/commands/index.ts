@@ -7,4 +7,7 @@ export const queuesNamespace = createNamespace({
 		status: "stable",
 		category: "Compute & AI",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });

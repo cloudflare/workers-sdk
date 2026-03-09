@@ -74,6 +74,9 @@ export const r2SqlNamespace = createNamespace({
 		status: "open beta",
 		owner: "Product: R2 SQL",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const r2SqlQueryCommand = createCommand({
@@ -81,6 +84,9 @@ export const r2SqlQueryCommand = createCommand({
 		description: "Execute SQL query against R2 Data Catalog",
 		status: "open beta",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["warehouse", "query"],
 	args: {

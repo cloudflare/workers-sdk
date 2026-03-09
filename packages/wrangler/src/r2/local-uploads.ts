@@ -13,6 +13,9 @@ export const r2BucketLocalUploadsNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const r2BucketLocalUploadsGetConfigCommand = createCommand({
@@ -20,6 +23,9 @@ export const r2BucketLocalUploadsGetConfigCommand = createCommand({
 		description: "Get the local uploads configuration for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -58,6 +64,9 @@ export const r2BucketLocalUploadsEnableCommand = createCommand({
 		description: "Enable local uploads for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -102,6 +111,9 @@ export const r2BucketLocalUploadsDisableCommand = createCommand({
 		description: "Disable local uploads for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

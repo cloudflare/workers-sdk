@@ -11,6 +11,9 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 		status: "stable",
 		hidden: true,
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 
 	positionalArgs: ["name"],
 

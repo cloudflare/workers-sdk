@@ -53,6 +53,7 @@ export const d1ExecuteCommand = createCommand({
 		supportTemporary: true,
 		printBanner: (args) => !args.json,
 		printResourceLocation: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		database: {

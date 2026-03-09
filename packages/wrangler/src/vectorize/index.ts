@@ -7,4 +7,7 @@ export const vectorizeNamespace = createNamespace({
 		owner: "Product: Vectorize",
 		category: "Storage & databases",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });

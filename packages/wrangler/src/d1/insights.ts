@@ -70,6 +70,7 @@ export const d1InsightsCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

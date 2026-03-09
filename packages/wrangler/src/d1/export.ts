@@ -30,6 +30,7 @@ export const d1ExportCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

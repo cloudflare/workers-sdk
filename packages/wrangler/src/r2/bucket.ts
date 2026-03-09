@@ -31,6 +31,9 @@ export const r2BucketNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const r2BucketCreateCommand = createCommand({
@@ -38,6 +41,9 @@ export const r2BucketCreateCommand = createCommand({
 		description: "Create a new R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["name"],
 	args: {
@@ -130,6 +136,9 @@ export const r2BucketUpdateNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const r2BucketUpdateStorageClassCommand = createCommand({
@@ -137,6 +146,9 @@ export const r2BucketUpdateStorageClassCommand = createCommand({
 		description: "Update the default storage class of an existing R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["name"],
 	args: {
@@ -240,6 +252,7 @@ export const r2BucketInfoCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 
 	async handler(args, { config }) {
@@ -285,6 +298,9 @@ export const r2BucketDeleteCommand = createCommand({
 		description: "Delete an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

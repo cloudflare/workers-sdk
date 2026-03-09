@@ -8,7 +8,10 @@ export const hyperdriveGetCommand = createCommand({
 		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
-	behaviour: { supportTemporary: true },
+	behaviour: {
+		supportTemporary: true,
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		id: {
 			type: "string",

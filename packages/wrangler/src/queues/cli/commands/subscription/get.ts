@@ -13,6 +13,7 @@ export const queuesSubscriptionGetCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["queue"],
 	args: {

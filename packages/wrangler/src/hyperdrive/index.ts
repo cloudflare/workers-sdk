@@ -20,6 +20,9 @@ export const hyperdriveNamespace = createNamespace({
 		owner: "Product: Hyperdrive",
 		category: "Storage & databases",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 function normalizeMysqlSslmode(sslmode: string): string {

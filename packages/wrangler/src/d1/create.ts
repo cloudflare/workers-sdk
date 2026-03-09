@@ -79,7 +79,10 @@ export const d1CreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
-	behaviour: { supportTemporary: true },
+	behaviour: {
+		supportTemporary: true,
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		name: {
 			type: "string",

@@ -9,6 +9,9 @@ export const vectorizeDeleteMetadataIndexCommand = createCommand({
 		owner: "Product: Vectorize",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		name: {
 			type: "string",

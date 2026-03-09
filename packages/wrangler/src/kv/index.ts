@@ -52,6 +52,9 @@ export const kvNamespace = createNamespace({
 		owner: "Product: KV",
 		category: "Storage & databases",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const kvNamespaceNamespace = createNamespace({
@@ -59,6 +62,9 @@ export const kvNamespaceNamespace = createNamespace({
 		description: `Interact with your Workers KV Namespaces`,
 		status: "stable",
 		owner: "Product: KV",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 });
 
@@ -68,6 +74,9 @@ export const kvKeyNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 });
 
 export const kvBulkNamespace = createNamespace({
@@ -75,6 +84,9 @@ export const kvBulkNamespace = createNamespace({
 		description: `Interact with multiple Workers KV key-value pairs at once`,
 		status: "stable",
 		owner: "Product: KV",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 });
 
@@ -84,7 +96,10 @@ export const kvNamespaceCreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-	behaviour: { supportTemporary: true },
+	behaviour: {
+		supportTemporary: true,
+		skipConfigValidationErrors: true,
+	},
 
 	args: {
 		namespace: {
@@ -173,6 +188,7 @@ export const kvNamespaceListCommand = createCommand({
 		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
+		skipConfigValidationErrors: true,
 	},
 	async handler(_, { config, sdk }) {
 		const accountId = await requireAuth(config);
@@ -201,7 +217,10 @@ export const kvNamespaceDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-	behaviour: { supportTemporary: true },
+	behaviour: {
+		supportTemporary: true,
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["namespace"],
 	args: {
 		namespace: {
@@ -321,7 +340,10 @@ export const kvNamespaceRenameCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-	behaviour: { supportTemporary: true },
+	behaviour: {
+		supportTemporary: true,
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["old-name"],
 	args: {
 		"old-name": {
@@ -456,6 +478,9 @@ const putCommonArgs = {
 			return parsed as KeyValue["metadata"];
 		},
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	local: {
 		type: "boolean",
 		describe: "Interact with local storage",
@@ -480,6 +505,7 @@ export const kvKeyPutCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["key", "value"],
 	args: {
@@ -576,6 +602,7 @@ export const kvKeyListCommand = createCommand({
 		// implicitly expects to output JSON only
 		printResourceLocation: false,
 		printBanner: false,
+		skipConfigValidationErrors: true,
 	},
 
 	args: {
@@ -700,6 +727,7 @@ export const kvKeyGetCommand = createCommand({
 		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["key"],
 	args: {
@@ -807,6 +835,7 @@ export const kvKeyDeleteCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["key"],
 	args: {
@@ -861,6 +890,7 @@ export const kvBulkGetCommand = createCommand({
 		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["filename"],
 	args: {
@@ -958,6 +988,7 @@ export const kvBulkPutCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["filename"],
 	args: {
@@ -1084,6 +1115,7 @@ export const kvBulkDeleteCommand = createCommand({
 	behaviour: {
 		supportTemporary: true,
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["filename"],
 	args: {

@@ -36,6 +36,12 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	// Used by the Vite plugin
 	// If set to `true`, the `main` field is not converted to an absolute path
 	preserveOriginalMain?: boolean;
+	/**
+	 * If `true`, config validation errors are demoted to warnings instead of
+	 * throwing a fatal error. Use this for commands that operate on account-level
+	 * resources and don't actually require a valid worker configuration.
+	 */
+	skipValidationErrors?: boolean;
 };
 
 export type { ConfigBindingOptions };
@@ -171,9 +177,15 @@ export function readConfig(
 
 	void logWarningsWithUpgradeHint(diagnostics, options?.hideWarnings);
 	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors(), {
-			telemetryMessage: "config wrangler validation failed",
-		});
+		if (options?.skipValidationErrors) {
+			logger.warn(
+				`Ignoring the following wrangler.toml validation errors:\n${diagnostics.renderErrors()}`
+			);
+		} else {
+			throw new UserError(diagnostics.renderErrors(), {
+				telemetryMessage: "config wrangler validation failed",
+			});
+		}
 	}
 
 	return config;

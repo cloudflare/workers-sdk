@@ -13,6 +13,10 @@ export const workflowsInstancesListCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
+
 	positionalArgs: ["name"],
 	args: {
 		...localWorkflowArgs,
