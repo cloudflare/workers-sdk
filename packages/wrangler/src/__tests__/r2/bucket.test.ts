@@ -219,58 +219,36 @@ describe("r2", () => {
 				`);
 			});
 
-			it("should list buckets even if the local wrangler config is invalid", async () => {
-				writeWranglerConfig(
-					{
-						r2_buckets: [
-							{
-								binding: "BUCKET",
-								bucket_name: "Invalid_Bucket",
-							},
-						],
-					},
-					"./wrangler.jsonc"
-				);
+			it("should proceed with a warning when wrangler.json has validation errors", async () => {
+				// Write a config with an invalid r2 bucket name (angle brackets are not allowed)
+				// This simulates the common case of a placeholder value being left in wrangler.json
+				writeWranglerConfig({
+					r2_buckets: [{ binding: "R2", bucket_name: "<my-bucket-name>" }],
+				});
 
-				const mockBuckets = [
-					{
-						name: "bucket-1-local-once",
-						creation_date: "01-01-2001",
-					},
-					{
-						name: "bucket-2-local-once",
-						creation_date: "01-01-2001",
-					},
-				];
+				const mockBuckets = [{ name: "real-bucket", creation_date: "01-01-2001" }];
 				msw.use(
 					http.get(
 						"*/accounts/:accountId/r2/buckets",
-						async ({ request, params }) => {
-							const { accountId } = params;
-							expect(accountId).toEqual("some-account-id");
-							expect(await request.text()).toEqual("");
+						async () => {
 							return HttpResponse.json(
-								createFetchResult({
-									buckets: mockBuckets,
-								})
+								createFetchResult({ buckets: mockBuckets })
 							);
 						},
 						{ once: true }
 					)
 				);
 
-				await runWrangler(`r2 bucket list`);
-				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Listing buckets...
-					name:           bucket-1-local-once
-					creation_date:  01-01-2001
+				// Should NOT throw even though the config has a validation error
+				await runWrangler("r2 bucket list");
 
-					name:           bucket-2-local-once
-					creation_date:  01-01-2001"
-				`);
+				// The command output should include the bucket listing
+				expect(std.out).toContain("real-bucket");
+				// A warning about the invalid config should be emitted, not a fatal error
+				expect(std.warn).toContain(
+					"This command does not require a valid Wrangler configuration"
+				);
+				expect(std.err).toBe("");
 			});
 		});
 

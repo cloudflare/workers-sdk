@@ -7,9 +7,6 @@ export const aiNamespace = createNamespace({
 		owner: "Product: AI",
 		category: "Compute & AI",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const aiFineTuneNamespace = createNamespace({
@@ -17,8 +14,5 @@ export const aiFineTuneNamespace = createNamespace({
 		description: "Interact with finetune files",
 		status: "stable",
 		owner: "Product: AI",
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });

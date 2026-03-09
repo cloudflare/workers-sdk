@@ -52,9 +52,6 @@ export const kvNamespace = createNamespace({
 		owner: "Product: KV",
 		category: "Storage & databases",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const kvNamespaceNamespace = createNamespace({
@@ -62,9 +59,6 @@ export const kvNamespaceNamespace = createNamespace({
 		description: `Interact with your Workers KV Namespaces`,
 		status: "stable",
 		owner: "Product: KV",
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });
 
@@ -74,9 +68,6 @@ export const kvKeyNamespace = createNamespace({
 		status: "stable",
 		owner: "Product: KV",
 	},
-	behaviour: {
-		skipConfigValidationErrors: true,
-	},
 });
 
 export const kvBulkNamespace = createNamespace({
@@ -84,9 +75,6 @@ export const kvBulkNamespace = createNamespace({
 		description: `Interact with multiple Workers KV key-value pairs at once`,
 		status: "stable",
 		owner: "Product: KV",
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 });
 
@@ -185,7 +173,6 @@ export const kvNamespaceListCommand = createCommand({
 	args: {},
 
 	behaviour: {
-		supportTemporary: true,
 		printBanner: false,
 		printResourceLocation: false,
 		skipConfigValidationErrors: true,
@@ -477,9 +464,6 @@ const putCommonArgs = {
 			}
 			return parsed as KeyValue["metadata"];
 		},
-	},
-	behaviour: {
-		skipConfigValidationErrors: true,
 	},
 	local: {
 		type: "boolean",
