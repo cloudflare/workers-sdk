@@ -26,7 +26,6 @@ interface SidebarItemGroupProps {
 			to: FileRouteTypes["to"];
 		};
 	}>;
-	loading: boolean;
 	title: string;
 }
 
@@ -35,7 +34,6 @@ function SidebarItemGroup({
 	error,
 	icon: Icon,
 	items,
-	loading,
 	title,
 }: SidebarItemGroupProps): JSX.Element {
 	return (
@@ -51,17 +49,11 @@ function SidebarItemGroup({
 
 			<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-starting-style:h-0 data-starting-style:opacity-0 data-ending-style:h-0 data-ending-style:opacity-0">
 				<ul className="list-none ml-3 pl-3 space-y-0.5 border-l border-border">
-					{loading ? (
-						<li className="py-1.5 px-2 text-text-secondary text-sm">
-							Loading...
-						</li>
-					) : null}
-
 					{error ? (
 						<li className="py-1.5 px-2 text-danger text-sm">{error}</li>
 					) : null}
 
-					{!loading && !error
+					{!error
 						? items.map((item) => (
 								<li key={item.id}>
 									<Link
@@ -81,7 +73,7 @@ function SidebarItemGroup({
 							))
 						: null}
 
-					{!loading && !error && items.length === 0 && (
+					{!error && items.length === 0 && (
 						<li className="py-1.5 px-2 text-text-secondary text-sm italic">
 							{emptyLabel}
 						</li>
@@ -100,7 +92,6 @@ interface SidebarProps {
 	doNamespaces: WorkersNamespace[];
 	kvError: string | null;
 	kvNamespaces: WorkersKvNamespace[];
-	loading: boolean;
 }
 
 export function Sidebar({
@@ -111,7 +102,6 @@ export function Sidebar({
 	doNamespaces,
 	kvError,
 	kvNamespaces,
-	loading,
 }: SidebarProps) {
 	return (
 		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
@@ -143,7 +133,6 @@ export function Sidebar({
 						to: "/kv/$namespaceId",
 					},
 				}))}
-				loading={loading}
 				title="KV Namespaces"
 			/>
 
@@ -161,7 +150,6 @@ export function Sidebar({
 						to: "/d1/$databaseId",
 					},
 				}))}
-				loading={loading}
 				title="D1 Databases"
 			/>
 
@@ -183,7 +171,6 @@ export function Sidebar({
 						},
 					};
 				})}
-				loading={loading}
 				title="Durable Objects"
 			/>
 		</aside>
