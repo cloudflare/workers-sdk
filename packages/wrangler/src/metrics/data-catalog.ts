@@ -10,7 +10,6 @@ import { logger } from "../logger";
 import { getMetricsConfig } from "../metrics/metrics-config";
 import { sniffUserAgent } from "../package-manager";
 import { getInstalledPackageJson } from "../utils/packages";
-import type { Binding, StartDevWorkerInput } from "../api";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type TelemetryDataCatalogEntryBase = {
@@ -35,8 +34,6 @@ type DeploymentDataForTelemetryDataCatalog = TelemetryDataCatalogEntryBase & {
 	packageManager?: "npm" | "pnpm" | "yarn" | "bun";
 	/** ISO timestamp of deploy */
 	deployedAt: string;
-	/** Object mapping every binding type to the number of such bindings defined for the current worker */
-	bindingsCount: Record<Binding["type"], number>;
 	/** The dependencies for the project, `undefined` if the dependencies detection fails */
 	projectDependencies?: Record<
 		string,
@@ -57,21 +54,18 @@ type DeploymentDataForTelemetryDataCatalog = TelemetryDataCatalogEntryBase & {
  * @param options.accountId The Cloudflare account ID
  * @param options.workerName The Worker's name
  * @param options.projectPath Path for the project (where their package.json should be)
- * @param options.bindings The bindings configured for the project
  * @param options.sendMetrics Optional override for telemetry settings (from config.send_metrics)
  */
 export async function sendDeploymentToTelemetryDataCatalog({
 	accountId,
 	workerName,
 	projectPath,
-	bindings,
 	sendMetrics,
 	complianceConfig,
 }: {
 	accountId: string;
 	workerName: string;
 	projectPath: string;
-	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	sendMetrics?: boolean;
 	complianceConfig: ComplianceConfig;
 }): Promise<void> {
@@ -90,8 +84,6 @@ export async function sendDeploymentToTelemetryDataCatalog({
 	const projectDependencies =
 		await getProjectDependenciesToCollect(projectPath);
 
-	const bindingsCount = getBindingsCount(bindings);
-
 	const deploymentData: DeploymentDataForTelemetryDataCatalog = {
 		type: "deployment",
 		version: "1",
@@ -101,7 +93,6 @@ export async function sendDeploymentToTelemetryDataCatalog({
 		packageManager: sniffUserAgent(),
 		deployedAt: new Date().toISOString(),
 		projectDependencies,
-		bindingsCount,
 	};
 
 	try {
@@ -183,55 +174,4 @@ async function getProjectDependenciesToCollect(
 			return undefined;
 		}
 	}
-}
-
-/**
- * Given an object containing the worker's bindings returns an object that maps every binding type to
- * the number of occurrences of such bindings
- *
- * @param bindings The target bindings
- * @returns Object containing the bindings counts
- */
-function getBindingsCount(
-	bindings: NonNullable<StartDevWorkerInput["bindings"]>
-): Record<Binding["type"], number> {
-	const bindingsCount: Record<Binding["type"], number> = {
-		service: 0,
-		pipeline: 0,
-		plain_text: 0,
-		secret_text: 0,
-		json: 0,
-		kv_namespace: 0,
-		send_email: 0,
-		wasm_module: 0,
-		text_blob: 0,
-		browser: 0,
-		ai: 0,
-		images: 0,
-		version_metadata: 0,
-		data_blob: 0,
-		durable_object_namespace: 0,
-		workflow: 0,
-		queue: 0,
-		r2_bucket: 0,
-		d1: 0,
-		vectorize: 0,
-		hyperdrive: 0,
-		fetcher: 0,
-		analytics_engine: 0,
-		dispatch_namespace: 0,
-		mtls_certificate: 0,
-		secrets_store_secret: 0,
-		logfwdr: 0,
-		ratelimit: 0,
-		worker_loader: 0,
-		vpc_service: 0,
-		media: 0,
-		assets: 0,
-		inherit: 0,
-	};
-	for (const { type: bindingType } of Object.values(bindings)) {
-		bindingsCount[bindingType]++;
-	}
-	return bindingsCount;
 }

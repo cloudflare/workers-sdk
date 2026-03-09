@@ -7,7 +7,6 @@ import { sniffUserAgent } from "../../package-manager";
 import { getInstalledPackageJson } from "../../utils/packages";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
-import type { Binding, StartDevWorkerInput } from "../../api";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 const TEST_DATA_CATALOG_WORKER_URL =
@@ -66,7 +65,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -95,7 +93,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				sendMetrics: false,
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
@@ -127,7 +124,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -161,15 +157,10 @@ describe("data-catalog", () => {
 				}),
 			});
 
-			const bindings: NonNullable<StartDevWorkerInput["bindings"]> = {
-				MY_KV: { type: "kv_namespace", id: "abc123" },
-			};
-
 			await sendDeploymentToTelemetryDataCatalog({
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings,
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -181,61 +172,12 @@ describe("data-catalog", () => {
 				wranglerVersion: expect.any(String),
 				packageManager: "npm",
 				deployedAt: expect.any(String),
-				bindingsCount: expect.objectContaining({
-					kv_namespace: 1,
-				}),
 				projectDependencies: {
 					hono: {
 						packageJsonVersion: "^4.0.0",
 						installedVersion: "4.0.0",
 					},
 				},
-			});
-		});
-
-		it("should correctly count bindings by type", async ({ expect }) => {
-			let capturedBody: unknown;
-			msw.use(
-				http.post(TEST_DATA_CATALOG_WORKER_URL, async ({ request }) => {
-					capturedBody = await request.json();
-					return HttpResponse.json({ success: true });
-				})
-			);
-
-			const bindings: NonNullable<StartDevWorkerInput["bindings"]> = {
-				KV_ONE: { type: "kv_namespace", id: "kv1" },
-				KV_TWO: { type: "kv_namespace", id: "kv2" },
-				MY_BUCKET: { type: "r2_bucket", bucket_name: "my-bucket" },
-				MY_DB: { type: "d1", database_id: "db123", database_name: "my-db" },
-				MY_DO: {
-					type: "durable_object_namespace",
-					class_name: "MyDO",
-					script_name: "worker",
-				},
-				MY_SERVICE: { type: "service", service: "other-worker" },
-				MY_VAR: { type: "plain_text", value: "hello" },
-				MY_SECRET: { type: "secret_text", value: "secret123" },
-			};
-
-			await sendDeploymentToTelemetryDataCatalog({
-				accountId: TEST_ACCOUNT_ID,
-				workerName: TEST_WORKER_NAME,
-				projectPath: ".",
-				bindings,
-				complianceConfig: TEST_COMPLIANCE_CONFIG,
-			});
-
-			expect(capturedBody).toMatchObject({
-				version: "1",
-				bindingsCount: expect.objectContaining({
-					kv_namespace: 2,
-					r2_bucket: 1,
-					d1: 1,
-					durable_object_namespace: 1,
-					service: 1,
-					plain_text: 1,
-					secret_text: 1,
-				}),
 			});
 		});
 
@@ -254,7 +196,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -285,7 +226,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -334,7 +274,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -398,7 +337,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -433,47 +371,9 @@ describe("data-catalog", () => {
 					accountId: TEST_ACCOUNT_ID,
 					workerName: TEST_WORKER_NAME,
 					projectPath: ".",
-					bindings: {},
 					complianceConfig: TEST_COMPLIANCE_CONFIG,
 				})
 			).resolves.toBeUndefined();
-		});
-
-		it("should handle empty bindings object", async ({ expect }) => {
-			let capturedBody: unknown;
-			msw.use(
-				http.post(TEST_DATA_CATALOG_WORKER_URL, async ({ request }) => {
-					capturedBody = await request.json();
-					return HttpResponse.json({ success: true });
-				})
-			);
-
-			await sendDeploymentToTelemetryDataCatalog({
-				accountId: TEST_ACCOUNT_ID,
-				workerName: TEST_WORKER_NAME,
-				projectPath: ".",
-				bindings: {},
-				complianceConfig: TEST_COMPLIANCE_CONFIG,
-			});
-
-			expect(capturedBody).toMatchObject({
-				version: "1",
-				bindingsCount: expect.objectContaining({
-					kv_namespace: 0,
-					r2_bucket: 0,
-					d1: 0,
-					durable_object_namespace: 0,
-					service: 0,
-					plain_text: 0,
-					secret_text: 0,
-					queue: 0,
-					workflow: 0,
-					hyperdrive: 0,
-					vectorize: 0,
-					ai: 0,
-					browser: 0,
-				}),
-			});
 		});
 
 		it("should not include devDependencies in projectDependencies", async ({
@@ -511,74 +411,12 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
 			expect(capturedBody.projectDependencies).toHaveProperty("hono");
 			expect(capturedBody.projectDependencies).not.toHaveProperty("vitest");
 			expect(capturedBody.projectDependencies).not.toHaveProperty("typescript");
-		});
-
-		it("should handle all binding types", async ({ expect }) => {
-			let capturedBody: { bindingsCount: Record<Binding["type"], number> } = {
-				bindingsCount: {} as Record<Binding["type"], number>,
-			};
-			msw.use(
-				http.post(TEST_DATA_CATALOG_WORKER_URL, async ({ request }) => {
-					capturedBody = (await request.json()) as typeof capturedBody;
-					return HttpResponse.json({ success: true });
-				})
-			);
-
-			const bindings: NonNullable<StartDevWorkerInput["bindings"]> = {
-				MY_AI: { type: "ai" },
-				MY_BROWSER: { type: "browser" },
-				MY_IMAGES: { type: "images" },
-				MY_VERSION: { type: "version_metadata" },
-				MY_QUEUE: { type: "queue", queue_name: "my-queue" },
-				MY_WORKFLOW: {
-					type: "workflow",
-					name: "my-workflow",
-					class_name: "MyWorkflow",
-					script_name: "worker",
-				},
-				MY_VECTORIZE: { type: "vectorize", index_name: "my-index" },
-				MY_HYPERDRIVE: { type: "hyperdrive", id: "hd123" },
-				MY_ANALYTICS: { type: "analytics_engine", dataset: "my-dataset" },
-				MY_DISPATCH: { type: "dispatch_namespace", namespace: "my-dispatch" },
-				MY_MTLS: { type: "mtls_certificate", certificate_id: "cert123" },
-				MY_PIPELINE: { type: "pipeline", pipeline: "my-pipeline" },
-				MY_RATELIMIT: {
-					type: "ratelimit",
-					namespace_id: "rl123",
-					simple: { limit: 100, period: 60 },
-				},
-				MY_ASSETS: { type: "assets" },
-			};
-
-			await sendDeploymentToTelemetryDataCatalog({
-				accountId: TEST_ACCOUNT_ID,
-				workerName: TEST_WORKER_NAME,
-				projectPath: ".",
-				bindings,
-				complianceConfig: TEST_COMPLIANCE_CONFIG,
-			});
-
-			expect(capturedBody.bindingsCount.ai).toBe(1);
-			expect(capturedBody.bindingsCount.browser).toBe(1);
-			expect(capturedBody.bindingsCount.images).toBe(1);
-			expect(capturedBody.bindingsCount.version_metadata).toBe(1);
-			expect(capturedBody.bindingsCount.queue).toBe(1);
-			expect(capturedBody.bindingsCount.workflow).toBe(1);
-			expect(capturedBody.bindingsCount.vectorize).toBe(1);
-			expect(capturedBody.bindingsCount.hyperdrive).toBe(1);
-			expect(capturedBody.bindingsCount.analytics_engine).toBe(1);
-			expect(capturedBody.bindingsCount.dispatch_namespace).toBe(1);
-			expect(capturedBody.bindingsCount.mtls_certificate).toBe(1);
-			expect(capturedBody.bindingsCount.pipeline).toBe(1);
-			expect(capturedBody.bindingsCount.ratelimit).toBe(1);
-			expect(capturedBody.bindingsCount.assets).toBe(1);
 		});
 
 		it("should include deployment metadata fields", async ({ expect }) => {
@@ -601,7 +439,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -639,7 +476,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -662,7 +498,6 @@ describe("data-catalog", () => {
 					accountId: TEST_ACCOUNT_ID,
 					workerName: TEST_WORKER_NAME,
 					projectPath: ".",
-					bindings: {},
 					complianceConfig: TEST_COMPLIANCE_CONFIG,
 				});
 
@@ -715,7 +550,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -774,7 +608,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -813,7 +646,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: { compliance_region: "fedramp_high" },
 			});
 
@@ -840,7 +672,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: TEST_COMPLIANCE_CONFIG,
 			});
 
@@ -869,7 +700,6 @@ describe("data-catalog", () => {
 				accountId: TEST_ACCOUNT_ID,
 				workerName: TEST_WORKER_NAME,
 				projectPath: ".",
-				bindings: {},
 				complianceConfig: { compliance_region: "fedramp_high" },
 			});
 

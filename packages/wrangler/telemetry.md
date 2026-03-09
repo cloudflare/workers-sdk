@@ -25,7 +25,6 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - The Cloudflare Account ID
   - The name of the Worker
   - The Deployment's timestamp
-  - Binding type counts (how many bindings of each type are configured, such as KV namespaces, R2 buckets, D1 databases, Durable Objects, etc... Binding names or values are not collected)
   - Information about public project dependencies in the project's `dependencies` field (package names, version specifiers, and installed versions)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
