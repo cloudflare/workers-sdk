@@ -232,7 +232,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		) {
 			logger.log(
 				chalk.gray(
-					`\nCloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md`
+					"\nCloudflare collects anonymous telemetry about your usage of Wrangler locally. When you deploy, we collect information about your account, Worker, and dependencies." +
+						"\nLearn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md\n"
 				)
 			);
 			metricsConfig.permission.bannerLastShown = wranglerVersion;

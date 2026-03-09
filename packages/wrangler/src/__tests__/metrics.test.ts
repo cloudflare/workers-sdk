@@ -313,7 +313,9 @@ describe("metrics", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+					Cloudflare collects anonymous telemetry about your usage of Wrangler locally. When you deploy, we collect information about your account, Worker, and dependencies.
+					Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
 					Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -435,7 +437,9 @@ describe("metrics", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 
-					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+					Cloudflare collects anonymous telemetry about your usage of Wrangler locally. When you deploy, we collect information about your account, Worker, and dependencies.
+					Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
 					Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -540,7 +544,9 @@ describe("metrics", () => {
 						 ⛅️ wrangler x.x.x
 						──────────────────
 
-						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+						Cloudflare collects anonymous telemetry about your usage of Wrangler locally. When you deploy, we collect information about your account, Worker, and dependencies.
+						Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
 						Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 					`);
 
@@ -575,7 +581,9 @@ describe("metrics", () => {
 						 ⛅️ wrangler x.x.x
 						──────────────────
 
-						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+						Cloudflare collects anonymous telemetry about your usage of Wrangler locally. When you deploy, we collect information about your account, Worker, and dependencies.
+						Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+
 						Opening a link in your default browser: FAKE_DOCS_URL:{"params":"query=arg&hitsPerPage=1&getRankingInfo=0"}"
 					`);
 					expect(requests.count).toBe(2);
