@@ -15,6 +15,7 @@ import { startDev } from "./dev/start-dev";
 import { logger } from "./logger";
 import { getHostFromRoute } from "./zones";
 import type { StartDevWorkerInput, Trigger } from "./api";
+import type { VarBinding } from "./dev/dev-vars";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	Binding,
@@ -433,15 +434,28 @@ export function getInferredHost(
  * Checks for CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_* env vars
  * and applies them to the config's hyperdrive bindings.
  */
-function applyHyperdriveEnvVars(config: Config, local: boolean): void {
+function applyHyperdriveEnvVars(
+	config: Config,
+	local: boolean,
+	localDevVars: Record<string, VarBinding>
+): void {
 	for (const hyperdrive of config.hyperdrive ?? []) {
 		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
-		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
-
 		let varName = `${prefix}${hyperdrive.binding}`;
 		let connectionStringFromEnv = process.env[varName];
+		// local .dev.vars or .env files overrides if binding name matches
+		if (varName in localDevVars) {
+			hyperdrive.localConnectionString =
+				localDevVars[varName].value?.toString();
+			continue; // move on to next binding
+		}
 
-		if (!connectionStringFromEnv) {
+		// fallback to deprecated prefix
+		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
+		if (
+			!connectionStringFromEnv &&
+			hyperdrive.localConnectionString === undefined
+		) {
 			varName = `${deprecatedPrefix}${hyperdrive.binding}`;
 			connectionStringFromEnv = process.env[varName];
 		}
@@ -473,6 +487,18 @@ function applyHyperdriveEnvVars(config: Config, local: boolean): void {
 		}
 	}
 }
+
+function syncHyperdriveBindingConnectionStrings(
+	config: Config,
+	bindings: NonNullable<StartDevWorkerInput["bindings"]>
+): void {
+	for (const hyperdrive of config.hyperdrive ?? []) {
+		const binding = bindings[hyperdrive.binding];
+		if (binding?.type === "hyperdrive") {
+			binding.localConnectionString = hyperdrive.localConnectionString;
+		}
+	}
+}
 /**
  * Gets the bindings for the Cloudflare Worker.
  *
@@ -492,8 +518,6 @@ export function getBindings(
 	inputBindings: StartDevWorkerInput["bindings"],
 	defaultBindings: StartDevWorkerInput["bindings"]
 ): StartDevWorkerInput["bindings"] {
-	applyHyperdriveEnvVars(configParam, local);
-
 	const bindings = convertConfigToBindings(configParam, {
 		usePreviewIds: true,
 	});
@@ -510,6 +534,11 @@ export function getBindings(
 		false,
 		configParam.secrets
 	);
+
+	// apply hyperdrive env variables after local dev vars to read file once
+	applyHyperdriveEnvVars(configParam, local, vars);
+	syncHyperdriveBindingConnectionStrings(configParam, bindings);
+
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace
 		const existingBinding = bindings[name];

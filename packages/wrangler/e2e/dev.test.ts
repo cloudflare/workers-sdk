@@ -955,6 +955,150 @@ describe.each(HYPERDRIVE_DATABASES)(
 			await socketMsgPromise;
 		});
 
+		it("uses CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE from .dev.vars", async ({
+			expect,
+		}) => {
+			const helper = new WranglerE2ETestHelper();
+			let port: number = defaultPort;
+			if (server.address() && typeof server.address() !== "string") {
+				port = (server.address() as nodeNet.AddressInfo).port;
+			}
+			await helper.seed({
+				".dev.vars": dedent`
+					CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE= "${scheme}://user:pass@127.0.0.1:${port}/some_db"
+				`,
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+			`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+
+			const worker = helper.runLongLived("wrangler dev");
+
+			const { url } = await worker.waitForReady();
+			const socketMsgPromise = new Promise((resolve, reject) => {
+				server.on("connection", (socket) => {
+					// For MySQL, send initial handshake first
+					if (scheme === "mysql") {
+						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
+					}
+					socket.on("data", (chunk) => {
+						if (
+							scheme === "postgresql" &&
+							POSTGRES_SSL_REQUEST_PACKET.equals(chunk)
+						) {
+							socket.write("N");
+							return;
+						}
+						expect(new TextDecoder().decode(chunk)).toBe("test string");
+						server.close();
+						resolve({});
+					});
+					socket.on("error", (err) => {
+						console.error("Socket error:", err);
+						reject(err);
+					});
+				});
+			});
+			await fetch(`${url}/connect`);
+
+			await socketMsgPromise;
+		});
+
+		it("uses CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE from .env", async ({
+			expect,
+		}) => {
+			const helper = new WranglerE2ETestHelper();
+			let port: number = defaultPort;
+			if (server.address() && typeof server.address() !== "string") {
+				port = (server.address() as nodeNet.AddressInfo).port;
+			}
+			await helper.seed({
+				".env": dedent`
+					CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE= "${scheme}://user:pass@127.0.0.1:${port}/some_db"
+				`,
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+			`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+
+			const worker = helper.runLongLived("wrangler dev");
+
+			const { url } = await worker.waitForReady();
+			const socketMsgPromise = new Promise((resolve, reject) => {
+				server.on("connection", (socket) => {
+					// For MySQL, send initial handshake first
+					if (scheme === "mysql") {
+						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
+					}
+					socket.on("data", (chunk) => {
+						if (
+							scheme === "postgresql" &&
+							POSTGRES_SSL_REQUEST_PACKET.equals(chunk)
+						) {
+							socket.write("N");
+							return;
+						}
+						expect(new TextDecoder().decode(chunk)).toBe("test string");
+						server.close();
+						resolve({});
+					});
+					socket.on("error", (err) => {
+						console.error("Socket error:", err);
+						reject(err);
+					});
+				});
+			});
+			await fetch(`${url}/connect`);
+
+			await socketMsgPromise;
+		});
+
 		it.skipIf(!CLOUDFLARE_ACCOUNT_ID || !process.env[envVar])(
 			"does not require local connection string when running `wrangler dev --remote`",
 			async () => {
