@@ -364,6 +364,8 @@ export type StartDevOptions = DevArguments &
 		enableIpc?: boolean;
 		dockerPath?: string;
 		containerEngine?: string;
+		/** Set to `false` to disable persistence. When `true` or `undefined`, uses default persistence path. */
+		persist?: boolean;
 	};
 
 export async function getHostAndRoutes(
