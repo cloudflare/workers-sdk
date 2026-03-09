@@ -191,7 +191,8 @@ export async function createPreviewSession(
 			const subdomain = await getWorkersDevSubdomain(
 				complianceConfig,
 				account.accountId,
-				undefined
+				undefined,
+				apiToken
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}
