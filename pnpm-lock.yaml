@@ -2209,7 +2209,7 @@ importers:
         specifier: ^9.0.0
         version: 9.2.1
       eslint-plugin-tailwindcss:
-        specifier: 4.0.0-beta.0
+        specifier: ^4.0.0-beta.0
         version: 4.0.0-beta.0(tailwindcss@4.1.18)
       typescript:
         specifier: catalog:default
