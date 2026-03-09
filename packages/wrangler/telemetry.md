@@ -26,9 +26,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - The name of the Worker
   - The Deployment's timestamp
   - Binding type counts (how many bindings of each type are configured, such as KV namespaces, R2 buckets, D1 databases, Durable Objects, etc... Binding names or values are not collected)
-  - Information about public project dependencies (package names, version specifiers, and installed versions):
-    - Only dependencies listed in the project's `dependencies` field are considered (`devDependencies`, `peerDependencies`, and similar are not collected)
-    - A dependency is considered public if it is not a private package (i.e., does not have `"private": true`), is published on the npm registry, and has at least 10,000 yearly downloads
+  - Information about public project dependencies in the project's `dependencies` field (package names, version specifiers, and installed versions)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
 - The major version of Node.js that the Wrangler client is running on

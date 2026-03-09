@@ -11,7 +11,7 @@ import { getMetricsConfig } from "../metrics/metrics-config";
 import { sniffUserAgent } from "../package-manager";
 import { getInstalledPackageJson } from "../utils/packages";
 import type { Binding, StartDevWorkerInput } from "../api";
-import type { CompatDate, ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 type TelemetryDataCatalogEntryBase = {
 	/** Schema version for the data entry (this is for allowing us to change the structure later on without breaking anything) */
@@ -154,18 +154,13 @@ async function getProjectDependenciesToCollect(
 				);
 
 				if (!pkgPackageJson || !pkgPackageJson.version) {
-				// If we can't detect the package's package.json or the package's installed version
-				// then to be on the safe side let's not collect this package's data
+					// If we can't detect the package's package.json or the package's installed version
+					// then to be on the safe side let's not collect this package's data
 					return undefined;
 				}
 
 				if (pkgPackageJson.private === true) {
 					// We don't want to collect data of private packages, so here we skip the package if it is private
-					return undefined;
-				}
-
-				if (!(await isPackageUsedOnNpm(dependency))) {
-					// If the package is not in the npm registry, or is barely used we don't collect its data
 					return undefined;
 				}
 
@@ -188,36 +183,6 @@ async function getProjectDependenciesToCollect(
 			return undefined;
 		}
 	}
-}
-
-type NpmPackageDownloadsInfo = {
-	downloads: number;
-	/** The dates have the same format as workerd's compat dates (YYYY-MM-DD) */
-	start: CompatDate;
-	end: CompatDate;
-	package: string;
-};
-
-/** Threshold of yearly downloads that we use to discern a package on npm is generally used */
-const npmPackageUsageYearlyThreshold = 10_000;
-
-async function isPackageUsedOnNpm(packageName: string): Promise<boolean> {
-	try {
-		const resp = await fetch(
-			`https://api.npmjs.org/downloads/point/last-year/${packageName}`,
-			// Let's timeout this fetch just in case there's some issue with npm
-			{ signal: AbortSignal.timeout(5000) }
-		);
-		const npmInfo = (await resp.json()) as NpmPackageDownloadsInfo;
-
-		if (npmInfo.package === packageName) {
-			if (npmInfo.downloads >= npmPackageUsageYearlyThreshold) {
-				return true;
-			}
-		}
-	} catch {}
-
-	return false;
 }
 
 /**
