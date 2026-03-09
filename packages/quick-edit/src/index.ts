@@ -5,6 +5,7 @@
 const ALLOWED_PARENT_ORIGINS = [
 	"https://dash.cloudflare.com",
 	"https://workers.cloudflare.com",
+	"https://workers-playground.pages.dev",
 ];
 
 // Origin patterns using wildcards, for Pages preview deployments etc.
