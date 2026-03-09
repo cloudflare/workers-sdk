@@ -33,7 +33,7 @@ import type { D1Result } from "@cloudflare/workers-types/experimental";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
-	results: Record<string, string | number | boolean>[];
+	results: Record<string, string | number | boolean | null>[];
 	success: boolean;
 	meta?: {
 		duration?: number;
@@ -327,9 +327,6 @@ async function executeLocally({
 				Object.entries(row).map(([key, value]) => {
 					if (Array.isArray(value)) {
 						value = `[${value.join(", ")}]`;
-					}
-					if (value === null) {
-						value = "null";
 					}
 					return [key, value];
 				})
