@@ -32,7 +32,11 @@ import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
-import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils";
 
 export const typesCommand = createCommand({
 	metadata: {
@@ -331,6 +335,20 @@ export function generateImportSpecifier(from: string, to: string) {
 }
 
 /**
+ * Checks whether any config level (top-level or any named environment) declares
+ * `secrets`. Used to determine if the project has opted into config-based
+ * secret declarations, which replaces `.dev.vars`/`.env` inference for type generation.
+ */
+function hasConfigSecrets(rawConfig: RawConfig): boolean {
+	if (rawConfig.secrets !== undefined) {
+		return true;
+	}
+	return Object.values(rawConfig.env ?? {}).some(
+		(env) => env.secrets !== undefined
+	);
+}
+
+/**
  * Generates TypeScript environment type definitions from a Wrangler configuration.
  *
  * This function collects all bindings (KV, R2, D1, Durable Objects, Services, etc.),
@@ -356,27 +374,58 @@ export async function generateEnvTypes(
 	serviceEntries?: Map<string, Entry>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
-	// Get secret vars from .dev.vars/.env files for type generation.
-	// We pass an empty vars object because we only want the secret keys,
-	// not merged with config vars.
-	const secretBindings = getVarsForDev(
-		config.userConfigPath,
-		args.envFile,
-		{},
-		args.env,
-		true
-	);
-	// Extract just the keys as a Record<string, string> for compatibility
-	// (type generation only needs the names, not the values)
-	const secrets: Record<string, string> = {};
-	for (const key of Object.keys(secretBindings)) {
-		secrets[key] = "";
-	}
-
 	const collectionArgs = {
 		...args,
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
+
+	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+
+	// Determine secrets source: if any config level declares `secrets`,
+	// the project is opted into config-based secrets (replaces .dev.vars inference).
+	let secrets: Record<string, string> = {};
+	let perEnvSecrets: Map<string, Record<string, string>> | undefined;
+	const useConfigSecrets = hasConfigSecrets(rawConfig);
+
+	if (useConfigSecrets) {
+		// Config-based: build per-env secrets maps
+		perEnvSecrets = new Map();
+
+		// Top-level secrets
+		const topLevelKeys: Record<string, string> = {};
+		for (const key of rawConfig.secrets?.required ?? []) {
+			topLevelKeys[key] = "";
+		}
+		perEnvSecrets.set(TOP_LEVEL_ENV_NAME, topLevelKeys);
+
+		// Per named env secrets
+		for (const [envName, envConfig] of Object.entries(rawConfig.env ?? {})) {
+			const envKeys: Record<string, string> = {};
+			for (const key of envConfig.secrets?.required ?? []) {
+				envKeys[key] = "";
+			}
+			perEnvSecrets.set(envName, envKeys);
+		}
+
+		// For the simple path: use the specific env's secrets (or top-level)
+		secrets = perEnvSecrets.get(args.env ?? TOP_LEVEL_ENV_NAME) ?? {};
+	} else {
+		// Fall back to .dev.vars/.env inference.
+		// We pass an empty vars object because we only want the secret keys,
+		// not merged with config vars.
+		const secretBindings = getVarsForDev(
+			config.userConfigPath,
+			args.envFile,
+			{},
+			args.env,
+			true
+		);
+		// Extract just the keys as a Record<string, string> for compatibility
+		// (type generation only needs the names, not the values)
+		for (const key of Object.keys(secretBindings)) {
+			secrets[key] = "";
+		}
+	}
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 
@@ -394,7 +443,6 @@ export async function generateEnvTypes(
 		);
 	}
 
-	const { rawConfig } = experimental_readRawConfig(collectionArgs);
 	const hasEnvironments =
 		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
 
@@ -408,6 +456,7 @@ export async function generateEnvTypes(
 			entrypoint,
 			serviceEntries,
 			secrets,
+			perEnvSecrets,
 			log
 		);
 	}
@@ -743,7 +792,8 @@ async function generateSimpleEnvTypes(
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
- * @param secrets - Record of secret variable names to their values
+ * @param secrets - Record of secret variable names (fallback for all envs when perEnvSecrets is not provided)
+ * @param perEnvSecrets - Optional per-environment secrets map. When provided, each env uses its own secrets instead of the shared fallback.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -756,6 +806,7 @@ async function generatePerEnvironmentTypes(
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
+	perEnvSecrets?: Map<string, Record<string, string>>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
@@ -898,6 +949,7 @@ async function generatePerEnvironmentTypes(
 	for (const envName of envNames) {
 		const interfaceName = toEnvInterfaceName(envName);
 		const envBindings = new Array<{ key: string; value: string }>();
+		const envSecrets = perEnvSecrets?.get(envName) ?? secrets;
 
 		const bindings = bindingsPerEnv.get(envName) ?? [];
 		for (const binding of bindings) {
@@ -910,7 +962,7 @@ async function generatePerEnvironmentTypes(
 
 		const vars = varsPerEnv.get(envName) ?? {};
 		for (const [varName, varValues] of Object.entries(vars)) {
-			if (varName in secrets) {
+			if (varName in envSecrets) {
 				continue;
 			}
 
@@ -923,8 +975,9 @@ async function generatePerEnvironmentTypes(
 			}
 		}
 
-		for (const secretName in secrets) {
+		for (const secretName in envSecrets) {
 			envBindings.push({ key: constructTypeKey(secretName), value: "string" });
+			trackBinding(secretName, "string", envName);
 			if (!stringKeys.includes(secretName)) {
 				stringKeys.push(secretName);
 			}
@@ -1002,9 +1055,11 @@ async function generatePerEnvironmentTypes(
 		trackBinding(binding.name, binding.type, TOP_LEVEL_ENV_NAME);
 	}
 
+	const topLevelSecrets = perEnvSecrets?.get(TOP_LEVEL_ENV_NAME) ?? secrets;
+
 	const topLevelVars = varsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? {};
 	for (const [varName, varValues] of Object.entries(topLevelVars)) {
-		if (varName in secrets) {
+		if (varName in topLevelSecrets) {
 			continue;
 		}
 
@@ -1013,6 +1068,13 @@ async function generatePerEnvironmentTypes(
 		trackBinding(varName, varType, TOP_LEVEL_ENV_NAME);
 		if (!stringKeys.includes(varName)) {
 			stringKeys.push(varName);
+		}
+	}
+
+	for (const secretName in topLevelSecrets) {
+		trackBinding(secretName, "string", TOP_LEVEL_ENV_NAME);
+		if (!stringKeys.includes(secretName)) {
+			stringKeys.push(secretName);
 		}
 	}
 
@@ -1063,19 +1125,7 @@ async function generatePerEnvironmentTypes(
 		type: string;
 	}>();
 
-	for (const secretName in secrets) {
-		aggregatedEnvBindings.push({
-			key: constructTypeKey(secretName),
-			required: true,
-			type: "string",
-		});
-	}
-
 	for (const [name, types] of aggregatedBindings.entries()) {
-		if (name in secrets) {
-			continue;
-		}
-
 		const typeArray = Array.from(types);
 		const unionType =
 			typeArray.length === 1 ? typeArray[0] : typeArray.join(" | ");

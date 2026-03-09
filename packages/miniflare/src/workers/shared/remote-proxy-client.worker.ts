@@ -19,11 +19,7 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 		super(ctx, env);
 
 		const stub = env.remoteProxyConnectionString
-			? makeRemoteProxyStub(
-					env.remoteProxyConnectionString,
-					env.binding,
-					env.bindingType ? { "MF-Binding-Type": env.bindingType } : undefined
-				)
+			? makeRemoteProxyStub(env.remoteProxyConnectionString, env.binding)
 			: undefined;
 
 		return new Proxy(this, {

@@ -1,14 +1,9 @@
 {
   "name": "<WORKER_NAME>",
-  "main": "./.output/server/index.mjs",
   "compatibility_date": "<COMPATIBILITY_DATE>",
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "assets": {
-    "binding": "ASSETS",
-    "directory": "./.output/public"
-  },
   "observability": {
     "enabled": true
   }
