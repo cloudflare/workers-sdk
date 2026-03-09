@@ -61,6 +61,7 @@ describe("errors during dev with remote bindings", () => {
 		vi.mocked(createPreviewSession).mockResolvedValue({
 			value: "test-session-value",
 			host: "test.workers.dev",
+			name: "test",
 		});
 
 		vi.mocked(createWorkerPreview).mockImplementation(async () => {
