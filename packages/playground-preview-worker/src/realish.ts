@@ -76,7 +76,10 @@ async function initialiseSubdomainPreview(
 
 async function tryExpandToken(exchangeUrl: string): Promise<string> {
 	const response = await fetch(exchangeUrl);
-	const json = (await response.json()) as { token: string };
+	const json = (await response.json()) as { token?: string };
+	if (typeof json?.token !== "string") {
+		throw new Error("Exchange response did not contain a token");
+	}
 	return json.token;
 }
 

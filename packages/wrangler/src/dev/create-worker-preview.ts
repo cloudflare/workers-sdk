@@ -143,10 +143,13 @@ async function tryExpandToken(
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
 
-	const { token } = parseJSON(bodyText) as {
-		token: string;
+	const body = parseJSON(bodyText) as {
+		token?: string;
 	};
-	return token;
+	if (typeof body?.token !== "string") {
+		throw new Error("Exchange response did not contain a token");
+	}
+	return body.token;
 }
 /**
  * Generates a preview session token.
