@@ -36,9 +36,7 @@ describe("KV API", () => {
 	});
 
 	describe("GET /storage/kv/namespaces", () => {
-		test("lists available KV namespaces with default pagination", async ({
-			expect,
-		}) => {
+		test("lists all available KV namespaces", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces`
 			);
@@ -56,9 +54,6 @@ describe("KV API", () => {
 			);
 			expect(data.result_info).toMatchObject({
 				count: 3,
-				page: 1,
-				per_page: 20,
-				total_count: 3,
 			});
 		});
 
@@ -102,42 +97,6 @@ describe("KV API", () => {
 					expect.objectContaining({ title: "TEST_KV" }),
 					expect.objectContaining({ title: "ANOTHER_KV" }),
 				],
-			});
-		});
-
-		test("pagination works", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=2&page=2`
-			);
-
-			expect(response.status).toBe(200);
-			// Sorted by ID: "another-kv-id", "test-kv-id", "zebra-kv-id"
-			// Page 2 with per_page=2 should return only "zebra-kv-id"
-			expect(await response.json()).toMatchObject({
-				result: [expect.objectContaining({ id: "zebra-kv-id" })],
-				result_info: {
-					count: 1,
-					page: 2,
-					per_page: 2,
-					total_count: 3,
-				},
-			});
-		});
-
-		test("returns empty result for page beyond total", async ({ expect }) => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=20&page=100`
-			);
-
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				result: [],
-				result_info: {
-					count: 0,
-					page: 100,
-					per_page: 20,
-					total_count: 3,
-				},
 			});
 		});
 	});
@@ -189,7 +148,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -269,7 +228,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Key not found" })],
+				errors: [expect.objectContaining({ code: 10009 })],
 			});
 		});
 
@@ -281,7 +240,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -349,7 +308,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});
@@ -400,7 +359,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
@@ -501,7 +460,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});

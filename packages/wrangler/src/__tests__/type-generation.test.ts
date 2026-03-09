@@ -2593,6 +2593,242 @@ describe("generate types", () => {
 			`);
 		});
 
+		it("should mark inheritable bindings as required when defined at top-level", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					assets: {
+						binding: "ASSETS",
+						directory: "/assets",
+					},
+					env: {
+						staging: {
+							kv_namespaces: [
+								{
+									binding: "KV_STAGING",
+									id: "staging-kv",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						KV_STAGING: KVNamespace;
+						ASSETS: Fetcher;
+					}
+					interface ProductionEnv {
+						KV_PROD: KVNamespace;
+						ASSETS: Fetcher;
+					}
+					interface Env {
+						KV_STAGING?: KVNamespace;
+						ASSETS: Fetcher;
+						KV_PROD?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should allow inheritable bindings to be overridden in named environments", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					assets: {
+						binding: "ASSETS",
+						directory: "/assets",
+					},
+					env: {
+						staging: {
+							assets: {
+								binding: "STAGING_ASSETS",
+								directory: "/staging-assets",
+							},
+						},
+						production: {
+							// Uses inherited `ASSETS` binding from top-level
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						STAGING_ASSETS: Fetcher;
+					}
+					interface ProductionEnv {
+						ASSETS: Fetcher;
+					}
+					interface Env {
+						STAGING_ASSETS?: Fetcher;
+						ASSETS?: Fetcher;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should mark inheritable bindings as optional when only defined in some environments", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					env: {
+						staging: {
+							assets: {
+								binding: "ASSETS",
+								directory: "/assets",
+							},
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						ASSETS: Fetcher;
+					}
+					interface ProductionEnv {
+						KV_PROD: KVNamespace;
+					}
+					interface Env {
+						ASSETS?: Fetcher;
+						KV_PROD?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should not inherit top-level inheritable bindings when env defines the property without a binding", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					assets: {
+						binding: "ASSETS",
+						directory: "/assets",
+					},
+					env: {
+						staging: {
+							// Defines assets but without a `binding` property - should NOT inherit top-level binding
+							assets: {
+								directory: "/staging-assets",
+							},
+						},
+						production: {
+							// Does NOT define `assets` at all - should inherit top-level binding
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {}
+					interface ProductionEnv {
+						KV_PROD: KVNamespace;
+						ASSETS: Fetcher;
+					}
+					interface Env {
+						KV_PROD?: KVNamespace;
+						ASSETS?: Fetcher;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
 		it("should produce union types for vars with different values across environments", async ({
 			expect,
 		}) => {

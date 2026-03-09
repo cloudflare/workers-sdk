@@ -113,7 +113,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
-import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
+import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
 	createInboundDoProxyService,
 	createOutboundDoProxyService,
@@ -139,6 +139,7 @@ import {
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
+import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
 	D1Database,
@@ -1346,6 +1347,11 @@ export class Miniflare {
 				response = new Response(filePath, { status: 200 });
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
+			} else if (url.pathname === "/core/dev-registry") {
+				// Used by the local explorer to aggregate resources across instances
+				const registryPath = this.#devRegistry.getRegistryPath();
+				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
+				response = Response.json(registry);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -2823,9 +2829,11 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	WorkerRegistry,
+	WorkerDefinition,
+} from "./shared/dev-registry-types";
 export {
-	type WorkerRegistry,
-	type WorkerDefinition,
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "./shared/dev-registry";
