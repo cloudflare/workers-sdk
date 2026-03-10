@@ -39,10 +39,9 @@ export default {
 		// Proxy API requests to the testing playground-preview-worker
 		if (url.pathname.startsWith("/playground/api")) {
 			const apiPath = url.pathname.replace(/^\/playground/, "");
-			return fetch(
-				new URL(apiPath, `https://${TESTING_ORIGIN}`),
-				request as RequestInit
-			);
+			const targetUrl = new URL(apiPath, `https://${TESTING_ORIGIN}`);
+			targetUrl.search = url.search;
+			return fetch(targetUrl, request as RequestInit);
 		}
 
 		// All other requests fall through to static assets
