@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.64.6
+
+### Patch Changes
+
+- [#12790](https://github.com/cloudflare/workers-sdk/pull/12790) [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump glob to ^10.5.0 to address command injection vulnerability in glob CLI
+
+- [#12787](https://github.com/cloudflare/workers-sdk/pull/12787) [`d6d75a7`](https://github.com/cloudflare/workers-sdk/commit/d6d75a773e76d04a5d53d30c4bb771ebf1daccd2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump `create-qwik` from 1.19.0 to 1.19.1
+
+  This update fixes an upstream issue where `create-qwik` installed `@eslint/js` at "latest", which resolved to v10 and conflicted with the project's eslint 9.x.
+
 ## 2.64.5
 
 ### Patch Changes

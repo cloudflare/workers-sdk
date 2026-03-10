@@ -1,8 +1,5 @@
-import {
-	createExecutionContext,
-	env,
-	runInDurableObject,
-} from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import { WorkflowBinding } from "../src/binding";
 import { setWorkflowEntrypoint } from "./utils";
@@ -39,7 +36,7 @@ describe("WorkflowBinding", () => {
 
 		const disposeSpy = vi.fn();
 
-		await runInDurableObject(engineStub, (engine) => {
+		await runInDurableObject<Engine, void>(engineStub, (engine) => {
 			const originalReceiveEvent = engine.receiveEvent.bind(engine);
 			engine.receiveEvent = (event) => {
 				const result = originalReceiveEvent(event);

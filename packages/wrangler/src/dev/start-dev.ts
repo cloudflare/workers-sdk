@@ -257,7 +257,7 @@ async function setupDevEnv(
 							? undefined
 							: args.upstreamProtocol === "https",
 				},
-				persist: args.persistTo,
+				persist: args.persist === false ? false : args.persistTo,
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,

@@ -1,3 +1,8 @@
-declare module "cloudflare:test" {
-	interface ProvidedEnv extends Env {}
+declare namespace Cloudflare {
+	interface GlobalProps {
+		mainModule: typeof import("../src");
+	}
+	interface Env {
+		ASSETS: Fetcher;
+	}
 }

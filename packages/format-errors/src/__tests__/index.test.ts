@@ -24,10 +24,12 @@ describe("handlePrettyErrorRequest", () => {
 		// Mock Youch to throw asynchronously
 		vi.doMock("../Youch", () => {
 			return {
-				default: vi.fn().mockImplementation(() => ({
-					addLink: vi.fn(),
-					toHTML: vi.fn().mockRejectedValue(new Error("Youch async error")),
-				})),
+				default: vi.fn().mockImplementation(function () {
+					return {
+						addLink: vi.fn(),
+						toHTML: vi.fn().mockRejectedValue(new Error("Youch async error")),
+					};
+				}),
 			};
 		});
 
