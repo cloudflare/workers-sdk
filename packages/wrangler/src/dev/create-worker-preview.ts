@@ -114,11 +114,11 @@ function switchHost(
  * Try and get a re-encoded token from the edge. This is expected to fail sometimes, depending on zone settings
  */
 async function tryExpandToken(
-	exchange_url: string,
+	exchangeUrl: string,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
 ) {
-	const switchedExchangeUrl = switchHost(exchange_url, ctx.host, !!ctx.zone);
+	const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
 
 	const headers: HeadersInit = {};
 	const accessToken = await getAccessToken(switchedExchangeUrl.hostname);

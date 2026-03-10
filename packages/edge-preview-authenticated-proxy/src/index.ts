@@ -93,15 +93,11 @@ function isRawHttpRequest(url: URL, env: Env) {
 	return url.hostname.endsWith(env.RAW_HTTP);
 }
 
-async function handleRequest(
-	request: Request,
-	env: Env,
-	ctx: ExecutionContext
-) {
+async function handleRequest(request: Request, env: Env) {
 	const url = new URL(request.url);
 
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, env, ctx);
+		return updatePreviewToken(url, env);
 	}
 
 	if (isRawHttpRequest(url, env)) {
@@ -263,7 +259,7 @@ async function handleRawHttp(request: Request, url: URL) {
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`
  * for future use.
  */
-async function updatePreviewToken(url: URL, env: Env, _ctx: ExecutionContext) {
+async function updatePreviewToken(url: URL, env: Env) {
 	const token = url.searchParams.get("token");
 	const remote = url.searchParams.get("remote");
 	if (!token || !remote) {
@@ -337,7 +333,7 @@ export default {
 		});
 
 		try {
-			return await handleRequest(request, env, ctx);
+			return await handleRequest(request, env);
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {
