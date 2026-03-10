@@ -47,7 +47,7 @@ for (const source of imageSource) {
 				name: `${workerName}`,
 				main: "src/index.ts",
 				compatibility_date: "2025-04-03",
-				compatibility_flags: ["experimental", "enable_ctx_exports"],
+				compatibility_flags: ["enable_ctx_exports"],
 				containers: [
 					{
 						image: "./Dockerfile",

@@ -80,7 +80,9 @@ export function VSCodeEditor({ content, onChange }: Props) {
 			if (editorRef !== null) {
 				setLoading(false);
 
-				editorRef.contentWindow?.postMessage("PORT", "*", [channel.remote]);
+				editorRef.contentWindow?.postMessage("PORT", quickEditHost, [
+					channel.remote,
+				]);
 			}
 		}
 		editorRef.addEventListener("load", handleLoad);
