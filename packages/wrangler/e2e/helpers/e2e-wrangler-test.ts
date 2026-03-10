@@ -93,6 +93,28 @@ export class WranglerE2ETestHelper {
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
 
+	/**
+	 * Run a Wrangler command as best-effort cleanup.
+	 *
+	 * Uses a short timeout (default 5s) and swallows errors, so that flaky or
+	 * slow backend responses during resource deletion don't cause test hooks to
+	 * time out and mask real test failures.
+	 */
+	async bestEffortRun(
+		wranglerCommand: string,
+		{ timeout = 5_000, ...options }: WranglerCommandOptions = {}
+	) {
+		try {
+			return await this.run(wranglerCommand, { timeout, ...options });
+		} catch (e) {
+			console.warn(
+				`Best-effort cleanup "${wranglerCommand}" failed:`,
+				e instanceof Error ? e.message : e
+			);
+			return undefined;
+		}
+	}
+
 	/** Create a KV namespace and clean it up during tear-down. */
 	async kv(isLocal: boolean) {
 		const name = generateResourceName("kv" + Date.now()).replaceAll("-", "_");
@@ -311,7 +333,7 @@ export class WranglerE2ETestHelper {
 		);
 
 		const cleanup = async () => {
-			await this.run(`wrangler delete --name ${workerName} --force`);
+			await this.bestEffortRun(`wrangler delete --name ${workerName} --force`);
 		};
 
 		if (cleanOnTestFinished) {
