@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import { scheduler } from "node:timers/promises";
 import { Miniflare, MiniflareOptions } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 
 const WORKFLOW_SCRIPT = () => `
@@ -21,7 +21,9 @@ export class MyWorkflow extends WorkflowEntrypoint {
 	},
   };`;
 
-test("persists Workflow data on file-system between runs", async () => {
+test("persists Workflow data on file-system between runs", async ({
+	expect,
+}) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
 		name: "worker",

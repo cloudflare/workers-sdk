@@ -12,6 +12,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

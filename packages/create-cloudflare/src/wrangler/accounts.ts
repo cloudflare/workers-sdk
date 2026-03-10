@@ -1,3 +1,4 @@
+import { updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { runCommand } from "helpers/command";
@@ -6,6 +7,14 @@ import { reporter } from "../metrics";
 import type { C3Context } from "types";
 
 export const chooseAccount = async (ctx: C3Context) => {
+	// Check if account ID is provided via environment variable (matching wrangler's behavior)
+	const accountIdFromEnv = process.env.CLOUDFLARE_ACCOUNT_ID;
+	if (accountIdFromEnv) {
+		updateStatus(`Using CLOUDFLARE_ACCOUNT_ID from the environment`);
+		ctx.account = { id: accountIdFromEnv, name: "" };
+		return;
+	}
+
 	const s = spinner();
 	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
 	const accounts = await listAccounts();

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerConfig } from "../config";
 
@@ -28,7 +28,7 @@ describe("update wrangler config", () => {
 		);
 	});
 
-	test("placeholder replacement `<TBD>`", async () => {
+	test("placeholder replacement `<TBD>`", async ({ expect }) => {
 		const toml = [
 			`name = "<TBD>"`,
 			`main = "src/index.ts"`,
@@ -49,6 +49,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[[services]]
 			binding = "SELF_SERVICE"
@@ -84,7 +85,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement", async () => {
+	test("placeholder replacement", async ({ expect }) => {
 		const toml = [
 			`name = "<WORKER_NAME>"`,
 			`main = "src/index.ts"`,
@@ -105,6 +106,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[[services]]
 			binding = "SELF_SERVICE"
@@ -140,7 +142,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement `<TBD>` (json)", async () => {
+	test("placeholder replacement `<TBD>` (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -178,7 +180,10 @@ describe("update wrangler config", () => {
 				],
 				"observability": {
 					"enabled": true
-				}
+				},
+				"compatibility_flags": [
+					"nodejs_compat"
+				]
 				/**
 				 * Smart Placement
 				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -206,7 +211,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement (json)", async () => {
+	test("placeholder replacement (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -244,7 +249,10 @@ describe("update wrangler config", () => {
 				],
 				"observability": {
 					"enabled": true
-				}
+				},
+				"compatibility_flags": [
+					"nodejs_compat"
+				]
 				/**
 				 * Smart Placement
 				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -272,7 +280,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("string literal replacement", async () => {
+	test("string literal replacement", async ({ expect }) => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
 			"\n",
 		);
@@ -288,6 +296,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
 			enabled = true
@@ -325,7 +334,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("missing name and compat date", async () => {
+	test("missing name and compat date", async ({ expect }) => {
 		const toml = `main = "src/index.ts"`;
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -339,6 +348,7 @@ describe("update wrangler config", () => {
 			main = "src/index.ts"
 			name = "test"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
 			enabled = true
@@ -376,7 +386,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("dont replace valid existing compatibility date", async () => {
+	test("dont replace valid existing compatibility date", async ({ expect }) => {
 		const toml = [
 			`name = "super-old-worker"`,
 			`compatibility_date = "2001-10-12"`,
@@ -392,6 +402,7 @@ describe("update wrangler config", () => {
 			# https://developers.cloudflare.com/workers/wrangler/configuration/
 			name = "test"
 			compatibility_date = "2001-10-12"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
 			enabled = true
@@ -429,7 +440,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement with Workflows (json)", async () => {
+	test("placeholder replacement with Workflows (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -465,7 +476,10 @@ describe("update wrangler config", () => {
 				],
 				"observability": {
 					"enabled": true
-				}
+				},
+				"compatibility_flags": [
+					"nodejs_compat"
+				]
 				/**
 				 * Smart Placement
 				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -496,5 +510,190 @@ describe("update wrangler config", () => {
 				// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
 			}"
 		`);
+	});
+
+	test("does not add nodejs_compat if already present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["nodejs_compat"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "nodejs_compat" ]');
+		expect(newToml.match(/nodejs_compat/g)?.length).toBe(1);
+	});
+
+	test("does not add nodejs_compat if nodejs_compat_v2 is present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["nodejs_compat_v2"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "nodejs_compat_v2" ]');
+		expect(newToml).not.toContain('"nodejs_compat"');
+	});
+
+	test("preserves existing compatibility flags when adding nodejs_compat (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["some_other_flag"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain("nodejs_compat");
+		expect(newToml).toContain("some_other_flag");
+	});
+
+	test("does not add nodejs_compat if already present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["nodejs_compat"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig.match(/nodejs_compat/g)?.length).toBe(1);
+	});
+
+	test("does not add nodejs_compat if nodejs_compat_v2 is present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["nodejs_compat_v2"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("nodejs_compat_v2");
+		expect(newConfig).not.toContain('"nodejs_compat"');
+	});
+
+	test("preserves existing compatibility flags when adding nodejs_compat (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["some_other_flag"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("nodejs_compat");
+		expect(newConfig).toContain("some_other_flag");
+	});
+
+	test("does not add nodejs_compat if no_nodejs_compat is present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["no_nodejs_compat"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "no_nodejs_compat" ]');
+		expect(newToml).not.toContain('"nodejs_compat"');
+	});
+
+	test("does not add nodejs_compat if no_nodejs_compat is present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["no_nodejs_compat"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("no_nodejs_compat");
+		expect(newConfig).not.toContain('"nodejs_compat"');
+	});
+
+	test("does not add nodejs_compat for Python projects (toml)", async ({
+		expect,
+	}) => {
+		const pythonCtx = createTestContext("test", {
+			...ctx.args,
+			lang: "python",
+		});
+		const toml = [`name = "my-worker"`, `main = "src/index.py"`].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(pythonCtx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).not.toContain("nodejs_compat");
+	});
+
+	test("does not add nodejs_compat for Python projects (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const pythonCtx = createTestContext("test", {
+			...ctx.args,
+			lang: "python",
+		});
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.py",
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(pythonCtx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).not.toContain("nodejs_compat");
 	});
 });

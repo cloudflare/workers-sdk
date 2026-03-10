@@ -1,18 +1,17 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, it, vi } from "vitest";
 import { validateHttpsOptions } from "../https-options";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("validateHttpsOptions()", () => {
 	runInTempDir();
 
-	it("should return undefined if nothing is passed in", async () => {
+	it("should return undefined if nothing is passed in", async ({ expect }) => {
 		const result = await validateHttpsOptions();
 		expect(result).toBeUndefined();
 	});
 
-	it("should read the certs from the paths if provided", async () => {
+	it("should read the certs from the paths if provided", async ({ expect }) => {
 		fs.mkdirSync("./certs");
 		await fs.promises.writeFile("./certs/test.key", "xxxxx");
 		await fs.promises.writeFile("./certs/test.pem", "yyyyy");
@@ -25,7 +24,9 @@ describe("validateHttpsOptions()", () => {
 		expect(options.cert).toEqual("yyyyy");
 	});
 
-	it("should error if only one of the two paths is provided", async () => {
+	it("should error if only one of the two paths is provided", async ({
+		expect,
+	}) => {
 		expect(() =>
 			validateHttpsOptions("./certs/test.key", undefined)
 		).toThrowErrorMatchingInlineSnapshot(
@@ -38,7 +39,7 @@ describe("validateHttpsOptions()", () => {
 		);
 	});
 
-	it("should error if the key file does not exist", async () => {
+	it("should error if the key file does not exist", async ({ expect }) => {
 		fs.mkdirSync("./certs");
 		await fs.promises.writeFile("./certs/test.pem", "yyyyy");
 		expect(() =>
@@ -48,7 +49,7 @@ describe("validateHttpsOptions()", () => {
 		);
 	});
 
-	it("should error if the cert file does not exist", async () => {
+	it("should error if the cert file does not exist", async ({ expect }) => {
 		fs.mkdirSync("./certs");
 		await fs.promises.writeFile("./certs/test.key", "xxxxx");
 		expect(() =>
@@ -58,7 +59,7 @@ describe("validateHttpsOptions()", () => {
 		);
 	});
 
-	it("should read the certs from the paths in env vars", async () => {
+	it("should read the certs from the paths in env vars", async ({ expect }) => {
 		fs.mkdirSync("./certs");
 		await fs.promises.writeFile("./certs/test.key", "xxxxx");
 		await fs.promises.writeFile("./certs/test.pem", "yyyyy");
@@ -70,7 +71,9 @@ describe("validateHttpsOptions()", () => {
 		expect(options.cert).toEqual("yyyyy");
 	});
 
-	it("should read the certs from the param paths rather than paths in env vars", async () => {
+	it("should read the certs from the param paths rather than paths in env vars", async ({
+		expect,
+	}) => {
 		fs.mkdirSync("./certs");
 		await fs.promises.writeFile("./certs/test-param.key", "xxxxx-param");
 		await fs.promises.writeFile("./certs/test-param.pem", "yyyyy-param");

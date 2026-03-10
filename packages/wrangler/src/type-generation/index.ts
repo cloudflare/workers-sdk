@@ -10,7 +10,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { findUpSync } from "find-up";
+import * as find from "empathic/find";
 import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -28,10 +28,15 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
+import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
-import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils";
 
 export const typesCommand = createCommand({
 	metadata: {
@@ -149,9 +154,11 @@ export const typesCommand = createCommand({
 		const { envInterface, path: outputPath } = args;
 
 		if (
-			!config.configPath ||
-			!fs.existsSync(config.configPath) ||
-			fs.statSync(config.configPath).isDirectory()
+			config.configPath == null ||
+			(fs
+				.statSync(config.configPath, { throwIfNoEntry: false })
+				?.isDirectory() ??
+				true)
 		) {
 			throw new UserError(
 				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
@@ -280,13 +287,20 @@ export function isValidIdentifier(key: string) {
 }
 
 /**
- * Construct a type key, if it's not a valid identifier, wrap it in quotes
+ * Escapes special characters in a string for use in a TypeScript string literal.
+ */
+export function escapeTypeScriptString(str: string): string {
+	return JSON.stringify(str).slice(1, -1);
+}
+
+/**
+ * Construct a type key, if it's not a valid identifier, wrap it in quotes with proper escaping
  */
 export function constructTypeKey(key: string) {
 	if (isValidIdentifier(key)) {
 		return `${key}`;
 	}
-	return `"${key}"`;
+	return `"${escapeTypeScriptString(key)}"`;
 }
 
 export function constructTSModuleGlob(glob: string) {
@@ -321,6 +335,20 @@ export function generateImportSpecifier(from: string, to: string) {
 }
 
 /**
+ * Checks whether any config level (top-level or any named environment) declares
+ * `secrets`. Used to determine if the project has opted into config-based
+ * secret declarations, which replaces `.dev.vars`/`.env` inference for type generation.
+ */
+function hasConfigSecrets(rawConfig: RawConfig): boolean {
+	if (rawConfig.secrets !== undefined) {
+		return true;
+	}
+	return Object.values(rawConfig.env ?? {}).some(
+		(env) => env.secrets !== undefined
+	);
+}
+
+/**
  * Generates TypeScript environment type definitions from a Wrangler configuration.
  *
  * This function collects all bindings (KV, R2, D1, Durable Objects, Services, etc.),
@@ -346,21 +374,58 @@ export async function generateEnvTypes(
 	serviceEntries?: Map<string, Entry>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
-	const secrets = getVarsForDev(
-		config.userConfigPath,
-		args.envFile,
-		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
-		// because we want to be able to work with secrets differently to vars.
-		// So we pass in a fake vars object here.
-		{},
-		args.env,
-		true
-	) as Record<string, string>;
-
 	const collectionArgs = {
 		...args,
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
+
+	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+
+	// Determine secrets source: if any config level declares `secrets`,
+	// the project is opted into config-based secrets (replaces .dev.vars inference).
+	let secrets: Record<string, string> = {};
+	let perEnvSecrets: Map<string, Record<string, string>> | undefined;
+	const useConfigSecrets = hasConfigSecrets(rawConfig);
+
+	if (useConfigSecrets) {
+		// Config-based: build per-env secrets maps
+		perEnvSecrets = new Map();
+
+		// Top-level secrets
+		const topLevelKeys: Record<string, string> = {};
+		for (const key of rawConfig.secrets?.required ?? []) {
+			topLevelKeys[key] = "";
+		}
+		perEnvSecrets.set(TOP_LEVEL_ENV_NAME, topLevelKeys);
+
+		// Per named env secrets
+		for (const [envName, envConfig] of Object.entries(rawConfig.env ?? {})) {
+			const envKeys: Record<string, string> = {};
+			for (const key of envConfig.secrets?.required ?? []) {
+				envKeys[key] = "";
+			}
+			perEnvSecrets.set(envName, envKeys);
+		}
+
+		// For the simple path: use the specific env's secrets (or top-level)
+		secrets = perEnvSecrets.get(args.env ?? TOP_LEVEL_ENV_NAME) ?? {};
+	} else {
+		// Fall back to .dev.vars/.env inference.
+		// We pass an empty vars object because we only want the secret keys,
+		// not merged with config vars.
+		const secretBindings = getVarsForDev(
+			config.userConfigPath,
+			args.envFile,
+			{},
+			args.env,
+			true
+		);
+		// Extract just the keys as a Record<string, string> for compatibility
+		// (type generation only needs the names, not the values)
+		for (const key of Object.keys(secretBindings)) {
+			secrets[key] = "";
+		}
+	}
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 
@@ -378,7 +443,6 @@ export async function generateEnvTypes(
 		);
 	}
 
-	const { rawConfig } = experimental_readRawConfig(collectionArgs);
 	const hasEnvironments =
 		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
 
@@ -392,6 +456,7 @@ export async function generateEnvTypes(
 			entrypoint,
 			serviceEntries,
 			secrets,
+			perEnvSecrets,
 			log
 		);
 	}
@@ -442,6 +507,7 @@ async function generateSimpleEnvTypes(
 	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
 	const collectedVars = collectAllVars(collectionArgs);
 	const collectedWorkflows = collectAllWorkflows(collectionArgs);
+	const collectedPipelines = collectAllPipelines(collectionArgs);
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
@@ -456,6 +522,28 @@ async function generateSimpleEnvTypes(
 			key: constructTypeKey(binding.name),
 			type: binding.type,
 		});
+	}
+
+	// Track named type definitions (e.g., `type MyStreamRecord = {...}`) to be added to the Cloudflare namespace
+	const typeDefinitions: string[] = [];
+
+	if (collectedPipelines.length > 0) {
+		const pipelineTypes = await fetchPipelineTypes(config, collectedPipelines);
+		for (const pipelineType of pipelineTypes) {
+			// For service-worker format, type definitions are at the top level (not in Cloudflare namespace)
+			// so we need to strip the "Cloudflare." prefix from the type reference
+			const typeRef =
+				entrypointFormat === "service-worker"
+					? pipelineType.type.replace("Cloudflare.", "")
+					: pipelineType.type;
+			envTypeStructure.push({
+				key: constructTypeKey(pipelineType.binding),
+				type: typeRef,
+			});
+			if (pipelineType.typeDefinition) {
+				typeDefinitions.push(pipelineType.typeDefinition);
+			}
+		}
 	}
 
 	if (collectedVars) {
@@ -664,7 +752,8 @@ async function generateSimpleEnvTypes(
 			entrypoint
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
-			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()]
+			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+			typeDefinitions
 		);
 
 		const hash = createHash("sha256")
@@ -703,7 +792,8 @@ async function generateSimpleEnvTypes(
  * @param outputPath - The file path where the generated types will be written
  * @param entrypoint - Optional entry point information for the Worker
  * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
- * @param secrets - Record of secret variable names to their values
+ * @param secrets - Record of secret variable names (fallback for all envs when perEnvSecrets is not provided)
+ * @param perEnvSecrets - Optional per-environment secrets map. When provided, each env uses its own secrets instead of the shared fallback.
  * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
@@ -716,6 +806,7 @@ async function generatePerEnvironmentTypes(
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	secrets: Record<string, string> = {},
+	perEnvSecrets?: Map<string, Record<string, string>>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
@@ -733,6 +824,7 @@ async function generatePerEnvironmentTypes(
 	const servicesPerEnv = collectServicesPerEnvironment(collectionArgs);
 	const workflowsPerEnv = collectWorkflowsPerEnvironment(collectionArgs);
 	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
+	const pipelinesPerEnv = collectPipelinesPerEnvironment(collectionArgs);
 
 	// Track all binding names and their types across all environments for aggregation
 	const aggregatedBindings = new Map<
@@ -851,10 +943,13 @@ async function generatePerEnvironmentTypes(
 
 	const perEnvInterfaces = new Array<string>();
 	const stringKeys = new Array<string>();
+	// Track named type definitions (e.g., `type MyStreamRecord = {...}`) to be added to the Cloudflare namespace
+	const typeDefinitions = new Set<string>();
 
 	for (const envName of envNames) {
 		const interfaceName = toEnvInterfaceName(envName);
 		const envBindings = new Array<{ key: string; value: string }>();
+		const envSecrets = perEnvSecrets?.get(envName) ?? secrets;
 
 		const bindings = bindingsPerEnv.get(envName) ?? [];
 		for (const binding of bindings) {
@@ -867,7 +962,7 @@ async function generatePerEnvironmentTypes(
 
 		const vars = varsPerEnv.get(envName) ?? {};
 		for (const [varName, varValues] of Object.entries(vars)) {
-			if (varName in secrets) {
+			if (varName in envSecrets) {
 				continue;
 			}
 
@@ -880,8 +975,9 @@ async function generatePerEnvironmentTypes(
 			}
 		}
 
-		for (const secretName in secrets) {
+		for (const secretName in envSecrets) {
 			envBindings.push({ key: constructTypeKey(secretName), value: "string" });
+			trackBinding(secretName, "string", envName);
 			if (!stringKeys.includes(secretName)) {
 				stringKeys.push(secretName);
 			}
@@ -921,6 +1017,27 @@ async function generatePerEnvironmentTypes(
 			trackBinding(unsafe.name, type, envName);
 		}
 
+		const envPipelines = pipelinesPerEnv.get(envName) ?? [];
+		if (envPipelines.length > 0) {
+			const pipelineTypes = await fetchPipelineTypes(config, envPipelines);
+			for (const pipelineType of pipelineTypes) {
+				// For service-worker format, type definitions are at the top level (not in Cloudflare namespace)
+				// so we need to strip the "Cloudflare." prefix from the type reference
+				const typeRef =
+					entrypointFormat === "service-worker"
+						? pipelineType.type.replace("Cloudflare.", "")
+						: pipelineType.type;
+				envBindings.push({
+					key: constructTypeKey(pipelineType.binding),
+					value: typeRef,
+				});
+				trackBinding(pipelineType.binding, typeRef, envName);
+				if (pipelineType.typeDefinition) {
+					typeDefinitions.add(pipelineType.typeDefinition);
+				}
+			}
+		}
+
 		if (envBindings.length > 0) {
 			const bindingLines = envBindings
 				.map(({ key, value }) => `\t\t${key}: ${value};`)
@@ -938,9 +1055,11 @@ async function generatePerEnvironmentTypes(
 		trackBinding(binding.name, binding.type, TOP_LEVEL_ENV_NAME);
 	}
 
+	const topLevelSecrets = perEnvSecrets?.get(TOP_LEVEL_ENV_NAME) ?? secrets;
+
 	const topLevelVars = varsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? {};
 	for (const [varName, varValues] of Object.entries(topLevelVars)) {
-		if (varName in secrets) {
+		if (varName in topLevelSecrets) {
 			continue;
 		}
 
@@ -949,6 +1068,13 @@ async function generatePerEnvironmentTypes(
 		trackBinding(varName, varType, TOP_LEVEL_ENV_NAME);
 		if (!stringKeys.includes(varName)) {
 			stringKeys.push(varName);
+		}
+	}
+
+	for (const secretName in topLevelSecrets) {
+		trackBinding(secretName, "string", TOP_LEVEL_ENV_NAME);
+		if (!stringKeys.includes(secretName)) {
+			stringKeys.push(secretName);
 		}
 	}
 
@@ -976,25 +1102,30 @@ async function generatePerEnvironmentTypes(
 		trackBinding(unsafe.name, type, TOP_LEVEL_ENV_NAME);
 	}
 
+	const topLevelPipelines = pipelinesPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	if (topLevelPipelines.length > 0) {
+		const pipelineTypes = await fetchPipelineTypes(config, topLevelPipelines);
+		for (const pipelineType of pipelineTypes) {
+			// For service-worker format, type definitions are at the top level (not in Cloudflare namespace)
+			// so we need to strip the "Cloudflare." prefix from the type reference
+			const typeRef =
+				entrypointFormat === "service-worker"
+					? pipelineType.type.replace("Cloudflare.", "")
+					: pipelineType.type;
+			trackBinding(pipelineType.binding, typeRef, TOP_LEVEL_ENV_NAME);
+			if (pipelineType.typeDefinition) {
+				typeDefinitions.add(pipelineType.typeDefinition);
+			}
+		}
+	}
+
 	const aggregatedEnvBindings = new Array<{
 		key: string;
 		required: boolean;
 		type: string;
 	}>();
 
-	for (const secretName in secrets) {
-		aggregatedEnvBindings.push({
-			key: constructTypeKey(secretName),
-			required: true,
-			type: "string",
-		});
-	}
-
 	for (const [name, types] of aggregatedBindings.entries()) {
-		if (name in secrets) {
-			continue;
-		}
-
 		const typeArray = Array.from(types);
 		const unionType =
 			typeArray.length === 1 ? typeArray[0] : typeArray.join(" | ");
@@ -1067,7 +1198,8 @@ async function generatePerEnvironmentTypes(
 		entrypoint
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
-		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()]
+		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()],
+		[...typeDefinitions]
 	);
 
 	const hash = createHash("sha256")
@@ -1115,10 +1247,17 @@ function generatePerEnvTypeStrings(
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: string[]
+	configuredDurableObjects: string[],
+	typeDefinitions: string[] = []
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let processEnv = "";
+
+	// Named type definitions go inside the Cloudflare namespace
+	const typeDefsContent =
+		typeDefinitions.length > 0
+			? typeDefinitions.map((def) => `\t${def}`).join("\n")
+			: "";
 
 	if (formatType === "modules") {
 		if (
@@ -1138,13 +1277,15 @@ function generatePerEnvTypeStrings(
 			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
 			: "";
 
-		baseContent = `declare namespace Cloudflare {${globalPropsContent}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
-		// Service worker syntax - just output aggregated bindings as globals
+		// Service worker syntax - type definitions go at the top level since there's no namespace
+		const globalTypeDefsContent =
+			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
 		const envBindingLines = aggregatedEnvBindings
 			.map(({ key, type }) => `\tconst ${key}: ${type};`)
 			.join("\n");
-		baseContent = `export {};\ndeclare global {\n${envBindingLines}\n}`;
+		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envBindingLines}\n}`;
 	}
 
 	const modulesContent = modulesTypeStructure.join("\n");
@@ -1166,7 +1307,7 @@ function generatePerEnvTypeStrings(
  * @throws {UserError} If a non-Wrangler .d.ts file already exists at the given path.
  */
 const validateTypesFile = (path: string): void => {
-	const wranglerOverrideDTSPath = findUpSync(path);
+	const wranglerOverrideDTSPath = find.file(path);
 	if (wranglerOverrideDTSPath === undefined) {
 		return;
 	}
@@ -1213,13 +1354,20 @@ function generateTypeStrings(
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: string[]
+	configuredDurableObjects: string[],
+	typeDefinitions: string[] = []
 ): {
 	consoleOutput: string;
 	fileContent: string;
 } {
 	let baseContent = "";
 	let processEnv = "";
+
+	// Type definitions (e.g., pipeline record types) go inside the Cloudflare namespace
+	const typeDefsContent =
+		typeDefinitions.length > 0
+			? typeDefinitions.map((def) => `\t${def}`).join("\n")
+			: "";
 
 	if (formatType === "modules") {
 		if (
@@ -1229,9 +1377,12 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
-		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
+		// For service worker format, type definitions still go at the top level since there's no namespace
+		const globalTypeDefsContent =
+			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
+		baseContent = `${globalTypeDefsContent}export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
 
 	const modulesContent = modulesTypeStructure.join("\n");
@@ -1702,25 +1853,7 @@ function collectCoreBindings(
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
-		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
-			if (!pipeline.binding) {
-				throwMissingBindingError({
-					binding: pipeline,
-					bindingType: "pipelines",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-					index,
-				});
-			}
-
-			addBinding(
-				pipeline.binding,
-				'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
-				"pipelines",
-				envName
-			);
-		}
+		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
 			addBinding("LOGFWDR_SCHEMA", "any", "logfwdr", envName);
@@ -2107,6 +2240,87 @@ function collectAllUnsafeBindings(
 	return Array.from(unsafeMap.values());
 }
 
+/**
+ * Collects pipeline bindings across environments.
+ *
+ * This is separate from collectCoreBindings because pipelines need async
+ * schema fetching for typed bindings.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected pipeline bindings with their names and pipeline IDs.
+ */
+function collectAllPipelines(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	binding: string;
+	pipeline: string;
+}> {
+	const pipelinesMap = new Map<
+		string,
+		{
+			binding: string;
+			pipeline: string;
+		}
+	>();
+
+	function collectEnvironmentPipelines(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
+		if (!env?.pipelines) {
+			return;
+		}
+
+		for (const [index, pipeline] of env.pipelines.entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			if (!pipeline.pipeline) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "pipeline",
+					index,
+				});
+			}
+
+			if (pipelinesMap.has(pipeline.binding)) {
+				continue;
+			}
+
+			pipelinesMap.set(pipeline.binding, {
+				binding: pipeline.binding,
+				pipeline: pipeline.pipeline,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		collectEnvironmentPipelines(envConfig, args.env);
+	} else {
+		collectEnvironmentPipelines(rawConfig, TOP_LEVEL_ENV_NAME);
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentPipelines(env, envName);
+		}
+	}
+
+	return Array.from(pipelinesMap.values());
+}
+
 const logHorizontalRule = () => {
 	const screenWidth = process.stdout.columns;
 	logger.log(chalk.dim("─".repeat(Math.min(screenWidth, 60))));
@@ -2117,6 +2331,53 @@ interface PerEnvBinding {
 	name: string;
 	type: string;
 }
+
+interface InheritableBindingDefinition {
+	/**
+	 * The category name for this binding (used for identification)
+	 */
+	bindingCategory: string;
+
+	/**
+	 * Extract the binding name from the raw environment config
+	 */
+	getBindingName: (env: RawEnvironment | undefined) => string | undefined;
+
+	/**
+	 * Check if the environment defines this inheritable property at all.
+	 *
+	 * This is used to determine if inheritance should be skipped, even when
+	 * the environment doesn't define a binding.
+	 *
+	 * For example, if an environment defines `assets: { directory: "/path" }`
+	 * without a `binding`, this method returns `true`, indicating the property
+	 * is defined and inheritance should be skipped.
+	 */
+	hasProperty: (env: RawEnvironment | undefined) => boolean;
+
+	/**
+	 * The TypeScript type for this binding
+	 */
+	type: string;
+}
+
+/**
+ * List of bindings that come from inheritable config properties.
+ *
+ * These bindings, when defined at the top-level config, are inherited by
+ * all named environments.
+ *
+ * The type generation needs to account for this inheritance when determining
+ * if a binding should be required or optional in the aggregated `Env` interface.
+ */
+const INHERITABLE_BINDINGS = [
+	{
+		bindingCategory: "assets",
+		getBindingName: (env) => env?.assets?.binding,
+		hasProperty: (env) => env?.assets !== undefined,
+		type: "Fetcher",
+	},
+] satisfies InheritableBindingDefinition[];
 
 /**
  * Collects vars per environment, returning a map from environment name to vars.
@@ -2496,24 +2757,7 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
-		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
-			if (!pipeline.binding) {
-				throwMissingBindingError({
-					binding: pipeline,
-					bindingType: "pipelines",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-					index,
-				});
-			}
-
-			bindings.push({
-				bindingCategory: "pipelines",
-				name: pipeline.binding,
-				type: 'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
-			});
-		}
+		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
 			bindings.push({
@@ -2626,6 +2870,26 @@ function collectCoreBindingsPerEnvironment(
 
 	const { rawConfig } = experimental_readRawConfig(args);
 
+	const topLevelInheritableBindings: Array<{
+		binding: PerEnvBinding;
+		definition: InheritableBindingDefinition;
+	}> = [];
+	for (const inheritableDef of INHERITABLE_BINDINGS) {
+		const bindingName = inheritableDef.getBindingName(rawConfig);
+		if (!bindingName) {
+			continue;
+		}
+
+		topLevelInheritableBindings.push({
+			binding: {
+				bindingCategory: inheritableDef.bindingCategory,
+				name: bindingName,
+				type: inheritableDef.type,
+			},
+			definition: inheritableDef,
+		});
+	}
+
 	const topLevelBindings = collectEnvironmentBindings(
 		rawConfig,
 		TOP_LEVEL_ENV_NAME
@@ -2636,6 +2900,25 @@ function collectCoreBindingsPerEnvironment(
 
 	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 		const envBindings = collectEnvironmentBindings(env, envName);
+
+		// Add top-level inheritable bindings if not already present in this environment
+		// (i.e., the environment doesn't override the inheritable property)
+		for (const inheritable of topLevelInheritableBindings) {
+			const alreadyHasBinding = envBindings.some(
+				(b) => b.bindingCategory === inheritable.binding.bindingCategory
+			);
+			if (alreadyHasBinding) {
+				continue;
+			}
+
+			// Skip inheriting if the env defines the property at all (even without a binding)
+			if (inheritable.definition.hasProperty(env)) {
+				continue;
+			}
+
+			envBindings.push(inheritable.binding);
+		}
+
 		if (envBindings.length > 0) {
 			result.set(envName, envBindings);
 		}
@@ -2975,6 +3258,101 @@ function collectUnsafeBindingsPerEnvironment(
 		const envUnsafe = collectEnvironmentUnsafe(env, envName);
 		if (envUnsafe.length > 0) {
 			result.set(envName, envUnsafe);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects pipeline bindings per environment.
+ *
+ * This is separate from collectCoreBindingsPerEnvironment because pipelines
+ * need async schema fetching for typed bindings.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of pipeline bindings
+ */
+function collectPipelinesPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		binding: string;
+		pipeline: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			binding: string;
+			pipeline: string;
+		}>
+	>();
+
+	function collectEnvironmentPipelines(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{
+		binding: string;
+		pipeline: string;
+	}> {
+		const pipelines = new Array<{
+			binding: string;
+			pipeline: string;
+		}>();
+
+		if (!env?.pipelines) {
+			return pipelines;
+		}
+
+		for (const [index, pipeline] of env.pipelines.entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			if (!pipeline.pipeline) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "pipeline",
+					index,
+				});
+			}
+
+			pipelines.push({
+				binding: pipeline.binding,
+				pipeline: pipeline.pipeline,
+			});
+		}
+
+		return pipelines;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelPipelines = collectEnvironmentPipelines(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelPipelines.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelPipelines);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envPipelines = collectEnvironmentPipelines(env, envName);
+		if (envPipelines.length > 0) {
+			result.set(envName, envPipelines);
 		}
 	}
 

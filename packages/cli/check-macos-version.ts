@@ -1,5 +1,6 @@
 import os from "node:os";
 import { UserError } from "@cloudflare/workers-utils";
+import ci from "ci-info";
 
 /**
  * Minimum macOS version required for workerd compatibility.
@@ -19,7 +20,7 @@ export function checkMacOSVersion(options: { shouldThrow: boolean }): void {
 		return;
 	}
 
-	if (process.env.CI) {
+	if (ci.isCI) {
 		return;
 	}
 

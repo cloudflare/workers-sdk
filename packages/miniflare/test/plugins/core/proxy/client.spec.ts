@@ -13,7 +13,7 @@ import {
 	Response,
 	WebSocketPair,
 } from "miniflare";
-import { describe, expect, onTestFinished, test } from "vitest";
+import { describe, onTestFinished, test } from "vitest";
 import { useDispose } from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
@@ -24,7 +24,7 @@ const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
 
 describe("ProxyClient", () => {
-	test("supports service bindings with WebSockets", async () => {
+	test("supports service bindings with WebSockets", async ({ expect }) => {
 		const mf = new Miniflare({
 			script: nullScript,
 			serviceBindings: {
@@ -56,7 +56,9 @@ describe("ProxyClient", () => {
 		expect(event.data).toBe("echo:hello");
 	});
 
-	test("supports serialising multiple ReadableStreams, Blobs and Files", async () => {
+	test("supports serialising multiple ReadableStreams, Blobs and Files", async ({
+		expect,
+	}) => {
 		// For testing proxy client serialisation, add an API that just returns its
 		// arguments. Note without the `.pipeThrough(new TransformStream())` below,
 		// we'll see `TypeError: Inter-TransformStream ReadableStream.pipeTo() is
@@ -127,7 +129,9 @@ describe("ProxyClient", () => {
 		expect(allResult[2].lastModified).toBe(1000);
 		expect(await allResult[2].text()).toBe("text file");
 	});
-	test("poisons dependent proxies after setOptions()/dispose()", async () => {
+	test("poisons dependent proxies after setOptions()/dispose()", async ({
+		expect,
+	}) => {
 		const mf = new Miniflare({ script: nullScript });
 		let disposed = false;
 		onTestFinished(() => {
@@ -161,7 +165,7 @@ describe("ProxyClient", () => {
 		expect(() => defaultCache.match(key)).toThrow(error);
 		expect(() => namedCache.match(key)).toThrow(error);
 	});
-	test("logging proxies provides useful information", async () => {
+	test("logging proxies provides useful information", async ({ expect }) => {
 		const mf = new Miniflare({ script: nullScript });
 		useDispose(mf);
 
@@ -173,7 +177,9 @@ describe("ProxyClient", () => {
 		expect(util.inspect(caches.open, inspectOpts)).toBe("[Function: open]");
 	});
 
-	test("stack traces don't include internal implementation", async () => {
+	test("stack traces don't include internal implementation", async ({
+		expect,
+	}) => {
 		function hasStack(value: unknown): value is { stack: string } {
 			return (
 				typeof value === "object" &&
@@ -222,7 +228,9 @@ describe("ProxyClient", () => {
 		}
 		await asyncUserFunction();
 	});
-	test("can access ReadableStream property multiple times", async () => {
+	test("can access ReadableStream property multiple times", async ({
+		expect,
+	}) => {
 		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
 		useDispose(mf);
 
@@ -233,7 +241,7 @@ describe("ProxyClient", () => {
 		expect(objectBody.body).not.toBe(null); // 1st access
 		expect(await text(objectBody.body)).toBe("value"); // 2nd access
 	});
-	test("returns empty ReadableStream synchronously", async () => {
+	test("returns empty ReadableStream synchronously", async ({ expect }) => {
 		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
 		useDispose(mf);
 
@@ -243,7 +251,7 @@ describe("ProxyClient", () => {
 		assert(objectBody != null);
 		expect(await text(objectBody.body)).toBe(""); // Synchronous empty stream access
 	});
-	test("returns multiple ReadableStreams in parallel", async () => {
+	test("returns multiple ReadableStreams in parallel", async ({ expect }) => {
 		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
 		useDispose(mf);
 
@@ -292,7 +300,7 @@ describe("ProxyClient", () => {
 		}
 	});
 
-	test("can `JSON.stringify()` proxies", async () => {
+	test("can `JSON.stringify()` proxies", async ({ expect }) => {
 		const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
 		useDispose(mf);
 
@@ -317,7 +325,7 @@ describe("ProxyClient", () => {
 		});
 	});
 
-	test("ProxyServer: prevents unauthorised access", async () => {
+	test("ProxyServer: prevents unauthorised access", async ({ expect }) => {
 		const mf = new Miniflare({ script: nullScript });
 		useDispose(mf);
 		const url = await mf.ready;

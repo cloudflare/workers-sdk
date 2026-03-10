@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import http from "node:http";
 import { AddressInfo } from "node:net";
 import { setImmediate } from "node:timers/promises";
@@ -12,7 +11,7 @@ import {
 	WebSocket,
 	WebSocketPair,
 } from "miniflare";
-import { expect, test } from "vitest";
+import { assert, test } from "vitest";
 import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";
 
@@ -23,7 +22,7 @@ test("WebSocket: can accept multiple times", () => {
 	webSocket.accept();
 	webSocket.accept();
 });
-test("WebSocket: cannot accept if already coupled", async () => {
+test("WebSocket: cannot accept if already coupled", async ({ expect }) => {
 	const server = await useServer(noop, (ws) => ws.send("test"));
 	const ws = new NodeWebSocket(server.ws);
 	const [webSocket1] = Object.values(new WebSocketPair());
@@ -34,7 +33,7 @@ test("WebSocket: cannot accept if already coupled", async () => {
 		)
 	);
 });
-test("WebSocket: sends message to pair", async () => {
+test("WebSocket: sends message to pair", async ({ expect }) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 	webSocket1.accept();
 	webSocket2.accept();
@@ -53,7 +52,7 @@ test("WebSocket: sends message to pair", async () => {
 	expect(messages1).toEqual(["from2"]);
 	expect(messages2).toEqual(["from1"]);
 });
-test("WebSocket: must accept before sending", () => {
+test("WebSocket: must accept before sending", ({ expect }) => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	expect(() => webSocket1.send("test")).toThrow(
 		new TypeError(
@@ -61,7 +60,7 @@ test("WebSocket: must accept before sending", () => {
 		)
 	);
 });
-test("WebSocket: queues messages if pair not accepted", async () => {
+test("WebSocket: queues messages if pair not accepted", async ({ expect }) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 
 	const messages1: MessageEvent["data"][] = [];
@@ -87,7 +86,7 @@ test("WebSocket: queues messages if pair not accepted", async () => {
 	expect(messages1).toEqual(["from2_1", "from2_2"]);
 	expect(messages2).toEqual(["from1_1", "from1_2"]);
 });
-test("WebSocket: queues closes if pair not accepted", async () => {
+test("WebSocket: queues closes if pair not accepted", async ({ expect }) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 
 	let closeEvent1: CloseEvent | undefined;
@@ -109,7 +108,9 @@ test("WebSocket: queues closes if pair not accepted", async () => {
 	expect(closeEvent1?.code).toBe(3002);
 	expect(closeEvent1?.reason).toBe("from2");
 });
-test("WebSocket: discards sent message to pair if other side closed", async () => {
+test("WebSocket: discards sent message to pair if other side closed", async ({
+	expect,
+}) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 
 	const messages1: MessageEvent["data"][] = [];
@@ -133,7 +134,7 @@ test("WebSocket: discards sent message to pair if other side closed", async () =
 	expect(messages1).toEqual(["from2"]);
 	expect(messages2).toEqual([]);
 });
-test("WebSocket: closes both sides of pair", async () => {
+test("WebSocket: closes both sides of pair", async ({ expect }) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 	webSocket1.accept();
 	webSocket2.accept();
@@ -151,7 +152,7 @@ test("WebSocket: closes both sides of pair", async () => {
 	// Check both event listeners called once
 	expect(closes).toEqual([1, 2, 3]);
 });
-test("WebSocket: has correct readyStates", async () => {
+test("WebSocket: has correct readyStates", async ({ expect }) => {
 	// Check constants have correct values:
 	// https://websockets.spec.whatwg.org/#interface-definition
 	expect(WebSocket.READY_STATE_CONNECTING).toBe(0);
@@ -183,7 +184,7 @@ test("WebSocket: has correct readyStates", async () => {
 	webSocket1.close();
 	await closePromise;
 });
-test("WebSocket: must accept before closing", () => {
+test("WebSocket: must accept before closing", ({ expect }) => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	expect(() => webSocket1.close()).toThrow(
 		new TypeError(
@@ -191,7 +192,7 @@ test("WebSocket: must accept before closing", () => {
 		)
 	);
 });
-test("WebSocket: can only call close once", () => {
+test("WebSocket: can only call close once", ({ expect }) => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	webSocket1.accept();
 	webSocket1.close(1000);
@@ -199,7 +200,7 @@ test("WebSocket: can only call close once", () => {
 		new TypeError("WebSocket already closed")
 	);
 });
-test("WebSocket: validates close code", () => {
+test("WebSocket: validates close code", ({ expect }) => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	webSocket1.accept();
 	// Try close with invalid code
@@ -214,7 +215,7 @@ test("WebSocket: validates close code", () => {
 	);
 });
 
-test("WebSocketPair: requires 'new' operator to construct", () => {
+test("WebSocketPair: requires 'new' operator to construct", ({ expect }) => {
 	// @ts-expect-error this shouldn't type check
 	expect(() => WebSocketPair()).toThrow(
 		new TypeError(
@@ -240,7 +241,7 @@ function _testWebSocketPairTypes() {
 	webSocket2 = pair[2];
 }
 
-test("coupleWebSocket: throws if already coupled", async () => {
+test("coupleWebSocket: throws if already coupled", async ({ expect }) => {
 	const server = await useServer(noop, (ws) => ws.send("test"));
 	const ws = new NodeWebSocket(server.ws);
 	const [client] = Object.values(new WebSocketPair());
@@ -249,7 +250,7 @@ test("coupleWebSocket: throws if already coupled", async () => {
 		new TypeError("Can't return WebSocket that was already used in a response.")
 	);
 });
-test("coupleWebSocket: throws if already accepted", async () => {
+test("coupleWebSocket: throws if already accepted", async ({ expect }) => {
 	const [client] = Object.values(new WebSocketPair());
 	client.accept();
 	await expect(coupleWebSocket({} as any, client)).rejects.toThrow(
@@ -258,7 +259,9 @@ test("coupleWebSocket: throws if already accepted", async () => {
 		)
 	);
 });
-test("coupleWebSocket: forwards messages from client to worker before coupling", async () => {
+test("coupleWebSocket: forwards messages from client to worker before coupling", async ({
+	expect,
+}) => {
 	const server = await useServer(noop, (ws) => ws.send("test"));
 	const ws = new NodeWebSocket(server.ws);
 	const [client, worker] = Object.values(new WebSocketPair());
@@ -273,7 +276,9 @@ test("coupleWebSocket: forwards messages from client to worker before coupling",
 	const event = await eventPromise;
 	expect(event.data).toBe("test");
 });
-test("coupleWebSocket: forwards messages from client to worker after coupling", async () => {
+test("coupleWebSocket: forwards messages from client to worker after coupling", async ({
+	expect,
+}) => {
 	const server = await useServer(noop, (ws) => ws.send("test"));
 	const ws = new NodeWebSocket(server.ws);
 	const [client, worker] = Object.values(new WebSocketPair());
@@ -289,7 +294,9 @@ test("coupleWebSocket: forwards messages from client to worker after coupling", 
 	const event = await eventPromise;
 	expect(event.data).toBe("test");
 });
-test("coupleWebSocket: forwards binary messages from client to worker", async () => {
+test("coupleWebSocket: forwards binary messages from client to worker", async ({
+	expect,
+}) => {
 	const server = await useServer(noop, (ws) => {
 		ws.send(Buffer.from("test", "utf8"));
 	});
@@ -303,11 +310,12 @@ test("coupleWebSocket: forwards binary messages from client to worker", async ()
 	await coupleWebSocket(ws, client);
 
 	const event = await eventPromise;
-	expect(event.data).toBeInstanceOf(ArrayBuffer);
 	assert(event.data instanceof ArrayBuffer);
 	expect(utf8Decode(new Uint8Array(event.data))).toBe("test");
 });
-test("coupleWebSocket: closes worker socket on client close", async () => {
+test("coupleWebSocket: closes worker socket on client close", async ({
+	expect,
+}) => {
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("message", () => ws.close(1000, "Test Closure"));
 	});
@@ -325,7 +333,9 @@ test("coupleWebSocket: closes worker socket on client close", async () => {
 	expect(event.code).toBe(1000);
 	expect(event.reason).toBe("Test Closure");
 });
-test("coupleWebSocket: closes worker socket with invalid client close code", async () => {
+test("coupleWebSocket: closes worker socket with invalid client close code", async ({
+	expect,
+}) => {
 	const server = http.createServer();
 	const wss = new WebSocketServer({ server });
 	wss.on("connection", (ws) => {
@@ -349,7 +359,9 @@ test("coupleWebSocket: closes worker socket with invalid client close code", asy
 	const event = await eventPromise;
 	expect(event.code).toBe(1005);
 });
-test("coupleWebSocket: forwards messages from worker to client before coupling", async () => {
+test("coupleWebSocket: forwards messages from worker to client before coupling", async ({
+	expect,
+}) => {
 	const eventPromise = new DeferredPromise<{ data: any }>();
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("message", eventPromise.resolve);
@@ -365,7 +377,9 @@ test("coupleWebSocket: forwards messages from worker to client before coupling",
 	const event = await eventPromise;
 	expect(event.data).toBe("test");
 });
-test("coupleWebSocket: forwards messages from worker to client after coupling", async () => {
+test("coupleWebSocket: forwards messages from worker to client after coupling", async ({
+	expect,
+}) => {
 	const eventPromise = new DeferredPromise<{ data: any }>();
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("message", eventPromise.resolve);
@@ -381,7 +395,9 @@ test("coupleWebSocket: forwards messages from worker to client after coupling", 
 	const event = await eventPromise;
 	expect(event.data).toBe("test");
 });
-test("coupleWebSocket: forwards binary messages from worker to client", async () => {
+test("coupleWebSocket: forwards binary messages from worker to client", async ({
+	expect,
+}) => {
 	const eventPromise = new DeferredPromise<{ data: any }>();
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("message", eventPromise.resolve);
@@ -396,7 +412,9 @@ test("coupleWebSocket: forwards binary messages from worker to client", async ()
 	const event = await eventPromise;
 	expect(utf8Decode(event.data)).toBe("test");
 });
-test("coupleWebSocket: closes client socket on worker close", async () => {
+test("coupleWebSocket: closes client socket on worker close", async ({
+	expect,
+}) => {
 	const eventPromise = new DeferredPromise<{ code: number; reason: string }>();
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("close", eventPromise.resolve);
@@ -411,7 +429,9 @@ test("coupleWebSocket: closes client socket on worker close", async () => {
 	expect(event.code).toBe(1000);
 	expect(event.reason).toBe("Test Closure");
 });
-test("coupleWebSocket: closes client socket on worker close with no close code", async () => {
+test("coupleWebSocket: closes client socket on worker close with no close code", async ({
+	expect,
+}) => {
 	const eventPromise = new DeferredPromise<{ code: number; reason: string }>();
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("close", eventPromise.resolve);
@@ -425,7 +445,9 @@ test("coupleWebSocket: closes client socket on worker close with no close code",
 	const event = await eventPromise;
 	expect(event.code).toBe(1005);
 });
-test("coupleWebSocket: accepts worker socket immediately if already open", async () => {
+test("coupleWebSocket: accepts worker socket immediately if already open", async ({
+	expect,
+}) => {
 	const eventPromise = new DeferredPromise<{ data: any }>();
 	const server = await useServer(noop, (ws) => {
 		ws.addEventListener("message", eventPromise.resolve);
@@ -445,7 +467,9 @@ test("coupleWebSocket: accepts worker socket immediately if already open", async
 	const event = await eventPromise;
 	expect(event.data).toBe("test");
 });
-test("coupleWebSocket: throws if web socket already closed", async () => {
+test("coupleWebSocket: throws if web socket already closed", async ({
+	expect,
+}) => {
 	const server = await useServer(noop, noop);
 	const ws = new NodeWebSocket(server.ws);
 	const [client, worker] = Object.values(new WebSocketPair());

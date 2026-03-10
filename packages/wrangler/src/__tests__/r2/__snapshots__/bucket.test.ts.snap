@@ -8,10 +8,10 @@ Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
-  \\"r2_buckets\\": [
+  "r2_buckets": [
     {
-      \\"bucket_name\\": \\"test-bucket\\",
-      \\"binding\\": \\"test_bucket\\"
+      "bucket_name": "test-bucket",
+      "binding": "test_bucket"
     }
   ]
 }
@@ -27,10 +27,10 @@ Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
-  \\"r2_buckets\\": [
+  "r2_buckets": [
     {
-      \\"bucket_name\\": \\"test-bucket\\",
-      \\"binding\\": \\"test_bucket\\"
+      "bucket_name": "test-bucket",
+      "binding": "test_bucket"
     }
   ]
 }
@@ -46,10 +46,10 @@ Creating bucket 'test-bucket (eu)'...
 ✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
-  \\"r2_buckets\\": [
+  "r2_buckets": [
     {
-      \\"bucket_name\\": \\"test-bucket\\",
-      \\"binding\\": \\"test_bucket\\"
+      "bucket_name": "test-bucket",
+      "binding": "test_bucket"
     }
   ]
 }
@@ -65,10 +65,10 @@ Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 {
-  \\"r2_buckets\\": [
+  "r2_buckets": [
     {
-      \\"bucket_name\\": \\"test-bucket\\",
-      \\"binding\\": \\"test_bucket\\"
+      "bucket_name": "test-bucket",
+      "binding": "test_bucket"
     }
   ]
 }
@@ -84,8 +84,8 @@ Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
-bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
+bucket_name = "test-bucket"
+binding = "test_bucket"
 "
 `;
 
@@ -97,8 +97,8 @@ Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
-bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
+bucket_name = "test-bucket"
+binding = "test_bucket"
 "
 `;
 
@@ -110,8 +110,8 @@ Creating bucket 'test-bucket (eu)'...
 ✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
-bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
+bucket_name = "test-bucket"
+binding = "test_bucket"
 "
 `;
 
@@ -123,7 +123,7 @@ Creating bucket 'test-bucket'...
 ✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
-bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
+bucket_name = "test-bucket"
+binding = "test_bucket"
 "
 `;

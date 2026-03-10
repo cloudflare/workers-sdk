@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- expect used in afterAll which has no test context
 import { afterAll, describe, expect, test } from "vitest";
 import {
 	getJsonResponse,

@@ -15,6 +15,7 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import * as jsonc from "jsonc-parser";
 import { fetch } from "undici";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
 import { expect } from "vitest";
 import { version } from "../../package.json";
 import { getFrameworkMap } from "../../src/templates";

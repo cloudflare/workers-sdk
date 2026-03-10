@@ -1,9 +1,9 @@
 {
 	"name": "@cloudflare/devprod-status-bot",
-	"version": "1.3.0",
+	"version": "1.4.1",
 	"private": true,
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy"
 	},

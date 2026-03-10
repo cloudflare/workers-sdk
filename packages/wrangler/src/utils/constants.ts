@@ -9,3 +9,5 @@ export const proxy =
 	process.env.http_proxy ||
 	process.env.HTTP_PROXY ||
 	undefined;
+export const noProxy =
+	process.env.no_proxy || process.env.NO_PROXY || undefined;

@@ -7,6 +7,7 @@ import chalk from "chalk";
 import { fetchResult } from "./cfetch";
 import { confirm, prompt } from "./dialogs";
 import { logger } from "./logger";
+import type { ApiCredentials } from "./user/user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
@@ -15,13 +16,18 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
 export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	configPath: string | undefined
+	configPath: string | undefined,
+	apiToken?: ApiCredentials
 ): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
 		const { subdomain } = await fetchResult<{ subdomain: string }>(
 			complianceConfig,
-			`/accounts/${accountId}/workers/subdomain`
+			`/accounts/${accountId}/workers/subdomain`,
+			undefined,
+			undefined,
+			undefined,
+			apiToken
 		);
 		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {

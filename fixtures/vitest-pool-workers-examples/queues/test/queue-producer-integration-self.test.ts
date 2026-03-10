@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
-import { expect, it, vi } from "vitest";
+import { it, vi } from "vitest";
 
-it("produces and consumers queue message", async () => {
+it("produces and consumers queue message", async ({ expect }) => {
 	// Enqueue job on queue
 	let response = await SELF.fetch("https://example.com/key", {
 		method: "POST",

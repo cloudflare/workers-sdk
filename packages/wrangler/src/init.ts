@@ -65,8 +65,9 @@ export const init = createCommand({
 
 		const name = args.fromDash ?? args.name;
 
+		const c3CommandParts = shellquote.parse(getC3CommandFromEnv());
 		const c3Arguments = [
-			...shellquote.parse(getC3CommandFromEnv()),
+			...c3CommandParts,
 			...(name ? [name] : []),
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),

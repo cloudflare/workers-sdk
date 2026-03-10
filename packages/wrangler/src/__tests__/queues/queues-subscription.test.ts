@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { EventSourceType } from "../../queues/subscription-types";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -62,7 +62,7 @@ describe("queues subscription", () => {
 	};
 
 	describe("create", () => {
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues subscription create --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -82,7 +82,7 @@ describe("queues subscription", () => {
 				  -v, --version   Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: \\"kv\\", \\"r2\\", \\"superSlurper\\", \\"vectorize\\", \\"workersAi.model\\", \\"workersBuilds.worker\\", \\"workflows.workflow\\"]
+				      --source         The event source type  [string] [required] [choices: "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
 				      --events         Comma-separated list of event types to subscribe to  [string] [required]
 				      --name           Name for the subscription (auto-generated if not provided)  [string]
 				      --enabled        Whether the subscription should be active  [boolean] [default: true]
@@ -92,7 +92,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should create a subscription for workersBuilds.worker source", async () => {
+		it("should create a subscription for workersBuilds.worker source", async ({
+			expect,
+		}) => {
 			const queueNameResolveRequest = mockGetQueueByNameRequest(
 				expectedQueueName,
 				{
@@ -138,7 +140,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should create subscription with custom name and disabled state", async () => {
+		it("should create subscription with custom name and disabled state", async ({
+			expect,
+		}) => {
 			const queueNameResolveRequest = mockGetQueueByNameRequest(
 				expectedQueueName,
 				{
@@ -184,7 +188,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should show error when worker-name is missing for workersBuilds.worker source", async () => {
+		it("should show error when worker-name is missing for workersBuilds.worker source", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"queues subscription create testQueue --source workersBuilds.worker --events build.completed"
@@ -194,7 +200,7 @@ describe("queues subscription", () => {
 			);
 		});
 
-		it("should show error for invalid source type", async () => {
+		it("should show error for invalid source type", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"queues subscription create testQueue --source invalid --events test"
@@ -205,7 +211,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should show error when no events are provided", async () => {
+		it("should show error when no events are provided", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"queues subscription create testQueue --source workersBuilds.worker --events '' --worker-name my-worker"
@@ -215,7 +221,7 @@ describe("queues subscription", () => {
 			);
 		});
 
-		it("should show error when queue does not exist", async () => {
+		it("should show error when queue does not exist", async ({ expect }) => {
 			const queueNameResolveRequest = mockGetQueueByNameRequest(
 				"nonexistent",
 				null
@@ -234,7 +240,7 @@ describe("queues subscription", () => {
 	});
 
 	describe("list", () => {
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues subscription list --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -260,7 +266,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should show message when no subscriptions exist", async () => {
+		it("should show message when no subscriptions exist", async ({
+			expect,
+		}) => {
 			const queueNameResolveRequest = mockGetQueueByNameRequest(
 				expectedQueueName,
 				{
@@ -290,7 +298,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should list subscriptions for a queue", async () => {
+		it("should list subscriptions for a queue", async ({ expect }) => {
 			const queueNameResolveRequest = mockGetQueueByNameRequest(
 				expectedQueueName,
 				{
@@ -330,7 +338,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			mockGetQueueByNameRequest(expectedQueueName, {
 				queue_id: expectedQueueId,
 				queue_name: expectedQueueName,
@@ -349,49 +357,49 @@ describe("queues subscription", () => {
 			await runWrangler("queues subscription list testQueue --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
-				    \\"id\\": \\"sub-123\\",
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"name\\": \\"Test Subscription 1\\",
-				    \\"enabled\\": true,
-				    \\"source\\": {
-				      \\"type\\": \\"workersBuilds.worker\\",
-				      \\"worker_name\\": \\"my-worker\\"
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "destination": {
+				      "queue_id": "queueId",
+				      "type": "queues.queue",
 				    },
-				    \\"destination\\": {
-				      \\"type\\": \\"queues.queue\\",
-				      \\"queue_id\\": \\"queueId\\"
+				    "enabled": true,
+				    "events": [
+				      "build.completed",
+				      "build.failed",
+				    ],
+				    "id": "sub-123",
+				    "modified_at": "2024-01-01T00:00:00Z",
+				    "name": "Test Subscription 1",
+				    "source": {
+				      "type": "workersBuilds.worker",
+				      "worker_name": "my-worker",
 				    },
-				    \\"events\\": [
-				      \\"build.completed\\",
-				      \\"build.failed\\"
-				    ]
 				  },
 				  {
-				    \\"id\\": \\"sub-456\\",
-				    \\"created_at\\": \\"2024-01-02T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-02T00:00:00Z\\",
-				    \\"name\\": \\"Test Subscription 2\\",
-				    \\"enabled\\": false,
-				    \\"source\\": {
-				      \\"type\\": \\"kv\\"
+				    "created_at": "2024-01-02T00:00:00Z",
+				    "destination": {
+				      "queue_id": "queueId",
+				      "type": "queues.queue",
 				    },
-				    \\"destination\\": {
-				      \\"type\\": \\"queues.queue\\",
-				      \\"queue_id\\": \\"queueId\\"
+				    "enabled": false,
+				    "events": [
+				      "namespace.created",
+				    ],
+				    "id": "sub-456",
+				    "modified_at": "2024-01-02T00:00:00Z",
+				    "name": "Test Subscription 2",
+				    "source": {
+				      "type": "kv",
 				    },
-				    \\"events\\": [
-				      \\"namespace.created\\"
-				    ]
-				  }
-				]"
+				  },
+				]
 			`);
 		});
 
-		it("should show error when queue does not exist", async () => {
+		it("should show error when queue does not exist", async ({ expect }) => {
 			const queueNameResolveRequest = mockGetQueueByNameRequest(
 				"nonexistent",
 				null
@@ -408,7 +416,7 @@ describe("queues subscription", () => {
 	});
 
 	describe("get", () => {
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues subscription get --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -433,7 +441,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should get a subscription by ID", async () => {
+		it("should get a subscription by ID", async ({ expect }) => {
 			mockGetQueueByNameRequest("testQueue", {
 				queue_id: expectedQueueId,
 				queue_name: "testQueue",
@@ -469,7 +477,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async ({ expect }) => {
 			mockGetQueueByNameRequest("testQueue", {
 				queue_id: expectedQueueId,
 				queue_name: "testQueue",
@@ -487,30 +495,32 @@ describe("queues subscription", () => {
 			);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  \\"id\\": \\"sub-123\\",
-				  \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				  \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
-				  \\"name\\": \\"Test Subscription 1\\",
-				  \\"enabled\\": true,
-				  \\"source\\": {
-				    \\"type\\": \\"workersBuilds.worker\\",
-				    \\"worker_name\\": \\"my-worker\\"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "created_at": "2024-01-01T00:00:00Z",
+				  "destination": {
+				    "queue_id": "queueId",
+				    "type": "queues.queue",
 				  },
-				  \\"destination\\": {
-				    \\"type\\": \\"queues.queue\\",
-				    \\"queue_id\\": \\"queueId\\"
+				  "enabled": true,
+				  "events": [
+				    "build.completed",
+				    "build.failed",
+				  ],
+				  "id": "sub-123",
+				  "modified_at": "2024-01-01T00:00:00Z",
+				  "name": "Test Subscription 1",
+				  "source": {
+				    "type": "workersBuilds.worker",
+				    "worker_name": "my-worker",
 				  },
-				  \\"events\\": [
-				    \\"build.completed\\",
-				    \\"build.failed\\"
-				  ]
-				}"
+				}
 			`);
 		});
 
-		it("should show error when subscription does not exist", async () => {
+		it("should show error when subscription does not exist", async ({
+			expect,
+		}) => {
 			const getRequest = mockGetSubscriptionRequest("nonexistent-id", null);
 
 			await expect(
@@ -526,7 +536,7 @@ describe("queues subscription", () => {
 	describe("delete", () => {
 		const { setIsTTY } = useMockIsTTY();
 
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues subscription delete --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -551,7 +561,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should delete a subscription after confirmation", async () => {
+		it("should delete a subscription after confirmation", async ({
+			expect,
+		}) => {
 			mockGetQueueByNameRequest("testQueue", {
 				queue_id: expectedQueueId,
 				queue_name: "testQueue",
@@ -587,7 +599,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should delete subscription without confirmation when --force is used", async () => {
+		it("should delete subscription without confirmation when --force is used", async ({
+			expect,
+		}) => {
 			mockGetQueueByNameRequest("testQueue", {
 				queue_id: expectedQueueId,
 				queue_name: "testQueue",
@@ -619,7 +633,9 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it("should show error when subscription does not exist", async () => {
+		it("should show error when subscription does not exist", async ({
+			expect,
+		}) => {
 			const getRequest = mockGetSubscriptionRequest("nonexistent-id", null);
 			const deleteRequest = mockDeleteSubscriptionRequest("nonexistent-id");
 
@@ -635,7 +651,9 @@ describe("queues subscription", () => {
 	});
 
 	describe("update", () => {
-		it("should update subscription with multiple fields", async () => {
+		it("should update subscription with multiple fields", async ({
+			expect,
+		}) => {
 			const subscriptionId = "subscription-123";
 			mockGetQueueByNameRequest("test-queue", {
 				queue_id: "queue-id-1",
@@ -683,7 +701,7 @@ describe("queues subscription", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports json output with "--json" flag', async ({ expect }) => {
 			const subscriptionId = "subscription-123";
 			mockGetQueueByNameRequest("test-queue", {
 				queue_id: "queue-id-1",
@@ -724,26 +742,26 @@ describe("queues subscription", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Updating event subscription...
 				{
-				  \\"id\\": \\"subscription-123\\",
-				  \\"name\\": \\"updated-subscription\\",
-				  \\"source\\": {
-				    \\"type\\": \\"workersBuilds.worker\\",
-				    \\"worker_name\\": \\"my-worker\\"
+				  "id": "subscription-123",
+				  "name": "updated-subscription",
+				  "source": {
+				    "type": "workersBuilds.worker",
+				    "worker_name": "my-worker"
 				  },
-				  \\"destination\\": {
-				    \\"queue_id\\": \\"queue-id-1\\"
+				  "destination": {
+				    "queue_id": "queue-id-1"
 				  },
-				  \\"events\\": [
-				    \\"build.completed\\",
-				    \\"build.failed\\"
+				  "events": [
+				    "build.completed",
+				    "build.failed"
 				  ],
-				  \\"enabled\\": false,
-				  \\"modified_at\\": \\"2023-01-01T00:00:00.000Z\\"
+				  "enabled": false,
+				  "modified_at": "2023-01-01T00:00:00.000Z"
 				}"
 			`);
 		});
 
-		it("should error when no fields provided", async () => {
+		it("should error when no fields provided", async ({ expect }) => {
 			const subscriptionId = "subscription-123";
 			mockGetQueueByNameRequest("test-queue", {
 				queue_id: "queue-id-1",

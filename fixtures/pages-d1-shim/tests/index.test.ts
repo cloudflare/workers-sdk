@@ -3,10 +3,12 @@ import { mkdtempSync, readFileSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import * as path from "path";
 import { join } from "path";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 describe("Pages D1 shim", () => {
-	it("builds functions with D1 binding, without the shim", async () => {
+	it("builds functions with D1 binding, without the shim", async ({
+		expect,
+	}) => {
 		const tempDir = realpathSync(
 			mkdtempSync(join(tmpdir(), "pages-d1-shim-tests"))
 		);

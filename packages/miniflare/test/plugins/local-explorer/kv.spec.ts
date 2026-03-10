@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, test } from "vitest";
+import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
@@ -10,7 +11,7 @@ import {
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
-const BASE_URL = "http://localhost/cdn-cgi/explorer/api";
+const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
 
 describe("KV API", () => {
 	let mf: Miniflare;
@@ -35,7 +36,7 @@ describe("KV API", () => {
 	});
 
 	describe("GET /storage/kv/namespaces", () => {
-		test("lists available KV namespaces with default pagination", async () => {
+		test("lists all available KV namespaces", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces`
 			);
@@ -53,13 +54,10 @@ describe("KV API", () => {
 			);
 			expect(data.result_info).toMatchObject({
 				count: 3,
-				page: 1,
-				per_page: 20,
-				total_count: 3,
 			});
 		});
 
-		test("sorts namespaces by id", async () => {
+		test("sorts namespaces by id", async ({ expect }) => {
 			let response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces`
 			);
@@ -87,7 +85,7 @@ describe("KV API", () => {
 			});
 		});
 
-		test("sorts namespaces by title", async () => {
+		test("sorts namespaces by title", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces?order=title&direction=desc`
 			);
@@ -101,46 +99,10 @@ describe("KV API", () => {
 				],
 			});
 		});
-
-		test("pagination works", async () => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=2&page=2`
-			);
-
-			expect(response.status).toBe(200);
-			// Sorted by ID: "another-kv-id", "test-kv-id", "zebra-kv-id"
-			// Page 2 with per_page=2 should return only "zebra-kv-id"
-			expect(await response.json()).toMatchObject({
-				result: [expect.objectContaining({ id: "zebra-kv-id" })],
-				result_info: {
-					count: 1,
-					page: 2,
-					per_page: 2,
-					total_count: 3,
-				},
-			});
-		});
-
-		test("returns empty result for page beyond total", async () => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces?per_page=20&page=100`
-			);
-
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				result: [],
-				result_info: {
-					count: 0,
-					page: 100,
-					per_page: 20,
-					total_count: 3,
-				},
-			});
-		});
 	});
 
 	describe("GET /storage/kv/namespaces/:namespaceId/keys", () => {
-		test("lists keys in a namespace", async () => {
+		test("lists keys in a namespace", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			await kv.put("test-key-1", "value1");
 			await kv.put("test-key-2", "value2");
@@ -161,7 +123,7 @@ describe("KV API", () => {
 			);
 		});
 
-		test("respects limit parameter", async () => {
+		test("respects limit parameter", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			for (let i = 0; i < 15; i++) {
 				await kv.put(`limit-test-${i}`, "value");
@@ -178,7 +140,7 @@ describe("KV API", () => {
 			});
 		});
 
-		test("returns 404 for non-existent namespace", async () => {
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/keys`
 			);
@@ -186,13 +148,67 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
+			});
+		});
+
+		test("filters keys by prefix", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("users:alice", "value1");
+			await kv.put("users:bob", "value2");
+			await kv.put("posts:first", "value3");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=users:`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: expect.arrayContaining([
+					expect.objectContaining({ name: "users:alice" }),
+					expect.objectContaining({ name: "users:bob" }),
+				]),
+				result_info: expect.objectContaining({ count: 2 }),
+			});
+		});
+
+		test("returns exact prefix match", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("exact-match", "value1");
+			await kv.put("exact-match-extended", "value2");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=exact-match`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: expect.arrayContaining([
+					expect.objectContaining({ name: "exact-match" }),
+					expect.objectContaining({ name: "exact-match-extended" }),
+				]),
+				result_info: expect.objectContaining({ count: 2 }),
+			});
+		});
+
+		test("returns empty result for non-matching prefix", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=nonexistent-prefix-xyz`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: [],
+				result_info: expect.objectContaining({ count: 0 }),
 			});
 		});
 	});
 
 	describe("GET /storage/kv/namespaces/:namespaceId/values/:keyName", () => {
-		test("returns value for existing key", async () => {
+		test("returns value for existing key", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			await kv.put("get-test-key", "test-value-123");
 
@@ -204,7 +220,7 @@ describe("KV API", () => {
 			expect(await response.text()).toBe("test-value-123");
 		});
 
-		test("returns 404 for non-existent key", async () => {
+		test("returns 404 for non-existent key", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/non-existent-key-xyz`
 			);
@@ -212,11 +228,11 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Key not found" })],
+				errors: [expect.objectContaining({ code: 10009 })],
 			});
 		});
 
-		test("returns 404 for non-existent namespace", async () => {
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`
 			);
@@ -224,11 +240,11 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
-		test("handles URL-encoded key names", async () => {
+		test("handles URL-encoded key names", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			const specialKey = "key:with:colons";
 			await kv.put(specialKey, "special-value");
@@ -243,7 +259,7 @@ describe("KV API", () => {
 	});
 
 	describe("PUT /storage/kv/namespaces/:namespaceId/values/:keyName", () => {
-		test("writes a new value", async () => {
+		test("writes a new value", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/put-test-key`,
 				{
@@ -263,7 +279,7 @@ describe("KV API", () => {
 			expect(await kv.get("put-test-key")).toBe("new-value");
 		});
 
-		test("overwrites existing value", async () => {
+		test("overwrites existing value", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			await kv.put("overwrite-key", "old-value");
 
@@ -280,7 +296,7 @@ describe("KV API", () => {
 			expect(await kv.get("overwrite-key")).toBe("updated-value");
 		});
 
-		test("returns 404 for non-existent namespace", async () => {
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`,
 				{
@@ -292,13 +308,13 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});
 
 	describe("DELETE /storage/kv/namespaces/:namespaceId/values/:keyName", () => {
-		test("deletes an existing key", async () => {
+		test("deletes an existing key", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			await kv.put("delete-test-key", "value-to-delete");
 
@@ -319,7 +335,7 @@ describe("KV API", () => {
 			expect(await kv.get("delete-test-key")).toBeNull();
 		});
 
-		test("succeeds even if key does not exist", async () => {
+		test("succeeds even if key does not exist", async ({ expect }) => {
 			// KV delete is idempotent - deleting non-existent key should succeed
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/definitely-does-not-exist`,
@@ -332,7 +348,7 @@ describe("KV API", () => {
 			expect(await response.json()).toMatchObject({ success: true });
 		});
 
-		test("returns 404 for non-existent namespace", async () => {
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/values/some-key`,
 				{
@@ -343,11 +359,11 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 
-		test("handles URL-encoded key names", async () => {
+		test("handles URL-encoded key names", async ({ expect }) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			const specialKey = "delete:key:with:colons";
 			await kv.put(specialKey, "value");
@@ -366,7 +382,9 @@ describe("KV API", () => {
 	});
 
 	describe("POST /storage/kv/namespaces/:namespaceId/bulk/get", () => {
-		test("returns multiple key-value pairs and null for non-existing keys", async () => {
+		test("returns multiple key-value pairs and null for non-existing keys", async ({
+			expect,
+		}) => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			await kv.put("bulk-key-1", "value-1");
 			await kv.put("bulk-key-2", "value-2");
@@ -403,7 +421,9 @@ describe("KV API", () => {
 			});
 		});
 
-		test("returns null values as success if all keys are non-existent", async () => {
+		test("returns null values as success if all keys are non-existent", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
 				{
@@ -427,7 +447,7 @@ describe("KV API", () => {
 			});
 		});
 
-		test("returns 404 for non-existent namespace", async () => {
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/bulk/get`,
 				{
@@ -440,7 +460,7 @@ describe("KV API", () => {
 			expect(response.status).toBe(404);
 			expect(await response.json()).toMatchObject({
 				success: false,
-				errors: [expect.objectContaining({ message: "Namespace not found" })],
+				errors: [expect.objectContaining({ code: 10013 })],
 			});
 		});
 	});

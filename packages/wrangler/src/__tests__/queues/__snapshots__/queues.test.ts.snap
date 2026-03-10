@@ -10,11 +10,11 @@ exports[`wrangler > queues > create > wrangler.json > should create a queue 1`] 
 Configure your Worker to send messages to this queue:
 
 {
-  \\"queues\\": {
-    \\"producers\\": [
+  "queues": {
+    "producers": [
       {
-        \\"queue\\": \\"testQueue\\",
-        \\"binding\\": \\"testQueue\\"
+        "queue": "testQueue",
+        "binding": "testQueue"
       }
     ]
   }
@@ -22,10 +22,10 @@ Configure your Worker to send messages to this queue:
 Configure your Worker to consume messages from this queue:
 
 {
-  \\"queues\\": {
-    \\"consumers\\": [
+  "queues": {
+    "consumers": [
       {
-        \\"queue\\": \\"testQueue\\"
+        "queue": "testQueue"
       }
     ]
   }
@@ -42,11 +42,11 @@ exports[`wrangler > queues > create > wrangler.json > should send queue settings
 Configure your Worker to send messages to this queue:
 
 {
-  \\"queues\\": {
-    \\"producers\\": [
+  "queues": {
+    "producers": [
       {
-        \\"queue\\": \\"testQueue\\",
-        \\"binding\\": \\"testQueue\\"
+        "queue": "testQueue",
+        "binding": "testQueue"
       }
     ]
   }
@@ -54,10 +54,10 @@ Configure your Worker to send messages to this queue:
 Configure your Worker to consume messages from this queue:
 
 {
-  \\"queues\\": {
-    \\"consumers\\": [
+  "queues": {
+    "consumers": [
       {
-        \\"queue\\": \\"testQueue\\"
+        "queue": "testQueue"
       }
     ]
   }
@@ -74,13 +74,13 @@ exports[`wrangler > queues > create > wrangler.toml > should create a queue 1`] 
 Configure your Worker to send messages to this queue:
 
 [[queues.producers]]
-queue = \\"testQueue\\"
-binding = \\"testQueue\\"
+queue = "testQueue"
+binding = "testQueue"
 
 Configure your Worker to consume messages from this queue:
 
 [[queues.consumers]]
-queue = \\"testQueue\\"
+queue = "testQueue"
 "
 `;
 
@@ -94,12 +94,12 @@ exports[`wrangler > queues > create > wrangler.toml > should send queue settings
 Configure your Worker to send messages to this queue:
 
 [[queues.producers]]
-queue = \\"testQueue\\"
-binding = \\"testQueue\\"
+queue = "testQueue"
+binding = "testQueue"
 
 Configure your Worker to consume messages from this queue:
 
 [[queues.consumers]]
-queue = \\"testQueue\\"
+queue = "testQueue"
 "
 `;

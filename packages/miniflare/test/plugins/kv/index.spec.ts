@@ -10,6 +10,7 @@ import {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 } from "miniflare";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { beforeEach, expect, test } from "vitest";
 import {
 	createJunkStream,

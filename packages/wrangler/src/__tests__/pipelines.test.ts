@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
 import { describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -268,11 +270,8 @@ describe("wrangler pipelines", () => {
 			expect(std.out).toContain(
 				"✨ Successfully created pipeline 'my_pipeline' with id 'pipeline_123'."
 			);
-			expect(std.out).toContain(
-				"Send your first event to stream 'test_stream':"
-			);
-			expect(std.out).toContain("Worker Integration:");
-			expect(std.out).toContain("HTTP Endpoint:");
+			expect(std.out).toContain("Then send events:");
+			expect(std.out).toContain("Or via HTTP:");
 		});
 
 		it("should create pipeline from SQL file", async () => {
@@ -531,7 +530,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async () => {
 			const mockPipelines: Pipeline[] = [
 				{
 					id: "pipeline_1",
@@ -556,25 +555,25 @@ describe("wrangler pipelines", () => {
 			await runWrangler("pipelines list --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
-				    {
-				        \\"id\\": \\"pipeline_1\\",
-				        \\"name\\": \\"pipeline_one\\",
-				        \\"sql\\": \\"INSERT INTO sink1 SELECT * FROM stream1;\\",
-				        \\"status\\": \\"active\\",
-				        \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				        \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
-				    },
-				    {
-				        \\"id\\": \\"pipeline_2\\",
-				        \\"name\\": \\"pipeline_two\\",
-				        \\"sql\\": \\"INSERT INTO sink2 SELECT * FROM stream2;\\",
-				        \\"status\\": \\"active\\",
-				        \\"created_at\\": \\"2024-01-02T00:00:00Z\\",
-				        \\"modified_at\\": \\"2024-01-02T00:00:00Z\\"
-				    }
-				]"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
+				  {
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "id": "pipeline_1",
+				    "modified_at": "2024-01-01T00:00:00Z",
+				    "name": "pipeline_one",
+				    "sql": "INSERT INTO sink1 SELECT * FROM stream1;",
+				    "status": "active",
+				  },
+				  {
+				    "created_at": "2024-01-02T00:00:00Z",
+				    "id": "pipeline_2",
+				    "modified_at": "2024-01-02T00:00:00Z",
+				    "name": "pipeline_two",
+				    "sql": "INSERT INTO sink2 SELECT * FROM stream2;",
+				    "status": "active",
+				  },
+				]
 			`);
 		});
 	});
@@ -741,7 +740,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async () => {
 			const mockPipeline: Pipeline = {
 				id: "pipeline_123",
 				name: "my_pipeline",
@@ -773,33 +772,33 @@ describe("wrangler pipelines", () => {
 			await runWrangler("pipelines get pipeline_123 --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				    \\"id\\": \\"pipeline_123\\",
-				    \\"name\\": \\"my_pipeline\\",
-				    \\"sql\\": \\"INSERT INTO test_sink SELECT * FROM test_stream;\\",
-				    \\"status\\": \\"active\\",
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"tables\\": [
-				        {
-				            \\"id\\": \\"stream_456\\",
-				            \\"name\\": \\"test_stream\\",
-				            \\"type\\": \\"stream\\",
-				            \\"version\\": 1,
-				            \\"latest\\": 1,
-				            \\"href\\": \\"/accounts/some-account-id/pipelines/v1/streams/stream_456\\"
-				        },
-				        {
-				            \\"id\\": \\"sink_789\\",
-				            \\"name\\": \\"test_sink\\",
-				            \\"type\\": \\"sink\\",
-				            \\"version\\": 1,
-				            \\"latest\\": 1,
-				            \\"href\\": \\"/accounts/some-account-id/pipelines/v1/sinks/sink_789\\"
-				        }
-				    ]
-				}"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "created_at": "2024-01-01T00:00:00Z",
+				  "id": "pipeline_123",
+				  "modified_at": "2024-01-01T00:00:00Z",
+				  "name": "my_pipeline",
+				  "sql": "INSERT INTO test_sink SELECT * FROM test_stream;",
+				  "status": "active",
+				  "tables": [
+				    {
+				      "href": "/accounts/some-account-id/pipelines/v1/streams/stream_456",
+				      "id": "stream_456",
+				      "latest": 1,
+				      "name": "test_stream",
+				      "type": "stream",
+				      "version": 1,
+				    },
+				    {
+				      "href": "/accounts/some-account-id/pipelines/v1/sinks/sink_789",
+				      "id": "sink_789",
+				      "latest": 1,
+				      "name": "test_sink",
+				      "type": "sink",
+				      "version": 1,
+				    },
+				  ],
+				}
 			`);
 		});
 	});
@@ -1045,8 +1044,8 @@ describe("wrangler pipelines", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Updating pipeline \\"my-legacy-pipeline\\"
-				✨ Successfully updated pipeline \\"my-legacy-pipeline\\" with ID legacy_123
+				🌀 Updating pipeline "my-legacy-pipeline"
+				✨ Successfully updated pipeline "my-legacy-pipeline" with ID legacy_123
 				"
 			`);
 		});
@@ -1321,7 +1320,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async () => {
 			const mockStreams: Stream[] = [
 				{
 					id: "stream_1",
@@ -1342,29 +1341,29 @@ describe("wrangler pipelines", () => {
 			await runWrangler("pipelines streams list --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
-				    {
-				        \\"id\\": \\"stream_1\\",
-				        \\"name\\": \\"stream_one\\",
-				        \\"version\\": 1,
-				        \\"endpoint\\": \\"https://pipelines.cloudflare.com/stream_1\\",
-				        \\"format\\": {
-				            \\"type\\": \\"json\\",
-				            \\"unstructured\\": true
-				        },
-				        \\"schema\\": null,
-				        \\"http\\": {
-				            \\"enabled\\": true,
-				            \\"authentication\\": false
-				        },
-				        \\"worker_binding\\": {
-				            \\"enabled\\": true
-				        },
-				        \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				        \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
-				    }
-				]"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
+				  {
+				    "created_at": "2024-01-01T00:00:00Z",
+				    "endpoint": "https://pipelines.cloudflare.com/stream_1",
+				    "format": {
+				      "type": "json",
+				      "unstructured": true,
+				    },
+				    "http": {
+				      "authentication": false,
+				      "enabled": true,
+				    },
+				    "id": "stream_1",
+				    "modified_at": "2024-01-01T00:00:00Z",
+				    "name": "stream_one",
+				    "schema": null,
+				    "version": 1,
+				    "worker_binding": {
+				      "enabled": true,
+				    },
+				  },
+				]
 			`);
 		});
 	});
@@ -1412,7 +1411,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async () => {
 			const mockStream: Stream = {
 				id: "stream_123",
 				name: "my_stream",
@@ -1431,27 +1430,27 @@ describe("wrangler pipelines", () => {
 			await runWrangler("pipelines streams get stream_123 --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				    \\"id\\": \\"stream_123\\",
-				    \\"name\\": \\"my_stream\\",
-				    \\"version\\": 1,
-				    \\"endpoint\\": \\"https://pipelines.cloudflare.com/stream_123\\",
-				    \\"format\\": {
-				        \\"type\\": \\"json\\",
-				        \\"unstructured\\": true
-				    },
-				    \\"schema\\": null,
-				    \\"http\\": {
-				        \\"enabled\\": true,
-				        \\"authentication\\": true
-				    },
-				    \\"worker_binding\\": {
-				        \\"enabled\\": true
-				    },
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
-				}"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "created_at": "2024-01-01T00:00:00Z",
+				  "endpoint": "https://pipelines.cloudflare.com/stream_123",
+				  "format": {
+				    "type": "json",
+				    "unstructured": true,
+				  },
+				  "http": {
+				    "authentication": true,
+				    "enabled": true,
+				  },
+				  "id": "stream_123",
+				  "modified_at": "2024-01-01T00:00:00Z",
+				  "name": "my_stream",
+				  "schema": null,
+				  "version": 1,
+				  "worker_binding": {
+				    "enabled": true,
+				  },
+				}
 			`);
 		});
 	});
@@ -1881,7 +1880,7 @@ describe("wrangler pipelines", () => {
 			`);
 		});
 
-		it('supports json output with "--json" flag', async () => {
+		it('supports valid json output with "--json" flag', async () => {
 			const mockSink: Sink = {
 				id: "sink_123",
 				name: "my_sink",
@@ -1899,22 +1898,20 @@ describe("wrangler pipelines", () => {
 			await runWrangler("pipelines sinks get sink_123 --json");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				    \\"id\\": \\"sink_123\\",
-				    \\"name\\": \\"my_sink\\",
-				    \\"type\\": \\"r2\\",
-				    \\"format\\": {
-				        \\"type\\": \\"json\\"
-				    },
-				    \\"schema\\": null,
-				    \\"config\\": {
-				        \\"bucket\\": \\"my-bucket\\"
-				    },
-				    \\"created_at\\": \\"2024-01-01T00:00:00Z\\",
-				    \\"modified_at\\": \\"2024-01-01T00:00:00Z\\"
-				}"
-			`);
+			expect(JSON.parse(std.out)).toEqual({
+				config: {
+					bucket: "my-bucket",
+				},
+				created_at: "2024-01-01T00:00:00Z",
+				format: {
+					type: "json",
+				},
+				id: "sink_123",
+				modified_at: "2024-01-01T00:00:00Z",
+				name: "my_sink",
+				schema: null,
+				type: "r2",
+			});
 		});
 	});
 

@@ -1,11 +1,15 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getTextResponse } from "../../__test-utils__";
 
 describe("in-worker defined durable objects", async () => {
-	test("can bind to a Durable Object that does not extend the `DurableObject` class", async () => {
+	test("can bind to a Durable Object that does not extend the `DurableObject` class", async ({
+		expect,
+	}) => {
 		expect(await getTextResponse("/legacy")).toEqual("Legacy Durable Object");
 	});
-	test("can bind and use a Durable Object defined in the worker", async () => {
+	test("can bind and use a Durable Object defined in the worker", async ({
+		expect,
+	}) => {
 		expect(await getTextResponse("/?name=my-do")).toEqual(
 			"Durable Object 'my-do' count: 0"
 		);

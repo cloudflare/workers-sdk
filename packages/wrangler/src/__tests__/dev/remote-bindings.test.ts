@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- it.each pattern and expect in vi.waitFor callbacks */
 import {
 	afterEach,
 	beforeEach,
@@ -10,6 +11,7 @@ import {
 	onTestFailed,
 	vi,
 } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { Binding, StartRemoteProxySessionOptions } from "../../api";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";

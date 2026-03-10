@@ -156,7 +156,7 @@ export function generateCommitMessage(
 		}
 	}
 	return dedent`
-		chore: update dependencies of ${packages.map((p: string) => `"${p}"`).join(", ")}
+		Update dependencies of ${packages.map((p: string) => `"${p}"`).join(", ")}
 
 		The following dependency versions have been updated:
 		${table}

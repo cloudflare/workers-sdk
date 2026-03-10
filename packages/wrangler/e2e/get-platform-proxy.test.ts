@@ -5,9 +5,21 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { MYSQL_INITIAL_HANDSHAKE_PACKET } from "./helpers/mysql-echo-handler";
 import { POSTGRES_SSL_REQUEST_PACKET } from "./helpers/postgres-echo-handler";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
+
+const HYPERDRIVE_DATABASES = [
+	{
+		scheme: "postgresql",
+		defaultPort: 5432,
+	},
+	{
+		scheme: "mysql",
+		defaultPort: 3306,
+	},
+] as const;
 
 describe("getPlatformProxy()", () => {
 	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers AI", () => {
@@ -362,94 +374,104 @@ describe("getPlatformProxy()", () => {
 		});
 	});
 
-	describe("Hyperdrive", () => {
-		let root: string;
-		let port = 5432;
-		let server: nodeNet.Server;
-		let receivedData: string | null = null;
-		beforeEach(async () => {
-			// Reset data for each test
-			receivedData = null;
-			// Create server with connection handler already attached
-			// Handle sslrequest packet for postgres tls handshake
-			server = nodeNet.createServer((socket) => {
-				socket.on("data", (chunk) => {
-					if (chunk.equals(POSTGRES_SSL_REQUEST_PACKET)) {
-						socket.write("N");
-					} else {
-						// Store what we received
-						receivedData = new TextDecoder().decode(chunk);
-						socket.write(chunk);
-						socket.end();
+	describe.each(HYPERDRIVE_DATABASES)(
+		"Hyperdrive ($scheme)",
+		({ scheme, defaultPort }) => {
+			let root: string;
+			let port: number = defaultPort;
+			let server: nodeNet.Server;
+			let receivedData: string | null = null;
+
+			beforeEach(async () => {
+				// Reset data for each test
+				receivedData = null;
+				// Create server with connection handler already attached
+				server = nodeNet.createServer((socket) => {
+					// For MySQL, send initial handshake first
+					if (scheme === "mysql") {
+						socket.write(MYSQL_INITIAL_HANDSHAKE_PACKET);
 					}
-				});
-			});
-
-			await new Promise<void>((resolve) => {
-				server.listen(0, "127.0.0.1", () => {
-					resolve();
-				});
-			});
-
-			const address = server.address();
-			if (address && typeof address !== "string") {
-				port = address.port;
-			}
-		});
-
-		afterEach(async () => {
-			await new Promise<void>((resolve, reject) => {
-				server.close((err) => (err ? reject(err) : resolve()));
-			});
-		});
-
-		/**
-		 *  Run nodejs script as child process with node spawn command.
-		 * 	Use spawn to avoid blocking the event loop.
-		 *  Docs: https://nodejs.org/api/child_process.html#child_processspawncommand-args-options
-		 */
-		async function runInNodeAsSpawnChildProcess(
-			scriptPath: string,
-			cwd: string,
-			timeoutMs: number = 5000
-		) {
-			return new Promise<void>((resolve, reject) => {
-				const childProcess = spawn("node", [scriptPath], {
-					cwd,
-					stdio: "inherit",
+					socket.on("data", (chunk) => {
+						// Handle PostgreSQL SSL request packet
+						if (
+							scheme === "postgresql" &&
+							chunk.equals(POSTGRES_SSL_REQUEST_PACKET)
+						) {
+							socket.write("N");
+						} else {
+							// Store what we received
+							receivedData = new TextDecoder().decode(chunk);
+							socket.write(chunk);
+							socket.end();
+						}
+					});
 				});
 
-				const timeout = setTimeout(() => {
-					childProcess.kill();
-					reject(new Error(`Timeout after ${timeoutMs}ms`));
-				}, timeoutMs);
-
-				childProcess.on("exit", (code) => {
-					clearTimeout(timeout);
-
-					// Windows: ignore libuv assertion failure exit code
-					const isWindowsCleanupError =
-						process.platform === "win32" && code === 3221226505;
-
-					if (code === 0 || code === null || isWindowsCleanupError) {
+				await new Promise<void>((resolve) => {
+					server.listen(0, "127.0.0.1", () => {
 						resolve();
-					} else {
-						reject(code);
-					}
+					});
 				});
 
-				childProcess.on("error", (err) => {
-					clearTimeout(timeout);
-					reject(err);
+				const address = server.address();
+				if (address && typeof address !== "string") {
+					port = address.port;
+				}
+			});
+
+			afterEach(async () => {
+				await new Promise<void>((resolve, reject) => {
+					server.close((err) => (err ? reject(err) : resolve()));
 				});
 			});
-		}
 
-		it("default hyperdrive can connect to a TCP socket via the hyperdrive connect", async () => {
-			// set worker per test
-			root = makeRoot();
-			await seed(root, {
-				"wrangler.toml": dedent`
+			/**
+			 *  Run nodejs script as child process with node spawn command.
+			 * 	Use spawn to avoid blocking the event loop.
+			 *  Docs: https://nodejs.org/api/child_process.html#child_processspawncommand-args-options
+			 */
+			async function runInNodeAsSpawnChildProcess(
+				scriptPath: string,
+				cwd: string,
+				timeoutMs: number = 5000
+			) {
+				return new Promise<void>((resolve, reject) => {
+					const childProcess = spawn("node", [scriptPath], {
+						cwd,
+						stdio: "inherit",
+					});
+
+					const timeout = setTimeout(() => {
+						childProcess.kill();
+						reject(new Error(`Timeout after ${timeoutMs}ms`));
+					}, timeoutMs);
+
+					childProcess.on("exit", (code) => {
+						clearTimeout(timeout);
+
+						// Windows: ignore libuv assertion failure exit code
+						const isWindowsCleanupError =
+							process.platform === "win32" && code === 3221226505;
+
+						if (code === 0 || code === null || isWindowsCleanupError) {
+							resolve();
+						} else {
+							reject(code);
+						}
+					});
+
+					childProcess.on("error", (err) => {
+						clearTimeout(timeout);
+						reject(err);
+					});
+				});
+			}
+
+			it("can connect to a TCP socket via the hyperdrive connect method", async () => {
+				// set worker per test
+				root = makeRoot();
+				await seed(root, {
+					"wrangler.toml": dedent`
 							name = "hyperdrive-app"
 							compatibility_date = "2025-09-06"
 							compatibility_flags = ["nodejs_compat"]
@@ -457,9 +479,9 @@ describe("getPlatformProxy()", () => {
 							[[hyperdrive]]
 							binding = "HYPERDRIVE"
 							id = "hyperdrive_id"
-							localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db"
+							localConnectionString = "${scheme}://user:%21pass@127.0.0.1:${port}/some_db"
 					`,
-				"index.mjs": dedent/*javascript*/ `
+					"index.mjs": dedent/*javascript*/ `
 							// Windows socket cleanup error handler
 							if (process.platform === 'win32') {
 								process.on('uncaughtException', (err) => {
@@ -484,28 +506,29 @@ describe("getPlatformProxy()", () => {
 
 							await dispose();
 							`,
-				"package.json": dedent`
+					"package.json": dedent`
 							{
 								"name": "hyperdrive-app",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
+				});
+
+				await runInNodeAsSpawnChildProcess("index.mjs", root);
+
+				// Check that we received the expected data
+				expect(receivedData).toBe("test string sent using getPlatformProxy");
 			});
 
-			await runInNodeAsSpawnChildProcess("index.mjs", root);
-
-			// Check that we received the expected data
-			expect(receivedData).toMatchInlineSnapshot(
-				`"test string sent using getPlatformProxy"`
-			);
-		});
-
-		it("sslmode - 'prefer' can connect to a TCP socket via the hyperdrive connect method over hyprdrive-proxy", async () => {
-			// set worker per test
-			root = makeRoot();
-			await seed(root, {
-				"wrangler.toml": dedent`
+			// PostgreSQL-specific sslmode tests
+			it.skipIf(scheme !== "postgresql")(
+				"sslmode - 'prefer' can connect to a TCP socket via the hyperdrive connect method",
+				async () => {
+					// set worker per test
+					root = makeRoot();
+					await seed(root, {
+						"wrangler.toml": dedent`
 							name = "hyperdrive-app"
 							compatibility_date = "2025-09-06"
 							compatibility_flags = ["nodejs_compat"]
@@ -515,7 +538,7 @@ describe("getPlatformProxy()", () => {
 							id = "hyperdrive_id"
 							localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=prefer"
 					`,
-				"index.mjs": dedent/*javascript*/ `
+						"index.mjs": dedent/*javascript*/ `
 							// Windows socket cleanup error handler
 							if (process.platform === 'win32') {
 								process.on('uncaughtException', (err) => {
@@ -539,28 +562,29 @@ describe("getPlatformProxy()", () => {
 
 							await dispose();
 							`,
-				"package.json": dedent`
+						"package.json": dedent`
 							{
 								"name": "hyperdrive-app",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
-			});
+					});
 
-			await runInNodeAsSpawnChildProcess("index.mjs", root);
+					await runInNodeAsSpawnChildProcess("index.mjs", root);
 
-			// Check that we received the expected data
-			expect(receivedData).toMatchInlineSnapshot(
-				`"test string sent using getPlatformProxy"`
+					// Check that we received the expected data
+					expect(receivedData).toBe("test string sent using getPlatformProxy");
+				}
 			);
-		});
 
-		it("sslmode - 'require' fails hyperdrive connection method over hyperdrive-proxy", async () => {
-			// set worker per test
-			root = makeRoot();
-			await seed(root, {
-				"wrangler.toml": dedent`
+			it.skipIf(scheme !== "postgresql")(
+				"sslmode - 'require' fails hyperdrive connection method",
+				async () => {
+					// set worker per test
+					root = makeRoot();
+					await seed(root, {
+						"wrangler.toml": dedent`
 						name = "hyperdrive-app"
 						compatibility_date = "2025-09-06"
 						compatibility_flags = ["nodejs_compat"]
@@ -570,7 +594,7 @@ describe("getPlatformProxy()", () => {
 						id = "hyperdrive_id"
 						localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=require"
 					`,
-				"index.mjs": dedent/*javascript*/ `
+						"index.mjs": dedent/*javascript*/ `
 						// Windows socket cleanup error handler
 						if (process.platform === 'win32') {
 							process.on('uncaughtException', (err) => {
@@ -594,18 +618,20 @@ describe("getPlatformProxy()", () => {
 
 						await dispose();
 					`,
-				"package.json": dedent`
+						"package.json": dedent`
 					{
 						"name": "hyperdrive-app",
 						"version": "0.0.0",
 						"private": true
 					}`,
-			});
+					});
 
-			await runInNodeAsSpawnChildProcess("index.mjs", root);
+					await runInNodeAsSpawnChildProcess("index.mjs", root);
 
-			// Check that we did not receive data since sslmode=require should fail request
-			expect(receivedData).toBeNull();
-		});
-	});
+					// Check that we did not receive data since sslmode=require should fail request
+					expect(receivedData).toBeNull();
+				}
+			);
+		}
+	);
 });

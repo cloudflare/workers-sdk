@@ -1,6 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in mockPostVersion callback */
 import { afterEach, describe, expect, it, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
@@ -47,7 +49,7 @@ describe("versions secret delete", () => {
 			──────────────────
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
-			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version without the secret SECRET to production traffic use the command "wrangler versions deploy"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -77,7 +79,7 @@ describe("versions secret delete", () => {
 			🤖 Using fallback value in non-interactive context: yes
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
-			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version without the secret SECRET to production traffic use the command "wrangler versions deploy"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -108,7 +110,7 @@ describe("versions secret delete", () => {
 			🤖 Using fallback value in non-interactive context: yes
 			🌀 Deleting the secret SECRET on the Worker script-name
 			✨ Success! Created version id with deleted secret SECRET.
-			➡️  To deploy this version without the secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+			➡️  To deploy this version without the secret SECRET to production traffic use the command "wrangler versions deploy"."
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -146,7 +148,7 @@ describe("versions secret delete", () => {
 				  To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify
 				  the target environment using the \`-e|--env\` flag.
 				  If your intention is to use the top-level environment of your configuration simply pass an empty
-				  string to the flag to target such environment. For example \`--env=\\"\\"\`.
+				  string to the flag to target such environment. For example \`--env=""\`.
 
 				"
 			`);

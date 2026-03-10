@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- helper functions with expect */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { printWranglerBanner } from "../wrangler-banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -29,7 +31,7 @@ describe("dispatch-namespace", () => {
 		await new Promise((resolve) => setImmediate(resolve));
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -112,7 +114,7 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace create ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Created dispatch namespace \\"my-namespace\\" with ID \\"some-namespace-id\\""`
+				`"Created dispatch namespace "my-namespace" with ID "some-namespace-id""`
 			);
 		});
 	});
@@ -164,7 +166,7 @@ describe("dispatch-namespace", () => {
 			await runWrangler(`dispatch-namespace delete ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Deleted dispatch namespace \\"my-namespace\\""`
+				`"Deleted dispatch namespace "my-namespace""`
 			);
 		});
 	});
@@ -340,7 +342,7 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(
-				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
+				`"Renamed dispatch namespace "my-namespace" to "new-namespace""`
 			);
 			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});

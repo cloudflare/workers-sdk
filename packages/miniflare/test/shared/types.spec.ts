@@ -1,7 +1,7 @@
 import { _isCyclic } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test("_isCyclic: detects cycles", () => {
+test("_isCyclic: detects cycles", ({ expect }) => {
 	// Check simple cycle
 	const a: { a?: unknown } = {};
 	a.a = a;

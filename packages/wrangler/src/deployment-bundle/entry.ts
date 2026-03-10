@@ -125,7 +125,8 @@ export async function getEntry(
 		paths.absolutePath,
 		paths.relativePath,
 		config.build,
-		config.configPath
+		config.configPath,
+		command
 	);
 
 	const projectRoot = paths.projectRoot ?? process.cwd();

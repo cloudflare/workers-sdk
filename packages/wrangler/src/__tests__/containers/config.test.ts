@@ -2,7 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large test file with 30+ tests */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -706,7 +708,7 @@ describe("getNormalizedContainerOptions", () => {
 				containers: [
 					{
 						class_name: "TestContainer",
-						image: "docker.io/test:latest",
+						image: "unsupported.domain/test:latest",
 						instance_type: "standard",
 						name: "test-container",
 						max_instances: 3,
@@ -725,7 +727,7 @@ describe("getNormalizedContainerOptions", () => {
 			const result = await getNormalizedContainerOptions(config, {});
 			expect(result).toHaveLength(1);
 			expect(result[0]).toMatchObject({
-				image_uri: "docker.io/test:latest",
+				image_uri: "unsupported.domain/test:latest",
 			});
 		});
 		it("should not try and add an account id to non containers registry uris", async () => {

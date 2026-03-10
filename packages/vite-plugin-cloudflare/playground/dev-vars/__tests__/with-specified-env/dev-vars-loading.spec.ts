@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	getJsonResponse,
 	isBuild,
@@ -7,7 +7,7 @@ import {
 	WAIT_FOR_OPTIONS,
 } from "../../../__test-utils__";
 
-test("reading variables from a staging .dev.vars file", async () => {
+test("reading variables from a staging .dev.vars file", async ({ expect }) => {
 	await vi.waitFor(
 		async () =>
 			expect(await getJsonResponse()).toEqual({
@@ -21,7 +21,9 @@ test("reading variables from a staging .dev.vars file", async () => {
 });
 
 describe.runIf(isBuild)("build output files", () => {
-	test("the .dev.vars.staging file has been copied over as .dev.vars", async () => {
+	test("the .dev.vars.staging file has been copied over as .dev.vars", async ({
+		expect,
+	}) => {
 		const srcDevVarsStagingPath = `${testDir}/.dev.vars.staging`;
 		const distDevVarsPath = `${testDir}/dist/worker/.dev.vars`;
 		const distDevVarsStagingPath = `${distDevVarsPath}.staging`;

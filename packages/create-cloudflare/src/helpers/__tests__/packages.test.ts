@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCommand } from "helpers/command";
 import { installPackages, installWrangler, npmInstall } from "helpers/packages";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";
 import * as files from "../files";
@@ -30,7 +30,7 @@ describe("Package Helpers", () => {
 	});
 
 	describe("npmInstall", () => {
-		test("npm", async () => {
+		test("npm", async ({ expect }) => {
 			await npmInstall(createTestContext());
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
@@ -39,7 +39,7 @@ describe("Package Helpers", () => {
 			);
 		});
 
-		test("pnpm", async () => {
+		test("pnpm", async ({ expect }) => {
 			mockPackageManager("pnpm", "8.5.1");
 
 			await npmInstall(createTestContext());
@@ -64,9 +64,9 @@ describe("Package Helpers", () => {
 			{ pm: "yarn", initialArgs: ["yarn", "add"] },
 		];
 
-		test.each(cases)(
+		test.for(cases)(
 			"with $pm",
-			async ({ pm, initialArgs, additionalArgs }) => {
+			async ({ pm, initialArgs, additionalArgs }, { expect }) => {
 				mockPackageManager(pm);
 				mockReadJSON.mockReturnValue({
 					["dependencies"]: {
@@ -109,9 +109,9 @@ describe("Package Helpers", () => {
 			{ pm: "yarn", initialArgs: ["yarn", "add", "-D"] },
 		];
 
-		test.each(devCases)(
+		test.for(devCases)(
 			"with $pm (dev = true)",
-			async ({ pm, initialArgs, additionalArgs }) => {
+			async ({ pm, initialArgs, additionalArgs }, { expect }) => {
 				mockPackageManager(pm);
 				mockReadJSON.mockReturnValue({
 					["devDependencies"]: {
@@ -148,7 +148,7 @@ describe("Package Helpers", () => {
 		);
 	});
 
-	test("installWrangler", async () => {
+	test("installWrangler", async ({ expect }) => {
 		mockReadJSON.mockReturnValue({
 			["devDependencies"]: {
 				wrangler: "^4.0.0",

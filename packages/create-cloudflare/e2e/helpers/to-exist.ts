@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- extends vitest expect with custom matcher
 import { expect } from "vitest";
 
 declare module "vitest" {

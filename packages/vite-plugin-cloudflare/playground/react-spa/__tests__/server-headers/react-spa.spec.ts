@@ -1,10 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getResponse, isBuild } from "../../../__test-utils__";
 
 describe.runIf(!isBuild)(
 	"adds headers included in Vite's `server.headers` to asset responses in dev",
 	() => {
-		test("adds headers to HTML responses", async () => {
+		test("adds headers to HTML responses", async ({ expect }) => {
 			const response = await getResponse();
 			const headers = await response.allHeaders();
 			expect(headers).toMatchObject({
@@ -14,7 +14,7 @@ describe.runIf(!isBuild)(
 			});
 		});
 
-		test("adds headers to non-HTML responses", async () => {
+		test("adds headers to non-HTML responses", async ({ expect }) => {
 			const response = await getResponse("/vite.svg");
 			const headers = await response.allHeaders();
 			expect(headers).toMatchObject({

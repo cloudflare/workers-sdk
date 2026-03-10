@@ -5,10 +5,10 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { NODE_PLATFORM_IMPL } from "../../../src/plugins/core/proxy/types";
 
-test("serialize RegExp object consisting of only ascii chars", () => {
+test("serialize RegExp object consisting of only ascii chars", ({ expect }) => {
 	const input = new RegExp(/HelloWorld/);
 
 	const serialized = stringify(input, structuredSerializableReducers);
@@ -18,7 +18,7 @@ test("serialize RegExp object consisting of only ascii chars", () => {
 	expect(deserialized).toEqual(input);
 });
 
-test("serialize RegExp object containing non-ascii chars", () => {
+test("serialize RegExp object containing non-ascii chars", ({ expect }) => {
 	const input = new RegExp(/こんにちは/);
 
 	const serialized = stringify(input, structuredSerializableReducers);
@@ -30,7 +30,9 @@ test("serialize RegExp object containing non-ascii chars", () => {
 	expect(deserialized).toEqual(input);
 });
 
-test("serialize Headers object consisting of multiple Set-Cookie headers", () => {
+test("serialize Headers object consisting of multiple Set-Cookie headers", ({
+	expect,
+}) => {
 	const impl = NODE_PLATFORM_IMPL;
 
 	const headers = new impl.Headers([

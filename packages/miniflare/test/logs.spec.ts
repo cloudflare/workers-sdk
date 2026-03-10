@@ -1,8 +1,10 @@
 import { Miniflare, MiniflareCoreError, WorkerdStructuredLog } from "miniflare";
-import { expect, test } from "vitest";
+import { assert, test } from "vitest";
 import { useDispose } from "./test-shared";
 
-test("logs are treated as standard stdout/stderr chunks by default", async () => {
+test("logs are treated as standard stdout/stderr chunks by default", async ({
+	expect,
+}) => {
 	const collected = {
 		stdout: "",
 		stderr: "",
@@ -38,7 +40,9 @@ test("logs are treated as standard stdout/stderr chunks by default", async () =>
 	expect(collected.stderr).toBe("__WARN__\n__ERROR__\n");
 });
 
-test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is `true`", async () => {
+test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is `true`", async ({
+	expect,
+}) => {
 	const collected = {
 		stdout: "",
 		stderr: "",
@@ -90,7 +94,9 @@ test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is
 	expect(collected.stderr).toBe("");
 });
 
-test("logs are structured and handled via `handleStructuredLogs` when such option is provided (no `structuredWorkerdLogs: true` needed)", async () => {
+test("logs are structured and handled via `handleStructuredLogs` when such option is provided (no `structuredWorkerdLogs: true` needed)", async ({
+	expect,
+}) => {
 	const collectedLogs: (Pick<WorkerdStructuredLog, "level" | "message"> & {
 		timestamp: string;
 	})[] = [];
@@ -148,7 +154,9 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 	]);
 });
 
-test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can still be used to read the raw stream values", async () => {
+test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can still be used to read the raw stream values", async ({
+	expect,
+}) => {
 	let numOfCollectedStructuredLogs = 0;
 	const collectedRaw = {
 		stdout: "",
@@ -192,7 +200,9 @@ test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can sti
 	expect(collectedRaw.stderr).toBe("");
 });
 
-test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` triggers an error", async () => {
+test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` triggers an error", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
@@ -208,14 +218,16 @@ test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` tri
 		error = e as MiniflareCoreError;
 	}
 
-	expect(error).toBeInstanceOf(MiniflareCoreError);
-	expect(error?.code).toBe("ERR_VALIDATION");
-	expect(error?.message).toContain(
+	assert(error instanceof MiniflareCoreError);
+	expect(error.code).toBe("ERR_VALIDATION");
+	expect(error.message).toContain(
 		"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
 	);
 });
 
-test("when using `handleStructuredLogs` some known unhelpful logs are filtered out (e.g. CODE_MOVED warnings)", async () => {
+test("when using `handleStructuredLogs` some known unhelpful logs are filtered out (e.g. CODE_MOVED warnings)", async ({
+	expect,
+}) => {
 	const collectedLogs: (Pick<WorkerdStructuredLog, "level" | "message"> & {
 		timestamp: string;
 	})[] = [];

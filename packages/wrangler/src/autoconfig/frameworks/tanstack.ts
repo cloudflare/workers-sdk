@@ -8,9 +8,10 @@ export class TanstackStart extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(["@cloudflare/vite-plugin"], {
+			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
@@ -21,7 +22,6 @@ export class TanstackStart extends Framework {
 
 		return {
 			wranglerConfig: {
-				compatibility_flags: ["nodejs_compat"],
 				main: "@tanstack/react-start/server-entry",
 			},
 		};

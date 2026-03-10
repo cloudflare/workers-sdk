@@ -1,7 +1,8 @@
 import { execSync } from "node:child_process";
-import fs, { readFileSync } from "node:fs";
+import fs from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
 import {
@@ -64,6 +65,10 @@ describe("Create Cloudflare CLI", () => {
 							input: [keys.enter],
 						},
 						{
+							matcher: /Do you want to add an AGENTS\.md file/,
+							input: ["n"],
+						},
+						{
 							matcher: /Do you want to use git for version control/,
 							input: [keys.right, keys.enter],
 						},
@@ -105,6 +110,10 @@ describe("Create Cloudflare CLI", () => {
 						{
 							matcher: /Which language do you want to use\?/,
 							input: [keys.down, keys.enter],
+						},
+						{
+							matcher: /Do you want to add an AGENTS\.md file/,
+							input: ["n"],
 						},
 						{
 							matcher: /Do you want to use git for version control/,
@@ -163,6 +172,10 @@ describe("Create Cloudflare CLI", () => {
 								input: [keys.enter],
 							},
 							{
+								matcher: /Do you want to add an AGENTS\.md file/,
+								input: ["n"],
+							},
+							{
 								matcher: /Do you want to use git for version control/,
 								input: ["n"],
 							},
@@ -175,10 +188,11 @@ describe("Create Cloudflare CLI", () => {
 					expect(output).toContain(`lang TypeScript`);
 					expect(output).toContain(`no deploy`);
 				} finally {
+					// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- see e2e/helpers/log-stream.ts for rationale
 					fs.rmSync(existingFilePath, {
 						recursive: true,
 						force: true,
-						maxRetries: 10,
+						maxRetries: 5,
 						retryDelay: 100,
 					});
 				}
@@ -194,6 +208,7 @@ describe("Create Cloudflare CLI", () => {
 						"--template=https://github.com/cloudflare/workers-graphql-server",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -226,6 +241,7 @@ describe("Create Cloudflare CLI", () => {
 						"--template=cloudflare/templates/multiplayer-globe-template",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -242,7 +258,7 @@ describe("Create Cloudflare CLI", () => {
 				// underlying issue appears to be with the packages pinned in
 				// the template - not whether or not the settings.json file is
 				// created
-				expect(readFileSync(`${project.path}/.vscode/settings.json`, "utf8"))
+				expect(fs.readFileSync(`${project.path}/.vscode/settings.json`, "utf8"))
 					.toMatchInlineSnapshot(`
 					"{
 						"files.associations": {
@@ -263,6 +279,7 @@ describe("Create Cloudflare CLI", () => {
 						"--type=hello-world-python",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -285,6 +302,7 @@ describe("Create Cloudflare CLI", () => {
 						"--type=hello-world",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -331,7 +349,7 @@ describe("Create Cloudflare CLI", () => {
 			"Selecting template by description",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--no-deploy", "--git=false"],
+					[project.path, "--no-deploy", "--git=false", "--no-agents"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -366,7 +384,7 @@ describe("Create Cloudflare CLI", () => {
 			async ({ logStream, project }) => {
 				const testProjectPath = "/test-project-path";
 				const { output } = await runC3(
-					[testProjectPath, "--git=false", "--no-deploy"],
+					[testProjectPath, "--git=false", "--no-deploy", "--no-agents"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -504,6 +522,7 @@ describe("Create Cloudflare CLI", () => {
 						"--existing-script=existing-script-test-do-not-delete",
 						"--git=false",
 						"--no-deploy",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -573,6 +592,8 @@ describe("Create Cloudflare CLI", () => {
 					    Deploy your application after it has been created
 					  --git, --no-git
 					    Initialize a local git repository for your application
+					  --agents, --no-agents
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>
@@ -677,6 +698,8 @@ describe("Create Cloudflare CLI", () => {
 					    Deploy your application after it has been created
 					  --git, --no-git
 					    Initialize a local git repository for your application
+					  --agents, --no-agents
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>
@@ -746,6 +769,45 @@ describe("Create Cloudflare CLI", () => {
 			expect(errors).toContain(
 				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
 			);
+		});
+
+		test("error when using invalid --variant for React Pages framework", async ({
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=pages",
+					"--variant=invalid-variant",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(errors).toContain(
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
+			);
+		});
+
+		test("accepts --variant for React Pages framework without prompting", async ({
+			logStream,
+		}) => {
+			const { output } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=pages",
+					"--variant=react-ts",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(output).toContain("--template react-ts");
+			expect(output).not.toContain("Select a variant");
 		});
 	});
 });

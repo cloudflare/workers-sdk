@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import * as files from "../files";
 import {
 	addJSONComment,
@@ -22,7 +22,7 @@ describe("json helpers", () => {
 	});
 
 	describe("readJSONWithComments", () => {
-		test("reads and parses JSON file with comments", () => {
+		test("reads and parses JSON file with comments", ({ expect }) => {
 			mockReadFile.mockReturnValue(
 				'{\n/* a comment */\n "name": "test"\n}\n// post-comment',
 			);
@@ -31,7 +31,7 @@ describe("json helpers", () => {
 			expect(result).toEqual({ name: "test" });
 		});
 
-		test("using a reviver function", () => {
+		test("using a reviver function", ({ expect }) => {
 			mockReadFile.mockReturnValue(
 				JSON.stringify({
 					name: "test",
@@ -62,7 +62,7 @@ describe("json helpers", () => {
 	});
 
 	describe("writeJSONWithComments", () => {
-		test("stringifies and writes JSON object with comments", () => {
+		test("stringifies and writes JSON object with comments", ({ expect }) => {
 			mockReadFile.mockReturnValue(
 				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment',
 			);
@@ -82,7 +82,7 @@ describe("json helpers", () => {
 	});
 
 	describe("addJSONComment", () => {
-		test("adds a string comment to JSON object", () => {
+		test("adds a string comment to JSON object", ({ expect }) => {
 			const jsonObject = { name: "foo" } as unknown as CommentObject;
 
 			addJSONComment(jsonObject, "before:name", " This is a comment ");
@@ -99,7 +99,7 @@ describe("json helpers", () => {
 			`);
 		});
 
-		test("adds multiple comments to JSON object", () => {
+		test("adds multiple comments to JSON object", ({ expect }) => {
 			const jsonObject = { name: "foo" } as unknown as CommentObject;
 
 			addJSONComment(jsonObject, "before:name", [
@@ -120,7 +120,7 @@ describe("json helpers", () => {
 			`);
 		});
 
-		test("appends to existing comments", () => {
+		test("appends to existing comments", ({ expect }) => {
 			const jsonObject = { name: "foo" } as unknown as CommentObject;
 			addJSONComment(jsonObject, "before:name", " This is a comment ");
 
@@ -141,7 +141,9 @@ describe("json helpers", () => {
 	});
 
 	describe("appendJSONProperty", () => {
-		test("appends property to JSON object, maintaining comments", () => {
+		test("appends property to JSON object, maintaining comments", ({
+			expect,
+		}) => {
 			mockReadFile.mockReturnValue(
 				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
 			);
@@ -164,7 +166,9 @@ describe("json helpers", () => {
 	});
 
 	describe("insertJSONProperty", () => {
-		test("inserts property at the beginning of JSON object, maintaining comments", () => {
+		test("inserts property at the beginning of JSON object, maintaining comments", ({
+			expect,
+		}) => {
 			mockReadFile.mockReturnValue(
 				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
 			);

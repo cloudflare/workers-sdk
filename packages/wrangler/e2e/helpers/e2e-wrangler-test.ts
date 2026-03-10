@@ -93,6 +93,28 @@ export class WranglerE2ETestHelper {
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
 
+	/**
+	 * Run a Wrangler command as best-effort cleanup.
+	 *
+	 * Uses a short timeout (default 5s) and swallows errors, so that flaky or
+	 * slow backend responses during resource deletion don't cause test hooks to
+	 * time out and mask real test failures.
+	 */
+	async bestEffortRun(
+		wranglerCommand: string,
+		{ timeout = 5_000, ...options }: WranglerCommandOptions = {}
+	) {
+		try {
+			return await this.run(wranglerCommand, { timeout, ...options });
+		} catch (e) {
+			console.warn(
+				`Best-effort cleanup "${wranglerCommand}" failed:`,
+				e instanceof Error ? e.message : e
+			);
+			return undefined;
+		}
+	}
+
 	/** Create a KV namespace and clean it up during tear-down. */
 	async kv(isLocal: boolean) {
 		const name = generateResourceName("kv" + Date.now()).replaceAll("-", "_");
@@ -182,20 +204,29 @@ export class WranglerE2ETestHelper {
 	}
 
 	/** Create a Hyperdrive connection and clean it up during tear-down. */
-	async hyperdrive(isLocal: boolean): Promise<{ id: string; name: string }> {
+	async hyperdrive(
+		isLocal: boolean,
+		scheme: "postgresql" | "mysql" = "postgresql"
+	): Promise<{ id: string; name: string }> {
 		const name = generateResourceName("hyperdrive");
 
 		if (isLocal) {
 			return { id: crypto.randomUUID(), name };
 		}
 
+		const envVar =
+			scheme === "mysql"
+				? "HYPERDRIVE_MYSQL_DATABASE_URL"
+				: "HYPERDRIVE_DATABASE_URL";
+		const connectionString = process.env[envVar];
+
 		assert(
-			process.env.HYPERDRIVE_DATABASE_URL,
-			"HYPERDRIVE_DATABASE_URL must be set in order to create a Hyperdrive resource for this test"
+			connectionString,
+			`${envVar} must be set in order to create a Hyperdrive resource for this test`
 		);
 
 		const result = await this.run(
-			`wrangler hyperdrive create ${name} --connection-string="${process.env.HYPERDRIVE_DATABASE_URL}"`
+			`wrangler hyperdrive create ${name} --connection-string="${connectionString}"`
 		);
 		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
 		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
@@ -302,7 +333,7 @@ export class WranglerE2ETestHelper {
 		);
 
 		const cleanup = async () => {
-			await this.run(`wrangler delete --name ${workerName} --force`);
+			await this.bestEffortRun(`wrangler delete --name ${workerName} --force`);
 		};
 
 		if (cleanOnTestFinished) {

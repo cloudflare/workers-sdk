@@ -1,5 +1,5 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -18,7 +18,7 @@ describe("versions view", () => {
 	describe("without wrangler.toml", () => {
 		beforeEach(() => msw.use(mswGetVersion()));
 
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler("versions view");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -30,7 +30,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails with --name arg only", async () => {
+		test("fails with --name arg only", async ({ expect }) => {
 			const result = runWrangler("versions view --name test-name");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -42,7 +42,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails with positional version-id arg only", async () => {
+		test("fails with positional version-id arg only", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000"
 			);
@@ -56,7 +56,9 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("succeeds with positional version-id arg and --name arg", async () => {
+		test("succeeds with positional version-id arg and --name arg", async ({
+			expect,
+		}) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --name test-name"
 			);
@@ -91,7 +93,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints version to stdout as --json", async () => {
+		test("prints version to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --name test-name --json"
 			);
@@ -100,55 +102,54 @@ describe("versions view", () => {
 
 			expect(cnsl.out).not.toMatch(/⛅️ wrangler/);
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				  \\"number\\": 1,
-				  \\"annotations\\": {
-				    \\"workers/triggered_by\\": \\"upload\\"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "annotations": {
+				    "workers/triggered_by": "upload",
 				  },
-				  \\"metadata\\": {
-				    \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+				  "id": "10000000-0000-0000-0000-000000000000",
+				  "metadata": {
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "author_id": "Picard-Gamma-6-0-7-3",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "modified_on": "2021-01-01T00:00:00.000000Z",
+				    "source": "wrangler",
 				  },
-				  \\"resources\\": {
-				    \\"bindings\\": [
+				  "number": 1,
+				  "resources": {
+				    "bindings": [
 				      {
-				        \\"type\\": \\"analytics_engine\\",
-				        \\"name\\": \\"ANALYTICS\\",
-				        \\"dataset\\": \\"analytics_dataset\\"
+				        "dataset": "analytics_dataset",
+				        "name": "ANALYTICS",
+				        "type": "analytics_engine",
 				      },
 				      {
-				        \\"type\\": \\"kv_namespace\\",
-				        \\"name\\": \\"KV\\",
-				        \\"namespace_id\\": \\"kv-namespace-id\\"
-				      }
+				        "name": "KV",
+				        "namespace_id": "kv-namespace-id",
+				        "type": "kv_namespace",
+				      },
 				    ],
-				    \\"script\\": {
-				      \\"etag\\": \\"aaabbbccc\\",
-				      \\"handlers\\": [
-				        \\"fetch\\",
-				        \\"scheduled\\"
+				    "script": {
+				      "etag": "aaabbbccc",
+				      "handlers": [
+				        "fetch",
+				        "scheduled",
 				      ],
-				      \\"last_deployed_from\\": \\"api\\"
+				      "last_deployed_from": "api",
 				    },
-				    \\"script_runtime\\": {
-				      \\"compatibility_date\\": \\"2020-01-01\\",
-				      \\"compatibility_flags\\": [
-				        \\"test\\",
-				        \\"flag\\"
+				    "script_runtime": {
+				      "compatibility_date": "2020-01-01",
+				      "compatibility_flags": [
+				        "test",
+				        "flag",
 				      ],
-				      \\"usage_model\\": \\"standard\\",
-				      \\"limits\\": {
-				        \\"cpu_ms\\": 50
-				      }
-				    }
-				  }
+				      "limits": {
+				        "cpu_ms": 50,
+				      },
+				      "usage_model": "standard",
+				    },
+				  },
 				}
-				"
 			`);
 		});
 	});
@@ -159,7 +160,7 @@ describe("versions view", () => {
 			writeWranglerConfig();
 		});
 
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler("versions view");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -171,7 +172,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("succeeds with positional version-id arg only", async () => {
+		test("succeeds with positional version-id arg only", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000"
 			);
@@ -205,7 +206,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails with non-existent version-id", async () => {
+		test("fails with non-existent version-id", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view ffffffff-ffff-ffff-ffff-ffffffffffff"
 			);
@@ -219,68 +220,69 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints version to stdout as --json", async () => {
+		test("prints version to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --json"
 			);
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"{
-				  \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				  \\"number\\": 1,
-				  \\"annotations\\": {
-				    \\"workers/triggered_by\\": \\"upload\\"
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				{
+				  "annotations": {
+				    "workers/triggered_by": "upload",
 				  },
-				  \\"metadata\\": {
-				    \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+				  "id": "10000000-0000-0000-0000-000000000000",
+				  "metadata": {
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "author_id": "Picard-Gamma-6-0-7-3",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "modified_on": "2021-01-01T00:00:00.000000Z",
+				    "source": "wrangler",
 				  },
-				  \\"resources\\": {
-				    \\"bindings\\": [
+				  "number": 1,
+				  "resources": {
+				    "bindings": [
 				      {
-				        \\"type\\": \\"analytics_engine\\",
-				        \\"name\\": \\"ANALYTICS\\",
-				        \\"dataset\\": \\"analytics_dataset\\"
+				        "dataset": "analytics_dataset",
+				        "name": "ANALYTICS",
+				        "type": "analytics_engine",
 				      },
 				      {
-				        \\"type\\": \\"kv_namespace\\",
-				        \\"name\\": \\"KV\\",
-				        \\"namespace_id\\": \\"kv-namespace-id\\"
-				      }
+				        "name": "KV",
+				        "namespace_id": "kv-namespace-id",
+				        "type": "kv_namespace",
+				      },
 				    ],
-				    \\"script\\": {
-				      \\"etag\\": \\"aaabbbccc\\",
-				      \\"handlers\\": [
-				        \\"fetch\\",
-				        \\"scheduled\\"
+				    "script": {
+				      "etag": "aaabbbccc",
+				      "handlers": [
+				        "fetch",
+				        "scheduled",
 				      ],
-				      \\"last_deployed_from\\": \\"api\\"
+				      "last_deployed_from": "api",
 				    },
-				    \\"script_runtime\\": {
-				      \\"compatibility_date\\": \\"2020-01-01\\",
-				      \\"compatibility_flags\\": [
-				        \\"test\\",
-				        \\"flag\\"
+				    "script_runtime": {
+				      "compatibility_date": "2020-01-01",
+				      "compatibility_flags": [
+				        "test",
+				        "flag",
 				      ],
-				      \\"usage_model\\": \\"standard\\",
-				      \\"limits\\": {
-				        \\"cpu_ms\\": 50
-				      }
-				    }
-				  }
+				      "limits": {
+				        "cpu_ms": 50,
+				      },
+				      "usage_model": "standard",
+				    },
+				  },
 				}
-				"
 			`);
 		});
 	});
 
 	describe("test output", () => {
-		test("no secrets, bindings or compat info is logged if not existing", async () => {
+		test("no secrets, bindings or compat info is logged if not existing", async ({
+			expect,
+		}) => {
 			msw.use(
 				mswGetVersion({
 					id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
@@ -326,7 +328,7 @@ describe("versions view", () => {
 			`);
 		});
 
-		test("compat date is logged if provided", async () => {
+		test("compat date is logged if provided", async ({ expect }) => {
 			msw.use(
 				mswGetVersion({
 					id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
@@ -374,7 +376,7 @@ describe("versions view", () => {
 			`);
 		});
 
-		test("compat flag is logged if provided", async () => {
+		test("compat flag is logged if provided", async ({ expect }) => {
 			msw.use(
 				mswGetVersion({
 					id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
@@ -424,7 +426,7 @@ describe("versions view", () => {
 			`);
 		});
 
-		test("secrets are logged if provided", async () => {
+		test("secrets are logged if provided", async ({ expect }) => {
 			msw.use(
 				mswGetVersion({
 					id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
@@ -480,7 +482,7 @@ describe("versions view", () => {
 			`);
 		});
 
-		test("env vars are logged if provided", async () => {
+		test("env vars are logged if provided", async ({ expect }) => {
 			msw.use(
 				mswGetVersion({
 					id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",
@@ -533,7 +535,7 @@ describe("versions view", () => {
 			`);
 		});
 
-		test("bindings are logged if provided", async () => {
+		test("bindings are logged if provided", async ({ expect }) => {
 			msw.use(
 				mswGetVersion({
 					id: "ce15c78b-cc43-4f60-b5a9-15ce4f298c2a",

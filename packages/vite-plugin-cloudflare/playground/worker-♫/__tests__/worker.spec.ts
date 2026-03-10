@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
@@ -10,23 +10,27 @@ import {
 	WAIT_FOR_OPTIONS,
 } from "../../__test-utils__";
 
-test("basic hello-world functionality", async () => {
+test("basic hello-world functionality", async ({ expect }) => {
 	await vi.waitFor(
 		async () => expect(await getTextResponse()).toEqual("Hello World!"),
 		WAIT_FOR_OPTIONS
 	);
 });
 
-test("the project path can contain a non-ascii character", async () => {
+test("the project path can contain a non-ascii character", async ({
+	expect,
+}) => {
 	// For context see https://github.com/cloudflare/workers-sdk/issues/10717
 	expect(rootDir).toContain("♫");
 });
 
-test("preserves entry signatures", async () => {
+test("preserves entry signatures", async ({ expect }) => {
 	expect(serverLogs.info.join()).toContain("__preserves-entry-signatures__");
 });
 
-test("basic dev logging (with the default logLevel: info)", async () => {
+test("basic dev logging (with the default logLevel: info)", async ({
+	expect,
+}) => {
 	expect(serverLogs.info.join()).toContain("__console log__");
 	expect(serverLogs.info.join()).toContain("__console debug__");
 	expect(serverLogs.errors.join()).toContain("__console error__");
@@ -36,7 +40,9 @@ test("basic dev logging (with the default logLevel: info)", async () => {
 	expect(serverLogs.errors.join()).not.toContain("__console warn__");
 });
 
-test("receives the original `x-forwarded-host` header if it is set", async () => {
+test("receives the original `x-forwarded-host` header if it is set", async ({
+	expect,
+}) => {
 	const response = await fetch(`${viteTestUrl}/x-forwarded-host`, {
 		headers: { "x-forwarded-host": "example.com:8080" },
 	});
@@ -44,7 +50,9 @@ test("receives the original `x-forwarded-host` header if it is set", async () =>
 	expect(await response.text()).toBe("example.com:8080");
 });
 
-test("receives the Vite server host as the `x-forwarded-host` header if the `x-forwarded-host` header is not set", async () => {
+test("receives the Vite server host as the `x-forwarded-host` header if the `x-forwarded-host` header is not set", async ({
+	expect,
+}) => {
 	const testUrl = new URL(viteTestUrl);
 	await vi.waitFor(
 		async () =>
@@ -53,13 +61,20 @@ test("receives the Vite server host as the `x-forwarded-host` header if the `x-f
 	);
 });
 
-test("does not cause unhandled rejection", async () => {
+test("receives the original Host header", async ({ expect }) => {
+	const testUrl = new URL(viteTestUrl);
+	await vi.waitFor(async () => {
+		expect(await getTextResponse("/host-header")).toBe(testUrl.host);
+	}, WAIT_FOR_OPTIONS);
+});
+
+test("does not cause unhandled rejection", async ({ expect }) => {
 	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
 });
 
 test.runIf(!isBuild)(
 	"updates using HMR code in Worker entry file",
-	async () => {
+	async ({ expect }) => {
 		// Touch the worker entry file to trigger a HMR update.
 		const workerEntryPath = path.join(rootDir, "src", "index.ts");
 		const originalContent = fs.readFileSync(workerEntryPath, "utf-8");
@@ -68,5 +83,18 @@ test.runIf(!isBuild)(
 		await vi.waitFor(() => {
 			expect(serverLogs.info.join()).toContain("[vite] hot updated");
 		}, WAIT_FOR_OPTIONS);
+	}
+);
+
+test.runIf(isBuild)(
+	"does not set `upload_source_maps` when `build.sourcemap` is disabled",
+	({ expect }) => {
+		const wranglerConfig = JSON.parse(
+			fs.readFileSync(
+				path.join(rootDir, "dist", "worker", "wrangler.json"),
+				"utf-8"
+			)
+		);
+		expect(wranglerConfig.upload_source_maps).toBeUndefined();
 	}
 );

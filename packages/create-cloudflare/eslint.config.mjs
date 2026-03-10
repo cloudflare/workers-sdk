@@ -11,4 +11,17 @@ export default defineConfig([
 		"scripts/**",
 	]),
 	{ extends: [sharedConfig], rules: { "no-console": "error" } },
+	// Enable no-vitest-import-expect for test files
+	{
+		files: [
+			"**/*.test.ts",
+			"**/*.spec.ts",
+			"**/test/**/*.ts",
+			"**/__tests__/**/*.ts",
+			"**/e2e/**/*.ts",
+		],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
 ]);

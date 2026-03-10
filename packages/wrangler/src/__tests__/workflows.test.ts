@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
 	mockCreateDate,
 	mockEndDate,
@@ -7,7 +8,9 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
 import { afterEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -522,7 +525,7 @@ describe("wrangler workflows", () => {
 				"workflows instances send-event some-workflow bar --type my-event"
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event with type \\"my-event\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type "my-event" was sent to the instance "bar" from some-workflow"`
 			);
 		});
 
@@ -535,7 +538,7 @@ describe("wrangler workflows", () => {
 				`workflows instances send-event some-workflow bar --type my-event --payload '{"key": "value"}'`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event with type \\"my-event\\" and payload \\"{\\"key\\": \\"value\\"}\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type "my-event" and payload "{"key": "value"}" was sent to the instance "bar" from some-workflow"`
 			);
 		});
 	});
@@ -567,7 +570,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances pause some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"⏸️ The instance \\"bar\\" from some-workflow was paused successfully"`
+				`"⏸️ The instance "bar" from some-workflow was paused successfully"`
 			);
 		});
 	});
@@ -599,7 +602,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances resume some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🔄 The instance \\"bar\\" from some-workflow was resumed successfully"`
+				`"🔄 The instance "bar" from some-workflow was resumed successfully"`
 			);
 		});
 	});
@@ -631,7 +634,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 The instance \\"bar\\" from some-workflow was terminated successfully"`
+				`"🥷 The instance "bar" from some-workflow was terminated successfully"`
 			);
 		});
 	});
@@ -663,7 +666,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances restart some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 The instance \\"bar\\" from some-workflow was restarted successfully"`
+				`"🥷 The instance "bar" from some-workflow was restarted successfully"`
 			);
 		});
 	});
@@ -675,7 +678,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate-all some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\"  has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -685,7 +688,7 @@ describe("wrangler workflows", () => {
 
 			await runWrangler(`workflows instances terminate-all some-workflow`);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\"  has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow"  has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -697,7 +700,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate-all some-workflow --status queued`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\" with status \\"queued\\" has been started. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow" with status "queued" has been started. It might take a few minutes to complete."`
 			);
 		});
 
@@ -713,7 +716,7 @@ describe("wrangler workflows", () => {
 				`workflows instances terminate-all some-workflow --status queued`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\" with status \\"queued\\" is already running. It might take a few minutes to complete."`
+				`"🥷 A job to terminate instances from Workflow "some-workflow" with status "queued" is already running. It might take a few minutes to complete."`
 			);
 		});
 
@@ -728,7 +731,7 @@ describe("wrangler workflows", () => {
 			);
 			expect(std.err).toMatchInlineSnapshot(
 				`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProvided status \\"not-a-status\\" is not valid, it must be one of the following: queued, running, paused, waitingForPause, waiting.[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProvided status "not-a-status" is not valid, it must be one of the following: queued, running, paused, waitingForPause, waiting.[0m
 
 				"
 			`
@@ -766,7 +769,7 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows trigger some-workflow`);
 			expect(std);
 			expect(std.info).toMatchInlineSnapshot(
-				`"🚀 Workflow instance \\"3c70754a-8435-4498-92ad-22e2e2c90853\\" has been queued successfully"`
+				`"🚀 Workflow instance "3c70754a-8435-4498-92ad-22e2e2c90853" has been queued successfully"`
 			);
 		});
 	});
@@ -783,7 +786,7 @@ describe("wrangler workflows", () => {
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				✅ Workflow \\"some-workflow\\" removed successfully.
+				✅ Workflow "some-workflow" removed successfully.
 				 Note that running instances might take a few minutes to be properly terminated."
 			`
 			);
@@ -825,7 +828,7 @@ describe("wrangler workflows", () => {
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - \\"workflows[0]\\" binding \\"name\\" field is invalid. Workflow names must be 1-64 characters long,
+				    - "workflows[0]" binding "name" field is invalid. Workflow names must be 1-64 characters long,
 				  start with a letter, number, or underscore, and may only contain letters, numbers, underscores, or
 				  hyphens.
 
@@ -927,6 +930,234 @@ describe("wrangler workflows", () => {
 			expect(std.err).toContain('"workflows" bindings should be objects');
 		});
 
+		it("should accept workflow binding with valid limits", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 5000 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with empty limits object", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: {},
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should accept workflow binding with limits.steps at boundary value 1", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 1 },
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.err).toBe("");
+		});
+
+		it("should reject workflow binding with limits.steps of 0", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 0 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be a positive integer'
+			);
+		});
+
+		it("should reject workflow binding with non-integer limits.steps", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: 1.5 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be a positive integer'
+			);
+		});
+
+		it("should reject workflow binding with negative limits.steps", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: { steps: -1 },
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'"limits.steps" field must be a positive integer'
+			);
+		});
+
+		it("should reject workflow binding with non-object limits", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: "invalid",
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'should, optionally, have an object "limits" field'
+			);
+		});
+
+		it("should reject workflow binding with array limits", async () => {
+			writeWranglerConfig({
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						limits: [1, 2, 3],
+					} as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+				],
+			});
+
+			await expect(runWrangler("deploy --dry-run")).rejects.toThrow();
+			expect(std.err).toContain(
+				'should, optionally, have an object "limits" field'
+			);
+		});
+
+		it("should warn on unexpected fields in workflow binding limits", async () => {
+			writeWorkerSource({ format: "ts" });
+			writeWranglerConfig({
+				main: "index.ts",
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "external-script",
+						limits: {
+							steps: 10,
+							// @ts-expect-error Testing unexpected fields in limits
+							unknownProp: "foo",
+						},
+					},
+				],
+			});
+
+			await runWrangler("deploy --dry-run");
+			expect(std.warn).toContain(
+				'Unexpected fields found in workflows[0].limits field: "unknownProp"'
+			);
+		});
+
+		it("should warn when step limit exceeds production maximum", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig(
+				{
+					main: "index.js",
+					workflows: [
+						{
+							binding: "MY_WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							limits: { steps: 30_000 },
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+
+			await runWrangler("deploy --dry-run --config wrangler.json");
+			expect(std.warn).toContain(
+				"has a step limit of 30000, which exceeds the production maximum of 25,000"
+			);
+		});
+
+		it("should not warn when step limit is within production maximum", async () => {
+			fs.writeFileSync(
+				"index.js",
+				"import { WorkflowEntrypoint } from 'cloudflare:workers';\nexport default {};\nexport class MyWorkflow extends WorkflowEntrypoint {};"
+			);
+			writeWranglerConfig(
+				{
+					main: "index.js",
+					workflows: [
+						{
+							binding: "MY_WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+							limits: { steps: 25_000 },
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+
+			await runWrangler("deploy --dry-run --config wrangler.json");
+			expect(std.warn).not.toContain("step limit");
+		});
+
 		it("should reject workflows binding with same name", async () => {
 			writeWorkerSource({ format: "ts" });
 			writeWranglerConfig({
@@ -969,8 +1200,8 @@ describe("wrangler workflows", () => {
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - \\"workflows\\" bindings must have unique \\"name\\" values; duplicate(s) found:
-				  \\"duplicate-workflow-name\\", \\"duplicate-workflow-name-2\\"
+				    - "workflows" bindings must have unique "name" values; duplicate(s) found:
+				  "duplicate-workflow-name", "duplicate-workflow-name-2"
 
 				"
 			`);

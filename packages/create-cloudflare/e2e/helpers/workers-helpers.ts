@@ -3,6 +3,7 @@ import getPort from "get-port";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { fetch } from "undici";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
 import { expect } from "vitest";
 import { isExperimental, runDeployTests } from "./constants";
 import { runC3 } from "./run-c3";
@@ -25,6 +26,7 @@ export async function runC3ForWorkerTest(
 		`${isExperimental}`,
 		"--no-open",
 		"--no-git",
+		"--no-agents",
 		"--deploy",
 		`${runDeployTests}`,
 		...(argv ?? []),

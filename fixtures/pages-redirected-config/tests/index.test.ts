@@ -1,13 +1,15 @@
 import { rmSync, writeFileSync } from "fs";
 import path, { resolve } from "path";
 import { fetch } from "undici";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, it, onTestFinished } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 const basePath = resolve(__dirname, "..");
 
 describe("wrangler pages dev", () => {
-	it("uses the generated config if there is no wrangler.toml", async () => {
+	it("uses the generated config if there is no wrangler.toml", async ({
+		expect,
+	}) => {
 		const { ip, port, stop } = await runWranglerPagesDev(basePath, undefined, [
 			"--port=0",
 			"--inspector-port=0",
@@ -21,7 +23,9 @@ describe("wrangler pages dev", () => {
 		expect(text).toMatchInlineSnapshot(`"Generated: true"`);
 	});
 
-	it("uses the generated config instead of a user wrangler.toml", async () => {
+	it("uses the generated config instead of a user wrangler.toml", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			path.join(basePath, "wrangler.toml"),
 			[

@@ -1,7 +1,6 @@
-import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, assert, beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -245,7 +244,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await Promise.allSettled([
 				helper.run(`wrangler r2 bucket delete ${workerName}-r2`),
 				helper.run(`wrangler d1 delete ${workerName}-d1 -y`),
-				helper.run(`wrangler delete`),
+				helper.bestEffortRun(`wrangler delete`),
 				helper.run(`wrangler kv namespace delete --namespace-id ${kvId}`),
 				helper.run(`wrangler kv namespace delete --namespace-id ${kvId2}`),
 			]);

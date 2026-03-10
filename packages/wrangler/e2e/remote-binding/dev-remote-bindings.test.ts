@@ -209,7 +209,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await vi.waitFor(
 					() =>
 						expect(worker.currentOutput).toContain(
-							"Could not resolve service binding 'REMOTE_WORKER'. Target script 'non-existent-service-binding' not found."
+							"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found."
 						),
 					7_000
 				);

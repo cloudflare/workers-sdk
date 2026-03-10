@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { mayContainTransaction, trimSqlQuery } from "../../d1/trimmer";
 
 describe("mayContainTransaction()", () => {
-	it("should return false if there for regular queries", () => {
+	it("should return false if there for regular queries", ({ expect }) => {
 		expect(mayContainTransaction(`SELECT * FROM my_table`)).toBe(false);
 		expect(mayContainTransaction(`SELECT * FROM my_table WHERE id = 42;`)).toBe(
 			false
@@ -12,7 +12,7 @@ describe("mayContainTransaction()", () => {
 		).toBe(false);
 	});
 
-	it("should return true if there is a transaction", () => {
+	it("should return true if there is a transaction", ({ expect }) => {
 		expect(
 			mayContainTransaction(
 				`PRAGMA foreign_keys=OFF;
@@ -30,11 +30,13 @@ describe("mayContainTransaction()", () => {
 });
 
 describe("trimSqlQuery()", () => {
-	it("should return original SQL if there are no real statements", () => {
+	it("should return original SQL if there are no real statements", ({
+		expect,
+	}) => {
 		expect(trimSqlQuery(`;;;`)).toMatchInlineSnapshot(`";;;"`);
 	});
 
-	it("should not trim single statements", () => {
+	it("should not trim single statements", ({ expect }) => {
 		expect(trimSqlQuery(`SELECT * FROM my_table`)).toMatchInlineSnapshot(
 			`"SELECT * FROM my_table"`
 		);
@@ -46,7 +48,7 @@ describe("trimSqlQuery()", () => {
 		).toMatchInlineSnapshot(`"SELECT * FROM my_table WHERE id = 42;"`);
 	});
 
-	it("should trim a regular old sqlite dump", () => {
+	it("should trim a regular old sqlite dump", ({ expect }) => {
 		expect(
 			trimSqlQuery(`PRAGMA foreign_keys=OFF;
 		BEGIN TRANSACTION;
@@ -69,7 +71,7 @@ describe("trimSqlQuery()", () => {
 					"
 		`);
 	});
-	it("should throw when provided multiple transactions", () => {
+	it("should throw when provided multiple transactions", ({ expect }) => {
 		expect(() =>
 			trimSqlQuery(`PRAGMA foreign_keys=OFF;
 		BEGIN TRANSACTION;
@@ -89,15 +91,13 @@ describe("trimSqlQuery()", () => {
 		`);
 	});
 
-	it("should handle strings", () => {
+	it("should handle strings", ({ expect }) => {
 		expect(
 			trimSqlQuery(`SELECT * FROM my_table WHERE val = "foo;bar";`)
-		).toMatchInlineSnapshot(
-			`"SELECT * FROM my_table WHERE val = \\"foo;bar\\";"`
-		);
+		).toMatchInlineSnapshot(`"SELECT * FROM my_table WHERE val = "foo;bar";"`);
 	});
 
-	it("should handle inline comments", () => {
+	it("should handle inline comments", ({ expect }) => {
 		expect(
 			trimSqlQuery(
 				`SELECT * FROM my_table -- semicolons; in; comments; don't count;
@@ -105,13 +105,13 @@ describe("trimSqlQuery()", () => {
         AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)`
 			)
 		).toMatchInlineSnapshot(`
-		"SELECT * FROM my_table -- semicolons; in; comments; don't count;
-		        WHERE val = 'foo;bar'
-		        AND \\"col;name\\" = \`other;col\`; -- or identifiers (Postgres or MySQL style)"
-	`);
+			"SELECT * FROM my_table -- semicolons; in; comments; don't count;
+			        WHERE val = 'foo;bar'
+			        AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)"
+		`);
 	});
 
-	it("should handle block comments", () => {
+	it("should handle block comments", ({ expect }) => {
 		expect(
 			trimSqlQuery(
 				`/****
@@ -129,7 +129,7 @@ describe("trimSqlQuery()", () => {
 	`);
 	});
 
-	it("should split multiple statements", () => {
+	it("should split multiple statements", ({ expect }) => {
 		expect(
 			trimSqlQuery(
 				`INSERT INTO my_table (id, value) VALUES (42, 'foo');SELECT * FROM my_table WHERE id = 42 - 10;`
@@ -139,7 +139,7 @@ describe("trimSqlQuery()", () => {
 		);
 	});
 
-	it("should handle whitespace between statements", () => {
+	it("should handle whitespace between statements", ({ expect }) => {
 		expect(
 			trimSqlQuery(`CREATE DOMAIN custom_types.email AS TEXT CHECK (VALUE ~ '^.+@.+$');
         CREATE TYPE custom_types.currency AS ENUM('USD', 'GBP');
@@ -185,7 +185,7 @@ describe("trimSqlQuery()", () => {
 	`);
 	});
 
-	it("should handle $...$ style string markers", () => {
+	it("should handle $...$ style string markers", ({ expect }) => {
 		expect(
 			trimSqlQuery(`CREATE OR REPLACE FUNCTION update_updated_at_column()
           RETURNS TRIGGER AS $$
@@ -214,7 +214,7 @@ describe("trimSqlQuery()", () => {
 		);
 	});
 
-	it("should handle compound statements", () => {
+	it("should handle compound statements", ({ expect }) => {
 		expect(
 			trimSqlQuery(
 				`CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items

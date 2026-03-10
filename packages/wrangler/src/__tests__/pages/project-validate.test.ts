@@ -1,6 +1,6 @@
 // /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { validate } from "../../pages/validate";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -24,7 +24,7 @@ describe("pages project validate", () => {
 		await endEventLoop();
 	});
 
-	it("should exit cleanly for a good directory", async () => {
+	it("should exit cleanly for a good directory", async ({ expect }) => {
 		writeFileSync("logo.png", "foobar");
 
 		await runWrangler("pages project validate .");
@@ -37,7 +37,7 @@ describe("pages project validate", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should error for a large file", async () => {
+	it("should error for a large file", async ({ expect }) => {
 		writeFileSync("logo.png", Buffer.alloc(1 * 1024 * 1024 + 1));
 
 		await expect(() => runWrangler("pages project validate .")).rejects
@@ -47,7 +47,7 @@ describe("pages project validate", () => {
 		`);
 	});
 
-	it("should error for a large directory", async () => {
+	it("should error for a large directory", async ({ expect }) => {
 		for (let i = 0; i < 10 + 1; i++) {
 			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
 		}
@@ -59,7 +59,9 @@ describe("pages project validate", () => {
 		);
 	});
 
-	it("should succeed with custom fileCountLimit even when exceeding default limit", async () => {
+	it("should succeed with custom fileCountLimit even when exceeding default limit", async ({
+		expect,
+	}) => {
 		// Create 11 files, which exceeds the mocked MAX_ASSET_COUNT_DEFAULT of 10
 		for (let i = 0; i < 11; i++) {
 			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
@@ -70,7 +72,9 @@ describe("pages project validate", () => {
 		expect(fileMap.size).toBe(11);
 	});
 
-	it("should error with custom fileCountLimit when exceeding custom limit", async () => {
+	it("should error with custom fileCountLimit when exceeding custom limit", async ({
+		expect,
+	}) => {
 		// Create 6 files
 		for (let i = 0; i < 6; i++) {
 			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
@@ -84,7 +88,9 @@ describe("pages project validate", () => {
 		);
 	});
 
-	it("should use fileCountLimit from CF_PAGES_UPLOAD_JWT when set", async () => {
+	it("should use fileCountLimit from CF_PAGES_UPLOAD_JWT when set", async ({
+		expect,
+	}) => {
 		// Create 11 files, which exceeds the mocked MAX_ASSET_COUNT_DEFAULT of 10
 		for (let i = 0; i < 11; i++) {
 			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
@@ -111,7 +117,9 @@ describe("pages project validate", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should error when file count exceeds limit from CF_PAGES_UPLOAD_JWT", async () => {
+	it("should error when file count exceeds limit from CF_PAGES_UPLOAD_JWT", async ({
+		expect,
+	}) => {
 		// Create 6 files
 		for (let i = 0; i < 6; i++) {
 			writeFileSync(`logo${i}.png`, Buffer.alloc(1));

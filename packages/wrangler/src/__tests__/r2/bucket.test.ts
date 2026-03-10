@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
 import { beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { actionsForEventCategories } from "../../r2/helpers/notification";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -110,6 +112,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
@@ -152,6 +155,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
@@ -290,7 +294,7 @@ describe("r2", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
@@ -328,7 +332,7 @@ describe("r2", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: \\"weur\\", \\"eeur\\", \\"apac\\", \\"wnam\\", \\"enam\\", \\"oc\\"]
+					      --location       The optional location hint that determines geographic placement of the R2 bucket  [string] [choices: "weur", "eeur", "apac", "wnam", "enam", "oc"]
 					  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
 					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
@@ -416,7 +420,7 @@ describe("r2", () => {
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std).toMatchInlineSnapshot(`
-					Object {
+					{
 					  "debug": "",
 					  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
 
@@ -800,7 +804,7 @@ describe("r2", () => {
 
 						OPTIONS
 						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
-						      --provider  [choices: \\"AWS\\", \\"GCS\\"]
+						      --provider  [choices: "AWS", "GCS"]
 						      --bucket                    The name of the upstream bucket  [string]
 						      --region                    (AWS provider only) The region of the upstream bucket  [string]
 						      --access-key-id             (AWS provider only) The secret access key id for the upstream bucket  [string]
@@ -2566,7 +2570,7 @@ describe("r2", () => {
 						  -v, --version   Show version number  [boolean]
 
 						OPTIONS
-						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
+						      --event-types, --event-type  The type of event(s) that will emit event notifications  [array] [required] [choices: "object-create", "object-delete"]
 						      --prefix                     The prefix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
 						      --suffix                     The suffix that an object must match to emit event notifications (note: regular expressions not supported)  [string]
 						      --queue                      The name of the queue that will receive event notification messages  [string] [required]
@@ -2703,7 +2707,7 @@ describe("r2", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						Deleting event notifications rule \\"rule123456789\\"...
+						Deleting event notifications rule "rule123456789"...
 						Event notification rule deleted successfully!"
 					`);
 				});

@@ -15,6 +15,13 @@ export default defineConfig([
 			"no-console": "off",
 		},
 	},
+	// Enable no-vitest-import-expect for test files
+	{
+		files: ["**/*.spec.ts", "**/test/**/*.ts"],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
 	// Rules following this are temporarily enabled while we transition Miniflare to use the standard workers-sdk eslint config
 	// TODO: fix instances of these rules and remove them
 	{

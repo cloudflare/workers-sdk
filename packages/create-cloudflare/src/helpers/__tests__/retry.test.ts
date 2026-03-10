@@ -1,8 +1,8 @@
 import { retry } from "helpers/retry";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 
 describe("retry", () => {
-	test("success on first try", async () => {
+	test("success on first try", async ({ expect }) => {
 		let tries = 0;
 		await retry({ times: 3 }, async () => {
 			tries++;
@@ -11,7 +11,7 @@ describe("retry", () => {
 		expect(tries).toBe(1);
 	});
 
-	test("success after one failure", async () => {
+	test("success after one failure", async ({ expect }) => {
 		let tries = 0;
 		await retry({ times: 3 }, async () => {
 			tries++;
@@ -23,7 +23,7 @@ describe("retry", () => {
 		expect(tries).toBe(2);
 	});
 
-	test("success after multiple failures", async () => {
+	test("success after multiple failures", async ({ expect }) => {
 		let tries = 0;
 		let fails = 2;
 
@@ -39,7 +39,7 @@ describe("retry", () => {
 		expect(tries).toBe(3);
 	});
 
-	test("hard failure", async () => {
+	test("hard failure", async ({ expect }) => {
 		await expect(async () => {
 			await retry({ times: 3 }, async () => {
 				throw Error("testing");
@@ -47,7 +47,7 @@ describe("retry", () => {
 		}).rejects.toThrowError("testing");
 	});
 
-	test("exit condition encountered", async () => {
+	test("exit condition encountered", async ({ expect }) => {
 		let tries = 0;
 
 		await expect(async () => {

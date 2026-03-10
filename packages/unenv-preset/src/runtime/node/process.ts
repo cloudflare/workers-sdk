@@ -1,3 +1,7 @@
+// This polyfill is only used with the process v1 native implementation since
+// process v2 implements all the APIs from workerd v1.20250924.0
+// Therefore there is no need to conditionally export items from this file.
+
 import { hrtime as UnenvHrTime } from "unenv/node/internal/process/hrtime";
 import { Process as UnenvProcess } from "unenv/node/internal/process/process";
 
@@ -16,83 +20,38 @@ export const getBuiltinModule: NodeJS.Process["getBuiltinModule"] =
 
 const workerdProcess = getBuiltinModule("node:process");
 
-// Workerd has 2 different implementation for `node:process`
-//
-// See:
-// - [workerd `process` v1](https://github.com/cloudflare/workerd/blob/main/src/node/internal/legacy_process.ts)
-// - [workerd `process` v2](https://github.com/cloudflare/workerd/blob/main/src/node/internal/public_process.ts)
-// - [`enable_nodejs_process_v2` flag](https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isWorkerdProcessV2 = (globalThis as any).Cloudflare.compatibilityFlags
-	.enable_nodejs_process_v2;
-
 const unenvProcess = new UnenvProcess({
 	env: globalProcess.env,
-	// `hrtime` is only available from workerd process v2
-	hrtime: isWorkerdProcessV2 ? workerdProcess.hrtime : UnenvHrTime,
+	hrtime: UnenvHrTime,
 	// `nextTick` is available from workerd process v1
 	nextTick: workerdProcess.nextTick,
 });
 
-// APIs implemented by workerd module in both v1 and v2
+// APIs implemented by workerd process in both v1 and v2
 // Note that `env`, `hrtime` and `nextTick` are always retrieved from `unenv`
 export const { exit, features, platform } = workerdProcess;
 
-// APIs that can be implemented by either `unenv` or `workerd`.
-// They are always retrieved from `unenv` which might use their `workerd` implementation.
-export const {
-	// Always implemented by workerd
-	env,
-	// Only implemented in workerd v2
-	hrtime,
-	// Always implemented by workerd
-	nextTick,
-} = unenvProcess;
-
-// APIs that are not implemented by `workerd` (whether v1 or v2)
-// They are retrieved from `unenv`.
 export const {
 	_channel,
+	_debugEnd,
+	_debugProcess,
 	_disconnect,
 	_events,
 	_eventsCount,
+	_exiting,
+	_fatalException,
+	_getActiveHandles,
+	_getActiveRequests,
 	_handleQueue,
+	_kill,
+	_linkedBinding,
 	_maxListeners,
 	_pendingMessage,
-	_send,
-	assert,
-	disconnect,
-	mainModule,
-} = unenvProcess;
-
-// API that are only implemented starting from v2 of workerd process
-// They are retrieved from unenv when process v1 is used
-export const {
-	// @ts-expect-error `_debugEnd` is missing typings
-	_debugEnd,
-	// @ts-expect-error `_debugProcess` is missing typings
-	_debugProcess,
-	// @ts-expect-error `_exiting` is missing typings
-	_exiting,
-	// @ts-expect-error `_fatalException` is missing typings
-	_fatalException,
-	// @ts-expect-error `_getActiveHandles` is missing typings
-	_getActiveHandles,
-	// @ts-expect-error `_getActiveRequests` is missing typings
-	_getActiveRequests,
-	// @ts-expect-error `_kill` is missing typings
-	_kill,
-	// @ts-expect-error `_linkedBinding` is missing typings
-	_linkedBinding,
-	// @ts-expect-error `_preload_modules` is missing typings
 	_preload_modules,
-	// @ts-expect-error `_rawDebug` is missing typings
 	_rawDebug,
-	// @ts-expect-error `_startProfilerIdleNotifier` is missing typings
+	_send,
 	_startProfilerIdleNotifier,
-	// @ts-expect-error `_stopProfilerIdleNotifier` is missing typings
 	_stopProfilerIdleNotifier,
-	// @ts-expect-error `_tickCallback` is missing typings
 	_tickCallback,
 	abort,
 	addListener,
@@ -100,8 +59,8 @@ export const {
 	arch,
 	argv,
 	argv0,
+	assert,
 	availableMemory,
-	// @ts-expect-error `binding` is missing typings
 	binding,
 	channel,
 	chdir,
@@ -111,11 +70,12 @@ export const {
 	cpuUsage,
 	cwd,
 	debugPort,
+	disconnect,
 	dlopen,
-	// @ts-expect-error `domain` is missing typings
 	domain,
 	emit,
 	emitWarning,
+	env,
 	eventNames,
 	execArgv,
 	execPath,
@@ -129,19 +89,19 @@ export const {
 	getMaxListeners,
 	getuid,
 	hasUncaughtExceptionCaptureCallback,
-	// @ts-expect-error `initgroups` is missing typings
+	hrtime,
 	initgroups,
 	kill,
 	listenerCount,
 	listeners,
 	loadEnvFile,
+	mainModule,
 	memoryUsage,
-	// @ts-expect-error `moduleLoadList` is missing typings
 	moduleLoadList,
+	nextTick,
 	off,
 	on,
 	once,
-	// @ts-expect-error `openStdin` is missing typings
 	openStdin,
 	permission,
 	pid,
@@ -149,7 +109,6 @@ export const {
 	prependListener,
 	prependOnceListener,
 	rawListeners,
-	// @ts-expect-error `reallyExit` is missing typings
 	reallyExit,
 	ref,
 	release,
@@ -178,7 +137,7 @@ export const {
 	uptime,
 	version,
 	versions,
-} = isWorkerdProcessV2 ? workerdProcess : unenvProcess;
+} = unenvProcess;
 
 const _process = {
 	abort,

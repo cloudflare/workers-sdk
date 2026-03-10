@@ -14,6 +14,7 @@
 		"is-odd": "^3.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@fixture/pages-plugin": "workspace:*",

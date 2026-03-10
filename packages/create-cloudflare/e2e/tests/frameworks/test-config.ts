@@ -1,5 +1,6 @@
 import { detectPackageManager } from "../../../src/helpers/packageManagers";
 import {
+	CLOUDFLARE_API_TOKEN,
 	frameworkToTestFilter,
 	isExperimental,
 	keys,
@@ -47,6 +48,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:pages",
 			argv: ["--platform", "pages"],
+			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -59,19 +61,12 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: true,
-			flags: [
-				"--skip-houston",
-				"--no-install",
-				"--no-git",
-				"--template",
-				"blog",
-				"--typescript",
-				"strict",
-			],
+			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -84,15 +79,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: true,
-			flags: [
-				"--skip-houston",
-				"--no-install",
-				"--no-git",
-				"--template",
-				"blog",
-				"--typescript",
-				"strict",
-			],
+			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
 			name: "docusaurus:pages",
@@ -360,7 +347,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "nuxt:pages",
 			promptHandlers: [
 				{
-					matcher: /Would you like to install any of the official modules\?/,
+					matcher: /Would you like to .* install .*modules\?/,
 					input: [keys.enter],
 				},
 			],
@@ -379,12 +366,13 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "nuxt:workers",
 			promptHandlers: [
 				{
-					matcher: /Would you like to install any of the official modules\?/,
+					matcher: /Would you like to .* install .*modules\?/,
 					input: [keys.enter],
 				},
 			],
@@ -403,6 +391,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "react:pages",
@@ -418,12 +407,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Vite + React",
+				// Note that this is the text in the static HTML that is returned
+				// This React SPA will change this at runtime but we are only making a fetch request
+				// not actually running the client side JS.
+				// create-vite 8+ changed the <title> from "Vite + React + TS" to the project name,
+				// so we match on the React root element instead.
+				expectedText: '<div id="root">',
 			},
 			verifyPreview: {
 				previewArgs: ["--inspector-port=0"],
 				route: "/",
-				expectedText: "Vite + React",
+				expectedText: '<div id="root">',
 			},
 			nodeCompat: false,
 		},
@@ -443,7 +437,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				// Note that this is the text in the static HTML that is returned
 				// This React SPA will change this at runtime but we are only making a fetch request
 				// not actually running the client side JS.
-				expectedText: "Vite + React + TS",
+				// create-vite 8+ changed the <title> from "Vite + React + TS" to the project name,
+				// so we match on the React root element instead.
+				expectedText: '<div id="root">',
 			},
 			verifyPreview: {
 				route: "/",
@@ -453,12 +449,13 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				// Note that this is the text in the static HTML that is returned
 				// This React SPA will change this at runtime but we are only making a fetch request
 				// not actually running the client side JS.
-				expectedText: "Vite + React + TS",
+				expectedText: '<div id="root">',
 			},
 			nodeCompat: false,
 		},
 		{
 			name: "solid",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
@@ -726,6 +723,7 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -790,7 +788,7 @@ function getExperimentalFrameworkTestConfig(
 			name: "nuxt:workers",
 			promptHandlers: [
 				{
-					matcher: /Would you like to install any of the official modules\?/,
+					matcher: /Would you like to .* install .*modules\?/,
 					input: [keys.enter],
 				},
 			],
@@ -809,9 +807,11 @@ function getExperimentalFrameworkTestConfig(
 			},
 			nodeCompat: false,
 			verifyTypes: false,
+			flags: ["--template", "minimal"],
 		},
 		{
 			name: "solid",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
@@ -896,7 +896,9 @@ function getExperimentalFrameworkTestConfig(
 				// Note that this is the text in the static HTML that is returned
 				// This React SPA will change this at runtime but we are only making a fetch request
 				// not actually running the client side JS.
-				expectedText: "Vite + React + TS",
+				// create-vite 8+ changed the <title> from "Vite + React + TS" to the project name,
+				// so we match on the React root element instead.
+				expectedText: '<div id="root">',
 			},
 			verifyPreview: {
 				route: "/",
@@ -906,7 +908,7 @@ function getExperimentalFrameworkTestConfig(
 				// Note that this is the text in the static HTML that is returned
 				// This React SPA will change this at runtime but we are only making a fetch request
 				// not actually running the client side JS.
-				expectedText: "Vite + React + TS",
+				expectedText: '<div id="root">',
 			},
 			nodeCompat: false,
 			verifyTypes: false,
@@ -980,6 +982,9 @@ function getExperimentalFrameworkTestConfig(
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["npm", "yarn"],
+			// this test creates an R2 bucket, so it requires a Cloudflare API token
+			// and needs to be skipped on forks
+			quarantine: !CLOUDFLARE_API_TOKEN,
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Generated by create next app",

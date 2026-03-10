@@ -30,14 +30,16 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
-import { upload } from "../../pages/upload";
-import { getPagesTmpDir } from "../../pages/utils";
+import { maxFileCountAllowedFromClaims, upload } from "../../pages/upload";
+import { getPagesTmpDir, truncateUtf8Bytes } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import type { Deployment, Project } from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
+
+const MAX_COMMIT_MESSAGE_BYTES = 384;
 
 interface PagesDeployOptions {
 	/**
@@ -145,12 +147,11 @@ export async function deploy({
 		_routesCustom = readFileSync(join(directory, "_routes.json"), "utf-8");
 	} catch {}
 
-	try {
-		_workerJSIsDirectory = lstatSync(_workerPath).isDirectory();
-		if (!_workerJSIsDirectory) {
-			_workerJS = readFileSync(_workerPath, "utf-8");
-		}
-	} catch {}
+	const workerJSStats = lstatSync(_workerPath, { throwIfNoEntry: false });
+	_workerJSIsDirectory = workerJSStats?.isDirectory() ?? false;
+	if (workerJSStats !== undefined && !_workerJSIsDirectory) {
+		_workerJS = readFileSync(_workerPath, "utf-8");
+	}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
 	const project = await fetchResult<Project>(
@@ -250,7 +251,15 @@ export async function deploy({
 		}
 	}
 
-	const fileMap = await validate({ directory });
+	// Fetch JWT to get file count limit for validation
+	const { jwt } = await fetchResult<{ jwt: string }>(
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
+		`/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+	);
+
+	const fileCountLimit = maxFileCountAllowedFromClaims(jwt);
+
+	const fileMap = await validate({ directory, fileCountLimit });
 
 	const manifest = await upload({
 		fileMap,
@@ -268,7 +277,10 @@ export async function deploy({
 	}
 
 	if (commitMessage) {
-		formData.append("commit_message", commitMessage);
+		formData.append(
+			"commit_message",
+			truncateUtf8Bytes(commitMessage, MAX_COMMIT_MESSAGE_BYTES)
+		);
 	}
 
 	if (commitHash) {

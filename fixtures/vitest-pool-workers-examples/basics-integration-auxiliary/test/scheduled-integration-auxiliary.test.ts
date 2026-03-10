@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
-it("dispatches scheduled event", async () => {
+it("dispatches scheduled event", async ({ expect }) => {
 	// Note the `Fetcher#scheduled()` method is experimental, and requires the
 	// `service_binding_extra_handlers` compatibility flag to be enabled.
 	const result = await env.WORKER.scheduled({

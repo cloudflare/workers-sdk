@@ -2,11 +2,13 @@ import { ChildProcess, fork } from "node:child_process";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch, Response } from "undici";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, it, onTestFinished } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages dev with proxy and a script file", () => {
-	it("should handle requests using a script from the default _worker.js path", async () => {
+	it("should handle requests using a script from the default _worker.js path", async ({
+		expect,
+	}) => {
 		const process = await startWranglerPagesDevProxy();
 		const combinedResponse = await waitUntilReady(
 			`http://127.0.0.1:${process.port}/`
@@ -30,7 +32,9 @@ describe("Pages dev with proxy and a script file", () => {
 		).toBeTruthy();
 	});
 
-	it("should handle requests using a script from a custom script path", async () => {
+	it("should handle requests using a script from a custom script path", async ({
+		expect,
+	}) => {
 		const process = await startWranglerPagesDevProxy([
 			"--script-path=custom/script/path/index.js",
 		]);

@@ -1,3 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
+import { getErrorType } from "../core/handle-errors";
+
 /**
  * Sanitizes the non-positional args provided to the command for metrics reporting.
  *
@@ -118,4 +121,19 @@ export function canonicalArg(arg: string) {
 	const camelize = (str: string) =>
 		str.replace(/-./g, (x) => x[1].toUpperCase());
 	return camelize(arg.replace("experimental", "x"));
+}
+
+/**
+ * Returns an object containing sanitized error information for metrics reporting.
+ *
+ * @param error The error to sanitize.
+ * @returns An object with `errorType` (the error classification for telemetry) and
+ *          `errorMessage` (the telemetry message, only present for UserErrors).
+ */
+export function sanitizeError(error: unknown) {
+	return {
+		errorType: getErrorType(error),
+		errorMessage:
+			error instanceof UserError ? error.telemetryMessage : undefined,
+	};
 }

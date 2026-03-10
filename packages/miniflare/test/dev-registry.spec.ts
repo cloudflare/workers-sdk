@@ -1,9 +1,9 @@
 import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
-import { describe, expect, onTestFinished, test, vi } from "vitest";
+import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";
 
 describe.sequential("DevRegistry", () => {
-	test("fetch to service worker", async () => {
+	test("fetch to service worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
@@ -62,7 +62,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to module worker", async () => {
+	test("fetch to module worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -131,7 +131,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("WebSocket upgrade to module worker", async () => {
+	test("WebSocket upgrade to module worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -227,7 +227,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("RPC to default entrypoint", async () => {
+	test("RPC to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -303,7 +303,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("RPC to custom entrypoint", async () => {
+	test("RPC to custom entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -379,7 +379,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to module worker with node bindings", async () => {
+	test("fetch to module worker with node bindings", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -467,7 +467,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("RPC to default entrypoint with node bindings", async () => {
+	test("RPC to default entrypoint with node bindings", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -550,7 +550,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to durable object with do proxy disabled", async () => {
+	test("fetch to durable object with do proxy disabled", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
@@ -613,7 +613,7 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(503);
 	});
 
-	test("RPC to durable object with do proxy disabled", async () => {
+	test("RPC to durable object with do proxy disabled", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
@@ -678,7 +678,7 @@ describe.sequential("DevRegistry", () => {
 		expect(res.status).toBe(500);
 	});
 
-	test("fetch to durable object", async () => {
+	test("fetch to durable object", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -750,7 +750,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("RPC to durable object", async () => {
+	test("RPC to durable object", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -824,7 +824,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("tail to default entrypoint", async () => {
+	test("tail to default entrypoint", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
@@ -899,7 +899,7 @@ describe.sequential("DevRegistry", () => {
 		expect(result2).toEqual(`["DevReg: log event"]`);
 	});
 
-	test("tail to unknown worker", async () => {
+	test("tail to unknown worker", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const mf = new Miniflare({
 			name: "local-worker",
@@ -937,7 +937,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("miniflare with different registry path", async () => {
+	test("miniflare with different registry path", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const unsafeDevRegistryPath2 = await useTmp();
 		const localOptions: MiniflareOptions = {
@@ -1039,7 +1039,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to module worker with https enabled", async () => {
+	test("fetch to module worker with https enabled", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -1105,7 +1105,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to durable object with https enabled", async () => {
+	test("fetch to durable object with https enabled", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const local = new Miniflare({
 			name: "local-worker",
@@ -1178,7 +1178,7 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("handleDevRegistryUpdate callback", async () => {
+	test("handleDevRegistryUpdate callback", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const firstCallbackInvocations: Array<{
 			registry: WorkerRegistry;

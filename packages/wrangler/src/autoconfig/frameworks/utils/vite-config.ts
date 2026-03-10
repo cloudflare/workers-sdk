@@ -10,6 +10,57 @@ import type { types } from "recast";
 const b = recast.types.builders;
 const t = recast.types.namedTypes;
 
+/**
+ * Extracts the ObjectExpression from the first argument of defineConfig().
+ *
+ * Handles:
+ *   - defineConfig({ ... })
+ *   - defineConfig(() => ({ ... }))
+ *   - defineConfig(({ isSsrBuild }) => ({ ... }))
+ *   - defineConfig(() => { return { ... }; })
+ *   - defineConfig(function() { return { ... }; })
+ */
+function extractConfigObject(
+	node: recast.types.ASTNode
+): types.namedTypes.ObjectExpression | null {
+	// Direct object: defineConfig({ ... })
+	if (t.ObjectExpression.check(node)) {
+		return node;
+	}
+
+	// Arrow function: defineConfig(() => ({ ... })) or defineConfig(() => { return { ... }; })
+	if (t.ArrowFunctionExpression.check(node)) {
+		if (t.ObjectExpression.check(node.body)) {
+			return node.body;
+		}
+		if (t.BlockStatement.check(node.body)) {
+			return extractFromBlockStatement(node.body);
+		}
+	}
+
+	// Function expression: defineConfig(function() { return { ... }; })
+	if (t.FunctionExpression.check(node)) {
+		return extractFromBlockStatement(node.body);
+	}
+
+	return null;
+}
+
+function extractFromBlockStatement(
+	block: types.namedTypes.BlockStatement
+): types.namedTypes.ObjectExpression | null {
+	const returnStmt = block.body.find((s) => t.ReturnStatement.check(s));
+	if (
+		returnStmt &&
+		t.ReturnStatement.check(returnStmt) &&
+		returnStmt.argument &&
+		t.ObjectExpression.check(returnStmt.argument)
+	) {
+		return returnStmt.argument;
+	}
+	return null;
+}
+
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string
 ): boolean {
@@ -39,15 +90,17 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
-			const config = n.node.arguments[0];
-			if (!t.ObjectExpression.check(config)) {
+			const configObject = extractConfigObject(n.node.arguments[0]);
+			if (!configObject) {
 				logger.debug(
-					`Vite config uses a non-object expression (e.g., function). Skipping Cloudflare plugin check.`
+					`Vite config uses an unsupported expression type. Skipping Cloudflare plugin check.`
 				);
 				return this.traverse(n);
 			}
 
-			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
+			const pluginsProp = configObject.properties.find((prop) =>
+				isPluginsProp(prop)
+			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
 				logger.debug(
 					`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
@@ -139,18 +192,29 @@ export function transformViteConfig(
 			// defineConfig({
 			//   plugins: [cloudflare({ viteEnvironment: { name: 'ssr' } })],
 			// });
+			// ```
+			// Also handles function-based configs like:
+			// ```
+			// defineConfig(({ isSsrBuild }) => ({
+			//   plugins: [...]
+			// }));
+			// ```
 			const callee = n.node.callee as types.namedTypes.Identifier;
 			if (callee.name !== "defineConfig") {
 				return this.traverse(n);
 			}
 
-			const config = n.node.arguments[0];
-			if (!t.ObjectExpression.check(config)) {
+			const configObject = extractConfigObject(n.node.arguments[0]);
+			if (!configObject) {
+				const argType = n.node.arguments[0]?.type ?? "unknown";
 				throw new UserError(dedent`
-					Cannot modify Vite config: expected an object literal but found ${config.type}.
+					Cannot modify Vite config: could not extract a config object (found ${argType}).
 
-					The Cloudflare plugin can only be automatically added to Vite configs that use a simple object.
-					If your config uses a function or other dynamic configuration, please manually add the plugin:
+					The Cloudflare plugin can only be automatically added to Vite configs that use:
+					  - A simple object: defineConfig({ plugins: [...] })
+					  - An arrow function returning an object: defineConfig(() => ({ plugins: [...] }))
+
+					If your config uses a more complex pattern, please manually add the plugin:
 
 					  import { cloudflare } from "@cloudflare/vite-plugin";
 
@@ -160,7 +224,9 @@ export function transformViteConfig(
 				`);
 			}
 
-			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
+			const pluginsProp = configObject.properties.find((prop) =>
+				isPluginsProp(prop)
+			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
 				throw new UserError(dedent`
 					Cannot modify Vite config: could not find a valid plugins array.

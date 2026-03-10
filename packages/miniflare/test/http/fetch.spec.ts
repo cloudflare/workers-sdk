@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { Blob } from "node:buffer";
 import http from "node:http";
 import { AddressInfo } from "node:net";
@@ -10,18 +9,18 @@ import {
 	FormData,
 	MessageEvent,
 } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
 import { useServer } from "../test-shared";
 
 const noop = () => {};
 
-test("fetch: performs regular http request", async () => {
+test("fetch: performs regular http request", async ({ expect }) => {
 	const upstream = (await useServer((req, res) => res.end("upstream"))).http;
 	const res = await fetch(upstream);
 	expect(await res.text()).toBe("upstream");
 });
-test("fetch: performs http request with form data", async () => {
+test("fetch: performs http request with form data", async ({ expect }) => {
 	const echoUpstream = (
 		await useServer((req, res) => {
 			let body = "";
@@ -43,7 +42,7 @@ test("fetch: performs http request with form data", async () => {
 		/Content-Disposition: form-data; name="c"; filename="file.txt"\r\nContent-Type: application\/octet-stream\r\n\r\nabc/
 	);
 });
-test("fetch: performs web socket upgrade", async () => {
+test("fetch: performs web socket upgrade", async ({ expect }) => {
 	const server = await useServer(noop, (ws, req) => {
 		ws.send("hello client");
 		ws.send(req.headers["user-agent"] ?? "");
@@ -53,7 +52,6 @@ test("fetch: performs web socket upgrade", async () => {
 		headers: { upgrade: "websocket", "user-agent": "Test" },
 	});
 	const webSocket = res.webSocket;
-	expect(webSocket).toBeDefined();
 	assert(webSocket);
 
 	const eventPromise = new DeferredPromise<void>();
@@ -68,7 +66,9 @@ test("fetch: performs web socket upgrade", async () => {
 	await eventPromise;
 	expect(messages).toEqual(["hello client", "Test", "hello server"]);
 });
-test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", async () => {
+test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", async ({
+	expect,
+}) => {
 	const server = await useServer(noop, (ws, req) => {
 		ws.send(req.headers["sec-websocket-protocol"] ?? "");
 	});
@@ -79,7 +79,6 @@ test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", as
 		},
 	});
 	const webSocket = res.webSocket;
-	expect(webSocket).toBeDefined();
 	assert(webSocket);
 	const eventPromise = new DeferredPromise<MessageEvent>();
 	webSocket.addEventListener("message", eventPromise.resolve);
@@ -88,7 +87,9 @@ test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", as
 	const event = await eventPromise;
 	expect(event.data).toBe("protocol1,proto2,p3");
 });
-test("fetch: includes headers from web socket upgrade response", async () => {
+test("fetch: includes headers from web socket upgrade response", async ({
+	expect,
+}) => {
 	const server = http.createServer();
 	const wss = new WebSocketServer({ server });
 	wss.on("connection", (ws) => {
@@ -115,7 +116,7 @@ test("fetch: includes headers from web socket upgrade response", async () => {
 test(
 	"fetch: dispatches close events on client and server close",
 	{ retry: 3 },
-	async () => {
+	async ({ expect }) => {
 		let clientCloses = 0;
 		let serverCloses = 0;
 		const clientClosePromise = new DeferredPromise<void>();
@@ -192,7 +193,7 @@ test(
 		await serverClosePromise;
 	}
 );
-test("fetch: throws on ws(s) protocols", async () => {
+test("fetch: throws on ws(s) protocols", async ({ expect }) => {
 	await expect(
 		fetch("ws://localhost/", {
 			headers: { upgrade: "websocket" },
@@ -212,7 +213,7 @@ test("fetch: throws on ws(s) protocols", async () => {
 		)
 	);
 });
-test("fetch: requires GET for web socket upgrade", async () => {
+test("fetch: requires GET for web socket upgrade", async ({ expect }) => {
 	const server = await useServer(
 		(req, res) => {
 			expect(req.method).toBe("POST");
@@ -229,7 +230,9 @@ test("fetch: requires GET for web socket upgrade", async () => {
 		})
 	).rejects.toThrow(new TypeError("fetch failed"));
 });
-test("fetch: returns regular response if no WebSocket response returned", async () => {
+test("fetch: returns regular response if no WebSocket response returned", async ({
+	expect,
+}) => {
 	const server = await useServer((req, res) => {
 		res.writeHead(404, "Not Found", { "Content-Type": "text/html" });
 		res.end("<p>Not Found</p>");

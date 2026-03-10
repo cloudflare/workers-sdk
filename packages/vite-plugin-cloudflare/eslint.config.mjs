@@ -1,10 +1,11 @@
 import sharedConfig from "@cloudflare/eslint-config-shared";
+import noVitestImportExpect from "@cloudflare/eslint-config-shared/rules/no-vitest-import-expect";
+import tsParser from "@typescript-eslint/parser";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
 	globalIgnores([
 		"**/dist",
-		"**/e2e",
 		"scripts/**",
 		"tsdown.config.ts",
 		"vitest.config.ts",
@@ -18,6 +19,7 @@ export default defineConfig([
 	]),
 	{
 		extends: [sharedConfig],
+		ignores: ["e2e/**"],
 		rules: {
 			"no-restricted-syntax": [
 				"error",
@@ -31,6 +33,32 @@ export default defineConfig([
 						'Named imports from "wrangler" are not allowed. Use namespace import instead: import * as wrangler from "wrangler"',
 				},
 			],
+		},
+	},
+	// Enable no-vitest-import-expect for e2e tests (only this rule, not the full shared config)
+	{
+		files: ["e2e/**/*.test.ts"],
+		languageOptions: {
+			parser: tsParser,
+		},
+		plugins: {
+			"workers-sdk": {
+				rules: { "no-vitest-import-expect": noVitestImportExpect },
+			},
+		},
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
+	// Enable no-vitest-import-expect for playground and src test files
+	{
+		files: [
+			"playground/**/__tests__/**/*.ts",
+			"src/**/*.spec.ts",
+			"src/**/__tests__/**/*.spec.ts",
+		],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
 		},
 	},
 ]);

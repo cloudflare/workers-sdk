@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
@@ -11,7 +11,7 @@ import {
 describe("config-changes", () => {
 	test.runIf(!isBuild)(
 		"successfully updates when a var is updated in the Worker config",
-		async () => {
+		async ({ expect }) => {
 			await vi.waitFor(
 				async () =>
 					expect(await getTextResponse()).toContain(
@@ -41,7 +41,7 @@ describe("config-changes", () => {
 
 	test.runIf(!isBuild)(
 		"reports errors in updates to the Worker config",
-		async () => {
+		async ({ expect }) => {
 			await vi.waitFor(
 				async () =>
 					expect(await getTextResponse()).toContain(

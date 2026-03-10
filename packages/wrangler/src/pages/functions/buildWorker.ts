@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
-import { access, cp, lstat, rm } from "node:fs/promises";
+import { access, cp, lstat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import { FatalError, removeDir } from "@cloudflare/workers-utils";
 import { build as esBuild } from "esbuild";
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import { findAdditionalModules } from "../../deployment-bundle/find-additional-modules";
@@ -434,10 +434,7 @@ function assetsPlugin(buildOutputDirectory: string | undefined): Plugin {
 							"pages-plugins",
 							identifier as string
 						);
-						await rm(staticAssetsOutputDirectory, {
-							force: true,
-							recursive: true,
-						});
+						await removeDir(staticAssetsOutputDirectory);
 						await cp(args.path, staticAssetsOutputDirectory, {
 							force: true,
 							recursive: true,

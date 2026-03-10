@@ -6,7 +6,9 @@ import turbo from "eslint-plugin-turbo";
 import unusedImports from "eslint-plugin-unused-imports";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
+import noDirectRecursiveRm from "./rules/no-direct-recursive-rm.mjs";
 import noUnsafeCommandExecution from "./rules/no-unsafe-command-execution.mjs";
+import noVitestImportExpect from "./rules/no-vitest-import-expect.mjs";
 
 export default defineConfig(
 	globalIgnores([
@@ -33,7 +35,9 @@ export default defineConfig(
 			"no-only-tests": noOnlyTests,
 			"workers-sdk": {
 				rules: {
+					"no-direct-recursive-rm": noDirectRecursiveRm,
 					"no-unsafe-command-execution": noUnsafeCommandExecution,
+					"no-vitest-import-expect": noVitestImportExpect,
 				},
 			},
 		},
@@ -85,7 +89,31 @@ export default defineConfig(
 					argsIgnorePattern: "^_",
 				},
 			],
+			"workers-sdk/no-direct-recursive-rm": "error",
 			"workers-sdk/no-unsafe-command-execution": "error",
+
+			// Enforce default import for ci-info so that test mocks work correctly.
+			// Named imports (e.g. `import { isCI } from "ci-info"`) bind to the mock
+			// factory return value and cannot be reassigned via `vi.mocked()`.
+			"no-restricted-imports": [
+				"error",
+				{
+					paths: [
+						{
+							name: "ci-info",
+							importNames: [
+								"isCI",
+								"CLOUDFLARE_PAGES",
+								"CLOUDFLARE_WORKERS",
+								"isPR",
+								"name",
+							],
+							message:
+								'Use default import (`import ci from "ci-info"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks.',
+						},
+					],
+				},
+			],
 		},
 	},
 	{

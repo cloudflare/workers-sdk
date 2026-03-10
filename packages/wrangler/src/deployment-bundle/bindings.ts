@@ -7,6 +7,7 @@ import {
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "../api/startDevWorker/utils";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
@@ -23,11 +24,11 @@ import {
 } from "../r2/helpers/bucket";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	CfD1Database,
 	CfKvNamespace,
 	CfR2Bucket,
-	CfWorkerInit,
 	ComplianceConfig,
 	Config,
 	RawConfig,
@@ -39,54 +40,14 @@ export function getBindings(
 	options?: {
 		pages?: boolean;
 	}
-): CfWorkerInit["bindings"] {
-	return {
-		kv_namespaces: config?.kv_namespaces,
-		send_email: options?.pages ? undefined : config?.send_email,
-		vars: config?.vars,
-		wasm_modules: options?.pages ? undefined : config?.wasm_modules,
-		browser: config?.browser,
-		ai: config?.ai,
-		images: config?.images,
-		version_metadata: config?.version_metadata,
-		text_blobs: options?.pages ? undefined : config?.text_blobs,
-		data_blobs: options?.pages ? undefined : config?.data_blobs,
-		durable_objects: config?.durable_objects,
-		workflows: config?.workflows,
-		queues: config?.queues.producers?.map((producer) => {
-			return { binding: producer.binding, queue_name: producer.queue };
-		}),
-		r2_buckets: config?.r2_buckets,
-		d1_databases: config?.d1_databases,
-		vectorize: config?.vectorize,
-		hyperdrive: config?.hyperdrive,
-		secrets_store_secrets: config?.secrets_store_secrets,
-		services: config?.services,
-		analytics_engine_datasets: config?.analytics_engine_datasets,
-		dispatch_namespaces: options?.pages
-			? undefined
-			: config?.dispatch_namespaces,
-		mtls_certificates: config?.mtls_certificates,
-		pipelines: options?.pages ? undefined : config?.pipelines,
-		logfwdr: options?.pages ? undefined : config?.logfwdr,
-		assets: options?.pages
-			? undefined
-			: config?.assets?.binding
-				? { binding: config?.assets?.binding }
-				: undefined,
-		unsafe: options?.pages
-			? undefined
-			: {
-					bindings: config?.unsafe.bindings,
-					metadata: config?.unsafe.metadata,
-					capnp: config?.unsafe.capnp,
-				},
-		unsafe_hello_world: options?.pages ? undefined : config?.unsafe_hello_world,
-		ratelimits: config?.ratelimits,
-		worker_loaders: config?.worker_loaders,
-		vpc_services: config?.vpc_services,
-		media: config?.media,
-	};
+): NonNullable<StartDevWorkerInput["bindings"]> {
+	if (!config) {
+		return {};
+	}
+	return convertConfigToBindings(config, {
+		usePreviewIds: false,
+		pages: options?.pages,
+	});
 }
 
 export type Settings = {
@@ -95,10 +56,11 @@ export type Settings = {
 
 abstract class ProvisionResourceHandler<
 	T extends WorkerMetadataBinding["type"],
-	B extends CfD1Database | CfR2Bucket | CfKvNamespace,
+	B extends ProvisionableBinding,
 > {
 	constructor(
 		public type: T,
+		public bindingName: string,
 		public binding: B,
 		public idField: keyof B,
 		public complianceConfig: ComplianceConfig,
@@ -168,7 +130,10 @@ abstract class ProvisionResourceHandler<
 	}
 }
 
-class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
+class R2Handler extends ProvisionResourceHandler<
+	"r2_bucket",
+	Extract<Binding, { type: "r2_bucket" }>
+> {
 	get name(): string | undefined {
 		return this.binding.bucket_name as string;
 	}
@@ -184,11 +149,19 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		return name;
 	}
 	constructor(
-		binding: CfR2Bucket,
+		bindingName: string,
+		binding: Extract<Binding, { type: "r2_bucket" }>,
 		complianceConfig: ComplianceConfig,
 		accountId: string
 	) {
-		super("r2_bucket", binding, "bucket_name", complianceConfig, accountId);
+		super(
+			"r2_bucket",
+			bindingName,
+			binding,
+			"bucket_name",
+			complianceConfig,
+			accountId
+		);
 	}
 
 	/**
@@ -209,7 +182,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		return !!settings?.bindings.find(
 			(existing) =>
 				existing.type === this.type &&
-				existing.name === this.binding.binding &&
+				existing.name === this.bindingName &&
 				existing.jurisdiction === this.binding.jurisdiction &&
 				(this.binding.bucket_name
 					? this.binding.bucket_name === existing.bucket_name
@@ -246,7 +219,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 
 class KVHandler extends ProvisionResourceHandler<
 	"kv_namespace",
-	CfKvNamespace
+	Extract<Binding, { type: "kv_namespace" }>
 > {
 	get name(): string | undefined {
 		return undefined;
@@ -255,16 +228,24 @@ class KVHandler extends ProvisionResourceHandler<
 		return await createKVNamespace(this.complianceConfig, this.accountId, name);
 	}
 	constructor(
-		binding: CfKvNamespace,
+		bindingName: string,
+		binding: Extract<Binding, { type: "kv_namespace" }>,
 		complianceConfig: ComplianceConfig,
 		accountId: string
 	) {
-		super("kv_namespace", binding, "id", complianceConfig, accountId);
+		super(
+			"kv_namespace",
+			bindingName,
+			binding,
+			"id",
+			complianceConfig,
+			accountId
+		);
 	}
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>
-				existing.type === this.type && existing.name === this.binding.binding
+				existing.type === this.type && existing.name === this.bindingName
 		);
 	}
 	isFullySpecified(): boolean {
@@ -272,7 +253,10 @@ class KVHandler extends ProvisionResourceHandler<
 	}
 }
 
-class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
+class D1Handler extends ProvisionResourceHandler<
+	"d1",
+	Extract<Binding, { type: "d1" }>
+> {
 	get name(): string | undefined {
 		return this.binding.database_name as string;
 	}
@@ -285,16 +269,24 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 		return db.uuid;
 	}
 	constructor(
-		binding: CfD1Database,
+		bindingName: string,
+		binding: Extract<Binding, { type: "d1" }>,
 		complianceConfig: ComplianceConfig,
 		accountId: string
 	) {
-		super("d1", binding, "database_id", complianceConfig, accountId);
+		super(
+			"d1",
+			bindingName,
+			binding,
+			"database_id",
+			complianceConfig,
+			accountId
+		);
 	}
 	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
 			(existing) =>
-				existing.type === this.type && existing.name === this.binding.binding
+				existing.type === this.type && existing.name === this.bindingName
 		) as Extract<WorkerMetadataBinding, { type: "d1" }> | undefined;
 		// A D1 binding with the same binding name exists is already present on the worker...
 		if (maybeInherited) {
@@ -347,72 +339,136 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 	}
 }
 
+type ProvisionableBinding =
+	| Extract<Binding, { type: "kv_namespace" }>
+	| Extract<Binding, { type: "d1" }>
+	| Extract<Binding, { type: "r2_bucket" }>;
+
 const HANDLERS = {
-	kv_namespaces: {
+	kv_namespace: {
 		Handler: KVHandler,
 		sort: 0,
 		name: "KV Namespace",
 		keyDescription: "title or id",
+		configField: "kv_namespaces" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const preExistingKV = await listKVNamespaces(
+				complianceConfig,
+				accountId,
+				true
+			);
+			return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "kv_namespace" }>
+		): CfKvNamespace => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
-
-	d1_databases: {
+	d1: {
 		Handler: D1Handler,
 		sort: 1,
 		name: "D1 Database",
 		keyDescription: "name or id",
+		configField: "d1_databases" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const preExisting = await listDatabases(
+				complianceConfig,
+				accountId,
+				true,
+				1000
+			);
+			return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "d1" }>
+		): CfD1Database => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
-	r2_buckets: {
+	r2_bucket: {
 		Handler: R2Handler,
 		sort: 2,
 		name: "R2 Bucket",
 		keyDescription: "name",
-	},
-};
-
-const LOADERS = {
-	kv_namespaces: async (
-		complianceConfig: ComplianceConfig,
-		accountId: string
-	) => {
-		const preExistingKV = await listKVNamespaces(
-			complianceConfig,
-			accountId,
-			true
-		);
-		return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
-	},
-	d1_databases: async (
-		complianceConfig: ComplianceConfig,
-		accountId: string
-	) => {
-		const preExisting = await listDatabases(
-			complianceConfig,
-			accountId,
-			true,
-			1000
-		);
-		return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
-	},
-	r2_buckets: async (complianceConfig: ComplianceConfig, accountId: string) => {
-		const preExisting = await listR2Buckets(complianceConfig, accountId);
-		return preExisting.map((bucket) => ({
-			title: bucket.name,
-			value: bucket.name,
-		}));
+		configField: "r2_buckets" as const,
+		load: async (complianceConfig: ComplianceConfig, accountId: string) => {
+			const preExisting = await listR2Buckets(complianceConfig, accountId);
+			return preExisting.map((bucket) => ({
+				title: bucket.name,
+				value: bucket.name,
+			}));
+		},
+		toConfig: (
+			bindingName: string,
+			binding: Extract<Binding, { type: "r2_bucket" }>
+		): CfR2Bucket => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 };
 
 type PendingResource = {
 	binding: string;
-	resourceType: "kv_namespaces" | "d1_databases" | "r2_buckets";
+	resourceType: "kv_namespace" | "d1" | "r2_bucket";
 	handler: KVHandler | D1Handler | R2Handler;
 };
+
+function isProvisionableBinding(
+	binding: Binding
+): binding is ProvisionableBinding {
+	return binding.type in HANDLERS;
+}
+
+function createHandler(
+	bindingName: string,
+	binding: ProvisionableBinding,
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): KVHandler | D1Handler | R2Handler {
+	switch (binding.type) {
+		case "kv_namespace":
+			return new KVHandler(bindingName, binding, complianceConfig, accountId);
+		case "d1":
+			return new D1Handler(bindingName, binding, complianceConfig, accountId);
+		case "r2_bucket":
+			return new R2Handler(bindingName, binding, complianceConfig, accountId);
+	}
+}
+
+function toConfigBinding(
+	bindingName: string,
+	binding: ProvisionableBinding
+): CfKvNamespace | CfR2Bucket | CfD1Database {
+	switch (binding.type) {
+		case "kv_namespace":
+			return HANDLERS.kv_namespace.toConfig(bindingName, binding);
+		case "d1":
+			return HANDLERS.d1.toConfig(bindingName, binding);
+		case "r2_bucket":
+			return HANDLERS.r2_bucket.toConfig(bindingName, binding);
+	}
+}
 
 async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: CfWorkerInit["bindings"],
+	bindings: StartDevWorkerInput["bindings"],
 	requireRemote: boolean
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
@@ -425,26 +481,23 @@ async function collectPendingResources(
 
 	const pendingResources: PendingResource[] = [];
 
-	for (const resourceType of Object.keys(
-		HANDLERS
-	) as (keyof typeof HANDLERS)[]) {
-		for (const resource of bindings[resourceType] ?? []) {
-			if (requireRemote && !resource.remote) {
-				continue;
-			}
-			const h = new HANDLERS[resourceType].Handler(
-				resource,
-				complianceConfig,
-				accountId
-			);
+	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
+		if (!isProvisionableBinding(binding)) {
+			continue;
+		}
 
-			if (await h.shouldProvision(settings)) {
-				pendingResources.push({
-					binding: resource.binding,
-					resourceType,
-					handler: h,
-				});
-			}
+		if (requireRemote && !("remote" in binding && binding.remote)) {
+			continue;
+		}
+
+		const h = createHandler(bindingName, binding, complianceConfig, accountId);
+
+		if (await h.shouldProvision(settings)) {
+			pendingResources.push({
+				binding: bindingName,
+				resourceType: binding.type,
+				handler: h,
+			});
 		}
 	}
 
@@ -454,7 +507,7 @@ async function collectPendingResources(
 }
 
 export async function provisionBindings(
-	bindings: CfWorkerInit["bindings"],
+	bindings: StartDevWorkerInput["bindings"],
 	accountId: string,
 	scriptName: string,
 	autoCreate: boolean,
@@ -482,14 +535,11 @@ export async function provisionBindings(
 			);
 		}
 		logger.log();
-		const printable: Record<string, { binding: string }[]> = {};
-		for (const resource of pendingResources) {
-			printable[resource.resourceType] ??= [];
-			printable[resource.resourceType].push({ binding: resource.binding });
-		}
 
 		printBindings(
-			printable,
+			Object.fromEntries(
+				pendingResources.map((r) => [r.binding, { type: r.resourceType }])
+			),
 			config.tail_consumers,
 			config.streaming_tail_consumers,
 			config.containers,
@@ -500,9 +550,9 @@ export async function provisionBindings(
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
 
 		for (const resource of pendingResources) {
-			existingResources[resource.resourceType] ??= await LOADERS[
+			existingResources[resource.resourceType] ??= await HANDLERS[
 				resource.resourceType
-			](config, accountId);
+			].load(config, accountId);
 
 			await runProvisioningFlow(
 				resource,
@@ -514,13 +564,6 @@ export async function provisionBindings(
 		}
 
 		const patch: RawConfig = {};
-
-		const allChanges: Map<string, CfKvNamespace | CfR2Bucket | CfD1Database> =
-			new Map();
-
-		for (const resource of pendingResources) {
-			allChanges.set(resource.binding, resource.handler.binding);
-		}
 
 		const existingBindingNames = new Set<string>();
 
@@ -539,40 +582,38 @@ export async function provisionBindings(
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
-				for (const binding of unredirectedConfig[resourceType] ?? []) {
+				const configField = HANDLERS[resourceType].configField;
+				for (const binding of unredirectedConfig[configField] ?? []) {
 					existingBindingNames.add(binding.binding);
 				}
 			}
 		}
-		for (const resourceType of Object.keys(
-			HANDLERS
-		) as (keyof typeof HANDLERS)[]) {
-			for (const binding of bindings[resourceType] ?? []) {
-				// See above for why we skip writing back some bindings to the config file
-				if (
-					isUsingRedirectedConfig &&
-					!existingBindingNames.has(binding.binding)
-				) {
-					continue;
-				}
-				patch[resourceType] ??= [];
 
-				const bindingToWrite = allChanges.has(binding.binding)
-					? // Gated by Map.has()
-						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-						allChanges.get(binding.binding)!
-					: binding;
-
-				patch[resourceType].push(
-					Object.fromEntries(
-						Object.entries(bindingToWrite).filter(
-							// Make sure all the values are JSON serialisable.
-							// Otherwise we end up with "undefined" in the config
-							([_, value]) => typeof value === "string"
-						)
-					) as NonNullable<(typeof patch)[typeof resourceType]>[number]
-				);
+		for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
+			if (!isProvisionableBinding(binding)) {
+				continue;
 			}
+
+			// See above for why we skip writing back some bindings to the config file
+			if (isUsingRedirectedConfig && !existingBindingNames.has(bindingName)) {
+				continue;
+			}
+
+			const resourceType = HANDLERS[binding.type].configField;
+
+			patch[resourceType] ??= [];
+
+			const bindingToWrite = toConfigBinding(bindingName, binding);
+
+			patch[resourceType].push(
+				Object.fromEntries(
+					Object.entries(bindingToWrite).filter(
+						// Make sure all the values are JSON serialisable.
+						// Otherwise we end up with "undefined" in the config
+						([_, value]) => typeof value === "string"
+					)
+				) as NonNullable<(typeof patch)[typeof resourceType]>[number]
+			);
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.

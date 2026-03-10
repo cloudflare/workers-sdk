@@ -3,7 +3,7 @@ import {
 	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, it, vi } from "vitest";
 import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
@@ -15,7 +15,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-it("produces message to pipeline", async () => {
+it("produces message to pipeline", async ({ expect }) => {
 	const mockPipeline = {
 		send: vi.fn().mockResolvedValue(undefined),
 	};

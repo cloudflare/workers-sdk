@@ -1,4 +1,6 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
+import { LOCAL_EXPLORER_BASE_PATH } from "miniflare";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
@@ -11,7 +13,6 @@ export default function registerDevHotKeys(
 	devEnvs: DevEnv[],
 	args: {
 		forceLocal?: boolean;
-		experimentalTailLogs: boolean;
 		remote: boolean;
 	},
 	render = true
@@ -31,9 +32,7 @@ export default function registerDevHotKeys(
 				keys: ["d"],
 				label: "open devtools",
 				// Don't display this hotkey if we're in a VSCode debug session
-				disabled:
-					!!process.env.VSCODE_INSPECTOR_OPTIONS ||
-					(args.remote && args.experimentalTailLogs),
+				disabled: !!process.env.VSCODE_INSPECTOR_OPTIONS || args.remote,
 				handler: async () => {
 					const { inspectorUrl } = await primaryDevEnv.proxy.ready.promise;
 
@@ -46,6 +45,16 @@ export default function registerDevHotKeys(
 							primaryDevEnv.config.latestConfig?.name
 						);
 					}
+				},
+			},
+			{
+				keys: ["e"],
+				label: "open local explorer",
+				disabled: !getLocalExplorerEnabledFromEnv(),
+				handler: async () => {
+					const { url } = await primaryDevEnv.proxy.ready.promise;
+					const explorerUrl = new URL(LOCAL_EXPLORER_BASE_PATH, url);
+					await openInBrowser(explorerUrl.href);
 				},
 			},
 			{

@@ -7,6 +7,7 @@ import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
+import { version as packageVersion } from "../../../package.json";
 import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
@@ -80,6 +81,7 @@ export class ProxyController extends Controller {
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,
 			stripDisablePrettyError: false,
+			unsafeLocalExplorer: false,
 			workers: [
 				{
 					name: "ProxyWorker",
@@ -161,6 +163,7 @@ export class ProxyController extends Controller {
 				},
 				bindings: {
 					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+					WRANGLER_VERSION: packageVersion,
 				},
 
 				unsafeDirectSockets: [
@@ -400,21 +403,19 @@ export class ProxyController extends Controller {
 	}
 
 	get inspectorEnabled() {
+		// In remote mode, there's no inspector URL available — logs use tail_url instead
+		if (this.latestConfig?.dev.remote) {
+			return false;
+		}
+
 		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
 		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
 		// inspector endpoint.
 		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
 
-		const shouldEnableInspector =
-			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal;
-
-		if (this.latestConfig?.dev.remote) {
-			// In `wrangler dev --remote`, only enable the inspector if the `--x-tail-logs` flag is disabled
-			return (
-				shouldEnableInspector && !this.latestConfig?.experimental?.tailLogs
-			);
-		}
-		return shouldEnableInspector;
+		return (
+			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal
+		);
 	}
 
 	// ******************

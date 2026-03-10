@@ -1,7 +1,7 @@
 import http from "node:http";
 import net from "node:net";
 import { DeferredPromise, Miniflare, Response } from "miniflare";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
 
@@ -35,7 +35,7 @@ describe("handleWebSocket", () => {
 	});
 
 	// https://github.com/cloudflare/workers-sdk/issues/12047
-	test("survives client disconnect during upgrade", async () => {
+	test("survives client disconnect during upgrade", async ({ expect }) => {
 		// Mock dispatchFetch to simulate a slow response - the bug occurs when
 		// the client disconnects while dispatchFetch is pending
 		const deferred = new DeferredPromise<Response>();

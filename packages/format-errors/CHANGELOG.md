@@ -1,5 +1,13 @@
 # format-errors
 
+## 0.0.7
+
+### Patch Changes
+
+- [#12756](https://github.com/cloudflare/workers-sdk/pull/12756) [`c7d0d18`](https://github.com/cloudflare/workers-sdk/commit/c7d0d189a40bea786e0425f25d9aa15686f40e92) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix error formatting to reliably return fallback responses on failure
+
+  Previously, if something went wrong while formatting a pretty error page, the failure could go unhandled, resulting in no response being returned to the user. Now, errors during formatting are properly caught, ensuring users always receive a 500 JSON fallback response.
+
 ## 0.0.6
 
 ### Patch Changes

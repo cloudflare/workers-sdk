@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -12,7 +12,9 @@ describe("logout", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should exit with a message stating the user is not logged in", async () => {
+	it("should exit with a message stating the user is not logged in", async ({
+		expect,
+	}) => {
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 		expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -22,7 +24,9 @@ describe("logout", () => {
 		`);
 	});
 
-	it("should exit with a message stating the user logged in via API token", async () => {
+	it("should exit with a message stating the user logged in via API token", async ({
+		expect,
+	}) => {
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: "DUMMY_TOKEN" });
 		expect(std.out).toMatchInlineSnapshot(
 			`
@@ -34,7 +38,9 @@ describe("logout", () => {
 		);
 	});
 
-	it("should logout user that has been properly logged in", async () => {
+	it("should logout user that has been properly logged in", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
@@ -68,7 +74,9 @@ describe("logout", () => {
 		expect(counter).toBe(1);
 	});
 
-	it("should not display warnings from wrangler configuration parsing when logging out", async () => {
+	it("should not display warnings from wrangler configuration parsing when logging out", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
@@ -103,7 +111,9 @@ describe("logout", () => {
 		expect(fs.existsSync(config)).toBeFalsy();
 	});
 
-	it("should still log out when wrangler configuration is unparsable", async () => {
+	it("should still log out when wrangler configuration is unparsable", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",
@@ -137,7 +147,9 @@ describe("logout", () => {
 		expect(fs.existsSync(config)).toBeFalsy();
 	});
 
-	it("should still log out when wrangler configuration contains an error", async () => {
+	it("should still log out when wrangler configuration contains an error", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",

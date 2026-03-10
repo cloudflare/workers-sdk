@@ -12,7 +12,15 @@ import type { C3Context, PackageJson } from "types";
 const { npx } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "--no-install"]);
+	// `--add cloudflare` could be used here because it invokes `astro` which is not installed (`--no-install`)
+	// The adapter is added in the `configure` step instead
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		// c3 will later install the dependencies
+		"--no-install",
+		// c3 will later ask users if they want to use git
+		"--no-git",
+	]);
 
 	logRaw(""); // newline
 };
@@ -26,10 +34,7 @@ const configure = async () => {
 		)}`,
 	});
 
-	updateAstroConfig();
-};
-
-const updateAstroConfig = () => {
+	// Update Astro config to enable platformProxy and imageService
 	const filePath = "astro.config.mjs";
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);

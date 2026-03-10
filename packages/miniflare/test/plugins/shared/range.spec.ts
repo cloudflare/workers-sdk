@@ -1,7 +1,7 @@
 import { parseRanges } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test('_parseRanges: case-insensitive unit must be "bytes"', () => {
+test('_parseRanges: case-insensitive unit must be "bytes"', ({ expect }) => {
 	// Check case-insensitive and ignores whitespace
 	expect(parseRanges("bytes=0-1", 2)).toBeDefined();
 	expect(parseRanges("BYTES    =0-1", 2)).toBeDefined();
@@ -11,7 +11,7 @@ test('_parseRanges: case-insensitive unit must be "bytes"', () => {
 	expect(parseRanges("nibbles=0-1", 2)).toBeUndefined();
 });
 
-test("_parseRanges: matches range with start and end", () => {
+test("_parseRanges: matches range with start and end", ({ expect }) => {
 	// Check valid ranges accepted
 	expect(parseRanges("bytes=0-1", 8)).toEqual([{ start: 0, end: 1 }]);
 	expect(parseRanges("bytes=2-7", 8)).toEqual([{ start: 2, end: 7 }]);
@@ -37,7 +37,7 @@ test("_parseRanges: matches range with start and end", () => {
 	]);
 });
 
-test("_parseRanges: matches range with just start", () => {
+test("_parseRanges: matches range with just start", ({ expect }) => {
 	// Check valid ranges accepted
 	expect(parseRanges("bytes=2-", 8)).toEqual([{ start: 2, end: 7 }]);
 	expect(parseRanges("bytes=5-", 6)).toEqual([{ start: 5, end: 5 }]);
@@ -52,7 +52,7 @@ test("_parseRanges: matches range with just start", () => {
 	]);
 });
 
-test("_parseRanges: matches range with just end", () => {
+test("_parseRanges: matches range with just end", ({ expect }) => {
 	// Check valid ranges accepted
 	expect(parseRanges("bytes=-2", 8)).toEqual([{ start: 6, end: 7 }]);
 	expect(parseRanges("bytes=-6", 7)).toEqual([{ start: 1, end: 6 }]);
@@ -69,7 +69,7 @@ test("_parseRanges: matches range with just end", () => {
 	]);
 });
 
-test("_parseRanges: range requires at least start or end", () => {
+test("_parseRanges: range requires at least start or end", ({ expect }) => {
 	// Check range with no start or end rejected
 	expect(parseRanges("bytes=-", 2)).toBeUndefined();
 	// Check range with no dash rejected

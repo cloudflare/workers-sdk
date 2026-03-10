@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { _forceColour, formatZodError } from "miniflare";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { z } from "zod";
 
 function formatZodErrorForTest(
@@ -16,14 +16,14 @@ function formatZodErrorForTest(
 }
 
 describe("formatZodError:", () => {
-	test("formats primitive schema with primitive input", () => {
+	test("formats primitive schema with primitive input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.number(), false);
 		expect(formatted).toMatchInlineSnapshot(`
 		"false
 		^ Expected number, received boolean"
 	`);
 	});
-	test("formats primitive schema with object input", () => {
+	test("formats primitive schema with object input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.string(), {
 			a: 1,
 			b: { c: 1 },
@@ -34,14 +34,14 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats object schema with primitive input", () => {
+	test("formats object schema with primitive input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.object({ a: z.number() }), true);
 		expect(formatted).toMatchInlineSnapshot(`
 		"true
 		^ Expected object, received boolean"
 	`);
 	});
-	test("formats object schema with object input", () => {
+	test("formats object schema with object input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.object({
 				a: z.string(),
@@ -75,7 +75,7 @@ describe("formatZodError:", () => {
 		}"
 	`);
 	});
-	test("formats object schema with additional options", () => {
+	test("formats object schema with additional options", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.object({ a: z.number() }).strict(),
 			{ a: 1, b: 2 }
@@ -86,14 +86,14 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats array schema with primitive input", () => {
+	test("formats array schema with primitive input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.array(z.boolean()), 1);
 		expect(formatted).toMatchInlineSnapshot(`
 		"1
 		^ Expected array, received number"
 	`);
 	});
-	test("formats array schema with array input", () => {
+	test("formats array schema with array input", ({ expect }) => {
 		const formatted = formatZodErrorForTest(z.array(z.number()), [
 			1, // Check skips valid
 			2, // Check doesn't duplicate `...` when skipping valid
@@ -113,7 +113,7 @@ describe("formatZodError:", () => {
 		]"
 	`);
 	});
-	test("formats array schema with additional options", () => {
+	test("formats array schema with additional options", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.array(z.number()).max(3),
 			[1, 2, 3, 4, 5]
@@ -124,7 +124,7 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats deeply nested schema", () => {
+	test("formats deeply nested schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.object({
 				a: z.number(),
@@ -173,7 +173,7 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats large actual values", () => {
+	test("formats large actual values", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.object({
 				a: z.object({
@@ -203,7 +203,7 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats union schema", () => {
+	test("formats union schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.union([z.boolean(), z.literal(1)]),
 			"a"
@@ -225,7 +225,7 @@ describe("formatZodError:", () => {
 			b: z.boolean(),
 		}),
 	]);
-	test("formats discriminated union schema", () => {
+	test("formats discriminated union schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(discriminatedUnionSchema, {
 			type: "a",
 			a: false,
@@ -238,7 +238,9 @@ describe("formatZodError:", () => {
 		}"
 	`);
 	});
-	test("formats discriminated union schema with invalid discriminator", () => {
+	test("formats discriminated union schema with invalid discriminator", ({
+		expect,
+	}) => {
 		const formatted = formatZodErrorForTest(discriminatedUnionSchema, {
 			type: "c",
 		});
@@ -250,7 +252,7 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats intersection schema", () => {
+	test("formats intersection schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.intersection(z.number(), z.literal(2)),
 			false
@@ -272,7 +274,7 @@ describe("formatZodError:", () => {
 			])
 		),
 	});
-	test("formats object union schema", () => {
+	test("formats object union schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(objectUnionSchema, {
 			key: false,
 			objects: [false, { a: 1 }, {}, [], { d: "" }],
@@ -308,7 +310,7 @@ describe("formatZodError:", () => {
 		}"
 	`);
 	});
-	test("formats object union schema in colour", () => {
+	test("formats object union schema in colour", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			objectUnionSchema,
 			{
@@ -385,7 +387,7 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats tuple union schema", () => {
+	test("formats tuple union schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.object({
 				tuples: z.array(
@@ -435,7 +437,7 @@ describe("formatZodError:", () => {
 	`);
 	});
 
-	test("formats custom message schema", () => {
+	test("formats custom message schema", ({ expect }) => {
 		const formatted = formatZodErrorForTest(
 			z.object({
 				a: z.custom<never>(() => false, {

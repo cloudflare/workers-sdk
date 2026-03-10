@@ -1,12 +1,12 @@
 import { fileURLToPath } from "node:url";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import {
 	readWorkerConfigFromFile,
 	resolveWorkerType,
 } from "../workers-configs";
 
 describe("readWorkerConfigFromFile", () => {
-	test("should return a simple raw config", () => {
+	test("should return a simple raw config", ({ expect }) => {
 		const { raw } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
@@ -34,7 +34,9 @@ describe("readWorkerConfigFromFile", () => {
 		expect(raw.tsconfig).toBeUndefined();
 	});
 
-	test("should return a simple config without non-applicable fields", () => {
+	test("should return a simple config without non-applicable fields", ({
+		expect,
+	}) => {
 		const { config } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
@@ -44,7 +46,9 @@ describe("readWorkerConfigFromFile", () => {
 		expect("preserve_file_names" in config).toBeFalsy();
 	});
 
-	test("should not return any non-applicable config when there isn't any", () => {
+	test("should not return any non-applicable config when there isn't any", ({
+		expect,
+	}) => {
 		const { nonApplicable } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
@@ -55,7 +59,7 @@ describe("readWorkerConfigFromFile", () => {
 		});
 	});
 
-	test("should read a simple wrangler config file", () => {
+	test("should read a simple wrangler config file", ({ expect }) => {
 		const { config, nonApplicable } = readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
@@ -84,7 +88,7 @@ describe("readWorkerConfigFromFile", () => {
 		});
 	});
 
-	test("should collect non applicable configs", () => {
+	test("should collect non applicable configs", ({ expect }) => {
 		const { config, raw, nonApplicable } = readWorkerConfigFromFile(
 			fileURLToPath(
 				new URL(
@@ -159,7 +163,9 @@ describe("readWorkerConfigFromFile", () => {
 });
 
 describe("resolveWorkerType", () => {
-	test("should throw if the provided main config doesn't point to an existing file", () => {
+	test("should throw if the provided main config doesn't point to an existing file", ({
+		expect,
+	}) => {
 		const configPath = fileURLToPath(
 			new URL("fixtures/non-existing-main-wrangler.jsonc", import.meta.url)
 		);

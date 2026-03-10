@@ -2,11 +2,10 @@ import assert from "node:assert";
 import path, { dirname } from "node:path";
 import {
 	InstanceType,
-	isDockerfile,
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import { isDockerfile, UserError } from "@cloudflare/workers-utils";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getAccountId } from "../user";
 import type {

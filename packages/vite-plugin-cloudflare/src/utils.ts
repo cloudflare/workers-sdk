@@ -9,6 +9,7 @@ import {
 import semverGte from "semver/functions/gte";
 import { version as viteVersion } from "vite";
 import * as vite from "vite";
+import { PROXY_SHARED_SECRET } from "./constants";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
 
@@ -115,6 +116,10 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		// TODO: reconsider this when adopting `miniflare.dispatchFetch` as it may be possible to provide the Vite server host in the `host` header
 		request.headers.set("X-Forwarded-Host", host);
 	}
+
+	// Add the proxy shared secret to the request headers
+	// so the proxy worker can trust it and add host headers back
+	request.headers.set(CoreHeaders.PROXY_SHARED_SECRET, PROXY_SHARED_SECRET);
 
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");

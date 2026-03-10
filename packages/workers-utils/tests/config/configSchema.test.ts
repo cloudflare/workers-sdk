@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { describe, expect, test } from "vitest";
 
 describe("src/config/environment.ts", () => {

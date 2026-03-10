@@ -3,7 +3,7 @@ import {
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
 } from "helpers/compatDate";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
 
@@ -24,7 +24,7 @@ describe("Compatibility Date Helpers", () => {
 	});
 
 	describe("getWorkerdCompatibilityDate()", () => {
-		test("normal flow", async () => {
+		test("normal flow", async ({ expect }) => {
 			vi.mocked(getLocalWorkerdCompatibilityDate).mockReturnValue({
 				date: "2025-01-10",
 				source: "workerd",
@@ -40,7 +40,7 @@ describe("Compatibility Date Helpers", () => {
 			);
 		});
 
-		test("fallback result", async () => {
+		test("fallback result", async ({ expect }) => {
 			vi.mocked(getLocalWorkerdCompatibilityDate).mockReturnValue({
 				date: "2025-09-27",
 				source: "fallback",
@@ -60,14 +60,14 @@ describe("Compatibility Date Helpers", () => {
 	describe("getLatestTypesEntrypoint", () => {
 		const ctx = createTestContext();
 
-		test("happy path", async () => {
+		test("happy path", async ({ expect }) => {
 			mockWorkersTypesDirectory();
 
 			const entrypoint = getLatestTypesEntrypoint(ctx);
 			expect(entrypoint).toBe("2023-07-01");
 		});
 
-		test("read error", async () => {
+		test("read error", async ({ expect }) => {
 			mockWorkersTypesDirectory(() => {
 				throw new Error("ENOENT: no such file or directory");
 			});
@@ -76,14 +76,14 @@ describe("Compatibility Date Helpers", () => {
 			expect(entrypoint).toBe(null);
 		});
 
-		test("empty directory", async () => {
+		test("empty directory", async ({ expect }) => {
 			mockWorkersTypesDirectory(() => []);
 
 			const entrypoint = getLatestTypesEntrypoint(ctx);
 			expect(entrypoint).toBe(null);
 		});
 
-		test("no compat dates found", async () => {
+		test("no compat dates found", async ({ expect }) => {
 			mockWorkersTypesDirectory(() => ["foo", "bar"]);
 
 			const entrypoint = getLatestTypesEntrypoint(ctx);

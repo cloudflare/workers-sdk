@@ -37,11 +37,11 @@
 /packages/workflows-shared/ @cloudflare/workflows @cloudflare/wrangler
 
 # unenv-preset ownership
-/packages/unenv-preset/ @cloudflare/workers-frameworks @cloudflare/wrangler
+/packages/unenv-preset/ @cloudflare/wrangler
 
 # vite-plugin-cloudflare ownership
-/packages/vite-plugin-cloudflare/ @cloudflare/workers-frameworks @cloudflare/wrangler
-/packages/workers-tsconfig/ @cloudflare/workers-frameworks @cloudflare/wrangler
+/packages/vite-plugin-cloudflare/ @cloudflare/wrangler
+/packages/workers-tsconfig/ @cloudflare/wrangler
 
 # Owners intentionally left blank on these shared directories / files
 # to avoid noisy review requests
@@ -49,9 +49,9 @@
 /fixtures/
 pnpm-lock.yaml
 
-# Only wrangler-admins are needed to approve releases
-# Product teams can request hold on release by reaching out to wrangler-admins
-**/CHANGELOG.md @cloudflare/wrangler-admins
+# Only a member of the wrangler team is needed to approve releases
+# Product teams can request hold on release by reaching out to wrangler team
+**/CHANGELOG.md @cloudflare/wrangler
 **/package.json @cloudflare/wrangler
 
 # Require admin review on changes to dependencies & dependency bundling

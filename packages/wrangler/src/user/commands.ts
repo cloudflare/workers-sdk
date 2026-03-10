@@ -134,6 +134,7 @@ export const whoamiCommand = createCommand({
 		category: "Account",
 	},
 	behaviour: {
+		printBanner: (args) => !args.json,
 		printConfigWarnings: false,
 	},
 	args: {
@@ -142,9 +143,15 @@ export const whoamiCommand = createCommand({
 			describe:
 				"Show membership information for the given account (id or name).",
 		},
+		json: {
+			type: "boolean",
+			describe:
+				"Return user information as JSON. Exits with a non-zero status if not authenticated.",
+			default: false,
+		},
 	},
 	async handler(args, { config }) {
-		await whoami(config, args.account);
+		await whoami(config, args.account, undefined, args.json);
 		metrics.sendMetricsEvent("view accounts", {
 			sendMetrics: config.send_metrics,
 		});

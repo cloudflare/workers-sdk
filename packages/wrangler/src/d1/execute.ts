@@ -21,7 +21,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import splitSqlQuery from "./splitter";
+import { splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -33,7 +33,7 @@ import type { D1Result } from "@cloudflare/workers-types/experimental";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
-	results: Record<string, string | number | boolean>[];
+	results: Record<string, string | number | boolean | null>[];
 	success: boolean;
 	meta?: {
 		duration?: number;
@@ -327,9 +327,6 @@ async function executeLocally({
 				Object.entries(row).map(([key, value]) => {
 					if (Array.isArray(value)) {
 						value = `[${value.join(", ")}]`;
-					}
-					if (value === null) {
-						value = "null";
 					}
 					return [key, value];
 				})

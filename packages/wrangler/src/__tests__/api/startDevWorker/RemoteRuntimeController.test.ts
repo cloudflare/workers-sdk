@@ -1,9 +1,8 @@
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	unwrapHook,
-} from "../../../api/startDevWorker/utils";
+import { unwrapHook } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
@@ -22,7 +21,6 @@ import type {
 	PreviewTokenExpiredEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
-import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 // Mock the API modules
 vi.mock("../../../dev/create-worker-preview", () => ({
@@ -43,7 +41,6 @@ vi.mock("../../../user/access", () => ({
 }));
 
 vi.mock("../../../api/startDevWorker/utils", () => ({
-	convertBindingsToCfWorkerInitBindings: vi.fn(),
 	unwrapHook: vi.fn(),
 }));
 
@@ -130,10 +127,9 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		vi.mocked(createPreviewSession).mockResolvedValue({
-			id: "test-session-id",
 			value: "test-session-value",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
+			name: "test",
 		});
 
 		vi.mocked(createRemoteWorkerInit).mockResolvedValue({
@@ -145,7 +141,7 @@ describe("RemoteRuntimeController", () => {
 				content: "export default { fetch() { return new Response('hello'); } }",
 			},
 			modules: [],
-			bindings: {} as CfWorkerInit["bindings"],
+			bindings: {},
 			migrations: undefined,
 			compatibility_date: "2025-11-11",
 			compatibility_flags: [],
@@ -158,21 +154,17 @@ describe("RemoteRuntimeController", () => {
 			tail_consumers: undefined,
 			limits: undefined,
 			observability: undefined,
+			containers: undefined,
+			cache: undefined,
 		});
 
 		vi.mocked(createWorkerPreview).mockResolvedValue({
 			value: "test-preview-token",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
 			tailUrl: "wss://test.workers.dev/tail",
 		});
 
 		vi.mocked(getAccessToken).mockResolvedValue(undefined);
-
-		vi.mocked(convertBindingsToCfWorkerInitBindings).mockResolvedValue({
-			bindings: {} as CfWorkerInit["bindings"],
-			fetchers: {},
-		});
 	});
 
 	describe("preview token refresh", () => {

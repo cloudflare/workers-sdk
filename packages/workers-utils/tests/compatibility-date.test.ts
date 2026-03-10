@@ -1,6 +1,6 @@
 import module from "node:module";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { getLocalWorkerdCompatibilityDate } from "../src/compatibility-date";
 
 describe("getLocalWorkerdCompatibilityDate", () => {
@@ -8,7 +8,9 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		vi.setSystemTime(vi.getRealSystemTime());
 	});
 
-	it("should successfully get the local latest compatibility date from the local workerd instance", () => {
+	it("should successfully get the local latest compatibility date from the local workerd instance", ({
+		expect,
+	}) => {
 		const createRequireSpy = vi
 			.spyOn(module, "createRequire")
 			.mockImplementation(() => {
@@ -32,7 +34,9 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		);
 	});
 
-	it("should fallback to the fallback date if it fails to get the date from a local workerd instance", () => {
+	it("should fallback to the fallback date if it fails to get the date from a local workerd instance", ({
+		expect,
+	}) => {
 		const createRequireSpy = vi
 			.spyOn(module, "createRequire")
 			.mockImplementation(
@@ -52,7 +56,9 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		);
 	});
 
-	it("should use today's date if the local workerd's date is in the future", async () => {
+	it("should use today's date if the local workerd's date is in the future", async ({
+		expect,
+	}) => {
 		vi.setSystemTime("2025-01-09T23:59:59.999Z");
 		vi.spyOn(module, "createRequire").mockImplementation(() => {
 			const mockedRequire = ((pkg: string) => {

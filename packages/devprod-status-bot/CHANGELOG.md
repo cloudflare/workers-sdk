@@ -1,5 +1,23 @@
 # devprod-status-bot
 
+## 1.4.1
+
+### Patch Changes
+
+- [#12435](https://github.com/cloudflare/workers-sdk/pull/12435) [`c2163df`](https://github.com/cloudflare/workers-sdk/commit/c2163df17f1c7b7fe96f10fbca35dc19ee65b7e2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Simplify Version Packages PR CI failure alerts
+
+  The bot now sends an alert for any failing CI job on the Version Packages PR, instead of first fetching the required status checks from GitHub's branch protection API and filtering. This removes unnecessary complexity and ensures all CI failures are reported.
+
+## 1.4.0
+
+### Minor Changes
+
+- [#12371](https://github.com/cloudflare/workers-sdk/pull/12371) [`50ad9a9`](https://github.com/cloudflare/workers-sdk/commit/50ad9a9ad9581122f83b9da245f10c9d677cc848) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Send alert to ANT: Alerts chat on failed CI checks in Version Packages PRs
+
+  When a required CI check fails or times out on the Version Packages PR (`changeset-release/main` branch), an alert is now sent to the ANT: Alerts Google Chat channel. This helps the team quickly identify and address CI failures that shouldn't occur since individual PRs have already passed before landing on main.
+
+  Alerts for the same PR are grouped into the same chat thread using the PR number as the thread ID.
+
 ## 1.3.0
 
 ### Minor Changes

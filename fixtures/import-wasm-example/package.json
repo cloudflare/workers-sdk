@@ -14,6 +14,7 @@
 		"@fixture/import-wasm-static": "workspace:^"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

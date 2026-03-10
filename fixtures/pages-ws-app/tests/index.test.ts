@@ -1,7 +1,7 @@
 import { fork, spawnSync } from "child_process";
 import * as path from "path";
 import { fetch } from "miniflare";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
@@ -56,7 +56,7 @@ describe.skip("Pages Functions", () => {
 		});
 	});
 
-	it("understands normal fetches", async () => {
+	it("understands normal fetches", async ({ expect }) => {
 		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/`);
 		expect(response.headers.get("x-proxied")).toBe("true");
@@ -64,7 +64,7 @@ describe.skip("Pages Functions", () => {
 		expect(text).toContain("Hello, world!");
 	});
 
-	it("understands websocket fetches", async () => {
+	it("understands websocket fetches", async ({ expect }) => {
 		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/ws`, {
 			headers: { Upgrade: "websocket" },

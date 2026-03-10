@@ -1,5 +1,5 @@
 import path from "node:path";
-import { findUpSync } from "find-up";
+import * as find from "empathic/find";
 import { getWranglerTmpDir } from "../paths";
 import type { BundleResult } from "../deployment-bundle/bundle";
 
@@ -47,7 +47,7 @@ export function getPagesProjectRoot(): string {
 	if (projectRootCache !== undefined && projectRootCacheCwd === cwd) {
 		return projectRootCache;
 	}
-	const packagePath = findUpSync("package.json");
+	const packagePath = find.file("package.json");
 	projectRootCache = packagePath ? path.dirname(packagePath) : process.cwd();
 	projectRootCacheCwd = cwd;
 	return projectRootCache;
@@ -74,4 +74,25 @@ export function getPagesTmpDir(): string {
 	tmpDirCache = tmpDir.path;
 	tmpDirCacheProjectRoot = projectRoot;
 	return tmpDirCache;
+}
+
+export function truncateUtf8Bytes(str: string, maxBytes: number): string {
+	const bytes = Buffer.byteLength(str, "utf8");
+	if (bytes <= maxBytes) {
+		return str;
+	}
+
+	const chars: string[] = [];
+	let byteCount = 0;
+
+	for (const char of str) {
+		const charBytes = Buffer.byteLength(char, "utf8");
+		if (byteCount + charBytes > maxBytes) {
+			break;
+		}
+		chars.push(char);
+		byteCount += charBytes;
+	}
+
+	return chars.join("");
 }

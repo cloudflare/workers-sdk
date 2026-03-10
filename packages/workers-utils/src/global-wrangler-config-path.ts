@@ -1,16 +1,7 @@
-import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import xdgAppPaths from "xdg-app-paths";
-
-function isDirectory(configPath: string) {
-	try {
-		return fs.statSync(configPath).isDirectory();
-	} catch {
-		// ignore error
-		return false;
-	}
-}
+import { isDirectory } from "./fs-helpers";
 
 export function getGlobalWranglerConfigPath() {
 	//TODO: We should implement a custom path --global-config and/or the WRANGLER_HOME type environment variable

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import { updateTsConfig } from "../workers";
 import { createTestContext } from "./helpers";
 import type { C3Context } from "types";
@@ -35,7 +35,7 @@ describe("updateTsConfig", () => {
 		);
 	});
 
-	test("installing workers types", async () => {
+	test("installing workers types", async ({ expect }) => {
 		ctx.template.workersTypes = "installed";
 
 		await updateTsConfig(ctx, { usesNodeCompat: false });
@@ -47,13 +47,13 @@ describe("updateTsConfig", () => {
 		);
 	});
 
-	test("tsconfig.json not found", async () => {
+	test("tsconfig.json not found", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementation(() => false);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(writeFile).not.toHaveBeenCalled();
 	});
 
-	test("latest entrypoint not found", async () => {
+	test("latest entrypoint not found", async ({ expect }) => {
 		ctx.template.workersTypes = "installed";
 
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(null);
@@ -62,7 +62,7 @@ describe("updateTsConfig", () => {
 		expect(writeFile).not.toHaveBeenCalled();
 	});
 
-	test("don't clobber existing entrypoints", async () => {
+	test("don't clobber existing entrypoints", async ({ expect }) => {
 		ctx.template.workersTypes = "installed";
 		vi.mocked(readFile).mockImplementation(
 			() =>
@@ -75,7 +75,9 @@ describe("updateTsConfig", () => {
 		);
 	});
 
-	test("will remove workers-types when generating types, if generated types include runtime types", async () => {
+	test("will remove workers-types when generating types, if generated types include runtime types", async ({
+		expect,
+	}) => {
 		vi.mocked(readFile).mockImplementation((path) => {
 			if (path.includes("tsconfig.json")) {
 				return `{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`;
@@ -89,7 +91,9 @@ describe("updateTsConfig", () => {
 		);
 	});
 
-	test("will NOT remove workers-types when generating types, if generated types don't include runtime types", async () => {
+	test("will NOT remove workers-types when generating types, if generated types don't include runtime types", async ({
+		expect,
+	}) => {
 		vi.mocked(readFile).mockImplementation((path) => {
 			if (path.includes("tsconfig.json")) {
 				return `{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`;
@@ -104,14 +108,16 @@ describe("updateTsConfig", () => {
 		);
 	});
 
-	test("will add generated types file", async () => {
+	test("will add generated types file", async ({ expect }) => {
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
 			`./worker-configuration.d.ts`,
 		);
 	});
 
-	test("skips modification when tsconfig uses project references", async () => {
+	test("skips modification when tsconfig uses project references", async ({
+		expect,
+	}) => {
 		vi.mocked(readFile).mockImplementation(
 			() => `{
 				"files": [],
@@ -125,7 +131,9 @@ describe("updateTsConfig", () => {
 		expect(writeFile).not.toHaveBeenCalled();
 	});
 
-	test("modifies tsconfig when references array is empty", async () => {
+	test("modifies tsconfig when references array is empty", async ({
+		expect,
+	}) => {
 		ctx.template.workersTypes = "installed";
 		vi.mocked(readFile).mockImplementation(
 			() => `{

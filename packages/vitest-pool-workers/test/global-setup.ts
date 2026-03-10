@@ -4,6 +4,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
+import { removeDir } from "@cloudflare/workers-utils";
+import { version } from "../package.json";
 import type { GlobalSetupContext } from "vitest/node";
 
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -26,10 +28,7 @@ export default async function ({ provide }: GlobalSetupContext) {
 		await stop();
 
 		console.log("Cleaning up temporary directory...");
-		try {
-			await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
-			// This sometimes fails on Windows with EBUSY
-		} catch {}
+		void removeDir(projectPath, { fireAndForget: true });
 	};
 }
 
@@ -48,7 +47,8 @@ async function createTestProject() {
 		private: true,
 		type: "module",
 		devDependencies: {
-			"@cloudflare/vitest-pool-workers": "*",
+			// Ensure we use the local version of vitest-pool-workers
+			"@cloudflare/vitest-pool-workers": version,
 			vitest: await getVitestPeerDep(),
 		},
 	};

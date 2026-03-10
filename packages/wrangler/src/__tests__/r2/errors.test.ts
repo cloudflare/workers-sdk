@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -7,7 +7,9 @@ describe("r2 errors", () => {
 	mockConsoleMethods();
 	runInTempDir();
 
-	it("should throw a helpful error if attempting to put a missing file", async () => {
+	it("should throw a helpful error if attempting to put a missing file", async ({
+		expect,
+	}) => {
 		const result = runWrangler(
 			`r2 object put bucket-object-test/missing-file.txt --file ./missing-file.txt `
 		);

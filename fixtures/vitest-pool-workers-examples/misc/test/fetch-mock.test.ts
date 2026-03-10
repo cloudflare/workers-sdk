@@ -5,7 +5,6 @@ import {
 	beforeAll,
 	beforeEach,
 	describe,
-	expect,
 	it,
 	vi,
 } from "vitest";
@@ -17,7 +16,7 @@ afterEach(() => {
 	fetchMock.deactivate();
 });
 
-it("falls through to global fetch() if unmatched", async () => {
+it("falls through to global fetch() if unmatched", async ({ expect }) => {
 	fetchMock
 		.get("https://example.com")
 		.intercept({ path: "/" })
@@ -32,7 +31,9 @@ it("falls through to global fetch() if unmatched", async () => {
 	expect(await response.text()).toBe("fallthrough:GET https://example.com/bad");
 });
 
-it("intercepts URLs with query parameters with repeated keys", async () => {
+it("intercepts URLs with query parameters with repeated keys", async ({
+	expect,
+}) => {
 	fetchMock
 		.get("https://example.com")
 		.intercept({ path: "/foo", query: { key: "value" } })
@@ -61,7 +62,7 @@ it("intercepts URLs with query parameters with repeated keys", async () => {
 	expect(await response3.text()).toBe("baz");
 });
 
-it("throws if you try to mutate the headers", async () => {
+it("throws if you try to mutate the headers", async ({ expect }) => {
 	fetchMock
 		.get("https://example.com")
 		.intercept({ path: "/" })
@@ -96,7 +97,7 @@ describe("AbortSignal", () => {
 
 	afterEach(() => vi.useRealTimers());
 
-	it("aborts if an AbortSignal timeout is exceeded", async () => {
+	it("aborts if an AbortSignal timeout is exceeded", async ({ expect }) => {
 		fetchMock
 			.get("https://example.com")
 			.intercept({ path: "/" })
@@ -115,7 +116,9 @@ describe("AbortSignal", () => {
 		);
 	});
 
-	it("does not abort if an AbortSignal timeout is not exceeded", async () => {
+	it("does not abort if an AbortSignal timeout is not exceeded", async ({
+		expect,
+	}) => {
 		fetchMock
 			.get("https://example.com")
 			.intercept({ path: "/" })
@@ -134,7 +137,7 @@ describe("AbortSignal", () => {
 		expect(await response.text()).toMatchInlineSnapshot(`"Delayed response"`);
 	});
 
-	it("aborts if an AbortSignal is already aborted", async () => {
+	it("aborts if an AbortSignal is already aborted", async ({ expect }) => {
 		const controller = new AbortController();
 		controller.abort();
 

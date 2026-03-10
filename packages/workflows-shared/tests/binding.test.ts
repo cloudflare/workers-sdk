@@ -3,38 +3,14 @@ import {
 	env,
 	runInDurableObject,
 } from "cloudflare:test";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { WorkflowBinding } from "../src/binding";
-import type { Engine } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
-import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
-
-async function setWorkflowEntrypoint(
-	stub: DurableObjectStub<Engine>,
-	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
-) {
-	const ctx = createExecutionContext();
-	await runInDurableObject(stub, (instance) => {
-		// @ts-expect-error this is only a stub for WorkflowEntrypoint
-		instance.env.USER_WORKFLOW = new (class {
-			constructor(
-				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected ctx: ExecutionContext,
-				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected env: ProvidedEnv
-			) {}
-			public async run(
-				event: Readonly<WorkflowEvent<unknown>>,
-				step: WorkflowStep
-			): Promise<unknown> {
-				return await callback(event, step);
-			}
-		})(ctx, env);
-	});
-}
+import { setWorkflowEntrypoint } from "./utils";
 
 describe("WorkflowBinding", () => {
-	it("should not call dispose when sending an event to an instance", async () => {
+	it("should not call dispose when sending an event to an instance", async ({
+		expect,
+	}) => {
 		const instanceId = "test-instance-with-event";
 		const ctx = createExecutionContext();
 

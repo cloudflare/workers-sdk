@@ -1,9 +1,14 @@
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import { isLoggedIn, listAccounts, wranglerLogin } from "../accounts";
+import {
+	chooseAccount,
+	isLoggedIn,
+	listAccounts,
+	wranglerLogin,
+} from "../accounts";
 
 const loggedInWhoamiOutput = `
 -------------------------------------------------------
@@ -47,8 +52,23 @@ describe("wrangler account helpers", () => {
 		spinner = mockSpinner();
 	});
 
+	describe("chooseAccount", () => {
+		test("uses CLOUDFLARE_ACCOUNT_ID from environment if set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id-123");
+
+			const testCtx = createTestContext();
+			await chooseAccount(testCtx);
+
+			expect(testCtx.account).toEqual({ id: "env-account-id-123", name: "" });
+			// Should not call wrangler whoami when env var is set
+			expect(runCommand).not.toHaveBeenCalled();
+		});
+	});
+
 	describe("wranglerLogin", async () => {
-		test("logged in", async () => {
+		test("logged in", async ({ expect }) => {
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
@@ -68,7 +88,7 @@ describe("wrangler account helpers", () => {
 			expect(spinner.stop).toHaveBeenCalledOnce();
 		});
 
-		test("logged out (successful login)", async () => {
+		test("logged out (successful login)", async ({ expect }) => {
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
@@ -89,7 +109,7 @@ describe("wrangler account helpers", () => {
 			expect(spinner.stop).toHaveBeenCalledTimes(2);
 		});
 
-		test("logged out (login denied)", async () => {
+		test("logged out (login denied)", async ({ expect }) => {
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
@@ -111,7 +131,7 @@ describe("wrangler account helpers", () => {
 		});
 	});
 
-	test("listAccounts", async () => {
+	test("listAccounts", async ({ expect }) => {
 		const mock = vi
 			.mocked(runCommand)
 			.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
@@ -125,7 +145,7 @@ describe("wrangler account helpers", () => {
 	});
 
 	describe("isLoggedIn", async () => {
-		test("logged in", async () => {
+		test("logged in", async ({ expect }) => {
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
@@ -139,7 +159,7 @@ describe("wrangler account helpers", () => {
 			);
 		});
 
-		test("logged out", async () => {
+		test("logged out", async ({ expect }) => {
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput));
@@ -153,7 +173,7 @@ describe("wrangler account helpers", () => {
 			);
 		});
 
-		test("wrangler whoami error", async () => {
+		test("wrangler whoami error", async ({ expect }) => {
 			const mock = vi
 				.mocked(runCommand)
 				.mockRejectedValueOnce(new Error("fail!"));

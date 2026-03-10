@@ -1,14 +1,12 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
-	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
@@ -60,6 +58,7 @@ import {
 	containersNamespace,
 	containersPushCommand,
 	containersRegistriesConfigureCommand,
+	containersRegistriesCredentialsCommand,
 	containersRegistriesDeleteCommand,
 	containersRegistriesListCommand,
 	containersRegistriesNamespace,
@@ -68,7 +67,7 @@ import {
 import { demandSingleValue } from "./core";
 import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
-import { getErrorType, handleError } from "./core/handle-errors";
+import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -135,6 +134,7 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
+import { sanitizeError } from "./metrics/sanitization";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -157,7 +157,10 @@ import {
 	pagesPublishCommand,
 } from "./pages/deploy";
 import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
+import {
+	pagesDeploymentDeleteCommand,
+	pagesDeploymentListCommand,
+} from "./pages/deployments";
 import { pagesDevCommand } from "./pages/dev";
 import { pagesDownloadConfigCommand } from "./pages/download-config";
 import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
@@ -260,6 +263,12 @@ import {
 	r2BucketLifecycleSetCommand,
 } from "./r2/lifecycle";
 import {
+	r2BucketLocalUploadsDisableCommand,
+	r2BucketLocalUploadsEnableCommand,
+	r2BucketLocalUploadsGetConfigCommand,
+	r2BucketLocalUploadsNamespace,
+} from "./r2/local-uploads";
+import {
 	r2BucketLockAddCommand,
 	r2BucketLockListCommand,
 	r2BucketLockNamespace,
@@ -329,7 +338,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { proxy } from "./utils/constants";
+import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -386,7 +395,9 @@ import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
 if (proxy) {
-	setGlobalDispatcher(new ProxyAgent(proxy));
+	setGlobalDispatcher(
+		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
+	);
 	logger.log(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
@@ -1093,6 +1104,22 @@ export function createCLIParser(argv: string[]) {
 			definition: r2BucketDevUrlDisableCommand,
 		},
 		{
+			command: "wrangler r2 bucket local-uploads",
+			definition: r2BucketLocalUploadsNamespace,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads get",
+			definition: r2BucketLocalUploadsGetConfigCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads enable",
+			definition: r2BucketLocalUploadsEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads disable",
+			definition: r2BucketLocalUploadsDisableCommand,
+		},
+		{
 			command: "wrangler r2 bucket lifecycle",
 			definition: r2BucketLifecycleNamespace,
 		},
@@ -1346,6 +1373,10 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler pages deployment tail",
 			definition: pagesDeploymentTailCommand,
 		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
+		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
 		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
@@ -1503,6 +1534,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler containers registries delete",
 			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers registries credentials",
+			definition: containersRegistriesCredentialsCommand,
 		},
 		{
 			command: "wrangler containers images",
@@ -1884,15 +1919,27 @@ export async function main(argv: string[]): Promise<void> {
 
 	// Check if this is a root-level help request (--help or -h with no subcommand)
 	// In this case, we use our custom help formatter to show command categories
-	const isRootHelpRequest =
-		(argv.includes("--help") || argv.includes("-h")) &&
-		argv.filter((arg) => !arg.startsWith("-")).length === 0;
+	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
+	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
+	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
 
-	const { wrangler, showHelpWithCategories } = createCLIParser(argv);
+	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
 	if (isRootHelpRequest) {
 		await showHelpWithCategories();
 		return;
+	}
+
+	// Check for unknown command with a `--help` flag
+	const [subCommand] = nonFlagArgs;
+	if (hasHelpFlag && subCommand) {
+		const knownCommands = registry.topLevelCommands;
+		if (!knownCommands.has(subCommand)) {
+			logger.info("");
+			logger.error(`Unknown argument: ${subCommand}`);
+			await showHelpWithCategories();
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
+		}
 	}
 
 	const startTime = Date.now();
@@ -1996,23 +2043,19 @@ function dispatchGenericCommandErrorEvent(
 	const sanitizedArgs = {};
 
 	// Send "started" event since handler never got to send it.
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command started", {
 		sanitizedCommand,
 		sanitizedArgs,
 		argsUsed: [],
 	});
 
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command errored", {
 		sanitizedCommand,
 		sanitizedArgs,
 		argsUsed: [],
 		durationMs,
-		durationSeconds: durationMs / 1000,
-		durationMinutes: durationMs / 1000 / 60,
-		errorType: getErrorType(error),
-		errorMessage:
-			error instanceof UserError || error instanceof ContainersUserError
-				? error.telemetryMessage
-				: undefined,
+		...sanitizeError(error),
 	});
 }

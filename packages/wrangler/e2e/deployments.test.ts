@@ -1,10 +1,10 @@
-import assert from "node:assert";
-import isCI from "is-ci";
+import ci from "ci-info";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	assert,
 	beforeAll,
 	beforeEach,
 	describe,
@@ -32,7 +32,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		afterAll(async () => {
 			// clean up user Worker after all tests
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
 		it("deploys a Worker", async () => {
@@ -267,7 +267,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 	describe("Workers", () => {
 		afterEach(async () => {
 			// clean up user Worker after each test
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
 		it("deploys a Workers + Assets project with assets only", async () => {
@@ -583,8 +583,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 		afterEach(async () => {
 			// clean up dispatch Worker
-			await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
-			await helper.run(
+			await helper.bestEffortRun(
+				`wrangler delete -c dispatch-worker/wrangler.toml`
+			);
+			await helper.bestEffortRun(
 				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
 			);
 		});
@@ -843,7 +845,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 });
 
 const skipContainersTest =
-	!CLOUDFLARE_ACCOUNT_ID || (isCI && process.platform !== "linux");
+	!CLOUDFLARE_ACCOUNT_ID || (ci.isCI && process.platform !== "linux");
 describe.skipIf(skipContainersTest)("containers", () => {
 	let helper: WranglerE2ETestHelper;
 	let workerName: string;
@@ -937,8 +939,8 @@ describe.skipIf(skipContainersTest)("containers", () => {
 
 	afterAll(async () => {
 		// clean up user Worker after each test
-		const deleteWorker = helper.run(`wrangler delete`);
-		const deleteContainer = helper.run(
+		const deleteWorker = helper.bestEffortRun(`wrangler delete`);
+		const deleteContainer = helper.bestEffortRun(
 			`wrangler containers delete ${applicationId}`
 		);
 		await Promise.allSettled([deleteWorker, deleteContainer]);

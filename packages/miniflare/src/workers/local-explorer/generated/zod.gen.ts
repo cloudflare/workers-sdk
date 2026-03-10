@@ -2,6 +2,163 @@
 
 import { z } from "zod";
 
+/**
+ * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+ */
+export const zWorkersCursor = z.string();
+
+export const zWorkersObject = z.object({
+	hasStoredData: z.boolean().readonly().optional(),
+	id: z.string().readonly().optional(),
+});
+
+/**
+ * ID of the namespace.
+ */
+export const zWorkersSchemasId = z.string();
+
+export const zWorkersMessages = z.array(
+	z.object({
+		code: z.number().int().gte(1000),
+		documentation_url: z.string().optional(),
+		message: z.string(),
+		source: z
+			.object({
+				pointer: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zWorkersApiResponseCommonFailure = z.object({
+	errors: zWorkersMessages,
+	messages: zWorkersMessages,
+	result: z.unknown(),
+	success: z.literal(false),
+});
+
+export const zWorkersNamespace = z.object({
+	class: z.string().optional(),
+	id: z.string().readonly().optional(),
+	name: z.string().optional(),
+	script: z.string().optional(),
+	use_sqlite: z.boolean().optional(),
+});
+
+export const zWorkersApiResponseCommon = z.object({
+	errors: zWorkersMessages,
+	messages: zWorkersMessages,
+	success: z.literal(true),
+});
+
+export const zWorkersApiResponseCollection = zWorkersApiResponseCommon.and(
+	z.object({
+		result_info: z
+			.object({
+				count: z.number().optional(),
+				page: z.number().optional(),
+				per_page: z.number().optional(),
+				total_count: z.number().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zD1QueryMeta = z.object({
+	changed_db: z.boolean().optional(),
+	changes: z.number().optional(),
+	duration: z.number().optional(),
+	last_row_id: z.number().optional(),
+	rows_read: z.number().optional(),
+	rows_written: z.number().optional(),
+	size_after: z.number().optional(),
+	timings: z
+		.object({
+			sql_duration_ms: z.number().optional(),
+		})
+		.optional(),
+});
+
+export const zD1RawResultResponse = z.object({
+	meta: zD1QueryMeta.optional(),
+	results: z
+		.object({
+			columns: z.array(z.string()).optional(),
+			rows: z
+				.array(
+					z.array(z.union([z.number(), z.string(), z.record(z.unknown())]))
+				)
+				.optional(),
+		})
+		.optional(),
+	success: z.boolean().optional(),
+});
+
+/**
+ * Your SQL query. Supports multiple statements, joined by semicolons, which will be executed as a batch.
+ */
+export const zD1Sql = z.string();
+
+export const zD1Params = z.array(z.string());
+
+/**
+ * single query
+ *
+ * A single query with or without parameters
+ */
+export const zD1SingleQuery = z.object({
+	params: zD1Params.optional(),
+	sql: zD1Sql,
+});
+
+/**
+ * A single query object or a batch query object
+ */
+export const zD1BatchQuery = z.union([
+	zD1SingleQuery,
+	z.object({
+		batch: z.array(zD1SingleQuery),
+	}),
+]);
+
+/**
+ * D1 database identifier (UUID).
+ */
+export const zD1DatabaseIdentifier = z.string().readonly();
+
+export const zD1Messages = z.array(
+	z.object({
+		code: z.number().int().gte(1000),
+		message: z.string(),
+	})
+);
+
+export const zD1ApiResponseCommonFailure = z.object({
+	errors: zD1Messages,
+	messages: zD1Messages,
+	result: z.unknown(),
+	success: z.literal(false),
+});
+
+export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
+
+/**
+ * D1 database name.
+ */
+export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
+
+export const zD1DatabaseResponse = z.object({
+	name: zD1DatabaseName.optional(),
+	uuid: zD1DatabaseIdentifier.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
+
+export const zD1ApiResponseCommon = z.object({
+	errors: zD1Messages,
+	messages: zD1Messages,
+	success: z.literal(true),
+});
+
 export const zWorkersKvAny: z.ZodTypeAny = z.union([
 	z.string(),
 	z.number(),
@@ -87,6 +244,11 @@ export const zWorkersKvKeyName = z.string().max(512);
  */
 export const zWorkersKvCursor = z.string();
 
+export const zWorkersKvCursorResultInfo = z.object({
+	count: z.number().optional(),
+	cursor: zWorkersKvCursor.optional(),
+});
+
 export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
 
 /**
@@ -122,9 +284,6 @@ export const zWorkersKvNamespace = z.object({
 
 export const zWorkersKvResultInfo = z.object({
 	count: z.number().optional(),
-	page: z.number().optional(),
-	per_page: z.number().optional(),
-	total_count: z.number().optional(),
 });
 
 export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
@@ -132,6 +291,44 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 		result_info: zWorkersKvResultInfo.optional(),
 	})
 );
+
+export const zDoSqlWithParams = z.object({
+	sql: z.string().min(1),
+	params: z.array(z.unknown()).optional(),
+});
+
+export const zDoQueryById = z.object({
+	durable_object_id: z.string().min(1),
+	queries: z.array(zDoSqlWithParams),
+});
+
+export const zDoQueryByName = z.object({
+	durable_object_name: z.string().min(1),
+	queries: z.array(zDoSqlWithParams),
+});
+
+export const zDoRawQueryResult = z.object({
+	columns: z.array(z.string()).optional(),
+	rows: z.array(z.array(z.unknown())).optional(),
+	meta: z
+		.object({
+			rows_read: z.number().optional(),
+			rows_written: z.number().optional(),
+		})
+		.optional(),
+});
+
+export const zWorkersNamespaceWritable = z.object({
+	class: z.string().optional(),
+	name: z.string().optional(),
+	script: z.string().optional(),
+	use_sqlite: z.boolean().optional(),
+});
+
+export const zD1DatabaseResponseWritable = z.object({
+	name: zD1DatabaseName.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
 
 export const zWorkersKvAnyWritable: z.ZodTypeAny = z.union([
 	z.string(),
@@ -159,8 +356,6 @@ export const zWorkersKvNamespaceListNamespacesData = z.object({
 	path: z.never().optional(),
 	query: z
 		.object({
-			page: z.number().gte(1).optional().default(1),
-			per_page: z.number().gte(1).lte(1000).optional().default(20),
 			order: z.enum(["id", "title"]).optional(),
 			direction: z.enum(["asc", "desc"]).optional(),
 		})
@@ -185,6 +380,7 @@ export const zWorkersKvNamespaceListANamespaceSKeysData = z.object({
 	query: z
 		.object({
 			limit: z.number().gte(10).lte(1000).optional().default(1000),
+			prefix: z.string().optional(),
 			cursor: z.string().optional(),
 		})
 		.optional(),
@@ -197,12 +393,7 @@ export const zWorkersKvNamespaceListANamespaceSKeysResponse =
 	zWorkersKvApiResponseCommon.and(
 		z.object({
 			result: z.array(zWorkersKvKey).optional(),
-			result_info: z
-				.object({
-					count: z.number().optional(),
-					cursor: zWorkersKvCursor.optional(),
-				})
-				.optional(),
+			result_info: zWorkersKvCursorResultInfo.optional(),
 		})
 	);
 
@@ -269,5 +460,109 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 			result: z
 				.union([zWorkersKvBulkGetResult, zWorkersKvBulkGetResultWithMetadata])
 				.optional(),
+		})
+	);
+
+export const zD1ListDatabasesData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z
+		.object({
+			name: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * List D1 databases response
+ */
+export const zD1ListDatabasesResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: z.array(zD1DatabaseResponse).optional(),
+		result_info: z
+			.object({
+				count: z.number().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zD1RawDatabaseQueryData = z.object({
+	body: zD1BatchQuery,
+	path: z.object({
+		database_id: zD1DatabaseIdentifier,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Raw query response
+ */
+export const zD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: z.array(zD1RawResultResponse).optional(),
+	})
+);
+
+export const zDurableObjectsNamespaceListNamespacesData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List Namespaces response.
+ */
+export const zDurableObjectsNamespaceListNamespacesResponse =
+	zWorkersApiResponseCollection.and(
+		z.object({
+			result: z.array(zWorkersNamespace).optional(),
+		})
+	);
+
+export const zDurableObjectsNamespaceListObjectsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		id: zWorkersSchemasId,
+	}),
+	query: z
+		.object({
+			limit: z.number().gte(10).lte(10000).optional().default(1000),
+			cursor: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * List Objects response.
+ */
+export const zDurableObjectsNamespaceListObjectsResponse =
+	zWorkersApiResponseCollection.and(
+		z.object({
+			result: z.array(zWorkersObject).optional(),
+			result_info: z
+				.object({
+					count: z.number().optional(),
+					cursor: zWorkersCursor.optional(),
+				})
+				.optional(),
+		})
+	);
+
+export const zDurableObjectsNamespaceQuerySqliteData = z.object({
+	body: z.union([zDoQueryById, zDoQueryByName]),
+	path: z.object({
+		namespace_id: zWorkersSchemasId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Query response.
+ */
+export const zDurableObjectsNamespaceQuerySqliteResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z.array(zDoRawQueryResult).optional(),
 		})
 	);

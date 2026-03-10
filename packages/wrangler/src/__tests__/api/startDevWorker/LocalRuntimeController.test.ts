@@ -3,10 +3,13 @@ import fs, { readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large test file with many patterns */
 import { assert, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import WebSocket from "ws";
 import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
@@ -716,7 +719,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -780,7 +783,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1026,7 +1029,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1096,7 +1099,7 @@ describe("LocalRuntimeController", () => {
 
 			// Check deleting persistence directory removes data
 			await controller.teardown();
-			fs.rmSync("./persist", { recursive: true });
+			removeDirSync("./persist");
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),

@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- helper functions with expect */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ServiceType } from "../vpc/index";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -96,10 +98,10 @@ describe("vpc service commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
+			{
+			  "host": {
 			    "ipv4": "10.0.0.1",
-			    "network": Object {
+			    "network": {
 			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
 			    },
 			  },
@@ -128,11 +130,11 @@ describe("vpc service commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
+			{
+			  "host": {
 			    "hostname": "db.example.com",
-			    "resolver_network": Object {
-			      "resolver_ips": Array [
+			    "resolver_network": {
+			      "resolver_ips": [
 			        "8.8.8.8",
 			        "8.8.4.4",
 			      ],
@@ -218,10 +220,10 @@ describe("vpc service commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
+			{
+			  "host": {
 			    "ipv4": "10.0.0.2",
-			    "network": Object {
+			    "network": {
 			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
 			    },
 			  },

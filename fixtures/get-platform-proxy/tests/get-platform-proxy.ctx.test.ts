@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { getPlatformProxy } from "./shared";
 
 describe("getPlatformProxy - ctx", () => {
-	it("should provide a no-op waitUntil method", async () => {
+	it("should provide a no-op waitUntil method", async ({ expect }) => {
 		const { ctx, dispose } = await getPlatformProxy();
 		try {
 			let value = 4;
@@ -18,7 +18,9 @@ describe("getPlatformProxy - ctx", () => {
 		}
 	});
 
-	it("should provide a no-op passThroughOnException method", async () => {
+	it("should provide a no-op passThroughOnException method", async ({
+		expect,
+	}) => {
 		const { ctx, dispose } = await getPlatformProxy();
 		try {
 			expect(ctx.passThroughOnException()).toBe(undefined);
@@ -27,7 +29,7 @@ describe("getPlatformProxy - ctx", () => {
 		}
 	});
 
-	it("should match the production runtime ctx object", async () => {
+	it("should match the production runtime ctx object", async ({ expect }) => {
 		const { ctx, dispose } = await getPlatformProxy();
 		try {
 			expect(ctx.constructor.name).toBe("ExecutionContext");
@@ -55,7 +57,9 @@ describe("getPlatformProxy - ctx", () => {
 	});
 
 	describe("detached methods should behave like workerd", () => {
-		it("destructured methods should throw illegal invocation errors", async () => {
+		it("destructured methods should throw illegal invocation errors", async ({
+			expect,
+		}) => {
 			const {
 				ctx: { waitUntil, passThroughOnException },
 				dispose,
@@ -73,7 +77,9 @@ describe("getPlatformProxy - ctx", () => {
 			}
 		});
 
-		it("extracted methods should throw illegal invocation errors", async () => {
+		it("extracted methods should throw illegal invocation errors", async ({
+			expect,
+		}) => {
 			const { ctx, dispose } = await getPlatformProxy();
 			const waitUntil = ctx.waitUntil;
 			const passThroughOnException = ctx.passThroughOnException;
@@ -91,7 +97,9 @@ describe("getPlatformProxy - ctx", () => {
 			}
 		});
 
-		it("extracted methods which correctly bind this should not throw illegal invocation errors", async () => {
+		it("extracted methods which correctly bind this should not throw illegal invocation errors", async ({
+			expect,
+		}) => {
 			const { ctx, dispose } = await getPlatformProxy();
 			const waitUntil = ctx.waitUntil.bind(ctx);
 			const passThroughOnException = ctx.passThroughOnException;
@@ -113,7 +121,9 @@ describe("getPlatformProxy - ctx", () => {
 			}
 		});
 
-		it("extracted methods which incorrectly bind this should throw illegal invocation errors", async () => {
+		it("extracted methods which incorrectly bind this should throw illegal invocation errors", async ({
+			expect,
+		}) => {
 			const { ctx, dispose } = await getPlatformProxy();
 			const waitUntil = ctx.waitUntil.bind({});
 			const passThroughOnException = ctx.passThroughOnException;
