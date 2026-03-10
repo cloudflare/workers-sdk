@@ -1023,7 +1023,6 @@ export const pagesDevCommand = createCommand({
 					siteInclude: undefined,
 					siteExclude: undefined,
 					enableContainers: false,
-					experimentalTailLogs: true,
 					types: false,
 				})
 		);

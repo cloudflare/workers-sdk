@@ -11,7 +11,6 @@ const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 export const DeployPlaygroundWorkerResponse = eg.union([
 	eg.object({
-		inspector: eg.string,
 		preview: eg.string,
 		tail: eg.string,
 	}),

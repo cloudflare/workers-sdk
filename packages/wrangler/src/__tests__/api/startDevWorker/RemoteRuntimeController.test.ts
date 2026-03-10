@@ -127,10 +127,9 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		vi.mocked(createPreviewSession).mockResolvedValue({
-			id: "test-session-id",
 			value: "test-session-value",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
+			name: "test",
 		});
 
 		vi.mocked(createRemoteWorkerInit).mockResolvedValue({
@@ -162,7 +161,6 @@ describe("RemoteRuntimeController", () => {
 		vi.mocked(createWorkerPreview).mockResolvedValue({
 			value: "test-preview-token",
 			host: "test.workers.dev",
-			prewarmUrl: new URL("https://test.workers.dev/prewarm"),
 			tailUrl: "wss://test.workers.dev/tail",
 		});
 

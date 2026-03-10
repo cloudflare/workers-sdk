@@ -53,7 +53,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
-			tail_logs: boolean;
+			name: string;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
@@ -65,7 +65,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				workerAccount,
 				workerContext,
 				this.#abortController.signal,
-				props.tail_logs
+				props.name
 			);
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -85,12 +85,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #previewToken(
-		props: Omit<CreateRemoteWorkerInitProps, "name"> &
-			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
+		props: CreateRemoteWorkerInitProps &
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
-				tail_logs: boolean;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
@@ -114,6 +112,9 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
+			// Suppress errors from terminating a WebSocket that hasn't connected yet
+			this.#activeTail?.removeAllListeners("error");
+			this.#activeTail?.on("error", () => {});
 			this.#activeTail?.terminate();
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
@@ -128,12 +129,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				}
 			);
 
-			const scriptId =
-				props.name ||
-				(workerContext.zone
-					? this.#session.id
-					: this.#session.host.split(".")[0]);
-
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (props.bundleId !== this.#currentBundleId) {
@@ -144,7 +139,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bundle: props.bundle,
 				modules: props.modules,
 				accountId: props.accountId,
-				name: scriptId,
+				name: props.name,
 				useServiceEnvironments: props.useServiceEnvironments,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
@@ -171,7 +166,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				props.minimal_mode
 			);
 
-			if (props.tail_logs && workerPreviewToken.tailUrl) {
+			if (workerPreviewToken.tailUrl) {
 				this.#activeTail = new WebSocket(
 					workerPreviewToken.tailUrl,
 					TRACE_VERSION,
@@ -226,7 +221,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			routes,
 			sendMetrics: config.sendMetrics,
 			configPath: config.config,
-			tail_logs: !!config.experimental?.tailLogs,
+			name: config.name,
 		});
 	}
 
@@ -291,7 +286,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			configPath: config.config,
 			bundleId,
 			minimal_mode: config.dev.remote === "minimal",
-			tail_logs: !!config.experimental?.tailLogs,
 		});
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
@@ -312,16 +306,6 @@ export class RemoteRuntimeController extends RuntimeController {
 					hostname: token.host,
 					port: "443",
 				},
-				...(!config.experimental?.tailLogs && token.inspectorUrl
-					? {
-							userWorkerInspectorUrl: {
-								protocol: token.inspectorUrl.protocol,
-								hostname: token.inspectorUrl.hostname,
-								port: token.inspectorUrl.port.toString(),
-								pathname: token.inspectorUrl.pathname,
-							},
-						}
-					: {}),
 				headers: {
 					"cf-workers-preview-token": token.value,
 					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
@@ -352,6 +336,12 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			if (this.#session) {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
+			}
+
+			// Recreate session if the worker name changed, since the session
+			// host bakes in the name from creation time.
+			if (this.#session && config.name !== this.#session.name) {
+				this.#session = undefined;
 			}
 
 			this.#session ??= await this.#getPreviewSession(config, auth, routes);
@@ -460,6 +450,9 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
+		// Suppress errors from terminating a WebSocket that hasn't connected yet
+		this.#activeTail?.removeAllListeners("error");
+		this.#activeTail?.on("error", () => {});
 		this.#activeTail?.terminate();
 		logger.debug("RemoteRuntimeController teardown complete");
 	}
