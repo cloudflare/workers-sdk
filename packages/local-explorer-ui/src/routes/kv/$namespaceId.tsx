@@ -448,7 +448,7 @@ function NamespaceView() {
 									Cancel
 								</AlertDialog.Close>
 								<Button
-									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-danger px-4 py-2 text-sm font-medium text-bg-tertiary transition-[background-color,transform] hover:bg-danger-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
+									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-danger px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-danger-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
 									onClick={handleConfirmDelete}
 									disabled={deleting}
 									focusableWhenDisabled
@@ -484,7 +484,7 @@ function NamespaceView() {
 									Cancel
 								</AlertDialog.Close>
 								<Button
-									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-bg-tertiary transition-[background-color,transform] hover:bg-primary-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
+									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
 									onClick={handleConfirmOverwrite}
 									disabled={overwriting}
 									focusableWhenDisabled
