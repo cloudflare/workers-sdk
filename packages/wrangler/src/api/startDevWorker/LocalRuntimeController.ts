@@ -270,7 +270,6 @@ export class LocalRuntimeController extends RuntimeController {
 					},
 					logger: logger,
 					isVite: false,
-					compatibilityFlags: data.config.compatibilityFlags,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;

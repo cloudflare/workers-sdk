@@ -17,8 +17,8 @@ import type {
 	WranglerLogger,
 } from "./types";
 
-const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:4dc6c7f@sha256:9621ef445ef120409e5d95bbd845ab2fa0f613636b59a01d998f5704f4096ae2";
+export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
 
 export function getEgressInterceptorImage(): string {
 	return (
@@ -114,7 +114,6 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	isVite: boolean;
-	compatibilityFlags?: string[];
 }): Promise<void> {
 	const {
 		dockerPath,
@@ -171,10 +170,9 @@ export async function prepareContainerImagesForDev(args: {
 		}
 	}
 
-	// Pull the egress interceptor image if experimental flag is enabled.
-	// This image is used to intercept outbound HTTP from containers and
-	// route it back to workerd (e.g. for interceptOutboundHttp).
-	if (!aborted && args.compatibilityFlags?.includes("experimental")) {
+	// Pull the egress interceptor image used to intercept outbound HTTP from
+	// containers and route it back to workerd (e.g. for interceptOutboundHttp).
+	if (!aborted) {
 		await pullEgressInterceptorImage(dockerPath);
 	}
 }
