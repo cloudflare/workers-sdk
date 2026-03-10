@@ -1,5 +1,81 @@
 # wrangler
 
+## 4.72.0
+
+### Minor Changes
+
+- [#12746](https://github.com/cloudflare/workers-sdk/pull/12746) [`211d75d`](https://github.com/cloudflare/workers-sdk/commit/211d75d6f5e611f86ff9b62d4e280b8baaa842b7) Thanks [@NuroDev](https://github.com/NuroDev)! - Add support for inheritable bindings in type generation
+
+  When using `wrangler types` with multiple environments, bindings from inheritable config properties (like `assets`) are now correctly inherited from the top-level config in all named environments. Previously, if you defined `assets.binding` at the top level with named environments, the binding would be marked as optional in the generated `Env` type because the type generation didn't account for inheritance.
+
+  Example:
+
+  ```json
+  {
+  	"assets": {
+  		"binding": "ASSETS",
+  		"directory": "./public"
+  	},
+  	"env": {
+  		"staging": {},
+  		"production": {}
+  	}
+  }
+  ```
+
+  Before this change, `ASSETS` would be typed as `ASSETS?: Fetcher` (optional). Now, `ASSETS` is correctly typed as `ASSETS: Fetcher` (required). This fix currently applies to the `assets` binding, with an extensible mechanism to support additional inheritable bindings in the future.
+
+- [#12826](https://github.com/cloudflare/workers-sdk/pull/12826) [`de65c58`](https://github.com/cloudflare/workers-sdk/commit/de65c58cbcf1c330a84c37fb351716780f2fd880) Thanks [@gabivlj](https://github.com/gabivlj)! - Enable container egress interception in local dev without the `experimental` compatibility flag
+
+  Container local development now always prepares the egress interceptor sidecar image needed for `interceptOutboundHttp()`. This makes container-to-Worker interception available by default in Wrangler, Miniflare, and the Cloudflare Vite plugin.
+
+### Patch Changes
+
+- [#12790](https://github.com/cloudflare/workers-sdk/pull/12790) [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bump node-forge to ^1.3.2 to address security vulnerabilities
+
+  node-forge had ASN.1 unbounded recursion, OID integer truncation, and ASN.1 validator desynchronization vulnerabilities. This is a bundled dependency used for local HTTPS certificate handling.
+
+- [#12795](https://github.com/cloudflare/workers-sdk/pull/12795) [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260301.1 | 1.20260306.1 |
+
+- [#12811](https://github.com/cloudflare/workers-sdk/pull/12811) [`3c67c2a`](https://github.com/cloudflare/workers-sdk/commit/3c67c2a9de3681f59026fecdcf58ca5b816882c8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260306.1 | 1.20260307.1 |
+
+- [#12827](https://github.com/cloudflare/workers-sdk/pull/12827) [`d645594`](https://github.com/cloudflare/workers-sdk/commit/d645594d3cd9ccf3eca08bca151d358396e2b31c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260307.1 | 1.20260310.1 |
+
+- [#12808](https://github.com/cloudflare/workers-sdk/pull/12808) [`6ed249b`](https://github.com/cloudflare/workers-sdk/commit/6ed249b77aa8d335dc7b20790892fe4dced9af4e) Thanks [@MaxwellCalkin](https://github.com/MaxwellCalkin)! - Fix `wrangler d1 execute --json` returning `"null"` (string) instead of `null` (JSON null) for SQL NULL values
+
+  When using `wrangler d1 execute --json` with local execution, SQL NULL values were incorrectly serialized as the string `"null"` instead of JSON `null`. This produced invalid JSON output that violated RFC 4627. The fix removes the explicit null-to-string conversion so NULL values are preserved as proper JSON null in the output.
+
+- [#12824](https://github.com/cloudflare/workers-sdk/pull/12824) [`9f93b54`](https://github.com/cloudflare/workers-sdk/commit/9f93b54de2847ca3e3aeb5f45fa89fb8b7e89ed3) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Strip query strings from module names before writing to disk
+
+  When bundling modules with query string suffixes (e.g. `.wasm?module`), the `?` character was included in the output filename. Since `?` is not a valid filename character on Windows, this caused an ENOENT error during `wrangler dev`. This was particularly visible when using Prisma Client with the D1 adapter, which imports `.wasm?module` files.
+
+  The fix strips query strings from module names before writing them to disk, while preserving correct module resolution.
+
+- [#12771](https://github.com/cloudflare/workers-sdk/pull/12771) [`b8c33f5`](https://github.com/cloudflare/workers-sdk/commit/b8c33f5509a202cf4d4ebe5bd38c5705dffd9346) Thanks [@penalosa](https://github.com/penalosa)! - Make remote dev `exchange_url` optional
+
+  The edge-preview API's `exchange_url` is now treated as optional. When unavailable or when the exchange fails, the initial token from the API response is used directly. The `prewarm` step and `inspector_websocket` have been removed from the remote dev flow in favour of `tail_url` for live logs.
+
+- Updated dependencies [[`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f), [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98), [`3c67c2a`](https://github.com/cloudflare/workers-sdk/commit/3c67c2a9de3681f59026fecdcf58ca5b816882c8), [`d645594`](https://github.com/cloudflare/workers-sdk/commit/d645594d3cd9ccf3eca08bca151d358396e2b31c), [`de65c58`](https://github.com/cloudflare/workers-sdk/commit/de65c58cbcf1c330a84c37fb351716780f2fd880), [`cb14820`](https://github.com/cloudflare/workers-sdk/commit/cb148200336ed57c56cb89028453ddd5fdef2e7b), [`a7c87d1`](https://github.com/cloudflare/workers-sdk/commit/a7c87d14a46850e38ae5a9a3ccde4b983e37a8cc), [`e4d9510`](https://github.com/cloudflare/workers-sdk/commit/e4d9510c3439d313ba0e0f78bf00d0726d5f67e9)]:
+  - miniflare@4.20260310.0
+
 ## 4.71.0
 
 ### Minor Changes
