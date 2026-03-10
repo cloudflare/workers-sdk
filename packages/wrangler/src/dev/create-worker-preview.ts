@@ -111,50 +111,59 @@ function switchHost(
 }
 
 /**
- * Try and get a re-encoded token from the edge. This is expected to fail sometimes, depending on zone settings
+ * Try and get a re-encoded token from the edge. Returns null if the exchange
+ * fails for any reason (expected with particular zone settings).
+ * Rethrows AbortError so callers can handle cancellation.
  */
 async function tryExpandToken(
 	exchangeUrl: string,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
-) {
-	const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
+): Promise<string | null> {
+	try {
+		const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
 
-	const headers: HeadersInit = {};
-	const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
+		const headers: HeadersInit = {};
+		const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
 
-	if (accessToken) {
-		headers.cookie = `CF_Authorization=${accessToken}`;
+		if (accessToken) {
+			headers.cookie = `CF_Authorization=${accessToken}`;
+		}
+
+		logger.debugWithSanitization(
+			"-- START EXCHANGE API REQUEST:",
+			` GET ${switchedExchangeUrl.href}`
+		);
+
+		logger.debug("-- END EXCHANGE API REQUEST");
+		const exchangeResponse = await fetch(switchedExchangeUrl, {
+			signal: abortSignal,
+			headers,
+		});
+		const bodyText = await exchangeResponse.text();
+		logger.debug(
+			"-- START EXCHANGE API RESPONSE:",
+			exchangeResponse.statusText,
+			exchangeResponse.status
+		);
+		logger.debug("HEADERS:", JSON.stringify(exchangeResponse.headers, null, 2));
+		logger.debugWithSanitization("RESPONSE:", bodyText);
+
+		logger.debug("-- END EXCHANGE API RESPONSE");
+
+		const body = parseJSON(bodyText) as {
+			token?: string;
+		};
+		if (typeof body?.token !== "string") {
+			return null;
+		}
+		return body.token;
+	} catch (e) {
+		if (e instanceof Error && e.name === "AbortError") {
+			throw e;
+		}
+		return null;
 	}
-
-	logger.debugWithSanitization(
-		"-- START EXCHANGE API REQUEST:",
-		` GET ${switchedExchangeUrl.href}`
-	);
-
-	logger.debug("-- END EXCHANGE API REQUEST");
-	const exchangeResponse = await fetch(switchedExchangeUrl, {
-		signal: abortSignal,
-		headers,
-	});
-	const bodyText = await exchangeResponse.text();
-	logger.debug(
-		"-- START EXCHANGE API RESPONSE:",
-		exchangeResponse.statusText,
-		exchangeResponse.status
-	);
-	logger.debug("HEADERS:", JSON.stringify(exchangeResponse.headers, null, 2));
-	logger.debugWithSanitization("RESPONSE:", bodyText);
-
-	logger.debug("-- END EXCHANGE API RESPONSE");
-
-	const body = parseJSON(bodyText) as {
-		token?: string;
-	};
-	if (typeof body?.token !== "string") {
-		throw new Error("Exchange response did not contain a token");
-	}
-	return body.token;
 }
 /**
  * Generates a preview session token.
@@ -176,22 +185,9 @@ export async function createPreviewSession(
 		exchange_url?: string;
 	}>(complianceConfig, initUrl, undefined, undefined, abortSignal, apiToken);
 
-	let previewSessionToken = token;
-
-	if (exchange_url) {
-		try {
-			previewSessionToken = await tryExpandToken(
-				exchange_url,
-				ctx,
-				abortSignal
-			);
-		} catch (e) {
-			if (e instanceof Error && e.name === "AbortError") {
-				throw e;
-			}
-			// Ignore other failures. This is an expected case with particular zone settings
-		}
-	}
+	const previewSessionToken = exchange_url
+		? (await tryExpandToken(exchange_url, ctx, abortSignal)) ?? token
+		: token;
 
 	try {
 		let host = ctx.host;

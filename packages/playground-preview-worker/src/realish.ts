@@ -74,13 +74,17 @@ async function initialiseSubdomainPreview(
 	return session.result;
 }
 
-async function tryExpandToken(exchangeUrl: string): Promise<string> {
-	const response = await fetch(exchangeUrl);
-	const json = (await response.json()) as { token?: string };
-	if (typeof json?.token !== "string") {
-		throw new Error("Exchange response did not contain a token");
+async function tryExpandToken(exchangeUrl: string): Promise<string | null> {
+	try {
+		const response = await fetch(exchangeUrl);
+		const json = (await response.json()) as { token?: string };
+		if (typeof json?.token !== "string") {
+			return null;
+		}
+		return json.token;
+	} catch {
+		return null;
 	}
-	return json.token;
 }
 
 export async function setupTokens(
@@ -88,15 +92,10 @@ export async function setupTokens(
 	apiToken: string
 ): Promise<RealishPreviewConfig> {
 	const previewSession = await initialiseSubdomainPreview(accountId, apiToken);
-	let uploadConfigToken = previewSession.token;
-
-	if (previewSession.exchange_url) {
-		try {
-			uploadConfigToken = await tryExpandToken(previewSession.exchange_url);
-		} catch {
-			// Use initial token if exchange fails
-		}
-	}
+	const uploadConfigToken = previewSession.exchange_url
+		? (await tryExpandToken(previewSession.exchange_url)) ??
+			previewSession.token
+		: previewSession.token;
 
 	return {
 		previewSession,
