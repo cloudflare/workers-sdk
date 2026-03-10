@@ -46,19 +46,9 @@ export async function startDev(args: StartDevOptions) {
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
 			config
 		) => {
-			const hotkeysDisplayed = !!unregisterHotKeys;
 			let accountId = args.accountId;
 			if (!accountId) {
-				unregisterHotKeys?.();
 				accountId = await requireAuth(config);
-				if (hotkeysDisplayed) {
-					assert(devEnv !== undefined);
-					unregisterHotKeys = registerDevHotKeys(
-						Array.isArray(devEnv) ? devEnv : [devEnv],
-						args,
-						false
-					);
-				}
 			}
 			return {
 				accountId,

@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { isPromise } from "node:util/types";
 import {
 	cleanupContainers,
 	getDevContainerImageName,
@@ -15,6 +16,7 @@ import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { getBinaryFileContents, unwrapHook } from "./utils";
+import type { CfAccount } from "../../dev/create-worker-preview";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -25,6 +27,7 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 import type { Binding, File, StartDevWorkerOptions } from "./types";
+import type { MaybePromise } from "./utils";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
 async function getTextFileContents(file: File<string | Uint8Array>) {
@@ -207,22 +210,31 @@ export class LocalRuntimeController extends RuntimeController {
 
 				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 
-				const auth =
-					Object.keys(remoteBindings).length === 0
-						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-							undefined
-						: await unwrapHook(data.config.dev.auth);
-
-				this.#remoteProxySessionData =
-					await maybeStartOrUpdateRemoteProxySession(
-						{
-							name: configBundle.name,
-							complianceRegion: configBundle.complianceRegion,
-							bindings: remoteBindings,
-						},
-						this.#remoteProxySessionData ?? null,
-						auth
-					);
+				if (Object.keys(remoteBindings).length > 0) {
+					let maybePromiseAuth: MaybePromise<CfAccount | undefined> =
+						unwrapHook(data.config.dev.auth);
+					if (!isPromise(maybePromiseAuth)) {
+						maybePromiseAuth = Promise.resolve(maybePromiseAuth);
+					}
+					const promiseAuth = maybePromiseAuth;
+					promiseAuth
+						// Note: we don't await this promise not to block the dev server from starting, instead
+						//       after the remote proxy session is established re-run this the onBundleComplete method
+						.then(async (auth) => {
+							this.#remoteProxySessionData =
+								await maybeStartOrUpdateRemoteProxySession(
+									{
+										name: configBundle.name,
+										complianceRegion: configBundle.complianceRegion,
+										bindings: remoteBindings,
+									},
+									this.#remoteProxySessionData ?? null,
+									auth
+								);
+							void this.#mutex.runWith(() => this.#onBundleComplete(data, id));
+						})
+						.catch(() => {});
+				}
 			}
 
 			// Assemble container options and build if necessary
