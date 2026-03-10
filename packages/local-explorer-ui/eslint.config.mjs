@@ -14,7 +14,8 @@ export default defineConfig([
 		settings: {
 			tailwindcss: {
 				callees: ["cn"],
-				config: dirname(fileURLToPath(import.meta.url)) + "/src/styles/tailwind.css",
+				config:
+					dirname(fileURLToPath(import.meta.url)) + "/src/styles/tailwind.css",
 			},
 		},
 	},
