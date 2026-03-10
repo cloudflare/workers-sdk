@@ -66,15 +66,19 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
-			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Hello, Astronaut!",
 			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello, Astronaut!",
+				devArgs: ["--host=127.0.0.1"],
+			},
 			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
+				previewArgs: ["--host=127.0.0.1"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
