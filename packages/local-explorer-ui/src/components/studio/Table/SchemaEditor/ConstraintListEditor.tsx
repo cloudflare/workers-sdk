@@ -183,7 +183,7 @@ function SortableColumnItem({ id }: SortableColumnItemProps): JSX.Element {
 
 	return (
 		<div
-			className="inline-block cursor-pointer rounded border border-border bg-accent p-1 px-2 font-mono select-none hover:border-accent"
+			className="inline-block cursor-pointer rounded border border-border bg-accent p-1 px-2 font-mono select-none hover:border-active-line"
 			ref={setNodeRef}
 			style={{
 				transform: CSS.Transform.toString(transform),
