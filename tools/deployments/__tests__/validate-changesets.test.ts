@@ -39,6 +39,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
 				"@cloudflare/workers-shared",
+				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
 				"create-cloudflare",
 				"miniflare",
