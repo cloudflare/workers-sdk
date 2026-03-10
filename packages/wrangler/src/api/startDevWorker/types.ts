@@ -222,7 +222,7 @@ export type StartDevWorkerOptions = Omit<
 	legacy: StartDevWorkerInput["legacy"] & {
 		site?: Config["site"];
 	};
-	dev: Omit<NonNullable<StartDevWorkerInput["dev"]>, "persist"> & {
+	dev: StartDevWorkerInput["dev"] & {
 		persist: string | false;
 		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 	};
