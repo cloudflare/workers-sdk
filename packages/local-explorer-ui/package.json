@@ -44,7 +44,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@hey-api/openapi-ts": "^0.91.1",
+		"@hey-api/openapi-ts": "catalog:default",
 		"@tanstack/react-router-devtools": "^1.158.0",
 		"@tanstack/router-plugin": "^1.158.0",
 		"@types/react": "^19.2.0",
