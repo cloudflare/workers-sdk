@@ -59,7 +59,7 @@
 			"files": "packages/local-explorer-ui/**/*.{js,jsx,ts,tsx}",
 			"options": {
 				"tailwindStylesheet": "./packages/local-explorer-ui/src/styles/tailwind.css",
-				"tailwindFunctions": ["cn", "clsx", "classnames"]
+				"tailwindFunctions": ["cn"]
 			}
 		}
 	]
