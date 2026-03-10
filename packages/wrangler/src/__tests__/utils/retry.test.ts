@@ -26,7 +26,7 @@ describe("retryOnAPIFailure", () => {
 		});
 		expect(attempts).toBe(3);
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`
-			Array [
+			[
 			  "Retrying API call after error...",
 			  "APIError: 500 error",
 			  "Retrying API call after error...",
@@ -46,7 +46,7 @@ describe("retryOnAPIFailure", () => {
 		).rejects.toMatchInlineSnapshot(`[APIError: 500 error]`);
 		expect(attempts).toBe(3);
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`
-			Array [
+			[
 			  "Retrying API call after error...",
 			  "APIError: 500 error",
 			  "Retrying API call after error...",
@@ -67,7 +67,7 @@ describe("retryOnAPIFailure", () => {
 			})
 		).rejects.toMatchInlineSnapshot(`[APIError: 401 error]`);
 		expect(attempts).toBe(1);
-		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`Array []`);
+		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`[]`);
 	});
 
 	it("should retry TypeError", async ({ expect }) => {
@@ -81,7 +81,7 @@ describe("retryOnAPIFailure", () => {
 		).rejects.toMatchInlineSnapshot(`[TypeError: type error]`);
 		expect(attempts).toBe(3);
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`
-			Array [
+			[
 			  "Retrying API call after error...",
 			  "Retrying API call after error...",
 			  "Retrying API call after error...",
@@ -99,7 +99,7 @@ describe("retryOnAPIFailure", () => {
 			})
 		).rejects.toMatchInlineSnapshot(`[Error: some error]`);
 		expect(attempts).toBe(1);
-		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`Array []`);
+		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`[]`);
 	});
 
 	it("should retry custom APIError implementation with non-5xx error", async ({
@@ -124,7 +124,7 @@ describe("retryOnAPIFailure", () => {
 		expect(attempts).toBe(3);
 		expect(checkedCustomIsRetryable).toBe(true);
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`
-			Array [
+			[
 			  "Retrying API call after error...",
 			  "CustomAPIError: 401 error",
 			  "Retrying API call after error...",

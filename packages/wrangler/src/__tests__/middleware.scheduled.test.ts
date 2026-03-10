@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { beforeEach, describe, it, vi } from "vitest";
-import { unstable_dev } from "../api";
+import { startWorker } from "../api/startDevWorker";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 vi.unmock("child_process");
@@ -40,102 +40,102 @@ describe("run scheduled events with middleware", () => {
 		it("should not intercept when middleware is not enabled", async ({
 			expect,
 		}) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 				},
 			});
 
-			const resp = await worker.fetch("/__scheduled");
+			const resp = await worker.fetch("http://dummy/__scheduled");
 			let text;
 			if (resp) {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Fetch triggered at /__scheduled"`);
-			await worker.stop();
+			await worker.dispose();
 		});
 
 		it("should intercept when middleware is enabled", async ({ expect }) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/__scheduled");
+			const resp = await worker.fetch("http://dummy/__scheduled");
 			let text;
 			if (resp) {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
-			await worker.stop();
+			await worker.dispose();
 		});
 
 		it("should not trigger scheduled event on wrong route", async ({
 			expect,
 		}) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/test");
+			const resp = await worker.fetch("http://dummy/test");
 			let text;
 			if (resp) {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
-			await worker.stop();
+			await worker.dispose();
 		});
 
 		it("should respond with 404 for favicons", async ({ expect }) => {
-			const worker = await unstable_dev("only-scheduled.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "only-scheduled.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/favicon.ico", {
+			const resp = await worker.fetch("http://dummy/favicon.ico", {
 				headers: {
 					referer: "http://localhost/__scheduled",
 				},
 			});
 
 			expect(resp.status).toEqual(404);
-			await worker.stop();
+			await worker.dispose();
 		});
 		it("should not respond with 404 for favicons if user-worker has a response", async ({
 			expect,
 		}) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/favicon.ico", {
+			const resp = await worker.fetch("http://dummy/favicon.ico", {
 				headers: {
 					referer: "http://localhost/__scheduled",
 				},
 			});
 
 			expect(resp.status).not.toEqual(404);
-			await worker.stop();
+			await worker.dispose();
 		});
 	});
 
@@ -170,102 +170,102 @@ describe("run scheduled events with middleware", () => {
 		it("should not intercept when middleware is not enabled", async ({
 			expect,
 		}) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 				},
 			});
 
-			const resp = await worker.fetch("/__scheduled");
+			const resp = await worker.fetch("http://dummy/__scheduled");
 			let text;
 			if (resp) {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Fetch triggered at /__scheduled"`);
-			await worker.stop();
+			await worker.dispose();
 		});
 
 		it("should intercept when middleware is enabled", async ({ expect }) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/__scheduled");
+			const resp = await worker.fetch("http://dummy/__scheduled");
 			let text;
 			if (resp) {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
-			await worker.stop();
+			await worker.dispose();
 		});
 
 		it("should not trigger scheduled event on wrong route", async ({
 			expect,
 		}) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/test");
+			const resp = await worker.fetch("http://dummy/test");
 			let text;
 			if (resp) {
 				text = await resp.text();
 			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
-			await worker.stop();
+			await worker.dispose();
 		});
 
 		it("should respond with 404 for favicons", async ({ expect }) => {
-			const worker = await unstable_dev("only-scheduled.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "only-scheduled.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/favicon.ico", {
+			const resp = await worker.fetch("http://dummy/favicon.ico", {
 				headers: {
 					referer: "http://localhost/__scheduled",
 				},
 			});
 
 			expect(resp.status).toEqual(404);
-			await worker.stop();
+			await worker.dispose();
 		});
 		it("should not respond with 404 for favicons if user-worker has a response", async ({
 			expect,
 		}) => {
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
 				},
 			});
 
-			const resp = await worker.fetch("/favicon.ico", {
+			const resp = await worker.fetch("http://dummy/favicon.ico", {
 				headers: {
 					referer: "http://localhost/__scheduled",
 				},
 			});
 
 			expect(resp.status).not.toEqual(404);
-			await worker.stop();
+			await worker.dispose();
 		});
 	});
 });

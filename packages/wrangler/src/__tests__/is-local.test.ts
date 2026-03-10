@@ -1,6 +1,4 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect -- uses .each */
-import { expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { it } from "vitest";
 import { isLocal } from "../utils/is-local";
 
 const testCases: [
@@ -20,6 +18,9 @@ const testCases: [
 	[{ remote: undefined, local: undefined }, false, false],
 ];
 
-it.each(testCases)("isLocal(%j, %o) -> %o", (args, defaultValue, expected) => {
-	expect(isLocal(args, defaultValue)).toBe(expected);
-});
+it.for(testCases)(
+	"isLocal(%j, %o) -> %o",
+	([args, defaultValue, expected], { expect }) => {
+		expect(isLocal(args, defaultValue)).toBe(expected);
+	}
+);

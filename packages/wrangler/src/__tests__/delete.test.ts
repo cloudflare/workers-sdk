@@ -35,7 +35,7 @@ describe("delete", () => {
 		await runWrangler("delete --name my-script");
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -60,7 +60,7 @@ describe("delete", () => {
 		await runWrangler("delete my-positional-worker");
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -86,7 +86,7 @@ describe("delete", () => {
 		await runWrangler("delete cli-provided-name");
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -112,7 +112,7 @@ describe("delete", () => {
 		await runWrangler("delete");
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -129,7 +129,7 @@ describe("delete", () => {
 		await runWrangler("delete --name xyz --dry-run");
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -151,7 +151,7 @@ describe("delete", () => {
 		await runWrangler("delete --name xyz");
 
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
@@ -201,14 +201,14 @@ describe("delete", () => {
 		mockDeleteWorkerRequest({ name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
+			🌀 Deleted asset namespace for Workers Site "__my-script-workers_sites_assets"
 			Successfully deleted my-script",
 			  "warn": "",
 			}
@@ -285,15 +285,15 @@ describe("delete", () => {
 		mockDeleteWorkerRequest({ name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
-			Object {
+			{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
-			🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets_preview\\"
+			🌀 Deleted asset namespace for Workers Site "__my-script-workers_sites_assets"
+			🌀 Deleted asset namespace for Workers Site "__my-script-workers_sites_assets_preview"
 			Successfully deleted my-script",
 			  "warn": "",
 			}
@@ -387,7 +387,7 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
@@ -432,7 +432,7 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
@@ -451,7 +451,7 @@ Are you sure you want to continue?`,
 			await runWrangler("delete --force");
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
@@ -492,7 +492,7 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
@@ -550,7 +550,7 @@ Are you sure you want to continue?`,
 			await runWrangler("delete");
 
 			expect(std).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "debug": "",
 				  "err": "",
 				  "info": "",

@@ -99,95 +99,94 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints deployments to stdout as --json", async ({ expect }) => {
+		test("prints deployments to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler("deployments list --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"upload\\"
+				    "annotations": {
+				      "workers/triggered_by": "upload",
 				    },
-				    \\"versions\\": [
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "id": "Galaxy-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 20
+				        "percentage": 20,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 80
-				      }
-				    ]
+				        "percentage": 80,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
 				  },
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"api\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    "annotations": {
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
+				      "workers/triggered_by": "rollback",
 				    },
-				    \\"versions\\": [
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-04T00:00:00.000000Z",
+				    "id": "Galaxy-Class-test-name",
+				    "source": "api",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 10
+				        "percentage": 10,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 90
-				      }
-				    ]
+				        "percentage": 90,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
 				  },
 				  {
-				    \\"id\\": \\"Intrepid-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    "annotations": {
+				      "workers/message": "Rolled back for this version",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+				      "workers/triggered_by": "rollback",
 				    },
-				    \\"versions\\": [
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-02T00:00:00.000000Z",
+				    "id": "Intrepid-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 30
+				        "percentage": 30,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 70
-				      }
-				    ]
+				        "percentage": 70,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
 				  },
 				  {
-				    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-				    \\"versions\\": [
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-03T00:00:00.000000Z",
+				    "id": "3mEgaU1T-Intrepid-someThing-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 40
+				        "percentage": 40,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 60
-				      }
-				    ]
-				  }
+				        "percentage": 60,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
+				  },
 				]
-				"
 			`);
 		});
 	});
@@ -262,95 +261,94 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints deployments to stdout as --json", async ({ expect }) => {
+		test("prints deployments to stdout as valid json", async ({ expect }) => {
 			const result = runWrangler("deployments list --json");
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"[
+			expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+				[
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"upload\\"
+				    "annotations": {
+				      "workers/triggered_by": "upload",
 				    },
-				    \\"versions\\": [
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-01T00:00:00.000000Z",
+				    "id": "Galaxy-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 20
+				        "percentage": 20,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 80
-				      }
-				    ]
+				        "percentage": 80,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
 				  },
 				  {
-				    \\"id\\": \\"Galaxy-Class-test-name\\",
-				    \\"source\\": \\"api\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
-				    \\"created_on\\": \\"2021-01-04T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-2222\\"
+				    "annotations": {
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
+				      "workers/triggered_by": "rollback",
 				    },
-				    \\"versions\\": [
+				    "author_email": "Jean-Luc-Picard@federation.org",
+				    "created_on": "2021-01-04T00:00:00.000000Z",
+				    "id": "Galaxy-Class-test-name",
+				    "source": "api",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 10
+				        "percentage": 10,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 90
-				      }
-				    ]
+				        "percentage": 90,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
 				  },
 				  {
-				    \\"id\\": \\"Intrepid-Class-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-02T00:00:00.000000Z\\",
-				    \\"annotations\\": {
-				      \\"workers/triggered_by\\": \\"rollback\\",
-				      \\"workers/rollback_from\\": \\"MOCK-DEPLOYMENT-ID-1111\\",
-				      \\"workers/message\\": \\"Rolled back for this version\\"
+				    "annotations": {
+				      "workers/message": "Rolled back for this version",
+				      "workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+				      "workers/triggered_by": "rollback",
 				    },
-				    \\"versions\\": [
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-02T00:00:00.000000Z",
+				    "id": "Intrepid-Class-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 30
+				        "percentage": 30,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 70
-				      }
-				    ]
+				        "percentage": 70,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
 				  },
 				  {
-				    \\"id\\": \\"3mEgaU1T-Intrepid-someThing-test-name\\",
-				    \\"source\\": \\"wrangler\\",
-				    \\"strategy\\": \\"percentage\\",
-				    \\"author_email\\": \\"Kathryn-Janeway@federation.org\\",
-				    \\"created_on\\": \\"2021-02-03T00:00:00.000000Z\\",
-				    \\"versions\\": [
+				    "author_email": "Kathryn-Janeway@federation.org",
+				    "created_on": "2021-02-03T00:00:00.000000Z",
+				    "id": "3mEgaU1T-Intrepid-someThing-test-name",
+				    "source": "wrangler",
+				    "strategy": "percentage",
+				    "versions": [
 				      {
-				        \\"version_id\\": \\"10000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 40
+				        "percentage": 40,
+				        "version_id": "10000000-0000-0000-0000-000000000000",
 				      },
 				      {
-				        \\"version_id\\": \\"20000000-0000-0000-0000-000000000000\\",
-				        \\"percentage\\": 60
-				      }
-				    ]
-				  }
+				        "percentage": 60,
+				        "version_id": "20000000-0000-0000-0000-000000000000",
+				      },
+				    ],
+				  },
 				]
-				"
 			`);
 		});
 	});

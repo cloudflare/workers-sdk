@@ -2,6 +2,7 @@ import { beforeEach, describe, test } from "vitest";
 import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
+import { NpmPackageManager } from "../../package-manager";
 import { dedent } from "../../utils/dedent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -34,6 +35,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "public",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -47,29 +49,29 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				"
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"worker-name\\",
-				    \\"compatibility_date\\": \\"2025-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "worker-name",
+				    "compatibility_date": "2025-01-01",
+				    "observability": {
+				      "enabled": true
 				    }
 				  }
 				"
 			`);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "public",
-				  "scripts": Object {},
+				  "scripts": {},
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -92,6 +94,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "dist",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -109,21 +112,21 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "dist",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -148,6 +151,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "out",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -165,21 +169,21 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
 				  "frameworkId": "static",
 				  "outputDir": "out",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
 				  "versionCommand": "npx wrangler versions upload",
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -198,6 +202,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Astro({ id: "astro", name: "Astro" }),
 					configured: false,
 					outputDir: "dist",
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -227,6 +232,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					configured: false,
 					outputDir: "public",
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{

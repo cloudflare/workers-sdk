@@ -8,7 +8,7 @@ import {
 import { base64Decode, base64Encode } from "./data";
 import { MiniflareDurableObject } from "./object.worker";
 import { InclusiveRange } from "./range";
-import { drain, get, TypedSql } from "./sql.worker";
+import { all, drain, get, TypedSql } from "./sql.worker";
 import { Timers } from "./timers.worker";
 import { Awaitable } from "./types";
 
@@ -60,6 +60,7 @@ function sqlStmts(db: TypedSql) {
 	);
 
 	return {
+		db,
 		getByKey: db.prepare<[key_1: string], Row>(
 			"SELECT key, blob_id, expiration, metadata FROM _mf_entries WHERE key = ?1"
 		),
@@ -77,6 +78,9 @@ function sqlStmts(db: TypedSql) {
 		deleteExpired: db.stmt<{ now: number }, Pick<Row, "blob_id">>(
 			// `expiration` may be `NULL`, but `NULL < ...` should be falsy
 			"DELETE FROM _mf_entries WHERE expiration < :now RETURNING blob_id"
+		),
+		deleteAll: db.prepare<[], Pick<Row, "blob_id">>(
+			"DELETE FROM _mf_entries RETURNING blob_id"
 		),
 		list: db.stmt<
 			{
@@ -228,6 +232,18 @@ export class KeyValueStorage<Metadata = unknown> {
 		this.#backgroundDelete(row.blob_id);
 		// Return true iff this entry hasn't expired
 		return !this.#hasExpired(row);
+	}
+
+	deleteAll(): number {
+		// Get all blob IDs and delete all entries in one statement
+		const rows = all(this.#stmts.deleteAll());
+
+		// Garbage collect all blobs in the background
+		for (const { blob_id } of rows) {
+			this.#backgroundDelete(blob_id);
+		}
+
+		return rows.length;
 	}
 
 	async list(opts: KeyEntriesQuery): Promise<KeyEntries<Metadata>> {

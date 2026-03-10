@@ -1,5 +1,6 @@
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
+import { TemporaryRedirectResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
@@ -80,6 +81,19 @@ export default {
 					version: env.VERSION_METADATA.tag,
 					userWorkerAhead: config.invoke_user_worker_ahead_of_assets,
 				});
+			}
+
+			// Handle /cdn-cgi\... backslash bypass attempts
+			// - in production if pathname starts with `/cdn-cgi/` then it bypassed the external
+			//   routing and so must have actually started with `/cdn-cgi\`.
+			// - in local dev it is possible for pathname to start with `/cdn-cgi/`
+			//   even if it doesn't start with `/cdn-cgi\` so we also check the raw URL for that.
+			if (
+				url.pathname.startsWith("/cdn-cgi/") &&
+				request.url.includes("/cdn-cgi\\")
+			) {
+				analytics.setData({ cdnCgiBackslashBypassUrl: request.url });
+				return new TemporaryRedirectResponse(url.href);
 			}
 
 			const routeToUserWorker = async ({

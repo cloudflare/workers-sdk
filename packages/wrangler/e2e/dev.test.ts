@@ -2570,9 +2570,9 @@ describe(".env support in local dev", () => {
 		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
 			"{
 			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_3": "default-3",
 			  "WRANGLER_ENV_VAR_1": "env-1",
-			  "WRANGLER_ENV_VAR_2": "env-2",
-			  "WRANGLER_ENV_VAR_3": "default-3"
+			  "WRANGLER_ENV_VAR_2": "env-2"
 			}"
 		`);
 	});
@@ -2598,9 +2598,9 @@ describe(".env support in local dev", () => {
 		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
 			"{
 			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_3": "default-3",
 			  "WRANGLER_ENV_VAR_1": "dev-vars-1",
-			  "WRANGLER_ENV_VAR_2": "dev-vars-2",
-			  "WRANGLER_ENV_VAR_3": "default-3"
+			  "WRANGLER_ENV_VAR_2": "dev-vars-2"
 			}"
 		`);
 	});
@@ -2700,9 +2700,9 @@ describe(".env support in local dev", () => {
 		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
 			"{
 			  "WRANGLER_ENV_VAR_0": "default-0",
+			  "WRANGLER_ENV_VAR_3": "default-3",
 			  "WRANGLER_ENV_VAR_1": "env-1",
-			  "WRANGLER_ENV_VAR_2": "env-2",
-			  "WRANGLER_ENV_VAR_3": "default-3"
+			  "WRANGLER_ENV_VAR_2": "env-2"
 			}"
 		`);
 	});

@@ -1,10 +1,17 @@
-import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import {
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	onTestFinished,
+	vi,
+} from "vitest";
 import WebSocket from "ws";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {

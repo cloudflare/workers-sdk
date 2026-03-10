@@ -1,5 +1,5 @@
 import { Miniflare, MiniflareCoreError, WorkerdStructuredLog } from "miniflare";
-import { test } from "vitest";
+import { assert, test } from "vitest";
 import { useDispose } from "./test-shared";
 
 test("logs are treated as standard stdout/stderr chunks by default", async ({
@@ -218,9 +218,9 @@ test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` tri
 		error = e as MiniflareCoreError;
 	}
 
-	expect(error).toBeInstanceOf(MiniflareCoreError);
-	expect(error?.code).toBe("ERR_VALIDATION");
-	expect(error?.message).toContain(
+	assert(error instanceof MiniflareCoreError);
+	expect(error.code).toBe("ERR_VALIDATION");
+	expect(error.message).toContain(
 		"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
 	);
 });

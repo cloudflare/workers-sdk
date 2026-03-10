@@ -3,8 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
 		"build:custom-mode": "vite build --app -c vite.config.custom-mode.ts",
+		"build:default": "vite build --app",
 		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:custom-mode": "vite dev -c vite.config.custom-mode.ts",

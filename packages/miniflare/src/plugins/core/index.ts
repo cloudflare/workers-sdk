@@ -5,11 +5,11 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
+import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
-import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -40,6 +40,7 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	DurableObjectClassNames,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 	Plugin,
@@ -55,10 +56,14 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
-	LOCAL_EXPLORER_DISK,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
+import {
+	constructExplorerBindingMap,
+	getExplorerServices,
+	wrapDurableObjectModules,
+} from "./explorer";
 import {
 	buildStringScriptPath,
 	convertModuleDefinition,
@@ -73,7 +78,8 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
-import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -187,7 +193,10 @@ const CoreOptionsSchemaInput = z.intersection(
 		containerEngine: z
 			.union([
 				z.object({
-					localDocker: z.object({ socketPath: z.string() }),
+					localDocker: z.object({
+						socketPath: z.string(),
+						containerEgressInterceptorImage: z.string().optional(),
+					}),
 				}),
 				z.string(),
 			])
@@ -742,6 +751,26 @@ export const CORE_PLUGIN: Plugin<
 		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
 
+		// Wrap Durable Object classes for the local explorer
+		// This injects a method onto user defined DO classes to allow
+		// us to introspect the sqlite databases, since these are not
+		// available on the stub.
+		const sqliteClasses = classNamesEntries.filter(
+			([, { enableSql }]) => enableSql
+		);
+		if (
+			sharedOptions.unsafeLocalExplorer &&
+			// service-format workers are not supported
+			"modules" in workerScript &&
+			sqliteClasses.length > 0 &&
+			"esModule" in workerScript.modules[0]
+		) {
+			workerScript.modules = wrapDurableObjectModules(
+				workerScript.modules,
+				sqliteClasses.map(([className]) => className)
+			);
+		}
+
 		const compatibilityDate = validateCompatibilityDate(
 			log,
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
@@ -966,6 +995,8 @@ export interface GlobalServicesOptions {
 	log: Log;
 	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
+	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
+	durableObjectClassNames: DurableObjectClassNames;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -974,6 +1005,7 @@ export function getGlobalServices({
 	loopbackPort,
 	log,
 	proxyBindings,
+	durableObjectClassNames,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1015,6 +1047,11 @@ export function getGlobalServices({
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
+		// Add cache service binding for purgeCache() API
+		{
+			name: CoreBindings.SERVICE_CACHE,
+			service: { name: getCacheServiceName(0) },
+		},
 	];
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
@@ -1091,90 +1128,30 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
-		// Build binding ID map from proxyBindings
-		// Maps binding names to their actual resource IDs
-		const IDToBindingName: {
-			d1: Record<string, string>;
-			kv: Record<string, string>;
-		} = {
-			d1: {},
-			kv: {},
-		};
-
-		for (const binding of proxyBindings) {
-			// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING", wrapped.innerBindings[0].service.name = "d1:db:ID"
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
-				) &&
-				"wrapped" in binding
-			) {
-				const [innerBinding] = binding.wrapped?.innerBindings ?? [];
-				assert(innerBinding && "service" in innerBinding);
-
-				const databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
-				assert(databaseId);
-
-				IDToBindingName.d1[databaseId] = binding.name;
-			}
-
-			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
-				) &&
-				"kvNamespace" in binding &&
-				binding.kvNamespace?.name?.startsWith("kv:ns:")
-			) {
-				// Extract ID from service name "kv:ns:ID"
-				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
-				IDToBindingName.kv[namespaceId] = binding.name;
-			}
-		}
-
-		// Disk service for serving local-explorer-ui assets
+		// Local explorer UI assets path
 		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
 		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
-		const distPath = path.join(__dirname, "../local-explorer-ui");
-		if (existsSync(distPath)) {
-			services.push({
-				name: LOCAL_EXPLORER_DISK,
-				disk: {
-					path: distPath,
-					writable: false,
-				},
-			});
-		} else {
+		const localExplorerUiPath = path.join(__dirname, "../local-explorer-ui");
+		if (!existsSync(localExplorerUiPath)) {
 			throw new MiniflareCoreError(
 				"ERR_MISSING_EXPLORER_UI",
-				`Local Explorer UI assets not found at expected path: ${distPath}`
+				`Local Explorer UI assets not found at expected path: ${localExplorerUiPath}`
 			);
 		}
-
-		services.push({
-			name: SERVICE_LOCAL_EXPLORER,
-			worker: {
-				compatibilityDate: "2026-01-01",
-				compatibilityFlags: ["nodejs_compat"],
-				modules: [
-					{
-						name: "explorer.worker.js",
-						esModule: SCRIPT_LOCAL_EXPLORER(),
-					},
-				],
-				bindings: [
-					...proxyBindings,
-					{
-						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
-						json: JSON.stringify(IDToBindingName),
-					},
-					{
-						name: CoreBindings.EXPLORER_DISK,
-						service: { name: LOCAL_EXPLORER_DISK },
-					},
-				],
-			},
-		});
+		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
+			proxyBindings,
+			durableObjectClassNames
+		);
+		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
+		services.push(
+			...getExplorerServices({
+				localExplorerUiPath,
+				proxyBindings,
+				bindingIdMap: IDToBindingMap,
+				hasDurableObjects,
+				workerNames,
+			})
+		);
 	}
 
 	return services;
@@ -1236,6 +1213,17 @@ function getWorkerScript(
 }
 
 /**
+ * Returns the default containerEgressInterceptorImage. It's used for
+ * container network interception for local dev.
+ */
+function getContainerEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+/**
  * Returns the Container engine configuration
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
@@ -1251,11 +1239,28 @@ function getContainerEngine(
 				: "unix:///var/run/docker.sock";
 	}
 
+	// Egress interceptor is to support direct connectivity between the Container and Workers,
+	// it spawns a container in the same network namespace as the local dev container and
+	// intercepts traffic to redirect to Workerd.
+	const egressImage = getContainerEgressInterceptorImage();
+
 	if (typeof engineOrSocketPath === "string") {
-		return { localDocker: { socketPath: engineOrSocketPath } };
+		return {
+			localDocker: {
+				socketPath: engineOrSocketPath,
+				containerEgressInterceptorImage: egressImage,
+			},
+		};
 	}
 
-	return engineOrSocketPath;
+	return {
+		localDocker: {
+			...engineOrSocketPath.localDocker,
+			containerEgressInterceptorImage:
+				engineOrSocketPath.localDocker.containerEgressInterceptorImage ??
+				egressImage,
+		},
+	};
 }
 
 export * from "./errors";

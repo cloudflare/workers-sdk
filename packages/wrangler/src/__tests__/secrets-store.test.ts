@@ -103,10 +103,10 @@ describe("secrets-store store commands", () => {
 			await runWrangler("secrets-store store create test-store --remote");
 
 			await expect(reqProm).resolves.toMatchInlineSnapshot(`
-        Object {
-          "name": "test-store",
-        }
-      `);
+				{
+				  "name": "test-store",
+				}
+			`);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -207,17 +207,17 @@ describe("secrets-store secret commands", () => {
 			);
 
 			await expect(reqProm).resolves.toMatchInlineSnapshot(`
-        Array [
-          Object {
-            "comment": "wrangler secret",
-            "name": "TEST_SECRET",
-            "scopes": Array [
-              "workers",
-            ],
-            "value": "shhhhhhh!",
-          },
-        ]
-      `);
+				[
+				  {
+				    "comment": "wrangler secret",
+				    "name": "TEST_SECRET",
+				    "scopes": [
+				      "workers",
+				    ],
+				    "value": "shhhhhhh!",
+				  },
+				]
+			`);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -507,14 +507,14 @@ describe("secrets-store secret commands", () => {
 			);
 
 			await expect(reqProm).resolves.toMatchInlineSnapshot(`
-        Object {
-          "comment": "wrangler secret update",
-          "scopes": Array [
-            "workers",
-          ],
-          "value": "shhhhhhh!",
-        }
-      `);
+				{
+				  "comment": "wrangler secret update",
+				  "scopes": [
+				    "workers",
+				  ],
+				  "value": "shhhhhhh!",
+				}
+			`);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -618,14 +618,14 @@ describe("secrets-store secret commands", () => {
 			);
 
 			await expect(reqProm).resolves.toMatchInlineSnapshot(`
-        Object {
-          "comment": "wrangler secret update",
-          "name": "DUPLICATE_KEY",
-          "scopes": Array [
-            "workers",
-          ],
-        }
-      `);
+				{
+				  "comment": "wrangler secret update",
+				  "name": "DUPLICATE_KEY",
+				  "scopes": [
+				    "workers",
+				  ],
+				}
+			`);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"

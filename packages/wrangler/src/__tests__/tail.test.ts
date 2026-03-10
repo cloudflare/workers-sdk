@@ -606,7 +606,7 @@ describe("tail", () => {
 				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
-				\\"* * * * *\\" @ [mock timestamp string] - Ok"
+				"* * * * *" @ [mock timestamp string] - Ok"
 			`);
 			await api.closeHelper();
 		});

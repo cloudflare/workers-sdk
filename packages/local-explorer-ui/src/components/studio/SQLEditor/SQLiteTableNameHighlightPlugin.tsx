@@ -1,0 +1,61 @@
+import { syntaxTree } from "@codemirror/language";
+import { Decoration, ViewPlugin } from "@codemirror/view";
+import type { Range } from "@codemirror/state";
+import type { DecorationSet, EditorView, ViewUpdate } from "@codemirror/view";
+
+const underlineMark = Decoration.mark({ class: "cm-table-name" });
+
+export function createSQLTableNameHighlightPlugin(tableNameList: string[]) {
+	const tableNameSet = new Set<string>(
+		tableNameList.map((table) => table.toLowerCase())
+	);
+
+	function highlightTableName(view: EditorView): DecorationSet {
+		const decorationList = new Array<Range<Decoration>>();
+		for (const { from, to } of view.visibleRanges) {
+			syntaxTree(view.state).iterate({
+				enter: (node) => {
+					if (node.name == "Identifier") {
+						const word = view.state.doc
+							.sliceString(node.from, node.to)
+							.toLowerCase();
+
+						const lastChar = node.node.prevSibling
+							? view.state.doc
+									.sliceString(
+										node.node.prevSibling.from,
+										node.node.prevSibling.to
+									)
+									.toLowerCase()
+							: "";
+
+						if (tableNameSet.has(word) && lastChar !== ".") {
+							decorationList.push(underlineMark.range(node.from, node.to));
+						}
+					}
+				},
+				from,
+				to,
+			});
+		}
+
+		return Decoration.set(decorationList);
+	}
+
+	return ViewPlugin.fromClass(
+		class {
+			decorations: DecorationSet;
+
+			constructor(view: EditorView) {
+				this.decorations = highlightTableName(view);
+			}
+
+			update(update: ViewUpdate) {
+				this.decorations = highlightTableName(update.view);
+			}
+		},
+		{
+			decorations: (v) => v.decorations,
+		}
+	);
+}

@@ -36,8 +36,8 @@ describe("loadDotEnv()", () => {
 
 		expect(result).toEqual({ FOO: "qux", BAZ: "qux" });
 		expect(std.out).toMatchInlineSnapshot(`
-			"Using vars defined in .env
-			Using vars defined in .env.local"
+			"Using secrets defined in .env
+			Using secrets defined in .env.local"
 		`);
 	});
 
@@ -65,7 +65,7 @@ describe("loadDotEnv()", () => {
 
 		expect(result).toEqual({});
 		expect(std.debug).toMatchInlineSnapshot(
-			`".env file not found at \\"./.env.missing\\". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/"`
+			`".env file not found at "./.env.missing". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/"`
 		);
 	});
 

@@ -68,25 +68,13 @@ const forceModuleTypeRegexp = new RegExp(
 );
 
 function isFile(filePath: string): boolean {
-	try {
-		return fs.statSync(filePath).isFile();
-	} catch (e) {
-		if (isFileNotFoundError(e)) {
-			return false;
-		}
-		throw e;
-	}
+	return fs.statSync(filePath, { throwIfNoEntry: false })?.isFile() ?? false;
 }
 
 function isDirectory(filePath: string): boolean {
-	try {
-		return fs.statSync(filePath).isDirectory();
-	} catch (e) {
-		if (isFileNotFoundError(e)) {
-			return false;
-		}
-		throw e;
-	}
+	return (
+		fs.statSync(filePath, { throwIfNoEntry: false })?.isDirectory() ?? false
+	);
 }
 
 function getParentPaths(filePath: string): string[] {

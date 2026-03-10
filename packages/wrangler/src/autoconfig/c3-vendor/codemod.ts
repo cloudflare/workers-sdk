@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readdirSync, writeFileSync } from "node:fs";
+import { lstatSync, readdirSync, writeFileSync } from "node:fs";
 import path, { extname, join } from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
 import * as recast from "recast";
@@ -80,11 +80,7 @@ export const transformFile = (
 export const loadSnippets = (parentFolder: string) => {
 	const snippetsPath = join(parentFolder, "snippets");
 
-	if (!existsSync(snippetsPath)) {
-		return {};
-	}
-
-	if (!lstatSync(snippetsPath).isDirectory) {
+	if (!lstatSync(snippetsPath, { throwIfNoEntry: false })?.isDirectory()) {
 		return {};
 	}
 
@@ -93,7 +89,7 @@ export const loadSnippets = (parentFolder: string) => {
 	return (
 		files
 			// don't try loading directories
-			.filter((fileName) => lstatSync(join(snippetsPath, fileName)).isFile)
+			.filter((fileName) => lstatSync(join(snippetsPath, fileName)).isFile())
 			// only load js or ts files
 			.filter((fileName) => [".js", ".ts"].includes(extname(fileName)))
 			.reduce((acc, snippetPath) => {

@@ -17,6 +17,23 @@ import type {
 	WranglerLogger,
 } from "./types";
 
+export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
+
+export function getEgressInterceptorImage(): string {
+	return (
+		process.env.MINIFLARE_CONTAINER_EGRESS_IMAGE ??
+		DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE
+	);
+}
+
+export async function pullEgressInterceptorImage(
+	dockerPath: string
+): Promise<void> {
+	const image = getEgressInterceptorImage();
+	await runDockerCmd(dockerPath, ["pull", image, "--platform", "linux/amd64"]);
+}
+
 export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
@@ -152,6 +169,12 @@ export async function prepareContainerImagesForDev(args: {
 			await checkExposedPorts(dockerPath, options);
 		}
 	}
+
+	// Pull the egress interceptor image used to intercept outbound HTTP from
+	// containers and route it back to workerd (e.g. for interceptOutboundHttp).
+	if (!aborted) {
+		await pullEgressInterceptorImage(dockerPath);
+	}
 }
 
 /**
@@ -233,6 +256,12 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
 			name: "AWS ECR",
 			secretType: "AWS Secret Access Key",
+		},
+		{
+			type: ExternalRegistryKind.DOCKER_HUB,
+			pattern: /^docker\.io$/,
+			name: "DockerHub",
+			secretType: "DockerHub PAT Token",
 		},
 		{
 			type: "cloudflare",

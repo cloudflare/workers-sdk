@@ -75,6 +75,11 @@ export interface StartDevWorkerInput {
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
+	/**
+	 * Default bindings that can be overridden by config bindings.
+	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
+	 */
+	defaultBindings?: Record<string, Extract<Binding, { type: "plain_text" }>>;
 	migrations?: DurableObjectMigration[];
 	containers?: ContainerApp[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */

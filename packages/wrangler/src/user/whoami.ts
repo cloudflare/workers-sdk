@@ -1,8 +1,10 @@
-import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
+import {
+	createFatalError,
+	getCloudflareComplianceRegion,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
-import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
@@ -11,17 +13,50 @@ import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
+ * Represents the JSON output of `wrangler whoami --json`.
+ */
+export type WhoamiResult =
+	| { loggedIn: false }
+	| {
+			loggedIn: true;
+			authType: AuthType;
+			email: string | undefined;
+			accounts: AccountInfo[];
+			tokenPermissions: string[] | undefined;
+	  };
+
+/**
  * Displays information about the currently authenticated user, including their
  * email, accounts, token permissions, and membership roles.
  *
  * When called with `accountFilter` and `configAccountId`, also checks for potential
  * `account_id` mismatches that could cause authentication errors.
+ *
+ * When `json` is true, outputs structured JSON to stdout and exits with a
+ * non-zero status if the user is not authenticated.
  */
 export async function whoami(
 	complianceConfig: ComplianceConfig,
 	accountFilter?: string,
-	configAccountId?: string
+	configAccountId?: string,
+	json?: boolean
 ) {
+	if (json) {
+		const user = await getUserInfo(complianceConfig);
+		if (!user) {
+			throw createFatalError({ loggedIn: false } satisfies WhoamiResult, true);
+		}
+		const result: WhoamiResult = {
+			loggedIn: true,
+			authType: user.authType,
+			email: user.email,
+			accounts: user.accounts,
+			tokenPermissions: user.tokenPermissions,
+		};
+		logger.json(result);
+		return;
+	}
+
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
@@ -57,11 +92,9 @@ function printComplianceRegion(complianceConfig: ComplianceConfig) {
 }
 
 function printUserEmail(user: UserInfo) {
-	const redactFields = isNonInteractiveOrCI();
-
 	if (user.authType === "Account API Token") {
 		// Account API Tokens only have access to a single account
-		const accountName = redactFields ? "(redacted)" : user.accounts[0].name;
+		const accountName = user.accounts[0].name;
 		return void logger.log(
 			`👋 You are logged in with an ${user.authType}, associated with the account ${chalk.blue(accountName)}.`
 		);
@@ -71,18 +104,15 @@ function printUserEmail(user: UserInfo) {
 			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
 		);
 	}
-	const email = redactFields ? "(redacted)" : user.email;
 	logger.log(
-		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(email)}.`
+		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(user.email)}.`
 	);
 }
 
 function printAccountList(user: UserInfo) {
-	const redactFields = isNonInteractiveOrCI();
-
 	logger.table(
 		user.accounts.map((account) => ({
-			"Account Name": redactFields ? "(redacted)" : account.name,
+			"Account Name": account.name,
 			"Account ID": account.id,
 		}))
 	);
@@ -189,10 +219,8 @@ async function printMembershipInfo(
 		if (!membershipRoles) {
 			return;
 		}
-		const redactFields = isNonInteractiveOrCI();
-		const accountName = redactFields ? "(redacted)" : selectedAccount.name;
 		logger.log(
-			`🎢 Membership roles in "${accountName}": Contact account super admin to change your permissions.`
+			`🎢 Membership roles in "${selectedAccount.name}": Contact account super admin to change your permissions.`
 		);
 		for (const role of membershipRoles) {
 			logger.log(`- ${role}`);

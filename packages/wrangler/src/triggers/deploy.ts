@@ -259,6 +259,12 @@ export default async function triggersDeploy(
 				workflow.script_name !== undefined &&
 				workflow.script_name !== scriptName
 			) {
+				if (workflow.limits) {
+					throw new UserError(
+						`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+							`Configure limits on the worker that defines the workflow.`
+					);
+				}
 				continue;
 			}
 
@@ -271,6 +277,7 @@ export default async function triggersDeploy(
 						body: JSON.stringify({
 							script_name: scriptName,
 							class_name: workflow.class_name,
+							...(workflow.limits && { limits: workflow.limits }),
 						}),
 						headers: {
 							"Content-Type": "application/json",

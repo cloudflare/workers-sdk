@@ -584,7 +584,7 @@ describe("pages deployment tail", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Connected to deployment mock-deployment-id, waiting for logs...
-				\\"* * * * *\\" @ [mock timestamp string] - Ok"
+				"* * * * *" @ [mock timestamp string] - Ok"
 			`);
 			await api.closeHelper();
 		});

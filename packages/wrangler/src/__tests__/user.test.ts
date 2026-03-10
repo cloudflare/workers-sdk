@@ -6,9 +6,9 @@ import {
 	normalizeString,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
+import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
-import { CI } from "../is-ci";
 import {
 	getAccountFromCache,
 	getAccountId,
@@ -36,10 +36,8 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
-import type { MockInstance } from "vitest";
 
 describe("User", () => {
-	let isCISpy: MockInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
 	// TODO: Implement these two mocks with MSW
@@ -48,7 +46,6 @@ describe("User", () => {
 
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
 	describe("login", () => {
@@ -324,7 +321,7 @@ describe("User", () => {
 	});
 
 	it("should revert to non-interactive mode if in CI", async ({ expect }) => {
-		isCISpy.mockReturnValue(true);
+		vi.mocked(ci).isCI = true;
 		await expect(
 			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
 		).resolves.toEqual(false);

@@ -81,11 +81,11 @@ describe("pages", () => {
 			      --version-metadata                           Worker Version metadata (--version-metadata VERSION_METADATA_BINDING)  [string]
 			      --service                                    Service to bind (--service SERVICE=SCRIPT_NAME)  [array]
 			      --live-reload                                Auto reload HTML pages when change is detected  [boolean] [default: false]
-			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: "http", "https"]
 			      --https-key-path                             Path to a custom certificate key  [string]
 			      --https-cert-path                            Path to a custom certificate  [string]
 			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
-			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"]
+			      --log-level                                  Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"]
 			      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]"
 		`);
 	});
@@ -129,7 +129,7 @@ describe("pages", () => {
 			  wrangler pages deployment list                    List deployments in your Cloudflare Pages project
 			  wrangler pages deployment create [directory]      Deploy a directory of static assets as a Pages deployment
 
-			                                                    Alias for \\"wrangler pages deploy\\".
+			                                                    Alias for "wrangler pages deploy".
 			  wrangler pages deployment tail [deployment]       Start a tailing session for a project's deployment and livestream logs from your Functions
 			  wrangler pages deployment delete <deployment-id>  Delete a deployment in your Cloudflare Pages project
 

@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- it.each patterns */
-import { afterEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, describe, it, vi } from "vitest";
 import { getWorkerNameFromProject } from "../../../autoconfig/details";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 
@@ -25,9 +23,12 @@ describe("autoconfig details - getWorkerNameFromProject()", () => {
 		},
 	];
 
-	it.each(workerNamesToTest)(
+	it.for(workerNamesToTest)(
 		"should use the directory name as the worker name when no package.json, normalizing if needed (%s)",
-		async ({ rawName: dirname, normalizedName: expectedWorkerName }) => {
+		async (
+			{ rawName: dirname, normalizedName: expectedWorkerName },
+			{ expect }
+		) => {
 			await seed({
 				[`./${dirname}/index.html`]: "<h1>Hello World</h1>",
 			});
@@ -35,9 +36,12 @@ describe("autoconfig details - getWorkerNameFromProject()", () => {
 		}
 	);
 
-	it.each(workerNamesToTest)(
+	it.for(workerNamesToTest)(
 		"should use the name from package.json when available, normalizing if needed (%s)",
-		async ({ rawName: projectName, normalizedName: expectedWorkerName }) => {
+		async (
+			{ rawName: projectName, normalizedName: expectedWorkerName },
+			{ expect }
+		) => {
 			const dirname = `project-${randomUUID()}`;
 			await seed({
 				[`./${dirname}/package.json`]: JSON.stringify({ name: projectName }),
@@ -46,7 +50,9 @@ describe("autoconfig details - getWorkerNameFromProject()", () => {
 		}
 	);
 
-	it("should fall back to directory name when package.json has no name field", async () => {
+	it("should fall back to directory name when package.json has no name field", async ({
+		expect,
+	}) => {
 		const dirname = "my-test-project";
 		await seed({
 			[`./${dirname}/package.json`]: JSON.stringify({ version: "1.0.0" }),
@@ -54,7 +60,9 @@ describe("autoconfig details - getWorkerNameFromProject()", () => {
 		expect(getWorkerNameFromProject(`./${dirname}`)).toBe(dirname);
 	});
 
-	it("should fall back to directory name when package.json is invalid", async () => {
+	it("should fall back to directory name when package.json is invalid", async ({
+		expect,
+	}) => {
 		const dirname = "my-test-project";
 		await seed({
 			[`./${dirname}/package.json`]: "not valid json",
@@ -62,7 +70,9 @@ describe("autoconfig details - getWorkerNameFromProject()", () => {
 		expect(getWorkerNameFromProject(`./${dirname}`)).toBe(dirname);
 	});
 
-	it("WRANGLER_CI_OVERRIDE_NAME should override the worker name", async () => {
+	it("WRANGLER_CI_OVERRIDE_NAME should override the worker name", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "overridden-worker-name");
 
 		await seed({

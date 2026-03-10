@@ -12,6 +12,7 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
@@ -31,7 +32,7 @@ export type { WorkerConfig } from "./workers-configs";
 
 const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
-	isRestartingDevServer: false,
+	restartingDevServerCount: 0,
 };
 
 await assertWranglerVersion();
@@ -64,17 +65,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
-						ctx.setIsRestartingDevServer(true);
+						ctx.beginRestartingDevServer();
 						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
-						ctx.setIsRestartingDevServer(false);
+						ctx.endRestartingDevServer();
 					}
 				};
 			},
 		},
 		configPlugin(ctx),
+		rscPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),

@@ -1,17 +1,16 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import type { AdditionalDevProps } from "../../dev";
 import type {
 	Binding,
 	File,
 	Hook,
 	HookValues,
-	ServiceFetch,
 	StartDevWorkerOptions,
 } from "./types";
 import type {
-	CfDispatchNamespace,
-	CfWorkerInit,
-	ConfigBindingOptions,
+	Config,
+	ConfigBindingFieldName,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
@@ -80,39 +79,40 @@ export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 }
 
 export function convertConfigBindingsToStartWorkerBindings(
-	configBindings: ConfigBindingOptions
+	configBindings: Partial<Pick<Config, ConfigBindingFieldName>>
 ): StartDevWorkerOptions["bindings"] {
-	const { queues, ...bindings } = configBindings;
-
-	return convertCfWorkerInitBindingsToBindings({
-		...bindings,
-		kv_namespaces: bindings.kv_namespaces.map((kv) => ({
-			...kv,
-			id: kv.preview_id ?? kv.id,
-		})),
-		d1_databases: bindings.d1_databases.map((d1) => ({
-			...d1,
-			database_id: d1.preview_database_id ?? d1.database_id,
-		})),
-		r2_buckets: bindings.r2_buckets.map((r2) => ({
-			...r2,
-			bucket_name: r2.preview_bucket_name ?? r2.bucket_name,
-		})),
-		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
+	return convertConfigToBindings(configBindings, {
+		usePreviewIds: true,
 	});
 }
 
-export function convertCfWorkerInitBindingsToBindings(
-	inputBindings: Partial<CfWorkerInit["bindings"]>
-): StartDevWorkerOptions["bindings"] {
-	const output: StartDevWorkerOptions["bindings"] = {};
+interface ConvertBindingsOptions {
+	/**
+	 * Use preview IDs (preview_id, preview_bucket_name, preview_database_id) instead of production IDs when resolving a binding ID.
+	 * This means that the rest of Wrangler does not need to be aware of preview IDs, and can just use regular IDs.
+	 */
+	usePreviewIds?: boolean;
+	/**
+	 * Exclude bindings that Pages doesn't support
+	 */
+	pages?: boolean;
+}
 
-	// required to retain type information
+/**
+ * Convert Config to the StartDevWorkerInput["bindings"] format for consistent internal use.
+ */
+export function convertConfigToBindings(
+	config: Partial<Pick<Config, ConfigBindingFieldName>>,
+	options?: ConvertBindingsOptions
+): NonNullable<StartDevWorkerOptions["bindings"]> {
+	const { usePreviewIds = false, pages = false } = options ?? {};
+	const output: NonNullable<StartDevWorkerOptions["bindings"]> = {};
+
 	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
-	type BindingsIterable = Entries<Required<typeof inputBindings>>;
-	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
+	type ConfigIterable = Entries<Required<Pick<Config, ConfigBindingFieldName>>>;
+	const configIterable = Object.entries(config) as ConfigIterable;
 
-	for (const [type, info] of bindingsIterable) {
+	for (const [type, info] of configIterable) {
 		if (info === undefined) {
 			continue;
 		}
@@ -130,17 +130,27 @@ export function convertCfWorkerInitBindingsToBindings(
 			}
 			case "kv_namespaces": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "kv_namespace", ...x };
+					output[binding] = {
+						type: "kv_namespace",
+						...x,
+						id: usePreviewIds ? x.preview_id ?? x.id : x.id,
+					};
 				}
 				break;
 			}
 			case "send_email": {
+				if (pages) {
+					break;
+				}
 				for (const { name, ...x } of info) {
 					output[name] = { type: "send_email", ...x };
 				}
 				break;
 			}
 			case "wasm_modules": {
+				if (pages) {
+					break;
+				}
 				for (const [key, value] of Object.entries(info)) {
 					if (typeof value === "string") {
 						output[key] = { type: "wasm_module", source: { path: value } };
@@ -151,12 +161,18 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "text_blobs": {
+				if (pages) {
+					break;
+				}
 				for (const [key, value] of Object.entries(info)) {
 					output[key] = { type: "text_blob", source: { path: value } };
 				}
 				break;
 			}
 			case "data_blobs": {
+				if (pages) {
+					break;
+				}
 				for (const [key, value] of Object.entries(info)) {
 					if (typeof value === "string") {
 						output[key] = { type: "data_blob", source: { path: value } };
@@ -172,7 +188,7 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "durable_objects": {
-				for (const { name, ...x } of info.bindings) {
+				for (const { name, ...x } of info.bindings ?? []) {
 					output[name] = { type: "durable_object_namespace", ...x };
 				}
 				break;
@@ -184,20 +200,36 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "queues": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "queue", ...x };
+				for (const { binding, ...x } of info.producers ?? []) {
+					output[binding] = {
+						type: "queue",
+						queue_name: x.queue,
+						...x,
+					};
 				}
 				break;
 			}
 			case "r2_buckets": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "r2_bucket", ...x };
+					output[binding] = {
+						type: "r2_bucket",
+						...x,
+						bucket_name: usePreviewIds
+							? x.preview_bucket_name ?? x.bucket_name
+							: x.bucket_name,
+					};
 				}
 				break;
 			}
 			case "d1_databases": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "d1", ...x };
+					output[binding] = {
+						type: "d1",
+						...x,
+						database_id: usePreviewIds
+							? x.preview_database_id ?? x.database_id
+							: x.database_id,
+					};
 				}
 				break;
 			}
@@ -214,6 +246,9 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "dispatch_namespaces": {
+				if (pages) {
+					break;
+				}
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "dispatch_namespace", ...x };
 				}
@@ -226,7 +261,10 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "logfwdr": {
-				for (const { name, ...x } of info.bindings) {
+				if (pages) {
+					break;
+				}
+				for (const { name, ...x } of info.bindings ?? []) {
 					output[name] = { type: "logfwdr", ...x };
 				}
 				break;
@@ -259,16 +297,27 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "unsafe": {
+				if (pages) {
+					break;
+				}
 				for (const { type: unsafeType, name, ...data } of info.bindings ?? []) {
 					output[name] = { type: `unsafe_${unsafeType}`, ...data };
 				}
 				break;
 			}
 			case "assets": {
-				output[info["binding"]] = { type: "assets" };
+				if (pages) {
+					break;
+				}
+				if (info.binding) {
+					output[info.binding] = { type: "assets" };
+				}
 				break;
 			}
 			case "pipelines": {
+				if (pages) {
+					break;
+				}
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "pipeline", ...x };
 				}
@@ -281,6 +330,9 @@ export function convertCfWorkerInitBindingsToBindings(
 				break;
 			}
 			case "unsafe_hello_world": {
+				if (pages) {
+					break;
+				}
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "unsafe_hello_world", ...x };
 				}
@@ -309,9 +361,8 @@ export function convertCfWorkerInitBindingsToBindings(
 				output[binding] = { type: "media", ...x };
 				break;
 			}
-			default: {
+			default:
 				assertNever(type);
-			}
 		}
 	}
 
@@ -319,230 +370,47 @@ export function convertCfWorkerInitBindingsToBindings(
 }
 
 /**
- * Convert either StartDevWorkerOptions["bindings"] or WorkerMetadataBinding[] to CfWorkerInit["bindings"]
- * This function is by design temporary, but has lived longer than originally expected.
- * For some context, CfWorkerInit is the in-memory representation of a Worker that Wrangler uses,
- * WorkerMetadataBinding is the representation of bindings that comes from the API, and StartDevWorkerOptions
- * is the "new" in-memory representation of a Worker that's used in Wrangler's dev flow. Over
- * time, all uses of CfWorkerInit should transition to StartDevWorkerOptions, but that's a pretty big refactor.
- * As such, in the meantime we have conversion functions so that different code paths can deal with the format they
- * expect and were written for.
- *
- * WARNING: Using this with WorkerMetadataBinding[] will lose information about certain
- * binding types (i.e. WASM modules, text blobs, and data blobs). These binding types are deprecated
- * but may still be used by some Workers in the wild.
+ * Bindings that can be passed via the StartDevOptions CLI interface.
  */
-export async function convertBindingsToCfWorkerInitBindings(
-	inputBindings: StartDevWorkerOptions["bindings"] | WorkerMetadataBinding[]
-): Promise<{
-	bindings: CfWorkerInit["bindings"];
-	fetchers: Record<string, ServiceFetch>;
-}> {
-	const bindings: CfWorkerInit["bindings"] = {
-		vars: undefined,
-		kv_namespaces: undefined,
-		send_email: undefined,
-		wasm_modules: undefined,
-		text_blobs: undefined,
-		browser: undefined,
-		ai: undefined,
-		images: undefined,
-		version_metadata: undefined,
-		data_blobs: undefined,
-		durable_objects: undefined,
-		queues: undefined,
-		r2_buckets: undefined,
-		workflows: undefined,
-		d1_databases: undefined,
-		vectorize: undefined,
-		hyperdrive: undefined,
-		secrets_store_secrets: undefined,
-		services: undefined,
-		vpc_services: undefined,
-		analytics_engine_datasets: undefined,
-		dispatch_namespaces: undefined,
-		mtls_certificates: undefined,
-		logfwdr: undefined,
-		unsafe: undefined,
-		assets: undefined,
-		pipelines: undefined,
-		unsafe_hello_world: undefined,
-		ratelimits: undefined,
-		worker_loaders: undefined,
-		media: undefined,
+export type StartDevOptionsBindings = Pick<
+	AdditionalDevProps,
+	| "vars"
+	| "kv"
+	| "durableObjects"
+	| "services"
+	| "r2"
+	| "ai"
+	| "version_metadata"
+	| "d1Databases"
+>;
+
+/**
+ * Convert StartDevOptions bindings to the flat StartDevWorkerInput["bindings"] format.
+ */
+export function convertStartDevOptionsToBindings(
+	inputBindings: StartDevOptionsBindings
+): StartDevWorkerOptions["bindings"] {
+	// Map StartDevOptionsBindings field names to Config field names
+	const configBindings = {
+		vars: inputBindings.vars,
+		kv_namespaces: inputBindings.kv,
+		durable_objects: inputBindings.durableObjects
+			? { bindings: inputBindings.durableObjects }
+			: undefined,
+		services: inputBindings.services,
+		r2_buckets: inputBindings.r2,
+		ai: inputBindings.ai,
+		version_metadata: inputBindings.version_metadata,
+		d1_databases: inputBindings.d1Databases,
 	};
 
-	const fetchers: Record<string, ServiceFetch> = {};
-
-	const bindingEntries: [string, WorkerMetadataBinding | Binding][] =
-		Array.isArray(inputBindings)
-			? inputBindings.map((b) => [b.name, b])
-			: Object.entries(inputBindings ?? {});
-
-	for (const [name, binding] of bindingEntries) {
-		if (binding.type === "plain_text") {
-			bindings.vars ??= {};
-			bindings.vars[name] = "value" in binding ? binding.value : binding.text;
-		} else if (binding.type === "json") {
-			bindings.vars ??= {};
-			bindings.vars[name] = "value" in binding ? binding.value : binding.json;
-		} else if (binding.type === "kv_namespace") {
-			bindings.kv_namespaces ??= [];
-			bindings.kv_namespaces.push({
-				...omitType(binding),
-				binding: name,
-				id: "namespace_id" in binding ? binding.namespace_id : binding.id,
-			});
-		} else if (binding.type === "send_email") {
-			bindings.send_email ??= [];
-			bindings.send_email.push({ ...omitType(binding), name: name });
-		} else if (binding.type === "wasm_module") {
-			if (!("source" in binding)) {
-				continue;
-			}
-			bindings.wasm_modules ??= {};
-			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "text_blob") {
-			if (!("source" in binding)) {
-				continue;
-			}
-			bindings.text_blobs ??= {};
-
-			if (typeof binding.source.path === "string") {
-				bindings.text_blobs[name] = binding.source.path;
-			} else if ("contents" in binding.source) {
-				// TODO(maybe): write file contents to disk and set path
-				throw new Error(
-					"Cannot provide text_blob contents directly in CfWorkerInitBindings"
-				);
-			}
-		} else if (binding.type === "data_blob") {
-			if (!("source" in binding)) {
-				continue;
-			}
-			bindings.data_blobs ??= {};
-			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "browser") {
-			bindings.browser = { ...omitType(binding), binding: name };
-		} else if (binding.type === "ai") {
-			bindings.ai = { ...omitType(binding), binding: name };
-		} else if (binding.type === "images") {
-			bindings.images = { ...omitType(binding), binding: name };
-		} else if (binding.type === "version_metadata") {
-			bindings.version_metadata = { binding: name };
-		} else if (binding.type === "durable_object_namespace") {
-			bindings.durable_objects ??= { bindings: [] };
-			bindings.durable_objects.bindings.push({
-				...omitType(binding),
-				name: name,
-			});
-		} else if (binding.type === "queue") {
-			bindings.queues ??= [];
-			bindings.queues.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "r2_bucket") {
-			bindings.r2_buckets ??= [];
-			bindings.r2_buckets.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "d1") {
-			bindings.d1_databases ??= [];
-			bindings.d1_databases.push({
-				...omitType(binding),
-				binding: name,
-				database_id: "id" in binding ? binding.id : binding.database_id,
-			});
-		} else if (binding.type === "vectorize") {
-			bindings.vectorize ??= [];
-			bindings.vectorize.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "hyperdrive") {
-			bindings.hyperdrive ??= [];
-			bindings.hyperdrive.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "service") {
-			bindings.services ??= [];
-			bindings.services.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "fetcher") {
-			fetchers[name] = binding.fetcher;
-		} else if (binding.type === "analytics_engine") {
-			bindings.analytics_engine_datasets ??= [];
-			bindings.analytics_engine_datasets.push({
-				...omitType(binding),
-				binding: name,
-			});
-		} else if (binding.type === "dispatch_namespace") {
-			bindings.dispatch_namespaces ??= [];
-			const outbound: CfDispatchNamespace["outbound"] =
-				binding.outbound && "worker" in binding.outbound
-					? {
-							service: binding.outbound.worker.service,
-							environment: binding.outbound.worker.environment,
-							parameters: binding.outbound.params?.map((p) => p.name),
-						}
-					: binding.outbound;
-			bindings.dispatch_namespaces.push({
-				...omitType(binding),
-				binding: name,
-				outbound,
-			});
-		} else if (binding.type === "mtls_certificate") {
-			bindings.mtls_certificates ??= [];
-			bindings.mtls_certificates.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "pipeline") {
-			bindings.pipelines ??= [];
-			bindings.pipelines.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "logfwdr") {
-			bindings.logfwdr ??= { bindings: [] };
-			bindings.logfwdr.bindings.push({ ...omitType(binding), name: name });
-		} else if (binding.type === "workflow") {
-			bindings.workflows ??= [];
-			bindings.workflows.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "secrets_store_secret") {
-			bindings.secrets_store_secrets ??= [];
-			bindings.secrets_store_secrets.push({
-				...omitType(binding),
-				binding: name,
-			});
-		} else if (binding.type === "unsafe_hello_world") {
-			bindings.unsafe_hello_world ??= [];
-			bindings.unsafe_hello_world.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "ratelimit") {
-			bindings.ratelimits ??= [];
-			bindings.ratelimits.push({ ...omitType(binding), name: name });
-		} else if (binding.type === "worker_loader") {
-			bindings.worker_loaders ??= [];
-			bindings.worker_loaders.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "vpc_service") {
-			bindings.vpc_services ??= [];
-			bindings.vpc_services.push({ ...binding, binding: name });
-		} else if (binding.type === "media") {
-			bindings.media = { ...binding, binding: name };
-		} else if (isUnsafeBindingType(binding.type)) {
-			bindings.unsafe ??= {
-				bindings: [],
-				metadata: undefined,
-				capnp: undefined,
-			};
-
-			const { type, ...data } = binding;
-			bindings.unsafe.bindings?.push({
-				type: type.slice("unsafe_".length),
-				name: name,
-				...data,
-			});
-		}
-	}
-
-	return { bindings, fetchers };
+	return convertConfigToBindings(configBindings, {
+		usePreviewIds: true,
+	});
 }
-
 export function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
 	return type.startsWith("unsafe_");
 }
-
-function omitType<T extends Record<string, unknown>>({
-	type: _,
-	...value
-}: T): Omit<T, "type"> {
-	return value;
-}
-
 /**
  * What configuration key does this binding use for referring to it's binding name?
  */
@@ -568,6 +436,237 @@ type FlatBinding<Type> = Extract<Binding, { type: Type }> &
 		: {
 				binding: string;
 			});
+
+/**
+ * Convert WorkerMetadataBinding[] (API format) to flat bindings format (Record<string, Binding>)
+ *
+ * WorkerMetadataBinding uses different field names than Binding:
+ * - KV: namespace_id -> id
+ * - D1: id -> database_id
+ * - plain_text/json: text/json -> value
+ * - dispatch_namespace: outbound.worker.service -> outbound.service
+ */
+export function convertWorkerMetadataBindingsToFlatBindings(
+	bindings: WorkerMetadataBinding[]
+): StartDevWorkerOptions["bindings"] {
+	const output: StartDevWorkerOptions["bindings"] = {};
+
+	for (const binding of bindings) {
+		const { name, type } = binding;
+
+		switch (type) {
+			case "plain_text": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "plain_text" }
+				>;
+				output[name] = { type: "plain_text", value: b.text };
+				break;
+			}
+			case "secret_text": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "secret_text" }
+				>;
+				output[name] = { type: "secret_text", value: b.text };
+				break;
+			}
+			case "json": {
+				const b = binding as Extract<WorkerMetadataBinding, { type: "json" }>;
+				output[name] = { type: "json", value: b.json };
+				break;
+			}
+			case "kv_namespace": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "kv_namespace" }
+				>;
+				output[name] = { type: "kv_namespace", id: b.namespace_id, raw: b.raw };
+				break;
+			}
+			case "d1": {
+				const b = binding as Extract<WorkerMetadataBinding, { type: "d1" }>;
+				output[name] = {
+					type: "d1",
+					database_id: b.id,
+					database_internal_env: b.internalEnv,
+					raw: b.raw,
+				};
+				break;
+			}
+			case "dispatch_namespace": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "dispatch_namespace" }
+				>;
+				output[name] = {
+					type: "dispatch_namespace",
+					namespace: b.namespace,
+					outbound: b.outbound
+						? {
+								service: b.outbound.worker.service,
+								environment: b.outbound.worker.environment,
+								parameters: b.outbound.params?.map((p) => p.name),
+							}
+						: undefined,
+				};
+				break;
+			}
+			case "durable_object_namespace": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "durable_object_namespace" }
+				>;
+				output[name] = {
+					type: "durable_object_namespace",
+					class_name: b.class_name,
+					script_name: b.script_name,
+					environment: b.environment,
+				};
+				break;
+			}
+			case "workflow": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "workflow" }
+				>;
+				output[name] = {
+					type: "workflow",
+					name: b.workflow_name,
+					class_name: b.class_name,
+					script_name: b.script_name,
+					raw: b.raw,
+				};
+				break;
+			}
+			case "queue": {
+				const b = binding as Extract<WorkerMetadataBinding, { type: "queue" }>;
+				output[name] = {
+					type: "queue",
+					queue_name: b.queue_name,
+					delivery_delay: b.delivery_delay,
+					raw: b.raw,
+				};
+				break;
+			}
+			case "r2_bucket": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "r2_bucket" }
+				>;
+				output[name] = {
+					type: "r2_bucket",
+					bucket_name: b.bucket_name,
+					jurisdiction: b.jurisdiction,
+					raw: b.raw,
+				};
+				break;
+			}
+			case "service": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "service" }
+				>;
+				output[name] = {
+					type: "service",
+					service: b.service,
+					environment: b.environment,
+					entrypoint: b.entrypoint,
+					cross_account_grant: b.cross_account_grant,
+				};
+				break;
+			}
+			case "analytics_engine": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "analytics_engine" }
+				>;
+				output[name] = { type: "analytics_engine", dataset: b.dataset };
+				break;
+			}
+			case "vectorize": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "vectorize" }
+				>;
+				output[name] = {
+					type: "vectorize",
+					index_name: b.index_name,
+					raw: b.raw,
+				};
+				break;
+			}
+			case "hyperdrive": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "hyperdrive" }
+				>;
+				output[name] = { type: "hyperdrive", id: b.id };
+				break;
+			}
+			case "send_email": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "send_email" }
+				>;
+				// CfSendEmailBindings uses a discriminated union, pass through the relevant fields
+				const emailBinding: Record<string, unknown> = { type: "send_email" };
+				if ("destination_address" in b && b.destination_address) {
+					emailBinding.destination_address = b.destination_address;
+				}
+				if (
+					"allowed_destination_addresses" in b &&
+					b.allowed_destination_addresses
+				) {
+					emailBinding.allowed_destination_addresses =
+						b.allowed_destination_addresses;
+				}
+				if ("allowed_sender_addresses" in b && b.allowed_sender_addresses) {
+					emailBinding.allowed_sender_addresses = b.allowed_sender_addresses;
+				}
+				output[name] = emailBinding as Binding;
+				break;
+			}
+			case "mtls_certificate": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "mtls_certificate" }
+				>;
+				output[name] = {
+					type: "mtls_certificate",
+					certificate_id: b.certificate_id,
+				};
+				break;
+			}
+			case "pipelines": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "pipelines" }
+				>;
+				output[name] = { type: "pipeline", pipeline: b.pipeline };
+				break;
+			}
+			case "browser":
+			case "ai":
+			case "images":
+			case "version_metadata":
+			case "media":
+			case "inherit": {
+				// These have the same structure (just type and possibly some flags)
+				const { name: _name, ...rest } = binding;
+				output[name] = rest as Binding;
+				break;
+			}
+			default: {
+				// For any other binding types, pass through as-is
+				const { name: _name, ...rest } = binding;
+				output[name] = rest as Binding;
+			}
+		}
+	}
+
+	return output;
+}
 
 export function extractBindingsOfType<
 	Type extends NonNullable<StartDevWorkerOptions["bindings"]>[string]["type"],

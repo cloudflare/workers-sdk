@@ -1,10 +1,10 @@
-import assert from "node:assert";
-import isCI from "is-ci";
+import ci from "ci-info";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
 	afterAll,
 	afterEach,
+	assert,
 	beforeAll,
 	beforeEach,
 	describe,
@@ -843,7 +843,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 });
 
 const skipContainersTest =
-	!CLOUDFLARE_ACCOUNT_ID || (isCI && process.platform !== "linux");
+	!CLOUDFLARE_ACCOUNT_ID || (ci.isCI && process.platform !== "linux");
 describe.skipIf(skipContainersTest)("containers", () => {
 	let helper: WranglerE2ETestHelper;
 	let workerName: string;

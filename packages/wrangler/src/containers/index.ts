@@ -25,6 +25,7 @@ export {
 	containersRegistriesConfigureCommand,
 	containersRegistriesListCommand,
 	containersRegistriesDeleteCommand,
+	containersRegistriesCredentialsCommand,
 } from "./registries";
 
 // Build and push commands

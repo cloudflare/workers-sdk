@@ -9,7 +9,7 @@ import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
-import { getFlatBindings } from "../../../dev";
+import { getBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
@@ -210,11 +210,12 @@ async function getMiniflareOptionsFromConfig(args: {
 }): Promise<MiniflareOptions> {
 	const { config, options, remoteProxyConnectionString } = args;
 
-	const bindings = getFlatBindings(
+	const bindings = getBindings(
 		config,
 		options.environment,
 		options.envFiles,
 		true,
+		{},
 		{}
 	);
 
@@ -404,7 +405,14 @@ export function unstable_getMiniflareWorkerOptions(
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
-	const bindings = getFlatBindings(config, env, options?.envFiles, true, {});
+	const bindings = getBindings(
+		config,
+		env,
+		options?.envFiles,
+		true,
+		undefined,
+		undefined
+	);
 
 	const enableContainers =
 		options?.overrides?.enableContainers !== undefined

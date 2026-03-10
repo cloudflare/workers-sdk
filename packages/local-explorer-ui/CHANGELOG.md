@@ -1,5 +1,65 @@
 # @cloudflare/local-explorer-ui
 
+## 0.7.0
+
+### Minor Changes
+
+- [#12453](https://github.com/cloudflare/workers-sdk/pull/12453) [`9764ea0`](https://github.com/cloudflare/workers-sdk/commit/9764ea09e0e106e96a403db8e99d41ad3f00ef98) Thanks [@NuroDev](https://github.com/NuroDev)! - Add initial data studio with D1 and Durable Objects support
+
+  Adds a data studio interface to the local explorer UI, allowing you to browse and interact with D1 databases and Durable Objects during local development. The studio provides table browsing, query execution, and data editing capabilities.
+
+- [#12760](https://github.com/cloudflare/workers-sdk/pull/12760) [`fa88fef`](https://github.com/cloudflare/workers-sdk/commit/fa88fef992bd8e65d00d1e7d279bf62ee9120ce8) Thanks [@NuroDev](https://github.com/NuroDev)! - Add schema editor to data studio
+
+  Adds a visual schema editor to the data studio that allows you to create new database tables and edit existing table schemas. The editor provides column management (add, edit, remove), constraint editing (primary keys, unique constraints), and generates the corresponding SQL statements for review before committing changes.
+
+  This is a WIP experimental feature.
+
+## 0.6.0
+
+### Minor Changes
+
+- [#12599](https://github.com/cloudflare/workers-sdk/pull/12599) [`3649d3e`](https://github.com/cloudflare/workers-sdk/commit/3649d3e408bf352468a59e47f05f42c9bd69c736) Thanks [@NuroDev](https://github.com/NuroDev)! - Adds the tab definition for the table explorer.
+
+  This serves as another stepping stone for adding the complete data studio to the local explorer.
+
+  This is a WIP experimental feature.
+
+## 0.5.0
+
+### Minor Changes
+
+- [#12570](https://github.com/cloudflare/workers-sdk/pull/12570) [`01ded52`](https://github.com/cloudflare/workers-sdk/commit/01ded5289e744e6f604edcbffdd6b1c95e6339c0) Thanks [@NuroDev](https://github.com/NuroDev)! - Add the initial plumbing for data studio components.
+
+  This serves as another stepping stone for adding the complete data studio to the local explorer.
+
+  This is a WIP experimental feature.
+
+## 0.4.0
+
+### Minor Changes
+
+- [#12518](https://github.com/cloudflare/workers-sdk/pull/12518) [`323f14e`](https://github.com/cloudflare/workers-sdk/commit/323f14e19605f3f0eb732992fa6d765657cb93ba) Thanks [@NuroDev](https://github.com/NuroDev)! - Implemented initial data studio driver support.
+
+  This provides the initial plumbing needed to add the complete data studio component to the local explorer in a later PR. D1 databases will now appear in the sidebar alongside KV namespaces when running the local explorer.
+
+  This is an experimental WIP feature.
+
+- [#12555](https://github.com/cloudflare/workers-sdk/pull/12555) [`2eeefeb`](https://github.com/cloudflare/workers-sdk/commit/2eeefeb01ddb6d44b99e3ea93a1b9faada925cb3) Thanks [@NuroDev](https://github.com/NuroDev)! - Add database table selection dropdown.
+
+  As part of the ongoing work to implement the data studio into the local explorer, this change allows you to view and select which table for a database you want to inspect.
+
+  This is an experimental WIP feature.
+
+## 0.3.0
+
+### Minor Changes
+
+- [#12431](https://github.com/cloudflare/workers-sdk/pull/12431) [`7aaa2a5`](https://github.com/cloudflare/workers-sdk/commit/7aaa2a5aa93011bd03aa0998c7310fa6e1eaff41) Thanks [@emily-shen](https://github.com/emily-shen)! - Add ability to search KV keys by prefix
+
+  The UI and list keys API now lets you search KV keys by prefix.
+
+  This is an experimental WIP feature.
+
 ## 0.2.0
 
 ### Minor Changes

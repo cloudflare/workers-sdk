@@ -150,16 +150,16 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/something:hello\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/something:hello"
+			│   instance_type = "lite"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -222,12 +222,12 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			│   ...
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -305,19 +305,19 @@ describe("cloudchamber apply", () => {
 			│   instances = 0
 			│ - max_instances = 4
 			│ + max_instances = 3
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			├ NEW my-container-app-2
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app-2\\"
+			│   name = "my-container-app-2"
 			│   max_instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/other-app:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			│   instance_type = "lite"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -391,21 +391,21 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			│ Skipping application rollout
 			│
 			├ NEW my-container-app-2
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app-2\\"
+			│   name = "my-container-app-2"
 			│   instances = 1
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/other-app:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			│   instance_type = "lite"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -477,19 +477,19 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			├ NEW my-container-app-2
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app-2\\"
+			│   name = "my-container-app-2"
 			│   instances = 1
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/other-app:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/other-app:boop"
+			│   instance_type = "lite"
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -611,30 +611,30 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"default\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "default"
 			│
 			│   ...
 			│
-			│   value = \\"value\\"
+			│   value = "value"
 			│   [[containers.configuration.labels]]
-			│ + name = \\"name-1\\"
-			│ + value = \\"value-1\\"
+			│ + name = "name-1"
+			│ + value = "value-1"
 			│ + [[containers.configuration.labels]]
-			│   name = \\"name-2\\"
-			│   value = \\"value-2\\"
+			│   name = "name-2"
+			│   value = "value-2"
 			│
 			│   ...
 			│
-			│   type = \\"env\\"
+			│   type = "env"
 			│   [[containers.configuration.secrets]]
-			│ - name = \\"MY_SECRET_1\\"
-			│ - secret = \\"SECRET_NAME_1\\"
-			│ - type = \\"env\\"
+			│ - name = "MY_SECRET_1"
+			│ - secret = "SECRET_NAME_1"
+			│ - type = "env"
 			│ - [[containers.configuration.secrets]]
-			│   name = \\"MY_SECRET_2\\"
-			│   secret = \\"SECRET_NAME_2\\"
-			│   type = \\"env\\"
+			│   name = "MY_SECRET_2"
+			│   secret = "SECRET_NAME_2"
+			│   type = "env"
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1025,8 +1025,8 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   instance_type = "lite"
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
 			│   [containers.constraints]
@@ -1092,8 +1092,8 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   instance_type = "lite"
 			│ + [containers.configuration.observability.logs]
 			│ + enabled = true
 			│   [containers.constraints]
@@ -1164,7 +1164,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1236,7 +1236,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1307,7 +1307,7 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   instance_type = \\"lite\\"
+			│   instance_type = "lite"
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
@@ -1522,16 +1522,16 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   instance_type = "lite"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1575,15 +1575,15 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
 			│   vcpu = 1
 			│   memory_mib = 1024
 			│
@@ -1653,12 +1653,12 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"regional\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "regional"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│ - instance_type = \\"lite\\"
-			│ + instance_type = \\"standard\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│ - instance_type = "lite"
+			│ + instance_type = "standard"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -1732,17 +1732,17 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"regional\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "regional"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│   memory = \\"256MB\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│   memory = "256MB"
 			│ - memory_mib = 256
 			│ + memory_mib = 1024
 			│ - vcpu = 0.0625
 			│ + vcpu = 1
 			│   [containers.configuration.disk]
-			│   size = \\"2GB\\"
+			│   size = "2GB"
 			│ - size_mb = 2000
 			│ + size_mb = 6000
 			│   [containers.constraints]
@@ -1813,12 +1813,12 @@ describe("cloudchamber apply", () => {
 			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
-			│   name = \\"my-container-app\\"
-			│   scheduling_policy = \\"regional\\"
+			│   name = "my-container-app"
+			│   scheduling_policy = "regional"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/beep:boop\\"
-			│ - instance_type = \\"basic\\"
-			│ + instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/beep:boop"
+			│ - instance_type = "basic"
+			│ + instance_type = "lite"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -1873,16 +1873,16 @@ describe("cloudchamber apply", () => {
 			├ NEW my-container-app
 			│
 			│   [[containers]]
-			│   name = \\"my-container-app\\"
+			│   name = "my-container-app"
 			│   instances = 3
-			│   scheduling_policy = \\"default\\"
+			│   scheduling_policy = "default"
 			│
 			│   [containers.constraints]
 			│   tier = 2
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│   instance_type = \\"lite\\"
+			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			│   instance_type = "lite"
 			│
 			│
 			│  SUCCESS  Created application my-container-app (Application ID: abc)
@@ -1947,9 +1947,9 @@ describe("cloudchamber apply", () => {
 			├ EDIT my-container-app
 			│
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│ - instance_type = \\"lite\\"
-			│ + instance_type = \\"standard\\"
+			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
+			│ - instance_type = "lite"
+			│ + instance_type = "standard"
 			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
@@ -2025,12 +2025,12 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   scheduling_policy = \\"regional\\"
+			│   scheduling_policy = "regional"
 			│   [containers.affinities]
-			│ - colocation = \\"datacenter\\"
-			│ + hardware_generation = \\"highest-overall-performance\\"
+			│ - colocation = "datacenter"
+			│ + hardware_generation = "highest-overall-performance"
 			│   [containers.configuration]
-			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
+			│   image = "registry.cloudflare.com/some-account-id/hello:1.0"
 			│
 			│
 			│  SUCCESS  Modified application my-container-app

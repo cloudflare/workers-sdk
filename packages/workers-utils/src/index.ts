@@ -4,7 +4,6 @@ export type {
 	RawDevConfig,
 	ConfigFields,
 	RawEnvironment,
-	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
 export {
@@ -44,12 +43,13 @@ export {
 } from "./parse";
 export {
 	friendlyBindingNames,
+	getBindingTypeFriendlyName,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	type NormalizeAndValidateConfigArgs,
+	type ConfigBindingFieldName,
 	isValidR2BucketName,
 	bucketFormatMessage,
-	getBindingTypeFriendlyName,
 } from "./config/validation";
 
 export { validatePagesConfig } from "./config/validation-pages";
@@ -91,4 +91,4 @@ export type { CompatDate } from "./compatibility-date";
 
 export { isDockerfile } from "./config/validation";
 
-export { isDirectory } from "./fs-helpers";
+export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";

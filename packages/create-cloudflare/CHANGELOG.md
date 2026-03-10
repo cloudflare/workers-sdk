@@ -1,5 +1,203 @@
 # create-cloudflare
 
+## 2.64.5
+
+### Patch Changes
+
+- [#12713](https://github.com/cloudflare/workers-sdk/pull/12713) [`f498237`](https://github.com/cloudflare/workers-sdk/commit/f498237074b00d97874cb145b4daf5e5556bbdae) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.1.4 | 21.2.0 |
+
+- [#12715](https://github.com/cloudflare/workers-sdk/pull/12715) [`8d0c835`](https://github.com/cloudflare/workers-sdk/commit/8d0c8350f49638413d1a2359c07fef9b4745619d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.21.1 | 3.22.0 |
+
+- [#12716](https://github.com/cloudflare/workers-sdk/pull/12716) [`1c2d93d`](https://github.com/cloudflare/workers-sdk/commit/1c2d93d28d0e9dac9d98442387686e37b7505b94) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.13.0 | 7.13.1 |
+
+- [#12717](https://github.com/cloudflare/workers-sdk/pull/12717) [`8e738f8`](https://github.com/cloudflare/workers-sdk/commit/8e738f82f4e16f29eb08854f9576ee3132933e00) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.2.3 | 2.3.1 |
+
+- [#12718](https://github.com/cloudflare/workers-sdk/pull/12718) [`62e20c1`](https://github.com/cloudflare/workers-sdk/commit/62e20c19abcb32c6affb8c840a325fbbc2391c71) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.12.2 | 0.12.4 |
+
+- [#12719](https://github.com/cloudflare/workers-sdk/pull/12719) [`554c5f3`](https://github.com/cloudflare/workers-sdk/commit/554c5f3e68170a86a4b77da875b2c33be4151822) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.581 | 0.0.591 |
+
+- [#12720](https://github.com/cloudflare/workers-sdk/pull/12720) [`a3ff7d4`](https://github.com/cloudflare/workers-sdk/commit/a3ff7d48b186a15915859f2069372e96a5cf8707) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.4-0 | 0.12.5-1.0.0-alpha.5-0 |
+
+- [#12728](https://github.com/cloudflare/workers-sdk/pull/12728) [`bbe09b6`](https://github.com/cloudflare/workers-sdk/commit/bbe09b619f9509fb9d392b6984dd066f93217b2f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update SolidStart template for compatibility with v2.
+
+  SolidStart v2 uses the `nitro` Vite plugin so we now update the Nitro config in `vite.config.ts` rather than `app.config.ts`.
+
+- [#12692](https://github.com/cloudflare/workers-sdk/pull/12692) [`f671934`](https://github.com/cloudflare/workers-sdk/commit/f671934de19985285453af15f396b228b4a0858b) Thanks [@roli-lpci](https://github.com/roli-lpci)! - Remove unused `chalk` dependency from create-cloudflare.
+
+## 2.64.4
+
+### Patch Changes
+
+- [#12657](https://github.com/cloudflare/workers-sdk/pull/12657) [`294297e`](https://github.com/cloudflare/workers-sdk/commit/294297e8e5bb90e71a6db15278e3ab0a9345cacf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.3-0 | 0.12.5-1.0.0-alpha.4-0 |
+
+- [#12648](https://github.com/cloudflare/workers-sdk/pull/12648) [`3d6e421`](https://github.com/cloudflare/workers-sdk/commit/3d6e421dcd03fad1837c52c0e677d91678c6eed7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Angular scaffolding to allow localhost SSR in development mode
+
+  Recent versions of Angular's `AngularAppEngine` block serving SSR on `localhost` by default. This caused `wrangler dev` / `wrangler pages dev` to fail with `URL with hostname "localhost" is not allowed.`
+
+  The fix passes `allowedHosts: ["localhost"]` to the `AngularAppEngine` constructor in `server.ts`, which is safe to do even in production since Cloudflare will already restrict which host is allowed.
+
+## 2.64.3
+
+### Patch Changes
+
+- [#12630](https://github.com/cloudflare/workers-sdk/pull/12630) [`e8fddc5`](https://github.com/cloudflare/workers-sdk/commit/e8fddc58fb99892f2ce5d1bb8c940b29acbe6c2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.21.0 | 3.21.1 |
+
+- [#12631](https://github.com/cloudflare/workers-sdk/pull/12631) [`5641c52`](https://github.com/cloudflare/workers-sdk/commit/5641c525bf65395918de0495fed2dd0c42f56d85) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.575 | 0.0.581 |
+
+- [#12633](https://github.com/cloudflare/workers-sdk/pull/12633) [`35c8ebd`](https://github.com/cloudflare/workers-sdk/commit/35c8ebd688e7d4aaf30b3a147fa5b65e405f740f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.59.3 | 0.59.8 |
+
+- [#12634](https://github.com/cloudflare/workers-sdk/pull/12634) [`11ace96`](https://github.com/cloudflare/workers-sdk/commit/11ace963bd195792bd53f7eec444c35fbbb27ec9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.12.1 | 0.12.2 |
+
+- [#12635](https://github.com/cloudflare/workers-sdk/pull/12635) [`4cee91e`](https://github.com/cloudflare/workers-sdk/commit/4cee91e87edddf6decfded0ef6fb503d36d25961) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.6.11 | 0.6.13 |
+
+- [#12609](https://github.com/cloudflare/workers-sdk/pull/12609) [`1714b9b`](https://github.com/cloudflare/workers-sdk/commit/1714b9bbc834d6eac5982a41daf91026c1ad44b1) Thanks [@Hari-07](https://github.com/Hari-07)! - Fix --variant flag being ignored for pages
+
+  When creating a Pages project using `npm create cloudflare -- --type pages --variant <variant>`,
+  the `--variant` flag was being ignored, causing users to be prompted for variant selection
+  or defaulting to an unexpected variant. This now correctly passes the variant to the project setup.
+
+- [#12602](https://github.com/cloudflare/workers-sdk/pull/12602) [`58a4020`](https://github.com/cloudflare/workers-sdk/commit/58a4020eaafcb56cb81dd7d08c58d3d75da08603) Thanks [@anonrig](https://github.com/anonrig)! - Optimize filesystem operations by using Node.js's throwIfNoEntry: false option
+
+  This reduces the number of system calls made when checking for file existence by avoiding the overhead of throwing and catching errors for missing paths. This is an internal performance optimization with no user-visible behavioral changes.
+
+## 2.64.2
+
+### Patch Changes
+
+- [#12564](https://github.com/cloudflare/workers-sdk/pull/12564) [`98e2627`](https://github.com/cloudflare/workers-sdk/commit/98e2627f340c33eb321222bfa32fb0d28e03c5b5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.16.0 | 5.16.1 |
+
+- [#12565](https://github.com/cloudflare/workers-sdk/pull/12565) [`aefb2a0`](https://github.com/cloudflare/workers-sdk/commit/aefb2a0422068ef47920f01b5028b41faf416317) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.1.2 | 21.1.4 |
+
+- [#12566](https://github.com/cloudflare/workers-sdk/pull/12566) [`3cd9d21`](https://github.com/cloudflare/workers-sdk/commit/3cd9d21206e42c6b88a71be76cbc69a24c212cd6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From    | To     |
+  | ---------------------- | ------- | ------ |
+  | @tanstack/create-start | 0.48.10 | 0.59.3 |
+
+## 2.64.1
+
+### Patch Changes
+
+- [#12529](https://github.com/cloudflare/workers-sdk/pull/12529) [`3777bcd`](https://github.com/cloudflare/workers-sdk/commit/3777bcdc9b9e8c6d6e1c4ffd4d812e02d713c9be) Thanks [@ascorbic](https://github.com/ascorbic)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To      |
+  | ---------------------- | ------ | ------- |
+  | @tanstack/create-start | 0.40.0 | 0.48.10 |
+
+- [#12531](https://github.com/cloudflare/workers-sdk/pull/12531) [`93b177f`](https://github.com/cloudflare/workers-sdk/commit/93b177fb423749f55bccd88a86e4857c27b0aa78) Thanks [@ascorbic](https://github.com/ascorbic)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 7.1.1 | 8.3.0 |
+
+- [#12482](https://github.com/cloudflare/workers-sdk/pull/12482) [`cef3278`](https://github.com/cloudflare/workers-sdk/commit/cef3278a19b27206a1208c66d7b1c036faaea1fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.11.4 | 0.12.1 |
+
+- [#11725](https://github.com/cloudflare/workers-sdk/pull/11725) [`be9745f`](https://github.com/cloudflare/workers-sdk/commit/be9745fc2a663f6da2addf2f784392a21dab9475) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix the experimental SvelteKit implementation incorrectly including the `"@sveltejs/adapter-auto"` dependency in the project's `package.json` file
+
+- [#12528](https://github.com/cloudflare/workers-sdk/pull/12528) [`73e5aa8`](https://github.com/cloudflare/workers-sdk/commit/73e5aa8205fb6310bc780e9952e1a3cae3dca3cf) Thanks [@ascorbic](https://github.com/ascorbic)! - Bump nuxi from 3.30.0 to 3.33.1
+
 ## 2.64.0
 
 ### Minor Changes

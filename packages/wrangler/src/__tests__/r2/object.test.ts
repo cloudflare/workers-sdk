@@ -58,7 +58,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Downloading "wormhole-img.png" from "bucket-object-test".
 					Download complete."
 				`);
 			});
@@ -84,7 +84,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 			});
@@ -101,7 +101,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" with InfrequentAccess storage class in bucket "bucket-object-test".
 					Upload complete."
 				`);
 			});
@@ -151,16 +151,16 @@ describe("r2", () => {
 							//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
 							delete headersObject["content-length"];
 							expect(headersObject).toMatchInlineSnapshot(`
-					Object {
-					  "authorization": "Bearer some-api-token",
-					  "cache-control": "cache-control-mock",
-					  "content-disposition": "content-disposition-mock",
-					  "content-encoding": "content-encoding-mock",
-					  "content-language": "content-lang-mock",
-					  "content-type": "content-type-mock",
-					  "expires": "expire-time-mock",
-					}
-				`);
+								{
+								  "authorization": "Bearer some-api-token",
+								  "cache-control": "cache-control-mock",
+								  "content-disposition": "content-disposition-mock",
+								  "content-encoding": "content-encoding-mock",
+								  "content-language": "content-lang-mock",
+								  "content-type": "content-type-mock",
+								  "expires": "expire-time-mock",
+								}
+							`);
 							return HttpResponse.json(
 								createFetchResult({
 									accountId: "some-account-id",
@@ -186,7 +186,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
+					Creating object "wormhole-img.png" in bucket "bucket-object-test".
 					Upload complete."
 				`);
 			});
@@ -202,7 +202,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
+					Deleting object "wormhole-img.png" from bucket "bucket-object-test".
 					Delete complete."
 				`);
 			});

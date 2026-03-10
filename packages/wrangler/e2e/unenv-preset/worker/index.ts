@@ -58,7 +58,7 @@ function generateTestListResponse(testName: string): Response {
 
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
-export const WorkerdTests: Record<string, () => void> = {
+export const WorkerdTests: Record<string, () => Promise<void>> = {
 	async testConsole() {
 		const importNamespace = await import("node:console");
 		const globalObject = globalThis.console;
@@ -171,46 +171,6 @@ export const WorkerdTests: Record<string, () => void> = {
 			INSPECT_MAX_BYTES: "number",
 			resolveObjectURL: "function",
 		});
-	},
-
-	async testNodeCompatModules() {
-		const module = await import("node:module");
-		const require = module.createRequire("/");
-		const modules = [
-			"_tls_common",
-			"_tls_wrap",
-			"assert",
-			"assert/strict",
-			"async_hooks",
-			"buffer",
-			"constants",
-			"crypto",
-			"diagnostics_channel",
-			"dns",
-			"dns/promises",
-			"events",
-			"net",
-			"path",
-			"path/posix",
-			"path/win32",
-			"querystring",
-			"module",
-			"stream",
-			"stream/consumers",
-			"stream/promises",
-			"stream/web",
-			"string_decoder",
-			"sys",
-			"timers",
-			"timers/promises",
-			"url",
-			"util",
-			"util/types",
-			"zlib",
-		];
-		for (const m of modules) {
-			assert.strictEqual(await import(m), require(m));
-		}
 	},
 
 	async testUtilImplements() {
@@ -898,6 +858,252 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.throws(
 			() => repl.start(),
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
+
+	async testV8() {
+		const v8 = await import("node:v8");
+
+		for (const target of [v8, v8.default]) {
+			assertTypeOfProperties(target, {
+				getHeapSnapshot: "function",
+				getHeapStatistics: "function",
+				getHeapSpaceStatistics: "function",
+				getHeapCodeStatistics: "function",
+				setFlagsFromString: "function",
+				Serializer: "function",
+				Deserializer: "function",
+				DefaultSerializer: "function",
+				DefaultDeserializer: "function",
+				deserialize: "function",
+				takeCoverage: "function",
+				stopCoverage: "function",
+				serialize: "function",
+				writeHeapSnapshot: "function",
+				promiseHooks: "object",
+				startupSnapshot: "object",
+				setHeapSnapshotNearHeapLimit: "function",
+				GCProfiler: "function",
+				cachedDataVersionTag: "function",
+			});
+		}
+	},
+
+	async testTty() {
+		const tty = await import("node:tty");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(tty, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		assertTypeOfProperties(tty.default, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		// isatty should return false (both unenv and workerd)
+		assert.strictEqual(tty.isatty(0), false);
+		assert.strictEqual(tty.isatty(1), false);
+		assert.strictEqual(tty.isatty(2), false);
+
+		assert.doesNotThrow(() => new tty.ReadStream(0));
+		assert.doesNotThrow(() => new tty.WriteStream(1));
+	},
+
+	async testChildProcess() {
+		const childProcess = await import("node:child_process");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(childProcess, {
+			ChildProcess: "function",
+			exec: "function",
+			execFile: "function",
+			execFileSync: "function",
+			execSync: "function",
+			fork: "function",
+			spawn: "function",
+			spawnSync: "function",
+		});
+
+		assertTypeOfProperties(childProcess.default, {
+			ChildProcess: "function",
+			exec: "function",
+			execFile: "function",
+			execFileSync: "function",
+			execSync: "function",
+			fork: "function",
+			spawn: "function",
+			spawnSync: "function",
+		});
+
+		// Both implementations throw when calling spawn()
+		assert.throws(
+			() => childProcess.spawn("ls"),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+
+		// Both implementations throw when calling exec()
+		assert.throws(
+			() => childProcess.exec("ls"),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
+
+	async testWorkerThreads() {
+		const workerThreads = await import("node:worker_threads");
+
+		// Common exports available in both unenv stub and native workerd
+		for (const target of [workerThreads, workerThreads.default]) {
+			assertTypeOfProperties(target, {
+				SHARE_ENV: "symbol",
+				getEnvironmentData: "function",
+				isMainThread: "boolean",
+				isMarkedAsUntransferable: "function",
+				markAsUntransferable: "function",
+				markAsUncloneable: "function",
+				moveMessagePortToContext: "function",
+				receiveMessageOnPort: "function",
+				setEnvironmentData: "function",
+				postMessageToThread: "function",
+				isInternalThread: "boolean",
+				BroadcastChannel: "function",
+				MessageChannel: "function",
+				Worker: "function",
+			});
+
+			// These are values, not functions
+			assert.strictEqual(target.parentPort, null, "parentPort should be null");
+			assert.strictEqual(target.threadId, 0, "threadId should be 0");
+			assert.strictEqual(target.workerData, null, "workerData should be null");
+			assert.deepStrictEqual(
+				target.resourceLimits,
+				{},
+				"resourceLimits should be empty object"
+			);
+			assert.strictEqual(
+				target.isMainThread,
+				true,
+				"isMainThread should be true"
+			);
+			assert.strictEqual(
+				(target as Record<string, unknown>).isInternalThread,
+				false,
+				"isInternalThread should be false"
+			);
+		}
+
+		// Test SHARE_ENV symbol value
+		assert.strictEqual(
+			workerThreads.SHARE_ENV,
+			Symbol.for("nodejs.worker_threads.SHARE_ENV"),
+			"SHARE_ENV should be the correct symbol"
+		);
+
+		// Test getEnvironmentData/setEnvironmentData
+		workerThreads.setEnvironmentData("test-key", "test-value");
+		assert.strictEqual(
+			workerThreads.getEnvironmentData("test-key"),
+			"test-value",
+			"getEnvironmentData should return the set value"
+		);
+
+		// Test MessageChannel creates ports
+		const channel = new workerThreads.MessageChannel();
+		assert.ok(channel.port1, "MessageChannel should have port1");
+		assert.ok(channel.port2, "MessageChannel should have port2");
+
+		// Test behavioral differences between native workerd and unenv stub
+		const isNative =
+			getRuntimeFlagValue("enable_nodejs_worker_threads_module") === true;
+		if (isNative) {
+			// Native workerd: Worker and BroadcastChannel constructors throw
+			assert.throws(
+				() => new workerThreads.Worker("test.js"),
+				/ERR_METHOD_NOT_IMPLEMENTED/,
+				"Worker constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
+			);
+			assert.throws(
+				() => new workerThreads.BroadcastChannel("test"),
+				/ERR_METHOD_NOT_IMPLEMENTED/,
+				"BroadcastChannel constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
+			);
+		}
+	},
+
+	async testReadline() {
+		const readline = await import("node:readline");
+
+		for (const target of [readline, readline.default]) {
+			assertTypeOfProperties(target, {
+				Interface: "function",
+				clearLine: "function",
+				clearScreenDown: "function",
+				createInterface: "function",
+				cursorTo: "function",
+				emitKeypressEvents: "function",
+				moveCursor: "function",
+				promises: "object",
+			});
+		}
+	},
+
+	async testReadlinePromises() {
+		const readlinePromises = await import("node:readline/promises");
+
+		for (const target of [readlinePromises, readlinePromises.default]) {
+			assertTypeOfProperties(target, {
+				Interface: "function",
+				Readline: "function",
+				createInterface: "function",
+			});
+		}
+	},
+
+	async testPerfHooks() {
+		assertTypeOf(globalThis, "performance", "object");
+		assertTypeOf(globalThis, "PerformanceObserver", "function");
+
+		assert.doesNotThrow(() => globalThis.performance.now());
+		assert.doesNotThrow(() => globalThis.performance.mark("test"));
+		assert.doesNotThrow(() => globalThis.performance.measure("test"));
+
+		const perfHooks = await import("node:perf_hooks");
+
+		assertTypeOfProperties(perfHooks, {
+			performance: "object",
+			PerformanceObserver: "function",
+			constants: "object",
+		});
+
+		assert.doesNotThrow(() => perfHooks.performance.now());
+		assert.doesNotThrow(() => perfHooks.performance.mark("test"));
+		assert.doesNotThrow(() => perfHooks.performance.measure("test"));
+
+		// Test performance.nodeTiming (Node.js-specific property)
+		const nodeTiming = perfHooks.performance.nodeTiming;
+		assertTypeOf(perfHooks.performance, "nodeTiming", "object");
+		assert.strictEqual(nodeTiming.name, "node");
+		assert.strictEqual(nodeTiming.entryType, "node");
+		assertTypeOfProperties(nodeTiming, {
+			startTime: "number",
+			duration: "number",
+			nodeStart: "number",
+			v8Start: "number",
+			bootstrapComplete: "number",
+			environment: "number",
+			loopStart: "number",
+			loopExit: "number",
+			idleTime: "number",
+		});
+
+		// Test performance.markResourceTiming() doesn't throw
+		// Note: Both workerd and unenv polyfill accept no arguments (stub implementations)
+		assert.doesNotThrow(() =>
+			(perfHooks.performance.markResourceTiming as unknown as () => void)()
 		);
 	},
 };

@@ -7,17 +7,19 @@ import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
+import type { PackageManager } from "../../package-manager";
 
 export class Angular extends Framework {
 	async configure({
 		workerName,
 		outputDir,
 		dryRun,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await updateAngularJson(workerName);
 			await overrideServerFile();
-			await installAdditionalDependencies();
+			await installAdditionalDependencies(packageManager);
 		}
 		return {
 			wranglerConfig: {
@@ -58,7 +60,11 @@ async function overrideServerFile() {
 		dedent`
 		import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 
-		const angularApp = new AngularAppEngine();
+		const angularApp = new AngularAppEngine({
+			// It is safe to set allow \`localhost\`, so that SSR can run in local development,
+			// as, in production, Cloudflare will ensure that \`localhost\` is not the host.
+			allowedHosts: ['localhost'],
+		});
 
 		/**
 		 * This is a request handler used by the Angular CLI (dev-server and during build).
@@ -74,8 +80,8 @@ async function overrideServerFile() {
 	);
 }
 
-async function installAdditionalDependencies() {
-	await installPackages(["xhr2"], {
+async function installAdditionalDependencies(packageManager: PackageManager) {
+	await installPackages(packageManager, ["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
 		doneText: `${brandColor("installed")}`,

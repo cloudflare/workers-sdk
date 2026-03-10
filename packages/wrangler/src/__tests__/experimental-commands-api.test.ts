@@ -1,4 +1,4 @@
-import { describe, test } from "vitest";
+import { assert, describe, test } from "vitest";
 import { experimental_getWranglerCommands } from "../experimental-commands-api";
 
 describe("experimental_getWranglerCommands", () => {
@@ -6,39 +6,39 @@ describe("experimental_getWranglerCommands", () => {
 		const commandTree = experimental_getWranglerCommands().globalFlags;
 
 		expect(commandTree).toMatchInlineSnapshot(`
-			Object {
-			  "config": Object {
+			{
+			  "config": {
 			    "alias": "c",
 			    "describe": "Path to Wrangler configuration file",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "cwd": Object {
+			  "cwd": {
 			    "describe": "Run as if Wrangler was started in the specified directory instead of the current working directory",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "env": Object {
+			  "env": {
 			    "alias": "e",
 			    "describe": "Environment to use for operations, and for selecting .env and .dev.vars files",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "env-file": Object {
+			  "env-file": {
 			    "array": true,
 			    "describe": "Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
 			    "requiresArg": true,
 			    "type": "string",
 			  },
-			  "experimental-auto-create": Object {
+			  "experimental-auto-create": {
 			    "alias": "x-auto-create",
 			    "default": true,
 			    "describe": "Automatically provision draft bindings with new resources",
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "experimental-provision": Object {
-			    "alias": Array [
+			  "experimental-provision": {
+			    "alias": [
 			      "x-provision",
 			    ],
 			    "default": true,
@@ -46,7 +46,7 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "v": Object {
+			  "v": {
 			    "alias": "version",
 			    "describe": "Show version number",
 			    "type": "boolean",
@@ -70,61 +70,60 @@ describe("experimental_getWranglerCommands", () => {
 		expect(commandTree.subtree.has("deploy")).toBe(true);
 
 		const docsCommand = commandTree.subtree.get("docs");
-		expect(docsCommand?.definition?.metadata).toBeDefined();
-		expect(docsCommand?.definition?.metadata?.description).toBeDefined();
-		expect(docsCommand?.definition?.metadata?.status).toBeDefined();
+		assert(docsCommand?.definition);
+		expect(docsCommand.definition.metadata).toBeDefined();
+		expect(docsCommand.definition.metadata?.description).toBeDefined();
+		expect(docsCommand.definition.metadata?.status).toBeDefined();
 	});
 
 	test("includes nested commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const d1Command = commandTree.subtree.get("d1");
-		expect(d1Command?.subtree).toBeInstanceOf(Map);
-		expect(d1Command?.subtree.has("list")).toBe(true);
-		expect(d1Command?.subtree.has("create")).toBe(true);
-		expect(d1Command?.subtree.has("delete")).toBe(true);
+		assert(d1Command);
+		expect(d1Command.subtree).toBeInstanceOf(Map);
+		expect(d1Command.subtree.has("list")).toBe(true);
+		expect(d1Command.subtree.has("create")).toBe(true);
+		expect(d1Command.subtree.has("delete")).toBe(true);
 	});
 
 	test("includes command arguments and metadata", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const initCommand = commandTree.subtree.get("init");
-		expect(initCommand?.definition?.type).toBe("command");
-		if (initCommand?.definition?.type === "command") {
-			expect(initCommand.definition.metadata).toBeDefined();
-			expect(initCommand.definition.metadata.description).toBeDefined();
-			expect(initCommand.definition.metadata.status).toBeDefined();
-			expect(initCommand.definition.metadata.owner).toBeDefined();
-		}
+		assert(initCommand?.definition?.type === "command");
+		expect(initCommand.definition.metadata).toBeDefined();
+		expect(initCommand.definition.metadata.description).toBeDefined();
+		expect(initCommand.definition.metadata.status).toBeDefined();
+		expect(initCommand.definition.metadata.owner).toBeDefined();
 	});
 
 	test("includes namespace commands", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const kvCommand = commandTree.subtree.get("kv");
-		expect(kvCommand?.definition?.type).toBe("namespace");
-		expect(kvCommand?.subtree).toBeInstanceOf(Map);
-		expect(kvCommand?.subtree.has("namespace")).toBe(true);
-		expect(kvCommand?.subtree.has("key")).toBe(true);
+		assert(kvCommand?.definition?.type === "namespace");
+		expect(kvCommand.subtree).toBeInstanceOf(Map);
+		expect(kvCommand.subtree.has("namespace")).toBe(true);
+		expect(kvCommand.subtree.has("key")).toBe(true);
 	});
 
 	test("preserves command metadata properties", ({ expect }) => {
 		const commandTree = experimental_getWranglerCommands().registry;
 
 		const deployCommand = commandTree.subtree.get("deploy");
-		if (deployCommand?.definition?.type === "command") {
-			const metadata = deployCommand.definition.metadata;
-			expect(metadata.description).toBeDefined();
-			expect(metadata.status).toBeDefined();
-			expect(metadata.owner).toBeDefined();
-			expect(typeof metadata.description).toBe("string");
-			expect([
-				"experimental",
-				"alpha",
-				"private beta",
-				"open beta",
-				"stable",
-			]).toContain(metadata.status);
-		}
+		assert(deployCommand?.definition?.type === "command");
+		const metadata = deployCommand.definition.metadata;
+		expect(metadata.description).toBeDefined();
+		expect(metadata.status).toBeDefined();
+		expect(metadata.owner).toBeDefined();
+		expect(typeof metadata.description).toBe("string");
+		expect([
+			"experimental",
+			"alpha",
+			"private beta",
+			"open beta",
+			"stable",
+		]).toContain(metadata.status);
 	});
 });

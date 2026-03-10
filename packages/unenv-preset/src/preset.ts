@@ -1,13 +1,11 @@
 import { version } from "../package.json";
 import type { Preset } from "unenv";
 
-// Built-in APIs provided by workerd.
+// Built-in APIs provided by workerd that do not need individual compatibility flags or dates.
 //
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-//
-// NOTE: Please sync any changes to `testNodeCompatModules`.
-const nativeModules = [
+const defaultNativeModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
 	"_stream_readable",
@@ -56,75 +54,45 @@ const nativeModules = [
 export function getCloudflarePreset({
 	compatibilityDate = "2024-09-03",
 	compatibilityFlags = [],
-}: {
-	compatibilityDate?: string;
-	compatibilityFlags?: string[];
-}): Preset {
+}: Partial<Compatibility>): Preset {
 	const compat = {
 		compatibilityDate,
 		compatibilityFlags,
 	};
 
-	const httpOverrides = getHttpOverrides(compat);
-	const http2Overrides = getHttp2Overrides(compat);
-	const osOverrides = getOsOverrides(compat);
-	const fsOverrides = getFsOverrides(compat);
-	const punycodeOverrides = getPunycodeOverrides(compat);
-	const clusterOverrides = getClusterOverrides(compat);
-	const traceEventsOverrides = getTraceEventsOverrides(compat);
-	const domainOverrides = getDomainOverrides(compat);
-	const wasiOverrides = getWasiOverrides(compat);
-	const consoleOverrides = getConsoleOverrides(compat);
-	const vmOverrides = getVmOverrides(compat);
-	const inspectorOverrides = getInspectorOverrides(compat);
-	const sqliteOverrides = getSqliteOverrides(compat);
-	const dgramOverrides = getDgramOverrides(compat);
-	const streamWrapOverrides = getStreamWrapOverrides(compat);
-	const replOverrides = getReplOverrides(compat);
-	const processOverrides = getProcessOverrides(compat);
-
-	// "dynamic" as they depend on the compatibility date and flags
-	const dynamicNativeModules = [
-		...nativeModules,
-		...httpOverrides.nativeModules,
-		...http2Overrides.nativeModules,
-		...osOverrides.nativeModules,
-		...fsOverrides.nativeModules,
-		...punycodeOverrides.nativeModules,
-		...clusterOverrides.nativeModules,
-		...traceEventsOverrides.nativeModules,
-		...domainOverrides.nativeModules,
-		...wasiOverrides.nativeModules,
-		...consoleOverrides.nativeModules,
-		...vmOverrides.nativeModules,
-		...inspectorOverrides.nativeModules,
-		...sqliteOverrides.nativeModules,
-		...dgramOverrides.nativeModules,
-		...streamWrapOverrides.nativeModules,
-		...replOverrides.nativeModules,
-		...processOverrides.nativeModules,
+	const overrides: Override[] = [
+		getHttpOverrides(compat),
+		getHttp2Overrides(compat),
+		getOsOverrides(compat),
+		getFsOverrides(compat),
+		getPunycodeOverrides(compat),
+		getClusterOverrides(compat),
+		getTraceEventsOverrides(compat),
+		getDomainOverrides(compat),
+		getWasiOverrides(compat),
+		getConsoleOverrides(compat),
+		getVmOverrides(compat),
+		getInspectorOverrides(compat),
+		getSqliteOverrides(compat),
+		getDgramOverrides(compat),
+		getStreamWrapOverrides(compat),
+		getReplOverrides(compat),
+		getProcessOverrides(compat),
+		getV8Overrides(compat),
+		getTtyOverrides(compat),
+		getChildProcessOverrides(compat),
+		getWorkerThreadsOverrides(compat),
+		getReadlineOverrides(compat),
+		getPerfHooksOverrides(compat),
 	];
 
-	// "dynamic" as they depend on the compatibility date and flags
-	const dynamicHybridModules = [
-		...httpOverrides.hybridModules,
-		...http2Overrides.hybridModules,
-		...osOverrides.hybridModules,
-		...fsOverrides.hybridModules,
-		...punycodeOverrides.hybridModules,
-		...clusterOverrides.hybridModules,
-		...traceEventsOverrides.hybridModules,
-		...domainOverrides.hybridModules,
-		...wasiOverrides.hybridModules,
-		...consoleOverrides.hybridModules,
-		...vmOverrides.hybridModules,
-		...inspectorOverrides.hybridModules,
-		...sqliteOverrides.hybridModules,
-		...dgramOverrides.hybridModules,
-		...streamWrapOverrides.hybridModules,
-		...replOverrides.hybridModules,
-		...processOverrides.hybridModules,
+	const nativeModules = [
+		...defaultNativeModules,
+		...overrides.flatMap((o) => o.nativeModules),
 	];
+	const hybridModules = overrides.flatMap((o) => o.hybridModules);
+	const injects = Object.assign({}, ...overrides.map((o) => o.inject ?? {}));
+	const polyfills = overrides.flatMap((o) => o.polyfills ?? []);
 
 	return {
 		meta: {
@@ -133,34 +101,33 @@ export function getCloudflarePreset({
 			url: __filename,
 		},
 		alias: {
-			// `nodeCompatModules` are implemented in workerd.
-			// Create aliases to override polyfills defined in based environments.
+			// Alias each native module (and its `node:...` equivalent) to itself to ensure we override any polyfills from the base unenv presets.
 			...Object.fromEntries(
-				dynamicNativeModules.flatMap((p) => [
+				nativeModules.flatMap((p) => [
 					[p, p],
 					[`node:${p}`, `node:${p}`],
 				])
 			),
 
-			// `hybridNodeCompatModules` are implemented by the cloudflare preset.
+			// Alias each hybrid module (and its `node:...` equivalent) to its unenv polyfill implementation.
 			...Object.fromEntries(
-				dynamicHybridModules.flatMap((m) => [
+				hybridModules.flatMap((m) => [
 					[m, `@cloudflare/unenv-preset/node/${m}`],
 					[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 				])
 			),
 		},
 		inject: {
-			// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
+			// Do not inject globals implemented natively by workerd. Setting the value to `false` ensures that any base preset inject is not used.
 			Buffer: false,
 			global: false,
 			clearImmediate: false,
 			setImmediate: false,
-			...consoleOverrides.inject,
-			...processOverrides.inject,
+			// Inject globals provided by unenv for the current compat date and flags.
+			...injects,
 		},
-		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
-		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
+		polyfill: polyfills,
+		external: nativeModules.flatMap((p) => [p, `node:${p}`]),
 	};
 }
 
@@ -172,18 +139,15 @@ export function getCloudflarePreset({
  * - can be enabled with the "enable_nodejs_http_modules" flag
  * - can be disabled with the "disable_nodejs_http_modules" flag
  *
- * The native http server APIS implementation:
- * - is enabled starting from 2025-09-15
+ * The native http server APIs implementation:
+ * - is enabled starting from 2025-09-01
  * - can be enabled with the "enable_nodejs_http_server_modules" flag
  * - can be disabled with the "disable_nodejs_http_server_modules" flag
  */
 function getHttpOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const httpDisabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_http_modules"
 	);
@@ -243,10 +207,7 @@ function getHttpOverrides({
 function getHttp2Overrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_http2_module"
 	);
@@ -279,10 +240,7 @@ function getHttp2Overrides({
 function getOsOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_os_module"
 	);
@@ -316,10 +274,7 @@ function getOsOverrides({
 function getFsOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_fs_module"
 	);
@@ -352,10 +307,7 @@ function getFsOverrides({
 function getPunycodeOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_punycode_module"
 	);
@@ -390,10 +342,7 @@ function getPunycodeOverrides({
 function getClusterOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_cluster_module"
 	);
@@ -428,10 +377,7 @@ function getClusterOverrides({
 function getTraceEventsOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_trace_events_module"
 	);
@@ -466,10 +412,7 @@ function getTraceEventsOverrides({
 function getDomainOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_domain_module"
 	);
@@ -504,10 +447,7 @@ function getDomainOverrides({
 function getWasiOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_wasi_module"
 	);
@@ -542,14 +482,7 @@ function getWasiOverrides({
 function getConsoleOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): {
-	nativeModules: string[];
-	hybridModules: string[];
-	inject: Record<string, string>;
-} {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_console_module"
 	);
@@ -586,10 +519,7 @@ function getConsoleOverrides({
 function getVmOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_vm_module"
 	);
@@ -622,10 +552,7 @@ function getVmOverrides({
 function getInspectorOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_inspector_module"
 	);
@@ -660,10 +587,7 @@ function getInspectorOverrides({
 function getSqliteOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_sqlite_module"
 	);
@@ -698,10 +622,7 @@ function getSqliteOverrides({
 function getDgramOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_dgram_module"
 	);
@@ -736,10 +657,7 @@ function getDgramOverrides({
 function getStreamWrapOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+}: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_stream_wrap_module"
 	);
@@ -771,12 +689,7 @@ function getStreamWrapOverrides({
  * - can be enabled with the "enable_nodejs_repl_module" flag
  * - can be disabled with the "disable_nodejs_repl_module" flag
  */
-function getReplOverrides({
-	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): { nativeModules: string[]; hybridModules: string[] } {
+function getReplOverrides({ compatibilityFlags }: Compatibility): Override {
 	const disabledByFlag = compatibilityFlags.includes(
 		"disable_nodejs_repl_module"
 	);
@@ -811,14 +724,7 @@ function getReplOverrides({
 function getProcessOverrides({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): {
-	nativeModules: string[];
-	hybridModules: string[];
-	inject: { process: string | false };
-} {
+}: Compatibility): Override {
 	const disabledV2ByFlag = compatibilityFlags.includes(
 		"disable_nodejs_process_v2"
 	);
@@ -866,10 +772,7 @@ function getProcessOverrides({
 function hasFetchIterableFixes({
 	compatibilityDate,
 	compatibilityFlags,
-}: {
-	compatibilityDate: string;
-	compatibilityFlags: string[];
-}): boolean {
+}: Compatibility): boolean {
 	const supportEnabledByFlag = compatibilityFlags.includes(
 		"fetch_iterable_type_support"
 	);
@@ -902,3 +805,214 @@ function hasFetchIterableFixes({
 
 	return adjustmentEnabled;
 }
+
+/**
+ * Returns the overrides for `node:v8` (unenv or workerd)
+ *
+ * The native v8 implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_v8_module" flag
+ * - can be disabled with the "disable_nodejs_v8_module" flag
+ */
+function getV8Overrides({ compatibilityFlags }: Compatibility): Override {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_v8_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_v8_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `v8` module from workerd
+	return enabled
+		? {
+				nativeModules: ["v8"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:tty` (unenv or workerd)
+ *
+ * The native tty implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_tty_module" flag
+ * - can be disabled with the "disable_nodejs_tty_module" flag
+ */
+function getTtyOverrides({ compatibilityFlags }: Compatibility): Override {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_tty_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_tty_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `tty` module from workerd
+	return enabled
+		? {
+				nativeModules: ["tty"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:child_process` (unenv or workerd)
+ *
+ * The native child_process implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_child_process_module" flag
+ * - can be disabled with the "disable_nodejs_child_process_module" flag
+ */
+function getChildProcessOverrides({
+	compatibilityFlags,
+}: Compatibility): Override {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_child_process_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_child_process_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `child_process` module from workerd
+	return enabled
+		? {
+				nativeModules: ["child_process"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:worker_threads` (unenv or workerd)
+ *
+ * The native worker_threads implementation:
+ * - can be enabled with the "enable_nodejs_worker_threads_module" flag
+ * - can be disabled with the "disable_nodejs_worker_threads_module" flag
+ * - is experimental (no default enable date)
+ */
+function getWorkerThreadsOverrides({
+	compatibilityFlags,
+}: Compatibility): Override {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_worker_threads_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_worker_threads_module") &&
+		compatibilityFlags.includes("experimental");
+
+	// worker_threads is experimental, no default enable date
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `worker_threads` module from workerd
+	return enabled
+		? {
+				nativeModules: ["worker_threads"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:readline` and `node:readline/promises` (unenv or workerd)
+ *
+ * The native readline implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_readline_module" flag
+ * - can be disabled with the "disable_nodejs_readline_module" flag
+ */
+function getReadlineOverrides({ compatibilityFlags }: Compatibility): Override {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_readline_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_readline_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `readline` and `readline/promises` modules from workerd
+	return enabled
+		? {
+				nativeModules: ["readline", "readline/promises"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:perf_hooks` (unenv or workerd)
+ *
+ * The native performance implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_perf_hooks_module" flag
+ * - can be disabled with the "disable_nodejs_perf_hooks_module" flag
+ */
+function getPerfHooksOverrides({
+	compatibilityFlags,
+}: Compatibility): Override {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_perf_hooks_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_perf_hooks_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["perf_hooks"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+				polyfills: ["@cloudflare/unenv-preset/polyfill/performance"],
+			};
+}
+
+export type Compatibility = {
+	/** The compatibility date to be used when computing overrides. */
+	compatibilityDate: string;
+	/** The compatibility flags to be used when computing overrides. */
+	compatibilityFlags: string[];
+};
+
+export type Override = {
+	/** The native workerd modules that are enabled for the current compat date and flags. */
+	nativeModules: string[];
+	/** Hybrid modules are provided by unenv but use some native workerd APIs. */
+	hybridModules: string[];
+	/** The globals that are injected from unenv for the current compat date and flags. */
+	inject?: Record<string, string | false>;
+	/** The side-effect polyfill modules that are provided from unenv for the current compat date and flags. */
+	polyfills?: string[];
+};

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.13.106",
+	"version": "0.13.112",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -33,7 +33,7 @@
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
-		"glob": "^10.4.5",
+		"glob": "^10.5.0",
 		"html-rewriter-wasm": "^0.4.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

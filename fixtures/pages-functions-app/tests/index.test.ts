@@ -56,18 +56,21 @@ describe("Pages Functions", () => {
 	it("passes environment variables", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/variables`);
 		const env = await response.json();
-		expect(env).toEqual({
-			ASSETS: {},
-			bucket: {},
-			NAME: "VALUE",
-			OTHER_NAME: "THING=WITH=EQUALS",
-			VAR_1: "var #1 value",
-			VAR_3: "var #3 value",
-			VAR_MULTI_LINE_1: "A: line 1\nline 2",
-			VAR_MULTI_LINE_2: "B: line 1\nline 2",
-			EMPTY: "",
-			UNQUOTED: "unquoted value", // Note that whitespace is trimmed
-		});
+		// Use objectContaining to allow for additional CF_PAGES_* variables
+		expect(env).toEqual(
+			expect.objectContaining({
+				ASSETS: {},
+				bucket: {},
+				NAME: "VALUE",
+				OTHER_NAME: "THING=WITH=EQUALS",
+				VAR_1: "var #1 value",
+				VAR_3: "var #3 value",
+				VAR_MULTI_LINE_1: "A: line 1\nline 2",
+				VAR_MULTI_LINE_2: "B: line 1\nline 2",
+				EMPTY: "",
+				UNQUOTED: "unquoted value", // Note that whitespace is trimmed
+			})
+		);
 	});
 
 	it("intercepts static requests with next()", async ({ expect }) => {

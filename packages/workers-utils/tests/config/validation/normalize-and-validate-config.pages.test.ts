@@ -1,7 +1,8 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- see #12346 */
+import { assert, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
 
 describe("normalizeAndValidateConfig() - Pages configuration", () => {
@@ -14,9 +15,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 		vi.stubEnv("NO_HYPERDRIVE_WARNING", "true");
 
 		// sanity checks
-		expect(pagesRawConfig.env).not.toBeUndefined();
-		expect(pagesRawConfig.env?.preview).not.toBeUndefined();
-		expect(pagesRawConfig.env?.production).not.toBeUndefined();
+		assert(pagesRawConfig.env);
+		expect(pagesRawConfig.env.preview).not.toBeUndefined();
+		expect(pagesRawConfig.env.production).not.toBeUndefined();
 	});
 
 	describe("named environments", () => {

@@ -208,7 +208,7 @@ describe("logger", () => {
 			expect(std.debug).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`"This is a log message"`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnrecognised WRANGLER_LOG value \\"everything\\", expected \\"none\\" | \\"error\\" | \\"warn\\" | \\"info\\" | \\"log\\" | \\"debug\\", defaulting to \\"log\\"...[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnrecognised WRANGLER_LOG value "everything", expected "none" | "error" | "warn" | "info" | "log" | "debug", defaulting to "log"...[0m
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis is a warn message[0m

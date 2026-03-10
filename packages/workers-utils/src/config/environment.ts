@@ -621,6 +621,14 @@ interface EnvironmentInheritable {
 	observability: Observability | undefined;
 
 	/**
+	 * Specify the cache behavior of the Worker.
+	 *
+	 * @inheritable
+	 * @hidden
+	 */
+	cache: CacheOptions | undefined;
+
+	/**
 	 * Specify the compliance region mode of the Worker.
 	 *
 	 * Although if the user does not specify a compliance region, the default is `public`,
@@ -667,6 +675,11 @@ export type WorkflowBinding = {
 	script_name?: string;
 	/** Whether the Workflow should be remote or not in local development */
 	remote?: boolean;
+	/** Optional limits for the Workflow */
+	limits?: {
+		/** Maximum number of steps a Workflow instance can execute */
+		steps?: number;
+	};
 };
 
 /**
@@ -699,6 +712,24 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	vars: Record<string, string | Json>;
+
+	/**
+	 * Secrets configuration (experimental).
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @nonInheritable
+	 */
+	secrets?: {
+		/**
+		 * List of secret names that are required by your Worker.
+		 * When defined, this property:
+		 * - Replaces .dev.vars/.env/process.env inference for type generation
+		 * - Enables local dev validation with warnings for missing secrets
+		 */
+		required?: string[];
+	};
 
 	/**
 	 * A list of durable objects that your Worker should be bound to.
@@ -1428,9 +1459,16 @@ export interface Observability {
 	};
 }
 
+export interface CacheOptions {
+	/** If cache is enabled for this Worker */
+	enabled: boolean;
+}
+
 export type DockerConfiguration = {
 	/** Socket used by miniflare to communicate with Docker */
 	socketPath: string;
+	/** Docker image name for the container egress interceptor sidecar */
+	containerEgressInterceptorImage?: string;
 };
 
 export type ContainerEngine =

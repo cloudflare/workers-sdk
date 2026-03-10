@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { opendirSync, rmSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -61,27 +62,35 @@ async function handleSnapshotRequest(
 	return new Response(null, { status: 405 });
 }
 
-async function emptyDir(dirPath: string) {
-	let names: string[];
+function emptyDir(dirPath: string) {
+	let dir;
 	try {
-		names = await fs.readdir(dirPath);
+		dir = opendirSync(dirPath);
 	} catch (e) {
 		if (isFileNotFoundError(e)) {
 			return;
 		}
 		throw e;
 	}
-	for (const name of names) {
-		try {
-			await fs.rm(path.join(dirPath, name), { recursive: true, force: true });
-		} catch (e) {
-			if (isEbusyError(e)) {
-				// Sometimes workerd holds on to file handles in Windows, preventing us from cleaning up these.
-				console.warn(
-					`vitest-pool-worker: Unable to remove temporary directory: ${e}`
-				);
+	try {
+		let entry;
+		while ((entry = dir.readSync()) !== null) {
+			const fullPath = path.join(dirPath, entry.name);
+
+			if (entry.isDirectory()) {
+				emptyDir(fullPath);
+			} else {
+				try {
+					rmSync(fullPath, { force: true });
+				} catch (e) {
+					if (isEbusyError(e)) {
+						console.warn(`vitest-pool-worker: Unable to remove file: ${e}`);
+					}
+				}
 			}
 		}
+	} finally {
+		dir.closeSync();
 	}
 }
 
@@ -225,7 +234,7 @@ export function scheduleStorageReset(mf: Miniflare) {
 		await abortAllWorker.fetch("http://placeholder", { method: "DELETE" });
 		for (const persistPath of state.persistPaths) {
 			// Clear directory rather than removing it so `workerd` can retain handle
-			await emptyDir(persistPath);
+			emptyDir(persistPath);
 		}
 		state.depth = 0;
 		// If any of the code in this callback throws, the `storageResetPromise`
@@ -305,8 +314,24 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 	);
 	await fs.cp(stackFramePath, persistPath, { recursive: true });
 
-	// Remove the stack frame
-	await fs.rm(stackFramePath, { recursive: true, force: true });
+	// Remove the stack frame.
+	//
+	// Note: this is intentionally inlined rather than importing `removeDir` from
+	// `@cloudflare/workers-utils`. That package's barrel export pulls in CJS
+	// dependencies (e.g. `xdg-app-paths`) that break when esbuild bundles them
+	// into our ESM output — the shimmed `require()` calls throw
+	// "Dynamic require of 'path' is not supported" at runtime.
+	// If the bundling setup for this package changes in the future (e.g.
+	// tree-shaking improves or a sub-path export is added), this could be
+	// replaced with a direct import from `@cloudflare/workers-utils`.
+	// Keep aligned with `removeDir()` in `packages/workers-utils/src/fs-helpers.ts`.
+	// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- see comment above: barrel import breaks ESM bundle
+	await fs.rm(stackFramePath, {
+		recursive: true,
+		force: true,
+		maxRetries: 5,
+		retryDelay: 100,
+	});
 }
 
 const PLUGIN_PRODUCT_NAMES: Record<string, string | undefined> = {

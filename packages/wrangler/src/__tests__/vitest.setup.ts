@@ -179,9 +179,26 @@ vi.mock("../user/generate-auth-url", async (importOriginal) => {
 	};
 });
 
-vi.mock("../is-ci", async (importOriginal) => {
-	const original = await importOriginal<typeof import("../is-ci")>();
-	return { ...original, CI: { isCI: vi.fn().mockImplementation(() => false) } };
+// Mock `ci-info` globally so tests run with CI detection disabled by default.
+//
+// IMPORTANT: only the default import (`import ci from "ci-info"`) can be controlled
+// by vi.mocked(ci).isCI = true. Named imports (`import { isCI } from "ci-info"`)
+// bind to the factory return value and cannot be reassigned — an ESLint rule in
+// eslint.config.mjs enforces this.
+vi.mock("ci-info", () => ({
+	default: { isCI: false, CLOUDFLARE_PAGES: false, CLOUDFLARE_WORKERS: false },
+	isCI: false,
+	CLOUDFLARE_PAGES: false,
+	CLOUDFLARE_WORKERS: false,
+}));
+
+// Reset `ci-info` mock after every test so individual overrides
+// (e.g. `vi.mocked(ci).isCI = true`) don't leak between tests.
+const _ci = await import("ci-info");
+afterEach(() => {
+	vi.mocked(_ci.default).isCI = false;
+	vi.mocked(_ci.default).CLOUDFLARE_PAGES = false;
+	vi.mocked(_ci.default).CLOUDFLARE_WORKERS = false;
 });
 
 vi.mock("../user/generate-random-state", () => {

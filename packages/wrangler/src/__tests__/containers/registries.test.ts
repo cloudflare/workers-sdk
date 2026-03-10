@@ -19,6 +19,33 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
+describe("containers registries --help", () => {
+	const std = mockConsoleMethods();
+
+	it("should help", async () => {
+		await runWrangler("containers registries --help");
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler containers registries
+
+			Configure and manage non-Cloudflare registries [open beta]
+
+			COMMANDS
+			  wrangler containers registries configure <DOMAIN>    Configure credentials for a non-Cloudflare container registry [open beta]
+			  wrangler containers registries list                  List all configured container registries [open beta]
+			  wrangler containers registries delete <DOMAIN>       Delete a configured container registry [open beta]
+			  wrangler containers registries credentials [DOMAIN]  Get a temporary password for a specific domain [open beta]
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+});
+
 describe("containers registries configure", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
@@ -31,15 +58,14 @@ describe("containers registries configure", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
-
 	it("should reject unsupported registry domains", async () => {
 		await expect(
 			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id`
+				`containers registries configure unsupported.domain --public-credential=test-id`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: docker.io is not a supported image registry.
-			Currently we support the following non-Cloudflare registries: AWS ECR.
+			[Error: unsupported.domain is not a supported image registry.
+			Currently we support the following non-Cloudflare registries: AWS ECR, DockerHub.
 			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
 		`);
 	});
@@ -48,7 +74,7 @@ describe("containers registries configure", () => {
 		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --public-credential=test-id --disableSecretsStore`
+				`containers registries configure ${domain} --public-credential=test-id --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Secrets Store can only be disabled in FedRAMP compliance regions.]`
@@ -61,34 +87,56 @@ describe("containers registries configure", () => {
 				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.]`
+			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disable-secrets-store.]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disableSecretsStore`
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Arguments secret-store-id and disableSecretsStore are mutually exclusive]`
+			`[Error: Arguments secret-store-id and disable-secrets-store are mutually exclusive]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disableSecretsStore`
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disable-secrets-store`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Arguments secret-name and disableSecretsStore are mutually exclusive]`
+			`[Error: Arguments secret-name and disable-secrets-store are mutually exclusive]`
+		);
+	});
+
+	it("should enforce mutual exclusivity for public credential arguments", async () => {
+		await expect(
+			runWrangler(`containers registries configure docker.io`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing required argument: dockerhub-username]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure 123456789012.dkr.ecr.region.amazonaws.com`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing required argument: aws-access-key-id]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure docker.io --public-credential=test-id --dockerhub-username=another-test-id`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments public-credential and dockerhub-username are mutually exclusive]`
 		);
 	});
 
 	it("should no-op on cloudflare registry (default)", async () => {
 		await runWrangler(
-			`containers registries configure registry.cloudflare.com --public-credential=test-id`
+			`containers registries configure registry.cloudflare.com`
 		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Configure a container registry
-			│
-			│ Configuring Cloudflare Containers Managed Registry registry: registry.cloudflare.com
 			│
 			│ You do not need to configure credentials for Cloudflare managed registries.
 			│
@@ -123,7 +171,7 @@ describe("containers registries configure", () => {
 			});
 
 			await runWrangler(
-				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disableSecretsStore`
+				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disable-secrets-store`
 			);
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -161,7 +209,7 @@ describe("containers registries configure", () => {
 				});
 
 				await runWrangler(
-					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disableSecretsStore`
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disable-secrets-store`
 				);
 			});
 		});
@@ -192,6 +240,7 @@ describe("containers registries configure", () => {
 					modified: "2024-01-01T00:00:00Z",
 				},
 			]);
+			mockListSecrets(storeId, []);
 			mockCreateSecret(storeId);
 			mockPutRegistry({
 				domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com",
@@ -235,6 +284,7 @@ describe("containers registries configure", () => {
 
 			mockListSecretStores([]);
 			mockCreateSecretStore(newStoreId);
+			mockListSecrets(newStoreId, []);
 			mockCreateSecret(newStoreId);
 			mockPutRegistry({
 				domain: awsEcrDomain,
@@ -275,6 +325,7 @@ describe("containers registries configure", () => {
 				result: "AWS_Secret_Access_Key",
 			});
 
+			mockListSecrets(providedStoreId, []);
 			mockCreateSecret(providedStoreId);
 			mockPutRegistry({
 				domain: awsEcrDomain,
@@ -307,7 +358,7 @@ describe("containers registries configure", () => {
 				│
 				│
 				│
-				│ Container-scoped secret AWS_Secret_Access_Key created in Secrets Store.
+				│ Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
 				│
 				╰ Registry configuration completed
 
@@ -336,6 +387,7 @@ describe("containers registries configure", () => {
 						modified: "2024-01-01T00:00:00Z",
 					},
 				]);
+				mockListSecrets(storeId, []);
 				mockCreateSecret(storeId);
 				mockPutRegistry({
 					domain: awsEcrDomain,
@@ -351,6 +403,142 @@ describe("containers registries configure", () => {
 				});
 				await runWrangler(
 					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=AWS_Secret_Access_Key`
+				);
+			});
+
+			it("should reuse existing secret with --skip-confirmation", async () => {
+				const storeId = "test-store-id-reuse";
+				const secretName = "existing_secret";
+
+				mockStdIn.send("test-secret-value");
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, [
+					{
+						id: "existing-secret-id",
+						store_id: storeId,
+						name: secretName,
+						comment: "",
+						scopes: ["containers"],
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+						status: "active",
+					},
+				]);
+				mockPutRegistry({
+					domain: awsEcrDomain,
+					is_public: false,
+					auth: {
+						public_credential: "test-access-key-id",
+						private_credential: {
+							store_id: storeId,
+							secret_name: secretName,
+						},
+					},
+					kind: "ECR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=${secretName} --skip-confirmation`
+				);
+
+				// Should not contain "created" message since we reused existing secret
+				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+			});
+		});
+	});
+
+	describe("DockerHub registry configuration", () => {
+		it("should configure DockerHub registry with interactive prompts", async () => {
+			setIsTTY(true);
+			const dockerHubDomain = "docker.io";
+			const storeId = "test-store-id-123";
+			mockPrompt({
+				text: "Enter DockerHub PAT Token:",
+				options: { isSecret: true },
+				result: "test-pat-token",
+			});
+			mockPrompt({
+				text: "Secret name:",
+				options: { isSecret: false, defaultValue: "DockerHub_PAT_Token" },
+				result: "DockerHub_PAT_Token",
+			});
+
+			mockListSecretStores([
+				{
+					id: storeId,
+					account_id: "some-account-id",
+					name: "Default",
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+				},
+			]);
+			mockListSecrets(storeId, []);
+			mockCreateSecret(storeId);
+			mockPutRegistry({
+				domain: "docker.io",
+				is_public: false,
+				auth: {
+					public_credential: "cloudchambertest",
+					private_credential: {
+						store_id: storeId,
+						secret_name: "DockerHub_PAT_Token",
+					},
+				},
+				kind: "DockerHub",
+			});
+
+			await runWrangler(
+				`containers registries configure ${dockerHubDomain} --dockerhub-username=cloudchambertest`
+			);
+
+			expect(cliStd.stdout).toContain("Using existing Secret Store Default");
+		});
+
+		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
+			const dockerHubDomain = "docker.io";
+			const mockStdIn = useMockStdin({ isTTY: false });
+
+			it("should accept the secret from piped input", async () => {
+				const secret = "example-pat-token";
+				const storeId = "test-store-id-999";
+
+				mockStdIn.send(secret);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockListSecrets(storeId, []);
+				mockCreateSecret(storeId);
+				mockPutRegistry({
+					domain: dockerHubDomain,
+					is_public: false,
+					auth: {
+						public_credential: "cloudchambertest",
+						private_credential: {
+							store_id: storeId,
+							secret_name: "DockerHub_PAT_Token",
+						},
+					},
+					kind: "DockerHub",
+				});
+				await runWrangler(
+					`containers registries configure ${dockerHubDomain} --public-credential=cloudchambertest --secret-name=DockerHub_PAT_Token`
 				);
 			});
 		});
@@ -405,18 +593,18 @@ describe("containers registries list", () => {
 		`);
 	});
 
-	it("should output JSON when --json flag is used", async () => {
+	it("should output valid JSON when --json flag is used", async () => {
 		const mockRegistries = [
 			{ domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com" },
 		];
 		mockListRegistries(mockRegistries);
 		await runWrangler("containers registries list --json");
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
-			    {
-			        \\"domain\\": \\"123456789012.dkr.ecr.us-west-2.amazonaws.com\\"
-			    }
-			]"
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
+			  {
+			    "domain": "123456789012.dkr.ecr.us-west-2.amazonaws.com",
+			  },
+			]
 		`);
 	});
 });
@@ -609,6 +797,125 @@ describe("containers registries delete", () => {
 	});
 });
 
+describe("containers registries credentials", () => {
+	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
+	mockAccountId();
+	mockApiToken();
+	beforeEach(() => {
+		mockAccount();
+	});
+
+	afterEach(() => {
+		msw.resetHandlers();
+	});
+
+	it("should reject non-Cloudflare registry domains", async () => {
+		setIsTTY(false);
+		await expect(
+			runWrangler("containers registries credentials example.com --push")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The credentials command only accepts the Cloudflare managed registry (registry.cloudflare.com).]`
+		);
+	});
+
+	it("should default to Cloudflare registry when DOMAIN is omitted", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler("containers registries credentials --push");
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should require --push or --pull", async () => {
+		setIsTTY(false);
+		await expect(
+			runWrangler("containers registries credentials registry.cloudflare.com")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: You have to specify either --push or --pull in the command.]`
+		);
+	});
+
+	it("should generate credentials with --push", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should generate credentials with --pull", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"pull",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --pull"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
+	it("should generate credentials with both --push and --pull", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "jwt-token", 15, [
+			"push",
+			"pull",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --pull"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"jwt-token"`);
+	});
+
+	it("should support custom expiration-minutes", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials(
+			"registry.cloudflare.com",
+			"custom-expiry-token",
+			30,
+			["push"]
+		);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --expiration-minutes=30"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
+	});
+
+	it("should output valid JSON when --json flag is used", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"push",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --push --json"
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "account_id": "some-account-id",
+			  "password": "test-password",
+			  "registry_host": "registry.cloudflare.com",
+			  "username": "test-username",
+			}
+		`);
+	});
+});
+
 const mockPutRegistry = (expected?: object) => {
 	msw.use(
 		http.post(
@@ -647,6 +954,35 @@ const mockDeleteRegistry = (domain: string, secretsStoreRef?: string) => {
 					createFetchResult({
 						domain: domain,
 						secrets_store_ref: secretsStoreRef,
+					})
+				);
+			}
+		)
+	);
+};
+
+const mockGenerateCredentials = (
+	domain: string,
+	password: string,
+	expectedExpirationMinutes: number,
+	expectedPermissions: string[]
+) => {
+	msw.use(
+		http.post(
+			`*/accounts/:accountId/containers/registries/${domain}/credentials`,
+			async ({ request, params }) => {
+				const body = (await request.json()) as {
+					expiration_minutes: number;
+					permissions: string[];
+				};
+				expect(body.expiration_minutes).toBe(expectedExpirationMinutes);
+				expect(body.permissions).toEqual(expectedPermissions);
+				return HttpResponse.json(
+					createFetchResult({
+						account_id: params.accountId,
+						registry_host: domain,
+						username: "test-username",
+						password: password,
 					})
 				);
 			}

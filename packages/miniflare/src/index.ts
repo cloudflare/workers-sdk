@@ -12,6 +12,7 @@ import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli";
+import { removeDir, removeDirSync } from "@cloudflare/workers-utils";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
@@ -44,8 +45,10 @@ import {
 	DurableObjectClassNames,
 	getDirectSocketName,
 	getGlobalServices,
+	getPersistPath,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
+	IMAGES_PLUGIN_NAME,
 	KV_PLUGIN_NAME,
 	launchBrowser,
 	loadExternalPlugins,
@@ -102,6 +105,7 @@ import {
 } from "./runtime";
 import {
 	_isCyclic,
+	isFileNotFoundError,
 	Log,
 	MiniflareCoreError,
 	NoOpLog,
@@ -109,7 +113,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
-import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
+import { DevRegistry, getWorkerRegistry } from "./shared/dev-registry";
 import {
 	createInboundDoProxyService,
 	createOutboundDoProxyService,
@@ -125,6 +129,7 @@ import {
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
+	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
 	LogLevel,
@@ -134,11 +139,13 @@ import {
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
+import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type {
 	CacheStorage,
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
+	ImagesBinding,
 	KVNamespace,
 	KVNamespaceListKey,
 	Queue,
@@ -1050,19 +1057,23 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
+			// This exit hook is synchronous — the event loop will never run again
+			// after it returns, so any operation that schedules a microtask (like
+			// fs.promises.rm) will never even be executed, let alone completed.
+			// We must use the sync variant here.
+			// `Runtime#dispose()` should kill the runtime immediately but it might not,
+			// so we only clean up on a best effort basis.
 			try {
-				fs.rmSync(this.#tmpPath, { force: true, recursive: true });
+				removeDirSync(this.#tmpPath);
 			} catch (e) {
-				// `rmSync` may fail on Windows with `EBUSY` if `workerd` is still
-				// running. `Runtime#dispose()` should kill the runtime immediately.
-				// `exitHook`s must be synchronous, so we can only clean up on a best
-				// effort basis.
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
-			// Unregister all workers from the dev registry
-			this.#devRegistry.dispose()?.catch((e) => {
-				this.#log.debug(`Error disposing Dev Registry: ${getErrorMessage(e)}`);
-			});
+			// Unregister all workers from the dev registry. Note that dispose()
+			// does synchronous cleanup (unregistering workers) then returns a
+			// Promise for async cleanup (closing watcher, terminating proxy).
+			// The .catch() will never run since the event loop won't tick again,
+			// but the synchronous portion still executes.
+			this.#devRegistry.dispose();
 		});
 
 		this.#disposeController = new AbortController();
@@ -1157,6 +1168,54 @@ export class Miniflare {
 				res.writeHead(500);
 			}
 			res.end(getErrorMessage(error));
+		}
+	}
+
+	/**
+	 * Gets DO object IDs by checking filenames in the DO persistence directory.
+	 *
+	 * @param url in format: /core/do-storage/<namespaceId>
+	 * @returns [{ name: string, type: "file" | "directory" }, ...]
+	 */
+	async #handleLoopbackDOStorageRequest(url: URL): Promise<Response> {
+		// Extract namespace ID from path (e.g., "/core/do-storage/worker-TestDO" -> "worker-TestDO")
+		const namespaceId = decodeURIComponent(
+			url.pathname.slice("/core/do-storage/".length)
+		);
+		assert(namespaceId, "Namespace ID is required");
+
+		const doSharedOpts = this.#sharedOpts.do;
+		const coreSharedOpts = this.#sharedOpts.core;
+		const doPersistPath = getPersistPath(
+			DURABLE_OBJECTS_PLUGIN_NAME,
+			this.#tmpPath,
+			coreSharedOpts.defaultPersistRoot,
+			doSharedOpts.durableObjectsPersist
+		);
+
+		const namespacePath = path.join(doPersistPath, namespaceId);
+
+		// Prevent escaping directory through dodgy namespaceId that encodes (`../` etc.)
+		// by ensuring the resolved path is still within the persistence directory
+		if (!namespacePath.startsWith(path.resolve(doPersistPath) + path.sep)) {
+			return new Response("Invalid namespace ID", { status: 400 });
+		}
+
+		try {
+			const dirEntries = await fs.promises.readdir(namespacePath, {
+				withFileTypes: true,
+			});
+			return Response.json(
+				dirEntries.map((entry) => ({
+					name: entry.name,
+					type: entry.isDirectory() ? "directory" : "file",
+				}))
+			);
+		} catch (e) {
+			if (isFileNotFoundError(e)) {
+				return new Response("Not Found", { status: 404 });
+			}
+			throw e;
 		}
 	}
 
@@ -1286,6 +1345,13 @@ export class Miniflare {
 				);
 				await writeFile(filePath, await request.text());
 				response = new Response(filePath, { status: 200 });
+			} else if (url.pathname.startsWith("/core/do-storage/")) {
+				response = await this.#handleLoopbackDOStorageRequest(url);
+			} else if (url.pathname === "/core/dev-registry") {
+				// Used by the local explorer to aggregate resources across instances
+				const registryPath = this.#devRegistry.getRegistryPath();
+				const registry = registryPath ? getWorkerRegistry(registryPath) : {};
+				response = Response.json(registry);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -1913,6 +1979,7 @@ export class Miniflare {
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,
+			durableObjectClassNames,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2582,6 +2649,45 @@ export class Miniflare {
 		return proxyClient.global
 			.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
 	}
+	/**
+	 * Purges all entries from the cache.
+	 *
+	 * This is useful during development when cached assets need to be cleared
+	 * without restarting the Miniflare instance.
+	 *
+	 * @param cacheName - Optional name of specific cache to purge. If not provided,
+	 *                    purges the default cache.
+	 * @returns A promise that resolves with the number of entries purged.
+	 */
+	async purgeCache(cacheName?: string): Promise<number> {
+		await this.ready;
+
+		const proxyClient = await this._getProxyClient();
+
+		// Get the cache service binding from proxy env. This is a Fetcher to
+		// the cache-entry worker which properly sets cf.miniflare.name before
+		// forwarding to the CacheObject Durable Object.
+		const cacheService = proxyClient.env[CoreBindings.SERVICE_CACHE] as Fetcher;
+
+		// Build the request with the cache namespace header if specified
+		const headers: Record<string, string> = {};
+		if (cacheName !== undefined) {
+			headers[CacheHeaders.NAMESPACE] = cacheName;
+		}
+
+		// Call the cache-entry worker's /purge-all endpoint
+		const response = await cacheService.fetch("http://localhost/purge-all", {
+			method: "DELETE",
+			headers,
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to purge cache: ${response.statusText}`);
+		}
+
+		const result = (await response.json()) as { deleted: number };
+		return result.deleted;
+	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
 		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);
 	}
@@ -2637,6 +2743,12 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
 	}
+	getImagesBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<ImagesBinding>> {
+		return this.#getProxy(IMAGES_PLUGIN_NAME, bindingName, workerName);
+	}
 	getHelloWorldBinding(
 		bindingName: string,
 		workerName?: string
@@ -2691,8 +2803,7 @@ export class Miniflare {
 			await this.#runtime?.dispose();
 
 			await this.#stopLoopbackServer();
-			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
-			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
+			await removeDir(this.#tmpPath);
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
@@ -2718,9 +2829,11 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export type {
+	WorkerRegistry,
+	WorkerDefinition,
+} from "./shared/dev-registry-types";
 export {
-	type WorkerRegistry,
-	type WorkerDefinition,
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
 } from "./shared/dev-registry";

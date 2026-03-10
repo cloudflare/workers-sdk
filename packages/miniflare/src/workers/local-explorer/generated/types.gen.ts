@@ -4,6 +4,84 @@ export type ClientOptions = {
 	baseUrl: `${string}://${string}/cdn-cgi/explorer/api` | (string & {});
 };
 
+/**
+ * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+ */
+export type WorkersCursor = string;
+
+export type WorkersObject = {
+	/**
+	 * Whether the Durable Object has stored data.
+	 */
+	readonly hasStoredData?: boolean;
+	/**
+	 * ID of the Durable Object.
+	 */
+	readonly id?: string;
+};
+
+/**
+ * ID of the namespace.
+ */
+export type WorkersSchemasId = string;
+
+export type WorkersApiResponseCommonFailure = {
+	errors: WorkersMessages;
+	messages: WorkersMessages;
+	result: null;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: false;
+};
+
+export type WorkersMessages = Array<{
+	code: number;
+	documentation_url?: string;
+	message: string;
+	source?: {
+		pointer?: string;
+	};
+}>;
+
+export type WorkersNamespace = {
+	class?: string;
+	readonly id?: string;
+	name?: string;
+	script?: string;
+	use_sqlite?: boolean;
+};
+
+export type WorkersApiResponseCollection = WorkersApiResponseCommon & {
+	result_info?: {
+		/**
+		 * Total number of results for the requested service.
+		 */
+		count?: number;
+		/**
+		 * Current page within paginated list of results.
+		 */
+		page?: number;
+		/**
+		 * Number of results per page of results.
+		 */
+		per_page?: number;
+		/**
+		 * Total results available without any search parameters.
+		 */
+		total_count?: number;
+	};
+};
+
+export type WorkersApiResponseCommon = {
+	errors: WorkersMessages;
+	messages: WorkersMessages;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: true;
+};
+
 export type D1RawResultResponse = {
 	meta?: D1QueryMeta;
 	results?: {
@@ -274,18 +352,67 @@ export type WorkersKvResultInfo = {
 	 * Total number of results for the requested service.
 	 */
 	count?: number;
+};
+
+export type DoSqlWithParams = {
 	/**
-	 * Current page within paginated list of results.
+	 * SQL query to execute
 	 */
-	page?: number;
+	sql: string;
 	/**
-	 * Number of results per page of results.
+	 * Optional parameters for the SQL query
 	 */
-	per_page?: number;
+	params?: Array<unknown>;
+};
+
+export type DoQueryById = {
 	/**
-	 * Total results available without any search parameters.
+	 * Hex string ID of the Durable Object
 	 */
-	total_count?: number;
+	durable_object_id: string;
+	/**
+	 * Array of SQL queries to execute
+	 */
+	queries: Array<DoSqlWithParams>;
+};
+
+export type DoQueryByName = {
+	/**
+	 * Name to derive DO ID via idFromName()
+	 */
+	durable_object_name: string;
+	/**
+	 * Array of SQL queries to execute
+	 */
+	queries: Array<DoSqlWithParams>;
+};
+
+export type DoRawQueryResult = {
+	/**
+	 * Column names from the query result
+	 */
+	columns?: Array<string>;
+	/**
+	 * Array of row arrays containing query results
+	 */
+	rows?: Array<Array<unknown>>;
+	meta?: {
+		/**
+		 * Number of rows read during query execution
+		 */
+		rows_read?: number;
+		/**
+		 * Number of rows written during query execution
+		 */
+		rows_written?: number;
+	};
+};
+
+export type WorkersNamespaceWritable = {
+	class?: string;
+	name?: string;
+	script?: string;
+	use_sqlite?: boolean;
 };
 
 export type D1DatabaseResponseWritable = {
@@ -316,14 +443,6 @@ export type WorkersKvNamespaceListNamespacesData = {
 	body?: never;
 	path?: never;
 	query?: {
-		/**
-		 * Page number of paginated results.
-		 */
-		page?: number;
-		/**
-		 * Maximum number of results per page.
-		 */
-		per_page?: number;
 		/**
 		 * Field to order results by.
 		 */
@@ -368,6 +487,10 @@ export type WorkersKvNamespaceListANamespaceSKeysData = {
 		 * Limits the number of keys returned in the response. The cursor attribute may be used to iterate over the next batch of keys if there are more than the limit.
 		 */
 		limit?: number;
+		/**
+		 * Filters returned keys by a name prefix. Exact matches and any key names that begin with the prefix will be returned.
+		 */
+		prefix?: string;
 		/**
 		 * Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the `cursors` object in the `result_info` structure.
 		 */
@@ -525,7 +648,7 @@ export type WorkersKvNamespaceGetMultipleKeyValuePairsResponses = {
 export type WorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 	WorkersKvNamespaceGetMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceGetMultipleKeyValuePairsResponses];
 
-export type CloudflareD1ListDatabasesData = {
+export type D1ListDatabasesData = {
 	body?: never;
 	path?: never;
 	query?: {
@@ -533,29 +656,21 @@ export type CloudflareD1ListDatabasesData = {
 		 * a database name to search for.
 		 */
 		name?: string;
-		/**
-		 * Page number of paginated results.
-		 */
-		page?: number;
-		/**
-		 * Number of items per page.
-		 */
-		per_page?: number;
 	};
 	url: "/d1/database";
 };
 
-export type CloudflareD1ListDatabasesErrors = {
+export type D1ListDatabasesErrors = {
 	/**
 	 * List D1 databases response failure
 	 */
 	"4XX": D1ApiResponseCommonFailure;
 };
 
-export type CloudflareD1ListDatabasesError =
-	CloudflareD1ListDatabasesErrors[keyof CloudflareD1ListDatabasesErrors];
+export type D1ListDatabasesError =
+	D1ListDatabasesErrors[keyof D1ListDatabasesErrors];
 
-export type CloudflareD1ListDatabasesResponses = {
+export type D1ListDatabasesResponses = {
 	/**
 	 * List D1 databases response
 	 */
@@ -566,26 +681,14 @@ export type CloudflareD1ListDatabasesResponses = {
 			 * Total number of results for the requested service
 			 */
 			count?: number;
-			/**
-			 * Current page within paginated list of results
-			 */
-			page?: number;
-			/**
-			 * Number of results per page of results
-			 */
-			per_page?: number;
-			/**
-			 * Total results available without any search parameters
-			 */
-			total_count?: number;
 		};
 	};
 };
 
-export type CloudflareD1ListDatabasesResponse =
-	CloudflareD1ListDatabasesResponses[keyof CloudflareD1ListDatabasesResponses];
+export type D1ListDatabasesResponse =
+	D1ListDatabasesResponses[keyof D1ListDatabasesResponses];
 
-export type CloudflareD1RawDatabaseQueryData = {
+export type D1RawDatabaseQueryData = {
 	body: D1BatchQuery;
 	path: {
 		database_id: D1DatabaseIdentifier;
@@ -594,17 +697,17 @@ export type CloudflareD1RawDatabaseQueryData = {
 	url: "/d1/database/{database_id}/raw";
 };
 
-export type CloudflareD1RawDatabaseQueryErrors = {
+export type D1RawDatabaseQueryErrors = {
 	/**
 	 * Query response failure
 	 */
 	"4XX": D1ApiResponseCommonFailure;
 };
 
-export type CloudflareD1RawDatabaseQueryError =
-	CloudflareD1RawDatabaseQueryErrors[keyof CloudflareD1RawDatabaseQueryErrors];
+export type D1RawDatabaseQueryError =
+	D1RawDatabaseQueryErrors[keyof D1RawDatabaseQueryErrors];
 
-export type CloudflareD1RawDatabaseQueryResponses = {
+export type D1RawDatabaseQueryResponses = {
 	/**
 	 * Raw query response
 	 */
@@ -613,5 +716,123 @@ export type CloudflareD1RawDatabaseQueryResponses = {
 	};
 };
 
-export type CloudflareD1RawDatabaseQueryResponse =
-	CloudflareD1RawDatabaseQueryResponses[keyof CloudflareD1RawDatabaseQueryResponses];
+export type D1RawDatabaseQueryResponse =
+	D1RawDatabaseQueryResponses[keyof D1RawDatabaseQueryResponses];
+
+export type DurableObjectsNamespaceListNamespacesData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/workers/durable_objects/namespaces";
+};
+
+export type DurableObjectsNamespaceListNamespacesErrors = {
+	/**
+	 * List Namespaces response failure.
+	 */
+	"4XX": WorkersApiResponseCollection & {
+		result?: Array<WorkersNamespace>;
+	} & WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceListNamespacesError =
+	DurableObjectsNamespaceListNamespacesErrors[keyof DurableObjectsNamespaceListNamespacesErrors];
+
+export type DurableObjectsNamespaceListNamespacesResponses = {
+	/**
+	 * List Namespaces response.
+	 */
+	200: WorkersApiResponseCollection & {
+		result?: Array<WorkersNamespace>;
+	};
+};
+
+export type DurableObjectsNamespaceListNamespacesResponse =
+	DurableObjectsNamespaceListNamespacesResponses[keyof DurableObjectsNamespaceListNamespacesResponses];
+
+export type DurableObjectsNamespaceListObjectsData = {
+	body?: never;
+	path: {
+		id: WorkersSchemasId;
+	};
+	query?: {
+		/**
+		 * The number of objects to return. The cursor attribute may be used to iterate over the next batch of objects if there are more than the limit.
+		 */
+		limit?: number;
+		/**
+		 * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+		 */
+		cursor?: string;
+	};
+	url: "/workers/durable_objects/namespaces/{id}/objects";
+};
+
+export type DurableObjectsNamespaceListObjectsErrors = {
+	/**
+	 * List Objects response failure.
+	 */
+	"4XX": WorkersApiResponseCollection & {
+		result?: Array<WorkersObject>;
+		result_info?: {
+			/**
+			 * Total results returned based on your list parameters.
+			 */
+			count?: number;
+			cursor?: WorkersCursor;
+		};
+	} & WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceListObjectsError =
+	DurableObjectsNamespaceListObjectsErrors[keyof DurableObjectsNamespaceListObjectsErrors];
+
+export type DurableObjectsNamespaceListObjectsResponses = {
+	/**
+	 * List Objects response.
+	 */
+	200: WorkersApiResponseCollection & {
+		result?: Array<WorkersObject>;
+		result_info?: {
+			/**
+			 * Total results returned based on your list parameters.
+			 */
+			count?: number;
+			cursor?: WorkersCursor;
+		};
+	};
+};
+
+export type DurableObjectsNamespaceListObjectsResponse =
+	DurableObjectsNamespaceListObjectsResponses[keyof DurableObjectsNamespaceListObjectsResponses];
+
+export type DurableObjectsNamespaceQuerySqliteData = {
+	body: DoQueryById | DoQueryByName;
+	path: {
+		namespace_id: WorkersSchemasId;
+	};
+	query?: never;
+	url: "/workers/durable_objects/namespaces/{namespace_id}/query";
+};
+
+export type DurableObjectsNamespaceQuerySqliteErrors = {
+	/**
+	 * Query response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceQuerySqliteError =
+	DurableObjectsNamespaceQuerySqliteErrors[keyof DurableObjectsNamespaceQuerySqliteErrors];
+
+export type DurableObjectsNamespaceQuerySqliteResponses = {
+	/**
+	 * Query response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<DoRawQueryResult>;
+	};
+};
+
+export type DurableObjectsNamespaceQuerySqliteResponse =
+	DurableObjectsNamespaceQuerySqliteResponses[keyof DurableObjectsNamespaceQuerySqliteResponses];

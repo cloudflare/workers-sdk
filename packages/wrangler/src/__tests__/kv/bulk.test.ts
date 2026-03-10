@@ -206,12 +206,12 @@ describe("kv", () => {
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in "keys.json".[0m
 
-			            The item at index 5 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 5 contains unexpected properties: ["invalid"].
 
-			          "
-		        `);
+					"
+				`);
 			});
 
 			it("should cap the number of errors", async () => {
@@ -269,20 +269,20 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 
 				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in "keys.json".[0m
 
-					  The item at index 0 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 1 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 2 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 3 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 4 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 5 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 6 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 7 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 8 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 9 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 10 contains unexpected properties: [\\"invalid\\"].
-					  The item at index 11 contains unexpected properties: [\\"invalid\\"].
+					  The item at index 0 contains unexpected properties: ["invalid"].
+					  The item at index 1 contains unexpected properties: ["invalid"].
+					  The item at index 2 contains unexpected properties: ["invalid"].
+					  The item at index 3 contains unexpected properties: ["invalid"].
+					  The item at index 4 contains unexpected properties: ["invalid"].
+					  The item at index 5 contains unexpected properties: ["invalid"].
+					  The item at index 6 contains unexpected properties: ["invalid"].
+					  The item at index 7 contains unexpected properties: ["invalid"].
+					  The item at index 8 contains unexpected properties: ["invalid"].
+					  The item at index 9 contains unexpected properties: ["invalid"].
+					  The item at index 10 contains unexpected properties: ["invalid"].
+					  The item at index 11 contains unexpected properties: ["invalid"].
 					  ...
 
 					"
@@ -325,7 +325,7 @@ describe("kv", () => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
@@ -349,7 +349,7 @@ describe("kv", () => {
 				const keys = [{ name: "someKey1" }, { name: "ns:someKey2" }];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				const requests = mockDeleteRequest(
@@ -376,7 +376,7 @@ describe("kv", () => {
 				const keys = new Array(12000).fill("some-key");
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
@@ -413,7 +413,7 @@ describe("kv", () => {
 				const keys = ["someKey1", "ns:someKey2"];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: false,
 				});
 				await runWrangler(
@@ -426,7 +426,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Not deleting keys read from \\"keys.json\\"."
+					Not deleting keys read from "keys.json"."
 				`
 				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -477,7 +477,7 @@ describe("kv", () => {
 				const keys = 12354;
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				await expect(
@@ -485,18 +485,18 @@ describe("kv", () => {
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Unexpected JSON input from "keys.json".
-				Expected an array of strings but got:
-				12354]
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings but got:
+					12354]
 			`);
 				expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 
-				"
-			`);
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -504,7 +504,7 @@ describe("kv", () => {
 				const keys = ["good", 12354, { key: "someKey" }, null];
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				mockConfirm({
-					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace with id "some-namespace-id"?`,
+					text: `Are you sure you want to delete all the keys read from "keys.json" from kv-namespace id: "some-namespace-id"?`,
 					result: true,
 				});
 				await expect(
@@ -512,20 +512,20 @@ describe("kv", () => {
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Unexpected JSON input from "keys.json".
-				Expected an array of strings or objects with a "name" key.
-				The item at index 1 is type: "number" - 12354
-				The item at index 2 is type: "object" - {"key":"someKey"}
-				The item at index 3 is type: "object" - null]
-			`);
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings or objects with a "name" key.
+					The item at index 1 is type: "number" - 12354
+					The item at index 2 is type: "object" - {"key":"someKey"}
+					The item at index 3 is type: "object" - null]
+				`);
 				expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Resource location: remote
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: remote
 
-				"
-			`);
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
@@ -582,8 +582,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
-					  \\"someKey1\\": \\"someKey1-value\\",
-					  \\"key2\\": \\"key2-value\\"
+					  "someKey1": "someKey1-value",
+					  "key2": "key2-value"
 					}
 
 					Success!"
@@ -609,8 +609,8 @@ describe("kv", () => {
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`
 					"{
-					  \\"someKey1\\": \\"someKey1-value\\",
-					  \\"ns:someKey2\\": \\"ns:someKey2-value\\"
+					  "someKey1": "someKey1-value",
+					  "ns:someKey2": "ns:someKey2-value"
 					}
 
 					Success!"

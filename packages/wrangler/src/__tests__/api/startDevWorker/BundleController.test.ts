@@ -96,7 +96,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var index_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello world\\");
+					    return new Response("hello world");
 					  }
 					};
 					"
@@ -123,7 +123,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var index_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello world 2\\");
+					    return new Response("hello world 2");
 					  }
 					};
 					"
@@ -154,10 +154,10 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			controller.onConfigUpdate({ type: "configUpdate", config });
 			expect(findSourceFile((await ev).bundle.entrypointSource, "other.ts"))
 				.toMatchInlineSnapshot(`
-				"// other.ts
-				var other_default = \\"someone\\";
-				"
-			`);
+					"// other.ts
+					var other_default = "someone";
+					"
+				`);
 			expect(findSourceFile((await ev).bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
@@ -177,10 +177,10 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			});
 			expect(findSourceFile((await ev).bundle.entrypointSource, "other.ts"))
 				.toMatchInlineSnapshot(`
-				"// other.ts
-				var other_default = \\"someone else\\";
-				"
-			`);
+					"// other.ts
+					var other_default = "someone else";
+					"
+				`);
 		});
 
 		test("custom build", async () => {
@@ -217,7 +217,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var out_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello custom build\\");
+					    return new Response("hello custom build");
 					  }
 					};
 					"
@@ -239,18 +239,18 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					await ev;
 					expect(findSourceFile((await ev).bundle.entrypointSource, "out.ts"))
 						.toMatchInlineSnapshot(`
-						"// out.ts
-						var out_exports = {};
-						__export(out_exports, {
-						  default: () => out_default
-						});
-						var out_default = {
-						  fetch(request, env, ctx) {
-						    return new Response(\\"hello custom build 2\\");
-						  }
-						};
-						"
-					`);
+							"// out.ts
+							var out_exports = {};
+							__export(out_exports, {
+							  default: () => out_default
+							});
+							var out_default = {
+							  fetch(request, env, ctx) {
+							    return new Response("hello custom build 2");
+							  }
+							};
+							"
+						`);
 				},
 				{ timeout: 5_000, interval: 500 }
 			);
@@ -339,7 +339,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var index_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello world\\");
+					    return new Response("hello world");
 					  }
 					};
 					"
@@ -382,7 +382,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var out_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello custom build\\");
+					    return new Response("hello custom build");
 					  }
 					};
 					"
@@ -419,7 +419,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 						});
 						var out_default = {
 						  fetch(request, env, ctx) {
-						    return new Response(\\"hello custom build 2\\");
+						    return new Response("hello custom build 2");
 						  }
 						};
 						"
@@ -467,7 +467,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var out_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello custom build\\");
+					    return new Response("hello custom build");
 					  }
 					};
 					"
@@ -503,7 +503,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var index_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello world\\");
+					    return new Response("hello world");
 					  }
 					};
 					"
@@ -530,7 +530,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					});
 					var index_default = {
 					  fetch(request, env, ctx) {
-					    return new Response(\\"hello world 2\\");
+					    return new Response("hello world 2");
 					  }
 					};
 					"

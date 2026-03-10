@@ -127,14 +127,14 @@ describe("pages project list", () => {
 		// Verify the output is valid JSON
 		const output = JSON.parse(std.out);
 		expect(output).toMatchInlineSnapshot(`
-			Array [
-			  Object {
+			[
+			  {
 			    "Git Provider": "Yes",
 			    "Last Modified": "[mock-time-ago]",
 			    "Project Domains": "dogs.pages.dev",
 			    "Project Name": "dogs",
 			  },
-			  Object {
+			  {
 			    "Git Provider": "No",
 			    "Last Modified": "[mock-time-ago]",
 			    "Project Domains": "cats.pages.dev, kitten.com",

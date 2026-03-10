@@ -10,7 +10,7 @@ import {
 	INBOUND_DO_PROXY_SERVICE_PATH,
 } from "../shared/external-service";
 import { Log } from "./log";
-import type { WorkerDefinition } from "../shared/dev-registry";
+import type { WorkerDefinition } from "../shared/dev-registry-types";
 import type { MessagePort } from "node:worker_threads";
 
 interface ProxyAddress {

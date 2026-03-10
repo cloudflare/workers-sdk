@@ -2,8 +2,7 @@ import Worker from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- complex test with .each patterns
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
@@ -73,9 +72,9 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 				not_found_handling: "none",
 			}));
 		});
-		it.each(cases)(
+		it.for(cases)(
 			"$title",
-			async ({ files, requestPath, matchedFile, finalPath }) => {
+			async ({ files, requestPath, matchedFile, finalPath }, { expect }) => {
 				existsMock(new Set(files));
 				const request = new IncomingRequest(BASE_URL + requestPath);
 				let response = await SELF.fetch(request);

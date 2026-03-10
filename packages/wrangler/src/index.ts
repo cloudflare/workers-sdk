@@ -6,7 +6,7 @@ import {
 	experimental_readRawConfig,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
@@ -58,6 +58,7 @@ import {
 	containersNamespace,
 	containersPushCommand,
 	containersRegistriesConfigureCommand,
+	containersRegistriesCredentialsCommand,
 	containersRegistriesDeleteCommand,
 	containersRegistriesListCommand,
 	containersRegistriesNamespace,
@@ -337,7 +338,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { proxy } from "./utils/constants";
+import { noProxy, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -394,7 +395,9 @@ import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
 if (proxy) {
-	setGlobalDispatcher(new ProxyAgent(proxy));
+	setGlobalDispatcher(
+		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
+	);
 	logger.log(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
@@ -1531,6 +1534,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler containers registries delete",
 			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers registries credentials",
+			definition: containersRegistriesCredentialsCommand,
 		},
 		{
 			command: "wrangler containers images",

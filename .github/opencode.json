@@ -1,0 +1,24 @@
+{
+	"$schema": "https://opencode.ai/config.json",
+	"disabled_providers": ["opencode"],
+	"enabled_providers": ["cloudflare-ai-gateway"],
+	"provider": {
+		"cloudflare-ai-gateway": {
+			"models": {
+				"anthropic/claude-sonnet-4-5": {}
+			}
+		}
+	},
+	"permission": {
+		"read": "allow",
+		"edit": "allow",
+		"glob": "allow",
+		"grep": "allow",
+		"bash": "deny",
+		"task": "allow",
+		"skill": "allow",
+		"todoread": "allow",
+		"todowrite": "allow",
+		"webfetch": "deny"
+	}
+}

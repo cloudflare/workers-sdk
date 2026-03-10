@@ -98,10 +98,10 @@ describe("vpc service commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
+			{
+			  "host": {
 			    "ipv4": "10.0.0.1",
-			    "network": Object {
+			    "network": {
 			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
 			    },
 			  },
@@ -130,11 +130,11 @@ describe("vpc service commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
+			{
+			  "host": {
 			    "hostname": "db.example.com",
-			    "resolver_network": Object {
-			      "resolver_ips": Array [
+			    "resolver_network": {
+			      "resolver_ips": [
 			        "8.8.8.8",
 			        "8.8.4.4",
 			      ],
@@ -220,10 +220,10 @@ describe("vpc service commands", () => {
 		);
 
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
-			Object {
-			  "host": Object {
+			{
+			  "host": {
 			    "ipv4": "10.0.0.2",
-			    "network": Object {
+			    "network": {
 			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
 			    },
 			  },

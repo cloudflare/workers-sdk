@@ -7,15 +7,19 @@ import {
 	LOCAL_EXPLORER_API_PATH,
 	LOCAL_EXPLORER_BASE_PATH,
 } from "../../plugins/core/constants";
+import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import {
-	zCloudflareD1ListDatabasesData,
-	zCloudflareD1RawDatabaseQueryData,
+	zD1ListDatabasesData,
+	zD1RawDatabaseQueryData,
+	zDurableObjectsNamespaceListObjectsData,
+	zDurableObjectsNamespaceQuerySqliteData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
+import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -24,15 +28,18 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import type { BindingIdMap } from "../../plugins/core/types";
 
-type BindingIdMap = {
-	d1: Record<string, string>; // databaseId -> bindingName
-	kv: Record<string, string>; // namespaceId -> bindingName
-};
 export type Env = {
 	[key: string]: unknown;
-	LOCAL_EXPLORER_BINDING_MAP: BindingIdMap;
-	MINIFLARE_EXPLORER_DISK: Fetcher;
+	[CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP]: BindingIdMap;
+	[CoreBindings.EXPLORER_DISK]: Fetcher;
+	// Loopback service for calling Node.js endpoints:
+	// - /core/dev-registry for cross-instance aggregation
+	// - /core/do-storage for DO storage listing
+	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	// Worker names for this instance, used to filter self from dev registry during aggregation
+	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 };
 
 export type AppBindings = { Bindings: Env };
@@ -42,6 +49,61 @@ const app = new Hono<AppBindings>().basePath(LOCAL_EXPLORER_BASE_PATH);
 // Global error handler - catches all uncaught errors and wraps them in an error response
 app.onError((err) => {
 	return errorResponse(500, 10000, err.message);
+});
+
+// ============================================================================
+// Middleware
+// ============================================================================
+
+app.use("/api/*", async (c, next) => {
+	const ALLOWED_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
+
+	const hostHeader = c.req.header("Host");
+	try {
+		const host = hostHeader ? new URL(`http://${hostHeader}`).hostname : "";
+		if (!ALLOWED_HOSTNAMES.includes(host)) {
+			return errorResponse(403, 10000, "Invalid Host header");
+		}
+	} catch {
+		return errorResponse(403, 10000, "Invalid Host header");
+	}
+
+	const origin = c.req.header("Origin");
+	if (origin) {
+		try {
+			if (!ALLOWED_HOSTNAMES.includes(new URL(origin).hostname)) {
+				return errorResponse(
+					403,
+					10000,
+					"Cross-origin requests to the local explorer API are not allowed"
+				);
+			}
+		} catch {
+			return errorResponse(
+				403,
+				10000,
+				"Cross-origin requests to the local explorer API are not allowed"
+			);
+		}
+	}
+
+	if (c.req.method === "OPTIONS") {
+		return new Response(null, {
+			status: 204,
+			headers: {
+				"Access-Control-Allow-Origin": origin ?? "*",
+				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+				"Access-Control-Allow-Headers": "Content-Type",
+				"Access-Control-Max-Age": "86400",
+			},
+		});
+	}
+
+	await next();
+
+	if (origin) {
+		c.res.headers.set("Access-Control-Allow-Origin", origin);
+	}
 });
 
 // ============================================================================
@@ -147,14 +209,32 @@ app.post(
 
 app.get(
 	"/api/d1/database",
-	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
+	validateQuery(zD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
 );
 
 app.post(
 	"/api/d1/database/:database_id/raw",
-	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
+	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
+);
+
+// ============================================================================
+// Durable Objects Endpoints
+// ============================================================================
+
+app.get("/api/workers/durable_objects/namespaces", (c) => listDONamespaces(c));
+
+app.get(
+	"/api/workers/durable_objects/namespaces/:namespace_id/objects",
+	validateQuery(zDurableObjectsNamespaceListObjectsData.shape.query.unwrap()),
+	(c) => listDOObjects(c, c.req.param("namespace_id"), c.req.valid("query"))
+);
+
+app.post(
+	"/api/workers/durable_objects/namespaces/:namespace_id/query",
+	validateRequestBody(zDurableObjectsNamespaceQuerySqliteData.shape.body),
+	(c) => queryDOSqlite(c, c.req.param("namespace_id"), c.req.valid("json"))
 );
 
 export default app;

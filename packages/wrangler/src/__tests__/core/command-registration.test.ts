@@ -1,5 +1,4 @@
-import assert from "node:assert";
-import { beforeEach, describe, test } from "vitest";
+import { assert, beforeEach, describe, test } from "vitest";
 import { CommandRegistry } from "../../core/CommandRegistry";
 import {
 	createAlias,

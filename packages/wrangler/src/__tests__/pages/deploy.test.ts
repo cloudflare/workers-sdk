@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import ci from "ci-info";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
@@ -46,7 +47,7 @@ describe("pages deploy", () => {
 
 	//TODO Abstract MSW handlers that repeat to this level - JACOB
 	beforeEach(() => {
-		vi.stubEnv("CI", "true");
+		vi.mocked(ci).isCI = true;
 		setIsTTY(false);
 	});
 
@@ -183,10 +184,10 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							    "value": "{"/logo.png":"2082190357cfd3617ccfe04f340c6247"}",
 							  },
 							]
 						`);
@@ -353,10 +354,10 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							    "value": "{"/logo.txt":"1a98fb08af91aca4a7df1764a2c4ddb0"}",
 							  },
 							]
 						`);
@@ -505,10 +506,10 @@ describe("pages deploy", () => {
 					if (requests.length === 1) {
 						expect(await formDataToObject(await request.formData()))
 							.toMatchInlineSnapshot(`
-								Array [
-								  Object {
+								[
+								  {
 								    "name": "manifest",
-								    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+								    "value": "{"/logo.txt":"1a98fb08af91aca4a7df1764a2c4ddb0"}",
 								  },
 								]
 							`);
@@ -725,10 +726,10 @@ describe("pages deploy", () => {
 					]);
 
 					expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+						{
+						  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -964,10 +965,10 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							    "value": "{"/logo.txt":"1a98fb08af91aca4a7df1764a2c4ddb0"}",
 							  },
 							]
 						`);
@@ -1120,13 +1121,13 @@ describe("pages deploy", () => {
 					const manifest = JSON.parse(await toString(body.get("manifest")));
 
 					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                                  "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                                  "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                                  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                                }
-			                          `);
+						{
+						  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						  "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						  "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -1317,13 +1318,13 @@ describe("pages deploy", () => {
 					const body = await request.formData();
 					const manifest = JSON.parse(await toString(body.get("manifest")));
 					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                                  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                                  "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                                  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                                }
-			                          `);
+						{
+						  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						  "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -1514,13 +1515,13 @@ describe("pages deploy", () => {
 					const body = await request.formData();
 					const manifest = JSON.parse(await toString(body.get("manifest")));
 					expect(manifest).toMatchInlineSnapshot(`
-				                                Object {
-				                                  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                                  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                                  "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                                  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                                }
-			                          `);
+						{
+						  "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						  "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						  "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						  "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						}
+					`);
 
 					return HttpResponse.json(
 						{
@@ -1776,7 +1777,7 @@ describe("pages deploy", () => {
 
 	// regression test for issue #3629
 	it("should not error when deploying a new project with a new repo", async () => {
-		vi.stubEnv("CI", "false");
+		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
 		await execa("git", ["init"]);
 		writeFileSync("logo.png", "foobar");
@@ -1841,12 +1842,12 @@ describe("pages deploy", () => {
 					expect(params.accountId).toEqual("some-account-id");
 					expect(await formDataToObject(await request.formData()))
 						.toMatchInlineSnapshot(`
-							Array [
-							  Object {
+							[
+							  {
 							    "name": "manifest",
-							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							    "value": "{"/logo.png":"2082190357cfd3617ccfe04f340c6247"}",
 							  },
-							  Object {
+							  {
 							    "name": "commit_dirty",
 							    "value": "true",
 							  },
@@ -2110,10 +2111,10 @@ describe("pages deploy", () => {
 						]);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// the contents of the generated `_worker.bundle` file is pretty massive, so I don't
 						// think snapshot testing makes much sense here. Plus, calling
@@ -2342,10 +2343,10 @@ describe("pages deploy", () => {
 							].sort()
 						);
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
@@ -2639,10 +2640,10 @@ async function onRequest() {
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// file content of generated `_worker.bundle` is too massive to snapshot test
 						expect(generatedWorkerBundle).not.toBeNull();
@@ -3008,10 +3009,10 @@ and that at least one include rule is provided.
 						]);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						return HttpResponse.json(
 							{
@@ -3201,10 +3202,10 @@ and that at least one include rule is provided.
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
 						expect(await toString(workerBundle)).toContain(
@@ -3413,10 +3414,10 @@ and that at least one include rule is provided.
 							["manifest", "_worker.bundle"].sort()
 						);
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
 						// dynamic values with static ones so we can properly test the
@@ -3446,25 +3447,25 @@ and that at least one include rule is provided.
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 							"------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"metadata\\"
+							Content-Disposition: form-data; name="metadata"
 
-							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							{"main_module":"bundledWorker-0.test.mjs"}
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 							Content-Type: application/javascript+module
 
 							// _worker.js
-							import wasm from \\"./test-hello.wasm\\";
-							import html from \\"./test-hello.html\\";
+							import wasm from "./test-hello.wasm";
+							import html from "./test-hello.html";
 							var worker_default = {
 							  async fetch(request, env) {
 							    const url = new URL(request.url);
 							    const helloModule = await WebAssembly.instantiate(wasm);
 							    const wasmGreeting = helloModule.exports.hello;
-							    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
+							    if (url.pathname.startsWith("/hello-wasm")) {
 							      return new Response(wasmGreeting);
 							    }
-							    if (url.pathname.startsWith(\\"/hello-text\\")) {
+							    if (url.pathname.startsWith("/hello-text")) {
 							      return new Response(html);
 							    }
 							    return env.ASSETS.fetch(request);
@@ -3476,12 +3477,12 @@ and that at least one include rule is provided.
 							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
+							Content-Disposition: form-data; name="./test-hello.wasm"; filename="./test-hello.wasm"
 							Content-Type: application/wasm
 
 							Hello wasm modules
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
+							Content-Disposition: form-data; name="./test-hello.html"; filename="./test-hello.html"
 							Content-Type: text/plain
 
 							<html><body>Hello text modules</body></html>
@@ -3705,10 +3706,10 @@ and that at least one include rule is provided.
 						]);
 						expect(params.accountId).toEqual("some-account-id");
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
@@ -3731,18 +3732,18 @@ and that at least one include rule is provided.
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 							"------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"metadata\\"
+							Content-Disposition: form-data; name="metadata"
 
-							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							{"main_module":"bundledWorker-0.test.mjs"}
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 							Content-Type: application/javascript+module
 
 							// _worker.js
 							var worker_default = {
 							  async fetch(request, env) {
 							    const url = new URL(request.url);
-							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							    return url.pathname.startsWith("/api/") ? new Response("Ok") : env.ASSETS.fetch(request);
 							  }
 							};
 							export {
@@ -4078,10 +4079,10 @@ and that at least one include rule is provided.
 							["manifest", "_worker.bundle"].sort()
 						);
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						// some fields in workerBundle, such as the undici form boundary
 						// or the file hashes, are randomly generated. Let's replace these
@@ -4104,18 +4105,18 @@ and that at least one include rule is provided.
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
 							"------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"metadata\\"
+							Content-Disposition: form-data; name="metadata"
 
-							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							{"main_module":"bundledWorker-0.test.mjs"}
 							------formdata-undici-0.test
-							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Disposition: form-data; name="bundledWorker-0.test.mjs"; filename="bundledWorker-0.test.mjs"
 							Content-Type: application/javascript+module
 
 							// _worker.js
 							var worker_default = {
 							  async fetch(request, env) {
 							    const url = new URL(request.url);
-							    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+							    return url.pathname.startsWith("/api/") ? new Response("Ok") : env.ASSETS.fetch(request);
 							  }
 							};
 							export {
@@ -4287,66 +4288,6 @@ and that at least one include rule is provided.
 					},
 					{ once: true }
 				),
-				http.post(
-					"*/accounts/:accountId/pages/projects/foo/deployments",
-					async ({ request, params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						const body = await request.formData();
-						const manifest = JSON.parse(await toString(body.get("manifest")));
-						const workerBundle = body.get("_worker.bundle");
-
-						// make sure this is all we uploaded
-						expect([...body.keys()].sort()).toEqual(
-							["manifest", "_worker.bundle"].sort()
-						);
-
-						expect(manifest).toMatchInlineSnapshot(`
-																								Object {
-																									"/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-																								}
-																				`);
-
-						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
-						expect(await toString(workerBundle)).toContain(`some-module`);
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									id: "123-456-789",
-									url: "https://abcxyz.foo.pages.dev/",
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
-				http.get(
-					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
-					async ({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						expect(params.deploymentId).toEqual("123-456-789");
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									latest_stage: {
-										name: "deploy",
-										status: "success",
-									},
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
 				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async ({ params }) => {
@@ -4483,10 +4424,10 @@ and that at least one include rule is provided.
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
 						expect(await toString(workerBundle)).toContain(`some-module`);
@@ -4670,10 +4611,10 @@ and that at least one include rule is provided.
 						);
 
 						expect(manifest).toMatchInlineSnapshot(`
-				Object {
-				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-				}
-			`);
+							{
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
 						await expect(workerHasD1Shim(workerBundle)).resolves.toBeFalsy();
 						expect(await toString(workerBundle)).toContain(

@@ -1,15 +1,20 @@
 import os from "node:os";
+import ci from "ci-info";
 import { beforeEach, describe, it, vi } from "vitest";
 import { checkMacOSVersion } from "../check-macos-version";
 
 vi.mock("node:os");
+vi.mock("ci-info", () => ({
+	default: { isCI: false },
+	isCI: false,
+}));
 
 const mockOs = vi.mocked(os);
 
 describe("checkMacOSVersion", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.unstubAllEnvs();
+		vi.mocked(ci).isCI = false;
 	});
 
 	it("should not throw on non-macOS platforms", ({ expect }) => {
@@ -41,7 +46,6 @@ describe("checkMacOSVersion", () => {
 
 	it("should throw error on macOS 12.7.6", ({ expect }) => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("21.6.0");
 
 		expect(() => checkMacOSVersion({ shouldThrow: true })).toThrow(
@@ -51,7 +55,6 @@ describe("checkMacOSVersion", () => {
 
 	it("should throw error on macOS 13.4.0", ({ expect }) => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("22.4.0");
 
 		expect(() => checkMacOSVersion({ shouldThrow: true })).toThrow(
@@ -73,31 +76,9 @@ describe("checkMacOSVersion", () => {
 		expect(() => checkMacOSVersion({ shouldThrow: true })).not.toThrow();
 	});
 
-	it("should not throw when CI environment variable is set to 'true'", ({
-		expect,
-	}) => {
+	it("should not throw when running in CI", ({ expect }) => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "true");
-		mockOs.release.mockReturnValue("21.6.0");
-
-		expect(() => checkMacOSVersion({ shouldThrow: true })).not.toThrow();
-	});
-
-	it("should not throw when CI environment variable is set to '1'", ({
-		expect,
-	}) => {
-		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "1");
-		mockOs.release.mockReturnValue("21.6.0");
-
-		expect(() => checkMacOSVersion({ shouldThrow: true })).not.toThrow();
-	});
-
-	it("should not throw when CI environment variable is set to 'yes'", ({
-		expect,
-	}) => {
-		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "yes");
+		vi.mocked(ci).isCI = true;
 		mockOs.release.mockReturnValue("21.6.0");
 
 		expect(() => checkMacOSVersion({ shouldThrow: true })).not.toThrow();
@@ -107,7 +88,7 @@ describe("checkMacOSVersion", () => {
 describe("checkMacOSVersion with shouldThrow=false", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.unstubAllEnvs();
+		vi.mocked(ci).isCI = false;
 	});
 
 	it("should not warn on non-macOS platforms", ({ expect }) => {
@@ -131,7 +112,6 @@ describe("checkMacOSVersion with shouldThrow=false", () => {
 
 	it("should warn on macOS 12.7.6", ({ expect }) => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("21.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -146,7 +126,6 @@ describe("checkMacOSVersion with shouldThrow=false", () => {
 
 	it("should warn on macOS 13.4.0", ({ expect }) => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "");
 		mockOs.release.mockReturnValue("22.4.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -159,37 +138,9 @@ describe("checkMacOSVersion with shouldThrow=false", () => {
 		);
 	});
 
-	it("should not warn when CI environment variable is set to 'true'", ({
-		expect,
-	}) => {
+	it("should not warn when running in CI", ({ expect }) => {
 		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "true");
-		mockOs.release.mockReturnValue("21.6.0");
-		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-		checkMacOSVersion({ shouldThrow: false });
-
-		expect(warnSpy).not.toHaveBeenCalled();
-	});
-
-	it("should not warn when CI environment variable is set to '1'", ({
-		expect,
-	}) => {
-		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "1");
-		mockOs.release.mockReturnValue("21.6.0");
-		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-		checkMacOSVersion({ shouldThrow: false });
-
-		expect(warnSpy).not.toHaveBeenCalled();
-	});
-
-	it("should not warn when CI environment variable is set to 'yes'", ({
-		expect,
-	}) => {
-		vi.spyOn(process, "platform", "get").mockReturnValue("darwin");
-		vi.stubEnv("CI", "yes");
+		vi.mocked(ci).isCI = true;
 		mockOs.release.mockReturnValue("21.6.0");
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

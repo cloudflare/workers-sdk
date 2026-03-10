@@ -94,9 +94,7 @@ describe("trimSqlQuery()", () => {
 	it("should handle strings", ({ expect }) => {
 		expect(
 			trimSqlQuery(`SELECT * FROM my_table WHERE val = "foo;bar";`)
-		).toMatchInlineSnapshot(
-			`"SELECT * FROM my_table WHERE val = \\"foo;bar\\";"`
-		);
+		).toMatchInlineSnapshot(`"SELECT * FROM my_table WHERE val = "foo;bar";"`);
 	});
 
 	it("should handle inline comments", ({ expect }) => {
@@ -107,10 +105,10 @@ describe("trimSqlQuery()", () => {
         AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)`
 			)
 		).toMatchInlineSnapshot(`
-		"SELECT * FROM my_table -- semicolons; in; comments; don't count;
-		        WHERE val = 'foo;bar'
-		        AND \\"col;name\\" = \`other;col\`; -- or identifiers (Postgres or MySQL style)"
-	`);
+			"SELECT * FROM my_table -- semicolons; in; comments; don't count;
+			        WHERE val = 'foo;bar'
+			        AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)"
+		`);
 	});
 
 	it("should handle block comments", ({ expect }) => {

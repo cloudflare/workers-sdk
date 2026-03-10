@@ -75,10 +75,10 @@ describe("cloudchamber image", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"{
-		    \\"domain\\": \\"docker.io\\"
-		}"
-	`);
+			"{
+			    "domain": "docker.io"
+			}"
+		`);
 	});
 
 	it("should create an image registry (no interactivity)", async () => {
@@ -149,12 +149,12 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
 			    {
-			        \\"public_key\\": \\"\\",
-			        \\"domain\\": \\"docker.io\\"
+			        "public_key": "",
+			        "domain": "docker.io"
 			    },
 			    {
-			        \\"public_key\\": \\"some_public_key\\",
-			        \\"domain\\": \\"docker.io2\\"
+			        "public_key": "some_public_key",
+			        "domain": "docker.io2"
 			    }
 			]"
 		`);
@@ -306,7 +306,7 @@ describe("cloudchamber image list", () => {
 		`);
 	});
 
-	it("should list repos with json flag set", async () => {
+	it("should list repos as valid json with json flag set", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -331,34 +331,34 @@ describe("cloudchamber image list", () => {
 		);
 		await runWrangler("cloudchamber images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    \\"name\\": \\"one\\",
-			    \\"tags\\": [
-			      \\"hundred\\",
-			      \\"ten\\"
-			    ]
+			    "name": "one",
+			    "tags": [
+			      "hundred",
+			      "ten",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"two\\",
-			    \\"tags\\": [
-			      \\"thousand\\",
-			      \\"twenty\\"
-			    ]
+			    "name": "two",
+			    "tags": [
+			      "thousand",
+			      "twenty",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"three\\",
-			    \\"tags\\": [
-			      \\"million\\",
-			      \\"thirty\\"
-			    ]
-			  }
-			]"
+			    "name": "three",
+			    "tags": [
+			      "million",
+			      "thirty",
+			    ],
+			  },
+			]
 		`);
 	});
 
-	it("should filter out repos with no non-sha tags in json output", async () => {
+	it("should filter out repos with no non-sha tags in valid json output", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		const tags = {
@@ -385,30 +385,30 @@ describe("cloudchamber image list", () => {
 		);
 		await runWrangler("cloudchamber images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"[
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
 			  {
-			    \\"name\\": \\"one\\",
-			    \\"tags\\": [
-			      \\"hundred\\",
-			      \\"ten\\"
-			    ]
+			    "name": "one",
+			    "tags": [
+			      "hundred",
+			      "ten",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"two\\",
-			    \\"tags\\": [
-			      \\"thousand\\",
-			      \\"twenty\\"
-			    ]
+			    "name": "two",
+			    "tags": [
+			      "thousand",
+			      "twenty",
+			    ],
 			  },
 			  {
-			    \\"name\\": \\"three\\",
-			    \\"tags\\": [
-			      \\"million\\",
-			      \\"thirty\\"
-			    ]
-			  }
-			]"
+			    "name": "three",
+			    "tags": [
+			      "million",
+			      "thirty",
+			    ],
+			  },
+			]
 		`);
 	});
 });

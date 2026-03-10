@@ -1,8 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { experimental_patchConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { runInTempDir, writeWranglerConfig } from "../../src/test-helpers";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -491,7 +490,7 @@ describe("experimental_patchConfig()", () => {
 				expectedJson,
 				expectedToml,
 			}) => {
-				it.each(["json", "toml"])("%s", (configType) => {
+				it.for(["json", "toml"])("%s", (configType, { expect }) => {
 					writeWranglerConfig(
 						original,
 						configType === "json" ? "./wrangler.json" : "./wrangler.toml"
@@ -513,7 +512,7 @@ describe("experimental_patchConfig()", () => {
 		describe.each(replacingOnlyTestCases)(
 			`$name`,
 			({ original, replacingPatch, expectedJson, expectedToml }) => {
-				it.each(["json", "toml"])("%s", (configType) => {
+				it.for(["json", "toml"])("%s", (configType, { expect }) => {
 					writeWranglerConfig(
 						original,
 						configType === "json" ? "./wrangler.json" : "./wrangler.toml"
@@ -534,7 +533,7 @@ describe("experimental_patchConfig()", () => {
 
 	describe("jsonc", () => {
 		describe("add multiple bindings", () => {
-			it("isArrayInsertion = true", () => {
+			it("isArrayInsertion = true", ({ expect }) => {
 				const jsonc = `
 				{
 					// a comment
@@ -577,35 +576,35 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// a comment
-						\\"compatibility_date\\": \\"2022-01-12\\",
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"compatibility_date": "2022-01-12",
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// more comments!
-								\\"binding\\": \\"KV\\"
+								"binding": "KV"
 							},
 							{
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 							},
 							{
-								\\"binding\\": \\"KV3\\"
+								"binding": "KV3"
 							}
 						],
-						\\"d1_databases\\": [
+						"d1_databases": [
 							/**
 											 * multiline comment
 											 */
 							{
-								\\"binding\\": \\"DB\\"
+								"binding": "DB"
 							},
 							{
-								\\"binding\\": \\"DB2\\"
+								"binding": "DB2"
 							}
 						]
 					}"
 				`);
 			});
-			it("isArrayInsertion = false ", () => {
+			it("isArrayInsertion = false ", ({ expect }) => {
 				const jsonc = dedent`
 		{
 			// a comment
@@ -658,29 +657,29 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// a comment
-						\\"compatibility_date\\": \\"2022-01-12\\",
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"compatibility_date": "2022-01-12",
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// more comments!
-								\\"binding\\": \\"KV\\"
+								"binding": "KV"
 							},
 							{
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 							},
 							{
-								\\"binding\\": \\"KV3\\"
+								"binding": "KV3"
 							}
 						],
-						\\"d1_databases\\": [
+						"d1_databases": [
 							/**
 							 * multiline comment
 							 */
 							{
-								\\"binding\\": \\"DB\\"
+								"binding": "DB"
 							},
 							{
-								\\"binding\\": \\"DB2\\"
+								"binding": "DB2"
 							}
 						]
 					}"
@@ -688,7 +687,7 @@ describe("experimental_patchConfig()", () => {
 			});
 		});
 
-		it("should not error if a `null` is passed in", () => {
+		it("should not error if a `null` is passed in", ({ expect }) => {
 			const jsonc = `
 				{
 					"compatibility_date": "2022-01-12",
@@ -709,15 +708,15 @@ describe("experimental_patchConfig()", () => {
 			expect(result).not.toBeFalsy();
 			expect(result).toMatchInlineSnapshot(`
 				"{
-					\\"compatibility_date\\": \\"2022-01-12\\",
-					\\"name\\": \\"test-name\\",
-					\\"tail_consumers\\": null,
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+					"tail_consumers": null,
 				}"
 			`);
 		});
 
 		describe("edit existing bindings", () => {
-			it("isArrayInsertion = false", () => {
+			it("isArrayInsertion = false", ({ expect }) => {
 				const jsonc = `
 				{
 					// comment one
@@ -760,19 +759,19 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// comment one
-						\\"compatibility_date\\": \\"2024-27-09\\",
+						"compatibility_date": "2024-27-09",
 						// comment two
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// comment three
-								\\"binding\\": \\"KV\\",
-								\\"id\\": \\"hello-id\\"
+								"binding": "KV",
+								"id": "hello-id"
 								// comment four
 							},
 							{
 								// comment five
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 								// comment six
 							}
 						]
@@ -782,7 +781,7 @@ describe("experimental_patchConfig()", () => {
 		});
 
 		describe("edit existing bindings with patch array in a different order (will mess up comments)", () => {
-			it("isArrayInsertion = false", () => {
+			it("isArrayInsertion = false", ({ expect }) => {
 				const jsonc = `
 				{
 					// comment one
@@ -827,19 +826,19 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// comment one
-						\\"compatibility_date\\": \\"2024-27-09\\",
+						"compatibility_date": "2024-27-09",
 						// comment two
-						\\"name\\": \\"test-name\\",
-						\\"kv_namespaces\\": [
+						"name": "test-name",
+						"kv_namespaces": [
 							{
 								// comment three
-								\\"binding\\": \\"KV2\\"
+								"binding": "KV2"
 								// comment four
 							},
 							{
 								// comment five
-								\\"binding\\": \\"KV\\",
-								\\"id\\": \\"hello-id\\"
+								"binding": "KV",
+								"id": "hello-id"
 								// comment six
 							}
 						]
@@ -849,7 +848,7 @@ describe("experimental_patchConfig()", () => {
 		});
 
 		describe("delete existing bindings (cannot preserve comments)", () => {
-			it("isArrayInsertion = false", () => {
+			it("isArrayInsertion = false", ({ expect }) => {
 				const jsonc = `
 				{
 					// comment one
@@ -884,9 +883,9 @@ describe("experimental_patchConfig()", () => {
 				expect(result).toMatchInlineSnapshot(`
 					"{
 						// comment one
-						\\"compatibility_date\\": \\"2024-27-09\\",
+						"compatibility_date": "2024-27-09",
 						// comment two
-						\\"name\\": \\"test-name\\"
+						"name": "test-name"
 					}"
 				`);
 			});

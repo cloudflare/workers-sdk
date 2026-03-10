@@ -1,6 +1,5 @@
 import { fetch } from "undici";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, it } from "vitest";
 
 const REMOTE = "https://playground-testing.devprod.cloudflare.dev";
 const PREVIEW_REMOTE =
@@ -79,7 +78,7 @@ describe("Preview Worker", () => {
 		}).then((response) => response.json());
 	});
 
-	it("should be redirected with cookie", async () => {
+	it("should be redirected with cookie", async ({ expect }) => {
 		const resp = await fetch(
 			`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 				"/hello?world"
@@ -101,7 +100,7 @@ describe("Preview Worker", () => {
 			`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 		);
 	});
-	it("shouldn't be redirected with no token", async () => {
+	it("shouldn't be redirected with no token", async ({ expect }) => {
 		const resp = await fetch(
 			`${PREVIEW_REMOTE}/.update-preview-token?suffix=${encodeURIComponent(
 				"/hello?world"
@@ -121,7 +120,7 @@ describe("Preview Worker", () => {
 			`"{"error":"TokenUpdateFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
-	it("shouldn't be redirected with invalid token", async () => {
+	it("shouldn't be redirected with invalid token", async ({ expect }) => {
 		const resp = await fetch(
 			`${PREVIEW_REMOTE}/.update-preview-token?token=TEST_TOKEN&suffix=${encodeURIComponent(
 				"/hello?world"
@@ -142,7 +141,7 @@ describe("Preview Worker", () => {
 		);
 	});
 
-	it("should convert cookie to header", async () => {
+	it("should convert cookie to header", async ({ expect }) => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "GET",
 			headers: {
@@ -154,7 +153,7 @@ describe("Preview Worker", () => {
 
 		expect(json.url.slice(-13, -1)).toMatchInlineSnapshot('".workers.dev"');
 	});
-	it("should not follow redirects", async () => {
+	it("should not follow redirects", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/redirect`, {
 			method: "GET",
 			headers: {
@@ -169,7 +168,7 @@ describe("Preview Worker", () => {
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
-	it("should return method", async () => {
+	it("should return method", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 			method: "PUT",
 			headers: {
@@ -180,7 +179,7 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toMatchInlineSnapshot('"PUT"');
 	});
-	it("should return header", async () => {
+	it("should return header", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
 			method: "PUT",
 			headers: {
@@ -192,7 +191,7 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
 	});
-	it("should return status", async () => {
+	it("should return status", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/status`, {
 			method: "PUT",
 			headers: {
@@ -203,14 +202,14 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toMatchInlineSnapshot('"407"');
 	});
-	it("should reject no token", async () => {
+	it("should reject no token", async ({ expect }) => {
 		const resp = await fetch(PREVIEW_REMOTE);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
 			`"{"error":"PreviewRequestFailed","message":"Valid token not found","data":{}}"`
 		);
 	});
-	it("should reject invalid cookie header", async () => {
+	it("should reject invalid cookie header", async ({ expect }) => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			headers: {
 				cookie: "token",
@@ -221,7 +220,7 @@ describe("Preview Worker", () => {
 			`"{"error":"PreviewRequestFailed","message":"Valid token not found","data":{}}"`
 		);
 	});
-	it("should reject invalid token", async () => {
+	it("should reject invalid token", async ({ expect }) => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			headers: {
 				cookie: `token=TEST_TOKEN`,
@@ -233,7 +232,7 @@ describe("Preview Worker", () => {
 		);
 	});
 
-	it("should return raw HTTP response", async () => {
+	it("should return raw HTTP response", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
 			headers: {
 				"X-CF-Token": defaultUserToken,
@@ -247,7 +246,9 @@ describe("Preview Worker", () => {
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
 	});
-	it("should return method specified on the X-CF-Http-Method header", async () => {
+	it("should return method specified on the X-CF-Http-Method header", async ({
+		expect,
+	}) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 			method: "POST",
 			headers: {
@@ -260,9 +261,9 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toEqual("PUT");
 	});
-	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+	it.for(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
 		"should handle %s method specified on the X-CF-Http-Method header",
-		async (method) => {
+		async (method, { expect }) => {
 			const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 				method: "POST",
 				headers: {
@@ -279,7 +280,9 @@ describe("Preview Worker", () => {
 			expect(resp.headers.get("cf-ew-raw-Test-Http-Method")).toEqual(method);
 		}
 	);
-	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
+	it("should fallback to the request method if the X-CF-Http-Method header is missing", async ({
+		expect,
+	}) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 			method: "PUT",
 			headers: {
@@ -291,7 +294,7 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toEqual("PUT");
 	});
-	it("should reject no token for raw HTTP response", async () => {
+	it("should reject no token for raw HTTP response", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
 			headers: {
 				"CF-Raw-HTTP": "true",
@@ -304,7 +307,9 @@ describe("Preview Worker", () => {
 			`"{"error":"RawHttpFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
-	it("should reject invalid token for raw HTTP response", async () => {
+	it("should reject invalid token for raw HTTP response", async ({
+		expect,
+	}) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
 			headers: {
 				"X-CF-Token": "TEST_TOKEN",
@@ -320,7 +325,7 @@ describe("Preview Worker", () => {
 	});
 
 	describe("Referer", () => {
-		it("should allow localhost", async () => {
+		it("should allow localhost", async ({ expect }) => {
 			const resp = await fetch(
 				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 					"/hello?world"
@@ -342,7 +347,7 @@ describe("Preview Worker", () => {
 				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
-		it("should allow workers.cloudflare.com", async () => {
+		it("should allow workers.cloudflare.com", async ({ expect }) => {
 			const resp = await fetch(
 				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 					"/hello?world"
@@ -364,7 +369,7 @@ describe("Preview Worker", () => {
 				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
-		it("should allow workers-playground.pages.dev", async () => {
+		it("should allow workers-playground.pages.dev", async ({ expect }) => {
 			const resp = await fetch(
 				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 					"/hello?world"
@@ -387,7 +392,7 @@ describe("Preview Worker", () => {
 				`"token=${defaultUserToken}; HttpOnly; SameSite=None; Partitioned; Secure; Path=/; Domain=random-data.playground-testing.devprod.cloudflare.dev"`
 			);
 		});
-		it("should reject unknown referer", async () => {
+		it("should reject unknown referer", async ({ expect }) => {
 			const resp = await fetch(
 				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 					"/hello?world"
@@ -410,7 +415,9 @@ describe("Preview Worker", () => {
 				}
 			`);
 		});
-		it("should reject unknown referer with pages.dev in path", async () => {
+		it("should reject unknown referer with pages.dev in path", async ({
+			expect,
+		}) => {
 			const resp = await fetch(
 				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 					"/hello?world"
@@ -441,7 +448,7 @@ describe("Upload Worker", () => {
 	beforeAll(async () => {
 		defaultUserToken = await fetchUserToken();
 	});
-	it("should upload valid worker", async () => {
+	it("should upload valid worker", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -452,7 +459,7 @@ describe("Upload Worker", () => {
 		});
 		expect(w.status).toMatchInlineSnapshot("200");
 	});
-	it("should upload valid worker and return tail url", async () => {
+	it("should upload valid worker and return tail url", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -465,7 +472,7 @@ describe("Upload Worker", () => {
 			tail: expect.stringContaining("tail.developers.workers.dev"),
 		});
 	});
-	it("should provide error message on invalid worker", async () => {
+	it("should provide error message on invalid worker", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -488,7 +495,7 @@ describe("Upload Worker", () => {
 			}
 		`);
 	});
-	it("should reject no token", async () => {
+	it("should reject no token", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -501,7 +508,7 @@ describe("Upload Worker", () => {
 			`"{"error":"UploadFailed","message":"Valid token not provided","data":{}}"`
 		);
 	});
-	it("should reject invalid token", async () => {
+	it("should reject invalid token", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -515,7 +522,7 @@ describe("Upload Worker", () => {
 			`"{"error":"UploadFailed","message":"Valid token not provided","data":{}}"`
 		);
 	});
-	it("should reject invalid form data", async () => {
+	it("should reject invalid form data", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -529,7 +536,7 @@ describe("Upload Worker", () => {
 			`"{"error":"BadUpload","message":"Expected valid form data","data":{"error":"TypeError: Unrecognized Content-Type header value. FormData can only parse the following MIME types: multipart/form-data, application/x-www-form-urlencoded"}}"`
 		);
 	});
-	it("should reject missing metadata", async () => {
+	it("should reject missing metadata", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -551,7 +558,7 @@ export default {
 			`"{"error":"BadUpload","message":"Expected metadata file to be defined","data":{}}"`
 		);
 	});
-	it("should reject invalid metadata json", async () => {
+	it("should reject invalid metadata json", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -570,7 +577,7 @@ Content-Type: application/json
 			`"{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}"`
 		);
 	});
-	it("should reject invalid metadata", async () => {
+	it("should reject invalid metadata", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -589,7 +596,7 @@ Content-Type: application/json
 			`"{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}"`
 		);
 	});
-	it("should reject service worker", async () => {
+	it("should reject service worker", async ({ expect }) => {
 		const w = await fetch(`${REMOTE}/api/worker`, {
 			method: "POST",
 			headers: {
@@ -629,7 +636,9 @@ describe("Raw HTTP preview", () => {
 			body: TEST_WORKER,
 		}).then((response) => response.json());
 	});
-	it("should allow arbitrary headers in cross-origin requests", async () => {
+	it("should allow arbitrary headers in cross-origin requests", async ({
+		expect,
+	}) => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "OPTIONS",
 			headers: {
@@ -641,7 +650,9 @@ describe("Raw HTTP preview", () => {
 
 		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
 	});
-	it("should allow arbitrary methods in cross-origin requests", async () => {
+	it("should allow arbitrary methods in cross-origin requests", async ({
+		expect,
+	}) => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "OPTIONS",
 			headers: {
@@ -654,7 +665,7 @@ describe("Raw HTTP preview", () => {
 		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
 	});
 
-	it("should preserve multiple cookies", async () => {
+	it("should preserve multiple cookies", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/cookies`, {
 			method: "GET",
 			headers: {
@@ -669,7 +680,7 @@ describe("Raw HTTP preview", () => {
 		);
 	});
 
-	it("should pass headers to the user-worker", async () => {
+	it("should pass headers to the user-worker", async ({ expect }) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}`, {
 			method: "GET",
 			headers: {
@@ -702,7 +713,9 @@ describe("Raw HTTP preview", () => {
 		`);
 	});
 
-	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
+	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async ({
+		expect,
+	}) => {
 		const resp = await fetch(`${PREVIEW_REMOTE}`, {
 			method: "GET",
 			headers: {

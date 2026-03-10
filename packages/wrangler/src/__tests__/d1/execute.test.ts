@@ -213,7 +213,7 @@ describe("execute", () => {
 		expect(std.out).toContain("1 command executed successfully");
 	});
 
-	it("should not show banner if --json=true", async ({ expect }) => {
+	it("should output valid JSON with --json flag", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -222,7 +222,29 @@ describe("execute", () => {
 		});
 
 		await runWrangler("d1 execute db --command 'select 1;' --json");
-		expect(std.out).not.toContain("⛅️ wrangler x.x.x");
+		expect(JSON.parse(std.out)).toMatchObject([
+			{
+				results: [{ "1": 1 }],
+				success: true,
+			},
+		]);
+	});
+
+	it("should output JSON null for SQL NULL values with --json flag", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await runWrangler(
+			"d1 execute db --command 'SELECT 1 as id, null as name;' --json"
+		);
+		const parsed = JSON.parse(std.out);
+		expect(parsed[0].results[0].name).toBeNull();
 	});
 
 	describe("duration formatting", () => {
