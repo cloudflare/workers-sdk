@@ -1,0 +1,5 @@
+{
+	"name": "auxiliary-worker",
+	"main": "src/auxiliary.ts",
+	"compatibility_date": "2024-09-23",
+}

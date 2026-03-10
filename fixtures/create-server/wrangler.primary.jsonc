@@ -1,0 +1,5 @@
+{
+	"name": "primary-worker",
+	"main": "src/primary.ts",
+	"compatibility_date": "2024-09-23",
+}
