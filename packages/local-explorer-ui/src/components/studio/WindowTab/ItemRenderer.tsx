@@ -31,7 +31,7 @@ export function StudioWindowTabItemRenderer({
 	return (
 		<div
 			className={cn(
-				"relative flex h-10  max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-border px-2 text-left text-xs select-none hover:text-text",
+				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-border px-2 text-left text-xs select-none hover:text-text",
 				selected ? "bg-surface" : "bg-surface-secondary text-muted",
 				isTemp && "italic",
 				isDirty && "not-italic"

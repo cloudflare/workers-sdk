@@ -60,7 +60,7 @@ function SidebarItemGroup({
 										className={cn(
 											"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-text no-underline transition-colors hover:bg-surface-tertiary",
 											{
-												"bg-primary/10 text-primary font-medium": item.isActive,
+												"bg-primary/10 font-medium text-primary": item.isActive,
 											}
 										)}
 										params={item.link.params}

@@ -251,12 +251,9 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								) : (
 									<div className="flex min-w-0 items-center gap-1.5">
 										<span
-											className={cn(
-												"min-w-0 truncate",
-												{
-													"text-text-secondary": !entry.value,
-												}
-											)}
+											className={cn("min-w-0 truncate", {
+												"text-text-secondary": !entry.value,
+											})}
 										>
 											{formatValue(entry.value)}
 										</span>
