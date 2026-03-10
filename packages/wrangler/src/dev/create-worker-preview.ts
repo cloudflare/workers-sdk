@@ -151,6 +151,10 @@ async function tryExpandToken(
 
 		logger.debug("-- END EXCHANGE API RESPONSE");
 
+		if (!exchangeResponse.ok) {
+			return null;
+		}
+
 		const body = parseJSON(bodyText) as {
 			token?: string;
 		};
