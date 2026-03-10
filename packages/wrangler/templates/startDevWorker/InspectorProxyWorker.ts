@@ -398,10 +398,18 @@ export class InspectorProxyWorker implements DurableObject {
 			{ method: "Runtime.enable", id: this.nextCounter() },
 			runtime
 		);
-		this.sendRuntimeMessage(
-			{ method: "Debugger.enable", id: this.nextCounter() },
-			runtime
-		);
+		// Only send Debugger.enable if DevTools is already attached.
+		// When DevTools first connects, it sends its own Debugger.enable message.
+		// However, on runtime reconnect (e.g., after worker reload), DevTools won't
+		// re-send Debugger.enable since it considers the session still active.
+		// Without this, Debugger.scriptParsed events won't be emitted on the new
+		// runtime connection, breaking source maps, breakpoints, and debugger pausing.
+		if (this.websockets.devtools !== undefined) {
+			this.sendRuntimeMessage(
+				{ method: "Debugger.enable", id: this.nextCounter() },
+				runtime
+			);
+		}
 		this.sendRuntimeMessage(
 			{ method: "Network.enable", id: this.nextCounter() },
 			runtime
