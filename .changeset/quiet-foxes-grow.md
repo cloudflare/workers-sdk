@@ -2,4 +2,14 @@
 "wrangler": patch
 ---
 
-fix: `wrangler vectorize list --json` and `wrangler vectorize list-metadata-index --json` now output valid json without extra log lines
+fix: `vectorize` commands now output valid json
+
+This fixes:
+
+- `wrangler vectorize create`
+- `wrangler vectorize info`
+- `wrangler vectorize insert`
+- `wrangler vectorize upsert`
+- `wrangler vectorize list`
+- `wrangler vectorize list-vectors`
+- `wrangler vectorize list-metadata-index`
