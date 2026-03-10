@@ -1,11 +1,11 @@
 import dedent from "ts-dedent";
-import { minimalVitestConfig, test, waitFor } from "./helpers";
+import { test, vitestConfig, waitFor } from "./helpers";
 
 test.skipIf(process.platform === "win32")(
 	"console.log()s include correct source-mapped locations",
 	async ({ expect, seed, vitestDev }) => {
 		await seed({
-			"vitest.config.mts": minimalVitestConfig,
+			"vitest.config.mts": vitestConfig(),
 			"index.test.ts": dedent`
 			import { describe, it } from "vitest";
 			console.log("global");
@@ -52,15 +52,14 @@ test.skipIf(process.platform === "win32")(
 	}
 );
 
-test("handles detatched console methods", async ({
+test("handles detached console methods", async ({
 	expect,
 	seed,
-	vitestDev,
+	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": minimalVitestConfig,
+		"vitest.config.mts": vitestConfig(),
 		"index.test.ts": dedent`
-			import { SELF } from "cloudflare:test";
 			import { expect, it } from "vitest";
 			it("does not crash when using a detached console method", async () => {
 				const fn = console["debug"];
@@ -69,8 +68,8 @@ test("handles detatched console methods", async ({
 			});
 	`,
 	});
-	const result = vitestDev();
-	expect(result.stderr).toMatch("");
+	const result = await vitestRun();
+	expect(await result.exitCode).toBe(0);
 });
 
 test("console.logs() inside `export default`ed handlers with SELF", async ({
@@ -79,23 +78,13 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							main: "./index.ts",
-							singleWorker: true,
-							miniflare: {
-								compatibilityDate: "2024-01-01",
-								compatibilityFlags: ["nodejs_compat"],
-							},
-						},
-					},
-				}
-			});
-		`,
+		"vitest.config.mts": vitestConfig({
+			main: "./index.ts",
+			miniflare: {
+				compatibilityDate: "2025-12-02",
+				compatibilityFlags: ["nodejs_compat"],
+			},
+		}),
 		"index.ts": dedent`
 			export default {
 				fetch() {

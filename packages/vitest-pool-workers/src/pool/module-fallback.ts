@@ -10,7 +10,7 @@ import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
-import type { ViteDevServer } from "vite";
+import type { Vite } from "vitest/node";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
@@ -131,7 +131,7 @@ await cjsModuleLexer.init();
  * using the same package as Node.
  */
 async function getCjsNamedExports(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	filePath: string,
 	contents: string,
 	seen = new Set()
@@ -150,14 +150,13 @@ async function getCjsNamedExports(
 		}
 		try {
 			const resolvedContents = fs.readFileSync(resolved, "utf8");
-			seen.add(filePath);
+			seen.add(resolved);
 			const resolvedNames = await getCjsNamedExports(
 				vite,
 				resolved,
 				resolvedContents,
 				seen
 			);
-			seen.delete(filePath);
 			for (const name of resolvedNames) {
 				result.add(name);
 			}
@@ -240,7 +239,7 @@ function getApproximateSpecifier(target: string, referrerDir: string): string {
 }
 
 async function viteResolve(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	specifier: string,
 	referrer: string,
 	isRequire: boolean
@@ -298,7 +297,7 @@ async function viteResolve(
 
 type ResolveMethod = "import" | "require";
 async function resolve(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
@@ -403,7 +402,7 @@ function buildModuleResponse(target: string, contents: ModuleContents) {
 }
 
 async function load(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	logBase: string,
 	method: ResolveMethod,
 	target: string,
@@ -494,7 +493,7 @@ async function load(
 }
 
 export async function handleModuleFallbackRequest(
-	vite: ViteDevServer,
+	vite: Vite.ViteDevServer,
 	request: Request
 ): Promise<Response> {
 	const method = request.headers.get("X-Resolve-Method");

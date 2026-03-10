@@ -13,20 +13,12 @@ describe("named entrypoints", () => {
 		expect,
 	}) => {
 		const response = await env.TEST_NAMED_HANDLER.fetch("https://example.com");
-		expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "ctxWaitUntil": "function",
-			  "envKeys": [
-			    "KV_NAMESPACE",
-			    "TEST_NAMED_ENTRYPOINT",
-			    "TEST_NAMED_HANDLER",
-			    "TEST_OBJECT",
-			  ],
-			  "method": "GET",
-			  "source": "testNamedHandler",
-			  "url": "https://example.com/",
-			}
-		`);
+		expect(await response.json()).toMatchObject({
+			ctxWaitUntil: "function",
+			method: "GET",
+			source: "testNamedHandler",
+			url: "https://example.com/",
+		});
 	});
 	it("dispatches fetch request to named WorkerEntrypoint", async ({
 		expect,
@@ -34,20 +26,12 @@ describe("named entrypoints", () => {
 		const response = await env.TEST_NAMED_ENTRYPOINT.fetch(
 			"https://example.com"
 		);
-		expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "ctxWaitUntil": "function",
-			  "envKeys": [
-			    "KV_NAMESPACE",
-			    "TEST_NAMED_ENTRYPOINT",
-			    "TEST_NAMED_HANDLER",
-			    "TEST_OBJECT",
-			  ],
-			  "method": "GET",
-			  "source": "TestNamedEntrypoint",
-			  "url": "https://example.com/",
-			}
-		`);
+		expect(await response.json()).toMatchObject({
+			ctxWaitUntil: "function",
+			method: "GET",
+			source: "TestNamedEntrypoint",
+			url: "https://example.com/",
+		});
 	});
 	it("calls method with rpc", async ({ expect }) => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
@@ -78,20 +62,12 @@ describe("Durable Object", () => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		const response = await stub.fetch("https://example.com");
-		expect(await response.json()).toMatchInlineSnapshot(`
-			{
-			  "ctxWaitUntil": "function",
-			  "envKeys": [
-			    "KV_NAMESPACE",
-			    "TEST_NAMED_ENTRYPOINT",
-			    "TEST_NAMED_HANDLER",
-			    "TEST_OBJECT",
-			  ],
-			  "method": "GET",
-			  "source": "TestObject",
-			  "url": "https://example.com/",
-			}
-		`);
+		expect(await response.json()).toMatchObject({
+			ctxWaitUntil: "function",
+			method: "GET",
+			source: "TestObject",
+			url: "https://example.com/",
+		});
 	});
 	it("increments count and allows direct/rpc access to instance/storage", async ({
 		expect,

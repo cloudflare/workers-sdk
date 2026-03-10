@@ -97,11 +97,11 @@ async function handleRequest(request: Request, env: Env) {
 	const url = new URL(request.url);
 
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, env);
+		return await updatePreviewToken(url, env);
 	}
 
 	if (isRawHttpRequest(url, env)) {
-		return handleRawHttp(request, url);
+		return await handleRawHttp(request, url);
 	}
 
 	/**
