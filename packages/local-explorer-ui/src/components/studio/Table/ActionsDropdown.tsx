@@ -69,7 +69,7 @@ export function StudioTableActionsDropdown({
 
 				<DropdownMenu.Content>
 					<DropdownMenu.Item
-						className="space-x-2 cursor-pointer"
+						className="cursor-pointer space-x-2"
 						icon={TextTIcon}
 						onClick={handleCopyTableName}
 					>
@@ -77,7 +77,7 @@ export function StudioTableActionsDropdown({
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						className="space-x-2 cursor-pointer"
+						className="cursor-pointer space-x-2"
 						icon={TableIcon}
 						onClick={handleCopyTableSchema}
 					>

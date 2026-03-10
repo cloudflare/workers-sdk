@@ -248,8 +248,8 @@ function renderCellList<HeaderMetadata = unknown>({
 		if (state.getSelectedRowIndex().includes(absoluteRowIndex)) {
 			if (state.isFullSelectionRow(absoluteRowIndex)) {
 				textClass = cn(
-					"flex items-center justify-end h-full pr-2 font-mono",
-					"bg-surface-secondary text-text font-bold"
+					"flex h-full items-center justify-end pr-2 font-mono",
+					"bg-surface-secondary font-bold text-text"
 				);
 				tdClass =
 					"sticky left-0 bg-surface-secondary dark:bg-blue-800 border-r border-b border-border";

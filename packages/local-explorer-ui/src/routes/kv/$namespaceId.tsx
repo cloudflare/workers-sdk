@@ -368,7 +368,7 @@ function NamespaceView() {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="text-danger p-4 bg-danger/8 border border-danger/20 rounded-md mb-4">
+					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
 						{error}
 					</div>
 				)}
@@ -379,14 +379,14 @@ function NamespaceView() {
 					disabled={loading}
 				/>
 
-				<hr className="border-border my-4" />
+				<hr className="my-4 border-border" />
 
 				<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
 
 				{loading ? (
-					<div className="text-center p-12 text-text-secondary">Loading...</div>
+					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : entries.length === 0 ? (
-					<div className="text-center p-12 text-text-secondary space-y-2 flex flex-col items-center justify-center">
+					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
 						{prefix ? (
 							<p className="text-sm font-light">{`No keys found matching prefix "${prefix}".`}</p>
 						) : (
@@ -410,9 +410,9 @@ function NamespaceView() {
 							/>
 						</div>
 						{hasMore && (
-							<div className="text-center p-4">
+							<div className="p-4 text-center">
 								<Button
-									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
+									className="inline-flex cursor-pointer items-center justify-center rounded-md border border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
 									onClick={handleLoadMore}
 									disabled={loadingMore}
 									focusableWhenDisabled
@@ -429,26 +429,26 @@ function NamespaceView() {
 					onOpenChange={(open) => !open && setDeleteTarget(null)}
 				>
 					<AlertDialog.Portal>
-						<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-1000 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
-						<AlertDialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-1001 bg-bg rounded-xl p-6 w-full max-w-125 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95">
-							<AlertDialog.Title className="text-lg font-semibold mb-4">
+						<AlertDialog.Backdrop className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+						<AlertDialog.Popup className="fixed top-1/2 left-1/2 z-1001 w-full max-w-125 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+							<AlertDialog.Title className="mb-4 text-lg font-semibold">
 								Delete key?
 							</AlertDialog.Title>
-							<AlertDialog.Description className="text-text-secondary mb-2">
+							<AlertDialog.Description className="mb-2 text-text-secondary">
 								Are you sure you want to delete &ldquo;{deleteTarget}&rdquo;?
 								This cannot be undone.
 							</AlertDialog.Description>
-							<div className="flex justify-end gap-2 mt-6">
+							<div className="mt-6 flex justify-end gap-2">
 								<AlertDialog.Close
 									render={
-										<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0" />
+										<Button className="inline-flex cursor-pointer items-center justify-center rounded-md border border-none border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0" />
 									}
 									disabled={deleting}
 								>
 									Cancel
 								</AlertDialog.Close>
 								<Button
-									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-danger text-bg-tertiary hover:bg-danger-hover data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
+									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-danger px-4 py-2 text-sm font-medium text-bg-tertiary transition-[background-color,transform] hover:bg-danger-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
 									onClick={handleConfirmDelete}
 									disabled={deleting}
 									focusableWhenDisabled
@@ -465,26 +465,26 @@ function NamespaceView() {
 					onOpenChange={(open) => !open && setOverwriteConfirm(null)}
 				>
 					<AlertDialog.Portal>
-						<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-1000 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
-						<AlertDialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-1001 bg-bg rounded-xl p-6 w-full max-w-125 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95">
-							<AlertDialog.Title className="text-lg font-semibold mb-4">
+						<AlertDialog.Backdrop className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
+						<AlertDialog.Popup className="fixed top-1/2 left-1/2 z-1001 w-full max-w-125 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+							<AlertDialog.Title className="mb-4 text-lg font-semibold">
 								Overwrite key?
 							</AlertDialog.Title>
-							<AlertDialog.Description className="text-text-secondary mb-2">
+							<AlertDialog.Description className="mb-2 text-text-secondary">
 								Key &ldquo;{overwriteConfirm?.key}&rdquo; already exists. Do you
 								want to overwrite its value?
 							</AlertDialog.Description>
-							<div className="flex justify-end gap-2 mt-6">
+							<div className="mt-6 flex justify-end gap-2">
 								<AlertDialog.Close
 									render={
-										<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0" />
+										<Button className="inline-flex cursor-pointer items-center justify-center rounded-md border border-none border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0" />
 									}
 									disabled={overwriting}
 								>
 									Cancel
 								</AlertDialog.Close>
 								<Button
-									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
+									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-bg-tertiary transition-[background-color,transform] hover:bg-primary-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
 									onClick={handleConfirmOverwrite}
 									disabled={overwriting}
 									focusableWhenDisabled

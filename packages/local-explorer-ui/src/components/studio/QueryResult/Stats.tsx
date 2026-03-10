@@ -28,7 +28,7 @@ export function StudioQueryResultStats({
 
 		if (stats.queryDurationMs !== null) {
 			content.push(
-				<div className="px-2 flex gap-1 items-center" key="query-duration">
+				<div className="flex items-center gap-1 px-2" key="query-duration">
 					<span className="font-semibold">Query Time</span>
 					<Tooltip content="Time taken by the server to execute the SQL query (excludes network delay and request overhead).">
 						<QuestionIcon />
@@ -41,7 +41,7 @@ export function StudioQueryResultStats({
 
 		if (stats.requestDurationMs) {
 			content.push(
-				<div className="px-2 flex gap-1 items-center" key="request-duration">
+				<div className="flex items-center gap-1 px-2" key="request-duration">
 					<span className="font-semibold">Response Time</span>
 					<Tooltip content="Total time from request sent to response received (includes query time, network latency, and server processing).">
 						<QuestionIcon />
@@ -81,5 +81,5 @@ export function StudioQueryResultStats({
 		return content;
 	}, [stats]);
 
-	return <div className="text-xs p-2 flex">{statsComponents}</div>;
+	return <div className="flex p-2 text-xs">{statsComponents}</div>;
 }

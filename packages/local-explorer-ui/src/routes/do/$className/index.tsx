@@ -130,15 +130,15 @@ function NamespaceView() {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="text-danger p-4 bg-danger/8 border border-danger/20 rounded-md mb-4">
+					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
 						{error}
 					</div>
 				)}
 
 				{loading ? (
-					<div className="text-center p-12 text-text-secondary">Loading...</div>
+					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : objects.length === 0 ? (
-					<div className="text-center p-12 text-text-secondary space-y-2 flex flex-col items-center justify-center">
+					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
 						<h2 className="text-2xl font-medium">
 							No Durable Objects with stored data
 						</h2>
@@ -148,26 +148,26 @@ function NamespaceView() {
 					</div>
 				) : (
 					<>
-						<div className="rounded-lg border border-border overflow-hidden">
+						<div className="overflow-hidden rounded-lg border border-border">
 							<table className="w-full text-sm">
 								<thead className="bg-bg-secondary">
 									<tr>
-										<th className="text-left px-4 py-3 font-medium text-text-secondary border-b border-border">
+										<th className="border-b border-border px-4 py-3 text-left font-medium text-text-secondary">
 											Object ID
 										</th>
-										<th className="text-right px-4 py-3 font-medium text-text-secondary border-b border-border" />
+										<th className="border-b border-border px-4 py-3 text-right font-medium text-text-secondary" />
 									</tr>
 								</thead>
 								<tbody>
 									{objects.map((obj) => (
 										<tr
-											className="border-b border-border last:border-b-0 hover:bg-bg-secondary/50 transition-colors"
+											className="border-b border-border transition-colors last:border-b-0 hover:bg-bg-secondary/50"
 											key={obj.id}
 										>
 											<td className="px-4 py-3 font-mono text-xs">{obj.id}</td>
 											<td className="px-4 py-3 text-right">
 												<Link
-													className="inline-flex items-center justify-center py-1.5 px-3 text-xs font-medium rounded-md cursor-pointer transition-colors bg-primary text-white hover:bg-primary-hover"
+													className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
 													params={{
 														className: params.className,
 														objectId: obj.id as string,
@@ -185,9 +185,9 @@ function NamespaceView() {
 						</div>
 
 						{hasMore && (
-							<div className="text-center p-4">
+							<div className="p-4 text-center">
 								<Button
-									className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
+									className="inline-flex cursor-pointer items-center justify-center rounded-md border border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
 									disabled={loadingMore}
 									focusableWhenDisabled
 									onClick={handleLoadMore}

@@ -241,12 +241,12 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
 		>
-			<div className="w-full flex flex-col bg-surface">
+			<div className="flex w-full flex-col bg-surface">
 				<div className="grow overflow-hidden">
 					<StudioSQLEditor
 						autoCompleteSchema={autoCompelteSchema}
 						autoFocus
-						className="p-2 w-full h-full"
+						className="h-full w-full p-2"
 						defaultValue={query}
 						dialect={driver.dialect}
 						keybinding={keybinding}
@@ -255,13 +255,13 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 						statementHighlight
 					/>
 				</div>
-				<div className="shrink-0 pt-0 pb-2 px-4 flex items-center gap-2">
-					<div className="text-xs grow text-muted">
+				<div className="flex shrink-0 items-center gap-2 px-4 pt-0 pb-2">
+					<div className="grow text-xs text-muted">
 						Ln {lineNumber} Col {columnNumber}
 					</div>
 
 					<Button
-						className="h-8 text-xs hover:bg-border transition"
+						className="h-8 text-xs transition hover:bg-border"
 						onClick={handleFormat}
 						variant="ghost"
 					>
@@ -270,7 +270,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 
 					<div className="flex overflow-hidden">
 						<Button
-							className="h-8 text-xs rounded-r-none pr-2! hover:bg-border transition"
+							className="h-8 rounded-r-none pr-2! text-xs transition hover:bg-border"
 							icon={<PlayIcon weight="fill" />}
 							loading={loading}
 							onClick={onRunCurrentClicked}
@@ -283,7 +283,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 							<DropdownMenu.Trigger
 								render={
 									<Button
-										className="h-8 text-xs px-2 rounded-r-md rounded-l-none ml-0 hover:bg-border transition"
+										className="ml-0 h-8 rounded-l-none rounded-r-md px-2 text-xs transition hover:bg-border"
 										disabled={loading}
 										variant="primary"
 									>
@@ -320,7 +320,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 				</div>
 			</div>
 
-			<div className="w-full h-full bg-surface">
+			<div className="h-full w-full bg-surface">
 				{queryTabs && queryTabs.length > 0 && (
 					<StudioWindowTab
 						key="main-window-tab"
