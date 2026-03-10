@@ -5,6 +5,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
+import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
@@ -1210,9 +1211,6 @@ function getWorkerScript(
 		return { serviceWorkerScript: code };
 	}
 }
-
-const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
 
 /**
  * Returns the default containerEgressInterceptorImage. It's used for

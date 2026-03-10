@@ -17,7 +17,7 @@ import type {
 	WranglerLogger,
 } from "./types";
 
-const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
+export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
 	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
 
 export function getEgressInterceptorImage(): string {
