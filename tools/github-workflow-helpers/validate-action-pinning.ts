@@ -28,7 +28,8 @@ const TRUSTED_PREFIXES = ["actions/"];
  * action files are pinned to a full commit SHA rather than a mutable
  * tag or branch reference.
  *
- * Returns an array of human-readable error strings (empty = all good).
+ * @param repoRoot - Absolute path to the repository root directory.
+ * @returns An array of human-readable error strings (empty = all good).
  */
 export function validateActionPinning(repoRoot: string): string[] {
 	const patterns = [
@@ -72,7 +73,7 @@ export function validateActionPinning(repoRoot: string): string[] {
 			const atIndex = raw.indexOf("@");
 			if (atIndex === -1) {
 				errors.push(
-					`${relPath}:${i + 1} — ${raw} has no version reference at all`
+					`${relPath}:${i + 1} — ${raw.split(/\s/)[0]} has no version reference at all`
 				);
 				continue;
 			}

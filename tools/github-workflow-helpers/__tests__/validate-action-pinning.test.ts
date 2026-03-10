@@ -216,6 +216,22 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("unpinned/action@v1");
 	});
 
+	it("should fail for third-party actions with no version reference at all", () => {
+		writeWorkflow(
+			"test.yml",
+			dedent`
+				jobs:
+				  build:
+				    steps:
+				      - uses: some-org/some-action
+			`
+		);
+		const errors = validateActionPinning(tmpDir);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toContain("some-org/some-action");
+		expect(errors[0]).toContain("has no version reference at all");
+	});
+
 	it("should pass when there are no workflow files", () => {
 		// tmpDir has the .github/workflows/ directory but no files
 		expect(validateActionPinning(tmpDir)).toEqual([]);
