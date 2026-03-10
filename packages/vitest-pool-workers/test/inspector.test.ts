@@ -200,7 +200,6 @@ test("throws error when user-specified inspector port is not available", async (
 			"vitest.config.mts": vitestConfig(
 				{
 					main: "./index.ts",
-					singleWorker: true,
 					miniflare: {
 						compatibilityDate: "2025-12-02",
 						compatibilityFlags: ["nodejs_compat"],

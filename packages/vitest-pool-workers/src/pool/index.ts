@@ -290,10 +290,13 @@ async function buildProjectWorkerOptions(
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
 
-	// Vitest runs all test files within the same Durable Object, so promise
-	// resolution regularly crosses request boundaries (e.g. a promise created
-	// during one test file resolving during another). The default workerd
-	// behaviour would reject these cross-request promises, breaking tests.
+	// By default, workerd tracks which request context a promise was created in
+	// and rejects promises that resolve in a different request context. This is a
+	// safety feature for production Workers to prevent data leaking between
+	// requests. However, vitest-pool-workers runs all test files within the same
+	// Durable Object, so promise resolution regularly crosses request boundaries
+	// (e.g. a setup promise created for one test file resolving during another).
+	// Without this flag, those promises get rejected and tests break.
 	runnerWorker.compatibilityFlags.push(
 		"no_handle_cross_request_promise_resolution"
 	);

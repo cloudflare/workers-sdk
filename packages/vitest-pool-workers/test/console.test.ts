@@ -80,7 +80,6 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 	await seed({
 		"vitest.config.mts": vitestConfig({
 			main: "./index.ts",
-			singleWorker: true,
 			miniflare: {
 				compatibilityDate: "2025-12-02",
 				compatibilityFlags: ["nodejs_compat"],
