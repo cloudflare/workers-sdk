@@ -186,7 +186,7 @@ describe("getWarningForWorkersConfigs", () => {
 			"
 			[43mWARNING[0m: your workers configs contain configuration options which are ignored since they are not applicable when using Vite:
 			  - (auxiliary) worker "worker-a" (config at \`a/wrangler.json\`)
-			    - \`assets\` which is not supported for auxiliary workers and will be ignored
+			    - \`assets\` which is not supported for auxiliary workers
 			"
 		`);
 	});

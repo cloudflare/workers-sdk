@@ -270,7 +270,7 @@ function getWorkerNonApplicableWarnLines(
 
 	if (options?.isAuxiliary && notSupportedOnAuxiliary.size > 0) {
 		lines.push(
-			`${linePrefix}${[...notSupportedOnAuxiliary].map((config) => `\`${config}\``).join(", ")} which ${notSupportedOnAuxiliary.size > 1 ? "are" : "is"} not supported for auxiliary workers and will be ignored`
+			`${linePrefix}${[...notSupportedOnAuxiliary].map((config) => `\`${config}\``).join(", ")} which ${notSupportedOnAuxiliary.size > 1 ? "are" : "is"} not supported for auxiliary workers`
 		);
 	}
 
