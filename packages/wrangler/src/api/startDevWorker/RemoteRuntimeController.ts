@@ -86,7 +86,6 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	async #previewToken(
 		props: CreateRemoteWorkerInitProps &
-			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
