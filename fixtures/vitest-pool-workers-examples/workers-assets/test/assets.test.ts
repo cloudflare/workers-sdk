@@ -23,8 +23,10 @@ describe("Hello World user worker", () => {
 		};
 
 		await withEnv({ ...env, ASSETS: mockAssets }, async () => {
-			const response = await exports.default.fetch(
-				"http://example.com/binding"
+			const response = await worker.fetch(
+				new Request("http://example.com/binding"),
+				env,
+				{} as ExecutionContext
 			);
 			expect(await response.text()).toBe("mocked asset response");
 		});
