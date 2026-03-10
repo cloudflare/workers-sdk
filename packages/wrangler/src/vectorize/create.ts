@@ -114,7 +114,7 @@ export const vectorizeCreateCommand = createCommand({
 		}
 
 		if (args.json) {
-			logger.log(JSON.stringify(index, null, 2));
+			logger.log(JSON.stringify(indexResult, null, 2));
 			return;
 		}
 

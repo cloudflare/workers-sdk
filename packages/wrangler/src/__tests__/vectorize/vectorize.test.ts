@@ -369,14 +369,22 @@ describe("vectorize commands", () => {
 		expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m[0m
 
-  You haven't created any indexes on this account.
+			  You haven't created any indexes on this account.
 
-  Use 'wrangler vectorize create <name>' to create one, or visit
-  [4mhttps://developers.cloudflare.com/vectorize/[0m to get started.
+			  Use 'wrangler vectorize create <name>' to create one, or visit
+			  [4mhttps://developers.cloudflare.com/vectorize/[0m to get started.
 
 
-"
+			"
 		`);
+	});
+
+	it("should return empty array JSON when there are no vectorize indexes with --json flag", async () => {
+		mockVectorizeV2RequestError();
+		await runWrangler("vectorize list --json");
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`[]`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
 	});
 
 	it("should handle listing vectorize indexes with valid JSON output", async () => {
@@ -421,6 +429,9 @@ describe("vectorize commands", () => {
 			    "dimensions": 1536,
 			    "metric": "euclidean",
 			  },
+			  "created_on": "2024-07-11T13:02:18.00268Z",
+			  "description": "test-desc",
+			  "modified_on": "2024-07-11T13:02:18.00268Z",
 			  "name": "test-index",
 			}
 		`);
@@ -952,14 +963,22 @@ describe("vectorize commands", () => {
 		expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m[0m
 
-  You haven't created any metadata indexes on this account.
+			  You haven't created any metadata indexes on this account.
 
-  Use 'wrangler vectorize create-metadata-index <name>' to create one, or visit
-  [4mhttps://developers.cloudflare.com/vectorize/[0m to get started.
+			  Use 'wrangler vectorize create-metadata-index <name>' to create one, or visit
+			  [4mhttps://developers.cloudflare.com/vectorize/[0m to get started.
 
 
-"
+			"
 		`);
+	});
+
+	it("should return empty array JSON when list metadata indexes returns empty with --json flag", async () => {
+		mockVectorizeV2RequestError();
+		await runWrangler("vectorize list-metadata-index test-index --json");
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`[]`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
 	});
 
 	it("should handle list-metadata-index with valid JSON output", async () => {
@@ -1146,9 +1165,9 @@ describe("vectorize commands", () => {
 		`);
 
 		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo vectors found in this index.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo vectors found in this index.[0m
 
-"
+			"
 		`);
 	});
 
