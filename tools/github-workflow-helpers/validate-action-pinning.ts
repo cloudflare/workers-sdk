@@ -97,7 +97,7 @@ if (require.main === module) {
 	const errors = validateActionPinning(repoRoot);
 	if (errors.length > 0) {
 		console.error(
-			"::error::Action pinning checks:" + errors.map((e) => `\n- ${e}`)
+			"::error::Action pinning checks:" + errors.map((e) => `\n- ${e}`).join("")
 		);
 	}
 	console.log("::endgroup::");
