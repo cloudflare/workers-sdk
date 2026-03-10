@@ -586,7 +586,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			await helper.bestEffortRun(
 				`wrangler delete -c dispatch-worker/wrangler.toml`
 			);
-			await helper.run(
+			await helper.bestEffortRun(
 				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
 			);
 		});
@@ -940,7 +940,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 	afterAll(async () => {
 		// clean up user Worker after each test
 		const deleteWorker = helper.bestEffortRun(`wrangler delete`);
-		const deleteContainer = helper.run(
+		const deleteContainer = helper.bestEffortRun(
 			`wrangler containers delete ${applicationId}`
 		);
 		await Promise.allSettled([deleteWorker, deleteContainer]);
