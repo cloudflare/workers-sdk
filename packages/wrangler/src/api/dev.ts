@@ -222,7 +222,6 @@ export async function unstable_dev(
 		enableContainers: options?.experimental?.enableContainers ?? false,
 		dockerPath,
 		containerEngine: options?.experimental?.containerEngine,
-		experimentalTailLogs: true,
 		types: false,
 	};
 
