@@ -44,9 +44,6 @@ describe("local explorer", () => {
 				],
 				result_info: {
 					count: 2,
-					page: 1,
-					per_page: 20,
-					total_count: 2,
 				},
 				success: true,
 			});

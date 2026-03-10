@@ -16,6 +16,7 @@ packages:
 # Quick Editor update | Every quarter | Update VSCode dependency and patches
 
 catalog:
+  "@hey-api/openapi-ts": "^0.94.0"
   "@types/node": "^20.19.9"
   "@typescript-eslint/eslint-plugin": "^8.35.1"
   "@typescript-eslint/parser": "^8.35.1"
@@ -32,8 +33,8 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260306.1"
-  workerd: "1.20260306.1"
+  "@cloudflare/workers-types": "^4.20260310.1"
+  workerd: "1.20260310.1"
   eslint: "^9.39.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"

@@ -98,10 +98,19 @@ export interface RequestBodyIgnore {
 	properties: string[];
 }
 
+export interface ResponsePropertyIgnore {
+	path: string;
+	method: string;
+	/** Dot-notation path to the property to remove, e.g. "result_info.total_count" */
+	propertyPath: string;
+}
+
 export interface IgnoresConfig {
 	parameters?: ParameterIgnore[];
 	requestBodyProperties?: RequestBodyIgnore[];
 	schemaProperties?: Record<string, string[]>;
+	/** Properties to remove from inline response schemas */
+	responseProperties?: ResponsePropertyIgnore[];
 }
 interface OpenAPIOperation {
 	parameters?: Array<{ name: string; [key: string]: unknown }>;
@@ -167,6 +176,9 @@ function filterOpenAPISpec(
 
 				// Apply request body ignores (if any)
 				applyRequestBodyIgnores(operation, originalPath, method, ignores);
+
+				// Apply response property ignores (if any)
+				applyResponsePropertyIgnores(operation, originalPath, method, ignores);
 
 				// Remove security from operation since we implement that differently locally
 				delete operation.security;
@@ -422,15 +434,38 @@ function removeSchemaProperties(
 	schema: OpenAPISchema,
 	propsToRemove: string[]
 ): void {
-	if (!schema.properties) {
-		return;
+	// Handle direct properties
+	if (schema.properties) {
+		const props = schema.properties;
+		for (const prop of propsToRemove) {
+			delete props[prop];
+		}
+		if (schema.required) {
+			schema.required = schema.required.filter(
+				(r) => !propsToRemove.includes(r)
+			);
+		}
 	}
-	const props = schema.properties;
-	for (const prop of propsToRemove) {
-		delete props[prop];
+
+	// Handle allOf - recurse into each sub-schema
+	if (Array.isArray(schema.allOf)) {
+		for (const subSchema of schema.allOf) {
+			removeSchemaProperties(subSchema as OpenAPISchema, propsToRemove);
+		}
 	}
-	if (schema.required) {
-		schema.required = schema.required.filter((r) => !propsToRemove.includes(r));
+
+	// Handle oneOf
+	if (Array.isArray(schema.oneOf)) {
+		for (const subSchema of schema.oneOf) {
+			removeSchemaProperties(subSchema as OpenAPISchema, propsToRemove);
+		}
+	}
+
+	// Handle anyOf
+	if (Array.isArray(schema.anyOf)) {
+		for (const subSchema of schema.anyOf) {
+			removeSchemaProperties(subSchema as OpenAPISchema, propsToRemove);
+		}
 	}
 }
 
@@ -476,6 +511,110 @@ function applySchemaIgnores(
 		const schema = components.schemas[schemaName];
 		if (schema) {
 			removeSchemaProperties(schema, propsToRemove);
+		}
+	}
+}
+
+/**
+ * Recursively find and process all inline schemas in response content.
+ * Applies property removal at specified paths.
+ */
+function applyResponsePropertyIgnores(
+	operation: OpenAPIOperation,
+	path: string,
+	method: string,
+	ignores: IgnoresConfig
+): void {
+	if (!ignores.responseProperties) {
+		return;
+	}
+
+	const pathIgnores = ignores.responseProperties.filter(
+		(p) => p.path === path && p.method === method
+	);
+
+	if (pathIgnores.length === 0) {
+		return;
+	}
+
+	const responses = operation.responses as
+		| Record<string, { content?: Record<string, { schema?: unknown }> }>
+		| undefined;
+	if (!responses) {
+		return;
+	}
+
+	for (const response of Object.values(responses)) {
+		if (!response.content) {
+			continue;
+		}
+		for (const mediaType of Object.values(response.content)) {
+			if (!mediaType.schema) {
+				continue;
+			}
+			// Walk through the schema and apply ignores
+			for (const ignore of pathIgnores) {
+				removePropertyFromSchema(mediaType.schema, ignore.propertyPath);
+			}
+		}
+	}
+}
+
+/**
+ * Remove a property from an OpenAPI schema at a dot-notation path.
+ * Handles allOf/oneOf/anyOf and nested properties.
+ * E.g., "result_info.total_count" removes total_count from result_info's properties.
+ */
+function removePropertyFromSchema(schema: unknown, propertyPath: string): void {
+	if (!schema || typeof schema !== "object") {
+		return;
+	}
+
+	const schemaObj = schema as Record<string, unknown>;
+
+	// Handle allOf - search in each sub-schema
+	if (Array.isArray(schemaObj.allOf)) {
+		for (const subSchema of schemaObj.allOf) {
+			removePropertyFromSchema(subSchema, propertyPath);
+		}
+	}
+
+	// Handle oneOf
+	if (Array.isArray(schemaObj.oneOf)) {
+		for (const subSchema of schemaObj.oneOf) {
+			removePropertyFromSchema(subSchema, propertyPath);
+		}
+	}
+
+	// Handle anyOf
+	if (Array.isArray(schemaObj.anyOf)) {
+		for (const subSchema of schemaObj.anyOf) {
+			removePropertyFromSchema(subSchema, propertyPath);
+		}
+	}
+
+	// Handle direct properties
+	if (schemaObj.properties && typeof schemaObj.properties === "object") {
+		const props = schemaObj.properties as Record<string, unknown>;
+		const parts = propertyPath.split(".");
+
+		if (parts.length === 1) {
+			// Simple property removal
+			delete props[parts[0]];
+			// Also remove from required array if present
+			if (Array.isArray(schemaObj.required)) {
+				schemaObj.required = (schemaObj.required as string[]).filter(
+					(r) => r !== parts[0]
+				);
+			}
+		} else {
+			// Nested property removal: e.g., "result_info.total_count"
+			// Navigate to the parent property's schema and remove from its properties
+			const [parentProp, ...rest] = parts;
+			const parentSchema = props[parentProp] as Record<string, unknown>;
+			if (parentSchema) {
+				removePropertyFromSchema(parentSchema, rest.join("."));
+			}
 		}
 	}
 }
