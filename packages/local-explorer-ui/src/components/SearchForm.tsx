@@ -21,7 +21,7 @@ export function SearchForm({ onSearch, disabled = false }: SearchFormProps) {
 			</label>
 			<input
 				id="search-prefix"
-				className="max-w-[400px] flex-1 rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
+				className="max-w-100 flex-1 rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
 				placeholder="Search keys by prefix..."
 				value={prefix}
 				onChange={(e) => setPrefix(e.target.value)}
@@ -29,7 +29,7 @@ export function SearchForm({ onSearch, disabled = false }: SearchFormProps) {
 			/>
 			<Button
 				type="submit"
-				className="btn inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px"
+				className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px"
 				disabled={disabled}
 				focusableWhenDisabled
 			>

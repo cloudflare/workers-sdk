@@ -84,7 +84,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				</label>
 				<textarea
 					id="add-value"
-					className="max-h-2xs w-full resize-none overflow-y-auto rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary lg:[field-sizing:content]"
+					className="max-h-32 w-full resize-none overflow-y-auto rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary lg:field-sizing-content"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
@@ -93,7 +93,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-white transition-[background-color,color,transform] hover:bg-primary-hover focus:border-primary focus:shadow-focus-primary focus:outline-none active:translate-y-px data-[disabled]:cursor-not-allowed data-[disabled]:bg-primary/50 data-[disabled]:text-white/70 data-[disabled]:active:translate-y-0 lg:w-auto"
+				className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-white transition-[background-color,color,transform] hover:bg-primary-hover focus:border-primary focus:shadow-focus-primary focus:outline-none active:translate-y-px data-disabled:cursor-not-allowed data-disabled:bg-primary/50 data-disabled:text-white/70 data-disabled:active:translate-y-0 lg:w-auto"
 				disabled={saving || isKeyInvalid}
 				focusableWhenDisabled
 			>
