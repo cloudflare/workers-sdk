@@ -88,7 +88,6 @@ export const StudioTableDisplayCell = forwardRef<
 	HTMLDivElement,
 	TableCellProps
 >(({ align, header, onDoubleClick, value }, ref) => {
-	const className = cn("flex h-[35px] font-mono leading-[35px]", "pr-2 pl-2");
 	const isAlignRight = align === "right";
 
 	const textBaseStyle = cn(
@@ -156,7 +155,11 @@ export const StudioTableDisplayCell = forwardRef<
 	}, [value, textBaseStyle, header]);
 
 	return (
-		<div ref={ref} className={className} onDoubleClick={onDoubleClick}>
+		<div
+			ref={ref}
+			className={cn("flex h-8.75 font-mono leading-8.75", "pr-2 pl-2")}
+			onDoubleClick={onDoubleClick}
+		>
 			<div className="flex grow overflow-hidden">{content}</div>
 		</div>
 	);
