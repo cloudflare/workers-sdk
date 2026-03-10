@@ -197,9 +197,7 @@ export interface StartDevWorkerInput {
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	assets?: string;
 
-	experimental?: {
-		tailLogs: boolean;
-	};
+	experimental?: Record<string, never>;
 }
 
 export type StartDevWorkerOptions = Omit<

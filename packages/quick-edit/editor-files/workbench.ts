@@ -88,10 +88,65 @@ function createEditor(port: MessagePort) {
 }
 
 /**
- * The web page that embeds this VSCode instance must provide a MessagePort used for file communication
+ * Read the list of allowed parent origins from the server-injected meta tag.
+ * These origins are permitted to send the "PORT" postMessage to establish
+ * the IPC channel. Entries may use a leading wildcard for subdomain matching
+ * (e.g. "https://*.example.com").
+ */
+function getAllowedParentOrigins(): string[] {
+	const el = document.getElementById("vscode-allowed-parent-origins");
+	const raw = el?.getAttribute("data-origins");
+	if (!raw) {
+		return [];
+	}
+	try {
+		const parsed: unknown = JSON.parse(raw);
+		return Array.isArray(parsed)
+			? parsed.filter((v) => typeof v === "string")
+			: [];
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Check whether the given origin matches any of the allowed origins.
+ * Supports two wildcard forms:
+ *  - "https://*.example.com" — matches any subdomain
+ *  - "http://localhost:*"    — matches any port on localhost
+ */
+function isAllowedOrigin(origin: string, allowedOrigins: string[]): boolean {
+	return allowedOrigins.some((allowed) => {
+		// Port wildcard: "http://localhost:*" matches "http://localhost:5173"
+		if (allowed.endsWith(":*")) {
+			const prefix = allowed.slice(0, -1); // e.g. "http://localhost:"
+			return origin.startsWith(prefix);
+		}
+		// Subdomain wildcard: "https://*.example.com" matches "https://foo.example.com"
+		const wildcardIndex = allowed.indexOf("*.");
+		if (wildcardIndex !== -1) {
+			const prefix = allowed.slice(0, wildcardIndex);
+			const suffix = allowed.slice(wildcardIndex + 1); // e.g. ".example.com"
+			return origin.startsWith(prefix) && origin.endsWith(suffix);
+		}
+		return origin === allowed;
+	});
+}
+
+/**
+ * The web page that embeds this VSCode instance must provide a MessagePort
+ * used for file communication. Only messages from allowed parent origins
+ * are accepted.
  */
 window.onmessage = (e) => {
 	if (e.data === "PORT" && e.ports[0]) {
+		const allowedOrigins = getAllowedParentOrigins();
+
+		if (!isAllowedOrigin(e.origin, allowedOrigins)) {
+			console.error(`Rejected postMessage from untrusted origin: ${e.origin}`);
+			return;
+		}
+
 		createEditor(e.ports[0]);
 	}
 };

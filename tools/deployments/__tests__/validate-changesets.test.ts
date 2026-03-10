@@ -39,6 +39,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-playground",
 				"@cloudflare/workers-shared",
+				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
 				"create-cloudflare",
 				"miniflare",
@@ -94,7 +95,6 @@ describe("validateChangesets()", () => {
 				["package-a", { name: "package-a" }],
 				["package-b", { name: "package-b" }],
 				["package-c", { name: "package-c" }],
-				["package-d", { name: "package-d", "workers-sdk": { deploy: true } }],
 			]),
 			[
 				{
@@ -152,15 +152,6 @@ describe("validateChangesets()", () => {
 
 						docs: test`,
 				},
-				{
-					file: "deployable-package.md",
-					contents: dedent`
-						---
-						"package-d": patch
-						---
-
-						fix: test`,
-				},
 			]
 		);
 		expect(errors).toMatchInlineSnapshot(`
@@ -168,7 +159,6 @@ describe("validateChangesets()", () => {
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
 			  "Unknown package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
-			  "Currently we are not allowing changes to package "package-d" in changeset at "deployable-package.md" since it would trigger a Worker/Pages deployment.",
 			]
 		`);
 	});

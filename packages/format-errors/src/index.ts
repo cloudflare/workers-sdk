@@ -167,7 +167,7 @@ export default {
 		}
 
 		try {
-			return handlePrettyErrorRequest(payload);
+			return await handlePrettyErrorRequest(payload);
 		} catch (e) {
 			sentry.captureException(e);
 			const errorCounter = registry.create(

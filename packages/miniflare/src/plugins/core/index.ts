@@ -5,6 +5,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
+import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
 import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
@@ -77,7 +78,7 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
-import type { WorkerRegistry } from "../../shared/dev-registry";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -916,10 +917,7 @@ export const CORE_PLUGIN: Plugin<
 							);
 						}
 					),
-					containerEngine: getContainerEngine(
-						options.containerEngine,
-						options.compatibilityFlags
-					),
+					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
 		}
@@ -1161,9 +1159,6 @@ export function getGlobalServices({
 			proxyBindings,
 			durableObjectClassNames
 		);
-		// Add loopback service binding if DOs are configured
-		// The explorer worker uses this to call the /core/do-storage endpoint
-		// which reads the filesystem using Node.js (bypassing workerd disk service issues on Windows)
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 		services.push(
 			...getExplorerServices({
@@ -1171,6 +1166,7 @@ export function getGlobalServices({
 				proxyBindings,
 				bindingIdMap: IDToBindingMap,
 				hasDurableObjects,
+				workerNames,
 			})
 		);
 	}
@@ -1233,9 +1229,6 @@ function getWorkerScript(
 	}
 }
 
-const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:4dc6c7f@sha256:9621ef445ef120409e5d95bbd845ab2fa0f613636b59a01d998f5704f4096ae2";
-
 /**
  * Returns the default containerEgressInterceptorImage. It's used for
  * container network interception for local dev.
@@ -1253,8 +1246,7 @@ function getContainerEgressInterceptorImage(): string {
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
 function getContainerEngine(
-	engineOrSocketPath: Worker_ContainerEngine | string | undefined,
-	compatibilityFlags?: string[]
+	engineOrSocketPath: Worker_ContainerEngine | string | undefined
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
 		// TODO: workerd does not support win named pipes
@@ -1264,13 +1256,10 @@ function getContainerEngine(
 				: "unix:///var/run/docker.sock";
 	}
 
-	// TODO: Once the feature becomes GA, we should remove the experimental requirement.
 	// Egress interceptor is to support direct connectivity between the Container and Workers,
 	// it spawns a container in the same network namespace as the local dev container and
 	// intercepts traffic to redirect to Workerd.
-	const egressImage = compatibilityFlags?.includes("experimental")
-		? getContainerEgressInterceptorImage()
-		: undefined;
+	const egressImage = getContainerEgressInterceptorImage();
 
 	if (typeof engineOrSocketPath === "string") {
 		return {

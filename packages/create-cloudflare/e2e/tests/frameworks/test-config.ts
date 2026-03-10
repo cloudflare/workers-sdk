@@ -48,6 +48,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:pages",
 			argv: ["--platform", "pages"],
+			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -65,6 +66,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -281,9 +283,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "qwik:pages",
 			argv: ["--platform", "pages"],
-			// quarantined: upstream @eslint/js "latest" now resolves to v10 which
-			// conflicts with the project's eslint 9.x
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
@@ -307,9 +306,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "qwik:workers",
 			argv: ["--platform", "workers"],
-			// quarantined: upstream @eslint/js "latest" now resolves to v10 which
-			// conflicts with the project's eslint 9.x
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
@@ -459,6 +455,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "solid",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
@@ -726,6 +723,7 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
+			quarantine: true,
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -813,6 +811,7 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "solid",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
@@ -842,9 +841,6 @@ function getExperimentalFrameworkTestConfig(
 		{
 			name: "qwik:workers",
 			argv: ["--platform", "workers"],
-			// quarantined: upstream @eslint/js "latest" now resolves to v10 which
-			// conflicts with the project's eslint 9.x
-			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,

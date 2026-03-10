@@ -116,7 +116,7 @@ function describeExplainNode(d: string): {
 			label: (
 				<div className="flex items-center">
 					<strong>SCAN </strong>
-					<span className="border border-color p-1 mx-2 rounded flex items-center gap-2">
+					<span className="border border-border p-1 mx-2 rounded flex items-center gap-2">
 						<TableIcon />
 						{d.substring("SCAN ".length)}
 					</span>

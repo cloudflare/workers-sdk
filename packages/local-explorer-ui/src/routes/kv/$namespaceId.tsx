@@ -18,6 +18,43 @@ import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
+	loader: async ({ params }) => {
+		const keysResponse = await workersKvNamespaceListANamespace_SKeys({
+			path: { namespace_id: params.namespaceId },
+			query: { limit: 50 },
+		});
+		const keys = keysResponse.data?.result ?? [];
+
+		let values: Record<string, string | null> = {};
+		if (keys.length > 0) {
+			const valuesResponse = await workersKvNamespaceGetMultipleKeyValuePairs({
+				path: {
+					namespace_id: params.namespaceId,
+				},
+				body: {
+					keys: keys.map((k) => k.name),
+				},
+			});
+			values = (valuesResponse.data?.result?.values ?? {}) as Record<
+				string,
+				string | null
+			>;
+		}
+
+		const cursor = keysResponse.data?.result_info?.cursor ?? null;
+		const entries = keys.map(
+			(key): KVEntry => ({
+				key,
+				value: values[key.name] ?? null,
+			})
+		);
+
+		return {
+			cursor,
+			entries,
+			hasMore: !!cursor,
+		};
+	},
 });
 
 // Helper functions for optimistic entry state updates
@@ -41,28 +78,45 @@ const entryVisible = (entries: KVEntry[], key: string): boolean =>
 
 function NamespaceView() {
 	const { namespaceId } = Route.useParams();
-	const [entries, setEntries] = useState<KVEntry[]>([]);
-	const [loading, setLoading] = useState(true);
+	const loaderData = Route.useLoaderData();
+
+	const [entries, setEntries] = useState<KVEntry[]>(loaderData.entries);
+	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
+	const [hasMore, setHasMore] = useState(loaderData.hasMore);
+
 	// Global (not individal validation) errors like fetch failures, shown in a
 	// banner. Set by fetchEntries, handleAdd, handleEditSave,
 	// handleConfirmOverwrite, handleConfirmDelete
-	const [error, setError] = useState<string | null>(null);
-	const [cursor, setCursor] = useState<string | null>(null);
-	const [hasMore, setHasMore] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-	const [deleting, setDeleting] = useState(false);
+	const [deleting, setDeleting] = useState<boolean>(false);
+	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState<boolean>(false);
+	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	// State for overwrite confirmation dialog
 	const [overwriteConfirm, setOverwriteConfirm] = useState<{
 		key: string;
 		value: string;
 		originalKey?: string; // undefined for add, set for edit
 	} | null>(null);
-	const [overwriting, setOverwriting] = useState(false);
+	const [overwriting, setOverwriting] = useState<boolean>(false);
 	// Signal to clear AddKVForm after successful overwrite
-	const [clearAddForm, setClearAddForm] = useState(0);
+	const [clearAddForm, setClearAddForm] = useState<number>(0);
 	// Search prefix filter
 	const [prefix, setPrefix] = useState<string | undefined>(undefined);
+
+	useEffect(() => {
+		setEntries(loaderData.entries);
+		setCursor(loaderData.cursor);
+		setHasMore(loaderData.hasMore);
+		setDeleteTarget(null);
+		setDeleting(false);
+		setOverwriteConfirm(null);
+		setOverwriting(false);
+		setError(null);
+		setPrefix(undefined);
+		setLoading(false);
+		setLoadingMore(false);
+	}, [loaderData]);
 
 	const fetchEntries = useCallback(
 		async (nextCursor?: string, prefixParam?: string) => {
@@ -119,14 +173,6 @@ function NamespaceView() {
 		},
 		[namespaceId]
 	);
-
-	useEffect(() => {
-		setDeleteTarget(null);
-		setOverwriteConfirm(null);
-		setError(null);
-		setPrefix(undefined);
-		void fetchEntries(undefined, undefined);
-	}, [namespaceId, fetchEntries]);
 
 	const handleLoadMore = () => {
 		if (cursor && !loadingMore) {
