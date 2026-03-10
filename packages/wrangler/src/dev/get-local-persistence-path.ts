@@ -7,14 +7,14 @@ import type { Config } from "@cloudflare/workers-utils";
  * We use the `userConfigPath` rather than the potentially redirected `configPath`
  * to decide the path to this directory.
  *
- * @param persistTo - The path to persist to, or `false`/`null` to disable persistence, or `undefined` to use the default path.
+ * @param persistTo - The path to persist to, or `false` to disable persistence, or `undefined` to use the default path.
  *
- * @returns The path to persist to, or `null` if persistence is disabled.
+ * @returns The path to persist to, or `false` if persistence is disabled.
  */
 export function getLocalPersistencePath(
-	persistTo: false | null,
+	persistTo: false,
 	config: Config
-): null;
+): false;
 
 export function getLocalPersistencePath(
 	persistTo: string | undefined,
@@ -22,16 +22,16 @@ export function getLocalPersistencePath(
 ): string;
 
 export function getLocalPersistencePath(
-	persistTo: string | false | null | undefined,
+	persistTo: string | false | undefined,
 	config: Config
-): string | null;
+): string | false;
 
 export function getLocalPersistencePath(
-	persistTo: string | false | null | undefined,
+	persistTo: string | false | undefined,
 	{ userConfigPath }: Config
-): string | null {
-	if (persistTo === false || persistTo === null) {
-		return null;
+): string | false {
+	if (persistTo === false) {
+		return false;
 	}
 
 	return persistTo
