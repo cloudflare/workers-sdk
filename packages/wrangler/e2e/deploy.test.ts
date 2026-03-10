@@ -44,7 +44,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 		});
 
 		afterAll(async () => {
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
 		it("omit subdomain warnings on 1st deploy", async () => {
