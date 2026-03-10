@@ -14,4 +14,4 @@ This fixes:
 - `wrangler vectorize list-vectors`
 - `wrangler vectorize list-metadata-index`
 
-Also, `wrangler vectorize create --json` also includes the `created_at`, `modified_on` and `description` fields.
+Also, `wrangler vectorize create --json` now also includes the `created_at`, `modified_on` and `description` fields.
