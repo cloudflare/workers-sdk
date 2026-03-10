@@ -733,14 +733,14 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("miss");
 		});
-		it("should not persist data when persist is null", async () => {
+		it("should not persist data when persist is false", async () => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config = {
 				dev: {
-					persist: null,
+					persist: false,
 				},
 				entrypoint: "NOT_REAL",
 				name: "worker",

@@ -14,26 +14,21 @@ describe("getLocalPersistencePath", () => {
 	runInTempDir();
 
 	describe("when persistence is disabled", () => {
-		it("should return null when persistTo is false", ({ expect }) => {
+		it("should return `false` when `persistTo` is `false`", ({ expect }) => {
 			const result = getLocalPersistencePath(false, makeConfig());
-			expect(result).toBeNull();
-		});
-
-		it("should return null when persistTo is null", ({ expect }) => {
-			const result = getLocalPersistencePath(null, makeConfig());
-			expect(result).toBeNull();
+			expect(result).toBe(false);
 		});
 	});
 
 	describe("when persistence is enabled with default path", () => {
-		it("should return .wrangler/state relative to cwd when no config path", ({
+		it("should return `.wrangler/state` relative to cwd when no config path", ({
 			expect,
 		}) => {
 			const result = getLocalPersistencePath(undefined, makeConfig());
 			expect(result).toBe(path.resolve(process.cwd(), ".wrangler/state"));
 		});
 
-		it("should return .wrangler/state relative to config file directory", ({
+		it("should return `.wrangler/state` relative to config file directory", ({
 			expect,
 		}) => {
 			const configPath = "/some/project/wrangler.json";
