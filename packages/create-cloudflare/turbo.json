@@ -18,7 +18,7 @@
 		"test:e2e": {
 			"passThroughEnv": ["GITHUB_TOKEN"],
 			"env": [
-				"NODE_DEBUG",
+				"$TURBO_EXTENDS$",
 				"E2E_EXPERIMENTAL",
 				"E2E_TEST_FILTER",
 				"E2E_TEST_PM",

@@ -65,8 +65,8 @@
 			"inputs": ["e2e/**"],
 			"dependsOn": ["build", "create-cloudflare#build"],
 			"env": [
+				"$TURBO_EXTENDS$",
 				"VITEST",
-				"NODE_DEBUG",
 				"MINIFLARE_WORKERD_PATH",
 				"WRANGLER",
 				"WRANGLER_IMPORT",

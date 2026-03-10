@@ -4,8 +4,8 @@
 	"tasks": {
 		"test:e2e": {
 			"env": [
+				"$TURBO_EXTENDS$",
 				"VITEST",
-				"NODE_DEBUG",
 				"MINIFLARE_WORKERD_PATH",
 				"WRANGLER",
 				"WRANGLER_IMPORT",
