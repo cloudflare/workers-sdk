@@ -168,7 +168,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					},
 					logger: logger,
 					isVite: false,
-					compatibilityFlags: data.config.compatibilityFlags,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;

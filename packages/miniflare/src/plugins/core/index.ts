@@ -908,10 +908,7 @@ export const CORE_PLUGIN: Plugin<
 							);
 						}
 					),
-					containerEngine: getContainerEngine(
-						options.containerEngine,
-						options.compatibilityFlags
-					),
+					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
 		}
@@ -1215,7 +1212,7 @@ function getWorkerScript(
 }
 
 const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:4dc6c7f@sha256:9621ef445ef120409e5d95bbd845ab2fa0f613636b59a01d998f5704f4096ae2";
+	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
 
 /**
  * Returns the default containerEgressInterceptorImage. It's used for
@@ -1234,8 +1231,7 @@ function getContainerEgressInterceptorImage(): string {
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
 function getContainerEngine(
-	engineOrSocketPath: Worker_ContainerEngine | string | undefined,
-	compatibilityFlags?: string[]
+	engineOrSocketPath: Worker_ContainerEngine | string | undefined
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
 		// TODO: workerd does not support win named pipes
@@ -1245,13 +1241,10 @@ function getContainerEngine(
 				: "unix:///var/run/docker.sock";
 	}
 
-	// TODO: Once the feature becomes GA, we should remove the experimental requirement.
 	// Egress interceptor is to support direct connectivity between the Container and Workers,
 	// it spawns a container in the same network namespace as the local dev container and
 	// intercepts traffic to redirect to Workerd.
-	const egressImage = compatibilityFlags?.includes("experimental")
-		? getContainerEgressInterceptorImage()
-		: undefined;
+	const egressImage = getContainerEgressInterceptorImage();
 
 	if (typeof engineOrSocketPath === "string") {
 		return {
