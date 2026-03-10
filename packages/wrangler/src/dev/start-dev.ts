@@ -286,9 +286,6 @@ async function setupDevEnv(
 				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
-			experimental: {
-				tailLogs: !!args.experimentalTailLogs,
-			},
 		} satisfies StartDevWorkerInput,
 		true
 	);

@@ -101,8 +101,10 @@ describe("DevEnv", { sequential: true }, () => {
 			});
 		});
 
-		it("InspectorProxyWorker discovery endpoints + devtools websocket connection", async () => {
-			const script = dedent`
+		it.skipIf(remote)(
+			"InspectorProxyWorker discovery endpoints + devtools websocket connection",
+			async () => {
+				const script = dedent`
 			export default {
 				fetch() {
 					console.log('Inside mock user worker');
@@ -112,111 +114,117 @@ describe("DevEnv", { sequential: true }, () => {
 			}
 		`;
 
-			await helper.seed({
-				"src/index.ts": script,
-			});
-
-			const worker = await startWorker({
-				name: "test-worker",
-				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
-
-				dev: {
-					remote,
-					server: { port: 0 },
-					inspector: { port: 0 },
-				},
-			});
-			onTestFinished(worker?.dispose);
-
-			const inspectorUrl = await worker.inspectorUrl;
-			assert(inspectorUrl, "missing inspectorUrl");
-			const res = await undici.fetch(`http://${inspectorUrl.host}/json`);
-
-			await expect(res.json()).resolves.toBeInstanceOf(Array);
-
-			assert(inspectorUrl, "missing inspectorUrl");
-			const ws = new WebSocket(inspectorUrl.href);
-			const openPromise = events.once(ws, "open");
-
-			const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
-				collectMessagesContaining(ws, "Runtime.consoleAPICalled");
-			const executionContextCreatedPromise = waitForMessageContaining(
-				ws,
-				"Runtime.executionContextCreated"
-			);
-
-			await openPromise;
-			await worker.fetch("http://dummy");
-
-			await expect(executionContextCreatedPromise).resolves.toMatchObject({
-				method: "Runtime.executionContextCreated",
-				params: {
-					context: { id: expect.any(Number) },
-				},
-			});
-			await waitFor(() => {
-				expect(consoleApiMessages).toContainMatchingObject({
-					method: "Runtime.consoleAPICalled",
-					params: expect.objectContaining({
-						args: [{ type: "string", value: "Inside mock user worker" }],
-					}),
+				await helper.seed({
+					"src/index.ts": script,
 				});
-			});
 
-			// Ensure execution contexts cleared on reload
-			const executionContextClearedPromise = waitForMessageContaining(
-				ws,
-				"Runtime.executionContextsCleared"
-			);
-			await helper.seed({
-				"src/index.ts": script.replace("body:1", "body:2"),
-			});
+				const worker = await startWorker({
+					name: "test-worker",
+					entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
-			await executionContextClearedPromise;
-		});
+					dev: {
+						remote,
+						server: { port: 0 },
+						inspector: { port: 0 },
+					},
+				});
+				onTestFinished(worker?.dispose);
 
-		it("InspectorProxyWorker rejects unauthorised requests", async () => {
-			await helper.seed({
-				"src/index.ts": dedent`
+				const inspectorUrl = await worker.inspectorUrl;
+				assert(inspectorUrl, "missing inspectorUrl");
+				const res = await undici.fetch(`http://${inspectorUrl.host}/json`);
+
+				await expect(res.json()).resolves.toBeInstanceOf(Array);
+
+				assert(inspectorUrl, "missing inspectorUrl");
+				const ws = new WebSocket(inspectorUrl.href);
+				const openPromise = events.once(ws, "open");
+
+				const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
+					collectMessagesContaining(ws, "Runtime.consoleAPICalled");
+				const executionContextCreatedPromise = waitForMessageContaining(
+					ws,
+					"Runtime.executionContextCreated"
+				);
+
+				await openPromise;
+				await worker.fetch("http://dummy");
+
+				await expect(executionContextCreatedPromise).resolves.toMatchObject({
+					method: "Runtime.executionContextCreated",
+					params: {
+						context: { id: expect.any(Number) },
+					},
+				});
+				await waitFor(() => {
+					expect(consoleApiMessages).toContainMatchingObject({
+						method: "Runtime.consoleAPICalled",
+						params: expect.objectContaining({
+							args: [{ type: "string", value: "Inside mock user worker" }],
+						}),
+					});
+				});
+
+				// Ensure execution contexts cleared on reload
+				const executionContextClearedPromise = waitForMessageContaining(
+					ws,
+					"Runtime.executionContextsCleared"
+				);
+				await helper.seed({
+					"src/index.ts": script.replace("body:1", "body:2"),
+				});
+
+				await executionContextClearedPromise;
+			}
+		);
+
+		it.skipIf(remote)(
+			"InspectorProxyWorker rejects unauthorised requests",
+			async () => {
+				await helper.seed({
+					"src/index.ts": dedent`
 				export default {
 					fetch() {
 						return new Response("body:1");
 					}
 				}
 			`,
-			});
+				});
 
-			const worker = await startWorker({
-				name: "test-worker",
-				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+				const worker = await startWorker({
+					name: "test-worker",
+					entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
-				dev: {
-					remote,
-					server: { port: 0 },
-					inspector: { port: 0 },
-				},
-			});
-			onTestFinished(worker?.dispose);
+					dev: {
+						remote,
+						server: { port: 0 },
+						inspector: { port: 0 },
+					},
+				});
+				onTestFinished(worker?.dispose);
 
-			const inspectorUrl = await worker.inspectorUrl;
-			assert(inspectorUrl);
+				const inspectorUrl = await worker.inspectorUrl;
+				assert(inspectorUrl);
 
-			assert(inspectorUrl, "missing inspectorUrl");
-			let ws = new WebSocket(inspectorUrl.href, {
-				setHost: false,
-				headers: { Host: "example.com" },
-			});
+				assert(inspectorUrl, "missing inspectorUrl");
+				let ws = new WebSocket(inspectorUrl.href, {
+					setHost: false,
+					headers: { Host: "example.com" },
+				});
 
-			let openPromise = events.once(ws, "open");
-			await expect(openPromise).rejects.toThrow("Unexpected server response");
+				let openPromise = events.once(ws, "open");
+				await expect(openPromise).rejects.toThrow("Unexpected server response");
 
-			// Check validates `Origin` header
-			assert(inspectorUrl, "missing inspectorUrl");
-			ws = new WebSocket(inspectorUrl.href, { origin: "https://example.com" });
-			openPromise = events.once(ws, "open");
-			await expect(openPromise).rejects.toThrow("Unexpected server response");
-			ws.close();
-		});
+				// Check validates `Origin` header
+				assert(inspectorUrl, "missing inspectorUrl");
+				ws = new WebSocket(inspectorUrl.href, {
+					origin: "https://example.com",
+				});
+				openPromise = events.once(ws, "open");
+				await expect(openPromise).rejects.toThrow("Unexpected server response");
+				ws.close();
+			}
+		);
 
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/5297
 		// The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
@@ -225,13 +233,15 @@ describe("DevEnv", { sequential: true }, () => {
 		// Connecting devtools directly to the inspector would work fine, but we proxy the inspector messages
 		// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
 		// By logging a large string we can verify that the inspector messages are being proxied successfully.
-		it("InspectorProxyWorker can proxy messages > 1MB", async () => {
-			vi.spyOn(console, "info").mockImplementation(() => {});
-			vi.spyOn(console, "log").mockImplementation(() => {});
+		it.skipIf(remote)(
+			"InspectorProxyWorker can proxy messages > 1MB",
+			async () => {
+				vi.spyOn(console, "info").mockImplementation(() => {});
+				vi.spyOn(console, "log").mockImplementation(() => {});
 
-			const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
+				const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
 
-			const script = dedent`
+				const script = dedent`
 			export default {
 				fetch() {
 					console.log("${LARGE_STRING}");
@@ -241,40 +251,41 @@ describe("DevEnv", { sequential: true }, () => {
 			}
 		`;
 
-			await helper.seed({
-				"src/index.ts": script,
-			});
-
-			const worker = await startWorker({
-				name: "test-worker",
-				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
-
-				dev: {
-					remote,
-					server: { port: 0 },
-					inspector: { port: 0 },
-				},
-			});
-			onTestFinished(worker?.dispose);
-
-			const inspectorUrl = await worker.inspectorUrl;
-			assert(inspectorUrl, "missing inspectorUrl");
-			const ws = new WebSocket(inspectorUrl.href);
-
-			const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
-				collectMessagesContaining(ws, "Runtime.consoleAPICalled");
-
-			await worker.fetch("http://dummy");
-
-			await waitFor(() => {
-				expect(consoleApiMessages).toContainMatchingObject({
-					method: "Runtime.consoleAPICalled",
-					params: expect.objectContaining({
-						args: [{ type: "string", value: LARGE_STRING }],
-					}),
+				await helper.seed({
+					"src/index.ts": script,
 				});
-			});
-		});
+
+				const worker = await startWorker({
+					name: "test-worker",
+					entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
+					dev: {
+						remote,
+						server: { port: 0 },
+						inspector: { port: 0 },
+					},
+				});
+				onTestFinished(worker?.dispose);
+
+				const inspectorUrl = await worker.inspectorUrl;
+				assert(inspectorUrl, "missing inspectorUrl");
+				const ws = new WebSocket(inspectorUrl.href);
+
+				const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
+					collectMessagesContaining(ws, "Runtime.consoleAPICalled");
+
+				await worker.fetch("http://dummy");
+
+				await waitFor(() => {
+					expect(consoleApiMessages).toContainMatchingObject({
+						method: "Runtime.consoleAPICalled",
+						params: expect.objectContaining({
+							args: [{ type: "string", value: LARGE_STRING }],
+						}),
+					});
+				});
+			}
+		);
 
 		it("config.dev.{server,inspector} changes, restart the server instance", async () => {
 			await helper.seed({
