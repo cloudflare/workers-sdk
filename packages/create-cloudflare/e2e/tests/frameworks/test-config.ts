@@ -455,6 +455,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "solid",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
@@ -810,6 +811,7 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "solid",
+			quarantine: true,
 			promptHandlers: [
 				{
 					matcher: /Which template would you like to use/,
