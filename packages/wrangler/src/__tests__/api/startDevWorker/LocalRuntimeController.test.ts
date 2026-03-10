@@ -783,7 +783,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("cached");
 
-			// Restart the worker - data should NOT be persisted since persist is null
+			// Restart the worker - data should NOT be persisted since persist is false
 			await controller.teardown();
 			controller.onBundleStart({
 				config: configDefaults(config),
