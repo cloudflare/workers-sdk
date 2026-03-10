@@ -16,6 +16,7 @@ packages:
 # Quick Editor update | Every quarter | Update VSCode dependency and patches
 
 catalog:
+  "@hey-api/openapi-ts": "^0.94.0"
   "@types/node": "^20.19.9"
   "@typescript-eslint/eslint-plugin": "^8.35.1"
   "@typescript-eslint/parser": "^8.35.1"
