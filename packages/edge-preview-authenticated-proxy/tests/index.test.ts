@@ -29,12 +29,6 @@ function createMockFetchImplementation() {
 			return new Response("BAD", { status: 500 });
 		}
 
-		if (url.pathname === "/exchange") {
-			return Response.json({
-				token: "TEST_TOKEN",
-				prewarm: "TEST_PREWARM",
-			});
-		}
 		if (url.pathname === "/redirect") {
 			// Use manual redirect to avoid trailing slash being added
 			return new Response(null, {
@@ -61,10 +55,6 @@ function createMockFetchImplementation() {
 			headers.append("Set-Cookie", "bar=2");
 			return new Response(undefined, { headers });
 		}
-		if (url.pathname === "/prewarm") {
-			return new Response("OK");
-		}
-
 		return Response.json(
 			{
 				url: request.url,
@@ -86,36 +76,6 @@ afterEach(() => {
 });
 
 describe("Preview Worker", () => {
-	it("should obtain token from exchange_url", async ({ expect }) => {
-		const resp = await SELF.fetch(
-			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/exchange`
-			)}`,
-			{
-				method: "POST",
-			}
-		);
-		const text = await resp.json();
-		expect(text).toMatchInlineSnapshot(
-			`
-			{
-			  "prewarm": "TEST_PREWARM",
-			  "token": "TEST_TOKEN",
-			}
-		`
-		);
-	});
-	it("should reject invalid exchange_url", async ({ expect }) => {
-		vi.spyOn(console, "error").mockImplementation(() => {});
-		const resp = await SELF.fetch(
-			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
-			{ method: "POST" }
-		);
-		expect(resp.status).toBe(400);
-		expect(await resp.text()).toMatchInlineSnapshot(
-			`"{"error":"Error","message":"Invalid URL"}"`
-		);
-	});
 	it("should allow tokens > 4096 bytes", async ({ expect }) => {
 		// 4096 is the size limit for cookies
 		const token = randomBytes(4096).toString("hex");
@@ -124,8 +84,6 @@ describe("Preview Worker", () => {
 		let resp = await SELF.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
-			)}&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
 			)}&remote=${encodeURIComponent(
 				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
@@ -164,9 +122,7 @@ describe("Preview Worker", () => {
 	});
 	it("should be redirected with cookie", async ({ expect }) => {
 		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
-			)}&remote=${encodeURIComponent(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
 				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
@@ -186,9 +142,7 @@ describe("Preview Worker", () => {
 
 	async function getToken() {
 		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
-			)}&remote=${encodeURIComponent(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
 				MOCK_REMOTE_URL
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
@@ -198,24 +152,10 @@ describe("Preview Worker", () => {
 		);
 		return (resp.headers.get("set-cookie") ?? "").split(";")[0].split("=")[1];
 	}
-	it("should reject invalid prewarm url", async ({ expect }) => {
-		vi.spyOn(console, "error").mockImplementation(() => {});
-		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
-				MOCK_REMOTE_URL
-			)}&suffix=${encodeURIComponent("/hello?world")}`
-		);
-		expect(resp.status).toBe(400);
-		expect(await resp.text()).toMatchInlineSnapshot(
-			`"{"error":"Error","message":"Invalid URL"}"`
-		);
-	});
 	it("should reject invalid remote url", async ({ expect }) => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await SELF.fetch(
-			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`${MOCK_REMOTE_URL}/prewarm`
-			)}&remote=not_a_remote_url&suffix=${encodeURIComponent("/hello?world")}`
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&remote=not_a_remote_url&suffix=${encodeURIComponent("/hello?world")}`
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(

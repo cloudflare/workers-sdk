@@ -31,9 +31,3 @@ it("stores in R2 bucket", async ({ expect }) => {
 	expect(response.headers.get("CF-Cache-Status")).toBe("HIT");
 	expect(await response.text()).toBe("value");
 });
-
-it("uses isolated storage for each test", async ({ expect }) => {
-	// Check write in previous test undone
-	const response = await SELF.fetch("https://example.com/r2/key");
-	expect(response.status).toBe(204);
-});

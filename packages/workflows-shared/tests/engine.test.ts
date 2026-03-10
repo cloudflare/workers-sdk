@@ -1,4 +1,5 @@
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, it, vi } from "vitest";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
