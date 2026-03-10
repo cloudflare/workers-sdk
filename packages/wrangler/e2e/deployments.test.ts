@@ -32,7 +32,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		afterAll(async () => {
 			// clean up user Worker after all tests
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
 		it("deploys a Worker", async () => {
@@ -267,7 +267,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 	describe("Workers", () => {
 		afterEach(async () => {
 			// clean up user Worker after each test
-			await helper.run(`wrangler delete`);
+			await helper.bestEffortRun(`wrangler delete`);
 		});
 
 		it("deploys a Workers + Assets project with assets only", async () => {
@@ -583,7 +583,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 		afterEach(async () => {
 			// clean up dispatch Worker
-			await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
+			await helper.bestEffortRun(
+				`wrangler delete -c dispatch-worker/wrangler.toml`
+			);
 			await helper.run(
 				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
 			);
@@ -937,7 +939,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 
 	afterAll(async () => {
 		// clean up user Worker after each test
-		const deleteWorker = helper.run(`wrangler delete`);
+		const deleteWorker = helper.bestEffortRun(`wrangler delete`);
 		const deleteContainer = helper.run(
 			`wrangler containers delete ${applicationId}`
 		);
