@@ -61,13 +61,13 @@ export const vectorizeListVectorsCommand = createCommand({
 
 		const result = await listVectors(config, args.name, options);
 
-		if (result.vectors.length === 0) {
-			logger.warn("No vectors found in this index.");
+		if (args.json) {
+			logger.log(JSON.stringify(result, null, 2));
 			return;
 		}
 
-		if (args.json) {
-			logger.log(JSON.stringify(result, null, 2));
+		if (result.vectors.length === 0) {
+			logger.warn("No vectors found in this index.");
 			return;
 		}
 
