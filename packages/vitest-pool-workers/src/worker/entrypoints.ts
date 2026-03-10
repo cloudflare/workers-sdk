@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import {
 	DurableObject as DurableObjectClass,
+	env as runtimeEnv,
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
@@ -250,13 +251,15 @@ async function getWorkerEntrypointRPCProperty(
 	entrypoint: string,
 	key: string
 ): Promise<unknown> {
-	const { ctx, env } = getEntrypointState(wrapper);
+	const { ctx } = getEntrypointState(wrapper);
 	const { mainPath, entrypointValue } = await getWorkerEntrypointExport(
-		env,
+		runtimeEnv as Cloudflare.Env,
 		entrypoint
 	);
 	// Ensure constructor and properties execute with ctx `AsyncLocalStorage` set
 	return patchAndRunWithHandlerContext(ctx, () => {
+		// Use the dynamic env from `cloudflare:workers` to respect `withEnv()`
+		const env = runtimeEnv as Cloudflare.Env;
 		const expectedWorkerEntrypointMessage = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\` for RPC`;
 		if (typeof entrypointValue !== "function") {
 			throw new TypeError(expectedWorkerEntrypointMessage);
@@ -312,7 +315,7 @@ export function createWorkerEntrypointWrapper(
 					// Assuming the user has defined an `ExportedHandler`
 					const maybeFn = (entrypointValue as Record<string, unknown>)[key];
 					if (typeof maybeFn === "function") {
-						return maybeFn.call(entrypointValue, thing, this.env, this.ctx);
+						return maybeFn.call(entrypointValue, thing, runtimeEnv, this.ctx);
 					} else {
 						const message = `Expected ${entrypoint} export of ${mainPath} to define a \`${key}()\` function`;
 						throw new TypeError(message);
@@ -320,7 +323,7 @@ export function createWorkerEntrypointWrapper(
 				} else if (typeof entrypointValue === "function") {
 					// Assuming the user has defined a `WorkerEntrypoint` subclass
 					const ctor = entrypointValue as WorkerEntrypointConstructor;
-					const instance = new ctor(this.ctx, this.env);
+					const instance = new ctor(this.ctx, runtimeEnv);
 					// noinspection SuspiciousTypeOfGuard
 					if (!(instance instanceof WorkerEntrypoint)) {
 						const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\``;
@@ -530,14 +533,14 @@ export function createWorkflowEntrypointWrapper(entrypoint: string) {
 		...args
 	) {
 		const { mainPath, entrypointValue } = await getWorkerEntrypointExport(
-			this.env,
+			runtimeEnv,
 			entrypoint
 		);
 		// workflow entrypoint value should always be a constructor
 		if (typeof entrypointValue === "function") {
 			// Assuming the user has defined a `WorkflowEntrypoint` subclass
 			const ctor = entrypointValue as WorkflowEntrypointConstructor;
-			const instance = new ctor(this.ctx, this.env);
+			const instance = new ctor(this.ctx, runtimeEnv);
 			// noinspection SuspiciousTypeOfGuard
 			if (!(instance instanceof WorkflowEntrypoint)) {
 				const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkflowEntrypoint\``;
