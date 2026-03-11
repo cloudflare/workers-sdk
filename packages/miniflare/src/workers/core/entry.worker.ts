@@ -9,9 +9,8 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
-import { LOCAL_EXPLORER_BASE_PATH } from "../../plugins/core/constants";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
-import { CoreBindings, CoreHeaders } from "./constants";
+import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes, WorkerRoute } from "./routing";
@@ -383,9 +382,14 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		// The magic proxy client (used by getPlatformProxy) will always specify an operation
-		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
-		if (isProxy) return handleProxy(request, env);
+		// The magic proxy client (used by getPlatformProxy)
+		if (new URL(request.url).pathname === CorePaths.PLATFORM_PROXY) {
+			if (request.headers.get(CoreHeaders.OP) !== null) {
+				return handleProxy(request, env);
+			}
+
+			return new Response("Invalid proxy request", { status: 400 });
+		}
 
 		// `dispatchFetch()` will always inject this header. When
 		// calling this function, we never want to display the pretty-error page.
@@ -411,16 +415,16 @@ export default <ExportedHandler<Env>>{
 
 		try {
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
-				if (url.pathname.startsWith(LOCAL_EXPLORER_BASE_PATH)) {
+				if (url.pathname.startsWith(CorePaths.EXPLORER)) {
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
 				}
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
-					url.pathname === "/cdn-cgi/handler/scheduled" ||
-					/* legacy URL path */ url.pathname === "/cdn-cgi/mf/scheduled"
+					url.pathname === CorePaths.SCHEDULED ||
+					/* legacy URL path */ url.pathname === CorePaths.LEGACY_SCHEDULED
 				) {
-					if (url.pathname === "/cdn-cgi/mf/scheduled") {
+					if (url.pathname === CorePaths.LEGACY_SCHEDULED) {
 						ctx.waitUntil(
 							env[CoreBindings.SERVICE_LOOPBACK].fetch(
 								"http://localhost/core/log",
@@ -429,7 +433,7 @@ export default <ExportedHandler<Env>>{
 									headers: {
 										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
 									},
-									body: `Triggering scheduled handlers via a request to \`/cdn-cgi/mf/scheduled\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`/cdn-cgi/handler/scheduled\``,
+									body: `Triggering scheduled handlers via a request to \`${CorePaths.LEGACY_SCHEDULED}\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`${CorePaths.SCHEDULED}\``,
 								}
 							)
 						);
@@ -437,7 +441,7 @@ export default <ExportedHandler<Env>>{
 					return await handleScheduled(url.searchParams, service);
 				}
 
-				if (url.pathname === "/cdn-cgi/handler/email") {
+				if (url.pathname === CorePaths.EMAIL) {
 					return await handleEmail(
 						url.searchParams,
 						request,
@@ -447,9 +451,9 @@ export default <ExportedHandler<Env>>{
 					);
 				}
 
-				if (url.pathname.startsWith("/cdn-cgi/handler/")) {
+				if (url.pathname.startsWith(CorePaths.HANDLER_PREFIX)) {
 					return new Response(
-						`"${url.pathname}" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`,
+						`"${url.pathname}" is not a valid handler. Did you mean to use "${CorePaths.SCHEDULED}" or "${CorePaths.EMAIL}"?`,
 						{ status: 404 }
 					);
 				}
