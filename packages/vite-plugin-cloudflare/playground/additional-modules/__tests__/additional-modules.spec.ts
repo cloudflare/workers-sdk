@@ -17,6 +17,22 @@ test("supports Text modules with a '.html' extension", async ({ expect }) => {
 	expect(content).toBe("Hello world");
 });
 
+test("supports Text modules imported via subpath imports", async ({
+	expect,
+}) => {
+	await page.goto(`${viteTestUrl}/subpath-html`);
+	const content = await page.textContent("h1");
+	expect(content).toBe("Hello world");
+});
+
+test("supports Text modules imported via subpath imports with extension", async ({
+	expect,
+}) => {
+	await page.goto(`${viteTestUrl}/subpath-html-with-ext`);
+	const content = await page.textContent("h1");
+	expect(content).toBe("Hello world");
+});
+
 test("supports Text modules with a '.txt' extension", async ({ expect }) => {
 	const result = await getTextResponse("/text");
 	expect(result).toBe("Example text content.\n");
