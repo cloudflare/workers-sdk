@@ -3,6 +3,7 @@ import { createPlugin, createRequestHandler } from "../utils";
 
 /**
  * Plugin to forward `/cdn-cgi/` routes to Miniflare in development
+ * We handle specified routes rather than using a catch all so that users can add their own routes using Vite's proxy functionality
  */
 export const cdnCgiPlugin = createPlugin("cdn-cgi", (ctx) => {
 	return {
@@ -28,6 +29,7 @@ export const cdnCgiPlugin = createPlugin("cdn-cgi", (ctx) => {
 				if (
 					url === "/cdn-cgi/explorer" ||
 					url.startsWith("/cdn-cgi/explorer/") ||
+					url.startsWith("/cdn-cgi/explorer?") ||
 					url.startsWith("/cdn-cgi/handler/")
 				) {
 					await requestHandler(req, res, next);
