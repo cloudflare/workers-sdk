@@ -106,7 +106,7 @@ describe("local explorer", () => {
 		expect(text).toContain("<!doctype html>");
 	});
 
-	describe("without X_LOCAL_EXPLORER=false", () => {
+	describe("with X_LOCAL_EXPLORER=false", () => {
 		let ip: string;
 		let port: number;
 		let stop: (() => Promise<unknown>) | undefined;
