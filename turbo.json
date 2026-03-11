@@ -19,7 +19,9 @@
 		"MINIFLARE_CONTAINER_EGRESS_IMAGE",
 		"WRANGLER_DOCKER_HOST",
 		"WRANGLER_LOG_PATH",
-		"WRANGLER_LOG"
+		"WRANGLER_LOG",
+		"CLOUDFLARE_API_TOKEN",
+		"CLOUDFLARE_ACCOUNT_ID"
 	],
 	"tasks": {
 		"dev": {
@@ -50,7 +52,8 @@
 		},
 		"test:e2e": {
 			"dependsOn": ["build"],
-			"outputLogs": "new-only"
+			"outputLogs": "new-only",
+			"env": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "NODE_DEBUG"]
 		},
 		"//#check:format": {
 			"cache": true

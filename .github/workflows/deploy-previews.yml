@@ -1,20 +1,19 @@
-name: Deploy Pages Previews
+name: Deploy Previews
 
-# This workflow is designed to deploy a "preview" version of a Pages project based on PR labels.
+# This workflow is designed to deploy a "preview" version of a project based on PR labels.
 
 # Triggers:
 # - update to a PR that has one of the `preview:...` labels
 #
 # Actions:
-# - deploy the matching Pages project to Cloudflare.
+# - deploy the matching project to Cloudflare.
 #
-# PR Label                   | Pages Project
+# PR Label                         | Project
 # ---------------------------------------------------------
 # preview:chrome-devtools-patches  | packages/chrome-devtools-patches
-# preview:quick-edit         | packages/quick-edit
-# preview:workers-playground | packages/workers-playground
+# preview:quick-edit               | packages/quick-edit
 #
-# Note: this workflow does not run tests against these packages, only for deploys previews.
+# Note: this workflow does not run tests against these packages, only deploys previews.
 
 on:
   pull_request:
@@ -26,11 +25,11 @@ permissions:
   pull-requests: write
 
 jobs:
-  deploy-pages-projects:
+  deploy-projects:
     # Only run this on PRs that are for the "cloudflare" org and not "from" `main`
     # - non-Cloudflare PRs will not have the secrets needed
     # - PRs "from" main would accidentally do a production deployment
-    if: github.repository_owner == 'cloudflare' && github.head_ref != 'main' && (contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches') || contains(github.event.*.labels.*.name, 'preview:quick-edit') || contains(github.event.*.labels.*.name, 'preview:workers-playground'))
+    if: github.repository_owner == 'cloudflare' && github.head_ref != 'main' && (contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches') || contains(github.event.*.labels.*.name, 'preview:quick-edit'))
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-app-previews
@@ -69,23 +68,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           NODE_OPTIONS: "--max_old_space_size=30000"
 
-      - name: Deploy Workers Playground preview
-        if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
-        run: |
-          output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
-          echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | sed -nE 's/.*Take a peek over at (https?:\/\/[^ ]+).*/\1/p')
-          echo "Extracted URL: $url"
-          echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          VITE_DEVTOOLS_PREVIEW_URL: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}
-
       - name: "Comment on PR with Devtools Link"
         if: contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches')
         uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2
         with:
-          header: ${{ steps.finder.outputs.pr }}
+          header: chrome-devtools-preview
           message: |
             The Wrangler DevTools preview is now live. You can access it directly at: ${{ env.VITE_DEVTOOLS_PREVIEW_URL }}/js_app
 
@@ -99,16 +86,3 @@ jobs:
             - https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&ws=127.0.0.1%3A9229%2Fws&domain=tester&debugger=true
             + https://8afc7d3d.cloudflare-devtools.pages.dev/js_app?theme=systemPreferred&ws=127.0.0.1%3A9229%2Fws&domain=tester&debugger=true
             ```
-
-      - name: "Comment on PR with Combined Link"
-        if: contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches') && contains(github.event.*.labels.*.name, 'preview:workers-playground')
-        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 # v2
-        with:
-          header: ${{ steps.finder.outputs.pr }}
-          append: true
-          message: |
-
-            ---
-
-            The Workers Playground preview is also now live. The Playground preview embeds the above DevTools preview, so you can see them working together at:
-            ${{ env.PLAYGROUND_URL }}/playground

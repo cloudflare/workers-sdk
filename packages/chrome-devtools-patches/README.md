@@ -52,16 +52,9 @@ Two methods are available for testing updates:
 
 **Preview Builds:**
 
-On any pull request to the repo on GitHub, you can add labels to trigger preview builds of both the DevTools frontend, and the Playground. This is useful because it will allow you to manually test your changes in a live environment, and with one-click.
+On any pull request to the repo on GitHub, you can add the `preview:chrome-devtools-patches` label to trigger a preview build of the DevTools frontend. This is useful because it will allow you to manually test your changes in a live environment, and with one-click.
 
-There are two labels you can use:
-
-- `preview:chrome-devtools-patches` - this will trigger the DevTools preview
-- `preview:workers-playground` - this will trigger the Playground preview
-
-If you add **both** labels, Playground will embed the DevTools preview, so you can test them together.
-
-Once the previews are built, you will see a comment on the PR with links to the live URLs.
+Once the preview is built, you will see a comment on the PR with a link to the live URL.
 
 ## Acceptance Criteria
 

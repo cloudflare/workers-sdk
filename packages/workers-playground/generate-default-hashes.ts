@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { FormData, Response } from "undici";
 
@@ -86,11 +87,12 @@ const defaultWorker = async () => {
 async function serialiseWorker(worker: FormData) {
 	const serialisedWorker = new Response(worker);
 
-	const generatedBoundary = serialisedWorker.headers
-		.get("content-type")!
-		.split(";")[1]
-		.split("=")[1]
-		.trim();
+	const generatedBoundary =
+		// content-type is always set for a FormData response, and always has the boundary as a parameter
+		(serialisedWorker.headers.get("content-type") as string)
+			.split(";")[1]
+			.split("=")[1]
+			.trim();
 
 	// This boundary is arbitrary, it's just specified for stability
 	const fixedBoundary = "----formdata-88e2b909-318c-42df-af0d-9077f33c7988";
@@ -107,24 +109,23 @@ const pythonWorkerContent = await pythonWorker();
 const defaultWorkerContent = await defaultWorker();
 
 if (process.argv[2] === "check") {
-	const currentFile = await import("./src/QuickEditor/defaultHashes.ts");
+	const currentFile = await import("./src/QuickEditor/defaultHashes.js");
 	const generated = await serialiseHashes({
 		"/python": pythonWorkerContent,
 		"/": defaultWorkerContent,
 	});
 
-	const equal =
-		currentFile.default["/"] === generated["/"] &&
-		currentFile.default["/python"] === generated["/python"];
-	if (!equal) {
-		console.log("Hash not up to date", equal);
+	try {
+		assert.deepEqual(currentFile.default, generated);
+	} catch (error) {
+		console.error("Hash not up to date", error);
 		console.log("current.txt", currentFile.default);
 		console.log("gen.txt", generated);
+		process.exit(1);
 	}
-	process.exit(equal ? 0 : 1);
 } else {
 	await writeFile(
-		"./src/QuickEditor/defaultHashes.ts",
+		"./src/QuickEditor/defaultHashes.js",
 		await generateFileForWorker({
 			"/python": pythonWorkerContent,
 			"/": defaultWorkerContent,
