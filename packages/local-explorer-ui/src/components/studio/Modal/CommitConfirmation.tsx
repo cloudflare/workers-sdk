@@ -44,7 +44,7 @@ export function StudioCommitConfirmation({
 			}}
 		>
 			<Dialog className="p-6">
-				<div className="flex items-start justify-between gap-4 mb-4">
+				<div className="mb-4 flex items-start justify-between gap-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-2xl font-semibold">
 						Review and Confirm Changes

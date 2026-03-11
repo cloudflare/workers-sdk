@@ -48,7 +48,7 @@ export function StudioSQLiteExplainTab({
 	tree = tree.filter((node) => node.parent === 0);
 
 	return (
-		<div className="w-full h-full grow p-8 overflow-auto">
+		<div className="h-full w-full grow overflow-auto p-8">
 			<div className="font-mono text-sm">
 				<ExplainNodes data={tree} />
 			</div>
@@ -68,9 +68,9 @@ function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 
 				return (
 					<Fragment key={row.id}>
-						<div className="h-8 flex gap-2 items-center">
+						<div className="flex h-8 items-center gap-2">
 							<div
-								className={cn("inline-flex border rounded-full", {
+								className={cn("inline-flex rounded-full border", {
 									"bg-green-500": performance === "fast",
 									"bg-red-500": performance === "slow",
 									"bg-yellow-500": performance === "medium",
@@ -80,7 +80,7 @@ function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 							/>
 							<div>{label}</div>
 						</div>
-						<div className="pl-4 border-l">
+						<div className="border-l pl-4">
 							<ExplainNodes data={row.children} />
 						</div>
 					</Fragment>
@@ -116,7 +116,7 @@ function describeExplainNode(d: string): {
 			label: (
 				<div className="flex items-center">
 					<strong>SCAN </strong>
-					<span className="border border-border p-1 mx-2 rounded flex items-center gap-2">
+					<span className="mx-2 flex items-center gap-2 rounded border border-border p-1">
 						<TableIcon />
 						{d.substring("SCAN ".length)}
 					</span>
@@ -149,7 +149,7 @@ function describeExplainNode(d: string): {
 							</div>
 						}
 					>
-						<strong className="underline cursor-pointer">CORRELATED</strong>
+						<strong className="cursor-pointer underline">CORRELATED</strong>
 					</Tooltip>
 					<span>{d.substring("CORRELATED".length)}</span>
 				</div>
@@ -196,7 +196,7 @@ function describeExplainNode(d: string): {
 						</div>
 					}
 				>
-					<strong className="underline cursor-pointer">{d}</strong>
+					<strong className="cursor-pointer underline">{d}</strong>
 				</Tooltip>
 			),
 		};

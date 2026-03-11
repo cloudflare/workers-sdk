@@ -59,7 +59,7 @@ export const StudioDeleteConfirmationModal = ({
 			open={isOpen}
 		>
 			<Dialog className="p-6">
-				<div className="flex items-start justify-between gap-4 mb-4">
+				<div className="mb-4 flex items-start justify-between gap-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
 				</div>
@@ -93,7 +93,7 @@ export const StudioDeleteConfirmationModal = ({
 						)}
 					</div>
 
-					<div className="flex gap-2 justify-end mt-4">
+					<div className="mt-4 flex justify-end gap-2">
 						<Button variant="secondary" onClick={closeModal}>
 							Cancel
 						</Button>

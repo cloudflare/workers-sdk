@@ -524,7 +524,7 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 		<ModalProvider>
 			<StudioContextMenuProvider>
 				<StudioContextProvider value={contextValues}>
-					<div className="relative w-full h-full overflow-hidden">
+					<div className="relative h-full w-full overflow-hidden">
 						<StudioWindowTabPane />
 					</div>
 				</StudioContextProvider>
