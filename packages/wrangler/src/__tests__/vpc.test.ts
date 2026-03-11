@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ServiceType } from "../vpc/index";
+import { validateHostname, validateRequest } from "../vpc/validation";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -15,6 +16,7 @@ import type {
 	ConnectivityService,
 	ConnectivityServiceRequest,
 } from "../vpc/index";
+import type { ServiceArgs } from "../vpc/validation";
 
 describe("vpc help", () => {
 	const std = mockConsoleMethods();
@@ -322,6 +324,189 @@ describe("vpc service commands", () => {
 			   Hostname: db.example.com
 			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440002"
 		`);
+	});
+});
+
+describe("hostname validation", () => {
+	it("should accept valid hostnames", () => {
+		expect(() => validateHostname("api.example.com")).not.toThrow();
+		expect(() => validateHostname("localhost")).not.toThrow();
+		expect(() => validateHostname("my-service.internal.local")).not.toThrow();
+		expect(() => validateHostname("sub.domain.example.co.uk")).not.toThrow();
+	});
+
+	it("should reject empty hostname", () => {
+		expect(() => validateHostname("")).toThrow("Hostname cannot be empty.");
+		expect(() => validateHostname("   ")).toThrow("Hostname cannot be empty.");
+	});
+
+	it("should reject hostname exceeding 253 characters", () => {
+		const longHostname = "a".repeat(254);
+		expect(() => validateHostname(longHostname)).toThrow(
+			"Hostname is too long. Maximum length is 253 characters."
+		);
+	});
+
+	it("should accept hostname at exactly 253 characters", () => {
+		const label = "a".repeat(63);
+		const hostname = `${label}.${label}.${label}.${label.slice(0, 61)}`;
+		expect(hostname.length).toBe(253);
+		expect(() => validateHostname(hostname)).not.toThrow();
+	});
+
+	it("should reject hostname with URL scheme", () => {
+		expect(() => validateHostname("https://example.com")).toThrow(
+			"Hostname must not include a URL scheme"
+		);
+		expect(() => validateHostname("http://example.com")).toThrow(
+			"Hostname must not include a URL scheme"
+		);
+	});
+
+	it("should reject hostname with path", () => {
+		expect(() => validateHostname("example.com/path")).toThrow(
+			"Hostname must not include a path"
+		);
+	});
+
+	it("should reject bare IPv4 address", () => {
+		expect(() => validateHostname("192.168.1.1")).toThrow(
+			"Hostname must not be an IP address. Use --ipv4 or --ipv6 instead."
+		);
+		expect(() => validateHostname("10.0.0.1")).toThrow(
+			"Hostname must not be an IP address"
+		);
+	});
+
+	it("should reject bare IPv6 address", () => {
+		expect(() => validateHostname("::1")).toThrow(
+			"Hostname must not be an IP address"
+		);
+		expect(() => validateHostname("2001:db8::1")).toThrow(
+			"Hostname must not be an IP address"
+		);
+		expect(() => validateHostname("[::1]")).toThrow(
+			"Hostname must not be an IP address"
+		);
+	});
+
+	it("should reject hostname with port", () => {
+		expect(() => validateHostname("example.com:8080")).toThrow(
+			"Hostname must not include a port number"
+		);
+	});
+
+	it("should reject hostname with whitespace", () => {
+		expect(() => validateHostname("bad host.com")).toThrow(
+			"Hostname must not contain whitespace"
+		);
+	});
+
+	it("should accept hostnames with underscores", () => {
+		expect(() => validateHostname("_dmarc.example.com")).not.toThrow();
+		expect(() => validateHostname("my_service.internal")).not.toThrow();
+	});
+
+	it("should report all applicable errors at once", () => {
+		// "https://example.com/path" has a scheme AND a path
+		expect(() => validateHostname("https://example.com/path")).toThrow(
+			/URL scheme.*\n.*path/s
+		);
+	});
+
+	it("should reject invalid hostname via wrangler service create", async () => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-bad-hostname --type http --hostname https://example.com --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+			)
+		).rejects.toThrow("Hostname must not include a URL scheme");
+	});
+
+	it("should reject IP address as hostname via wrangler service create", async () => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-ip-hostname --type http --hostname 192.168.1.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+			)
+		).rejects.toThrow("Hostname must not be an IP address");
+	});
+});
+
+describe("IP address validation", () => {
+	const baseArgs: ServiceArgs = {
+		name: "test",
+		type: ServiceType.Http,
+		tunnelId: "550e8400-e29b-41d4-a716-446655440000",
+	};
+
+	it("should accept valid IPv4 addresses", () => {
+		expect(() =>
+			validateRequest({ ...baseArgs, ipv4: "192.168.1.1" })
+		).not.toThrow();
+		expect(() =>
+			validateRequest({ ...baseArgs, ipv4: "10.0.0.1" })
+		).not.toThrow();
+	});
+
+	it("should reject invalid IPv4 addresses", () => {
+		expect(() => validateRequest({ ...baseArgs, ipv4: "not-an-ip" })).toThrow(
+			"Invalid IPv4 address"
+		);
+		expect(() =>
+			validateRequest({ ...baseArgs, ipv4: "999.999.999.999" })
+		).toThrow("Invalid IPv4 address");
+		expect(() => validateRequest({ ...baseArgs, ipv4: "example.com" })).toThrow(
+			"Invalid IPv4 address"
+		);
+	});
+
+	it("should accept valid IPv6 addresses", () => {
+		expect(() => validateRequest({ ...baseArgs, ipv6: "::1" })).not.toThrow();
+		expect(() =>
+			validateRequest({ ...baseArgs, ipv6: "2001:db8::1" })
+		).not.toThrow();
+	});
+
+	it("should reject invalid IPv6 addresses", () => {
+		expect(() => validateRequest({ ...baseArgs, ipv6: "not-an-ip" })).toThrow(
+			"Invalid IPv6 address"
+		);
+		expect(() => validateRequest({ ...baseArgs, ipv6: "192.168.1.1" })).toThrow(
+			"Invalid IPv6 address"
+		);
+	});
+
+	it("should accept valid resolver IPs", () => {
+		expect(() =>
+			validateRequest({
+				...baseArgs,
+				hostname: "example.com",
+				resolverIps: "8.8.8.8,8.8.4.4",
+			})
+		).not.toThrow();
+		expect(() =>
+			validateRequest({
+				...baseArgs,
+				hostname: "example.com",
+				resolverIps: "2001:db8::1",
+			})
+		).not.toThrow();
+	});
+
+	it("should reject invalid resolver IPs", () => {
+		expect(() =>
+			validateRequest({
+				...baseArgs,
+				hostname: "example.com",
+				resolverIps: "not-an-ip",
+			})
+		).toThrow("Invalid resolver IP address(es): 'not-an-ip'");
+		expect(() =>
+			validateRequest({
+				...baseArgs,
+				hostname: "example.com",
+				resolverIps: "8.8.8.8,bad-ip,1.1.1.1",
+			})
+		).toThrow("Invalid resolver IP address(es): 'bad-ip'");
 	});
 });
 

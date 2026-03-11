@@ -56,6 +56,7 @@ describe("readWorkerConfigFromFile", () => {
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
+			notSupportedOnAuxiliary: new Set(),
 		});
 	});
 
@@ -85,6 +86,7 @@ describe("readWorkerConfigFromFile", () => {
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
+			notSupportedOnAuxiliary: new Set(),
 		});
 	});
 
