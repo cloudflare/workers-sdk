@@ -50,6 +50,7 @@ export const d1ExportCommand = createCommand({
 		table: {
 			type: "string",
 			description: "Specify which tables to include in export",
+			array: true,
 		},
 		"no-schema": {
 			type: "boolean",
@@ -91,11 +92,7 @@ export const d1ExportCommand = createCommand({
 		}
 
 		// Allow multiple --table x --table y flags or none
-		const tables: string[] = table
-			? Array.isArray(table)
-				? table
-				: [table]
-			: [];
+		const tables = table ?? [];
 
 		if (remote) {
 			return await exportRemotely(config, name, output, tables, !schema, !data);
