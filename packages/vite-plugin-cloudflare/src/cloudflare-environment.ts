@@ -25,23 +25,16 @@ import type { FetchFunctionOptions } from "vite/module-runner";
 
 export const MAIN_ENTRY_NAME = "index";
 
-interface WebSocketContainer {
-	webSocket?: WebSocket;
-}
+type EnvWebSocket = Readonly<
+	Pick<WebSocket, "send" | "addEventListener" | "removeEventListener">
+>;
 
-const webSocketUndefinedError = "The WebSocket is undefined";
-
-function createHotChannel(
-	webSocketContainer: WebSocketContainer
-): vite.HotChannel {
+function createHotChannel(envWebSocket: EnvWebSocket): vite.HotChannel {
 	const listenersMap = new Map<string, Set<vite.HotChannelListener>>();
 
 	const client: vite.HotChannelClient = {
 		send(payload) {
-			const webSocket = webSocketContainer.webSocket;
-			assert(webSocket, webSocketUndefinedError);
-
-			webSocket.send(JSON.stringify(payload));
+			envWebSocket.send(JSON.stringify(payload));
 		},
 	};
 
@@ -56,10 +49,7 @@ function createHotChannel(
 
 	return {
 		send(payload) {
-			const webSocket = webSocketContainer.webSocket;
-			assert(webSocket, webSocketUndefinedError);
-
-			webSocket.send(JSON.stringify(payload));
+			envWebSocket.send(JSON.stringify(payload));
 		},
 		on(event: string, listener: vite.HotChannelListener) {
 			const listeners = listenersMap.get(event) ?? new Set();
@@ -71,31 +61,55 @@ function createHotChannel(
 			listenersMap.get(event)?.delete(listener);
 		},
 		listen() {
-			const webSocket = webSocketContainer.webSocket;
-			assert(webSocket, webSocketUndefinedError);
-
-			webSocket.addEventListener("message", onMessage);
+			envWebSocket.addEventListener("message", onMessage);
 		},
 		close() {
-			const webSocket = webSocketContainer.webSocket;
-			assert(webSocket, webSocketUndefinedError);
-
-			webSocket.removeEventListener("message", onMessage);
+			envWebSocket.removeEventListener("message", onMessage);
 		},
 	};
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
-	#webSocketContainer: { webSocket?: WebSocket };
+	#webSocket: WebSocket | undefined;
+	#onRunnerInitialized: () => void;
 
 	constructor(name: string, config: vite.ResolvedConfig) {
-		// It would be good if we could avoid passing this object around and mutating it
-		const webSocketContainer = {};
+		let resolveRunnerInitialized = () => {};
+		const runnerInitialized = new Promise<void>((resolve) => {
+			resolveRunnerInitialized = resolve;
+		});
+
+		const getClassWebsocket = () => {
+			assert(this.#webSocket, "The Environment WebSocket is undefined");
+			return this.#webSocket;
+		};
+
+		const envWebsocket = new Proxy<EnvWebSocket>({} as EnvWebSocket, {
+			get(_target, property) {
+				return (...args: unknown[]) =>
+					runnerInitialized.then(() => {
+						const ws = getClassWebsocket();
+						const value = Reflect.get(ws, property);
+						assert(
+							typeof value === "function",
+							`unexpected ${JSON.stringify(property)} get run on envWebSocket`
+						);
+						return value.apply(ws, args);
+					});
+			},
+			set(_target, property, _value) {
+				throw new Error(
+					`Internal Error: unexpected ${JSON.stringify(property)} set run on envWebSocket`
+				);
+			},
+		});
+
 		super(name, config, {
 			hot: true,
-			transport: createHotChannel(webSocketContainer),
+			transport: createHotChannel(envWebsocket),
 		});
-		this.#webSocketContainer = webSocketContainer;
+
+		this.#onRunnerInitialized = resolveRunnerInitialized;
 	}
 
 	async initRunner(
@@ -123,7 +137,8 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		const webSocket = response.webSocket;
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
-		this.#webSocketContainer.webSocket = webSocket;
+		this.#webSocket = webSocket;
+		this.#onRunnerInitialized();
 	}
 
 	async fetchWorkerExportTypes(
