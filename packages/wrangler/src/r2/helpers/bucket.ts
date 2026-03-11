@@ -1,5 +1,7 @@
+import { UserError } from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../../cfetch";
+import { isDataCatalogConflict } from "./misc";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { HeadersInit } from "undici";
 
@@ -543,6 +545,7 @@ export async function putLifecycleRules(
 	accountId: string,
 	bucket: string,
 	rules: LifecycleRule[],
+	force: boolean,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {
@@ -552,13 +555,27 @@ export async function putLifecycleRules(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchResult(
-		complianceConfig,
-		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
-		{
-			method: "PUT",
-			headers,
-			body: JSON.stringify({ rules: rules }),
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
+	}
+
+	try {
+		await fetchResult(
+			complianceConfig,
+			`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
+			{
+				method: "PUT",
+				headers,
+				body: JSON.stringify({ rules: rules }),
+			}
+		);
+	} catch (error) {
+		if (!force && isDataCatalogConflict(error)) {
+			throw new UserError(
+				`Data catalog validation failed: This operation could leave this bucket's data catalog in an invalid state.\n` +
+					`To bypass this check and proceed anyway, run the command again with the --force flag (-y).`
+			);
 		}
-	);
+		throw error;
+	}
 }

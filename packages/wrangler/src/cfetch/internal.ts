@@ -326,9 +326,21 @@ export async function fetchR2Objects(
 	} else if (response.status === 404) {
 		return null;
 	} else {
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
+		// Read response body to get detailed error message
+		let errorDetails = "";
+		try {
+			const bodyText = await response.text();
+			if (bodyText) {
+				errorDetails = `Failed to fetch ${resource} - ${response.status}: ${response.statusText} - ${bodyText}`;
+			} else {
+				errorDetails = `Failed to fetch ${resource} - ${response.status}: ${response.statusText}`;
+			}
+		} catch {
+			// If we can't read the body, continue without it
+			errorDetails = `Failed to fetch ${resource} - ${response.status}: ${response.statusText}`;
+		}
+
+		throw new Error(errorDetails);
 	}
 }
 
