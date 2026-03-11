@@ -120,13 +120,13 @@ export const tunnelRunCommand = createCommand({
 			cloudflared.kill("SIGTERM");
 
 			// Force kill after timeout
-			setTimeout(() => {
+			const forceKillTimer = setTimeout(() => {
 				if (!cloudflared.killed) {
 					logger.debug("Force killing cloudflared...");
 					cloudflared.kill("SIGKILL");
 				}
 			}, 5000);
-		};
+			forceKillTimer.unref();
 
 		process.on("SIGINT", shutdownHandler);
 		process.on("SIGTERM", shutdownHandler);
