@@ -2,9 +2,9 @@ import { CoreHeaders } from "miniflare";
 import { createPlugin, createRequestHandler } from "../utils";
 
 /**
- * Plugin to forward `/cdn-cgi/handler/*` routes to trigger handlers in development
+ * Plugin to forward `/cdn-cgi/` routes to Miniflare in development
  */
-export const triggerHandlersPlugin = createPlugin("trigger-handlers", (ctx) => {
+export const cdnCgiPlugin = createPlugin("cdn-cgi", (ctx) => {
 	return {
 		enforce: "pre",
 		async configureServer(viteDevServer) {
@@ -22,7 +22,19 @@ export const triggerHandlersPlugin = createPlugin("trigger-handlers", (ctx) => {
 				});
 			});
 
-			viteDevServer.middlewares.use("/cdn-cgi/handler/", requestHandler);
+			viteDevServer.middlewares.use(async (req, res, next) => {
+				const url = req.originalUrl ?? "";
+
+				if (
+					url === "/cdn-cgi/explorer" ||
+					url.startsWith("/cdn-cgi/explorer/") ||
+					url.startsWith("/cdn-cgi/handler/")
+				) {
+					await requestHandler(req, res, next);
+				} else {
+					next();
+				}
+			});
 		},
 	};
 });
