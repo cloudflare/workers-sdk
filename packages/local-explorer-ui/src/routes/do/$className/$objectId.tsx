@@ -60,6 +60,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 function ObjectView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
+	const { namespaceId } = loaderData;
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
@@ -75,8 +76,6 @@ function ObjectView(): JSX.Element {
 		schemaName: string;
 		tableName: string;
 	} | null>(null);
-
-	const { namespaceId } = loaderData;
 
 	const driver = useMemo<LocalDODriver>(
 		() => new LocalDODriver(namespaceId, params.objectId),
@@ -185,6 +184,9 @@ function ObjectView(): JSX.Element {
 						to="/do/$className"
 					>
 						{params.className}
+						{namespaceId !== params.className && (
+							<span className="text-text-secondary">({namespaceId})</span>
+						)}
 					</Link>,
 					<span
 						className="flex items-center gap-1.5 font-mono text-xs"

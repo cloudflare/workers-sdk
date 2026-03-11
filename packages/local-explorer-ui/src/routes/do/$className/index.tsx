@@ -123,6 +123,9 @@ function NamespaceView() {
 				items={[
 					<span className="flex items-center gap-1.5" key="class-name">
 						{params.className}
+						{namespaceId !== params.className && (
+							<span className="text-text-secondary">({namespaceId})</span>
+						)}
 					</span>,
 				]}
 				title="Durable Objects"

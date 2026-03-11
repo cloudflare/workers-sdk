@@ -7,7 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
-	Link,
+	getRouteApi,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
@@ -41,11 +41,15 @@ export const Route = createFileRoute("/d1/$databaseId")({
 	}),
 });
 
+const rootRoute = getRouteApi("__root__");
+
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
+	const loaderData = Route.useLoaderData();
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
+	const rootData = rootRoute.useLoaderData();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
@@ -63,6 +67,14 @@ function DatabaseView(): JSX.Element {
 		() => new LocalD1Driver(params.databaseId),
 		[params.databaseId]
 	);
+
+	// Get database name (binding) from root loader data
+	const databaseName = useMemo(() => {
+		const database = rootData.databases.find(
+			(db) => db.uuid === params.databaseId
+		);
+		return database?.name;
+	}, [rootData.databases, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
@@ -153,15 +165,16 @@ function DatabaseView(): JSX.Element {
 				icon={DatabaseIcon}
 				title="D1"
 				items={[
-					<Link
-						className="flex items-center gap-1.5"
-						key="database-id"
-						params={{ databaseId: params.databaseId }}
-						search={{ table: undefined }}
-						to="/d1/$databaseId"
-					>
-						{params.databaseId}
-					</Link>,
+					<span className="flex items-center gap-1.5">
+						{databaseName && databaseName !== params.databaseId ? (
+							<>
+								{databaseName}
+								<span className="text-text-secondary">{params.databaseId}</span>
+							</>
+						) : (
+							params.databaseId
+						)}
+					</span>,
 					<TableSelect
 						key="table-selector"
 						selectedTable={searchParams.table}

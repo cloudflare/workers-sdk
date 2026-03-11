@@ -1,6 +1,6 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	workersKvNamespaceDeleteKeyValuePair,
 	workersKvNamespaceGetMultipleKeyValuePairs,
@@ -75,9 +75,18 @@ const prependEntry = (entries: KVEntry[], entry: KVEntry): KVEntry[] => [
 const entryVisible = (entries: KVEntry[], key: string): boolean =>
 	entries.some((e) => e.key.name === key);
 
+const rootRoute = getRouteApi("__root__");
+
 function NamespaceView() {
 	const { namespaceId } = Route.useParams();
 	const loaderData = Route.useLoaderData();
+	const rootData = rootRoute.useLoaderData();
+
+	// Get namespace title (binding name) from root loader data
+	const namespaceTitle = useMemo(() => {
+		const namespace = rootData.kvNamespaces.find((ns) => ns.id === namespaceId);
+		return namespace?.title;
+	}, [rootData.kvNamespaces, namespaceId]);
 
 	const [entries, setEntries] = useState<KVEntry[]>(loaderData.entries);
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
@@ -360,7 +369,14 @@ function NamespaceView() {
 				title="KV"
 				items={[
 					<span className="flex items-center gap-1.5" key="namespace-id">
-						{namespaceId}
+						{namespaceTitle && namespaceTitle !== namespaceId ? (
+							<>
+								{namespaceTitle}
+								<span className="text-text-secondary">({namespaceId})</span>
+							</>
+						) : (
+							namespaceId
+						)}
 					</span>,
 				]}
 			/>
