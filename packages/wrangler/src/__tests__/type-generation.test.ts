@@ -3758,7 +3758,7 @@ describe("pipeline schema type generation", () => {
 	});
 
 	describe("cron trigger types", () => {
-		it("should generate crons as literal union types in GlobalProps", async ({
+		it("should generate `crons` as literal union types in `GlobalProps`", async ({
 			expect,
 		}) => {
 			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3798,7 +3798,7 @@ describe("pipeline schema type generation", () => {
 			`);
 		});
 
-		it("should generate crons as string type when empty array is provided", async ({
+		it("should generate `crons` as `string` type when empty array is provided", async ({
 			expect,
 		}) => {
 			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3838,7 +3838,7 @@ describe("pipeline schema type generation", () => {
 			`);
 		});
 
-		it("should not include crons in GlobalProps when no triggers are defined", async ({
+		it("should not include `crons` in `GlobalProps` when no `triggers` are defined", async ({
 			expect,
 		}) => {
 			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
@@ -3876,7 +3876,7 @@ describe("pipeline schema type generation", () => {
 			`);
 		});
 
-		it("should aggregate crons from all environments", async ({ expect }) => {
+		it("should aggregate `crons` from all environments", async ({ expect }) => {
 			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
 			fs.writeFileSync(
 				"./wrangler.json",
@@ -3925,7 +3925,9 @@ describe("pipeline schema type generation", () => {
 			`);
 		});
 
-		it("should only include crons from specified --env", async ({ expect }) => {
+		it("should only include `crons` from specified --env", async ({
+			expect,
+		}) => {
 			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
 			fs.writeFileSync(
 				"./wrangler.json",
@@ -3971,7 +3973,7 @@ describe("pipeline schema type generation", () => {
 			`);
 		});
 
-		it("should not include crons in GlobalProps for service-worker format", async ({
+		it("should not include `crons` in `GlobalProps` for service-worker format", async ({
 			expect,
 		}) => {
 			fs.writeFileSync(
