@@ -26,12 +26,13 @@ export const cdnCgiPlugin = createPlugin("cdn-cgi", (ctx) => {
 			viteDevServer.middlewares.use(async (req, res, next) => {
 				const url = req.originalUrl ?? "";
 
-				if (
+				const isLocalExplorer =
 					url === "/cdn-cgi/explorer" ||
 					url.startsWith("/cdn-cgi/explorer/") ||
-					url.startsWith("/cdn-cgi/explorer?") ||
-					url.startsWith("/cdn-cgi/handler/")
-				) {
+					url.startsWith("/cdn-cgi/explorer?");
+				const isTriggerHandler = url.startsWith("/cdn-cgi/handler/");
+
+				if (isLocalExplorer || isTriggerHandler) {
 					await requestHandler(req, res, next);
 				} else {
 					next();
