@@ -229,6 +229,9 @@ describe("MetricsRegistry", () => {
 		});
 	});
 
+	// This prometheus-metrics module is an (almost) drop-in replacement for promjs,
+	// so we include tests to verify that the output format matches promjs's exactly.
+	// This ensures compatibility with any existing Prometheus parsers that may be sensitive to formatting details.
 	describe("promjs format compatibility", () => {
 		it("produces the exact format promjs generates for a request counter", ({
 			expect,
