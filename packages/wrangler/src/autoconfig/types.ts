@@ -63,7 +63,7 @@ export type AutoConfigOptions = {
 export type AutoConfigSummary = {
 	scripts: Record<string, string>;
 	wranglerInstall: boolean;
-	wranglerConfig: RawConfig;
+	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;
 	frameworkId?: string;
