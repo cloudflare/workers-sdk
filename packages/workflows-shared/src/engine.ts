@@ -12,6 +12,7 @@ import { computeHash } from "./lib/cache";
 import {
 	ABORT_REASONS,
 	createWorkflowError,
+	isAbortError,
 	isUserTriggeredPause,
 	WorkflowFatalError,
 } from "./lib/errors";
@@ -646,15 +647,22 @@ export class Engine extends DurableObject<Env> {
 			InstanceStatus.WaitingForPause
 		);
 
-		void this.timeoutHandler.waitUntilNothingIsRunning("pause", async () => {
-			await this.ctx.storage.put(PAUSE_DATETIME, new Date());
-			await this.setStatus(
-				metadata.accountId,
-				metadata.instance.id,
-				InstanceStatus.Paused
-			);
-			await this.abort(ABORT_REASONS.USER_PAUSE);
-		});
+		void this.timeoutHandler
+			.waitUntilNothingIsRunning("pause", async () => {
+				await this.ctx.storage.put(PAUSE_DATETIME, new Date());
+				await this.setStatus(
+					metadata.accountId,
+					metadata.instance.id,
+					InstanceStatus.Paused
+				);
+				await this.abort(ABORT_REASONS.USER_PAUSE);
+			})
+			.catch((e) => {
+				// Expected: abort rejects the promise chain when it kills the DO
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			});
 	}
 
 	async userTriggeredRestart() {
@@ -808,6 +816,7 @@ export class Engine extends DurableObject<Env> {
 				InstanceStatus.Errored, // TODO (WOR-85): Remove this once upgrade story is done
 				InstanceStatus.Terminated,
 				InstanceStatus.Complete,
+				InstanceStatus.Paused,
 			].includes(status)
 		) {
 			return;

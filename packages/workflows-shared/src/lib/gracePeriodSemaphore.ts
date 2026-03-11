@@ -78,7 +78,11 @@ export class GracePeriodSemaphore {
 				});
 			} catch {
 				// If the promise gets rejected (e.g. resume cancels the pause),
-				// allow steps to run again
+				// allow steps to run again and unblock any that were waiting
+				for (const promise of this.#waitingSteps) {
+					promise.resolveCallback(undefined);
+				}
+				this.#waitingSteps = [];
 				this.#canInitiateSteps = true;
 				return;
 			}
@@ -109,6 +113,12 @@ export class GracePeriodSemaphore {
 		);
 
 		this.#canInitiateSteps = true;
+
+		// Unblock any steps that were waiting to acquire while the pause was pending
+		for (const promise of this.#waitingSteps) {
+			promise.resolveCallback(undefined);
+		}
+		this.#waitingSteps = [];
 	}
 
 	isRunningStep() {

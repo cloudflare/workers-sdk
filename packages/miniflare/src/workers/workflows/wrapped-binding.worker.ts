@@ -74,33 +74,28 @@ class InstanceImpl implements WorkflowInstance {
 	}
 
 	public async pause(): Promise<void> {
-		const instance = await this.getInstance();
+		using instance = await this.getInstance();
 		await instance.pause();
-		instance[Symbol.dispose]();
 	}
 
 	public async resume(): Promise<void> {
-		const instance = await this.getInstance();
+		using instance = await this.getInstance();
 		await instance.resume();
-		instance[Symbol.dispose]();
 	}
 
 	public async terminate(): Promise<void> {
-		const instance = await this.getInstance();
+		using instance = await this.getInstance();
 		await instance.terminate();
-		instance[Symbol.dispose]();
 	}
 
 	public async restart(): Promise<void> {
-		const instance = await this.getInstance();
+		using instance = await this.getInstance();
 		await instance.restart();
-		instance[Symbol.dispose]();
 	}
 
 	public async status(): Promise<InstanceStatus> {
-		const instance = await this.getInstance();
+		using instance = await this.getInstance();
 		using res = (await instance.status()) as InstanceStatus & Disposable;
-		instance[Symbol.dispose]();
 		return structuredClone(res);
 	}
 
@@ -108,9 +103,8 @@ class InstanceImpl implements WorkflowInstance {
 		payload: unknown;
 		type: string;
 	}): Promise<void> {
-		const instance = await this.getInstance();
+		using instance = await this.getInstance();
 		await instance.sendEvent(args);
-		instance[Symbol.dispose]();
 	}
 }
 

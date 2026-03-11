@@ -219,20 +219,31 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	public async status(): Promise<
 		InstanceStatus & { __LOCAL_DEV_STEP_OUTPUTS: unknown[] }
 	> {
-		// If the stub is stale (e.g. after pause/restart/terminate aborted
-		// the DO), refresh it transparently so callers never see the error.
-		let status: EngineInstanceStatus;
+		// Both getStatus() and readLogs() must use the same fresh stub.
+		// After pause/restart/terminate aborts the DO, the stub goes stale
+		const fetchStatusAndLogs = async () => {
+			const status = await this.stub.getStatus();
+
+			// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
+			const logs = await (this.stub.readLogs() as unknown as Promise<
+				EngineLogs & Disposable
+			>);
+
+			return { status, logs };
+		};
+
+		let result: {
+			status: EngineInstanceStatus;
+			logs: EngineLogs & Disposable;
+		};
 		try {
-			status = await this.stub.getStatus();
+			result = await fetchStatusAndLogs();
 		} catch {
 			this.stub = this.getStub();
-			status = await this.stub.getStatus();
+			result = await fetchStatusAndLogs();
 		}
-
-		// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
-		using logs = await (this.stub.readLogs() as unknown as Promise<
-			EngineLogs & Disposable
-		>);
+		// Dispose the RPC handle when the method scope exits
+		using logs = result.logs;
 
 		const filteredLogs = logs.logs.filter(
 			(log) =>
@@ -255,7 +266,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		)?.metadata.error;
 
 		return {
-			status: instanceStatusName(status),
+			status: instanceStatusName(result.status),
 			__LOCAL_DEV_STEP_OUTPUTS: stepOutputs,
 			output: workflowOutput,
 			error: workflowError,
