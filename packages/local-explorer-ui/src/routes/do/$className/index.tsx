@@ -186,7 +186,7 @@ function NamespaceView() {
 						</div>
 
 						{hasMore && (
-							<div className="p-4 text-center">
+							<div className="py-4 text-center">
 								<Button
 									variant="secondary"
 									disabled={loadingMore}

@@ -142,120 +142,120 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 		<div className="overflow-hidden rounded-lg border border-border">
 			<Table>
 				<Table.Header>
-				<Table.Row>
-					<Table.Head>Key</Table.Head>
-					<Table.Head>Value</Table.Head>
-					<Table.Head className="w-12" />
-				</Table.Row>
-			</Table.Header>
-			<Table.Body>
-				{entries.map((entry) => {
-					const isEditing = editData?.originalKey === entry.key.name;
-					return (
-						<Table.Row key={entry.key.name} className="group">
-							<Table.Cell className="group/cell align-top">
-								{isEditing && editData ? (
-									<div className="flex flex-col">
-										<label
-											className="sr-only"
-											htmlFor={`edit-key-${entry.key.name}`}
-										>
-											Key
-										</label>
-										<input
-											id={`edit-key-${entry.key.name}`}
-											className={cn(
-												"min-h-8 w-full rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary",
-												{
-													"border-danger focus:shadow-focus-danger":
-														editData.keyError,
-												}
-											)}
-											value={editData.key}
-											onChange={(e) => handleKeyChange(e.target.value)}
-											onKeyDown={handleKeyDown}
-											disabled={saving}
-											autoFocus
-										/>
-										{editData.keyError && (
-											<span className="mt-1 text-xs text-danger">
-												{editData.keyError}
-											</span>
-										)}
-									</div>
-								) : (
-									<div className="group/cell flex items-center gap-1.5">
-										<code className="font-medium text-primary">
-											{entry.key.name}
-										</code>
-										<CopyButton text={entry.key.name} />
-									</div>
-								)}
-							</Table.Cell>
-							<Table.Cell className="group/cell max-w-[400px] font-mono text-[13px]">
-								{isEditing && editData ? (
-									<div className="flex flex-col gap-2">
-										<label
-											className="sr-only"
-											htmlFor={`edit-value-${entry.key.name}`}
-										>
-											Value
-										</label>
-										<textarea
-											id={`edit-value-${entry.key.name}`}
-											className="[field-sizing:content] max-h-[200px] min-h-8 w-full resize-none overflow-y-auto rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
-											value={editData.value}
-											onChange={(e) =>
-												setEditData({ ...editData, value: e.target.value })
-											}
-											onKeyDown={handleKeyDown}
-											disabled={saving}
-										/>
-										<div className="flex justify-end gap-1.5">
-											<Button
-												variant="secondary"
-												size="sm"
-												onClick={handleCancel}
+					<Table.Row>
+						<Table.Head>Key</Table.Head>
+						<Table.Head>Value</Table.Head>
+						<Table.Head className="w-12" />
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					{entries.map((entry) => {
+						const isEditing = editData?.originalKey === entry.key.name;
+						return (
+							<Table.Row key={entry.key.name} className="group">
+								<Table.Cell className="group/cell align-top">
+									{isEditing && editData ? (
+										<div className="flex flex-col">
+											<label
+												className="sr-only"
+												htmlFor={`edit-key-${entry.key.name}`}
+											>
+												Key
+											</label>
+											<input
+												id={`edit-key-${entry.key.name}`}
+												className={cn(
+													"min-h-8 w-full rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary",
+													{
+														"border-danger focus:shadow-focus-danger":
+															editData.keyError,
+													}
+												)}
+												value={editData.key}
+												onChange={(e) => handleKeyChange(e.target.value)}
+												onKeyDown={handleKeyDown}
 												disabled={saving}
-											>
-												Cancel
-											</Button>
-											<Button
-												variant="primary"
-												size="sm"
-												onClick={handleSave}
-												disabled={saving || isKeyInvalid}
-												loading={saving}
-											>
-												{saving ? "Saving..." : "Save"}
-											</Button>
+												autoFocus
+											/>
+											{editData.keyError && (
+												<span className="mt-1 text-xs text-danger">
+													{editData.keyError}
+												</span>
+											)}
 										</div>
-									</div>
-								) : (
-									<div className="flex min-w-0 items-center gap-1.5">
-										<span
-											className={cn("min-w-0 truncate", {
-												"text-text-secondary": !entry.value,
-											})}
-										>
-											{formatValue(entry.value)}
-										</span>
-										{entry.value && <CopyButton text={entry.value} />}
-									</div>
-								)}
-							</Table.Cell>
-							<Table.Cell className="text-right whitespace-nowrap">
-								{!isEditing && (
-									<ActionMenu
-										onEdit={() => handleStartEdit(entry)}
-										onDelete={() => void onDelete(entry.key.name)}
-									/>
-								)}
-							</Table.Cell>
-						</Table.Row>
-					);
-				})}
-			</Table.Body>
+									) : (
+										<div className="group/cell flex items-center gap-1.5">
+											<code className="font-medium text-primary">
+												{entry.key.name}
+											</code>
+											<CopyButton text={entry.key.name} />
+										</div>
+									)}
+								</Table.Cell>
+								<Table.Cell className="group/cell max-w-[400px] font-mono text-[13px]">
+									{isEditing && editData ? (
+										<div className="flex flex-col gap-2">
+											<label
+												className="sr-only"
+												htmlFor={`edit-value-${entry.key.name}`}
+											>
+												Value
+											</label>
+											<textarea
+												id={`edit-value-${entry.key.name}`}
+												className="[field-sizing:content] max-h-[200px] min-h-8 w-full resize-none overflow-y-auto rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
+												value={editData.value}
+												onChange={(e) =>
+													setEditData({ ...editData, value: e.target.value })
+												}
+												onKeyDown={handleKeyDown}
+												disabled={saving}
+											/>
+											<div className="flex justify-end gap-1.5">
+												<Button
+													variant="secondary"
+													size="sm"
+													onClick={handleCancel}
+													disabled={saving}
+												>
+													Cancel
+												</Button>
+												<Button
+													variant="primary"
+													size="sm"
+													onClick={handleSave}
+													disabled={saving || isKeyInvalid}
+													loading={saving}
+												>
+													{saving ? "Saving..." : "Save"}
+												</Button>
+											</div>
+										</div>
+									) : (
+										<div className="flex min-w-0 items-center gap-1.5">
+											<span
+												className={cn("min-w-0 truncate", {
+													"text-text-secondary": !entry.value,
+												})}
+											>
+												{formatValue(entry.value)}
+											</span>
+											{entry.value && <CopyButton text={entry.value} />}
+										</div>
+									)}
+								</Table.Cell>
+								<Table.Cell className="text-right whitespace-nowrap">
+									{!isEditing && (
+										<ActionMenu
+											onEdit={() => handleStartEdit(entry)}
+											onDelete={() => void onDelete(entry.key.name)}
+										/>
+									)}
+								</Table.Cell>
+							</Table.Row>
+						);
+					})}
+				</Table.Body>
 			</Table>
 		</div>
 	);
