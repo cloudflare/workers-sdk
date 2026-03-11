@@ -286,7 +286,19 @@ describe("Workflows", () => {
 			// Pause the instance
 			await fetchJson(`http://${ip}:${port}/pause?workflowName=${name}`);
 
-			// Send event to unblock waitForEvent
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.status).toBe("paused");
+				},
+				{ timeout: 1500 }
+			);
+
+			// Resume the instance
+			await fetchJson(`http://${ip}:${port}/resume?workflowName=${name}`);
+
 			await fetchJson(
 				`http://${ip}:${port}/sendEvent?workflowName=${name}`,
 				{ event: true },
@@ -298,22 +310,9 @@ describe("Workflows", () => {
 					const result = await fetchJson(
 						`http://${ip}:${port}/get2?workflowName=${name}`
 					);
-					expect(result.status).toBe("paused");
-				},
-				{ timeout: 1500 }
-			);
-
-			await fetchJson(`http://${ip}:${port}/resume?workflowName=${name}`);
-
-			// After resume, the workflow should eventually complete
-			await vi.waitFor(
-				async () => {
-					const result = await fetchJson(
-						`http://${ip}:${port}/get2?workflowName=${name}`
-					);
 					expect(result.status).toBe("complete");
 				},
-				{ timeout: 1500 }
+				{ timeout: 5000 }
 			);
 		});
 

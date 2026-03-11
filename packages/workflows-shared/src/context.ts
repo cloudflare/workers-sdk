@@ -67,6 +67,10 @@ export class Context extends RpcTarget {
 	}
 
 	async #checkForPendingPause(): Promise<void> {
+		if (this.#engine.timeoutHandler.isRunningStep()) {
+			return;
+		}
+
 		const status = await this.#engine.getStatus();
 		if (status === InstanceStatus.WaitingForPause) {
 			await this.#state.storage.put(PAUSE_DATETIME, new Date());
@@ -643,9 +647,6 @@ export class Context extends RpcTarget {
 
 		// @ts-expect-error priorityQueue is initiated in init
 		this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
-
-		// Check if a pause was requested while this sleep was running
-		await this.#checkForPendingPause();
 	}
 
 	async sleepUntil(name: string, timestamp: Date | number): Promise<void> {
@@ -831,9 +832,6 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(errorKey, error);
 				throw error;
 			});
-
-		// Check if a pause was requested while we were waiting for the event
-		await this.#checkForPendingPause();
 
 		return result as WorkflowStepEvent<T>;
 	}

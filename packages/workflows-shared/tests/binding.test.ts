@@ -512,37 +512,29 @@ describe("WorkflowHandle", () => {
 	});
 
 	describe("pause()", () => {
-		it("should pause a running workflow between steps", async ({ expect }) => {
+		it("should pause a running workflow", async ({ expect }) => {
 			const binding = createBinding();
 			const engineStub = env.ENGINE.get(
 				env.ENGINE.idFromName("some-instance-id")
 			);
 
 			setTestWorkflowCallback(async (_event, step) => {
-				await step.waitForEvent("wait-step", {
-					type: "pause-trigger",
-					timeout: "10 seconds",
+				await step.do("long-step", async () => {
+					await scheduler.wait(500);
+					return "result-1";
 				});
-				// step-2 should never run because pause will take effect after waitForEvent
+				// step-2 should never run because pause takes effect after long-step
 				await step.do("step-2", async () => "result-2");
 				return "done";
 			});
 
 			await binding.create({ id: "some-instance-id" });
-			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+			await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
 
 			const instance = await binding.get("some-instance-id");
 
+			// Pause while long-step is in flight
 			await instance.pause();
-
-			const statusAfterPause = await instance.status();
-			expect(statusAfterPause.status).toBe("waitingForPause");
-
-			// send event to complete the waitForEvent step
-			await instance.sendEvent({
-				type: "pause-trigger",
-				payload: {},
-			});
 
 			await vi.waitUntil(
 				async () => {
@@ -567,24 +559,21 @@ describe("WorkflowHandle", () => {
 			);
 
 			setTestWorkflowCallback(async (_event, step) => {
-				await step.waitForEvent("wait-step", {
-					type: "resume-trigger",
-					timeout: "10 seconds",
+				await step.do("long-step", async () => {
+					await scheduler.wait(500);
+					return "result-1";
 				});
 				await step.do("step-2", async () => "result-2");
 				return "all-done";
 			});
 
 			await binding.create({ id: "some-instance-id" });
-			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+			await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
 
 			const instance = await binding.get("some-instance-id");
-			await instance.pause();
 
-			await instance.sendEvent({
-				type: "resume-trigger",
-				payload: {},
-			});
+			// Pause while long-step is in flight
+			await instance.pause();
 
 			await vi.waitUntil(
 				async () => {
@@ -618,19 +607,20 @@ describe("WorkflowHandle", () => {
 			);
 
 			setTestWorkflowCallback(async (_event, step) => {
-				await step.waitForEvent("long-wait", {
-					type: "my-event",
-					timeout: "10 seconds",
+				await step.do("long-step", async () => {
+					await scheduler.wait(1000);
+					return "long-result";
 				});
-				await step.do("step-after-wait", async () => "final-result");
+				await step.do("step-after", async () => "final-result");
 				return "completed";
 			});
 
 			await binding.create({ id: "some-instance-id" });
-			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+			await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
 
 			const instance = await binding.get("some-instance-id");
 
+			// Pause while long-step is in flight — sets WaitingForPause
 			await instance.pause();
 
 			const statusAfterPause = await instance.status();
@@ -643,17 +633,12 @@ describe("WorkflowHandle", () => {
 			const statusAfterResume = await instance.status();
 			expect(statusAfterResume.status).toBe("running");
 
-			await instance.sendEvent({
-				type: "my-event",
-				payload: { data: "test" },
-			});
-
 			await vi.waitUntil(
 				async () => {
 					const s = await instance.status();
 					return s.status === "complete";
 				},
-				{ timeout: 2000 }
+				{ timeout: 3000 }
 			);
 
 			const finalStatus = await instance.status();

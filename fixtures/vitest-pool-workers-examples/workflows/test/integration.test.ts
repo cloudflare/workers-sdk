@@ -157,11 +157,6 @@ describe("workflow instance lifecycle methods", () => {
 		const handle = await env.MODERATOR.get(data.id);
 		await handle.pause();
 
-		await handle.sendEvent({
-			type: "moderation-decision",
-			payload: { moderatorAction: "approve" },
-		});
-
 		// ASSERTIONS:
 		await expect(instance.waitForStatus("paused")).resolves.not.toThrow();
 

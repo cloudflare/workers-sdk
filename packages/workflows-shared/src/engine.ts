@@ -553,6 +553,7 @@ export class Engine extends DurableObject<Env> {
 				const currentStatus = await this.getStatus();
 				if (currentStatus === InstanceStatus.WaitingForPause) {
 					// Engine is still running — cancel the pending pause
+					this.timeoutHandler.cancelWaitingPromisesByType("pause");
 					await this.setStatus(
 						metadata.accountId,
 						metadata.instance.id,
@@ -639,14 +640,21 @@ export class Engine extends DurableObject<Env> {
 			);
 		}
 
-		// Set to WaitingForPause — the engine keeps running.
-		// The Context class will check for this between steps, store
-		// PAUSE_DATETIME, transition to Paused, and then abort.
 		await this.setStatus(
 			metadata.accountId,
 			metadata.instance.id,
 			InstanceStatus.WaitingForPause
 		);
+
+		void this.timeoutHandler.waitUntilNothingIsRunning("pause", async () => {
+			await this.ctx.storage.put(PAUSE_DATETIME, new Date());
+			await this.setStatus(
+				metadata.accountId,
+				metadata.instance.id,
+				InstanceStatus.Paused
+			);
+			await this.abort(ABORT_REASONS.USER_PAUSE);
+		});
 	}
 
 	async userTriggeredRestart() {

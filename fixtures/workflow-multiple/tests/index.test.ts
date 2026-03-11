@@ -121,13 +121,6 @@ describe("Workflows", () => {
 			// Pause the instance
 			await fetchJson(`http://${ip}:${port}/pause?workflowName=3&id=${id}`);
 
-			// Send event to unblock waitForEvent
-			await fetchJson(
-				`http://${ip}:${port}/sendEvent?workflowName=3&id=${id}`,
-				{ done: true },
-				"POST"
-			);
-
 			await vi.waitFor(
 				async () => {
 					const result = (await fetchJson(
@@ -140,6 +133,12 @@ describe("Workflows", () => {
 
 			// Resume the instance
 			await fetchJson(`http://${ip}:${port}/resume?workflowName=3&id=${id}`);
+
+			await fetchJson(
+				`http://${ip}:${port}/sendEvent?workflowName=3&id=${id}`,
+				{ done: true },
+				"POST"
+			);
 
 			await vi.waitFor(
 				async () => {

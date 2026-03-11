@@ -88,12 +88,12 @@ export class LifecycleWorkflow extends WorkflowEntrypoint {
 	async run(event, step) {
 		const first = await step.do("first step", async () => "step-1-done");
 
-		const eventData = await step.waitForEvent("wait for signal", {
-			type: "continue",
-			timeout: "1 day",
+		await step.do("long step", async () => {
+			await scheduler.wait(500);
+			return "long-step-done";
 		});
 
-		const second = await step.do("second step", async () => "step-2-done");
+		const second = await step.do("third step", async () => "step-3-done");
 
 		return "workflow-complete";
 	}
@@ -224,18 +224,12 @@ describe("workflow instance lifecycle methods", () => {
 
 		await waitForStepOutput(mf, "pause-resume-test", "step-1-done");
 
-		// Pause the instance
+		// Pause the instance — waits for the in-flight long step to finish, then pauses
 		const pauseRes = await mf.dispatchFetch(
 			"http://localhost/pause?id=pause-resume-test"
 		);
 		const pauseData = (await pauseRes.json()) as Record<string, unknown>;
 		expect(pauseData).toHaveProperty("status");
-
-		// Send the event to unblock waitForEvent
-		const eventRes = await mf.dispatchFetch(
-			"http://localhost/sendEvent?id=pause-resume-test"
-		);
-		expect(((await eventRes.json()) as Record<string, unknown>).ok).toBe(true);
 
 		await waitForStatus(mf, "pause-resume-test", "paused");
 
@@ -246,7 +240,7 @@ describe("workflow instance lifecycle methods", () => {
 		const resumeData = (await resumeRes.json()) as Record<string, unknown>;
 		expect(resumeData).toHaveProperty("status");
 
-		// After resume, the workflow should complete (step-2 runs, then returns)
+		// After resume, the workflow should complete (third step runs, then returns)
 		const finalStatus = await waitForStatus(
 			mf,
 			"pause-resume-test",
@@ -299,17 +293,7 @@ describe("workflow instance lifecycle methods", () => {
 		const restartData = (await restartRes.json()) as Record<string, unknown>;
 		expect(restartData).toHaveProperty("status");
 
-		// After restart, the workflow restarts from scratch — wait for "running"
-		await waitForStatus(mf, "restart-test", "running");
-
-		// Send the event to complete the restarted workflow
-		// (workflow replays: first step is cached, then waitForEvent blocks again)
-		await waitForStepOutput(mf, "restart-test", "step-1-done");
-		const eventRes = await mf.dispatchFetch(
-			"http://localhost/sendEvent?id=restart-test"
-		);
-		await eventRes.text(); // consume the body
-
+		// After restart, the workflow restarts from scratch and runs to completion
 		const finalStatus = await waitForStatus(mf, "restart-test", "complete");
 		expect(finalStatus.output).toBe("workflow-complete");
 	});

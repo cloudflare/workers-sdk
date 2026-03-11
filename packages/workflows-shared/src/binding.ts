@@ -2,6 +2,7 @@ import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
 	isAbortError,
+	isUserTriggeredPause,
 	isUserTriggeredRestart,
 	isUserTriggeredTerminate,
 	WorkflowError,
@@ -175,7 +176,14 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	}
 
 	public async pause(): Promise<void> {
-		await this.stub.changeInstanceStatus("pause");
+		try {
+			await this.stub.changeInstanceStatus("pause");
+		} catch (e) {
+			// pause causes instance abortion
+			if (!isUserTriggeredPause(e)) {
+				throw e;
+			}
+		}
 	}
 
 	public async resume(): Promise<void> {

@@ -7,12 +7,24 @@ export const ENGINE_TIMEOUT = ms("5 minutes" satisfies WorkflowSleepDuration);
 
 let latestGracePeriodTimestamp: number | undefined = undefined;
 
+export type WaitingPromiseType = "pause";
+
 export type GracePeriodCallback = (engine: Engine, timeoutMs: number) => void;
 
 export class GracePeriodSemaphore {
 	#counter: number = 0;
 	readonly callback: GracePeriodCallback;
 	readonly timeoutMs: number;
+	#waitingPromises: {
+		rejectCallback: () => void;
+		resolveCallback: (value: unknown) => void;
+		type: WaitingPromiseType;
+	}[] = [];
+	#canInitiateSteps = true;
+	#waitingSteps: {
+		rejectCallback: () => void;
+		resolveCallback: (value: unknown) => void;
+	}[] = [];
 
 	constructor(callback: GracePeriodCallback, timeoutMs: number) {
 		this.callback = callback;
@@ -21,6 +33,14 @@ export class GracePeriodSemaphore {
 
 	// acquire takes engine to be the same as release
 	async acquire(_engine: Engine) {
+		if (!this.#canInitiateSteps) {
+			await new Promise((resolve, reject) => {
+				this.#waitingSteps.push({
+					resolveCallback: resolve,
+					rejectCallback: reject,
+				});
+			});
+		}
 		// when the counter goes from 0 to 1 - we can safely reject the previous grace period
 		if (this.#counter == 0) {
 			latestGracePeriodTimestamp = undefined;
@@ -34,7 +54,61 @@ export class GracePeriodSemaphore {
 			// Trigger timeout promise, no need to await here,
 			// this can be triggered slightly after it's not time sensitive
 			this.callback(engine, this.timeoutMs);
+			// Resolve any promises waiting for all steps to finish (e.g. pause)
+			for (const promise of this.#waitingPromises) {
+				promise.resolveCallback(undefined);
+			}
+			this.#waitingPromises = [];
 		}
+	}
+
+	async waitUntilNothingIsRunning(
+		type: WaitingPromiseType,
+		callback: () => Promise<void>
+	): Promise<void> {
+		this.#canInitiateSteps = false;
+		if (this.#counter > 0) {
+			try {
+				await new Promise((resolve, reject) => {
+					this.#waitingPromises.push({
+						resolveCallback: resolve,
+						rejectCallback: reject,
+						type,
+					});
+				});
+			} catch {
+				// If the promise gets rejected (e.g. resume cancels the pause),
+				// allow steps to run again
+				this.#canInitiateSteps = true;
+				return;
+			}
+		}
+		await callback();
+		// Allow steps to run again and unblock any that were waiting
+		for (const promise of this.#waitingSteps) {
+			promise.resolveCallback(undefined);
+		}
+		this.#waitingSteps = [];
+		this.#canInitiateSteps = true;
+	}
+
+	cancelWaitingPromisesByType(type: WaitingPromiseType) {
+		const sameTypePromises = this.#waitingPromises.filter(
+			(val) => val.type === type
+		);
+		if (sameTypePromises.length === 0) {
+			return;
+		}
+
+		for (const promise of sameTypePromises) {
+			promise.rejectCallback();
+		}
+
+		this.#waitingPromises = this.#waitingPromises.filter(
+			(val) => val.type !== type
+		);
+
+		this.#canInitiateSteps = true;
 	}
 
 	isRunningStep() {
