@@ -53,8 +53,7 @@ export class Astro extends Framework {
 }
 
 /**
- * Gets the installed version of the "@solidjs/start" package
- *
+ * Gets the installed version of the "astro" package
  * @param projectPath The path of the project
  */
 function getAstroVersion(projectPath: string): string {
