@@ -1,7 +1,9 @@
 import { CloudflareLogo, cn } from "@cloudflare/kumo";
 import { Collapsible } from "@cloudflare/kumo/primitives/collapsible";
-import { CaretRightIcon, CubeIcon, DatabaseIcon } from "@phosphor-icons/react";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import D1Icon from "../assets/icons/d1.svg?react";
+import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import type {
 	D1DatabaseResponse,
@@ -108,7 +110,7 @@ export function Sidebar({
 				className="box-border flex min-h-16.75 items-center gap-2.5 p-4"
 				href="/cdn-cgi/explorer/"
 			>
-				<CloudflareLogo variant="glyph" className="shrink-0 w-8 h-8" />
+				<CloudflareLogo variant="glyph" className="h-8 w-8 shrink-0" />
 				<div className="flex flex-col gap-px">
 					<span className="text-sm leading-tight font-semibold text-text">
 						Local Explorer
@@ -138,7 +140,7 @@ export function Sidebar({
 			<SidebarItemGroup
 				emptyLabel="No databases"
 				error={d1Error}
-				icon={DatabaseIcon}
+				icon={D1Icon}
 				items={databases.map((db) => ({
 					id: db.uuid as string,
 					isActive: currentPath === `/d1/${db.uuid}`,
@@ -155,7 +157,7 @@ export function Sidebar({
 			<SidebarItemGroup
 				emptyLabel="No SQLite namespaces"
 				error={doError}
-				icon={CubeIcon}
+				icon={DOIcon}
 				items={doNamespaces.map((ns) => {
 					const className = ns.class ?? ns.name ?? ns.id ?? "Unknown";
 					return {

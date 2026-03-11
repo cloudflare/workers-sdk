@@ -83,7 +83,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				</label>
 				<textarea
 					id="add-value"
-					className="min-h-9 max-h-32 w-full resize-none overflow-y-auto rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary lg:field-sizing-content"
+					className="max-h-32 min-h-9 w-full resize-none overflow-y-auto rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary lg:field-sizing-content"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
@@ -92,7 +92,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="shrink-0 w-full lg:w-auto"
+				className="w-full shrink-0 lg:w-auto"
 				variant="primary"
 				disabled={saving || isKeyInvalid}
 				loading={saving}

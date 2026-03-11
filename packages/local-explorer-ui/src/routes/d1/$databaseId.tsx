@@ -1,7 +1,6 @@
 import { Button } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
-	DatabaseIcon,
 	PencilIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
@@ -12,6 +11,7 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
@@ -162,10 +162,10 @@ function DatabaseView(): JSX.Element {
 	return (
 		<div className="flex h-full flex-col">
 			<Breadcrumbs
-				icon={DatabaseIcon}
+				icon={D1Icon}
 				title="D1"
 				items={[
-					<span className="flex items-center gap-1.5">
+					<span className="flex items-center gap-1.5" key="database-id">
 						{databaseName && databaseName !== params.databaseId ? (
 							<>
 								{databaseName}

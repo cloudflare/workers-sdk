@@ -41,7 +41,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 					<Button
 						variant="ghost"
 						shape="square"
-						className="!w-7 !h-7"
+						className="!h-7 !w-7"
 						aria-label="Actions"
 					>
 						<DotsThreeIcon size={16} weight="bold" />
@@ -139,7 +139,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 	const isKeyInvalid = editData ? !!validateKey(editData.key) : false;
 
 	return (
-		<div className="rounded-lg border border-border overflow-hidden">
+		<div className="overflow-hidden rounded-lg border border-border">
 			<Table>
 				<Table.Header>
 				<Table.Row>

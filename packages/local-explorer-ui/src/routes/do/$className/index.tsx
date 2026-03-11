@@ -1,11 +1,11 @@
 import { Button, Link as KumoLink, Table } from "@cloudflare/kumo";
-import { CubeIcon } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
 	durableObjectsNamespaceListObjects,
 } from "../../../api";
+import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import type { WorkersObject } from "../../../api";
 
@@ -119,7 +119,7 @@ function NamespaceView() {
 	return (
 		<>
 			<Breadcrumbs
-				icon={CubeIcon}
+				icon={DOIcon}
 				items={[
 					<span className="flex items-center gap-1.5" key="class-name">
 						{params.className}

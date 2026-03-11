@@ -1,7 +1,6 @@
 import { Button } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
-	CubeIcon,
 	PencilIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
@@ -13,6 +12,7 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
+import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
@@ -175,7 +175,7 @@ function ObjectView(): JSX.Element {
 	return (
 		<div className="flex h-full flex-col">
 			<Breadcrumbs
-				icon={CubeIcon}
+				icon={DOIcon}
 				items={[
 					<Link
 						className="flex items-center gap-1.5"

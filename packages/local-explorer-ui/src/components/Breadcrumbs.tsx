@@ -3,7 +3,7 @@ import { Fragment } from "react";
 import type { FC, PropsWithChildren, ReactNode } from "react";
 
 interface BreadcrumbsProps extends PropsWithChildren {
-	icon: FC;
+	icon: FC<{ className?: string }>;
 	items: Array<ReactNode>;
 	title: string;
 }
@@ -17,7 +17,7 @@ export function Breadcrumbs({
 	return (
 		<div className="box-border flex min-h-16.75 shrink-0 items-center gap-2 border-b border-border bg-bg-secondary px-6 py-4 text-sm">
 			<span className="flex items-center gap-1.5">
-				<Icon />
+				<Icon className="h-4 w-4" />
 				{title}
 			</span>
 

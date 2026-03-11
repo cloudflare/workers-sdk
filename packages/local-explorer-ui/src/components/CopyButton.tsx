@@ -18,7 +18,7 @@ export function CopyButton({ text }: CopyButtonProps) {
 	return (
 		<Button
 			className={cn(
-				"!p-0 !w-6 !h-6 opacity-0 transition-[opacity,background-color,color] group-hover/cell:opacity-100",
+				"!h-6 !w-6 !p-0 opacity-0 transition-[opacity,background-color,color] group-hover/cell:opacity-100",
 				{
 					"text-success opacity-100": copied,
 				}
