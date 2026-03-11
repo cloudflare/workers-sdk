@@ -21,6 +21,7 @@ type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
 	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
+	[CoreBindings.SERVICE_DEV_REGISTRY_PROXY]?: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -386,6 +387,17 @@ export default <ExportedHandler<Env>>{
 		// The magic proxy client (used by getPlatformProxy) will always specify an operation
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
+
+		if (
+			request.method === "POST" &&
+			new URL(request.url).pathname === "/cdn-cgi/dev-registry/update"
+		) {
+			const devRegistryProxy = env[CoreBindings.SERVICE_DEV_REGISTRY_PROXY];
+			if (devRegistryProxy) {
+				return devRegistryProxy.fetch(request);
+			}
+			return new Response(null, { status: 204 });
+		}
 
 		// `dispatchFetch()` will always inject this header. When
 		// calling this function, we never want to display the pretty-error page.

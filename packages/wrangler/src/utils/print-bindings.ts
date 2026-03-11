@@ -435,11 +435,7 @@ export function printBindings(
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
-						if (
-							registryDefinition &&
-							(!entrypoint ||
-								registryDefinition.entrypointAddresses?.[entrypoint])
-						) {
+						if (registryDefinition && registryDefinition.debugPortAddress) {
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
 							mode = getMode({ isSimulatedLocally: true, connected: false });

@@ -238,6 +238,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
+				compatibilityFlags: ["service_binding_extra_handlers"],
 				modules: [
 					{
 						name: "assets-proxy-worker.mjs",

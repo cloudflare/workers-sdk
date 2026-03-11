@@ -170,6 +170,15 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
+		/** Override the workerd service name used as the default entrypoint in the
+		 * dev registry. When set, the dev registry will route requests for this
+		 * worker's default entrypoint to the specified worker name (wrapped with
+		 * getUserServiceName) instead of the worker's own service or assets proxy.
+		 *
+		 * Used by the vite plugin to route through the vite proxy worker, which
+		 * handles both HMR and asset serving in vite dev mode. */
+		unsafeOverrideDefaultEntrypoint: z.string().optional(),
+
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
@@ -277,8 +286,6 @@ export const CoreSharedOptionsSchema = z
 
 		// Enable auto service / durable objects discovery with the dev registry
 		unsafeDevRegistryPath: z.string().optional(),
-		// Enable External Durable Objects Proxy / Internal DOs registration
-		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
 			.function(z.tuple([z.custom<WorkerRegistry>()]))
@@ -452,6 +459,7 @@ function maybeGetCustomServiceService(
 		};
 	} else if (
 		typeof service === "object" &&
+		"remoteProxyConnectionString" in service &&
 		service.remoteProxyConnectionString !== undefined
 	) {
 		assert(
@@ -997,6 +1005,8 @@ export interface GlobalServicesOptions {
 	proxyBindings: Worker_Binding[];
 	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
 	durableObjectClassNames: DurableObjectClassNames;
+	/** Service name for the dev registry proxy worker, if external services are configured */
+	devRegistryProxyServiceName?: string;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1006,6 +1016,7 @@ export function getGlobalServices({
 	log,
 	proxyBindings,
 	durableObjectClassNames,
+	devRegistryProxyServiceName,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1078,6 +1089,12 @@ export function getGlobalServices({
 		serviceEntryBindings.push({
 			name: CoreBindings.DATA_LIVE_RELOAD_SCRIPT,
 			data: encoder.encode(liveReloadScript),
+		});
+	}
+	if (devRegistryProxyServiceName) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_DEV_REGISTRY_PROXY,
+			service: { name: devRegistryProxyServiceName },
 		});
 	}
 	const services: Service[] = [

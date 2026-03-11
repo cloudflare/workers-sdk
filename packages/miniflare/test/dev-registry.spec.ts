@@ -12,12 +12,6 @@ describe.sequential("DevRegistry", () => {
 			script: `addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello from service worker!"));
 			})`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -110,12 +104,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -206,12 +194,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -256,7 +238,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -271,12 +253,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -295,7 +271,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+					`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -333,7 +309,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+			`Cannot access "ping" as we couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -348,12 +324,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: "TestEntrypoint",
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -371,7 +341,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+					`Cannot access "ping" as we couldn't find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -431,12 +401,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -498,7 +462,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+						`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 					);
 				}
 			},
@@ -516,12 +480,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 
 		await remote.ready;
@@ -542,7 +500,7 @@ describe.sequential("DevRegistry", () => {
 					throw new Error(`Expected error, got result: ${result}`);
 				} catch (e) {
 					expect(e instanceof Error ? e.message : `${e}`).toBe(
-						`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+						`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 					);
 				}
 			},
@@ -550,12 +508,12 @@ describe.sequential("DevRegistry", () => {
 		);
 	});
 
-	test("fetch to durable object with do proxy disabled", async ({ expect }) => {
+	test("fetch to durable object with remote running", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -585,7 +543,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -607,18 +565,22 @@ describe.sequential("DevRegistry", () => {
 		});
 		useDispose(local);
 
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe("Service Unavailable");
-		expect(res.status).toBe(503);
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Hello from Durable Object!");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
 	});
 
-	test("RPC to durable object with do proxy disabled", async ({ expect }) => {
+	test("RPC to durable object with remote running", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -642,7 +604,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: false,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -670,12 +632,14 @@ describe.sequential("DevRegistry", () => {
 		});
 		useDispose(local);
 
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe(
-			`Couldn't find the durable Object "MyDurableObject" of script "remote-worker".`
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("pong");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
 		);
-		expect(res.status).toBe(500);
 	});
 
 	test("fetch to durable object", async ({ expect }) => {
@@ -683,7 +647,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -708,13 +672,15 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe("Service Unavailable");
+		expect(await res.text()).toBe(
+			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+		);
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -755,7 +721,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -784,15 +750,15 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe(
-			`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
+		expect(await res.text()).toContain(
+			`couldn't find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
 				DO: {
@@ -812,16 +778,255 @@ describe.sequential("DevRegistry", () => {
 		useDispose(remote);
 
 		await remote.ready;
+		// DO RPC now works natively via the debug port
 		await vi.waitFor(
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
-				expect(await res.text()).toBe(
-					`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
-				);
-				expect(res.status).toBe(500);
+				expect(await res.text()).toBe("Response from remote worker: pong");
+				expect(res.status).toBe(200);
 			},
 			{ timeout: 10_000, interval: 100 }
 		);
+	});
+
+	test("DO RPC survives remote worker restart", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
+			},
+			modules: true,
+			script: `
+				import { DurableObject } from "cloudflare:workers";
+				export class MyDurableObject extends DurableObject {
+					ping() { return "v1"; }
+				}
+				export default { fetch() { return new Response("ok"); } }
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			// Use idFromName so the same DO instance is reused across requests —
+			// this ensures the cached _cachedFetcher is exercised on the second call.
+			script: `
+				export default {
+					async fetch(request, env) {
+						try {
+							const id = env.DO.idFromName("stable");
+							const stub = env.DO.get(id);
+							const result = await stub.ping();
+							return new Response("Response: " + result);
+						} catch (ex) {
+							return new Response(ex.message, { status: 500 });
+						}
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		// First request — caches the fetcher in the DO proxy instance
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v1");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Restart remote — gets a new debug port, registry file updates
+		await remote.setOptions({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
+			},
+			modules: true,
+			script: `
+				import { DurableObject } from "cloudflare:workers";
+				export class MyDurableObject extends DurableObject {
+					ping() { return "v2"; }
+				}
+				export default { fetch() { return new Response("ok"); } }
+			`,
+		});
+
+		// Second request — same DO instance (idFromName("stable")),
+		// but remote debug port has changed. The cached _cachedFetcher
+		// points to the old dead connection.
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v2");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("service binding RPC survives remote worker restart", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export default class extends WorkerEntrypoint {
+					ping() { return "v1"; }
+				}
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			serviceBindings: {
+				SERVICE: "remote-worker",
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				export default {
+					async fetch(request, env) {
+						try {
+							const result = await env.SERVICE.ping();
+							return new Response("Response: " + result);
+						} catch (e) {
+							return new Response(e.message, { status: 500 });
+						}
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		// First request — ExternalServiceProxy resolves from registry
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v1");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		// Restart remote — gets a new debug port, registry file updates
+		await remote.setOptions({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export default class extends WorkerEntrypoint {
+					ping() { return "v2"; }
+				}
+			`,
+		});
+
+		// Second request — ExternalServiceProxy is re-instantiated per request,
+		// so it reads the updated registry Map and connects to the new debug port.
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch("http://placeholder");
+				expect(await res.text()).toBe("Response: v2");
+				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("scheduled to default entrypoint", async ({ expect }) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			unsafeTriggerHandlers: true,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				let resolve, reject;
+				const promise = new Promise((res, rej) => {
+					resolve = res;
+					reject = rej;
+				});
+				export default {
+					async fetch() {
+						try {
+							const event = await Promise.race([
+								promise,
+								new Promise((_, cancel) => setTimeout(cancel, 1000))
+							]);
+							return Response.json(event);
+						} catch {
+							return new Response("No scheduled event received", { status: 500 });
+						}
+					},
+					scheduled(e) {
+						resolve({ cron: e.cron, scheduledTime: e.scheduledTime });
+					}
+				};
+			`,
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			serviceBindings: {
+				REMOTE: "remote-worker",
+			},
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
+				export default {
+					async fetch(request, env) {
+						await env.REMOTE.scheduled({ cron: "*/5 * * * *" });
+						return new Response("scheduled event dispatched");
+					}
+				}
+			`,
+		});
+		useDispose(local);
+
+		// Check scheduled() was dispatched
+		await (await local.dispatchFetch("http://placeholder")).text();
+		const res = await remote.dispatchFetch("http://placeholder");
+		const json = (await res.json()) as { cron: string; scheduledTime: number };
+		expect(json).toMatchObject({ cron: "*/5 * * * *" });
+		expect(typeof json.scheduledTime).toBe("number");
 	});
 
 	test("tail to default entrypoint", async ({ expect }) => {
@@ -854,12 +1059,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				};
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(remote);
 
@@ -972,12 +1171,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		};
 
 		const local = new Miniflare({
@@ -988,7 +1181,7 @@ describe.sequential("DevRegistry", () => {
 
 		const res = await local.dispatchFetch("http://placeholder");
 		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 		);
 		expect(res.status).toBe(500);
 
@@ -1017,7 +1210,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe(
-					`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+					`Cannot access "ping" as we couldn't find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
 				);
 				expect(res.status).toBe(500);
 			},
@@ -1110,7 +1303,7 @@ describe.sequential("DevRegistry", () => {
 		const local = new Miniflare({
 			name: "local-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			durableObjects: {
 				DO: {
 					className: "MyDurableObject",
@@ -1135,13 +1328,15 @@ describe.sequential("DevRegistry", () => {
 		useDispose(local);
 
 		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe("Service Unavailable");
+		expect(await res.text()).toBe(
+			`Couldn\'t find a local dev session for Durable Object "MyDurableObject" of service "remote-worker" to proxy to`
+		);
 		expect(res.status).toBe(503);
 
 		const remote = new Miniflare({
 			name: "remote-worker",
 			unsafeDevRegistryPath,
-			unsafeDevRegistryDurableObjectProxy: true,
+
 			https: true,
 			compatibilityFlags: ["experimental"],
 			durableObjects: {
@@ -1233,12 +1428,6 @@ describe.sequential("DevRegistry", () => {
 					}
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		useDispose(unrelated);
 
@@ -1260,12 +1449,6 @@ describe.sequential("DevRegistry", () => {
 					ping() { return "pong"; }
 				}
 			`,
-			unsafeDirectSockets: [
-				{
-					entrypoint: undefined,
-					proxy: true,
-				},
-			],
 		});
 		onTestFinished(async () => {
 			try {
