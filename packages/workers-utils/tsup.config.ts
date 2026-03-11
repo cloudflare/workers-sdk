@@ -7,7 +7,7 @@ export default defineConfig(() => [
 		entry: [
 			"src/index.ts",
 			"src/browser.ts",
-			"src/metrics.ts",
+			"src/prometheus-metrics.ts",
 			"src/test-helpers/index.ts",
 		],
 		platform: "node",

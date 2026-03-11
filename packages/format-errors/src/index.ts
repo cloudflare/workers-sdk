@@ -1,4 +1,4 @@
-import { MetricsRegistry } from "@cloudflare/workers-utils/metrics";
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import { Toucan } from "toucan-js";
 import { z } from "zod";
 import Youch from "./Youch";
