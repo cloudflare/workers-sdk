@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { MetricsRegistry } from "../src/metrics";
+import { MetricsRegistry } from "../src/prometheus-metrics";
 
 describe("MetricsRegistry", () => {
 	describe("createCounter", () => {
@@ -219,25 +219,13 @@ describe("MetricsRegistry", () => {
 			const registry = new MetricsRegistry();
 			const c1 = registry.createCounter("first_total", "First");
 			const c2 = registry.createCounter("second_total", "Second");
-			c1.inc();
-			c1.inc();
-			c1.inc();
-			c2.inc();
-
-			expect(registry.metrics()).toContain("first_total 3\n");
-			expect(registry.metrics()).toContain("second_total 1\n");
-		});
-
-		it("incrementing one counter does not affect another", ({ expect }) => {
-			const registry = new MetricsRegistry();
-			const c1 = registry.createCounter("first_total", "First");
-			const c2 = registry.createCounter("second_total", "Second");
 
 			c1.add(100);
 			expect(registry.metrics()).toContain("second_total 0\n");
 
 			c2.inc();
 			expect(registry.metrics()).toContain("first_total 100\n");
+			expect(registry.metrics()).toContain("second_total 1\n");
 		});
 	});
 
