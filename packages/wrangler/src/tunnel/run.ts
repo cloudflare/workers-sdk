@@ -127,6 +127,7 @@ export const tunnelRunCommand = createCommand({
 				}
 			}, 5000);
 			forceKillTimer.unref();
+		};
 
 		process.on("SIGINT", shutdownHandler);
 		process.on("SIGTERM", shutdownHandler);
