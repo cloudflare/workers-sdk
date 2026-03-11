@@ -71,9 +71,11 @@ export const vectorizeCreateCommand = createCommand({
 		let indexConfig;
 		if (args.preset) {
 			indexConfig = { preset: args.preset };
-			logger.log(
-				`Configuring index based for the embedding model ${args.preset}.`
-			);
+			if (!args.json) {
+				logger.log(
+					`Configuring index based for the embedding model ${args.preset}.`
+				);
+			}
 		} else if (args.dimensions && args.metric) {
 			// We let the server validate the supported (maximum) dimensions so that we
 			// don't have to keep wrangler in sync with server-side changes
@@ -87,7 +89,7 @@ export const vectorizeCreateCommand = createCommand({
 			);
 		}
 
-		if (args.deprecatedV1) {
+		if (args.deprecatedV1 && !args.json) {
 			logger.warn(
 				"Creation of legacy Vectorize indexes will be blocked by December 2024"
 			);
@@ -99,7 +101,9 @@ export const vectorizeCreateCommand = createCommand({
 			config: indexConfig,
 		};
 
-		logger.log(`🚧 Creating index: '${args.name}'`);
+		if (!args.json) {
+			logger.log(`🚧 Creating index: '${args.name}'`);
+		}
 		const indexResult = await createIndex(config, index, args.deprecatedV1);
 
 		let bindingName: string;
@@ -110,7 +114,7 @@ export const vectorizeCreateCommand = createCommand({
 		}
 
 		if (args.json) {
-			logger.log(JSON.stringify(index, null, 2));
+			logger.log(JSON.stringify(indexResult, null, 2));
 			return;
 		}
 
