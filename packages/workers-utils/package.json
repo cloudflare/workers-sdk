@@ -23,9 +23,9 @@
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
 		},
-		"./metrics": {
-			"import": "./dist/metrics.mjs",
-			"types": "./dist/metrics.d.mts"
+		"./prometheus-metrics": {
+			"import": "./dist/prometheus-metrics.mjs",
+			"types": "./dist/prometheus-metrics.d.mts"
 		},
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",

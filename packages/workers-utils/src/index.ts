@@ -93,5 +93,5 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
-export { MetricsRegistry } from "./metrics";
-export type { Counter } from "./metrics";
+export { MetricsRegistry } from "./prometheus-metrics";
+export type { Counter } from "./prometheus-metrics";

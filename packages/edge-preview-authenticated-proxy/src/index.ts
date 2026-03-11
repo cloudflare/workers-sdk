@@ -1,4 +1,4 @@
-import { MetricsRegistry } from "@cloudflare/workers-utils/metrics";
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import cookie from "cookie";
 import { Toucan } from "toucan-js";
 

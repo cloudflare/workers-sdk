@@ -1,4 +1,4 @@
-import { MetricsRegistry } from "@cloudflare/workers-utils/metrics";
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import {
