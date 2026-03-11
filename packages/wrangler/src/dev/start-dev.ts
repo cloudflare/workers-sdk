@@ -14,7 +14,7 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { StartDevWorkerInput, Trigger } from "../api";
-import type { ServerWorkerInput, WorkerServer } from "../api/server";
+import type { WorkerServer } from "../api/server";
 import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
@@ -190,7 +190,7 @@ async function createWorkerInput(
 			generateTypes: args.types,
 		},
 		legacy: {
-			site: (configParam) => {
+			site: (configParam: Config) => {
 				const legacyAssetPaths = getResolvedSiteAssetPaths(args, configParam);
 				return Boolean(args.site || configParam.site) && legacyAssetPaths
 					? {
@@ -209,7 +209,7 @@ async function createWorkerInput(
 		experimental: {
 			tailLogs: !!args.experimentalTailLogs,
 		},
-	} satisfies ServerWorkerInput;
+	} satisfies StartDevWorkerInput;
 }
 
 async function getPagesAssetsFetcher(

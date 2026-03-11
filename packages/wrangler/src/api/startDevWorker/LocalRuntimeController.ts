@@ -136,7 +136,6 @@ export async function convertToConfigBundle(
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		testScheduled: !!event.config.dev.testScheduled,
 		outboundService: event.config.dev.outboundService,
-		mockFetch: event.config.dev.mockFetch,
 		tails: event.config.tailConsumers,
 		streamingTails: event.config.streamingTailConsumers,
 		containerDOClassNames: new Set(

@@ -133,7 +133,6 @@ async function resolveDevConfig(
 		auth,
 		remote: input.dev?.remote,
 		outboundService: input.dev?.outboundService,
-		mockFetch: input.dev?.mockFetch,
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,
 			port:
