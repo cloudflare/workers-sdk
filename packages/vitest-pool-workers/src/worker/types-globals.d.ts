@@ -1,11 +1,15 @@
 // noinspection ES6ConvertVarToLetConst
 
-import type { WorkerGlobalState } from "vitest";
+import type { VitestUtils, WorkerGlobalState } from "vitest";
 
 declare global {
-	// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/worker.ts#L49-L69
-	const __vitest_worker__: WorkerGlobalState & {
-		config?: { poolOptions?: { workers?: SerializedOptions } };
+	// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/runtime/utils.ts#L24
+	const __vitest_worker__: WorkerGlobalState;
+	// https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/runtime/moduleRunner/moduleRunner.ts#L86
+	const __vitest_mocker__: VitestUtils & {
+		moduleRunner: {
+			import: (id: string) => Promise<Record<string, unknown>>;
+		};
 	};
 	// Original, un-patched console that always logs directly to stdout/err,
 	// without call site annotations

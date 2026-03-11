@@ -1,5 +1,7 @@
 {
 	"name": "module-resolution",
 	"main": "src/index.ts",
+	"compatibility_date": "2025-12-13",
+	"compatibility_flags": ["nodejs_compat"],
 	// don't provide compatibility_date so that vitest will infer the latest one
 }

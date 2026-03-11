@@ -1,5 +1,21 @@
 # @cloudflare/local-explorer-ui
 
+## 0.8.0
+
+### Minor Changes
+
+- [#12754](https://github.com/cloudflare/workers-sdk/pull/12754) [`e4d9510`](https://github.com/cloudflare/workers-sdk/commit/e4d9510c3439d313ba0e0f78bf00d0726d5f67e9) Thanks [@emily-shen](https://github.com/emily-shen)! - Add cross-process support to the local explorer
+
+  When running multiple miniflare processes, the local explorer will now be able to view and edit resources that are bound to workers in other miniflare instances.
+
+### Patch Changes
+
+- [#12828](https://github.com/cloudflare/workers-sdk/pull/12828) [`cb14820`](https://github.com/cloudflare/workers-sdk/commit/cb148200336ed57c56cb89028453ddd5fdef2e7b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update `@hey-api/openapi-ts` to ^0.94.0
+
+- [#12779](https://github.com/cloudflare/workers-sdk/pull/12779) [`b2f8b47`](https://github.com/cloudflare/workers-sdk/commit/b2f8b47b19ef2a2235130a681da002206ef4c4e6) Thanks [@NuroDev](https://github.com/NuroDev)! - Refactors KV & sidebar to use route loaders.
+
+  This change improves the user experience of the Local Explorer dashboard by ensuring that the data used for the initial render is fetched server-side and passed down to the client. This avoids the initial flicker when loading in. Both D1 & Durable Object routes already incorporate this system.
+
 ## 0.7.0
 
 ### Minor Changes
