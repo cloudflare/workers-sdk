@@ -23,8 +23,6 @@
 				"CF_PAGES_UPLOAD_JWT",
 				"CF_PAGES",
 				"CI",
-				"CLOUDFLARE_ACCOUNT_ID",
-				"CLOUDFLARE_API_TOKEN",
 				"CUSTOM_BUILD_VAR",
 				"EXPERIMENTAL_MIDDLEWARE",
 				"FORMAT_WRANGLER_ERRORS",
@@ -67,14 +65,12 @@
 			"inputs": ["e2e/**"],
 			"dependsOn": ["build", "create-cloudflare#build"],
 			"env": [
+				"$TURBO_EXTENDS$",
 				"VITEST",
-				"NODE_DEBUG",
 				"MINIFLARE_WORKERD_PATH",
 				"WRANGLER",
 				"WRANGLER_IMPORT",
 				"MINIFLARE_IMPORT",
-				"CLOUDFLARE_ACCOUNT_ID",
-				"CLOUDFLARE_API_TOKEN",
 				"WRANGLER_E2E_TEST_FILE"
 			]
 		}

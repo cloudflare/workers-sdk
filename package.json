@@ -11,7 +11,7 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && pnpm check:workflows && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
 		"check:format": "prettier . --check --ignore-unknown --cache",
@@ -19,6 +19,7 @@
 		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",
+		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts",
 		"dev": "dotenv -- turbo dev",
 		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
 		"prettify": "prettier . --write --ignore-unknown --cache",
@@ -42,8 +43,10 @@
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
+		"jsonc-parser": "catalog:default",
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
+		"prettier-plugin-tailwindcss": "^0.7.2",
 		"tree-kill": "^1.2.2",
 		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
@@ -74,8 +77,9 @@
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
 			"@types/node": "$@types/node",
-			"vitest>vite": "catalog:default",
-			"@types/node>undici-types": "catalog:default"
+			"@types/node>undici-types": "catalog:default",
+			"vitest@4>vite": "catalog:vite-plugin",
+			"vitest@3>vite": "^5.0.0"
 		},
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",

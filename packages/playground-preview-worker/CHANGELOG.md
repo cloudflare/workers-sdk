@@ -1,5 +1,15 @@
 # playground-preview-worker
 
+## 0.3.0
+
+### Minor Changes
+
+- [#12771](https://github.com/cloudflare/workers-sdk/pull/12771) [`b8c33f5`](https://github.com/cloudflare/workers-sdk/commit/b8c33f5509a202cf4d4ebe5bd38c5705dffd9346) Thanks [@penalosa](https://github.com/penalosa)! - Remove prewarm, inspector_websocket, and exchange proxy from preview flow
+
+  The preview session exchange endpoint (`/exchange`) has been removed from the edge-preview-authenticated-proxy — it has been unused since the dash started fetching the exchange URL directly (DEVX-979). The `prewarm` parameter is no longer required or accepted by the `.update-preview-token` endpoint.
+
+  The playground preview worker now treats `exchange_url` as optional, falling back to the initial token from the edge-preview API when exchange is unavailable. Inspector websocket proxying and prewarm have been removed in favour of using `tail_url` for live logs.
+
 ## 0.2.0
 
 ### Minor Changes

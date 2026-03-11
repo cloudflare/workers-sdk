@@ -392,8 +392,8 @@ export function StudioTableExplorerTab({
 	);
 
 	return (
-		<div className="w-full h-full flex flex-col bg-surface">
-			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
+		<div className="flex h-full w-full flex-col bg-surface">
+			<div className="flex shrink-0 items-center gap-2 border-b border-border p-2">
 				<Button aria-label="Refresh" onClick={onRefreshClicked} shape="square">
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
@@ -447,7 +447,7 @@ export function StudioTableExplorerTab({
 					</>
 				)}
 			</div>
-			<div className="grow overflow-hidden relative">
+			<div className="relative grow overflow-hidden">
 				{schema && state && !error && (
 					<StudioResultTable
 						arrangeHeaderIndex={headerIndexList}
@@ -458,34 +458,34 @@ export function StudioTableExplorerTab({
 					/>
 				)}
 
-				{error && <div className="p-4 text-red-500 text-base">{error}</div>}
+				{error && <div className="p-4 text-base text-red-500">{error}</div>}
 
 				{loading && (
 					<>
 						<div
-							className="absolute left-0 top-0 bottom-0 right-0 backdrop-blur-md bg-black/30 dark:bg-white/30 z-40"
+							className="absolute top-0 right-0 bottom-0 left-0 z-40 bg-black/30 backdrop-blur-md dark:bg-white/30"
 							style={{ opacity: 0.2 }}
 						/>
-						<div className="flex absolute left-0 top-0 bottom-0 right-0 justify-center items-center z-40">
+						<div className="absolute top-0 right-0 bottom-0 left-0 z-40 flex items-center justify-center">
 							<SpinnerIcon className="animate-spin" size={48} />
 						</div>
 					</>
 				)}
 			</div>
-			<div className="shrink-0 border-t border-border gap-2 p-2 flex items-center">
+			<div className="flex shrink-0 items-center gap-2 border-t border-border p-2">
 				<div className="grow">
 					{queryStats && <StudioQueryResultStats stats={queryStats} />}
 				</div>
 
 				<div>
 					<InputGroup size="base">
-						<div className="flex items-center justify-center px-2 border-r border-border">
+						<div className="flex items-center justify-center border-r border-border px-2">
 							<ListNumbersIcon size={14} />
 						</div>
 
 						<input
 							aria-label="Rows per page"
-							className="text-center bg-transparent text-sm outline-none border border-none rounded-r-lg px-1 w-12.5"
+							className="w-12.5 rounded-r-lg border border-none bg-transparent px-1 text-center text-sm outline-none"
 							onBlur={onLimitBlur}
 							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
 							value={pageLimitInput}
@@ -506,7 +506,7 @@ export function StudioTableExplorerTab({
 
 						<input
 							aria-label="Page offset"
-							className="text-center bg-transparent text-sm outline-none w-12.5"
+							className="w-12.5 bg-transparent text-center text-sm outline-none"
 							onBlur={onOffsetBlur}
 							onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
 							value={pageOffsetInput}

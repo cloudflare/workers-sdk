@@ -33,29 +33,9 @@ class HttpError extends Error {
 	}
 }
 
-class NoExchangeUrl extends HttpError {
-	constructor() {
-		super("No exchange_url provided", 400, false);
-	}
-}
-
-class ExchangeFailed extends HttpError {
-	constructor(
-		readonly url: string,
-		readonly exchangeStatus: number,
-		readonly body: string
-	) {
-		super("Exchange failed", 400, true);
-	}
-
-	get data(): { url: string; status: number; body: string } {
-		return { url: this.url, status: this.exchangeStatus, body: this.body };
-	}
-}
-
 class TokenUpdateFailed extends HttpError {
 	constructor() {
-		super("Provide token, prewarmUrl and remote", 400, false);
+		super("Provide token and remote", 400, false);
 	}
 }
 
@@ -101,14 +81,6 @@ function switchRemote(url: URL, remote: string) {
 	return workerUrl;
 }
 
-function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
-	return (
-		request.method === "POST" &&
-		url.hostname === env.PREVIEW &&
-		url.pathname === "/exchange"
-	);
-}
-
 function isPreviewUpdateRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "GET" &&
@@ -121,23 +93,15 @@ function isRawHttpRequest(url: URL, env: Env) {
 	return url.hostname.endsWith(env.RAW_HTTP);
 }
 
-async function handleRequest(
-	request: Request,
-	env: Env,
-	ctx: ExecutionContext
-) {
+async function handleRequest(request: Request, env: Env) {
 	const url = new URL(request.url);
 
-	if (isTokenExchangeRequest(request, url, env)) {
-		return handleTokenExchange(url);
-	}
-
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, env, ctx);
+		return await updatePreviewToken(url, env);
 	}
 
 	if (isRawHttpRequest(url, env)) {
-		return handleRawHttp(request, url);
+		return await handleRawHttp(request, url);
 	}
 
 	/**
@@ -295,26 +259,14 @@ async function handleRawHttp(request: Request, url: URL) {
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`
  * for future use.
  */
-async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
+async function updatePreviewToken(url: URL, env: Env) {
 	const token = url.searchParams.get("token");
-	const prewarmUrl = url.searchParams.get("prewarm");
 	const remote = url.searchParams.get("remote");
-	// return Response.json([...url.searchParams.entries()]);
-	if (!token || !prewarmUrl || !remote) {
+	if (!token || !remote) {
 		throw new TokenUpdateFailed();
 	}
 
-	assertValidURL(prewarmUrl);
 	assertValidURL(remote);
-
-	ctx.waitUntil(
-		fetch(prewarmUrl, {
-			method: "POST",
-			headers: {
-				"cf-workers-preview-token": token,
-			},
-		})
-	);
 
 	// The token can sometimes be too large for a cookie (4096 bytes).
 	// Store the token in KV, and allow lookups
@@ -338,54 +290,6 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 				domain: url.hostname,
 				partitioned: true,
 			}),
-		},
-	});
-}
-
-/**
- * Request the preview session associated with a given exchange_url
- * exchange_url comes from an authenticated core API call made in the client
- * It doesn't have CORS set up, so needs to be proxied
- */
-async function handleTokenExchange(url: URL) {
-	const exchangeUrl = url.searchParams.get("exchange_url");
-	if (!exchangeUrl) {
-		throw new NoExchangeUrl();
-	}
-	assertValidURL(exchangeUrl);
-	const exchangeRes = await fetch(exchangeUrl);
-	if (exchangeRes.status !== 200) {
-		const exchange = new URL(exchangeUrl);
-		// Clear sensitive token
-		exchange.search = "";
-
-		throw new ExchangeFailed(
-			exchange.href,
-			exchangeRes.status,
-			await exchangeRes.text()
-		);
-	}
-	const session = await exchangeRes.json<{
-		prewarm: string;
-		token: string;
-	}>();
-	if (
-		typeof session.token !== "string" ||
-		typeof session.prewarm !== "string"
-	) {
-		const exchange = new URL(exchangeUrl);
-		// Clear sensitive token
-		exchange.search = "";
-		throw new ExchangeFailed(
-			exchange.href,
-			exchangeRes.status,
-			JSON.stringify(session)
-		);
-	}
-	return Response.json(session, {
-		headers: {
-			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Methods": "POST",
 		},
 	});
 }
@@ -429,7 +333,7 @@ export default {
 		});
 
 		try {
-			return await handleRequest(request, env, ctx);
+			return await handleRequest(request, env);
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {

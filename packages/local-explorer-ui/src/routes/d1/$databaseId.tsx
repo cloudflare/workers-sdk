@@ -153,7 +153,7 @@ function DatabaseView(): JSX.Element {
 	}, [deleteTarget, handleTableDeleted]);
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex h-full flex-col">
 			<Breadcrumbs
 				icon={DatabaseIcon}
 				title="D1"
@@ -276,10 +276,10 @@ function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
 			open={open}
 			value={searchParams.table ?? null}
 		>
-			<Select.Trigger className="inline-flex items-center gap-1 p-2 -mx-1.5 rounded-md bg-transparent text-sm text-text cursor-pointer border-none transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
+			<Select.Trigger className="-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md border-none bg-transparent p-2 text-sm text-text transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
 				<Select.Value placeholder="Select table" />
 				<Select.Icon>
-					<CaretUpDownIcon className="w-3.5 h-3.5 text-text-secondary" />
+					<CaretUpDownIcon className="h-3.5 w-3.5 text-text-secondary" />
 				</Select.Icon>
 			</Select.Trigger>
 
@@ -290,15 +290,15 @@ function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
 					side="bottom"
 					sideOffset={4}
 				>
-					<Select.Popup className="min-w-36 max-h-72 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-100 overflow-hidden transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:-translate-y-1 data-ending-style:opacity-0 data-ending-style:-translate-y-1">
+					<Select.Popup className="z-100 max-h-72 min-w-36 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
 						<div className="p-1">
 							<button
-								className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none hover:bg-bg-secondary dark:hover:bg-bg-tertiary"
+								className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none hover:bg-bg-secondary dark:hover:bg-bg-tertiary"
 								onClick={handleCreateTable}
 								type="button"
 							>
-								<span className="flex items-center w-4">
-									<PlusIcon className="w-3.5 h-3.5" />
+								<span className="flex w-4 items-center">
+									<PlusIcon className="h-3.5 w-3.5" />
 								</span>
 								Create table
 							</button>
@@ -314,19 +314,19 @@ function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
 
 									return (
 										<Select.Item
-											className="flex items-center gap-2 w-full py-1.5 px-2 rounded-md text-sm text-text cursor-pointer transition-colors select-none outline-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
+											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
 											key={table.value}
 											value={table.value}
 										>
-											<span className="flex items-center w-4">
-												<Icon className="w-3.5 h-3.5" />
+											<span className="flex w-4 items-center">
+												<Icon className="h-3.5 w-3.5" />
 											</span>
 											<Select.ItemText>{table.label}</Select.ItemText>
 										</Select.Item>
 									);
 								})
 							) : (
-								<span className="flex justify-center items-center gap-2 w-full py-1.5 px-2 text-sm text-text-secondary">
+								<span className="flex w-full items-center justify-center gap-2 px-2 py-1.5 text-sm text-text-secondary">
 									No tables
 								</span>
 							)}

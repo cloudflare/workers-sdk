@@ -227,6 +227,7 @@ function resolveWorkerConfig(
 		nonApplicable = {
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
+			notSupportedOnAuxiliary: new Set(),
 		};
 	}
 
@@ -437,6 +438,10 @@ export function resolvePluginConfig(
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
 			visitedConfigPaths: configPaths,
 		});
+
+		if (workerResolvedConfig.config.assets) {
+			workerResolvedConfig.nonApplicable.notSupportedOnAuxiliary.add("assets");
+		}
 
 		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
 

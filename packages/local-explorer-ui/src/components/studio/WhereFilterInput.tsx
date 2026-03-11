@@ -136,7 +136,7 @@ export function StudioWhereFilterInput({
 	}, [loading, currentValue, value, parsingError]);
 
 	return (
-		<div className="border-border bg-surface-secondary border rounded flex items-center">
+		<div className="flex items-center rounded border border-border bg-surface-secondary">
 			<StudioSQLWhereEditor
 				className="w-full p-1"
 				columnNames={columnNameList}

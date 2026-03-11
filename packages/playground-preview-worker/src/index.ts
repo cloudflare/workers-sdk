@@ -200,23 +200,6 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 	});
 });
 
-app.get(`${rootDomain}/api/inspector`, async (c) => {
-	const url = new URL(c.req.url);
-	const userId = url.searchParams.get("user");
-	if (!userId) {
-		throw new PreviewRequestFailed("", false);
-	}
-	let userObjectId: DurableObjectId;
-	try {
-		userObjectId = c.env.UserSession.idFromString(userId);
-	} catch {
-		throw new PreviewRequestFailed(userId, false);
-	}
-	const userObject = c.env.UserSession.get(userObjectId);
-
-	return userObject.fetch(c.req.raw);
-});
-
 /**
  * Given a preview session, the client should obtain a specific preview token
  * This endpoint takes in the URL parameters:
@@ -241,7 +224,10 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		!(
 			referer.hostname === "workers.cloudflare.com" ||
 			referer.hostname === "localhost" ||
-			referer.hostname.endsWith("workers-playground.pages.dev")
+			referer.hostname.endsWith(".workers-playground.pages.dev") ||
+			referer.hostname === "workers-playground.pages.dev" ||
+			referer.hostname.endsWith(".workers-playground.workers.dev") ||
+			referer.hostname === "workers-playground.workers.dev"
 		)
 	) {
 		throw new PreviewRequestForbidden();

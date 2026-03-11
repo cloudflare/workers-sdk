@@ -145,8 +145,8 @@ export interface StartDevWorkerInput {
 		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
-		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
-		persist?: string;
+		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. Set to `false` to disable persistence. */
+		persist?: string | false;
 		/** Controls which logs are logged 🤙. */
 		logLevel?: LogLevel;
 		/** Whether the worker server restarts upon source/config file changes. */
@@ -197,14 +197,12 @@ export interface StartDevWorkerInput {
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	assets?: string;
 
-	experimental?: {
-		tailLogs: boolean;
-	};
+	experimental?: Record<string, never>;
 }
 
 export type StartDevWorkerOptions = Omit<
 	StartDevWorkerInput,
-	"assets" | "containers"
+	"assets" | "containers" | "dev"
 > & {
 	/** A worker's directory. Usually where the Wrangler configuration file is located */
 	projectRoot: string;
@@ -223,7 +221,7 @@ export type StartDevWorkerOptions = Omit<
 		site?: Config["site"];
 	};
 	dev: StartDevWorkerInput["dev"] & {
-		persist: string;
+		persist: string | false;
 		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 	};
 	entrypoint: string;

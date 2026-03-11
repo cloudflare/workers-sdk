@@ -141,11 +141,11 @@ export function StudioTableSchemaEditor({
 			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
 		>
-			<div className="flex flex-col w-full h-full overflow-hidden text-xs bg-surface">
-				<div className="flex gap-2 p-4 py-2 border-b border-border shadow-xs">
+			<div className="flex h-full w-full flex-col overflow-hidden bg-surface text-xs">
+				<div className="flex gap-2 border-b border-border p-4 py-2 shadow-xs">
 					<input
 						autoFocus
-						className="w-62.5 h-9 rounded-lg border border-border px-3 text-base bg-transparent"
+						className="h-9 w-62.5 rounded-lg border border-border bg-transparent px-3 text-base"
 						onChange={(e) => handleNameChange(e.target.value)}
 						placeholder="Table name"
 						value={value.name.new ?? ""}
@@ -167,31 +167,31 @@ export function StudioTableSchemaEditor({
 					</div>
 				</div>
 
-				<div className="overflow-auto grow relative">
+				<div className="relative grow overflow-auto">
 					<div className="p-4">
-						<table className="border-collapse w-full">
+						<table className="w-full border-collapse">
 							<thead className="sticky top-0">
 								<tr>
-									<th className="w-10 p-2 border border-border text-center">
+									<th className="w-10 border border-border p-2 text-center">
 										#
 									</th>
-									<th className="w-10 p-2 border border-border text-center">
+									<th className="w-10 border border-border p-2 text-center">
 										<KeyIcon />
 									</th>
-									<th className="w-50 p-2 border border-border text-left">
+									<th className="w-50 border border-border p-2 text-left">
 										Column Name
 									</th>
-									<th className="w-25 p-2 border border-border text-left">
+									<th className="w-25 border border-border p-2 text-left">
 										Type
 									</th>
-									<th className="w-12.5 p-2 border border-border text-left">
+									<th className="w-12.5 border border-border p-2 text-left">
 										NULL
 									</th>
-									<th className="w-31.25 p-2 border border-border text-left">
+									<th className="w-31.25 border border-border p-2 text-left">
 										Default Value
 									</th>
-									<th className="p-2 border border-border"></th>
-									<th className="w-10 p-2 border border-border"></th>
+									<th className="border border-border p-2"></th>
+									<th className="w-10 border border-border p-2"></th>
 								</tr>
 							</thead>
 							<tbody>
@@ -219,7 +219,7 @@ export function StudioTableSchemaEditor({
 					</div>
 				</div>
 			</div>
-			<div className="overflow-hidden grow bg-surface">
+			<div className="grow overflow-hidden bg-surface">
 				<StudioSQLEditor
 					className="h-full w-full grow"
 					readOnly
@@ -241,17 +241,17 @@ function IndexList({ indexList }: IndexListProps): JSX.Element | null {
 
 	return (
 		<>
-			<div className="text-base font-bold my-4">Indexes</div>
+			<div className="my-4 text-base font-bold">Indexes</div>
 
-			<table className="border-collapse w-full">
+			<table className="w-full border-collapse">
 				<thead>
 					<tr>
-						<th className="w-10 p-2 border border-border">#</th>
-						<th className="w-50 p-2 border border-border text-left">
+						<th className="w-10 border border-border p-2">#</th>
+						<th className="w-50 border border-border p-2 text-left">
 							Index Name
 						</th>
-						<th className="w-25 p-2 border border-border text-left">Type</th>
-						<th className="p-2 border border-border text-left"></th>
+						<th className="w-25 border border-border p-2 text-left">Type</th>
+						<th className="border border-border p-2 text-left"></th>
 					</tr>
 				</thead>
 
@@ -259,10 +259,10 @@ function IndexList({ indexList }: IndexListProps): JSX.Element | null {
 					{indexList.map((index, indexIdx) => {
 						return (
 							<tr key={index.name}>
-								<td className="p-2 border border-border">{indexIdx + 1}</td>
-								<td className="p-2 border border-border">{index.name}</td>
-								<td className="p-2 border border-border">{index.type}</td>
-								<td className="p-2 border border-border font-mono">
+								<td className="border border-border p-2">{indexIdx + 1}</td>
+								<td className="border border-border p-2">{index.name}</td>
+								<td className="border border-border p-2">{index.type}</td>
+								<td className="border border-border p-2 font-mono">
 									{index.columns.join(", ")}
 								</td>
 							</tr>
