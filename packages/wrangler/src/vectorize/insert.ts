@@ -90,21 +90,27 @@ export const vectorizeInsertCommand = createCommand({
 				})
 			);
 			if (args.deprecatedV1) {
-				logger.log(`✨ Uploading vector batch (${batch.length} vectors)`);
+				if (!args.json) {
+					logger.log(`✨ Uploading vector batch (${batch.length} vectors)`);
+				}
 				const idxPart = await insertIntoIndexV1(config, args.name, formData);
 				vectorInsertCount += idxPart.count;
 			} else {
 				const mutation = await insertIntoIndex(config, args.name, formData);
 				vectorInsertCount += batch.length;
-				logger.log(
-					`✨ Enqueued ${batch.length} vectors into index '${args.name}' for insertion. Mutation changeset identifier: ${mutation.mutationId}`
-				);
+				if (!args.json) {
+					logger.log(
+						`✨ Enqueued ${batch.length} vectors into index '${args.name}' for insertion. Mutation changeset identifier: ${mutation.mutationId}`
+					);
+				}
 			}
 
 			if (vectorInsertCount > VECTORIZE_MAX_UPSERT_VECTOR_RECORDS) {
-				logger.warn(
-					`🚧 While Vectorize is in beta, we've limited uploads to 100k vectors per run. You may run this again with another batch to upload further`
-				);
+				if (!args.json) {
+					logger.warn(
+						`🚧 While Vectorize is in beta, we've limited uploads to 100k vectors per run. You may run this again with another batch to upload further`
+					);
+				}
 				break;
 			}
 		}

@@ -60,7 +60,7 @@ export function printWelcomeMessage(
 export const printSummary = (ctx: C3Context) => {
 	// Prepare relevant information
 	const dashboardUrl = ctx.account
-		? `https://dash.cloudflare.com/?to=/:account/workers/services/view/${ctx.project.name}`
+		? `https://dash.cloudflare.com/?to=/:account/workers/services/view/${ctx.project.name}/production`
 		: null;
 	const relativePath = relative(ctx.originalCWD, ctx.project.path);
 	const cdCommand = relativePath ? `cd ${relativePath}` : null;
