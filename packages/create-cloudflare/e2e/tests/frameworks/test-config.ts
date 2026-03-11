@@ -1,5 +1,6 @@
 import { detectPackageManager } from "../../../src/helpers/packageManagers";
 import {
+	CLOUDFLARE_API_TOKEN,
 	frameworkToTestFilter,
 	isExperimental,
 	keys,
