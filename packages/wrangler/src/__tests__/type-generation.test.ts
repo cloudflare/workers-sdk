@@ -3992,7 +3992,7 @@ describe("pipeline schema type generation", () => {
 
 			await runWrangler("types --include-runtime=false");
 
-			// Service worker format doesn't have GlobalProps, so crons are not included
+			// Service worker format doesn't have `GlobalProps`, so crons are not included
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
