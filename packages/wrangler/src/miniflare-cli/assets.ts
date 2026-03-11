@@ -23,12 +23,17 @@ export interface Options {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
+	signal?: AbortSignal;
 }
 
 export default async function generateASSETSBinding(options: Options) {
 	const assetsFetch =
 		options.directory !== undefined
-			? await generateAssetsFetch(options.directory, options.log)
+			? await generateAssetsFetch(
+					options.directory,
+					options.log,
+					options.signal
+				)
 			: invalidAssetsFetch;
 
 	return async function (miniflareRequest: Request) {
@@ -128,7 +133,8 @@ class ProxyDispatcher extends Dispatcher {
 
 async function generateAssetsFetch(
 	directory: string,
-	log: Logger
+	log: Logger,
+	signal?: AbortSignal
 ): Promise<typeof fetch> {
 	directory = resolve(directory);
 	// Defer importing miniflare until we really need it
@@ -174,35 +180,46 @@ async function generateAssetsFetch(
 		logger: log,
 	});
 
-	watch([headersFile, redirectsFile], { persistent: true }).on(
-		"change",
-		(path) => {
-			switch (path) {
-				case headersFile: {
-					log.log("_headers modified. Re-evaluating...");
-					const contents = readFileSync(headersFile).toString();
-					headers = parseHeaders(contents);
-					break;
-				}
-				case redirectsFile: {
-					log.log("_redirects modified. Re-evaluating...");
-					const contents = readFileSync(redirectsFile).toString();
-					redirects = parseRedirects(contents, {
-						htmlHandling: undefined, // Pages dev server doesn't expose html_handling configuration in this context.
-					});
-					break;
-				}
+	const watcher = watch([headersFile, redirectsFile], {
+		persistent: true,
+	}).on("change", (path) => {
+		switch (path) {
+			case headersFile: {
+				log.log("_headers modified. Re-evaluating...");
+				const contents = readFileSync(headersFile).toString();
+				headers = parseHeaders(contents);
+				break;
 			}
-
-			metadata = createMetadataObject({
-				redirects,
-				headers,
-				redirectsFile,
-				headersFile,
-				logger: log,
-			});
+			case redirectsFile: {
+				log.log("_redirects modified. Re-evaluating...");
+				const contents = readFileSync(redirectsFile).toString();
+				redirects = parseRedirects(contents, {
+					htmlHandling: undefined, // Pages dev server doesn't expose html_handling configuration in this context.
+				});
+				break;
+			}
 		}
-	);
+
+		metadata = createMetadataObject({
+			redirects,
+			headers,
+			redirectsFile,
+			headersFile,
+			logger: log,
+		});
+	});
+
+	if (signal) {
+		if (signal.aborted) {
+			void watcher.close().catch(() => {});
+		} else {
+			signal.addEventListener(
+				"abort",
+				() => void watcher.close().catch(() => {}),
+				{ once: true }
+			);
+		}
+	}
 
 	const generateResponse = async (request: Request) => {
 		const assetKeyEntryMap = new Map<string, string>();

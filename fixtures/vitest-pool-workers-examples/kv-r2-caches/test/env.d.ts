@@ -1,4 +1,6 @@
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {}
+declare namespace Cloudflare {
+	interface Env {
+		KV_NAMESPACE: KVNamespace;
+		R2_BUCKET: R2Bucket;
+	}
 }

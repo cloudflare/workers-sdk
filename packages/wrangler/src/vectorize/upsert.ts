@@ -73,15 +73,19 @@ export const vectorizeUpsertCommand = createCommand({
 			{
 				const mutation = await upsertIntoIndex(config, args.name, formData);
 				vectorUpsertCount += batch.length;
-				logger.log(
-					`✨ Enqueued ${batch.length} vectors into index '${args.name}' for upsertion. Mutation changeset identifier: ${mutation.mutationId}`
-				);
+				if (!args.json) {
+					logger.log(
+						`✨ Enqueued ${batch.length} vectors into index '${args.name}' for upsertion. Mutation changeset identifier: ${mutation.mutationId}`
+					);
+				}
 			}
 
 			if (vectorUpsertCount > VECTORIZE_MAX_UPSERT_VECTOR_RECORDS) {
-				logger.warn(
-					`🚧 While Vectorize is in beta, we've limited uploads to 100k vectors per run. You may run this again with another batch to upload further`
-				);
+				if (!args.json) {
+					logger.warn(
+						`🚧 While Vectorize is in beta, we've limited uploads to 100k vectors per run. You may run this again with another batch to upload further`
+					);
+				}
 				break;
 			}
 		}

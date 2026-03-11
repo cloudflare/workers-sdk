@@ -733,6 +733,74 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("miss");
 		});
+		it("should not persist data when persist is false", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const config = {
+				dev: {
+					persist: false,
+				},
+				entrypoint: "NOT_REAL",
+				name: "worker",
+			} satisfies Partial<StartDevWorkerOptions>;
+
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						const key = "http://localhost/";
+						if (request.method === "POST") {
+							const response = new Response("cached", {
+								headers: {
+									"Cache-Control": "max-age=3600"
+								}
+							});
+							await caches.default.put(key, response);
+						}
+						return (await caches.default.match(key)) ?? new Response("miss");
+					}
+				}`);
+
+			controller.onBundleStart({
+				config: configDefaults(config),
+				type: "bundleStart",
+			});
+
+			controller.onBundleComplete({
+				bundle,
+				config: configDefaults(config),
+				type: "bundleComplete",
+			});
+
+			let event = await bus.waitFor("reloadComplete");
+			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
+				method: "POST",
+			});
+			expect(await res.text()).toBe("cached");
+
+			// Check that data is cached within the same session
+			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(await res.text()).toBe("cached");
+
+			// Restart the worker - data should NOT be persisted since persist is false
+			await controller.teardown();
+			controller.onBundleStart({
+				config: configDefaults(config),
+				type: "bundleStart",
+			});
+			controller.onBundleComplete({
+				bundle,
+				config: configDefaults(config),
+				type: "bundleComplete",
+			});
+
+			event = await bus.waitFor("reloadComplete");
+			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+
+			// Data should be gone since persistence was disabled
+			expect(await res.text()).toBe("miss");
+		});
 		it("should expose KV namespace bindings", async () => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
