@@ -1,13 +1,8 @@
-import { Select } from "@base-ui/react/select";
 import { Button } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
-	CaretUpDownIcon,
-	CheckIcon,
 	DatabaseIcon,
 	PencilIcon,
-	PlusIcon,
-	TableIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import {
@@ -21,10 +16,10 @@ import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
+import { TableSelect } from "../../components/TableSelect";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioRef } from "../../components/studio";
 import type { StudioResource } from "../../types/studio";
-import type { RefObject } from "react";
 
 export const Route = createFileRoute("/d1/$databaseId")({
 	component: DatabaseView,
@@ -167,7 +162,12 @@ function DatabaseView(): JSX.Element {
 					>
 						{params.databaseId}
 					</Link>,
-					<TableSelect key="table-selector" studioRef={studioRef} />,
+					<TableSelect
+						key="table-selector"
+						selectedTable={searchParams.table}
+						studioRef={studioRef}
+						tables={loaderData.tables}
+					/>,
 				]}
 			>
 				<div className="flex-1" />
@@ -236,104 +236,5 @@ function DatabaseView(): JSX.Element {
 				/>
 			</div>
 		</div>
-	);
-}
-
-interface TableSelectProps {
-	studioRef: RefObject<StudioRef | null>;
-}
-
-function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
-	const data = Route.useLoaderData();
-	const navigate = useNavigate();
-	const searchParams = Route.useSearch();
-	const [open, setOpen] = useState(false);
-
-	const handleTableChange = useCallback(
-		(tableName: string | null) => {
-			if (tableName === null) {
-				return;
-			}
-
-			void navigate({
-				search: { table: tableName },
-				to: ".",
-			});
-		},
-		[navigate]
-	);
-
-	const handleCreateTable = useCallback((): void => {
-		setOpen(false);
-		studioRef.current?.openCreateTableTab();
-	}, [studioRef]);
-
-	return (
-		<Select.Root
-			key="table-select"
-			onOpenChange={setOpen}
-			onValueChange={handleTableChange}
-			open={open}
-			value={searchParams.table ?? null}
-		>
-			<Select.Trigger className="-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md border-none bg-transparent p-2 text-sm text-text transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
-				<Select.Value placeholder="View table" />
-				<Select.Icon>
-					<CaretUpDownIcon className="h-3.5 w-3.5 text-text-secondary" />
-				</Select.Icon>
-			</Select.Trigger>
-
-			<Select.Portal>
-				<Select.Positioner
-					align="start"
-					alignItemWithTrigger={false}
-					side="bottom"
-					sideOffset={4}
-				>
-					<Select.Popup className="z-100 max-h-72 min-w-36 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
-						<div className="p-1">
-							<button
-								className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none hover:bg-bg-secondary dark:hover:bg-bg-tertiary"
-								onClick={handleCreateTable}
-								type="button"
-							>
-								<span className="flex w-4 items-center">
-									<PlusIcon className="h-3.5 w-3.5" />
-								</span>
-								Create table
-							</button>
-						</div>
-
-						<div className="mx-1 border-t border-border" />
-
-						<Select.List className="p-1">
-							{data.tables.length > 0 ? (
-								data.tables.map((table) => {
-									const Icon =
-										searchParams.table === table.value ? CheckIcon : TableIcon;
-
-									return (
-										<Select.Item
-											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none data-highlighted:bg-bg-secondary dark:data-highlighted:bg-bg-tertiary"
-											key={table.value}
-											value={table.value}
-										>
-											<span className="flex w-4 items-center">
-												<Icon className="h-3.5 w-3.5" />
-											</span>
-											<Select.ItemText>{table.label}</Select.ItemText>
-										</Select.Item>
-									);
-								})
-							) : (
-								<span className="flex w-full items-center justify-center gap-2 px-2 py-1.5 text-sm text-text-secondary">
-									No tables
-								</span>
-							)}
-						</Select.List>
-					</Select.Popup>
-				</Select.Positioner>
-			</Select.Portal>
-		</Select.Root>
 	);
 }
