@@ -1,8 +1,7 @@
-import { Collapsible } from "@base-ui/react/collapsible";
-import { cn } from "@cloudflare/kumo";
+import { CloudflareLogo, cn } from "@cloudflare/kumo";
+import { Collapsible } from "@cloudflare/kumo/primitives/collapsible";
 import { CaretRightIcon, CubeIcon, DatabaseIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import type {
 	D1DatabaseResponse,
@@ -109,7 +108,7 @@ export function Sidebar({
 				className="box-border flex min-h-16.75 items-center gap-2.5 p-4"
 				href="/cdn-cgi/explorer/"
 			>
-				<CloudflareLogo className="shrink-0 text-primary" />
+				<CloudflareLogo variant="glyph" className="shrink-0 w-8 h-8" />
 				<div className="flex flex-col gap-px">
 					<span className="text-sm leading-tight font-semibold text-text">
 						Local Explorer

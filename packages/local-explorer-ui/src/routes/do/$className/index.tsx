@@ -1,4 +1,4 @@
-import { Button } from "@base-ui/react/button";
+import { Button, Link as KumoLink, Table } from "@cloudflare/kumo";
 import { CubeIcon } from "@phosphor-icons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
@@ -149,25 +149,22 @@ function NamespaceView() {
 				) : (
 					<>
 						<div className="overflow-hidden rounded-lg border border-border">
-							<table className="w-full text-sm">
-								<thead className="bg-bg-secondary">
-									<tr>
-										<th className="border-b border-border px-4 py-3 text-left font-medium text-text-secondary">
-											Object ID
-										</th>
-										<th className="border-b border-border px-4 py-3 text-right font-medium text-text-secondary" />
-									</tr>
-								</thead>
-								<tbody>
+							<Table>
+								<Table.Header>
+									<Table.Row>
+										<Table.Head>Object ID</Table.Head>
+										<Table.Head />
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
 									{objects.map((obj) => (
-										<tr
-											className="border-b border-border transition-colors last:border-b-0 hover:bg-bg-secondary/50"
-											key={obj.id}
-										>
-											<td className="px-4 py-3 font-mono text-xs">{obj.id}</td>
-											<td className="px-4 py-3 text-right">
+										<Table.Row key={obj.id}>
+											<Table.Cell className="font-mono text-xs">
+												{obj.id}
+											</Table.Cell>
+											<Table.Cell className="text-right">
 												<Link
-													className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+													className="inline-flex h-6.5 items-center gap-1 rounded-md px-2 text-xs hover:bg-border/50"
 													params={{
 														className: params.className,
 														objectId: obj.id as string,
@@ -176,20 +173,21 @@ function NamespaceView() {
 													to="/do/$className/$objectId"
 												>
 													Open Studio
+													<KumoLink.ExternalIcon />
 												</Link>
-											</td>
-										</tr>
+											</Table.Cell>
+										</Table.Row>
 									))}
-								</tbody>
-							</table>
+								</Table.Body>
+							</Table>
 						</div>
 
 						{hasMore && (
 							<div className="p-4 text-center">
 								<Button
-									className="inline-flex cursor-pointer items-center justify-center rounded-md border border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
+									variant="secondary"
 									disabled={loadingMore}
-									focusableWhenDisabled
+									loading={loadingMore}
 									onClick={handleLoadMore}
 								>
 									{loadingMore ? "Loading..." : "Load More"}

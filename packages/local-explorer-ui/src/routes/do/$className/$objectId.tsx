@@ -311,7 +311,7 @@ function TableSelect({ studioRef }: TableSelectProps): JSX.Element {
 			value={searchParams.table ?? null}
 		>
 			<Select.Trigger className="-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md border-none bg-transparent p-2 text-sm text-text transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
-				<Select.Value placeholder="Select table" />
+				<Select.Value placeholder="View table" />
 				<Select.Icon>
 					<CaretUpDownIcon className="h-3.5 w-3.5 text-text-secondary" />
 				</Select.Icon>

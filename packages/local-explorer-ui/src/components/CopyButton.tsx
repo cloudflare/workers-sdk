@@ -1,5 +1,4 @@
-import { Button } from "@base-ui/react/button";
-import { cn } from "@cloudflare/kumo";
+import { Button, cn } from "@cloudflare/kumo";
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
@@ -19,13 +18,15 @@ export function CopyButton({ text }: CopyButtonProps) {
 	return (
 		<Button
 			className={cn(
-				"flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded border-none bg-transparent p-0 text-text-secondary opacity-0 transition-[opacity,background-color,color] group-hover/cell:opacity-100 hover:bg-border hover:text-text",
+				"!p-0 !w-6 !h-6 opacity-0 transition-[opacity,background-color,color] group-hover/cell:opacity-100",
 				{
 					"text-success opacity-100": copied,
 				}
 			)}
 			onClick={handleCopy}
 			aria-label={copied ? "Copied" : "Copy to clipboard"}
+			variant="ghost"
+			shape="square"
 		>
 			{copied ? <CheckIcon size={14} weight="bold" /> : <CopyIcon size={14} />}
 		</Button>
