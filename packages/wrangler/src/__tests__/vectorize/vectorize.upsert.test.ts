@@ -239,6 +239,78 @@ describe("dataset upsert", () => {
 		`);
 	});
 
+	it("should output valid JSON for insert with --json flag", async () => {
+		writeFileSync(
+			"vectors.ndjson",
+			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
+		);
+
+		const mutationId = crypto.randomUUID();
+
+		msw.use(
+			http.post("*/vectorize/v2/indexes/:indexName/insert", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { mutationId: mutationId },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		await runWrangler(
+			`vectorize insert my-index --file vectors.ndjson --batch-size 10 --json`
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "count": 5,
+			  "index": "my-index",
+			}
+		`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
+	it("should output valid JSON for upsert with --json flag", async () => {
+		writeFileSync(
+			"vectors.ndjson",
+			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
+		);
+
+		const mutationId = crypto.randomUUID();
+
+		msw.use(
+			http.post("*/vectorize/v2/indexes/:indexName/upsert", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { mutationId: mutationId },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		await runWrangler(
+			`vectorize upsert my-index --file vectors.ndjson --batch-size 10 --json`
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "count": 5,
+			  "index": "my-index",
+			}
+		`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
 	it("should reject an invalid file param", async () => {
 		await expect(
 			runWrangler("vectorize upsert my-index --file invalid_vectors.ndjson")
