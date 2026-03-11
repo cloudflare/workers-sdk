@@ -18,13 +18,21 @@ See below for a summary of this repo's Actions
   - Adds the PR to a GitHub project
   - Makes sure that Wrangler's warning for old Node.js versions works.
 
-### E2E tests (e2e.yml)
+### Wrangler E2E tests (e2e-wrangler.yml)
 
 - Triggers
   - Updates to PRs on the Cloudflare fork.
   - PRs in the merge queue.
 - Actions
-  - Runs the E2E tests for Wrangler & Vite.
+  - Runs the E2E tests for Wrangler.
+
+### Vite Plugin E2E tests (e2e-vite.yml)
+
+- Triggers
+  - Updates to PRs on the Cloudflare fork.
+  - PRs in the merge queue.
+- Actions
+  - Runs the E2E tests for the Vite plugin.
 
 ## Deploy Pages Previews (deploy-pages-preview.yml)
 
