@@ -19,27 +19,6 @@
 				"parameters": [
 					{
 						"in": "query",
-						"name": "page",
-						"schema": {
-							"default": 1,
-							"description": "Page number of paginated results.",
-							"minimum": 1,
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "per_page",
-						"schema": {
-							"default": 20,
-							"description": "Maximum number of results per page.",
-							"maximum": 1000,
-							"minimum": 1,
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
 						"name": "order",
 						"schema": {
 							"description": "Field to order results by.",
@@ -445,7 +424,7 @@
 		"/d1/database": {
 			"get": {
 				"description": "Returns a list of D1 databases.",
-				"operationId": "cloudflare-d1-list-databases",
+				"operationId": "d1-list-databases",
 				"parameters": [
 					{
 						"in": "query",
@@ -453,27 +432,6 @@
 						"schema": {
 							"description": "a database name to search for.",
 							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "page",
-						"schema": {
-							"default": 1,
-							"description": "Page number of paginated results.",
-							"minimum": 1,
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "per_page",
-						"schema": {
-							"default": 1000,
-							"description": "Number of items per page.",
-							"maximum": 10000,
-							"minimum": 10,
-							"type": "number"
 						}
 					}
 				],
@@ -499,21 +457,6 @@
 														"count": {
 															"description": "Total number of results for the requested service",
 															"example": 1,
-															"type": "number"
-														},
-														"page": {
-															"description": "Current page within paginated list of results",
-															"example": 1,
-															"type": "number"
-														},
-														"per_page": {
-															"description": "Number of results per page of results",
-															"example": 20,
-															"type": "number"
-														},
-														"total_count": {
-															"description": "Total results available without any search parameters",
-															"example": 2000,
 															"type": "number"
 														}
 													},
@@ -545,7 +488,7 @@
 		"/d1/database/{database_id}/raw": {
 			"post": {
 				"description": "Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
-				"operationId": "cloudflare-d1-raw-database-query",
+				"operationId": "d1-raw-database-query",
 				"parameters": [
 					{
 						"in": "path",
@@ -610,29 +553,7 @@
 			"get": {
 				"description": "Returns the Durable Object namespaces owned by an account.",
 				"operationId": "durable-objects-namespace-list-namespaces",
-				"parameters": [
-					{
-						"description": "Current page.",
-						"in": "query",
-						"name": "page",
-						"schema": {
-							"default": 1,
-							"minimum": 1,
-							"type": "integer"
-						}
-					},
-					{
-						"description": "Items per-page.",
-						"in": "query",
-						"name": "per_page",
-						"schema": {
-							"default": 20,
-							"maximum": 1000,
-							"minimum": 1,
-							"type": "integer"
-						}
-					}
-				],
+				"parameters": [],
 				"responses": {
 					"200": {
 						"content": {
@@ -1647,21 +1568,6 @@
 					"count": {
 						"description": "Total number of results for the requested service.",
 						"example": 1,
-						"type": "number"
-					},
-					"page": {
-						"description": "Current page within paginated list of results.",
-						"example": 1,
-						"type": "number"
-					},
-					"per_page": {
-						"description": "Number of results per page of results.",
-						"example": 20,
-						"type": "number"
-					},
-					"total_count": {
-						"description": "Total results available without any search parameters.",
-						"example": 2000,
 						"type": "number"
 					}
 				},

@@ -4,7 +4,11 @@
 		"lib": ["esnext"],
 		"module": "esnext",
 		"moduleResolution": "bundler",
-		"types": ["@cloudflare/vitest-pool-workers"],
+		"types": [
+			"@types/node",
+			"@cloudflare/workers-types",
+			"@cloudflare/vitest-pool-workers/types"
+		],
 		"allowJs": true,
 		"checkJs": false,
 		"noEmit": true,

@@ -1324,10 +1324,10 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 				`,
 			});
 			const worker = helper.runLongLived("wrangler dev --remote");
+			const { url } = await worker.waitForReady();
 
-			await worker.readUntil(
-				/Could not access `not-a-domain.testing.devprod.cloudflare.dev`. Make sure the domain is set up to be proxied by Cloudflare/
-			);
+			await fetchText(url);
+			await worker.readUntil(/ERROR/);
 		});
 	}
 );

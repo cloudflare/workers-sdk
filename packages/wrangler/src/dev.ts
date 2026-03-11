@@ -255,14 +255,6 @@ export const dev = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-tail-logs": {
-			type: "boolean",
-			alias: ["x-tail-logs"],
-			describe:
-				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
-			default: true,
-			hidden: true,
-		},
 		types: {
 			describe: "Generate types from your Worker configuration",
 			type: "boolean",
@@ -364,6 +356,8 @@ export type StartDevOptions = DevArguments &
 		enableIpc?: boolean;
 		dockerPath?: string;
 		containerEngine?: string;
+		/** Set to `false` to disable persistence. When `true` or `undefined`, uses default persistence path. */
+		persist?: boolean;
 	};
 
 export async function getHostAndRoutes(

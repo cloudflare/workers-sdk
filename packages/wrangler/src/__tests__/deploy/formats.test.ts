@@ -344,6 +344,47 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should strip query string suffixes from module names (esm)", async () => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`import hello from './hello.wasm?module'; export default {};`
+			);
+			fs.writeFileSync("./hello.wasm", "SOME WASM CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./94b240d0d692281e6467aa42043986e5c7eea034-hello.wasm":
+						"SOME WASM CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should strip query string suffixes from module names with preserve_file_names (esm)", async () => {
+			writeWranglerConfig({
+				preserve_file_names: true,
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`import hello from './hello.wasm?module'; export default {};`
+			);
+			fs.writeFileSync("./hello.wasm", "SOME WASM CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./hello.wasm": "SOME WASM CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		describe("inject process.env.NODE_ENV", () => {
 			beforeEach(() => {
 				vi.stubEnv("NODE_ENV", "some-node-env");
