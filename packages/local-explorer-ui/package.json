@@ -12,6 +12,7 @@
 		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
 		"dev:ui": "concurrently -n api,ui -c green,blue \"openapi-ts --watch\" \"vite\"",
 		"postinstall": "openapi-ts",
+		"playwright:install": "pnpm playwright install chromium",
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:ci": "vitest run",
