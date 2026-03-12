@@ -91,7 +91,7 @@ jobs:
         env:
           NODE_VERSION: ${{ env.NODE_VERSION }}
           CLOUDFLARE_API_TOKEN: ${{ (github.event_name == 'merge_group' || github.head_ref == 'changeset-release/main' || steps.check-remote.outputs.has_label == 'true') && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ (github.event_name == 'merge_group' || github.head_ref == 'changeset-release/main' || steps.check-remote.outputs.has_label == 'true') && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
           E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
