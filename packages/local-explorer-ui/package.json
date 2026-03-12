@@ -16,6 +16,9 @@
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:ci": "vitest run",
+		"pretest:e2e": "pnpm playwright:install",
+		"test:e2e": "vitest run --config vitest.config.e2e.ts",
+		"test:e2e:watch": "vitest --config vitest.config.e2e.ts",
 		"test:watch": "vitest"
 	},
 	"dependencies": {
