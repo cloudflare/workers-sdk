@@ -71,11 +71,7 @@ import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type {
-	CfWorkerInit,
-	Config,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {
@@ -700,17 +696,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		let rawBindings: WorkerMetadataBinding[] | undefined;
 		if (props.secretsFile) {
-			const secretsContent = await parseBulkInputToObject(props.secretsFile);
-			if (secretsContent) {
-				rawBindings = Object.entries(secretsContent).map(
-					([secretName, secretValue]) => ({
+			const secretsResult = await parseBulkInputToObject(props.secretsFile);
+			if (secretsResult) {
+				for (const [secretName, secretValue] of Object.entries(
+					secretsResult.content
+				)) {
+					bindings[secretName] = {
 						type: "secret_text",
-						name: secretName,
-						text: secretValue,
-					})
-				);
+						value: secretValue,
+					};
+				}
 			}
 		}
 
@@ -726,7 +722,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
-			rawBindings,
 			migrations,
 			modules,
 			containers: config.containers,
