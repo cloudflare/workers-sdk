@@ -107,7 +107,7 @@ export function Sidebar({
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
 			<a
 				className="box-border flex min-h-16.75 items-center gap-2.5 p-4"
-				href="/"
+				href="/cdn-cgi/explorer/"
 			>
 				<CloudflareLogo className="shrink-0 text-primary" />
 				<div className="flex flex-col gap-px">
