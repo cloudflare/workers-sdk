@@ -15,13 +15,17 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        EVENT_NAME: ${{ github.event_name }}
+        HEAD_REF: ${{ github.head_ref }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
       run: |
-        if [ "${{ github.event_name }}" = "merge_group" ] || \
-           [ "${{ github.head_ref }}" = "changeset-release/main" ]; then
+        if [ "$EVENT_NAME" = "merge_group" ] || \
+           [ "$HEAD_REF" = "changeset-release/main" ]; then
           echo "run_remote=true" >> "$GITHUB_OUTPUT"
-        elif [ "${{ github.event_name }}" = "pull_request" ]; then
-          HAS_LABEL=$(gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --json labels \
+        elif [ "$EVENT_NAME" = "pull_request" ]; then
+          HAS_LABEL=$(gh pr view "$PR_NUMBER" \
+            --repo "$REPO" --json labels \
             --jq '[.labels[].name] | any(. == "run-remote-tests")')
           echo "run_remote=${HAS_LABEL}" >> "$GITHUB_OUTPUT"
         else
