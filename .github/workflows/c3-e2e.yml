@@ -49,6 +49,7 @@ jobs:
       - name: Check for remote test label
         id: check-remote
         if: github.event_name == 'pull_request'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
