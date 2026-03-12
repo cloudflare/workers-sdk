@@ -33,6 +33,7 @@ export type {
 	CacheOptions,
 	ConfigModuleRuleType,
 	Environment,
+	PreviewsConfig,
 	RawEnvironment,
 } from "./environment";
 

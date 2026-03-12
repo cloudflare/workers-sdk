@@ -650,6 +650,19 @@ interface EnvironmentInheritable {
 		 */
 		exclude: string[];
 	};
+
+	/**
+	 * Configuration for Worker Previews.
+	 *
+	 * Previews are branches of your Worker's main instance used to test features
+	 * in development outside of production. This block defines the settings
+	 * used when creating Preview deployments via `wrangler preview`.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+	 *
+	 * @inheritable
+	 */
+	previews: PreviewsConfig | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -1558,3 +1571,21 @@ export type ContainerEngine =
 			localDocker: DockerConfiguration;
 	  }
 	| string;
+
+/**
+ * Configuration for Worker Previews.
+ *
+ * This defines the settings used when creating Preview deployments.
+ * Previews are branches of your Worker's main instance used to test features
+ * during feature development outside of production.
+ *
+ * The `previews` block contains any intentionally divergent configuration intended solely for Previews, including:
+ * - All non-inheritable properties (environment variables and bindings like KV, D1, R2, etc.)
+ * - Select inheritable properties: `logpush`, `observability`, `limits`
+ *
+ * @inheritable
+ */
+export interface PreviewsConfig
+	extends
+		EnvironmentNonInheritable,
+		Pick<EnvironmentInheritable, "logpush" | "observability" | "limits"> {}
