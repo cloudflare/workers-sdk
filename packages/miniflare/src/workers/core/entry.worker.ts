@@ -152,6 +152,91 @@ function getTargetService(request: Request, url: URL, env: Env) {
 	return service;
 }
 
+const LOCALHOST_HOSTNAMES = ["localhost", "127.0.0.1", "[::1]"];
+
+/**
+ * Validates that a request to the local explorer API is a same-origin request.
+ * This check must happen BEFORE any header rewriting (getUserRequest) to ensure
+ * we're checking the actual browser-sent headers, not Miniflare rewritten ones.
+ */
+function validateLocalExplorerRequest(
+	request: Request,
+	routes: WorkerRoute[],
+	upstreamUrl: string | undefined
+): void {
+	// Build allowed hostnames set from localhost + user configured routes
+	const allowedHostnames = new Set(LOCALHOST_HOSTNAMES);
+	for (const route of routes) {
+		// route.hostname has already had the leading "*" stripped by parseRoutes,
+		// but may have a leading "." for wildcard routes (e.g., "*.example.com" -> ".example.com")
+		const hostname = route.hostname.replace(/^\./, "");
+		if (hostname) {
+			allowedHostnames.add(hostname);
+		}
+	}
+	// Add upstream hostname if configured (e.g., from --host or --local-upstream)
+	if (upstreamUrl) {
+		try {
+			const upstreamHostname = new URL(upstreamUrl).hostname;
+			if (upstreamHostname) {
+				allowedHostnames.add(upstreamHostname);
+			}
+		} catch {
+			// Ignore invalid upstream URL
+		}
+	}
+
+	const hostHeader = request.headers.get("Host");
+	let hostHostname: string;
+	if (hostHeader) {
+		try {
+			hostHostname = new URL(`http://${hostHeader}`).hostname;
+		} catch {
+			throw new HttpError(403, "Invalid Host header");
+		}
+		if (!isHostnameAllowed(hostHostname, allowedHostnames)) {
+			throw new HttpError(403, "Invalid Host header");
+		}
+	}
+
+	const origin = request.headers.get("Origin");
+	if (origin) {
+		let originHostname: string;
+		try {
+			originHostname = new URL(origin).hostname;
+		} catch {
+			throw new HttpError(403, "Invalid Origin header");
+		}
+		if (!isHostnameAllowed(originHostname, allowedHostnames)) {
+			throw new HttpError(403, "Invalid Origin header");
+		}
+	}
+}
+
+/**
+ * Check if a hostname is allowed, supporting wildcard routes.
+ * For example, if allowedHostnames contains "example.com", then
+ * "sub.example.com" would also be allowed if there was a wildcard route.
+ */
+function isHostnameAllowed(
+	hostname: string,
+	allowedHostnames: Set<string>
+): boolean {
+	// Direct match
+	if (allowedHostnames.has(hostname)) {
+		return true;
+	}
+
+	// Check for subdomain matches (for wildcard routes like *.example.com)
+	for (const allowed of allowedHostnames) {
+		if (hostname.endsWith(`.${allowed}`)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 function maybePrettifyError(request: Request, response: Response, env: Env) {
 	if (
 		response.status !== 500 ||
@@ -396,6 +481,19 @@ export default <ExportedHandler<Env>>{
 		const clientAcceptEncoding = request.headers.get("Accept-Encoding");
 
 		try {
+			// Security check for local explorer API - must happen BEFORE getUserRequest()
+			// to check the original headers before any rewriting (e.g., for custom routes/upstream).
+			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
+				const preRewriteUrl = new URL(request.url);
+				if (preRewriteUrl.pathname.startsWith(LOCAL_EXPLORER_BASE_PATH)) {
+					validateLocalExplorerRequest(
+						request,
+						env[CoreBindings.JSON_ROUTES],
+						env[CoreBindings.TEXT_UPSTREAM_URL]
+					);
+				}
+			}
+
 			request = getUserRequest(request, env, clientIp);
 		} catch (e) {
 			if (e instanceof HttpError) {
