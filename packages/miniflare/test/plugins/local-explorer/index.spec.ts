@@ -1,10 +1,7 @@
 import http from "node:http";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import {
-	LOCAL_EXPLORER_API_PATH,
-	LOCAL_EXPLORER_BASE_PATH,
-} from "../../../src/plugins/core/constants";
+import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
 import { disposeWithRetry } from "../../test-shared";
 
 const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
@@ -251,9 +248,7 @@ describe("Local Explorer API validation", () => {
 
 	describe("routing", () => {
 		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
-			const res = await mf.dispatchFetch(
-				`http://localhost${LOCAL_EXPLORER_BASE_PATH}`
-			);
+			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer");
 			expect(res.status).toBe(200);
 			expect(res.headers.get("Content-Type")).toContain("text/html");
 
@@ -261,9 +256,7 @@ describe("Local Explorer API validation", () => {
 		});
 
 		test("serves explorer UI at /cdn-cgi/explorer/", async ({ expect }) => {
-			const res = await mf.dispatchFetch(
-				`http://localhost${LOCAL_EXPLORER_BASE_PATH}/`
-			);
+			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer/");
 			expect(res.status).toBe(200);
 			expect(res.headers.get("Content-Type")).toContain("text/html");
 
