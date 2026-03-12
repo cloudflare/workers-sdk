@@ -1,0 +1,38 @@
+name: "Rerun Remote Tests"
+
+# When the "run-remote-tests" label is added to a PR, re-run the E2E workflows
+# so they pick up the label and pass the Cloudflare API token to the test steps.
+# This avoids adding "labeled" as a trigger type to every E2E workflow (which
+# would cause wasteful re-runs on unrelated label changes).
+on:
+  pull_request:
+    types: [labeled]
+
+permissions: {}
+
+jobs:
+  rerun-e2e:
+    name: "Rerun E2E Tests"
+    if: github.event.label.name == 'run-remote-tests'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: "Re-run E2E workflows"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          for workflow in e2e-wrangler.yml e2e-vite.yml c3-e2e.yml; do
+            run_id=$(gh api "repos/${REPO}/actions/workflows/${workflow}/runs?head_sha=${HEAD_SHA}&per_page=1" \
+              --jq '.workflow_runs[0].id' || true)
+
+            if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+              gh api "repos/${REPO}/actions/runs/${run_id}/rerun" --method POST \
+                || echo "Run may already be in progress"
+              echo "Re-triggered ${workflow} (run ${run_id})"
+            else
+              echo "No run found for ${workflow} at SHA ${HEAD_SHA}"
+            fi
+          done
