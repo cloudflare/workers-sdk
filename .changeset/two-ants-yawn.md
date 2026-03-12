@@ -2,4 +2,6 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Add support for Sandbox SDK preview URLs to @cloudflare/vite-plugin.
+Fix Sandbox SDK preview URL WebSocket routing
+
+When using Sandbox SDK preview URLs, WebSocket requests using the `vite-hmr` protocol could be dropped before they reached the worker, causing HMR to fail. The plugin now forwards Sandbox WebSocket traffic and preserves the original request origin/host so worker proxy logic receives the correct URL.
