@@ -981,10 +981,20 @@ function groupByWranglerConfig(configs: TestConfig[]): ConfigGroup[] {
 		const existing = groups.get(key);
 		if (existing) {
 			existing.name += `, ${config.name}`;
-			Object.assign(
-				existing.expectRuntimeFlags,
+			for (const [flag, value] of Object.entries(
 				config.expectRuntimeFlags ?? {}
-			);
+			)) {
+				if (
+					flag in existing.expectRuntimeFlags &&
+					existing.expectRuntimeFlags[flag] !== value
+				) {
+					throw new Error(
+						`Conflicting expectRuntimeFlags for "${flag}" in group "${existing.name}": ` +
+							`existing=${existing.expectRuntimeFlags[flag]}, new=${value} (from "${config.name}")`
+					);
+				}
+				existing.expectRuntimeFlags[flag] = value;
+			}
 		} else {
 			groups.set(key, {
 				name: config.name,
