@@ -6,6 +6,7 @@ import type { ConnectivityServiceRequest, ServiceHost } from "./index";
 export interface ServiceArgs {
 	name: string;
 	type: ServiceType;
+	tcpPort?: number;
 	httpPort?: number;
 	httpsPort?: number;
 	ipv4?: string;
@@ -110,6 +111,11 @@ export function validateRequest(args: ServiceArgs) {
 			);
 		}
 	}
+
+	// Validate TCP services require a port
+	if (args.type === ServiceType.Tcp && !args.tcpPort) {
+		throw new UserError("TCP services require a --tcp-port to be specified");
+	}
 }
 
 export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
@@ -148,7 +154,9 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 	};
 
 	// Add service-specific fields
-	if (args.type === ServiceType.Http) {
+	if (args.type === ServiceType.Tcp) {
+		request.tcp_port = args.tcpPort;
+	} else if (args.type === ServiceType.Http) {
 		request.http_port = args.httpPort;
 		request.https_port = args.httpsPort;
 	}

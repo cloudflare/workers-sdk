@@ -27,7 +27,11 @@ export const vpcServiceGetCommand = createCommand({
 		logger.log(`   Type: ${service.type}`);
 
 		// Display service-specific details
-		if (service.type === ServiceType.Http) {
+		if (service.type === ServiceType.Tcp) {
+			if (service.tcp_port) {
+				logger.log(`   TCP Port: ${service.tcp_port}`);
+			}
+		} else if (service.type === ServiceType.Http) {
 			if (service.http_port) {
 				logger.log(`   HTTP Port: ${service.http_port}`);
 			}
