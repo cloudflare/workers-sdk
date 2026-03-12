@@ -49,10 +49,10 @@ export function TableSelect({
 			onOpenChange={setOpen}
 			onValueChange={handleTableChange}
 			open={open}
-			value={selectedTable ?? "Select table"}
+			value={selectedTable}
 		>
 			<Select.Trigger className="-mx-1.5 inline-flex cursor-pointer items-center gap-1 rounded-md border-none bg-transparent p-2 text-sm text-text transition-colors hover:bg-border/50 data-popup-open:bg-border/50">
-				<Select.Value placeholder="View table" />
+				{selectedTable ? <Select.Value /> : "Select table"}
 				<Select.Icon>
 					<CaretUpDownIcon className="h-3.5 w-3.5 text-text-secondary" />
 				</Select.Icon>
