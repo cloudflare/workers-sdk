@@ -46,17 +46,9 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
 
-      - name: Check for remote test label
+      - name: Check if remote tests should run
         id: check-remote
-        if: github.event_name == 'pull_request'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          HAS_LABEL=$(gh pr view "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --json labels \
-            --jq '[.labels[].name] | any(. == "run-remote-tests")')
-          echo "has_label=${HAS_LABEL}" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/check-remote-tests
 
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -90,8 +82,8 @@ jobs:
         run: pnpm run test:e2e:c3
         env:
           NODE_VERSION: ${{ env.NODE_VERSION }}
-          CLOUDFLARE_API_TOKEN: ${{ (github.event_name == 'merge_group' || github.head_ref == 'changeset-release/main' || steps.check-remote.outputs.has_label == 'true') && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ (github.event_name == 'merge_group' || github.head_ref == 'changeset-release/main' || steps.check-remote.outputs.has_label == 'true') && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
+          CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
           E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
