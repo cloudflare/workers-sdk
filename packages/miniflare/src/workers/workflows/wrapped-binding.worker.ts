@@ -69,33 +69,30 @@ class InstanceImpl implements WorkflowInstance {
 		private binding: WorkflowBinding
 	) {}
 
-	private async getInstance(): Promise<WorkflowInstance & Disposable> {
-		return (await this.binding.get(this.id)) as WorkflowInstance & Disposable;
-	}
-
 	public async pause(): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.pause();
+		// Look for instance in namespace
+		// Get engine stub
+		// Call a few functions on stub
+		throw new Error("Not implemented yet");
 	}
 
 	public async resume(): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.resume();
+		throw new Error("Not implemented yet");
 	}
 
 	public async terminate(): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.terminate();
+		throw new Error("Not implemented yet");
 	}
 
 	public async restart(): Promise<void> {
-		using instance = await this.getInstance();
-		await instance.restart();
+		throw new Error("Not implemented yet");
 	}
 
 	public async status(): Promise<InstanceStatus> {
-		using instance = await this.getInstance();
+		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
+			Disposable;
 		using res = (await instance.status()) as InstanceStatus & Disposable;
+		instance[Symbol.dispose]();
 		return structuredClone(res);
 	}
 
@@ -103,8 +100,10 @@ class InstanceImpl implements WorkflowInstance {
 		payload: unknown;
 		type: string;
 	}): Promise<void> {
-		using instance = await this.getInstance();
+		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
+			Disposable;
 		await instance.sendEvent(args);
+		instance[Symbol.dispose]();
 	}
 }
 
