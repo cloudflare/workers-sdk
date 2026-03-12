@@ -411,7 +411,10 @@ export default <ExportedHandler<Env>>{
 
 		try {
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
-				if (url.pathname.startsWith(LOCAL_EXPLORER_BASE_PATH)) {
+				if (
+					url.pathname === LOCAL_EXPLORER_BASE_PATH ||
+					url.pathname.startsWith(`${LOCAL_EXPLORER_BASE_PATH}/`)
+				) {
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
 				}
 			}
