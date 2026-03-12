@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import {
+	clickButton,
+	fillByPlaceholder,
+	getTableRowCount,
+	isTextVisible,
 	navigateToKV,
 	page,
 	seedKV,
+	waitForSelector,
 	waitForTableRows,
 	waitForText,
 } from "../utils";
@@ -15,9 +20,7 @@ describe("KV Namespace", () => {
 	describe("viewing entries", () => {
 		test("displays entries in the table", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
-
 			await waitForText("greeting");
 
 			const greetingRow = page.locator("tr").filter({ hasText: "greeting" });
@@ -27,7 +30,6 @@ describe("KV Namespace", () => {
 
 		test("shows column headers", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(1);
 
 			await waitForText("Key");
@@ -38,13 +40,10 @@ describe("KV Namespace", () => {
 	describe("searching entries", () => {
 		test("filters entries by prefix", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
-			const searchInput = page.getByPlaceholder("Search keys by prefix...");
-			await searchInput.fill("config:");
-
-			await page.getByRole("button", { name: "Search" }).click();
+			await fillByPlaceholder("Search keys by prefix...", "config:");
+			await clickButton("Search");
 
 			await waitForText("config:theme");
 
@@ -55,13 +54,13 @@ describe("KV Namespace", () => {
 
 		test("shows no results message when prefix matches nothing", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
-			const searchInput = page.getByPlaceholder("Search keys by prefix...");
-			await searchInput.fill("nonexistent-prefix-xyz:");
-
-			await page.getByRole("button", { name: "Search" }).click();
+			await fillByPlaceholder(
+				"Search keys by prefix...",
+				"nonexistent-prefix-xyz:"
+			);
+			await clickButton("Search");
 
 			await waitForText("No keys found matching prefix");
 		});
@@ -70,7 +69,6 @@ describe("KV Namespace", () => {
 	describe("adding entries", () => {
 		test("adds a new key/value pair", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
 			const mockData = {
@@ -80,8 +78,7 @@ describe("KV Namespace", () => {
 
 			await page.locator("#add-key").fill(mockData.key);
 			await page.locator("#add-value").fill(mockData.value);
-
-			await page.getByRole("button", { name: "Add entry" }).click();
+			await clickButton("Add entry");
 
 			await page.waitForTimeout(500);
 
@@ -99,30 +96,23 @@ describe("KV Namespace", () => {
 
 			await page.locator("#add-key").fill("greeting");
 			await page.locator("#add-value").fill("new-greeting-value");
-			await page.getByRole("button", { name: "Add entry" }).click();
+			await clickButton("Add entry");
 
-			await page.waitForSelector('[role="alertdialog"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
 			await waitForText("Overwrite key?");
 		});
 
 		test("confirms overwrite and updates value", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
 			const mockValue = "overwritten-value-e2e";
 
 			await page.locator("#add-key").fill("greeting");
 			await page.locator("#add-value").fill(mockValue);
-			await page.getByRole("button", { name: "Add entry" }).click();
+			await clickButton("Add entry");
 
-			await page.waitForSelector('[role="alertdialog"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
 			await page
 				.getByRole("alertdialog")
 				.getByRole("button", { name: "Overwrite" })
@@ -135,61 +125,47 @@ describe("KV Namespace", () => {
 	describe("editing entries", () => {
 		test("opens edit mode via menu", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
 			const row = page.locator("tr").filter({ hasText: "greeting" });
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Edit" }).click();
 
-			await page.waitForSelector('input[id^="edit-key-"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('input[id^="edit-key-"]', { timeout: 5_000 });
 		});
 
 		test("saves edited value", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
 			const row = page.locator("tr").filter({ hasText: "greeting" });
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Edit" }).click();
 
-			await page.waitForSelector('textarea[id^="edit-value-"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('textarea[id^="edit-value-"]', { timeout: 5_000 });
 
 			const updatedMockValue = "Updated greeting e2e";
 
 			const valueInput = page.locator('textarea[id^="edit-value-"]');
 			await valueInput.fill(updatedMockValue);
-
-			await page.getByRole("button", { name: "Save" }).click();
+			await clickButton("Save");
 
 			await waitForText(updatedMockValue);
 		});
 
 		test("cancels editing without saving changes", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
 			const row = page.locator("tr").filter({ hasText: "greeting" });
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Edit" }).click();
 
-			await page.waitForSelector('textarea[id^="edit-value-"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('textarea[id^="edit-value-"]', { timeout: 5_000 });
 
 			const valueInput = page.locator('textarea[id^="edit-value-"]');
 			await valueInput.fill("Should not be saved");
-
-			await page.getByRole("button", { name: "Cancel" }).click();
+			await clickButton("Cancel");
 
 			// Original value should still be there
 			const greetingRow = page.locator("tr").filter({ hasText: "greeting" });
@@ -201,18 +177,13 @@ describe("KV Namespace", () => {
 	describe("deleting entries", () => {
 		test("shows delete confirmation dialog", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
 			const row = page.locator("tr").filter({ hasText: "greeting" });
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Delete" }).click();
 
-			await page.waitForSelector('[role="alertdialog"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
-
+			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
 			await waitForText("Delete key?");
 		});
 
@@ -224,10 +195,7 @@ describe("KV Namespace", () => {
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Delete" }).click();
 
-			await page.waitForSelector('[role="alertdialog"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
 			await page
 				.getByRole("alertdialog")
 				.getByRole("button", { name: "Delete" })
@@ -251,17 +219,13 @@ describe("KV Namespace", () => {
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Delete" }).click();
 
-			await page.waitForSelector('[role="alertdialog"]', {
-				state: "visible",
-				timeout: 5_000,
-			});
+			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
 			await page
 				.getByRole("alertdialog")
 				.getByRole("button", { name: "Cancel" })
 				.click();
 
-			const greetingRow = page.locator("tr").filter({ hasText: "greeting" });
-			const isVisible = await greetingRow.isVisible();
+			const isVisible = await isTextVisible("greeting");
 			expect(isVisible).toBe(true);
 		});
 	});
@@ -269,10 +233,9 @@ describe("KV Namespace", () => {
 	describe("pagination", () => {
 		test("loads more entries when clicking Load More", async () => {
 			await navigateToKV("KV");
-
 			await waitForTableRows(5);
 
-			const initialRows = await page.locator("tbody tr").count();
+			const initialRows = await getTableRowCount();
 
 			const loadMoreButton = page.getByRole("button", { name: "Load More" });
 			if (await loadMoreButton.isVisible()) {
@@ -287,12 +250,10 @@ describe("KV Namespace", () => {
 					return rows.length > prevCount;
 				},
 				initialRows,
-				{
-					timeout: 10_000,
-				}
+				{ timeout: 10_000 }
 			);
 
-			const newRows = await page.locator("tbody tr").count();
+			const newRows = await getTableRowCount();
 			expect(newRows).toBeGreaterThan(initialRows);
 		});
 	});

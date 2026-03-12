@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { navigateToDOClass, page, seedDO, waitForText } from "../utils";
+import {
+	isTextVisible,
+	navigateToDOClass,
+	page,
+	seedDO,
+	waitForText,
+} from "../utils";
 
 describe("Durable Objects", () => {
 	beforeEach(async () => {
@@ -24,8 +30,8 @@ describe("Durable Objects", () => {
 
 		test("shows Open Studio link for objects if they exist", async () => {
 			await navigateToDOClass("MyDurableObject");
-
 			await waitForText("MyDurableObject");
+
 			await page.waitForTimeout(1_000);
 
 			const openStudioLinks = page.locator('a:has-text("Open Studio")');
@@ -40,16 +46,10 @@ describe("Durable Objects", () => {
 
 			await page.waitForTimeout(1_000);
 
-			const hasEmptyMessage = await page
-				.getByText("No Durable Objects with stored data")
-				.isVisible()
-				.catch(() => false);
-
-			const hasObjectIdHeader = await page
-				.getByText("Object ID")
-				.isVisible()
-				.catch(() => false);
-
+			const hasEmptyMessage = await isTextVisible(
+				"No Durable Objects with stored data"
+			);
+			const hasObjectIdHeader = await isTextVisible("Object ID");
 			const hasOpenStudioLink = await page
 				.locator('a:has-text("Open Studio")')
 				.first()
