@@ -7,6 +7,7 @@ import { type OpenAPIConfig } from "./OpenAPI";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
 import type { OnCancel } from "./CancelablePromise";
+import type { PaginatedResult, ResultInfo } from "./PaginatedResult";
 
 type FetchResponseInfo = {
 	code: number;
@@ -18,6 +19,7 @@ type FetchResult<ResponseType = unknown> = {
 	result?: ResponseType;
 	errors?: FetchResponseInfo[];
 	messages?: FetchResponseInfo[];
+	result_info?: ResultInfo;
 };
 
 const isDefined = <T>(
@@ -335,6 +337,74 @@ const catchErrorCodes = (
 	}
 };
 
+type ExecuteRequestResult = {
+	url: string;
+	response: Response;
+	responseBody: any;
+	responseHeader: string | undefined;
+};
+
+/**
+ * Shared HTTP execution: builds URL, headers, body, sends the request,
+ * and returns the raw response components for further processing.
+ * Returns null if the request was cancelled before sending.
+ */
+const executeRequest = async (
+	config: OpenAPIConfig,
+	options: ApiRequestOptions,
+	onCancel: OnCancel
+): Promise<ExecuteRequestResult | null> => {
+	const url = getUrl(config, options);
+	const formData = getFormData(options);
+	const body = getRequestBody(options);
+	const headers = await getHeaders(config, options);
+	debugLogRequest(config, url, headers, formData ?? body ?? {});
+
+	if (onCancel.isCancelled) {
+		return null;
+	}
+
+	const response = await sendRequest(
+		config,
+		options,
+		url,
+		body,
+		formData,
+		headers,
+		onCancel
+	);
+	const responseBody = await getResponseBody(response);
+	const responseHeader = getResponseHeader(response, options.responseHeader);
+
+	return { url, response, responseBody, responseHeader };
+};
+
+/**
+ * Build an ApiResult from the raw response, handling V4 schema parsing.
+ */
+const buildApiResult = (
+	config: OpenAPIConfig,
+	options: ApiRequestOptions,
+	req: ExecuteRequestResult
+): ApiResult => {
+	if (isResponseSchemaV4(config, options)) {
+		return parseResponseSchemaV4(
+			req.url,
+			req.response,
+			req.responseHeader,
+			req.responseBody
+		);
+	}
+
+	return {
+		url: req.url,
+		ok: req.response.ok,
+		status: req.response.status,
+		statusText: req.response.statusText,
+		body: req.responseHeader ?? req.responseBody,
+	};
+};
+
 /**
  * Request method
  * @param config The OpenAPI configuration object
@@ -348,50 +418,58 @@ export const request = <T>(
 ): CancelablePromise<T> => {
 	return new CancelablePromise(async (resolve, reject, onCancel) => {
 		try {
-			const url = getUrl(config, options);
-			const formData = getFormData(options);
-			const body = getRequestBody(options);
-			const headers = await getHeaders(config, options);
-			debugLogRequest(config, url, headers, formData ?? body ?? {});
-
-			if (!onCancel.isCancelled) {
-				const response = await sendRequest(
-					config,
-					options,
-					url,
-					body,
-					formData,
-					headers,
-					onCancel
-				);
-				const responseBody = await getResponseBody(response);
-				const responseHeader = getResponseHeader(
-					response,
-					options.responseHeader
-				);
-
-				let result: ApiResult;
-
-				if (isResponseSchemaV4(config, options)) {
-					result = parseResponseSchemaV4(
-						url,
-						response,
-						responseHeader,
-						responseBody
-					);
-				} else {
-					result = {
-						url,
-						ok: response.ok,
-						status: response.status,
-						statusText: response.statusText,
-						body: responseHeader ?? responseBody,
-					};
-				}
-				debugLogResponse(config, result);
-				catchErrorCodes(options, result);
-				resolve(result.body);
+			const req = await executeRequest(config, options, onCancel);
+			if (!req) {
+				return;
 			}
+
+			const result = buildApiResult(config, options, req);
+			debugLogResponse(config, result);
+			catchErrorCodes(options, result);
+			resolve(result.body);
+		} catch (error) {
+			reject(error);
+		}
+	});
+};
+
+/**
+ * Request method that preserves pagination info from V4 responses
+ * @param config The OpenAPI configuration object
+ * @param options The request options from the service
+ * @returns CancelablePromise<PaginatedResult<T>>
+ * @throws ApiError
+ */
+export const requestPaginated = <T>(
+	config: OpenAPIConfig,
+	options: ApiRequestOptions
+): CancelablePromise<PaginatedResult<T>> => {
+	return new CancelablePromise(async (resolve, reject, onCancel) => {
+		try {
+			const req = await executeRequest(config, options, onCancel);
+			if (!req) {
+				return;
+			}
+
+			const result = buildApiResult(config, options, req);
+			debugLogResponse(config, result);
+			catchErrorCodes(options, result);
+
+			// Extract result_info from the raw V4 response body for pagination
+			let resultInfo: ResultInfo | undefined;
+			if (isResponseSchemaV4(config, options)) {
+				const fetchResult = (
+					typeof req.responseBody === "object"
+						? req.responseBody
+						: JSON.parse(req.responseBody)
+				) as FetchResult<T>;
+				resultInfo = fetchResult.result_info;
+			}
+
+			resolve({
+				data: result.body as T,
+				resultInfo,
+			});
 		} catch (error) {
 			reject(error);
 		}
