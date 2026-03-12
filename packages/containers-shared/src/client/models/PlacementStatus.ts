@@ -15,6 +15,11 @@ export type PlacementStatus = {
 	 */
 	ready?: boolean;
 	/**
+	 * The container runtime status. Preferred over `health` when deriving
+	 * the displayed state in the Dash.
+	 */
+	container_status?: string;
+	/**
 	 * The status of the placement in relationship to a durable object.
 	 * This only applies when the backing application is configured
 	 * to connect with a durable object namespace.
