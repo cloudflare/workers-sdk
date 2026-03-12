@@ -10,6 +10,26 @@ import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
+import { aiSearchChatCommand } from "./ai-search/chat";
+import { aiSearchCreateCommand } from "./ai-search/create";
+import { aiSearchDeleteCommand } from "./ai-search/delete";
+import { aiSearchGetCommand } from "./ai-search/get";
+import { aiSearchNamespace } from "./ai-search/index";
+import { aiSearchItemsChunksCommand } from "./ai-search/items/chunks";
+import { aiSearchItemsGetCommand } from "./ai-search/items/get";
+import { aiSearchItemsNamespace } from "./ai-search/items/index";
+import { aiSearchItemsListCommand } from "./ai-search/items/list";
+import { aiSearchItemsLogsCommand } from "./ai-search/items/logs";
+import { aiSearchJobsCreateCommand } from "./ai-search/jobs/create";
+import { aiSearchJobsGetCommand } from "./ai-search/jobs/get";
+import { aiSearchJobsNamespace } from "./ai-search/jobs/index";
+import { aiSearchJobsListCommand } from "./ai-search/jobs/list";
+import { aiSearchJobsLogsCommand } from "./ai-search/jobs/logs";
+import { aiSearchListCommand } from "./ai-search/list";
+import { aiSearchPlaygroundCommand } from "./ai-search/playground";
+import { aiSearchSearchCommand } from "./ai-search/search";
+import { aiSearchStatsCommand } from "./ai-search/stats";
+import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
@@ -1298,6 +1318,76 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("hyperdrive");
+
+	// ai-search
+	registry.define([
+		{ command: "wrangler ai-search", definition: aiSearchNamespace },
+		{ command: "wrangler ai-search list", definition: aiSearchListCommand },
+		{
+			command: "wrangler ai-search create",
+			definition: aiSearchCreateCommand,
+		},
+		{ command: "wrangler ai-search get", definition: aiSearchGetCommand },
+		{
+			command: "wrangler ai-search update",
+			definition: aiSearchUpdateCommand,
+		},
+		{
+			command: "wrangler ai-search delete",
+			definition: aiSearchDeleteCommand,
+		},
+		{ command: "wrangler ai-search stats", definition: aiSearchStatsCommand },
+		{
+			command: "wrangler ai-search search",
+			definition: aiSearchSearchCommand,
+		},
+		{ command: "wrangler ai-search chat", definition: aiSearchChatCommand },
+		{
+			command: "wrangler ai-search playground",
+			definition: aiSearchPlaygroundCommand,
+		},
+		{
+			command: "wrangler ai-search items",
+			definition: aiSearchItemsNamespace,
+		},
+		{
+			command: "wrangler ai-search items list",
+			definition: aiSearchItemsListCommand,
+		},
+		{
+			command: "wrangler ai-search items get",
+			definition: aiSearchItemsGetCommand,
+		},
+		{
+			command: "wrangler ai-search items logs",
+			definition: aiSearchItemsLogsCommand,
+		},
+		{
+			command: "wrangler ai-search items chunks",
+			definition: aiSearchItemsChunksCommand,
+		},
+		{
+			command: "wrangler ai-search jobs",
+			definition: aiSearchJobsNamespace,
+		},
+		{
+			command: "wrangler ai-search jobs list",
+			definition: aiSearchJobsListCommand,
+		},
+		{
+			command: "wrangler ai-search jobs create",
+			definition: aiSearchJobsCreateCommand,
+		},
+		{
+			command: "wrangler ai-search jobs get",
+			definition: aiSearchJobsGetCommand,
+		},
+		{
+			command: "wrangler ai-search jobs logs",
+			definition: aiSearchJobsLogsCommand,
+		},
+	]);
+	registry.registerNamespace("ai-search");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
