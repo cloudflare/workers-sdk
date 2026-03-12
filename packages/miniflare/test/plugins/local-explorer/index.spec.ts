@@ -1,7 +1,10 @@
 import http from "node:http";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
+import {
+	LOCAL_EXPLORER_API_PATH,
+	LOCAL_EXPLORER_BASE_PATH,
+} from "../../../src/plugins/core/constants";
 import { disposeWithRetry } from "../../test-shared";
 
 const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
@@ -244,5 +247,38 @@ describe("Local Explorer API validation", () => {
 			req.on("error", reject);
 		});
 		expect(status).toBe(403);
+	});
+
+	describe("routing", () => {
+		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
+			const res = await mf.dispatchFetch(
+				`http://localhost${LOCAL_EXPLORER_BASE_PATH}`
+			);
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("serves explorer UI at /cdn-cgi/explorer/", async ({ expect }) => {
+			const res = await mf.dispatchFetch(
+				`http://localhost${LOCAL_EXPLORER_BASE_PATH}/`
+			);
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("does not match paths that start with /cdn-cgi/explorer but are not the explorer", async ({
+			expect,
+		}) => {
+			// This should fall through to the user worker, not match the explorer
+			const res = await mf.dispatchFetch(
+				"http://localhost/cdn-cgi/explorerfoo"
+			);
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("user worker");
+		});
 	});
 });
