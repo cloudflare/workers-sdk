@@ -65,6 +65,6 @@ jobs:
             fi
 
             gh api "repos/${REPO}/actions/runs/${run_id}/rerun" --method POST \
+              && echo "Re-triggered ${workflow} (run ${run_id})" \
               || echo "Failed to re-run ${workflow} (run ${run_id})"
-            echo "Re-triggered ${workflow} (run ${run_id})"
           done
