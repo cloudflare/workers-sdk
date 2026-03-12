@@ -52,6 +52,7 @@
 		"@vitejs/plugin-react": "^4.4.1",
 		"concurrently": "^9.0.0",
 		"eslint-plugin-tailwindcss": "^4.0.0-beta.0",
+		"playwright-chromium": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vite-plugin-svgr": "^4.3.0",

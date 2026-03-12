@@ -2249,6 +2249,9 @@ importers:
       eslint-plugin-tailwindcss:
         specifier: ^4.0.0-beta.0
         version: 4.0.0-beta.0(tailwindcss@4.1.18)
+      playwright-chromium:
+        specifier: catalog:default
+        version: 1.56.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
