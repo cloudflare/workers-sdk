@@ -1,12 +1,13 @@
 name: "Rerun Remote Tests"
 
-# When the "run-remote-tests" label is added to a PR, re-run the E2E workflows
-# so they pick up the label and pass the Cloudflare API token to the test steps.
-# This avoids adding "labeled" as a trigger type to every E2E workflow (which
-# would cause wasteful re-runs on unrelated label changes).
+# When the "run-remote-tests" label is added to or removed from a PR, re-run
+# the E2E workflows so they pick up the label change and pass (or withhold) the
+# Cloudflare API token to the test steps.  This avoids adding "labeled" as a
+# trigger type to every E2E workflow (which would cause wasteful re-runs on
+# unrelated label changes).
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, unlabeled]
 
 permissions: {}
 
