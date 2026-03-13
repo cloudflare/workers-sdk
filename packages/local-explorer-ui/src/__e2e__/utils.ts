@@ -56,7 +56,10 @@ export async function navigateToDOObject(
 	objectId: string,
 	table?: string
 ): Promise<void> {
-	const url = new URL(`/cdn-cgi/explorer/do/${className}/${objectId}`);
+	const url = new URL(
+		`/cdn-cgi/explorer/do/${className}/${objectId}`,
+		"http://localhost"
+	);
 	if (table) {
 		url.searchParams.set("table", table);
 	}

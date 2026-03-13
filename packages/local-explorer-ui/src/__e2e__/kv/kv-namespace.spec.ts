@@ -238,7 +238,7 @@ describe("KV Namespace", () => {
 			const initialRows = await getTableRowCount();
 
 			const loadMoreButton = page.getByRole("button", { name: "Load More" });
-			if (await loadMoreButton.isVisible()) {
+			if (!(await loadMoreButton.isVisible())) {
 				return;
 			}
 
