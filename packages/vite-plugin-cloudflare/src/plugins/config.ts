@@ -48,6 +48,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			return {
 				appType: "custom",
+				esbuild: getEsbuildOptions(userConfig),
 				server: {
 					fs: {
 						deny: [
@@ -148,6 +149,24 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 	};
 });
+
+export function getEsbuildOptions(
+	userConfig: UserConfig
+): UserConfig["esbuild"] {
+	if (userConfig.esbuild === false) {
+		return false;
+	}
+
+	return {
+		...userConfig.esbuild,
+		supported: {
+			...userConfig.esbuild?.supported,
+			// Force esbuild to lower TC39 decorators — workerd does not support
+			// native decorator syntax. See https://github.com/cloudflare/workers-sdk/issues/12626
+			decorators: false,
+		},
+	};
+}
 
 /**
  * Generates the environment configuration for all Worker environments.
