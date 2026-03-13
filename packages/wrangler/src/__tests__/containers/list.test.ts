@@ -1,8 +1,9 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
+import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DASH_APPLICATIONS } from "../helpers/mock-cloudchamber";
