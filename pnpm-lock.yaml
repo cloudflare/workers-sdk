@@ -2026,6 +2026,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260312.1
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -2035,9 +2038,6 @@ importers:
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
-      promjs:
-        specifier: ^0.4.2
-        version: 0.4.2
       toucan-js:
         specifier: 4.0.0
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
@@ -2095,15 +2095,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260312.1
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
-      promjs:
-        specifier: ^0.4.2
-        version: 0.4.2
       toucan-js:
         specifier: 4.0.0
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
@@ -2531,6 +2531,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260312.1
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -2543,9 +2546,6 @@ importers:
       itty-router:
         specifier: ^4.0.13
         version: 4.0.17
-      promjs:
-        specifier: ^0.4.2
-        version: 0.4.2
       toucan-js:
         specifier: 4.0.0
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
@@ -13995,9 +13995,6 @@ packages:
   progress@2.0.3:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
-
-  promjs@0.4.2:
-    resolution: {integrity: sha512-qvHcTU9xwEieFOf2Qnf5JYPKkdJU2lRbJfJvJspw6XpnoH7VPmNfnJJnOLPfN8ODJMBLRt8wEPVjxyyn0Or6RQ==}
 
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
@@ -26082,8 +26079,6 @@ snapshots:
   process@0.11.10: {}
 
   progress@2.0.3: {}
-
-  promjs@0.4.2: {}
 
   prompts@2.4.2:
     dependencies:
