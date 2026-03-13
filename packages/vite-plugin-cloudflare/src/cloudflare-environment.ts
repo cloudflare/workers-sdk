@@ -25,16 +25,24 @@ import type { FetchFunctionOptions } from "vite/module-runner";
 
 export const MAIN_ENTRY_NAME = "index";
 
-type EnvWebSocket = Readonly<
-	Pick<WebSocket, "send" | "addEventListener" | "removeEventListener">
->;
+interface WebSocketContainer {
+	webSocket?: WebSocket;
+	messageBuffers?: string[];
+}
 
-function createHotChannel(envWebSocket: EnvWebSocket): vite.HotChannel {
+const webSocketUndefinedError = "The WebSocket is undefined";
+
+function createHotChannel(
+	webSocketContainer: WebSocketContainer
+): vite.HotChannel {
 	const listenersMap = new Map<string, Set<vite.HotChannelListener>>();
 
 	const client: vite.HotChannelClient = {
 		send(payload) {
-			envWebSocket.send(JSON.stringify(payload));
+			const webSocket = webSocketContainer.webSocket;
+			assert(webSocket, webSocketUndefinedError);
+
+			webSocket.send(JSON.stringify(payload));
 		},
 	};
 
@@ -49,7 +57,16 @@ function createHotChannel(envWebSocket: EnvWebSocket): vite.HotChannel {
 
 	return {
 		send(payload) {
-			envWebSocket.send(JSON.stringify(payload));
+			const webSocket = webSocketContainer.webSocket;
+			const message = JSON.stringify(payload);
+
+			if (!webSocket) {
+				webSocketContainer.messageBuffers ??= [];
+				webSocketContainer.messageBuffers.push(message);
+				return;
+			}
+
+			webSocket.send(message);
 		},
 		on(event: string, listener: vite.HotChannelListener) {
 			const listeners = listenersMap.get(event) ?? new Set();
@@ -61,55 +78,31 @@ function createHotChannel(envWebSocket: EnvWebSocket): vite.HotChannel {
 			listenersMap.get(event)?.delete(listener);
 		},
 		listen() {
-			envWebSocket.addEventListener("message", onMessage);
+			const webSocket = webSocketContainer.webSocket;
+			assert(webSocket, webSocketUndefinedError);
+
+			webSocket.addEventListener("message", onMessage);
 		},
 		close() {
-			envWebSocket.removeEventListener("message", onMessage);
+			const webSocket = webSocketContainer.webSocket;
+			assert(webSocket, webSocketUndefinedError);
+
+			webSocket.removeEventListener("message", onMessage);
 		},
 	};
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
-	#webSocket: WebSocket | undefined;
-	#onRunnerInitialized: () => void;
+	#webSocketContainer: WebSocketContainer;
 
 	constructor(name: string, config: vite.ResolvedConfig) {
-		let resolveRunnerInitialized = () => {};
-		const runnerInitialized = new Promise<void>((resolve) => {
-			resolveRunnerInitialized = resolve;
-		});
-
-		const getClassWebsocket = () => {
-			assert(this.#webSocket, "The Environment WebSocket is undefined");
-			return this.#webSocket;
-		};
-
-		const envWebsocket = new Proxy<EnvWebSocket>({} as EnvWebSocket, {
-			get(_target, property) {
-				return (...args: unknown[]) =>
-					runnerInitialized.then(() => {
-						const ws = getClassWebsocket();
-						const value = Reflect.get(ws, property);
-						assert(
-							typeof value === "function",
-							`unexpected ${JSON.stringify(property)} get run on envWebSocket`
-						);
-						return value.apply(ws, args);
-					});
-			},
-			set(_target, property, _value) {
-				throw new Error(
-					`Internal Error: unexpected ${JSON.stringify(property)} set run on envWebSocket`
-				);
-			},
-		});
-
+		// It would be good if we could avoid passing this object around and mutating it
+		const webSocketContainer: WebSocketContainer = {};
 		super(name, config, {
 			hot: true,
-			transport: createHotChannel(envWebsocket),
+			transport: createHotChannel(webSocketContainer),
 		});
-
-		this.#onRunnerInitialized = resolveRunnerInitialized;
+		this.#webSocketContainer = webSocketContainer;
 	}
 
 	async initRunner(
@@ -137,8 +130,15 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		const webSocket = response.webSocket;
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
-		this.#webSocket = webSocket;
-		this.#onRunnerInitialized();
+		this.#webSocketContainer.webSocket = webSocket;
+
+		if (this.#webSocketContainer.messageBuffers) {
+			for (const bufferedMessage of this.#webSocketContainer.messageBuffers) {
+				webSocket.send(bufferedMessage);
+			}
+
+			delete this.#webSocketContainer.messageBuffers;
+		}
 	}
 
 	async fetchWorkerExportTypes(
