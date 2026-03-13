@@ -31,6 +31,7 @@ jobs:
           filters: |
             relevant:
               - 'packages/local-explorer-ui/**'
+              - 'packages/miniflare/src/workers/local-explorer/**'
               - 'fixtures/worker-with-resources/**'
               - 'fixtures/shared/**'
 
