@@ -1,36 +1,64 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
-import { describe, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
-import { runWorkflow, runWorkflowDefer, setWorkflowEntrypoint } from "./utils";
+import { ABORT_REASONS, isAbortError } from "../src/lib/errors";
+import { setTestWorkflowCallback } from "./test-entry";
+import {
+	runWorkflow,
+	runWorkflowAndAwait,
+	settlePendingWorkflows,
+} from "./utils";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
 	EngineLogs,
 } from "../src/engine";
+import type { WorkflowStep } from "cloudflare:workers";
+
+afterEach(async () => {
+	await settlePendingWorkflows();
+});
 
 describe("Engine", () => {
 	it("should not retry after NonRetryableError is thrown", async ({
 		expect,
 	}) => {
-		const engineStub = await runWorkflow(
-			"MOCK-INSTANCE-ID",
-			async (event, step) => {
-				await step.do("should only have one retry", async () => {
-					throw new NonRetryableError("Should only retry once");
-				});
-			}
+		const instanceId = "NON-RETRYABLE-ERROR";
+		const engineId = env.ENGINE.idFromName(instanceId);
+
+		await runWorkflow(instanceId, async (_event, step) => {
+			await step.do("should only have one retry", async () => {
+				throw new NonRetryableError("Should only retry once");
+			});
+		});
+
+		await vi.waitUntil(
+			async () => {
+				try {
+					const logs = (await env.ENGINE.get(
+						engineId
+					).readLogs()) as EngineLogs;
+					return logs.logs.some(
+						(val) => val.event === InstanceEvent.WORKFLOW_FAILURE
+					);
+				} catch (e) {
+					// DO may still be aborting — retry
+					if (isAbortError(e)) {
+						return false;
+					}
+					throw e;
+				}
+			},
+			{ timeout: 3000 }
 		);
 
-		const logs = (await engineStub.readLogs()) as EngineLogs;
+		const logs = (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
 
 		expect(
-			logs.logs.some((val) => val.event == InstanceEvent.WORKFLOW_FAILURE)
-		).toBe(true);
-		expect(
-			logs.logs.filter((val) => val.event == InstanceEvent.ATTEMPT_START)
+			logs.logs.filter((val) => val.event === InstanceEvent.ATTEMPT_START)
 		).toHaveLength(1);
 	});
 
@@ -39,7 +67,7 @@ describe("Engine", () => {
 	}) => {
 		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
-			async (event, step) => {
+			async (_event, step) => {
 				try {
 					await step.do(
 						"always errors out",
@@ -58,6 +86,16 @@ describe("Engine", () => {
 			}
 		);
 
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 1000 }
+		);
+
 		const logs = (await engineStub.readLogs()) as EngineLogs;
 
 		expect(
@@ -70,7 +108,7 @@ describe("Engine", () => {
 	});
 
 	it("waitForEvent should receive events while active", async () => {
-		const engineStub = await runWorkflowDefer(
+		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
 			async (_, step) => {
 				return await step.waitForEvent("i'm a event!", {
@@ -100,7 +138,7 @@ describe("Engine", () => {
 	});
 
 	it("waitForEvent should receive events even if not active", async () => {
-		const engineStub = await runWorkflowDefer(
+		const engineStub = await runWorkflow(
 			"MOCK-INSTANCE-ID",
 			async (_, step) => {
 				return await step.waitForEvent("i'm a event!", {
@@ -182,11 +220,18 @@ describe("Engine", () => {
 			return "test";
 		});
 
-		await runInDurableObject(engineStub, async (engine) => {
-			await engine.init(accountId, workflow, version, instance, event);
-			await engine.setStatus(accountId, instanceId, InstanceStatus.Running);
-			await engine.abort("kaboom");
-		});
+		try {
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.init(accountId, workflow, version, instance, event);
+				await engine.setStatus(accountId, instanceId, InstanceStatus.Running);
+				await engine.abort(ABORT_REASONS.GRACE_PERIOD_COMPLETE);
+			});
+		} catch (e) {
+			// Expected - abort throws to break the DO
+			if (!isAbortError(e)) {
+				throw e;
+			}
+		}
 
 		const engineId = env.ENGINE.idFromName(instanceId);
 		const restartedStub = env.ENGINE.get(engineId);
@@ -206,55 +251,29 @@ describe("Engine", () => {
 	describe("step limits", () => {
 		it("should enforce step limit when exceeded", async ({ expect }) => {
 			const stepLimit = 3;
+			const instanceId = "STEP-LIMIT-EXCEEDED";
+			const engineId = env.ENGINE.idFromName(instanceId);
+			const engineStub = env.ENGINE.get(engineId);
 
-			const engineStub = await runWorkflow(
-				"STEP-LIMIT-EXCEEDED",
-				async (_event, step) => {
-					// Try to run more steps than the limit
-					for (let i = 0; i < stepLimit + 1; i++) {
-						await step.do(`step-${i}`, async () => `result-${i}`);
-					}
-				}
-			);
-
-			// Set the step limit on the engine
 			await runInDurableObject(engineStub, (engine) => {
 				engine.stepLimit = stepLimit;
 			});
 
-			// Re-init to run with the new limit
-			await setWorkflowEntrypoint(engineStub, async (_event, step) => {
+			setTestWorkflowCallback(async (_event, step) => {
 				for (let i = 0; i < stepLimit + 1; i++) {
 					await step.do(`step-${i}`, async () => `result-${i}`);
 				}
 			});
 
-			const engineId = env.ENGINE.idFromName("STEP-LIMIT-EXCEEDED-2");
-			const freshStub = env.ENGINE.get(engineId);
-
-			await runInDurableObject(freshStub, (engine) => {
-				engine.stepLimit = stepLimit;
-			});
-
-			await setWorkflowEntrypoint(freshStub, async (_event, step) => {
-				for (let i = 0; i < stepLimit + 1; i++) {
-					await step.do(`step-${i}`, async () => `result-${i}`);
-				}
-			});
-
-			await freshStub.init(
+			await engineStub.init(
 				12346,
 				{} as DatabaseWorkflow,
 				{} as DatabaseVersion,
-				{ id: "STEP-LIMIT-EXCEEDED-2" } as DatabaseInstance,
-				{
-					payload: {},
-					timestamp: new Date(),
-					instanceId: "STEP-LIMIT-EXCEEDED-2",
-				}
+				{ id: instanceId } as DatabaseInstance,
+				{ payload: {}, timestamp: new Date(), instanceId }
 			);
 
-			const logs = (await freshStub.readLogs()) as EngineLogs;
+			const logs = (await engineStub.readLogs()) as EngineLogs;
 
 			expect(
 				logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_FAILURE)
@@ -265,34 +284,30 @@ describe("Engine", () => {
 			expect,
 		}) => {
 			const stepLimit = 3;
+			const instanceId = "STEP-LIMIT-AT-LIMIT";
+			const engineId = env.ENGINE.idFromName(instanceId);
+			const engineStub = env.ENGINE.get(engineId);
 
-			const engineId = env.ENGINE.idFromName("STEP-LIMIT-AT-LIMIT");
-			const freshStub = env.ENGINE.get(engineId);
-
-			await runInDurableObject(freshStub, (engine) => {
+			await runInDurableObject(engineStub, (engine) => {
 				engine.stepLimit = stepLimit;
 			});
 
-			await setWorkflowEntrypoint(freshStub, async (_event, step) => {
+			setTestWorkflowCallback(async (_event, step) => {
 				for (let i = 0; i < stepLimit; i++) {
 					await step.do(`step-${i}`, async () => `result-${i}`);
 				}
 				return "done";
 			});
 
-			await freshStub.init(
+			await engineStub.init(
 				12346,
 				{} as DatabaseWorkflow,
 				{} as DatabaseVersion,
-				{ id: "STEP-LIMIT-AT-LIMIT" } as DatabaseInstance,
-				{
-					payload: {},
-					timestamp: new Date(),
-					instanceId: "STEP-LIMIT-AT-LIMIT",
-				}
+				{ id: instanceId } as DatabaseInstance,
+				{ payload: {}, timestamp: new Date(), instanceId }
 			);
 
-			const logs = (await freshStub.readLogs()) as EngineLogs;
+			const logs = (await engineStub.readLogs()) as EngineLogs;
 
 			expect(
 				logs.logs.some((val) => val.event === InstanceEvent.WORKFLOW_SUCCESS)
@@ -314,6 +329,473 @@ describe("Engine", () => {
 			);
 
 			expect(stepLimit).toBe(DEFAULT_STEP_LIMIT);
+		});
+		it.for([
+			InstanceStatus.Complete,
+			InstanceStatus.Errored,
+			InstanceStatus.Terminated,
+		])(
+			"should throw when calling terminate on instance in finite state: %s",
+			async (finiteStatus, { expect }) => {
+				const engineStub = await runWorkflow(
+					`TERMINATE-${finiteStatus}-INSTANCE`,
+					async () => "done"
+				);
+
+				await vi.waitUntil(
+					async () => {
+						const status = await runInDurableObject(engineStub, (engine) =>
+							engine.getStatus()
+						);
+						return status === InstanceStatus.Complete;
+					},
+					{ timeout: 1000 }
+				);
+
+				// If not Complete, manually set the status
+				if (finiteStatus !== InstanceStatus.Complete) {
+					await runInDurableObject(engineStub, async (_engine, state) => {
+						await state.storage.put("ENGINE_STATUS", finiteStatus);
+					});
+				}
+
+				await expect(
+					runInDurableObject(engineStub, async (engine) => {
+						await engine.changeInstanceStatus("terminate");
+					})
+				).rejects.toThrow(
+					"Cannot terminate instance since its on a finite state"
+				);
+			}
+		);
+
+		it.for([
+			InstanceStatus.Complete,
+			InstanceStatus.Errored,
+			InstanceStatus.Terminated,
+			InstanceStatus.Running,
+			InstanceStatus.Paused,
+		])(
+			"should restart workflow from status: %s",
+			async (initialStatus, { expect }) => {
+				const instanceId = `RESTART-${initialStatus}-INSTANCE`;
+				const engineId = env.ENGINE.idFromName(instanceId);
+
+				const engineStub = await runWorkflowAndAwait(
+					instanceId,
+					async (_event: unknown, step: WorkflowStep) => {
+						await step.do("test-step", async () => "step-result");
+						return "done";
+					}
+				);
+
+				// Set the status to initialStatus
+				await runInDurableObject(engineStub, async (_engine, state) => {
+					await state.storage.put("ENGINE_STATUS", initialStatus);
+				});
+
+				try {
+					await runInDurableObject(engineStub, async (engine) => {
+						await engine.changeInstanceStatus("restart");
+					});
+				} catch (e) {
+					// Expected - abort throws to break the DO
+					if (!isAbortError(e)) {
+						throw e;
+					}
+				}
+
+				const restartedStub = env.ENGINE.get(engineId);
+
+				await runInDurableObject(restartedStub, async (engine) => {
+					await engine.attemptRestart();
+				});
+
+				await vi.waitUntil(
+					async () => {
+						const status = await runInDurableObject(restartedStub, (engine) =>
+							engine.getStatus()
+						);
+						return status === InstanceStatus.Complete;
+					},
+					{ timeout: 1000 }
+				);
+
+				// Verify the workflow ran again by checking logs
+				const logs = (await restartedStub.readLogs()) as EngineLogs;
+
+				expect(
+					logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_START)
+				).toBe(true);
+
+				expect(
+					logs.logs.some((log) => log.event === InstanceEvent.STEP_START)
+				).toBe(true);
+
+				expect(
+					logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
+				).toBe(true);
+			}
+		);
+
+		it("should pause after in-flight step.do finishes", async ({ expect }) => {
+			const instanceId = "PAUSE-AFTER-DO";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflow(instanceId, async (_event, step) => {
+				await step.do("long-step", async () => {
+					await scheduler.wait(500);
+					return "first";
+				});
+				// step-2 should never run because pause takes effect after long-step
+				await step.do("step-2", async () => "second");
+				return "done";
+			});
+
+			// Wait for long-step to start
+			await vi.waitUntil(
+				async () => {
+					return await runInDurableObject(engineStub, (engine) => {
+						const logs = engine.readLogs() as unknown as EngineLogs;
+						return logs.logs.some(
+							(log) => log.event === InstanceEvent.STEP_START
+						);
+					});
+				},
+				{ timeout: 1000 }
+			);
+
+			// Request pause while long-step is in flight.
+			// The pause fires this.ctx.abort() which breaks the DO's output gate —
+			// any runInDurableObject call (including the ones below) can throw the
+			// abort error while the DO is tearing down, so we must catch it.
+			try {
+				await runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("pause");
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			await vi.waitUntil(
+				async () => {
+					try {
+						return await runInDurableObject(
+							env.ENGINE.get(engineId),
+							async (engine) =>
+								(await engine.getStatus()) === InstanceStatus.Paused
+						);
+					} catch (e) {
+						if (isAbortError(e)) {
+							return false;
+						}
+						throw e;
+					}
+				},
+				{ timeout: 2000 }
+			);
+
+			const freshStub = env.ENGINE.get(engineId);
+			const finalStatus = await runInDurableObject(freshStub, (engine) =>
+				engine.getStatus()
+			);
+			expect(finalStatus).toBe(InstanceStatus.Paused);
+
+			// Verify long-step completed but step-2 never ran
+			const logs = await runInDurableObject(freshStub, (engine) => {
+				return engine.readLogs() as unknown as EngineLogs;
+			});
+			const stepSuccesses = logs.logs.filter(
+				(log) => log.event === InstanceEvent.STEP_SUCCESS
+			);
+			expect(stepSuccesses).toHaveLength(1);
+		});
+
+		it("should pause after multiple concurrent in-flight step.dos finish", async ({
+			expect,
+		}) => {
+			const instanceId = "PAUSE-AFTER-CONCURRENT-DOS";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflow(instanceId, async (_event, step) => {
+				const [resultA, resultB] = await Promise.all([
+					step.do("slow-step-a", async () => {
+						await scheduler.wait(500);
+						return "a-done";
+					}),
+					step.do("slow-step-b", async () => {
+						await scheduler.wait(500);
+						return "b-done";
+					}),
+				]);
+
+				// This step should never run
+				await step.do("step-after-pause", async () => "should-not-run");
+				return { resultA, resultB };
+			});
+
+			await vi.waitUntil(
+				async () => {
+					return await runInDurableObject(engineStub, (engine) => {
+						const logs = engine.readLogs() as unknown as EngineLogs;
+						return (
+							logs.logs.filter((log) => log.event === InstanceEvent.STEP_START)
+								.length >= 2
+						);
+					});
+				},
+				{ timeout: 1000 }
+			);
+
+			// Request pause while both slow steps are in flight
+			try {
+				await runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("pause");
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			await vi.waitUntil(
+				async () => {
+					try {
+						return await runInDurableObject(
+							env.ENGINE.get(engineId),
+							async (engine) =>
+								(await engine.getStatus()) === InstanceStatus.Paused
+						);
+					} catch (e) {
+						if (isAbortError(e)) {
+							return false;
+						}
+						throw e;
+					}
+				},
+				{ timeout: 2000 }
+			);
+
+			const freshStub = env.ENGINE.get(engineId);
+			const finalStatus = await runInDurableObject(freshStub, (engine) =>
+				engine.getStatus()
+			);
+			expect(finalStatus).toBe(InstanceStatus.Paused);
+
+			// Both concurrent steps should have completed, but step-after-pause should not
+			const logs = await runInDurableObject(freshStub, (engine) => {
+				return engine.readLogs() as unknown as EngineLogs;
+			});
+			const stepSuccesses = logs.logs.filter(
+				(log) => log.event === InstanceEvent.STEP_SUCCESS
+			);
+			expect(stepSuccesses).toHaveLength(2);
+		});
+
+		it("should unblock concurrent steps blocked when resume cancels pending pause", async ({
+			expect,
+		}) => {
+			const instanceId = "RESUME-UNBLOCKS-WAITING-STEPS";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflow(instanceId, async (_event, step) => {
+				const [slowResult, fastResult] = await Promise.all([
+					step.do("slow-step", async () => {
+						await scheduler.wait(1000);
+						return "slow-done";
+					}),
+					step.do("fast-step", async () => {
+						return "fast-done";
+					}),
+				]);
+
+				await step.do("step-after-resume", async () => "after-resume");
+				return { slowResult, fastResult };
+			});
+
+			await vi.waitUntil(
+				async () => {
+					return await runInDurableObject(engineStub, (engine) => {
+						const logs = engine.readLogs() as unknown as EngineLogs;
+						return logs.logs.some(
+							(log) => log.event === InstanceEvent.STEP_START
+						);
+					});
+				},
+				{ timeout: 1000 }
+			);
+
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.changeInstanceStatus("pause");
+			});
+
+			await vi.waitUntil(
+				async () =>
+					runInDurableObject(
+						env.ENGINE.get(engineId),
+						async (engine) =>
+							(await engine.getStatus()) === InstanceStatus.WaitingForPause
+					),
+				{ timeout: 1000 }
+			);
+
+			// Resume before slow-step finishes
+			await runInDurableObject(engineStub, async (engine) => {
+				await engine.changeInstanceStatus("resume");
+			});
+
+			// Verify status goes back to Running
+			const statusAfterResume = await runInDurableObject(
+				env.ENGINE.get(engineId),
+				(engine) => engine.getStatus()
+			);
+			expect(statusAfterResume).toBe(InstanceStatus.Running);
+
+			await vi.waitUntil(
+				async () =>
+					runInDurableObject(
+						env.ENGINE.get(engineId),
+						async (engine) =>
+							(await engine.getStatus()) === InstanceStatus.Complete
+					),
+				{ timeout: 5000 }
+			);
+
+			const freshStub = env.ENGINE.get(engineId);
+			const finalStatus = await runInDurableObject(freshStub, (engine) =>
+				engine.getStatus()
+			);
+			expect(finalStatus).toBe(InstanceStatus.Complete);
+
+			// All three steps should have completed
+			const logs = await runInDurableObject(freshStub, (engine) => {
+				return engine.readLogs() as unknown as EngineLogs;
+			});
+			const stepSuccesses = logs.logs.filter(
+				(log) => log.event === InstanceEvent.STEP_SUCCESS
+			);
+			expect(stepSuccesses).toHaveLength(3);
+		});
+
+		it("should pause immediately during a step.sleep", async ({ expect }) => {
+			const instanceId = "PAUSE-DURING-SLEEP";
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			const engineStub = await runWorkflow(instanceId, async (_event, step) => {
+				await step.do("first-step", async () => "first-done");
+
+				await step.sleep("long-sleep", "10 seconds");
+
+				await step.do("after-sleep", async () => "should-not-run");
+				return "done";
+			});
+
+			// Wait for the first step to complete (workflow is now in the sleep)
+			await vi.waitUntil(
+				async () => {
+					try {
+						return await runInDurableObject(engineStub, (engine) => {
+							const logs = engine.readLogs() as unknown as EngineLogs;
+							return logs.logs.some(
+								(log) => log.event === InstanceEvent.STEP_SUCCESS
+							);
+						});
+					} catch (e) {
+						if (isAbortError(e)) {
+							return false;
+						}
+						throw e;
+					}
+				},
+				{ timeout: 1000 }
+			);
+
+			// Request pause while in step.sleep — should pause immediately
+			try {
+				await runInDurableObject(engineStub, async (engine) => {
+					await engine.changeInstanceStatus("pause");
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			await vi.waitUntil(
+				async () => {
+					try {
+						return await runInDurableObject(
+							env.ENGINE.get(engineId),
+							async (engine) =>
+								(await engine.getStatus()) === InstanceStatus.Paused
+						);
+					} catch (e) {
+						if (isAbortError(e)) {
+							return false;
+						}
+						throw e;
+					}
+				},
+				{ timeout: 1000 }
+			);
+
+			const freshStub = env.ENGINE.get(engineId);
+			const finalStatus = await runInDurableObject(freshStub, (engine) =>
+				engine.getStatus()
+			);
+			expect(finalStatus).toBe(InstanceStatus.Paused);
+
+			// Only the first step should have succeeded — sleep was interrupted
+			const logs = await runInDurableObject(freshStub, (engine) => {
+				return engine.readLogs() as unknown as EngineLogs;
+			});
+			const stepSuccesses = logs.logs.filter(
+				(log) => log.event === InstanceEvent.STEP_SUCCESS
+			);
+			expect(stepSuccesses).toHaveLength(1);
+		});
+
+		it("should transition WaitingForPause to Paused on init() entry", async ({
+			expect,
+		}) => {
+			const instanceId = "WAITING-FOR-PAUSE-INIT";
+
+			const engineStub = await runWorkflowAndAwait(
+				instanceId,
+				async () => "done"
+			);
+
+			// Manually set status to WaitingForPause (simulating a DO restart scenario)
+			await runInDurableObject(engineStub, async (_engine, state) => {
+				await state.storage.put(
+					"ENGINE_STATUS",
+					InstanceStatus.WaitingForPause
+				);
+			});
+
+			// Now call init() — it should detect WaitingForPause and transition to Paused
+			await runInDurableObject(engineStub, async (engine) => {
+				// Reset isRunning so init() doesn't short-circuit
+				engine.isRunning = false;
+				await engine.init(
+					12346,
+					{} as DatabaseWorkflow,
+					{} as DatabaseVersion,
+					{ id: instanceId } as DatabaseInstance,
+					{
+						payload: {},
+						timestamp: new Date(),
+						instanceId,
+					}
+				);
+			});
+
+			const status = await runInDurableObject(engineStub, (engine) =>
+				engine.getStatus()
+			);
+			expect(status).toBe(InstanceStatus.Paused);
 		});
 	});
 });

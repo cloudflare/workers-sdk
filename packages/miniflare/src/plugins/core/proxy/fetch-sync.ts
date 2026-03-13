@@ -45,6 +45,19 @@ const { notifyHandle, port, filename } = workerData;
 const actualRequire = createRequire(filename);
 const { Pool, fetch } = actualRequire("undici");
 
+// When worker.terminate() is called from the host, in-flight fetch() promises
+// may reject after the async function's catch continuation has been interrupted.
+// On Windows, this commonly produces ECONNREFUSED because TCP socket teardown
+// is asynchronous (TerminateProcess). Suppress these expected teardown errors
+// so they don't propagate to the parent thread and crash the process.
+process.on("unhandledRejection", (reason) => {
+  const code = reason?.cause?.code;
+  if (code === "ECONNREFUSED" || code === "ECONNRESET") {
+    return;
+  }
+  throw reason;
+});
+
 let dispatcherUrl;
 let dispatcher;
 
