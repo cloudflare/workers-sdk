@@ -15,7 +15,19 @@ import type {
 	DashApplicationInstances,
 } from "@cloudflare/containers-shared";
 
-function deriveInstanceState(instance: DashApplicationInstance): string {
+type ContainerState =
+	| "provisioning"
+	| "running"
+	| "failed"
+	| "stopping"
+	| "stopped"
+	| "unhealthy"
+	| "inactive"
+	| "unknown";
+
+function deriveInstanceState(
+	instance: DashApplicationInstance
+): ContainerState {
 	const status = instance.current_placement?.status;
 	if (!status) {
 		return "unknown";
@@ -23,12 +35,10 @@ function deriveInstanceState(instance: DashApplicationInstance): string {
 
 	const raw = status.container_status ?? status.health;
 	switch (raw) {
-		case "running":
-			return "running";
 		case "placed":
 			return "provisioning";
+		case "running":
 		case "failed":
-			return "failed";
 		case "stopping":
 		case "stopped":
 		case "unhealthy":
@@ -38,7 +48,7 @@ function deriveInstanceState(instance: DashApplicationInstance): string {
 	}
 }
 
-function colorState(state: string): string {
+function colorState(state: ContainerState): string {
 	switch (state) {
 		case "running":
 			return green(state);
