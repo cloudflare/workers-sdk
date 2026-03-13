@@ -776,9 +776,14 @@ const localTestConfigs: TestConfig[] = [
 	],
 ].flat() as TestConfig[];
 
-describe.each(localTestConfigs)(
+// Many test configs share the same (compatibilityDate, compatibilityFlags) combination
+// and therefore produce identical wrangler dev instances. Group them to avoid redundant
+// startups and test executions (84 configs → 58 unique wrangler instances).
+const groupedLocalConfigs = groupByWranglerConfig(localTestConfigs);
+
+describe.each(groupedLocalConfigs)(
 	`Local preset test: $name`,
-	({ compatibilityDate, compatibilityFlags = [], expectRuntimeFlags = {} }) => {
+	({ compatibilityDate, compatibilityFlags, expectRuntimeFlags }) => {
 		let url: string;
 
 		beforeAll(async () => {
@@ -812,7 +817,7 @@ describe.each(localTestConfigs)(
 			}
 
 			return async () => await wrangler.stop();
-		}, 10_000);
+		}, 30_000);
 
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
@@ -949,6 +954,59 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		);
 	}
 );
+
+type ConfigGroup = {
+	name: string;
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+	expectRuntimeFlags: Record<string, boolean>;
+};
+
+/**
+ * Groups test configs by their effective wrangler configuration
+ * (compatibilityDate + compatibilityFlags). Configs that would produce
+ * identical wrangler dev instances are merged into a single group,
+ * combining their expectRuntimeFlags assertions.
+ */
+function groupByWranglerConfig(configs: TestConfig[]): ConfigGroup[] {
+	const groups = new Map<string, ConfigGroup>();
+
+	for (const config of configs) {
+		const flags = config.compatibilityFlags ?? [];
+		const key = JSON.stringify({
+			date: config.compatibilityDate,
+			flags: [...flags].sort(),
+		});
+
+		const existing = groups.get(key);
+		if (existing) {
+			existing.name += `, ${config.name}`;
+			for (const [flag, value] of Object.entries(
+				config.expectRuntimeFlags ?? {}
+			)) {
+				if (
+					flag in existing.expectRuntimeFlags &&
+					existing.expectRuntimeFlags[flag] !== value
+				) {
+					throw new Error(
+						`Conflicting expectRuntimeFlags for "${flag}" in group "${existing.name}": ` +
+							`existing=${existing.expectRuntimeFlags[flag]}, new=${value} (from "${config.name}")`
+					);
+				}
+				existing.expectRuntimeFlags[flag] = value;
+			}
+		} else {
+			groups.set(key, {
+				name: config.name,
+				compatibilityDate: config.compatibilityDate,
+				compatibilityFlags: flags,
+				expectRuntimeFlags: { ...(config.expectRuntimeFlags ?? {}) },
+			});
+		}
+	}
+
+	return [...groups.values()];
+}
 
 /**
  * Collects enabled flags:
