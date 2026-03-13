@@ -3,6 +3,7 @@ import {
 	env,
 	runInDurableObject,
 } from "cloudflare:test";
+import { setTestWorkflowCallback } from "./test-entry";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -43,9 +44,9 @@ export async function runWorkflow(
 	const engineId = env.ENGINE.idFromName(instanceId);
 	const engineStub = env.ENGINE.get(engineId);
 
-	await setWorkflowEntrypoint(engineStub, callback);
+	setTestWorkflowCallback(callback);
 
-	await engineStub.init(
+	void engineStub.init(
 		12346,
 		{} as DatabaseWorkflow,
 		{} as DatabaseVersion,
