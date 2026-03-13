@@ -62,10 +62,11 @@ export function TableSelect({
 				<Select.Positioner
 					align="start"
 					alignItemWithTrigger={false}
+					className="z-100"
 					side="bottom"
 					sideOffset={4}
 				>
-					<Select.Popup className="z-100 max-h-72 min-w-36 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
+					<Select.Popup className="max-h-72 min-w-36 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
 						<div className="p-1">
 							<button
 								className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none hover:bg-bg-secondary dark:hover:bg-bg-tertiary"
