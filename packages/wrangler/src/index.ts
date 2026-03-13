@@ -373,8 +373,17 @@ import { versionsViewCommand } from "./versions/view";
 import { vpcServiceCreateCommand } from "./vpc/create";
 import { vpcServiceDeleteCommand } from "./vpc/delete";
 import { vpcServiceGetCommand } from "./vpc/get";
-import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
+import {
+	vpcNamespace,
+	vpcNetworkNamespace,
+	vpcServiceNamespace,
+} from "./vpc/index";
 import { vpcServiceListCommand } from "./vpc/list";
+import { vpcNetworkCreateCommand } from "./vpc/network-create";
+import { vpcNetworkDeleteCommand } from "./vpc/network-delete";
+import { vpcNetworkGetCommand } from "./vpc/network-get";
+import { vpcNetworkListCommand } from "./vpc/network-list";
+import { vpcNetworkUpdateCommand } from "./vpc/network-update";
 import { vpcServiceUpdateCommand } from "./vpc/update";
 import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
 import { workflowsDeleteCommand } from "./workflows/commands/delete";
@@ -1801,6 +1810,27 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler vpc service update",
 			definition: vpcServiceUpdateCommand,
+		},
+		{ command: "wrangler vpc network", definition: vpcNetworkNamespace },
+		{
+			command: "wrangler vpc network create",
+			definition: vpcNetworkCreateCommand,
+		},
+		{
+			command: "wrangler vpc network delete",
+			definition: vpcNetworkDeleteCommand,
+		},
+		{
+			command: "wrangler vpc network get",
+			definition: vpcNetworkGetCommand,
+		},
+		{
+			command: "wrangler vpc network list",
+			definition: vpcNetworkListCommand,
+		},
+		{
+			command: "wrangler vpc network update",
+			definition: vpcNetworkUpdateCommand,
 		},
 	]);
 	registry.registerNamespace("vpc");
