@@ -13,7 +13,6 @@ import {
 	ABORT_REASONS,
 	createWorkflowError,
 	isAbortError,
-	isUserTriggeredPause,
 	WorkflowFatalError,
 } from "./lib/errors";
 import {
@@ -99,6 +98,8 @@ export class Engine extends DurableObject<Env> {
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
 	stepLimit: number;
+	engineAbortController: AbortController = new AbortController();
+	pauseController: AbortController = new AbortController();
 
 	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
 		new Map();
@@ -325,7 +326,13 @@ export class Engine extends DurableObject<Env> {
 				if (waiter) {
 					waiter.reject(
 						new Error(
-							`[WorkflowIntrospector] The Workflow instance ${this.instanceId} has reached status '${instanceStatusName(reachedStatus)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(unreachableStatus)}'.`
+							`[WorkflowIntrospector] The Workflow instance ${
+								this.instanceId
+							} has reached status '${instanceStatusName(
+								reachedStatus
+							)}'. This is a finite status that prevents it from ever reaching the expected status of '${instanceStatusName(
+								unreachableStatus
+							)}'.`
 						)
 					);
 					this.statusWaiters.delete(unreachableStatus);
@@ -401,7 +408,9 @@ export class Engine extends DurableObject<Env> {
 		if (isOutput) {
 			if (status !== InstanceStatus.Complete) {
 				throw new Error(
-					`Cannot retrieve output: Workflow instance is in status "${instanceStatusName(status)}" but must be "complete" to have an output available`
+					`Cannot retrieve output: Workflow instance is in status "${instanceStatusName(
+						status
+					)}" but must be "complete" to have an output available`
 				);
 			}
 			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_SUCCESS).logs;
@@ -409,7 +418,9 @@ export class Engine extends DurableObject<Env> {
 		} else {
 			if (status !== InstanceStatus.Errored) {
 				throw new Error(
-					`Cannot retrieve error: Workflow instance is in status "${instanceStatusName(status)}" but must be "errored" to have error information available`
+					`Cannot retrieve error: Workflow instance is in status "${instanceStatusName(
+						status
+					)}" but must be "errored" to have error information available`
 				);
 			}
 			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_FAILURE).logs;
@@ -425,6 +436,11 @@ export class Engine extends DurableObject<Env> {
 
 	async abort(reason: string) {
 		await this.ctx.storage.sync();
+
+		// Clean up pending JS operations
+		this.timeoutHandler.dispose();
+		this.engineAbortController.abort(new Error(reason));
+
 		this.ctx.abort(reason);
 	}
 
@@ -655,14 +671,13 @@ export class Engine extends DurableObject<Env> {
 					metadata.instance.id,
 					InstanceStatus.Paused
 				);
-				await this.abort(ABORT_REASONS.USER_PAUSE);
+				// Signal the pause controller to interrupt any active
+				// scheduler.wait (sleep/waitForEvent). The workflow will
+				// throw a pause error at the next step boundary via
+				// #checkForPendingPause()
+				this.pauseController.abort(ABORT_REASONS.USER_PAUSE);
 			})
-			.catch((e) => {
-				// Expected: abort rejects the promise chain when it kills the DO
-				if (!isAbortError(e)) {
-					throw e;
-				}
-			});
+			.catch(() => {});
 	}
 
 	async userTriggeredRestart() {
@@ -765,14 +780,25 @@ export class Engine extends DurableObject<Env> {
 		const pausedDate = await this.ctx.storage.get<Date>(PAUSE_DATETIME);
 		if (pausedDate !== undefined) {
 			const offset = Date.now() - new Date(pausedDate).valueOf();
-			const pq = new TimePriorityQueue(this.ctx, metadata);
-			pq.offsetAll(offset);
+			if (this.priorityQueue) {
+				this.priorityQueue.offsetAll(offset);
+			} else {
+				const pq = new TimePriorityQueue(this.ctx, metadata);
+				pq.offsetAll(offset);
+			}
 		}
 		await this.ctx.storage.delete(PAUSE_DATETIME);
 
 		const { accountId, workflow, version, instance, event } = metadata;
 
 		await this.ctx.storage.put(ENGINE_STATUS_KEY, InstanceStatus.Queued);
+
+		// Reset pause state for the new run. The DO stays alive across
+		// pause/resume (no this.ctx.abort()), so we need to clear stale
+		// in-memory state from the previous run to avoid duplicates.
+		this.pauseController = new AbortController();
+		this.waiters = new Map();
+		this.eventMap = new Map();
 
 		void this.init(accountId, workflow, version, instance, event);
 	}
@@ -879,7 +905,7 @@ export class Engine extends DurableObject<Env> {
 			});
 			this.isRunning = false;
 		} catch (err) {
-			if (isUserTriggeredPause(err)) {
+			if (isAbortError(err)) {
 				this.isRunning = false;
 				return;
 			}

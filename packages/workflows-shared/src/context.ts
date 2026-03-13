@@ -72,6 +72,11 @@ export class Context extends RpcTarget {
 		}
 
 		const status = await this.#engine.getStatus();
+
+		if (status === InstanceStatus.Paused) {
+			throw new Error(ABORT_REASONS.USER_PAUSE);
+		}
+
 		if (status === InstanceStatus.WaitingForPause) {
 			await this.#state.storage.put(PAUSE_DATETIME, new Date());
 			const metadata =
@@ -83,7 +88,7 @@ export class Context extends RpcTarget {
 					InstanceStatus.Paused
 				);
 			}
-			await this.#engine.abort(ABORT_REASONS.USER_PAUSE);
+			throw new Error(ABORT_REASONS.USER_PAUSE);
 		}
 	}
 
@@ -511,8 +516,34 @@ export class Context extends RpcTarget {
 						type: "retry",
 					});
 					await this.#engine.timeoutHandler.release(this.#engine);
-					// this may never finish because of the grace period - but waker will take of it
-					await scheduler.wait(durationMs);
+					// Race retry wait against the pause signal so pause
+					// takes effect immediately during retries
+					{
+						const retryPauseSignal = this.#engine.pauseController.signal;
+						let pausedDuringRetry = false;
+						await Promise.race([
+							scheduler.wait(durationMs),
+							new Promise<void>((resolve) => {
+								if (retryPauseSignal.aborted) {
+									resolve();
+									return;
+								}
+								retryPauseSignal.addEventListener("abort", () => resolve(), {
+									once: true,
+								});
+							}),
+						]);
+						const retryStatus = await this.#engine.getStatus();
+						if (
+							retryStatus === InstanceStatus.Paused ||
+							retryStatus === InstanceStatus.WaitingForPause
+						) {
+							pausedDuringRetry = true;
+						}
+						if (pausedDuringRetry) {
+							throw new Error(ABORT_REASONS.USER_PAUSE);
+						}
+					}
 
 					// if it ever reaches here, we can try to remove it from the priority queue since it's no longer useful
 					// @ts-expect-error priorityQueue is initiated in init
@@ -634,8 +665,37 @@ export class Context extends RpcTarget {
 			type: "sleep",
 		});
 
-		// this probably will never finish except if sleep is less than the grace period
-		await scheduler.wait(disableSleep ? 0 : duration);
+		// Race the sleep against the pause signal
+		const pauseSignal = this.#engine.pauseController.signal;
+		const sleepDuration = disableSleep ? 0 : duration;
+
+		let pausedDuringSleep = false;
+		await Promise.race([
+			scheduler.wait(sleepDuration),
+			new Promise<void>((resolve) => {
+				if (pauseSignal.aborted) {
+					resolve();
+					return;
+				}
+				pauseSignal.addEventListener("abort", () => resolve(), {
+					once: true,
+				});
+			}),
+		]);
+
+		// Check if we were paused during the sleep
+		const statusAfterSleep = await this.#engine.getStatus();
+		if (
+			statusAfterSleep === InstanceStatus.Paused ||
+			statusAfterSleep === InstanceStatus.WaitingForPause
+		) {
+			pausedDuringSleep = true;
+		}
+
+		if (pausedDuringSleep) {
+			// Throw pause error
+			throw new Error(ABORT_REASONS.USER_PAUSE);
+		}
 
 		this.#engine.writeLog(
 			InstanceEvent.SLEEP_COMPLETE,
@@ -806,33 +866,49 @@ export class Context extends RpcTarget {
 			this.#engine.waiters.set(options.type, callbacks);
 		});
 
-		const result = await Promise.race([
+		// Race event, timeout, and pause signal. The pause promise resolves
+		// when the race settles via event/timeout before the pause signal fires
+		const pauseSignal = this.#engine.pauseController.signal;
+		const pausePromise = new Promise<void>((resolve) => {
+			if (pauseSignal.aborted) {
+				resolve();
+				return;
+			}
+			pauseSignal.addEventListener("abort", () => resolve(), {
+				once: true,
+			});
+		});
+
+		const raceResult = await Promise.race([
 			eventPromise,
 			timeoutEntryPQ !== undefined
 				? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
 				: timeoutPromise(ms(options.timeout), true),
-		])
-			.then(async (event) => {
-				this.#engine.writeLog(
-					InstanceEvent.WAIT_COMPLETE,
-					cacheKey,
-					waitForEventNameWithCounter,
-					event as Event
-				);
-				await this.#state.storage.put(waitForEventKey, event);
-				return event;
-			})
-			.catch(async (error) => {
-				this.#engine.writeLog(
-					InstanceEvent.WAIT_TIMED_OUT,
-					cacheKey,
-					waitForEventNameWithCounter,
-					error
-				);
-				await this.#state.storage.put(errorKey, error);
-				throw error;
-			});
+			pausePromise,
+		]).catch(async (error) => {
+			this.#engine.writeLog(
+				InstanceEvent.WAIT_TIMED_OUT,
+				cacheKey,
+				waitForEventNameWithCounter,
+				error
+			);
+			await this.#state.storage.put(errorKey, error);
+			throw error;
+		});
 
-		return result as WorkflowStepEvent<T>;
+		// Pause signal won the race — throw to stop the workflow
+		if (raceResult === undefined) {
+			throw new Error(ABORT_REASONS.USER_PAUSE);
+		}
+
+		this.#engine.writeLog(
+			InstanceEvent.WAIT_COMPLETE,
+			cacheKey,
+			waitForEventNameWithCounter,
+			raceResult as Event
+		);
+		await this.#state.storage.put(waitForEventKey, raceResult);
+
+		return raceResult as WorkflowStepEvent<T>;
 	}
 }

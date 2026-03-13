@@ -8,6 +8,11 @@ import type { WorkflowHandle } from "../src/binding";
 import type { Engine, EngineLogs } from "../src/engine";
 import type { WorkflowEvent } from "cloudflare:workers";
 
+let instanceCounter = 0;
+function uniqueId(prefix = "instance"): string {
+	return `${prefix}-${++instanceCounter}`;
+}
+
 function createBinding(): WorkflowBinding {
 	const ctx = createExecutionContext();
 	return new WorkflowBinding(ctx, {
@@ -36,33 +41,44 @@ describe("WorkflowBinding", () => {
 		it("should create an instance with provided id and params", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (event) => {
 				return (event as WorkflowEvent<{ key: string }>).payload;
 			});
 
 			const params = { key: "test-value" };
-			const result = await binding.create({ id: "some-instance-id", params });
+			const result = await binding.create({ id, params });
 
-			expect(result.id).toBe("some-instance-id");
+			expect(result.id).toBe(id);
 
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			const status = await instance.status();
 			expect(status.output).toEqual(params);
 		});
 
 		it("should auto-generate id when not provided", async ({ expect }) => {
 			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
 			const result = await binding.create();
 
 			expect(result.id).toBeDefined();
 			expect(result.id.length).toBeGreaterThan(0);
+
+			// Wait for the workflow to complete before the test ends so
+			// the fire-and-forget init() RPC settles before teardown.
+			const instance = await binding.get(result.id);
+			await vi.waitUntil(
+				async () => {
+					const s = await instance.status();
+					return s.status === "complete";
+				},
+				{ timeout: 1000 }
+			);
 		});
 
 		it("should throw WorkflowError for invalid instance id", async ({
@@ -79,22 +95,33 @@ describe("WorkflowBinding", () => {
 		it("should return a WorkflowHandle for an existing instance", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			env.ENGINE.get(env.ENGINE.idFromName("some-instance-id"));
+			env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async () => "done");
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 
 			expect(instance).toMatchObject({
-				id: "some-instance-id",
+				id,
 				status: expect.any(Function),
 				pause: expect.any(Function),
 				resume: expect.any(Function),
 				terminate: expect.any(Function),
 				restart: expect.any(Function),
 			});
+
+			// Wait for the workflow to complete before the test ends so
+			// the fire-and-forget init() RPC settles before teardown.
+			await vi.waitUntil(
+				async () => {
+					const s = await instance.status();
+					return s.status === "complete";
+				},
+				{ timeout: 1000 }
+			);
 		});
 	});
 
@@ -113,6 +140,19 @@ describe("WorkflowBinding", () => {
 				const instance = await binding.get(id);
 				expect(instance.id).toBe(id);
 			}
+
+			// Wait for all batch workflows to complete before the test ends
+			// so the fire-and-forget init() RPCs settle before teardown.
+			for (const id of ids) {
+				const instance = await binding.get(id);
+				await vi.waitUntil(
+					async () => {
+						const s = await instance.status();
+						return s.status === "complete";
+					},
+					{ timeout: 1000 }
+				);
+			}
 		});
 
 		it("should throw error for empty batch", async ({ expect }) => {
@@ -125,15 +165,13 @@ describe("WorkflowBinding", () => {
 	});
 });
 
-// TODO: move
 describe("WorkflowBinding", () => {
 	it("should not call dispose when sending an event to an instance", async ({
 		expect,
 	}) => {
+		const id = uniqueId();
 		const binding = createBinding();
-		const engineStub = env.ENGINE.get(
-			env.ENGINE.idFromName("some-instance-id")
-		);
+		const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 		setTestWorkflowCallback(async (_event, step) => {
 			const receivedEvent = await step.waitForEvent("wait-for-test-event", {
@@ -143,11 +181,11 @@ describe("WorkflowBinding", () => {
 			return receivedEvent;
 		});
 
-		const { id } = await binding.create({ id: "some-instance-id" });
-		expect(id).toBe("some-instance-id");
+		const createdInstance = await binding.create({ id });
+		expect(createdInstance.id).toBe(id);
 
-		const instance = await binding.get("some-instance-id");
-		expect(instance.id).toBe("some-instance-id");
+		const instance = await binding.get(id);
+		expect(instance.id).toBe(id);
 
 		const disposeSpy = vi.fn();
 
@@ -183,10 +221,9 @@ describe("WorkflowHandle", () => {
 		it("should return running status for a workflow waiting for an event", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.waitForEvent("wait-for-event", {
@@ -196,31 +233,35 @@ describe("WorkflowHandle", () => {
 				return "completed";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			const status = await instance.status();
 
 			expect(status.status).toBe("running");
 			expect(status.output).toBeNull();
 			expect(status.error).toBeUndefined();
+
+			// Terminate the waiting workflow so the init() RPC settles
+			// before teardown (the 2-second waitForEvent timeout would
+			// otherwise leave the workflow running past test end).
+			await instance.terminate();
 		});
 
 		it("should return complete status and output for a successful workflow", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 			const expectedOutput = { result: "success", value: 42 };
 
 			setTestWorkflowCallback(async () => expectedOutput);
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			const status = await instance.status();
 
 			expect(status.status).toBe("complete");
@@ -231,19 +272,18 @@ describe("WorkflowHandle", () => {
 		it("should return errored status and error for a failed workflow", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async () => {
 				throw new Error("Workflow failed intentionally");
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_FAILURE);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			const status = await instance.status();
 
 			expect(status.status).toBe("errored");
@@ -255,10 +295,9 @@ describe("WorkflowHandle", () => {
 		it("should return step outputs in __LOCAL_DEV_STEP_OUTPUTS", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				const step1Result = await step.do(
@@ -272,12 +311,10 @@ describe("WorkflowHandle", () => {
 				return { step1Result, step2Result, step3Result };
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
 
-			const instance = (await binding.get(
-				"some-instance-id"
-			)) as WorkflowHandle;
+			const instance = (await binding.get(id)) as WorkflowHandle;
 			const status = await instance.status();
 
 			expect(status.status).toBe("complete");
@@ -292,10 +329,9 @@ describe("WorkflowHandle", () => {
 		it("should return terminated status for a terminated instance", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.waitForEvent("wait-for-event", {
@@ -305,13 +341,13 @@ describe("WorkflowHandle", () => {
 				return "completed";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			await instance.terminate();
 
-			const newInstance = await binding.get("some-instance-id");
+			const newInstance = await binding.get(id);
 			const status = await newInstance.status();
 
 			expect(status.status).toBe("terminated");
@@ -322,10 +358,9 @@ describe("WorkflowHandle", () => {
 		it("should deliver event payload to a waiting workflow", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				const receivedEvent = await step.waitForEvent("wait-for-event", {
@@ -335,10 +370,10 @@ describe("WorkflowHandle", () => {
 				return receivedEvent;
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			const eventPayload = { message: "hello", count: 42 };
 
 			await instance.sendEvent({
@@ -362,10 +397,9 @@ describe("WorkflowHandle", () => {
 		});
 
 		it("should handle multiple sequential events", async ({ expect }) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				const event1 = await step.waitForEvent("wait-1", {
@@ -379,8 +413,8 @@ describe("WorkflowHandle", () => {
 				return { first: event1.payload, second: event2.payload };
 			});
 
-			await binding.create({ id: "some-instance-id" });
-			const instance = await binding.get("some-instance-id");
+			await binding.create({ id });
+			const instance = await binding.get(id);
 
 			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
 			await instance.sendEvent({
@@ -423,10 +457,9 @@ describe("WorkflowHandle", () => {
 
 	describe("terminate()", () => {
 		it("should terminate a running workflow instance", async ({ expect }) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.waitForEvent("wait-for-event", {
@@ -439,16 +472,14 @@ describe("WorkflowHandle", () => {
 				return "should never complete";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 			await instance.terminate();
 
 			// Get a new stub since the engine was aborted
-			const newEngineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const newEngineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			const status = await runInDurableObject(newEngineStub, (engine) => {
 				return engine.getStatus();
@@ -471,20 +502,19 @@ describe("WorkflowHandle", () => {
 
 	describe("restart()", () => {
 		it("should restart a workflow instance", async ({ expect }) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.sleep("sleep", 250);
 				return "complete";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_SUCCESS);
 
-			let instance = await binding.get("some-instance-id");
+			let instance = await binding.get(id);
 			let status = await instance.status();
 			expect(status.status).toBe("complete");
 
@@ -505,7 +535,7 @@ describe("WorkflowHandle", () => {
 			);
 
 			// Verify second run completed
-			instance = await binding.get("some-instance-id");
+			instance = await binding.get(id);
 			status = await instance.status();
 			expect(status.status).toBe("complete");
 		});
@@ -513,10 +543,9 @@ describe("WorkflowHandle", () => {
 
 	describe("pause()", () => {
 		it("should pause a running workflow", async ({ expect }) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.do("long-step", async () => {
@@ -528,10 +557,10 @@ describe("WorkflowHandle", () => {
 				return "done";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 
 			// Pause while long-step is in flight
 			await instance.pause();
@@ -553,10 +582,9 @@ describe("WorkflowHandle", () => {
 		it("should resume a paused workflow and complete it", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.do("long-step", async () => {
@@ -567,10 +595,10 @@ describe("WorkflowHandle", () => {
 				return "all-done";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 
 			// Pause while long-step is in flight
 			await instance.pause();
@@ -601,10 +629,9 @@ describe("WorkflowHandle", () => {
 		it("should cancel a pending pause when resume is called before step finishes", async ({
 			expect,
 		}) => {
+			const id = uniqueId();
 			const binding = createBinding();
-			const engineStub = env.ENGINE.get(
-				env.ENGINE.idFromName("some-instance-id")
-			);
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
 				await step.do("long-step", async () => {
@@ -615,10 +642,10 @@ describe("WorkflowHandle", () => {
 				return "completed";
 			});
 
-			await binding.create({ id: "some-instance-id" });
+			await binding.create({ id });
 			await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
 
-			const instance = await binding.get("some-instance-id");
+			const instance = await binding.get(id);
 
 			// Pause while long-step is in flight — sets WaitingForPause
 			await instance.pause();

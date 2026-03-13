@@ -1,7 +1,6 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
-	isAbortError,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
 	isUserTriggeredTerminate,
@@ -58,11 +57,9 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 					val[Symbol.dispose]();
 				}
 			})
-			.catch((e) => {
-				// Suppress abort errors since they're expected
-				if (!isAbortError(e)) {
-					throw e;
-				}
+			.catch(() => {
+				// Suppress all rejections: create() should queue and
+				// return immediately
 			});
 
 		this.ctx.waitUntil(initPromise);
