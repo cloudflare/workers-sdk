@@ -14,6 +14,8 @@ import {
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zR2BucketDeleteObjectsData,
+	zR2BucketListObjectsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
@@ -28,6 +30,13 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import {
+	deleteR2Objects,
+	getR2Object,
+	listR2Buckets,
+	listR2Objects,
+	putR2Object,
+} from "./resources/r2";
 import type { BindingIdMap } from "../../plugins/core/types";
 
 export type Env = {
@@ -209,6 +218,37 @@ app.post(
 	"/api/workers/durable_objects/namespaces/:namespace_id/query",
 	validateRequestBody(zDurableObjectsNamespaceQuerySqliteData.shape.body),
 	(c) => queryDOSqlite(c, c.req.param("namespace_id"), c.req.valid("json"))
+);
+
+// ============================================================================
+// R2 Endpoints
+// ============================================================================
+
+app.get("/api/r2/buckets", listR2Buckets);
+
+app.get(
+	"/api/r2/buckets/:bucket_name/objects",
+	validateQuery(zR2BucketListObjectsData.shape.query.unwrap()),
+	(c) => listR2Objects(c, c.req.param("bucket_name"), c.req.valid("query"))
+);
+
+app.get("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
+	getR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"), {
+		"cf-metadata-only": c.req.header("cf-metadata-only"),
+	})
+);
+
+app.put("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
+	putR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"), {
+		"content-type": c.req.header("content-type"),
+		"cf-r2-custom-metadata": c.req.header("cf-r2-custom-metadata"),
+	})
+);
+
+app.delete(
+	"/api/r2/buckets/:bucket_name/objects",
+	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
+	(c) => deleteR2Objects(c, c.req.param("bucket_name"), c.req.valid("json"))
 );
 
 export default app;
