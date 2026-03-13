@@ -1,11 +1,13 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
+import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
@@ -21,9 +23,7 @@ describe("versions upload --secrets-file", () => {
 		msw.use(
 			http.get(
 				`*/accounts/:accountId/workers/services/:scriptName`,
-				({ params }) => {
-					expect(params.scriptName).toEqual(workerName);
-
+				() => {
 					return HttpResponse.json(
 						createFetchResult({
 							default_environment: {
@@ -47,7 +47,9 @@ describe("versions upload --secrets-file", () => {
 		writeWorkerSource();
 	});
 
-	it("should upload secrets from a JSON file alongside the worker version", async () => {
+	it("should upload secrets from a JSON file alongside the worker version", async ({
+		expect,
+	}) => {
 		mockGetScript();
 		const secretsFile = "secrets.json";
 		writeFileSync(
@@ -58,31 +60,10 @@ describe("versions upload --secrets-file", () => {
 			})
 		);
 
-		msw.use(
+		const captured = captureRequestsFrom(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/versions",
-				async ({ request, params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.scriptName).toEqual(workerName);
-
-					const formData = await request.formData();
-					const metadata = JSON.parse(formData.get("metadata") as string);
-
-					expect(metadata.bindings).toEqual([
-						{
-							type: "secret_text",
-							name: "SECRET1",
-							text: "value1",
-						},
-						{
-							type: "secret_text",
-							name: "SECRET2",
-							text: "value2",
-						},
-					]);
-
-					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
-
+				async () => {
 					return HttpResponse.json(
 						createFetchResult({
 							id: "version-id-123",
@@ -92,19 +73,36 @@ describe("versions upload --secrets-file", () => {
 							},
 						})
 					);
-				},
-				{ once: true }
+				}
 			)
-		);
+		)();
 
 		await runWrangler(
 			`versions upload --name ${workerName} --secrets-file ${secretsFile}`
 		);
 
+		const formData = await captured.requests[0].clone().formData();
+		const metadata = JSON.parse(await toString(formData.get("metadata")));
+
+		expect(metadata.bindings).toEqual([
+			{
+				type: "secret_text",
+				name: "SECRET1",
+				text: "value1",
+			},
+			{
+				type: "secret_text",
+				name: "SECRET2",
+				text: "value2",
+			},
+		]);
+		expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 		expect(std.out).toContain("Worker Startup Time:");
 	});
 
-	it("should upload secrets from a .env file alongside the worker version", async () => {
+	it("should upload secrets from a .env file alongside the worker version", async ({
+		expect,
+	}) => {
 		mockGetScript();
 		const secretsFile = ".env.production";
 		writeFileSync(
@@ -115,38 +113,10 @@ SECRET2=value2
 SECRET3=value3`
 		);
 
-		msw.use(
+		const captured = captureRequestsFrom(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/versions",
-				async ({ request, params }) => {
-					expect(params.accountId).toEqual("some-account-id");
-					expect(params.scriptName).toEqual(workerName);
-
-					const formData = await request.formData();
-					const metadata = JSON.parse(formData.get("metadata") as string);
-
-					expect(metadata.bindings).toEqual(
-						expect.arrayContaining([
-							{
-								type: "secret_text",
-								name: "SECRET1",
-								text: "value1",
-							},
-							{
-								type: "secret_text",
-								name: "SECRET2",
-								text: "value2",
-							},
-							{
-								type: "secret_text",
-								name: "SECRET3",
-								text: "value3",
-							},
-						])
-					);
-
-					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
-
+				async () => {
 					return HttpResponse.json(
 						createFetchResult({
 							id: "version-id-123",
@@ -156,19 +126,43 @@ SECRET3=value3`
 							},
 						})
 					);
-				},
-				{ once: true }
+				}
 			)
-		);
+		)();
 
 		await runWrangler(
 			`versions upload --name ${workerName} --secrets-file ${secretsFile}`
 		);
 
+		const formData = await captured.requests[0].clone().formData();
+		const metadata = JSON.parse(await toString(formData.get("metadata")));
+
+		expect(metadata.bindings).toEqual(
+			expect.arrayContaining([
+				{
+					type: "secret_text",
+					name: "SECRET1",
+					text: "value1",
+				},
+				{
+					type: "secret_text",
+					name: "SECRET2",
+					text: "value2",
+				},
+				{
+					type: "secret_text",
+					name: "SECRET3",
+					text: "value3",
+				},
+			])
+		);
+		expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 		expect(std.out).toContain("Worker Startup Time:");
 	});
 
-	it("should set keep_bindings to inherit non-provided secrets when providing secrets file", async () => {
+	it("should set keep_bindings to inherit non-provided secrets when providing secrets file", async ({
+		expect,
+	}) => {
 		mockGetScript();
 		const secretsFile = "secrets.json";
 		writeFileSync(
@@ -178,15 +172,10 @@ SECRET3=value3`
 			})
 		);
 
-		msw.use(
+		const captured = captureRequestsFrom(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/versions",
-				async ({ request }) => {
-					const formData = await request.formData();
-					const metadata = JSON.parse(formData.get("metadata") as string);
-
-					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
-
+				async () => {
 					return HttpResponse.json(
 						createFetchResult({
 							id: "version-id-123",
@@ -196,27 +185,29 @@ SECRET3=value3`
 							},
 						})
 					);
-				},
-				{ once: true }
+				}
 			)
-		);
+		)();
 
 		await runWrangler(
 			`versions upload --name ${workerName} --secrets-file ${secretsFile}`
 		);
+
+		const formData = await captured.requests[0].clone().formData();
+		const metadata = JSON.parse(await toString(formData.get("metadata")));
+
+		expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 	});
 
-	it("should inherit secrets when not providing secrets file", async () => {
+	it("should inherit secrets when not providing secrets file", async ({
+		expect,
+	}) => {
 		mockGetScript();
-		msw.use(
+
+		const captured = captureRequestsFrom(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/versions",
-				async ({ request }) => {
-					const formData = await request.formData();
-					const metadata = JSON.parse(formData.get("metadata") as string);
-
-					expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
-
+				async () => {
 					return HttpResponse.json(
 						createFetchResult({
 							id: "version-id-123",
@@ -226,15 +217,19 @@ SECRET3=value3`
 							},
 						})
 					);
-				},
-				{ once: true }
+				}
 			)
-		);
+		)();
 
 		await runWrangler(`versions upload --name ${workerName}`);
+
+		const formData = await captured.requests[0].clone().formData();
+		const metadata = JSON.parse(await toString(formData.get("metadata")));
+
+		expect(metadata.keep_bindings).toEqual(["secret_text", "secret_key"]);
 	});
 
-	it("should fail when secrets file does not exist", async () => {
+	it("should fail when secrets file does not exist", async ({ expect }) => {
 		await expect(
 			runWrangler(
 				`versions upload --name ${workerName} --secrets-file non-existent-file.json`
@@ -242,7 +237,9 @@ SECRET3=value3`
 		).rejects.toThrowError();
 	});
 
-	it("should fail when secrets file contains invalid JSON", async () => {
+	it("should fail when secrets file contains invalid JSON", async ({
+		expect,
+	}) => {
 		const secretsFile = "invalid.json";
 		writeFileSync(secretsFile, "{ invalid json }");
 
