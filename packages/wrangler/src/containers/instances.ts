@@ -87,7 +87,7 @@ function buildInstanceRows(data: DashApplicationInstances): InstanceRow[] {
 
 async function fetchPage(
 	applicationId: string,
-	perPage: number,
+	perPage?: number,
 	pageToken?: string
 ): Promise<{
 	data: DashApplicationInstances;
@@ -226,26 +226,21 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 	}
 
 	if (args.json || isNonInteractiveOrCI()) {
-		let allData: DashApplicationInstances;
 		try {
 			// Fetch all pages
-			allData = { instances: [] };
-			let pageToken: string | undefined;
-			do {
-				const { data, nextPageToken } = await fetchPage(
-					args.ID,
-					args.perPage,
-					pageToken
+			const { data } = await fetchPage(args.ID);
+			const rows = buildInstanceRows(data);
+			const jsonRows = rowsToJsonOutput(rows);
+
+			if (jsonRows.length === 0 && !args.json) {
+				logger.log(
+					"No instances found for this application. The application may not have any running containers."
 				);
-				allData.instances.push(...data.instances);
-				if (data.durable_objects) {
-					if (!allData.durable_objects) {
-						allData.durable_objects = [];
-					}
-					allData.durable_objects.push(...data.durable_objects);
-				}
-				pageToken = nextPageToken;
-			} while (pageToken);
+				return;
+			}
+
+			logger.json(jsonRows);
+			return;
 		} catch (err) {
 			if (args.json) {
 				const message = err instanceof Error ? err.message : "Unknown error";
@@ -253,19 +248,6 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 			}
 			throw err;
 		}
-
-		const rows = buildInstanceRows(allData);
-		const jsonRows = rowsToJsonOutput(rows);
-
-		if (jsonRows.length === 0 && !args.json) {
-			logger.log(
-				"No instances found for this application. The application may not have any running containers."
-			);
-			return;
-		}
-
-		logger.json(jsonRows);
-		return;
 	}
 
 	// Interactive: display one page at a time

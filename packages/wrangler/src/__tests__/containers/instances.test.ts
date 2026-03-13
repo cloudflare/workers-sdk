@@ -261,49 +261,32 @@ describe("containers instances", () => {
 		expect(std.out).toContain("No instances found");
 	});
 
-	it("should paginate across multiple pages", async () => {
+	it("should fetch all results in a single unpaginated request (non-TTY)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		let requestCount = 0;
 		msw.use(
-			http.get("*/dash/applications/*/instances", async ({ request }) => {
-				requestCount++;
-				const url = new URL(request.url);
-				const pageToken = url.searchParams.get("page_token");
-
-				if (!pageToken) {
-					// First page
+			http.get(
+				"*/dash/applications/*/instances",
+				async ({ request }) => {
+					requestCount++;
+					const url = new URL(request.url);
+					// Non-interactive omits per_page so the API returns everything
+					expect(url.searchParams.has("per_page")).toBe(false);
+					expect(url.searchParams.has("page_token")).toBe(false);
 					return HttpResponse.json({
 						success: true,
-						result: {
-							instances: [MOCK_INSTANCES.instances[0]],
-							durable_objects: [],
-						},
-						result_info: {
-							per_page: 1,
-							next_page_token: "token-page-2",
-						},
+						result: MOCK_INSTANCES,
+						result_info: { per_page: 50 },
 						errors: [],
 						messages: [],
 					});
-				} else {
-					// Second page
-					expect(pageToken).toBe("token-page-2");
-					return HttpResponse.json({
-						success: true,
-						result: {
-							instances: [MOCK_INSTANCES.instances[1]],
-							durable_objects: [],
-						},
-						result_info: { per_page: 1 },
-						errors: [],
-						messages: [],
-					});
-				}
-			})
+				},
+				{ once: true }
+			)
 		);
 		await runWrangler(`containers instances ${APP_ID}`);
-		expect(requestCount).toBe(2);
+		expect(requestCount).toBe(1);
 		const output = JSON.parse(std.out);
 		expect(output).toHaveLength(2);
 		expect(output[0].id).toBe("11111111-1111-1111-1111-111111111111");
@@ -413,47 +396,32 @@ describe("containers instances", () => {
 			expect(output).toEqual([]);
 		});
 
-		it("should paginate and return all results in a single array", async () => {
+		it("should fetch all results in a single unpaginated request", async () => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			let requestCount = 0;
 			msw.use(
-				http.get("*/dash/applications/*/instances", async ({ request }) => {
-					requestCount++;
-					const url = new URL(request.url);
-					const pageToken = url.searchParams.get("page_token");
-
-					if (!pageToken) {
+				http.get(
+					"*/dash/applications/*/instances",
+					async ({ request }) => {
+						requestCount++;
+						const url = new URL(request.url);
+						// --json omits per_page so the API returns everything
+						expect(url.searchParams.has("per_page")).toBe(false);
+						expect(url.searchParams.has("page_token")).toBe(false);
 						return HttpResponse.json({
 							success: true,
-							result: {
-								instances: [MOCK_INSTANCES.instances[0]],
-								durable_objects: [],
-							},
-							result_info: {
-								per_page: 1,
-								next_page_token: "token-page-2",
-							},
+							result: MOCK_INSTANCES,
+							result_info: { per_page: 50 },
 							errors: [],
 							messages: [],
 						});
-					} else {
-						expect(pageToken).toBe("token-page-2");
-						return HttpResponse.json({
-							success: true,
-							result: {
-								instances: [MOCK_INSTANCES.instances[1]],
-								durable_objects: [],
-							},
-							result_info: { per_page: 1 },
-							errors: [],
-							messages: [],
-						});
-					}
-				})
+					},
+					{ once: true }
+				)
 			);
 			await runWrangler(`containers instances ${APP_ID} --json`);
-			expect(requestCount).toBe(2);
+			expect(requestCount).toBe(1);
 			const output = JSON.parse(std.out);
 			expect(output).toHaveLength(2);
 			expect(output[0].id).toBe("11111111-1111-1111-1111-111111111111");
