@@ -1,9 +1,7 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -93,7 +91,9 @@ describe("deploy --secrets-file", () => {
 		clearOutputFilePath();
 	});
 
-	it("should upload secrets from a JSON file alongside the worker", async () => {
+	it("should upload secrets from a JSON file alongside the worker", async ({
+		expect,
+	}) => {
 		const secretsFile = "secrets.json";
 		fs.writeFileSync(
 			secretsFile,
@@ -146,7 +146,9 @@ describe("deploy --secrets-file", () => {
 	`);
 	});
 
-	it("should upload secrets from a .env file alongside the worker", async () => {
+	it("should upload secrets from a .env file alongside the worker", async ({
+		expect,
+	}) => {
 		const secretsFile = ".env.production";
 		fs.writeFileSync(
 			secretsFile,
@@ -205,7 +207,9 @@ SECRET3=value3`
 	`);
 	});
 
-	it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async () => {
+	it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async ({
+		expect,
+	}) => {
 		const secretsFile = "secrets.json";
 		fs.writeFileSync(
 			secretsFile,
@@ -251,13 +255,15 @@ SECRET3=value3`
 	`);
 	});
 
-	it("should fail when secrets file does not exist", async () => {
+	it("should fail when secrets file does not exist", async ({ expect }) => {
 		await expect(
 			runWrangler("deploy --secrets-file non-existent-file.json")
 		).rejects.toThrowError();
 	});
 
-	it("should fail when secrets file contains invalid JSON", async () => {
+	it("should fail when secrets file contains invalid JSON", async ({
+		expect,
+	}) => {
 		const secretsFile = "invalid.json";
 		fs.writeFileSync(secretsFile, "{ invalid json }");
 
