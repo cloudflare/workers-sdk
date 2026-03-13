@@ -10,7 +10,12 @@ const { npm } = detectPackageManager();
 const generate = async (ctx: C3Context) => {
 	const variant = await getVariant(ctx);
 
-	await runFrameworkGenerator(ctx, [ctx.project.name, "--template", variant]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		"--template",
+		variant,
+		"--no-immediate",
+	]);
 
 	logRaw("");
 };
