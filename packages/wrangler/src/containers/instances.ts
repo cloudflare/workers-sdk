@@ -271,12 +271,15 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 
 	do {
 		start("Loading instances");
-		const { data, nextPageToken } = await fetchPage(
-			args.ID,
-			args.perPage,
-			pageToken
-		);
-		stop();
+		let data: DashApplicationInstances;
+		let nextPageToken: string | undefined;
+		try {
+			const result = await fetchPage(args.ID, args.perPage, pageToken);
+			data = result.data;
+			nextPageToken = result.nextPageToken;
+		} finally {
+			stop();
+		}
 		const rows = buildInstanceRows(data);
 
 		if (rows.length === 0 && totalShown === 0) {
