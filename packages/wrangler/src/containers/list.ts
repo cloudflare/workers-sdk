@@ -107,6 +107,12 @@ const listArgs = {
 		describe: "Number of containers per page",
 		type: "number",
 		default: 25,
+		coerce: (val: number) => {
+			if (val < 1) {
+				throw new UserError("--per-page must be at least 1");
+			}
+			return val;
+		},
 	},
 	json: {
 		describe: "Return output as JSON",

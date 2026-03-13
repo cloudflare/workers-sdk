@@ -65,6 +65,22 @@ describe("containers list", () => {
 		`);
 	});
 
+	it("should reject --per-page 0", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("containers list --per-page 0")
+		).rejects.toThrowError(/--per-page must be at least 1/);
+	});
+
+	it("should reject --per-page with negative value", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("containers list --per-page -1")
+		).rejects.toThrowError(/--per-page must be at least 1/);
+	});
+
 	it("should show the correct authentication error", async () => {
 		const spy = vi.spyOn(user, "getScopes");
 		spy.mockReset();
