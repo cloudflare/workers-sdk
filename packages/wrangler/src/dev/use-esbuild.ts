@@ -59,6 +59,7 @@ export function runBuild(
 		defineNavigatorUserAgent,
 		checkFetch,
 		pythonModulesExcludes,
+		external,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -87,6 +88,7 @@ export function runBuild(
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
 		pythonModulesExcludes?: string[];
+		external?: string[];
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -179,7 +181,7 @@ export function runBuild(
 						entryName: undefined,
 						inject: undefined,
 						isOutfile: undefined,
-						external: undefined,
+						external,
 
 						// sourcemap defaults to true in dev
 						sourcemap: undefined,

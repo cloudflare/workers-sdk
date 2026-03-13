@@ -142,7 +142,7 @@ export class BundlerController extends Controller {
 						entryName: undefined,
 						inject: undefined,
 						isOutfile: undefined,
-						external: undefined,
+						external: config.build.external,
 
 						// We don't use esbuild watching for custom builds
 						watch: undefined,
@@ -284,6 +284,7 @@ export class BundlerController extends Controller {
 					config.compatibilityFlags
 				),
 				pythonModulesExcludes: config.pythonModules?.exclude ?? [],
+				external: config.build.external,
 			},
 			(cb) => {
 				const newBundle = cb(this.#currentBundle);

@@ -115,6 +115,8 @@ export interface StartDevWorkerInput {
 		minify?: boolean;
 		/** Whether to keep function names after JavaScript transpilations. */
 		keepNames?: boolean;
+		/** Modules to mark as external during bundling. Only takes effect if bundle: true. */
+		external?: string[];
 		/** Options controlling a custom build step. */
 		custom?: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */

@@ -1916,6 +1916,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		bundling_external: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"bundling_external",
+			isStringArray,
+			undefined
+		),
 		first_party_worker: inheritable(
 			diagnostics,
 			topLevelEnv,

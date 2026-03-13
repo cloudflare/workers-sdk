@@ -10,6 +10,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
+import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
@@ -510,6 +511,152 @@ describe("deploy", () => {
 
 			mockSubDomainRequest();
 			await runWrangler("deploy -e testEnv index.js");
+		});
+	});
+	describe("bundling_external", () => {
+		it("should mark modules as external when `bundling_external` is configured", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				bundling_external: ["external-module"],
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				import foo from 'external-module';
+				export default {
+					fetch() {
+						return new Response(foo);
+					}
+				}
+				`
+			);
+
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedEntry: (str) => {
+					// External import should be preserved as an import statement
+					expect(str).toMatch(/from\s*["']external-module["']/);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should mark modules as external when `bundling_external` is configured in environment", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {
+						bundling_external: ["env-external-module"],
+					},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				import bar from 'env-external-module';
+				export default {
+					fetch() {
+						return new Response(bar);
+					}
+				}`
+			);
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				useServiceEnvironments: true,
+				expectedEntry: (str) => {
+					// External import should be preserved
+					expect(str).toMatch(/from\s*["']env-external-module["']/);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (testEnv) (TIMINGS)
+				Deployed test-name (testEnv) triggers (TIMINGS)
+				  https://testEnv.test-name.test-sub-domain.workers.dev
+				Current Version ID: undefined"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should recommend bundling_external when a non-Node module cannot be resolved", async () => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"index.js",
+				dedent/* javascript */ `
+					import foo from 'some-nonexistent-module';
+					export default { fetch() { return new Response(foo); } }
+				`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Could not resolve "some-nonexistent-module"
+
+				    index.js:1:16:
+				      1 │ import foo from 'some-nonexistent-module';
+				        ╵                 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+				  To fix this, you can:
+				  - Add "some-nonexistent-module" to "bundling_external" in your Wrangler configuration to exclude it from the bundle
+				  - Add an entry to "alias" in your Wrangler configuration to map it to a different module (see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing)"
+			`);
+		});
+
+		it("should NOT recommend bundling_external for Node built-in modules", async () => {
+			writeWranglerConfig();
+			fs.writeFileSync("index.js", "import fs from 'fs';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Could not resolve "fs"
+
+				    index.js:1:15:
+				      1 │ import fs from 'fs';
+				        ╵                ~~~~
+
+				  The package "fs" wasn't found on the file system but is built into node.
+				  - Add the "nodejs_compat" compatibility flag to your project."
+			`);
 		});
 	});
 	describe("--node-compat", () => {
@@ -1140,10 +1287,46 @@ describe("deploy", () => {
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
 
-			"
-		`);
+				"
+			`);
+		});
+	});
+	describe("--no-bundle bundling_external", () => {
+		it("should warn that no-bundle and bundling_external can't be used together (CLI flag)", async () => {
+			writeWranglerConfig({
+				bundling_external: ["external-module"],
+			});
+			const scriptContent = `
+				import foo from 'external-module';
+				export default { fetch() { return new Response(foo); } }
+			`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundling_external\` and \`--no-bundle\` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process.[0m
+
+				"
+			`);
+		});
+
+		it("should warn that no-bundle and bundling_external can't be used together (config)", async () => {
+			writeWranglerConfig({
+				no_bundle: true,
+				bundling_external: ["external-module"],
+			});
+			const scriptContent = `
+				import foo from 'external-module';
+				export default { fetch() { return new Response(foo); } }
+			`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler("deploy index.js --dry-run --outdir dist");
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundling_external\` and \`--no-bundle\` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process.[0m
+
+				"
+			`);
 		});
 	});
 	describe("source maps", () => {

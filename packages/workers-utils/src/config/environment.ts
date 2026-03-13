@@ -528,6 +528,14 @@ interface EnvironmentInheritable {
 	no_bundle: boolean | undefined;
 
 	/**
+	 * A list of modules to be considered external during bundling (not applicable when bundling is disabled).
+	 * Corresponds with esbuild's `external` config (https://esbuild.github.io/api/#external).
+	 *
+	 * @inheritable
+	 */
+	bundling_external: string[] | undefined;
+
+	/**
 	 * Minify the script before uploading.
 	 * @inheritable
 	 */

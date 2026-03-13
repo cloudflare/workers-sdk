@@ -575,11 +575,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	);
 
-	// Warn if user tries minify with no-bundle
-	if (props.noBundle && minify) {
-		logger.warn(
-			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
+	if (props.noBundle) {
+		if (minify) {
+			logger.warn(
+				"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
+			);
+		}
+
+		if (config.bundling_external?.length) {
+			logger.warn(
+				"`bundling_external` and `--no-bundle` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process."
+			);
+		}
 	}
 
 	const scriptName = props.name;
@@ -753,7 +760,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						entryName: undefined,
 						inject: undefined,
 						isOutfile: undefined,
-						external: undefined,
+						external: config.bundling_external,
 
 						// These options are dev-only
 						testScheduled: undefined,

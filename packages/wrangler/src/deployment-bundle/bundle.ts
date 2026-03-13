@@ -12,6 +12,7 @@ import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,
+	rewriteBundlingExternalBuildFailure,
 	rewriteNodeCompatBuildFailure,
 } from "./build-failures";
 import { dedupeModulesByName } from "./dedupe-modules";
@@ -477,6 +478,7 @@ export async function bundleWorker(
 	} catch (e) {
 		if (isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
+			rewriteBundlingExternalBuildFailure(e.errors);
 		}
 		throw e;
 	}
