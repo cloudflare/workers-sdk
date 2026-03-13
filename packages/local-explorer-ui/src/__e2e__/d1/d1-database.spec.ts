@@ -20,16 +20,15 @@ describe("D1 Database Studio", () => {
 			await navigateToD1("DB");
 			await waitForText("D1");
 
-			const selectButton = page.getByRole("button", {
+			const selectTableButton = page.getByRole("button", {
 				name: /Select a table|users/i,
 			});
 
-			if (!(await selectButton.isVisible())) {
+			if (!(await selectTableButton.isVisible())) {
 				return;
 			}
 
-			// Open the dropdown
-			await selectButton.click();
+			await selectTableButton.click();
 
 			// Should show the users table from seed data
 			const usersOption = page.getByRole("option", { name: "users" });
@@ -135,7 +134,6 @@ describe("D1 Database Studio", () => {
 
 			await waitForDialog();
 
-			// The dialog should mention the table name
 			const dialog = page.getByRole("dialog");
 			const dialogText = await dialog.textContent();
 			expect(dialogText).toContain("users");

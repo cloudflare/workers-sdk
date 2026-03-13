@@ -24,7 +24,7 @@ describe("Durable Objects", () => {
 		test("shows 'Object ID' header in table", async () => {
 			await navigateToDOClass("MyDurableObject");
 
-			// The table should have an Object ID column
+			// The table should have an 'Object ID' column
 			await waitForText("Object ID");
 		});
 
