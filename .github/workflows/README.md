@@ -18,13 +18,23 @@ See below for a summary of this repo's Actions
   - Adds the PR to a GitHub project
   - Makes sure that Wrangler's warning for old Node.js versions works.
 
-### E2E tests (e2e.yml)
+### Wrangler E2E tests (e2e-wrangler.yml)
 
 - Triggers
   - Updates to PRs on the Cloudflare fork.
   - PRs in the merge queue.
 - Actions
-  - Runs the E2E tests for Wrangler & Vite.
+  - Runs the E2E tests for Wrangler.
+  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
+
+### Vite Plugin E2E tests (e2e-vite.yml)
+
+- Triggers
+  - Updates to PRs on the Cloudflare fork.
+  - PRs in the merge queue.
+- Actions
+  - Runs the E2E tests for the Vite plugin.
+  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
 
 ## Deploy Pages Previews (deploy-pages-preview.yml)
 
@@ -94,3 +104,11 @@ See below for a summary of this repo's Actions
   - Updates to PRs.
 - Actions
   - Runs the E2E tests for C3.
+  - Cloudflare API credentials are only passed on Version Packages PRs (`changeset-release/main`), in the merge queue, or when the `run-remote-tests` label is applied. Other PRs run the E2E suite without remote tests.
+
+### Rerun Remote Tests (rerun-remote-tests.yml)
+
+- Triggers
+  - The `run-remote-tests` label is added to a PR.
+- Actions
+  - Re-runs the Wrangler, Vite, and C3 E2E workflows for the PR so they pick up the label and pass API credentials to the test steps.

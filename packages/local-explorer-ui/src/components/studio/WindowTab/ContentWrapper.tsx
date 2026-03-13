@@ -70,7 +70,7 @@ export function StudioTabContentWrapper({
 			}}
 		>
 			<div
-				className={cn("absolute bottom-0 top-0 right-0 left-0", {
+				className={cn("absolute top-0 right-0 bottom-0 left-0", {
 					invisible: tab.key !== selectedTabKey,
 				})}
 			>

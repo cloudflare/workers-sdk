@@ -6,7 +6,8 @@
 	"trailingComma": "es5",
 	"plugins": [
 		"@ianvs/prettier-plugin-sort-imports",
-		"prettier-plugin-packagejson"
+		"prettier-plugin-packagejson",
+		"prettier-plugin-tailwindcss"
 	],
 	"overrides": [
 		{
@@ -52,6 +53,13 @@
 			"files": ".changeset/*.md",
 			"options": {
 				"proseWrap": "never"
+			}
+		},
+		{
+			"files": "packages/local-explorer-ui/**/*.{js,jsx,ts,tsx}",
+			"options": {
+				"tailwindStylesheet": "./packages/local-explorer-ui/src/styles/tailwind.css",
+				"tailwindFunctions": ["cn"]
 			}
 		}
 	]

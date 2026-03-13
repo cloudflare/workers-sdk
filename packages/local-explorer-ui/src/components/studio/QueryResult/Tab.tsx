@@ -35,7 +35,7 @@ export function StudioQueryResultTab({
 	}, [result.result.headers]);
 
 	return (
-		<div className="w-full h-full flex flex-col">
+		<div className="flex h-full w-full flex-col">
 			<StudioExportModal
 				closeModal={() => setIsExportModalOpen(false)}
 				isOpen={isExportModalOpen}
@@ -46,8 +46,8 @@ export function StudioQueryResultTab({
 				<StudioResultTable state={state} arrangeHeaderIndex={headerIndexList} />
 			</div>
 
-			<div className="shrink-0 h-11 flex items-center border-t border-border">
-				<div className="grow text-base px-4">
+			<div className="flex h-11 shrink-0 items-center border-t border-border">
+				<div className="grow px-4 text-base">
 					<Button
 						aria-label="Export query results"
 						icon={ExportIcon}

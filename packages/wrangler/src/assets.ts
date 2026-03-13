@@ -71,15 +71,24 @@ export const syncAssets = async (
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
-	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
-		complianceConfig,
-		url,
-		{
+	const initializeAssetsResponse =
+		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
 			headers: { "Content-Type": "application/json" },
 			method: "POST",
 			body: JSON.stringify({ manifest: manifest }),
-		}
-	);
+		});
+
+	// In the past we've seen the endpoint return that incorrectly doesn't contain
+	// a null response (see: https://github.com/cloudflare/workers-sdk/issues/9465).
+	// So just to be extra sure here we check the object and provide a clear error message to the user
+	// if it is falsy.
+	if (!initializeAssetsResponse) {
+		throw new FatalError(
+			"An unexpected response has been received from the Cloudflare API for assets upload. Please try again.",
+			1,
+			{ telemetryMessage: true }
+		);
+	}
 
 	// if nothing to upload, return
 	if (initializeAssetsResponse.buckets.flat().length === 0) {

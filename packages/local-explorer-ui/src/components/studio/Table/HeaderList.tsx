@@ -23,7 +23,7 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 		<thead className="contents">
 			<tr className="contents">
 				{headers.length > 0 && (
-					<th className="sticky top-0 left-0 z-30 border-r border-b bg-bg-secondary border-border"></th>
+					<th className="sticky top-0 left-0 z-30 border-r border-b border-border bg-bg-secondary"></th>
 				)}
 
 				{headers.map((header, idx) => {
@@ -65,7 +65,7 @@ function StudioTableHeader<HeaderMetadata = unknown>({
 		<th
 			className={cn(
 				{ "z-30": sticky },
-				"bg-background border-r border-b overflow-hidden sticky top-0 h-8.75 leading-8.75 flex text-left z-10 p-0 border-border"
+				"sticky top-0 z-10 flex h-8.75 overflow-hidden border-r border-b border-border bg-background p-0 text-left leading-8.75"
 			)}
 			key={header.name}
 			onContextMenu={onContextMenu}

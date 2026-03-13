@@ -1,5 +1,28 @@
 # miniflare
 
+## 4.20260312.0
+
+### Patch Changes
+
+- [#12861](https://github.com/cloudflare/workers-sdk/pull/12861) [`f7de0fd`](https://github.com/cloudflare/workers-sdk/commit/f7de0fdd6074089ba5a484df683647cb70fe06f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260310.1 | 1.20260312.1 |
+
+- [#12864](https://github.com/cloudflare/workers-sdk/pull/12864) [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer route matching to be more precise
+
+  Previously, the route matching used `startsWith("/cdn-cgi/explorer")` which would incorrectly match paths like `/cdn-cgi/explorerfoo` or `/cdn-cgi/explorereeeeee`, causing unexpected behavior. The route matching has been improved to only match:
+
+  - `/cdn-cgi/explorer` (exact match)
+  - `/cdn-cgi/explorer/` and any sub-paths (e.g., `/cdn-cgi/explorer/api/*`)
+
+  Paths that merely start with `/cdn-cgi/explorer` but aren't actually the explorer (like `/cdn-cgi/explorerfoo`) will now correctly fall through to the user worker.
+
+- [#12775](https://github.com/cloudflare/workers-sdk/pull/12775) [`1dda1c8`](https://github.com/cloudflare/workers-sdk/commit/1dda1c83cc286f5bc8bf7a13ed455265c50b0206) Thanks [@fhanau](https://github.com/fhanau)! - Add support for worker connect handler in miniflare
+
 ## 4.20260310.0
 
 ### Minor Changes

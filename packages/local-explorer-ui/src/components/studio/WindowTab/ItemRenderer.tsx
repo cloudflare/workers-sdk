@@ -31,7 +31,7 @@ export function StudioWindowTabItemRenderer({
 	return (
 		<div
 			className={cn(
-				"h-10 min-w-42.5 max-w-75  flex gap-2 relative px-2 border-b border-r border-border items-center text-left text-xs cursor-pointer hover:text-text select-none",
+				"relative flex h-10 max-w-75 min-w-42.5 cursor-pointer items-center gap-2 border-r border-b border-border px-2 text-left text-xs select-none hover:text-text",
 				selected ? "bg-surface" : "bg-surface-secondary text-muted",
 				isTemp && "italic",
 				isDirty && "not-italic"
@@ -41,7 +41,7 @@ export function StudioWindowTabItemRenderer({
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>
-			<tab.icon className="w-4 h-4" />
+			<tab.icon className="h-4 w-4" />
 
 			<div className={cn("line-clamp-1 grow")}>{tab.title}</div>
 

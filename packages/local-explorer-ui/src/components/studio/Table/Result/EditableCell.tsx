@@ -94,7 +94,7 @@ function InputCellEditor({
 			{popover &&
 				createPortal(
 					<div
-						className="bg-surface border border-border rounded fixed shadow flex flex-col"
+						className="fixed flex flex-col rounded border border-border bg-surface shadow"
 						ref={refs.setFloating}
 						style={{
 							...(floatingStyles as React.CSSProperties),
@@ -116,7 +116,7 @@ function InputCellEditor({
 				)}
 			{popover ? (
 				// eslint-disable-next-line react-hooks/refs -- `refs.setReference` is a callback ref from @floating-ui/react, not a .current access
-				<div ref={refs.setReference} className="w-full h-full">
+				<div ref={refs.setReference} className="h-full w-full">
 					{popoverPlaceholder}
 				</div>
 			) : (
@@ -127,8 +127,8 @@ function InputCellEditor({
 					autoFocus
 					className={
 						align === "right"
-							? "h-full w-full border-0 bg-inherit pr-2 pl-2 text-right text-xs font-mono! outline-hidden"
-							: "h-full w-full border-0 bg-inherit pr-2 pl-2 text-xs font-mono! outline-hidden"
+							? "h-full w-full border-0 bg-inherit pr-2 pl-2 text-right font-mono! text-xs outline-hidden"
+							: "h-full w-full border-0 bg-inherit pr-2 pl-2 font-mono! text-xs outline-hidden"
 					}
 					onBlur={() => {
 						applyChange(value, shouldExit.current);
@@ -205,7 +205,7 @@ function PopoverEditor({
 					ref={editorRef}
 				/>
 			</div>
-			<div className="p-2 border-t border-border flex justify-end">
+			<div className="flex justify-end border-t border-border p-2">
 				<Button
 					onClick={() => {
 						onApply(editorRef.current?.getValue());

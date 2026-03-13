@@ -73,18 +73,18 @@ export function StudioExportModal({
 			open={isOpen}
 		>
 			<Dialog className="p-6" size="lg">
-				<div className="flex items-start justify-between gap-4 mb-4">
+				<div className="mb-4 flex items-start justify-between gap-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">Export</Dialog.Title>
 				</div>
 
 				{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-				<Dialog.Description className="text-kumo-subtle text-sm">
+				<Dialog.Description className="text-sm text-kumo-subtle">
 					Choose how you want to export your query result:
 				</Dialog.Description>
 
-				<div className="flex flex-col gap-4 mt-4">
-					<div className="text-base border border-border rounded-lg shadow-xs">
+				<div className="mt-4 flex flex-col gap-4">
+					<div className="rounded-lg border border-border text-base shadow-xs">
 						<StudioExportOptionEditor value={option} onChange={setOption} />
 					</div>
 
@@ -95,7 +95,7 @@ export function StudioExportModal({
 					)}
 				</div>
 
-				<div className="flex gap-2 justify-end mt-4">
+				<div className="mt-4 flex justify-end gap-2">
 					<Button variant="secondary" onClick={closeModal}>
 						Cancel
 					</Button>

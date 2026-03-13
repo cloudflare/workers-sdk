@@ -180,13 +180,13 @@ export function StudioColumnSchemaEditor({
 			}
 			key={column.key}
 		>
-			<td className="p-2 border border-border text-center h-10">
+			<td className="h-10 border border-border p-2 text-center">
 				{columnIndex + 1}
 			</td>
 
 			<td
 				className={cn(
-					"p-2 border border-border text-center",
+					"border border-border p-2 text-center",
 					!readOnlyExistingColumns && "cursor-pointer"
 				)}
 				onClick={!readOnlyExistingColumns ? onPrimaryKeyClicked : undefined}
@@ -200,13 +200,13 @@ export function StudioColumnSchemaEditor({
 				)}
 			</td>
 
-			<td className="p-2 border border-border font-mono">
+			<td className="border border-border p-2 font-mono">
 				{editableColumn.name}
 			</td>
 
-			<td className="p-2 border border-border">{editableColumn.type}</td>
+			<td className="border border-border p-2">{editableColumn.type}</td>
 
-			<td className="p-2 border border-border text-center">
+			<td className="border border-border p-2 text-center">
 				<Checkbox
 					aria-label="Is nullable"
 					checked={!editableColumn.constraint?.notNull}
@@ -217,18 +217,18 @@ export function StudioColumnSchemaEditor({
 				/>
 			</td>
 
-			<td className="p-2 border border-border font-mono">
+			<td className="border border-border p-2 font-mono">
 				{JSON.stringify(editableColumn.constraint?.defaultValue)}
 			</td>
 
-			<td className="p-2 border border-border">
+			<td className="border border-border p-2">
 				<ColumnConstraintDescription
 					column={editableColumn}
 					constraints={value.constraints}
 				/>
 			</td>
 
-			<td className="p-2 border border-border text-center">
+			<td className="border border-border p-2 text-center">
 				<DropdownMenu>
 					<DropdownMenu.Trigger
 						render={
@@ -345,8 +345,8 @@ function ColumnConstraintBadge({
 	name,
 }: ColumnConstraintBadgeProps): JSX.Element {
 	return (
-		<div className="inline-flex items-center gap-1 border border-border rounded overflow-hidden">
-			<div className="bg-accent p-1 border-r border-border flex items-center">
+		<div className="inline-flex items-center gap-1 overflow-hidden rounded border border-border">
+			<div className="flex items-center border-r border-border bg-accent p-1">
 				{IconComponent && <IconComponent className="mr-1" />} {name}
 			</div>
 
@@ -406,7 +406,7 @@ export function StudioColumnEditorModal({
 			open={isOpen}
 		>
 			<Dialog className="p-6">
-				<div className="flex items-start justify-between gap-4 mb-4">
+				<div className="mb-4 flex items-start justify-between gap-4">
 					{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 					<Dialog.Title className="text-lg font-semibold">
 						{defaultValue ? "Edit Column" : "Add Column"}
@@ -420,7 +420,7 @@ export function StudioColumnEditorModal({
 						: "Enter the column details below."}
 				</Dialog.Description>
 
-				<div className="flex flex-col gap-4 mt-4">
+				<div className="mt-4 flex flex-col gap-4">
 					<div>
 						<Label
 							tooltip={
@@ -433,7 +433,7 @@ export function StudioColumnEditorModal({
 						</Label>
 						<input
 							autoFocus
-							className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
+							className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
 							onChange={(e): void => {
 								setValue(
 									produce(value, (draft) => {
@@ -449,7 +449,7 @@ export function StudioColumnEditorModal({
 					<div className="w-full">
 						<Label>Data type</Label>
 						<select
-							className="w-full rounded-md border border-border px-3 py-2 text-sm bg-transparent"
+							className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
 							onChange={(e): void => {
 								const newType = e.target.value;
 								if (!newType) {
