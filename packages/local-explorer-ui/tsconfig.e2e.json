@@ -9,6 +9,7 @@
 	"include": [
 		"src/__e2e__",
 		"src/__e2e__/global-setup.ts",
-		"src/__e2e__/setup.ts"
+		"src/__e2e__/setup.ts",
+		"../../fixtures/shared/src/run-wrangler-long-lived.ts"
 	]
 }
