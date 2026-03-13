@@ -1,5 +1,86 @@
 # wrangler
 
+## 4.73.0
+
+### Minor Changes
+
+- [#12853](https://github.com/cloudflare/workers-sdk/pull/12853) [`ff543e3`](https://github.com/cloudflare/workers-sdk/commit/ff543e30d69694613ab9d2da4281488fd27fd1b9) Thanks [@gpanders](https://github.com/gpanders)! - Deprecate SSH passthrough flags in `wrangler containers ssh`
+
+  The `--cipher`, `--log-file`, `--escape-char`, `--config-file`, `--pkcs11`, `--identity-file`, `--mac-spec`, `--option`, and `--tag` flags are now deprecated. These flags expose OpenSSH-specific options that are tied to the current implementation. A future release will replace the underlying SSH transport, at which point these flags will be removed. They still function for now.
+
+- [#12815](https://github.com/cloudflare/workers-sdk/pull/12815) [`e63539d`](https://github.com/cloudflare/workers-sdk/commit/e63539de64308cd0706b8876a22e1b1ccabe0721) Thanks [@NuroDev](https://github.com/NuroDev)! - Support disabling persistence in `unstable_startWorker()` and `unstable_dev()`
+
+  You can now disable persistence entirely by setting `persist: false` in the `dev` options:
+
+  ```typescript
+  const worker = await unstable_dev("./src/worker.ts", {
+  	persist: false,
+  });
+  ```
+
+  Or when using `unstable_startWorker()`:
+
+  ```typescript
+  const worker = await unstable_startWorker({
+  	entrypoint: "./src/worker.ts",
+  	dev: {
+  		persist: false,
+  	},
+  });
+  ```
+
+  This is useful for testing scenarios where you want to ensure a clean state on each run without any persisted data from previous runs.
+
+### Patch Changes
+
+- [#12861](https://github.com/cloudflare/workers-sdk/pull/12861) [`f7de0fd`](https://github.com/cloudflare/workers-sdk/commit/f7de0fdd6074089ba5a484df683647cb70fe06f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260310.1 | 1.20260312.1 |
+
+- [#12734](https://github.com/cloudflare/workers-sdk/pull/12734) [`8e89e85`](https://github.com/cloudflare/workers-sdk/commit/8e89e85cf4f75b483a2dce5aa6947f050e5f35cc) Thanks [@flostellbrink](https://github.com/flostellbrink)! - Add back support for wrangler d1 exports with multiple tables.
+
+  Example:
+
+  ```bash
+  # All tables (default)
+  wrangler d1 export db --output all-tables.sql
+
+  # Single table (unchanged)
+  wrangler d1 export db --output single-table.sql --table foo
+
+  # Multiple tables (new)
+  wrangler d1 export db --output multiple-tables.sql --table foo --table bar
+  ```
+
+- [#12807](https://github.com/cloudflare/workers-sdk/pull/12807) [`8d1e130`](https://github.com/cloudflare/workers-sdk/commit/8d1e130bba5fa4019edab855e817a17110b360d0) Thanks [@MaxwellCalkin](https://github.com/MaxwellCalkin)! - fix: `vectorize` commands now output valid json
+
+  This fixes:
+
+  - `wrangler vectorize create`
+  - `wrangler vectorize info`
+  - `wrangler vectorize insert`
+  - `wrangler vectorize upsert`
+  - `wrangler vectorize list`
+  - `wrangler vectorize list-vectors`
+  - `wrangler vectorize list-metadata-index`
+
+  Also, `wrangler vectorize create --json` now also includes the `created_at`, `modified_on` and `description` fields.
+
+- [#12856](https://github.com/cloudflare/workers-sdk/pull/12856) [`6ee18e1`](https://github.com/cloudflare/workers-sdk/commit/6ee18e1bda05ef3870dfe917510bd2a55310254b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix autoconfig for Astro v6 projects to skip wrangler config generation
+
+  Astro 6+ generates its own wrangler configuration on build, so autoconfig now detects the Astro version and skips creating a `wrangler.jsonc` file for projects using Astro 6 or later. This prevents conflicts between the autoconfig-generated config and Astro's built-in config generation.
+
+- [#12700](https://github.com/cloudflare/workers-sdk/pull/12700) [`4bb61b9`](https://github.com/cloudflare/workers-sdk/commit/4bb61b9758bc4e4349ede7327a1075774178be64) Thanks [@RiscadoA](https://github.com/RiscadoA)! - Add client-side validation for VPC service host flags
+
+  The `--hostname`, `--ipv4`, and `--ipv6` flags on `wrangler vpc service create` and `wrangler vpc service update` now validate input before sending requests to the API. Previously, invalid values were accepted by the CLI and only rejected by the API with opaque error messages. Now users get clear, actionable error messages for common mistakes like passing a URL instead of a hostname, using an IP address in the `--hostname` flag, or providing malformed IP addresses.
+
+- Updated dependencies [[`f7de0fd`](https://github.com/cloudflare/workers-sdk/commit/f7de0fdd6074089ba5a484df683647cb70fe06f6), [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31), [`1dda1c8`](https://github.com/cloudflare/workers-sdk/commit/1dda1c83cc286f5bc8bf7a13ed455265c50b0206)]:
+  - miniflare@4.20260312.0
+
 ## 4.72.0
 
 ### Minor Changes
