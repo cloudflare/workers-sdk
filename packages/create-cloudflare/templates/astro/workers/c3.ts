@@ -1,11 +1,9 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
 import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
@@ -32,42 +30,6 @@ const configure = async () => {
 		doneText: `${brandColor("installed")} ${dim(
 			`via \`${npx} astro add cloudflare\``,
 		)}`,
-	});
-
-	// Update Astro config to enable platformProxy and imageService
-	const filePath = "astro.config.mjs";
-
-	updateStatus(`Updating configuration in ${blue(filePath)}`);
-
-	transformFile(filePath, {
-		visitCallExpression: function (n) {
-			const callee = n.node.callee as recast.types.namedTypes.Identifier;
-			if (callee.name !== "cloudflare") {
-				return this.traverse(n);
-			}
-
-			const b = recast.types.builders;
-			n.node.arguments = [
-				b.objectExpression([
-					// platformProxy: {
-					//   enabled: true,
-					// },
-					b.objectProperty(
-						b.identifier("platformProxy"),
-						b.objectExpression([
-							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
-						]),
-					),
-					// imageService: "cloudflare",
-					b.objectProperty(
-						b.identifier("imageService"),
-						b.stringLiteral("cloudflare"),
-					),
-				]),
-			];
-
-			return false;
-		},
 	});
 };
 
@@ -103,7 +65,7 @@ const config: TemplateConfig = {
 	transformPackageJson: async (pkgJson: PackageJson, ctx: C3Context) => ({
 		scripts: {
 			deploy: `astro build && wrangler deploy`,
-			preview: `astro build && wrangler dev`,
+			preview: `astro build && astro preview`,
 			...(usesTypescript(ctx) && { "cf-typegen": `wrangler types` }),
 		},
 	}),
