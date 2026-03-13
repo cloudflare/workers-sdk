@@ -1195,5 +1195,37 @@ describe("deploy", () => {
 			});
 			await runWrangler("deploy --dispatch-namespace my-namespace");
 		});
+
+		it("should error when assets upload session response is null", async () => {
+			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+
+			// Mock the AUS endpoint to return a null result
+			msw.use(
+				http.post(
+					`*/accounts/some-account-id/workers/scripts/test-name/assets-upload-session`,
+					() => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await expect(
+				runWrangler("deploy")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: An unexpected response has been received from the Cloudflare API for assets upload. Please try again.]`
+			);
+		});
 	});
 });

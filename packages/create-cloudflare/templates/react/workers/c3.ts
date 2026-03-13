@@ -24,6 +24,7 @@ const generate = async (ctx: C3Context) => {
 		ctx.project.name,
 		"--template",
 		variant.value,
+		"--no-immediate",
 	]);
 
 	logRaw("");

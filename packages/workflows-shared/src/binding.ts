@@ -1,12 +1,6 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { InstanceEvent, instanceStatusName } from "./instance";
-import {
-	isAbortError,
-	isUserTriggeredPause,
-	isUserTriggeredRestart,
-	isUserTriggeredTerminate,
-	WorkflowError,
-} from "./lib/errors";
+import { WorkflowError } from "./lib/errors";
 import { isValidWorkflowInstanceId } from "./lib/validators";
 import type {
 	DatabaseInstance,
@@ -15,7 +9,6 @@ import type {
 	Engine,
 	EngineLogs,
 } from "./engine";
-import type { InstanceStatus as EngineInstanceStatus } from "./instance";
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
@@ -57,12 +50,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				if (val !== undefined) {
 					val[Symbol.dispose]();
 				}
-			})
-			.catch((e) => {
-				// Suppress abort errors since they're expected
-				if (!isAbortError(e)) {
-					throw e;
-				}
 			});
 
 		this.ctx.waitUntil(initPromise);
@@ -75,11 +62,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	public async get(id: string): Promise<WorkflowInstance> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
-
-		// Pass a getter function so WorkflowHandle can get a fresh stub after abort
-		const getStub = () => this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
-
-		const handle = new WorkflowHandle(id, stub, getStub);
+		const handle = new WorkflowHandle(id, stub);
 
 		try {
 			await handle.status();
@@ -164,86 +147,41 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
-	private stub: DurableObjectStub<Engine>;
-
 	constructor(
 		public id: string,
-		stub: DurableObjectStub<Engine>,
-		private getStub: () => DurableObjectStub<Engine>
+		private stub: DurableObjectStub<Engine>
 	) {
 		super();
-		this.stub = stub;
 	}
 
 	public async pause(): Promise<void> {
-		try {
-			await this.stub.changeInstanceStatus("pause");
-		} catch (e) {
-			// pause causes instance abortion
-			if (!isUserTriggeredPause(e)) {
-				throw e;
-			}
-		}
+		// Look for instance in namespace
+		// Get engine stub
+		// Call a few functions on stub
+		throw new Error("Not implemented yet");
 	}
 
 	public async resume(): Promise<void> {
-		await this.stub.changeInstanceStatus("resume");
+		throw new Error("Not implemented yet");
 	}
 
 	public async terminate(): Promise<void> {
-		try {
-			await this.stub.changeInstanceStatus("terminate");
-		} catch (e) {
-			// terminate causes instance abortion
-			if (!isUserTriggeredTerminate(e)) {
-				throw e;
-			}
-		}
+		throw new Error("Not implemented yet");
 	}
 
 	public async restart(): Promise<void> {
-		try {
-			await this.stub.changeInstanceStatus("restart");
-		} catch (e) {
-			// restart causes instance abortion
-			if (!isUserTriggeredRestart(e)) {
-				throw e;
-			}
-		}
-
-		// trigger restart flow after abortion
-		this.stub = this.getStub();
-		await this.stub.attemptRestart();
+		throw new Error("Not implemented yet");
 	}
 
 	public async status(): Promise<
 		InstanceStatus & { __LOCAL_DEV_STEP_OUTPUTS: unknown[] }
 	> {
-		// Both getStatus() and readLogs() must use the same fresh stub.
-		// After pause/restart/terminate aborts the DO, the stub goes stale
-		const fetchStatusAndLogs = async () => {
-			const status = await this.stub.getStatus();
+		const status = await this.stub.getStatus();
 
-			// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
-			const logs = await (this.stub.readLogs() as unknown as Promise<
-				EngineLogs & Disposable
-			>);
-
-			return { status, logs };
-		};
-
-		let result: {
-			status: EngineInstanceStatus;
-			logs: EngineLogs & Disposable;
-		};
-		try {
-			result = await fetchStatusAndLogs();
-		} catch {
-			this.stub = this.getStub();
-			result = await fetchStatusAndLogs();
-		}
-		// Dispose the RPC handle when the method scope exits
-		using logs = result.logs;
+		// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
+		using logs = await (this.stub.readLogs() as unknown as Promise<
+			EngineLogs & Disposable
+		>);
 
 		const filteredLogs = logs.logs.filter(
 			(log) =>
@@ -266,7 +204,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		)?.metadata.error;
 
 		return {
-			status: instanceStatusName(result.status),
+			status: instanceStatusName(status),
 			__LOCAL_DEV_STEP_OUTPUTS: stepOutputs,
 			output: workflowOutput,
 			error: workflowError,

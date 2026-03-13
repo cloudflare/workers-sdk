@@ -13,22 +13,6 @@ type UserEvent = {
 	payload: unknown;
 };
 
-// KV key prefixes/values used by the modifier/mock system
-export const MODIFIER_KEYS = {
-	REPLACE_RESULT: "replace-result-",
-	MOCK_STEP_ERROR: "mock-step-error-",
-	MOCK_EVENT: "mock-event-",
-	FORCE_STEP_TIMEOUT: "force-step-timeout-",
-	FORCE_EVENT_TIMEOUT: "force-event-timeout-",
-	FAILURE_INDEX: "failure-index-",
-	DISABLE_SLEEP: "disable-sleep-",
-	DISABLE_ALL_SLEEPS: "disableAllSleeps",
-} as const;
-
-export function isModifierKey(key: string): boolean {
-	return Object.values(MODIFIER_KEYS).some((v) => key.startsWith(v));
-}
-
 export class WorkflowInstanceModifier extends RpcTarget {
 	#engine: Engine;
 	#state: DurableObjectState;
@@ -65,7 +49,7 @@ export class WorkflowInstanceModifier extends RpcTarget {
 	}
 
 	#getAndIncrementCounter = async (valueKey: string, by: number) => {
-		const counterKey = `${MODIFIER_KEYS.FAILURE_INDEX}${valueKey}`;
+		const counterKey = `failure-index-${valueKey}`;
 		const next = (await this.#state.storage.get<number>(counterKey)) ?? 1;
 		await this.#state.storage.put(counterKey, next + by);
 		return next;
@@ -78,12 +62,12 @@ export class WorkflowInstanceModifier extends RpcTarget {
 		}
 		const sleepNameCountHash = await computeHash(step.name + count);
 
-		return `${MODIFIER_KEYS.DISABLE_SLEEP}${sleepNameCountHash}`;
+		return sleepNameCountHash;
 	}
 
 	async disableSleeps(steps?: StepSelector[]): Promise<void> {
 		if (!steps) {
-			await this.#state.storage.put(MODIFIER_KEYS.DISABLE_ALL_SLEEPS, true);
+			await this.#state.storage.put("disableAllSleeps", true);
 		} else {
 			for (const step of steps) {
 				const sleepDisableKey = await this.#getSleepStepDisableKey(step);
@@ -101,20 +85,13 @@ export class WorkflowInstanceModifier extends RpcTarget {
 	async mockStepResult(step: StepSelector, stepResult: unknown): Promise<void> {
 		const valueKey = await this.#getStepCacheKey(step);
 
-		if (
-			await this.#state.storage.get(
-				`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`
-			)
-		) {
+		if (await this.#state.storage.get(`replace-result-${valueKey}`)) {
 			throw new Error(
 				`[WorkflowIntrospector] Trying to mock step '${step.name}' multiple times!`
 			);
 		}
 
-		await this.#state.storage.put(
-			`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`,
-			stepResult
-		);
+		await this.#state.storage.put(`replace-result-${valueKey}`, stepResult);
 	}
 
 	// Same logic of `mockStepResult` but stores an error instead of a value.
@@ -129,11 +106,7 @@ export class WorkflowInstanceModifier extends RpcTarget {
 			message: error.message,
 		};
 
-		if (
-			await this.#state.storage.get(
-				`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`
-			)
-		) {
+		if (await this.#state.storage.get(`replace-result-${valueKey}`)) {
 			throw new Error(
 				`[WorkflowIntrospector] Trying to mock error on step '${step.name}' after mocking its result!`
 			);
@@ -143,13 +116,13 @@ export class WorkflowInstanceModifier extends RpcTarget {
 			const start = await this.#getAndIncrementCounter(valueKey, times);
 			const mockErrorsPuts = Array.from({ length: times }, (_, i) => {
 				const attempt = start + i;
-				const mockErrorKey = `${MODIFIER_KEYS.MOCK_STEP_ERROR}${valueKey}-${attempt}`;
+				const mockErrorKey = `mock-step-error-${valueKey}-${attempt}`;
 				return this.#state.storage.put(mockErrorKey, serializableError);
 			});
 
 			await Promise.all(mockErrorsPuts);
 		} else {
-			const mockErrorKey = `${MODIFIER_KEYS.MOCK_STEP_ERROR}${valueKey}`;
+			const mockErrorKey = `mock-step-error-${valueKey}`;
 			await this.#state.storage.put(mockErrorKey, serializableError);
 		}
 	}
@@ -157,11 +130,7 @@ export class WorkflowInstanceModifier extends RpcTarget {
 	async forceStepTimeout(step: StepSelector, times?: number) {
 		const valueKey = await this.#getStepCacheKey(step);
 
-		if (
-			await this.#state.storage.get(
-				`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`
-			)
-		) {
+		if (await this.#state.storage.get(`replace-result-${valueKey}`)) {
 			throw new Error(
 				`[WorkflowIntrospector] Trying to force timeout on step '${step.name}' after mocking its result!`
 			);
@@ -171,13 +140,13 @@ export class WorkflowInstanceModifier extends RpcTarget {
 			const start = await this.#getAndIncrementCounter(valueKey, times);
 			const forceTimeouts = Array.from({ length: times }, (_, i) => {
 				const attempt = start + i;
-				const forceStepTimeoutKey = `${MODIFIER_KEYS.FORCE_STEP_TIMEOUT}${valueKey}-${attempt}`;
+				const forceStepTimeoutKey = `force-step-timeout-${valueKey}-${attempt}`;
 				return this.#state.storage.put(forceStepTimeoutKey, true);
 			});
 
 			await Promise.all(forceTimeouts);
 		} else {
-			const forceStepTimeoutKey = `${MODIFIER_KEYS.FORCE_STEP_TIMEOUT}${valueKey}`;
+			const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
 			await this.#state.storage.put(forceStepTimeoutKey, true);
 		}
 	}
@@ -189,17 +158,14 @@ export class WorkflowInstanceModifier extends RpcTarget {
 			type: event.type,
 		};
 
-		await this.#state.storage.put(
-			`${MODIFIER_KEYS.MOCK_EVENT}${event.type}`,
-			true
-		);
+		await this.#state.storage.put(`mock-event-${event.type}`, true);
 		await this.#engine.receiveEvent(myEvent);
 	}
 
 	async forceEventTimeout(step: StepSelector): Promise<void> {
 		const waitForEventKey = await this.#getWaitForEventCacheKey(step);
 		await this.#state.storage.put(
-			`${MODIFIER_KEYS.FORCE_EVENT_TIMEOUT}${waitForEventKey}`,
+			`force-event-timeout-${waitForEventKey}`,
 			true
 		);
 	}

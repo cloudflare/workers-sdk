@@ -34,8 +34,7 @@ export enum InstanceStatus {
 	Errored = 3, // Stopped due to a user or system Error
 	Terminated = 4, // Stopped explicitly by user
 	Complete = 5, // Successful completion
-	WaitingForPause = 6,
-	Waiting = 7,
+	// TODO (WOR-71): Sleep
 }
 
 export function instanceStatusName(status: InstanceStatus) {
@@ -52,10 +51,6 @@ export function instanceStatusName(status: InstanceStatus) {
 			return "terminated";
 		case InstanceStatus.Complete:
 			return "complete";
-		case InstanceStatus.WaitingForPause:
-			return "waitingForPause";
-		case InstanceStatus.Waiting:
-			return "waiting";
 		default:
 			return "unknown";
 	}
@@ -68,8 +63,6 @@ export const instanceStatusNames = [
 	"errored",
 	"terminated",
 	"complete",
-	"waitingForPause",
-	"waiting",
 	"unknown",
 ] as const;
 
@@ -87,10 +80,6 @@ export function toInstanceStatus(status: string): InstanceStatus {
 			return InstanceStatus.Terminated;
 		case "complete":
 			return InstanceStatus.Complete;
-		case "waitingForPause":
-			return InstanceStatus.WaitingForPause;
-		case "waiting":
-			return InstanceStatus.Waiting;
 		case "unknown":
 			throw new Error("unknown cannot be parsed into a InstanceStatus");
 		default:

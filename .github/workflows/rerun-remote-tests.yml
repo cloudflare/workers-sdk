@@ -1,0 +1,71 @@
+name: "Rerun Remote Tests"
+
+# When the "run-remote-tests" label is added to or removed from a PR, re-run
+# the E2E workflows so they pick up the label change and pass (or withhold) the
+# Cloudflare API token to the test steps.  This avoids adding "labeled" as a
+# trigger type to every E2E workflow (which would cause wasteful re-runs on
+# unrelated label changes).
+on:
+  pull_request:
+    types: [labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  rerun-e2e:
+    name: "Rerun E2E Tests"
+    if: github.event.label.name == 'run-remote-tests'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: "Re-run E2E workflows"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          for workflow in e2e-wrangler.yml e2e-vite.yml c3-e2e.yml; do
+            run=$(gh api "repos/${REPO}/actions/workflows/${workflow}/runs?head_sha=${HEAD_SHA}&per_page=1" \
+              --jq '.workflow_runs[0] | "\(.id) \(.status)"' || true)
+
+            run_id=$(echo "$run" | awk '{print $1}')
+            status=$(echo "$run" | awk '{print $2}')
+
+            if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+              echo "No run found for ${workflow} at SHA ${HEAD_SHA}"
+              continue
+            fi
+
+            # Each E2E workflow has a "check-remote" step that calls
+            # `gh pr view ... --json labels` at runtime, so a run that
+            # hasn't started yet will see the newly-added label on its
+            # own — no need to cancel and re-run it.
+            if [ "$status" != "completed" ] && [ "$status" != "in_progress" ]; then
+              echo "${workflow} run ${run_id} is ${status} — not yet started, skipping."
+              continue
+            fi
+
+            # If the run is actively executing, the label check has
+            # already evaluated to false. Cancel it first — the rerun
+            # endpoint only works on completed runs.
+            if [ "$status" = "in_progress" ]; then
+              echo "Cancelling in-progress ${workflow} run ${run_id}..."
+              gh api "repos/${REPO}/actions/runs/${run_id}/cancel" --method POST || true
+
+              # Cancellation is async; poll until the run reaches "completed".
+              for i in $(seq 1 30); do
+                current=$(gh api "repos/${REPO}/actions/runs/${run_id}" --jq '.status')
+                if [ "$current" = "completed" ]; then
+                  echo "Run ${run_id} is now completed (cancelled)."
+                  break
+                fi
+                echo "  Waiting for cancellation to finish (${i}/30, status: ${current})..."
+                sleep 2
+              done
+            fi
+
+            gh api "repos/${REPO}/actions/runs/${run_id}/rerun" --method POST \
+              && echo "Re-triggered ${workflow} (run ${run_id})" \
+              || echo "Failed to re-run ${workflow} (run ${run_id})"
+          done
