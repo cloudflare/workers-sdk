@@ -3,8 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	publicDir: false,
 	test: {
-		// Run tests sequentially to avoid port conflicts & race conditions
-		fileParallelism: false,
+		fileParallelism: true,
 		globalSetup: ["./src/__e2e__/global-setup.ts"],
 		hookTimeout: 60_000,
 		include: ["src/__e2e__/**/*.spec.ts"],
