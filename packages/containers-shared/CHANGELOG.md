@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.11.0
+
+### Minor Changes
+
+- [#12857](https://github.com/cloudflare/workers-sdk/pull/12857) [`3f09bb2`](https://github.com/cloudflare/workers-sdk/commit/3f09bb2e22672c4a11dc5fcdaf9e6954d3e1973b) Thanks [@gabivlj](https://github.com/gabivlj)! - Update the `proxy-everything` image used for containers local dev
+
+  The egress interceptor image now supports HTTPS and ingress over HTTP CONNECT in workerd.
+
 ## 0.10.0
 
 ### Minor Changes
