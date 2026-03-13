@@ -39,6 +39,8 @@ describe("wrangler", () => {
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
 
+				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
+
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
@@ -109,6 +111,8 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
+
+				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
