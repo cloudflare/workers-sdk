@@ -237,11 +237,11 @@ SECRET3=value3`
 		).rejects.toThrowError();
 	});
 
-	it("should fail when secrets file contains invalid JSON", async ({
+	it("should fail when secrets file is neither valid JSON nor .env format", async ({
 		expect,
 	}) => {
-		const secretsFile = "invalid.json";
-		writeFileSync(secretsFile, "{ invalid json }");
+		const secretsFile = "invalid_file";
+		writeFileSync(secretsFile, "{ invalid file }");
 
 		await expect(
 			runWrangler(
