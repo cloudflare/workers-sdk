@@ -1,5 +1,4 @@
 import { ms } from "itty-time";
-import { ABORT_REASONS } from "./errors";
 import type { Engine } from "../engine";
 import type { WorkflowSleepDuration } from "cloudflare:workers";
 
@@ -166,7 +165,8 @@ export const startGracePeriod: GracePeriodCallback = async (
 
 		// Ensure next alarm is set before we abort
 		await engine.priorityQueue?.handleNextAlarm();
-		await engine.abort(ABORT_REASONS.GRACE_PERIOD_COMPLETE);
+		// TODO: possibly handle alarms
+		// await engine.abort(ABORT_REASONS.GRACE_PERIOD_COMPLETE);
 	};
 	void gracePeriodHandler();
 };

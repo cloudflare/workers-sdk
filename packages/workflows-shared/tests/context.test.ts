@@ -1,7 +1,11 @@
-import { describe, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { InstanceEvent } from "../src";
-import { runWorkflow } from "./utils";
+import { runWorkflow, settlePendingWorkflows } from "./utils";
 import type { EngineLogs } from "../src/engine";
+
+afterEach(async () => {
+	await settlePendingWorkflows();
+});
 
 describe("Context", () => {
 	it("should provide attempt count 1 on first successful attempt", async ({
