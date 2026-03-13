@@ -6,6 +6,7 @@ import {
 	navigateToDOObjectByName,
 	openTableSelector,
 	page,
+	refreshTables,
 	runAllQueries,
 	runQuery,
 	seedDO,
@@ -93,6 +94,8 @@ describe("Durable Objects", () => {
 			`);
 			await runAllQueries();
 			await waitForQueryResult();
+
+			await refreshTables();
 
 			await openTableSelector();
 

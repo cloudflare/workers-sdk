@@ -5,6 +5,7 @@ import {
 	navigateToD1,
 	openTableSelector,
 	page,
+	refreshTables,
 	runAllQueries,
 	runQuery,
 	seedD1,
@@ -182,6 +183,8 @@ describe("D1 Database Studio", () => {
 			`);
 			await runAllQueries();
 			await waitForQueryResult();
+
+			await refreshTables();
 
 			await openTableSelector();
 

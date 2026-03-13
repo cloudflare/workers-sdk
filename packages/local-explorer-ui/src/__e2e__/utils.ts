@@ -423,3 +423,12 @@ export async function waitForQueryResult(options?: {
 		timeout: options?.timeout ?? 10_000,
 	});
 }
+
+/**
+ * Click the "Refresh tables" button and wait for refresh to complete.
+ */
+export async function refreshTables(): Promise<void> {
+	const refreshButton = page.getByRole("button", { name: "Refresh tables" });
+	await refreshButton.click();
+	await page.waitForTimeout(500);
+}
