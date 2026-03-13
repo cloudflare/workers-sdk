@@ -167,7 +167,9 @@ describe("versions secret bulk", () => {
 
 		await expect(
 			runWrangler(`versions secret bulk secrets.json --name script-name`)
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: The contents of "secrets.json" is not valid.]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The contents of "secrets.json" is not valid.]`
+		);
 	});
 
 	test("should error on invalid json stdin", async () => {
