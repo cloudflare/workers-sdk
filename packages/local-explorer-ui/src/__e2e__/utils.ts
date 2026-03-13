@@ -49,23 +49,63 @@ export async function navigateToDOClass(className: string): Promise<void> {
 }
 
 /**
- * Navigate to a specific Durable Object instance.
+ * Navigate to a specific Durable Object instance by hex ID.
+ *
+ * Note: The API requires the actual hex object ID, not a string name.
+ * If you only have a string name (e.g., "test-object"), use `navigateToDOObjectByName` instead.
  */
 export async function navigateToDOObject(
 	className: string,
 	objectId: string,
 	table?: string
 ): Promise<void> {
-	const url = new URL(
-		`/cdn-cgi/explorer/do/${className}/${objectId}`,
-		"http://localhost"
-	);
+	let path = `/cdn-cgi/explorer/do/${className}/${objectId}`;
 	if (table) {
-		url.searchParams.set("table", table);
+		path += `?table=${encodeURIComponent(table)}`;
 	}
 
-	await navigateTo(url.href);
+	await navigateTo(path);
 	await waitForPageLoad();
+}
+
+/**
+ * Navigate to a Durable Object instance by going through the class page UI.
+ * This is necessary because the API requires hex object IDs, but tests often
+ * only know the string name used with `idFromName()`.
+ *
+ * This function:
+ * 1. Navigates to the DO class page
+ * 2. Finds the first "Open Studio" link
+ * 3. Extracts the hex object ID from the link href
+ * 4. Navigates to the object page (optionally with a table selected)
+ *
+ * @returns The hex object ID that was extracted from the UI
+ */
+export async function navigateToDOObjectByName(
+	className: string,
+	table?: string
+): Promise<string> {
+	await navigateToDOClass(className);
+	await waitForText(className);
+
+	const openStudioLink = page.locator('a:has-text("Open Studio")').first();
+	await openStudioLink.waitFor({ state: "visible", timeout: 10_000 });
+
+	const href = await openStudioLink.getAttribute("href");
+	if (!href) {
+		throw new Error("Could not find href on Open Studio link");
+	}
+
+	// Extract the object ID from the href (format: /cdn-cgi/explorer/do/{className}/{objectId})
+	const match = href.match(/\/cdn-cgi\/explorer\/do\/[^/]+\/([a-f0-9]+)/);
+	if (!match || !match[1]) {
+		throw new Error(`Could not extract object ID from href: ${href}`);
+	}
+	const objectId: string = match[1];
+
+	await navigateToDOObject(className, objectId, table);
+
+	return objectId;
 }
 
 /**
