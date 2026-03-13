@@ -13,13 +13,9 @@ import {
 } from "../utils";
 
 describe("KV Namespace", () => {
-	beforeEach(
-		async () => {
-			await seedKV();
-		},
-		// Increase hook timeout since Windows CI can be slow
-		120_000
-	);
+	beforeEach(async () => {
+		await seedKV();
+	});
 
 	describe("viewing entries", () => {
 		test("displays entries in the table", async () => {

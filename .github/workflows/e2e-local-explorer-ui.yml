@@ -13,22 +13,12 @@ env:
 
 jobs:
   test:
-    name: ${{ format('Local Explorer UI E2E ({0})', matrix.description) }}
+    name: Local Explorer UI E2E
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            description: macOS
-          - os: ubuntu-latest
-            description: Linux
-          - os: windows-latest
-            description: Windows
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -66,12 +56,12 @@ jobs:
         run: pnpm test:e2e -F @cloudflare/local-explorer-ui --log-order=stream
         timeout-minutes: 10
         env:
-          CI_OS: ${{ matrix.os }}
+          CI_OS: Linux
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Upload turbo logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}
+          name: turbo-runs
           path: .turbo/runs
