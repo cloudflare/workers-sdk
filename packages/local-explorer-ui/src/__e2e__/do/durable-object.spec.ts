@@ -71,12 +71,4 @@ describe("Durable Objects", () => {
 			await waitForText("MyDurableObject");
 		});
 	});
-
-	// Note: Testing the actual DO Studio requires navigating to a specific object
-	// which requires knowing the object ID (hex-encoded). The seed endpoint creates
-	// an object with idFromName("test-object"), but we'd need to look up the actual ID.
-	// For comprehensive DO Studio testing, we'd need to:
-	// 1. Create a DO by calling the /do endpoint
-	// 2. List objects to find the ID
-	// 3. Navigate to the object's studio
 });
