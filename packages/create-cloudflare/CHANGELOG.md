@@ -1,5 +1,35 @@
 # create-cloudflare
 
+## 2.64.7
+
+### Patch Changes
+
+- [#12805](https://github.com/cloudflare/workers-sdk/pull/12805) [`9e78285`](https://github.com/cloudflare/workers-sdk/commit/9e78285c84b11dfbc6e2d031a2f59dfcf11c5df1) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.2.0 | 21.2.1 |
+
+- [#12806](https://github.com/cloudflare/workers-sdk/pull/12806) [`56986b9`](https://github.com/cloudflare/workers-sdk/commit/56986b95eea536a27f27c3177e37d675c5c5850b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.591 | 0.0.592 |
+
+- [#12512](https://github.com/cloudflare/workers-sdk/pull/12512) [`01f252d`](https://github.com/cloudflare/workers-sdk/commit/01f252db83daff52ede0c582443548833f02caf1) Thanks [@thebeyondr](https://github.com/thebeyondr)! - Fix C3 success summary dashboard link to point to Workers service production view
+
+  The "Dash:" URL now includes `/production` so it opens the correct Workers & Pages service view in the Cloudflare dashboard.
+
+- [#12820](https://github.com/cloudflare/workers-sdk/pull/12820) [`556bce0`](https://github.com/cloudflare/workers-sdk/commit/556bce0acd78e42b84b25247d73699513c2cf1aa) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Generate `app/env.d.ts` and `server/env.d.ts` for Nuxt applications
+
+  Previously, only a top-level `env.d.ts` was created, which meant server files didn't receive Cloudflare types. Now the CLI generates separate `app/env.d.ts` and `server/env.d.ts` files, both importing from a shared `_cloudflare/env.d.ts` to avoid duplication.
+
+  This ensures Cloudflare types are available in both app and server directories.
+
 ## 2.64.6
 
 ### Patch Changes

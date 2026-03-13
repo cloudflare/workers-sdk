@@ -1,5 +1,69 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.13.0
+
+### Minor Changes
+
+- [#11632](https://github.com/cloudflare/workers-sdk/pull/11632) [`a6ddbdb`](https://github.com/cloudflare/workers-sdk/commit/a6ddbdb2b67978377dda1acda289fe21eb0892bd) Thanks [@penalosa](https://github.com/penalosa)! - Support Vitest 4 in `@cloudflare/vitest-pool-workers`.
+
+  This a breaking change to the `@cloudflare/vitest-pool-workers` integration in order to support Vitest v4. Along with supporting Vitest v4 (and dropping support for Vitest v2 and v3), we've made a number of changes that may require changes to your tests. Our aim has been to improve stability & the foundations of `@cloudflare/vitest-pool-workers` as we move towards a v1 release of the package.
+
+  We've made a codemod to make the migration easier, which will make the required changes to your config file:
+
+  ```sh
+  npx jscodeshift -t node_modules/@cloudflare/vitest-pool-workers/dist/codemods/vitest-v3-to-v4.mjs vitest.config.ts
+  ```
+
+  Or, without installing the package first:
+
+  ```sh
+  npx jscodeshift -t https://unpkg.com/@cloudflare/vitest-pool-workers/dist/codemods/vitest-v3-to-v4.mjs --parser=ts vitest.config.ts
+  ```
+
+  - **Config API:** `defineWorkersProject` and `defineWorkersConfig` from `@cloudflare/vitest-pool-workers/config` have been replaced with a `cloudflareTest()` Vite plugin exported from `@cloudflare/vitest-pool-workers`. The `test.poolOptions.workers` options are now passed directly to `cloudflareTest()`:
+
+    Before:
+
+    ```ts
+    import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+
+    export default defineWorkersProject({
+    	test: {
+    		poolOptions: {
+    			workers: {
+    				wrangler: { configPath: "./wrangler.jsonc" },
+    			},
+    		},
+    	},
+    });
+    ```
+
+    After:
+
+    ```ts
+    import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+    import { defineConfig } from "vitest/config";
+
+    export default defineConfig({
+    	plugins: [
+    		cloudflareTest({
+    			wrangler: { configPath: "./wrangler.jsonc" },
+    		}),
+    	],
+    });
+    ```
+
+  - **`isolatedStorage` & `singleWorker`:** These have been removed in favour of a simpler isolation model that more closely matches Vitest. Storage isolation is now on a per test file basis, and you can make your test files share the same storage by using the Vitest flags `--max-workers=1 --no-isolate`
+  - **`import { env, SELF } from "cloudflare:test"`:** These have been removed in favour of `import { env, exports } from "cloudflare:workers"`. `exports.default.fetch()` has the same behaviour as `SELF.fetch()`, except that it doesn't expose Assets. To test your assets, write an integration test using [`startDevWorker()`](https://developers.cloudflare.com/workers/testing/unstable_startworker/)
+  - **`import { fetchMock } from "cloudflare:test"`:** This has been removed. Instead, [mock `globalThis.fetch`](https://github.com/cloudflare/workers-sdk/blob/main/fixtures/vitest-pool-workers-examples/request-mocking/test/imperative.test.ts) or use ecosystem libraries like [MSW (recommended)](https://mswjs.io/).
+  - **Vitest peer dependency:** `@cloudflare/vitest-pool-workers` now requires `vitest@^4.1.0`.
+
+### Patch Changes
+
+- Updated dependencies [[`f7de0fd`](https://github.com/cloudflare/workers-sdk/commit/f7de0fdd6074089ba5a484df683647cb70fe06f6), [`ff543e3`](https://github.com/cloudflare/workers-sdk/commit/ff543e30d69694613ab9d2da4281488fd27fd1b9), [`8e89e85`](https://github.com/cloudflare/workers-sdk/commit/8e89e85cf4f75b483a2dce5aa6947f050e5f35cc), [`e63539d`](https://github.com/cloudflare/workers-sdk/commit/e63539de64308cd0706b8876a22e1b1ccabe0721), [`8d1e130`](https://github.com/cloudflare/workers-sdk/commit/8d1e130bba5fa4019edab855e817a17110b360d0), [`6ee18e1`](https://github.com/cloudflare/workers-sdk/commit/6ee18e1bda05ef3870dfe917510bd2a55310254b), [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31), [`1dda1c8`](https://github.com/cloudflare/workers-sdk/commit/1dda1c83cc286f5bc8bf7a13ed455265c50b0206), [`4bb61b9`](https://github.com/cloudflare/workers-sdk/commit/4bb61b9758bc4e4349ede7327a1075774178be64)]:
+  - miniflare@4.20260312.0
+  - wrangler@4.73.0
+
 ## 0.12.21
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @cloudflare/local-explorer-ui
 
+## 0.8.1
+
+### Patch Changes
+
+- [#12864](https://github.com/cloudflare/workers-sdk/pull/12864) [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer's sidebar header link to point to the correct `/cdn-cgi/explorer/` path rather than `/`.
+
 ## 0.8.0
 
 ### Minor Changes
