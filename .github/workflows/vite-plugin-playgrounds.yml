@@ -55,7 +55,7 @@ jobs:
       - name: Build plugin with initial Vite version
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: |
-          dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin
+          pnpm dotenv -- pnpm turbo build --filter @cloudflare/vite-plugin
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
@@ -69,7 +69,7 @@ jobs:
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          dotenv -- pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
+          pnpm dotenv -- pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
         env:
           VITE_VERSION: ${{ matrix.vite }}
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -82,7 +82,7 @@ jobs:
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          dotenv -- pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
+          pnpm dotenv -- pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
         env:
           VITE_VERSION: ${{ matrix.vite }}
           NODE_OPTIONS: "--max_old_space_size=8192"
