@@ -18,7 +18,7 @@ import type {
 } from "./types";
 
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
-	"cloudflare/proxy-everything:3f5e832@sha256:816255f5b6ebdc2cdcddb578d803121e7ee9cfe178442da07725d75a66cdcf37";
+	"cloudflare/proxy-everything:233db0f@sha256:f159d9e1b0f28bc01bd106f38d62479c018d050e3f95b365c5f9b5f83f60df82";
 
 export function getEgressInterceptorImage(): string {
 	return (

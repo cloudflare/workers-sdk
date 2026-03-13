@@ -245,4 +245,33 @@ describe("Local Explorer API validation", () => {
 		});
 		expect(status).toBe(403);
 	});
+
+	describe("routing", () => {
+		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
+			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer");
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("serves explorer UI at /cdn-cgi/explorer/", async ({ expect }) => {
+			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer/");
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("does not match paths that start with /cdn-cgi/explorer but are not the explorer", async ({
+			expect,
+		}) => {
+			// This should fall through to the user worker, not match the explorer
+			const res = await mf.dispatchFetch(
+				"http://localhost/cdn-cgi/explorerfoo"
+			);
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("user worker");
+		});
+	});
 });

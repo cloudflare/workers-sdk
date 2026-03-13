@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   e2e:
@@ -45,6 +46,10 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
 
+      - name: Check if remote tests should run
+        id: check-remote
+        uses: ./.github/actions/check-remote-tests
+
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
@@ -77,8 +82,8 @@ jobs:
         run: pnpm run test:e2e:c3
         env:
           NODE_VERSION: ${{ env.NODE_VERSION }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
           E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}

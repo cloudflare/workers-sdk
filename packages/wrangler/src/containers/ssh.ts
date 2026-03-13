@@ -12,78 +12,90 @@ import {
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { containersScope } from "./index";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
+import type { HandlerArgs, NamedArgDefinitions } from "../core/types";
 import type { WranglerSSHResponse } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Server } from "node:net";
 
-export function sshYargs(args: CommonYargsArgv) {
-	return (
-		args
-			.positional("ID", {
-				describe: "ID of the container instance",
-				type: "string",
-				demandOption: true,
-			})
-			// Following are SSH flags that should be directly passed in
-			.option("cipher", {
-				describe:
-					"Sets `ssh -c`: Select the cipher specification for encrypting the session",
-				type: "string",
-			})
-			.option("log-file", {
-				describe:
-					"Sets `ssh -E`: Append debug logs to log_file instead of standard error",
-				type: "string",
-			})
-			.option("escape-char", {
-				describe:
-					"Sets `ssh -e`: Set the escape character for sessions with a pty (default: ‘~’)",
-				type: "string",
-			})
-			.option("config-file", {
-				alias: "F",
-				describe:
-					"Sets `ssh -F`: Specify an alternative per-user ssh configuration file",
-				type: "string",
-			})
-			.option("pkcs11", {
-				describe:
-					"Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
-				type: "string",
-			})
-			.option("identity-file", {
-				alias: "i",
-				describe:
-					"Sets `ssh -i`: Select a file from which the identity (private key) for public key authentication is read",
-				type: "string",
-			})
-			.option("mac-spec", {
-				describe:
-					"Sets `ssh -m`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
-				type: "string",
-			})
-			.option("option", {
-				alias: "o",
-				describe:
-					"Sets `ssh -o`: Set options in the format used in the ssh configuration file. May be repeated",
-				type: "string",
-			})
-			.option("tag", {
-				describe:
-					"Sets `ssh -P`: Specify a tag name that may be used to select configuration in ssh_config",
-				type: "string",
-			})
-	);
-}
+// Deprecated SSH flags are hidden because a future SSH implementation
+// will not use OpenSSH, at which point these options will not work.
+const sshArgDefs = {
+	ID: {
+		describe: "ID of the container instance",
+		type: "string",
+		demandOption: true,
+	},
+	cipher: {
+		describe:
+			"Sets `ssh -c`: Select the cipher specification for encrypting the session",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	"log-file": {
+		describe:
+			"Sets `ssh -E`: Append debug logs to log_file instead of standard error",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	"escape-char": {
+		describe:
+			"Sets `ssh -e`: Set the escape character for sessions with a pty (default: '~')",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	"config-file": {
+		alias: "F",
+		describe:
+			"Sets `ssh -F`: Specify an alternative per-user ssh configuration file",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	pkcs11: {
+		describe:
+			"Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	"identity-file": {
+		alias: "i",
+		describe:
+			"Sets `ssh -i`: Select a file from which the identity (private key) for public key authentication is read",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	"mac-spec": {
+		describe:
+			"Sets `ssh -m`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	option: {
+		alias: "o",
+		describe:
+			"Sets `ssh -o`: Set options in the format used in the ssh configuration file. May be repeated",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+	tag: {
+		describe:
+			"Sets `ssh -P`: Specify a tag name that may be used to select configuration in ssh_config",
+		type: "string",
+		hidden: true,
+		deprecated: true,
+	},
+} as const satisfies NamedArgDefinitions;
 
-export async function sshCommand(
-	sshArgs: StrictYargsOptionsToInterface<typeof sshYargs>,
-	_config: Config
-) {
+type SshArgs = HandlerArgs<typeof sshArgDefs>;
+
+async function sshCommand(sshArgs: SshArgs, _config: Config) {
 	if (sshArgs.ID.length !== 64) {
 		throw new UserError(`Expected an instance ID but got ${sshArgs.ID}`);
 	}
@@ -261,9 +273,7 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 	return proxy;
 }
 
-function buildSshArgs(
-	sshArgs: StrictYargsOptionsToInterface<typeof sshYargs>
-): string[] {
+function buildSshArgs(sshArgs: SshArgs): string[] {
 	const flags = [
 		// Never use a control socket.
 		"-o",
@@ -334,61 +344,7 @@ export const containersSshCommand = createCommand({
 		owner: "Product: Cloudchamber",
 		hidden: true,
 	},
-	args: {
-		ID: {
-			describe: "ID of the container instance",
-			type: "string",
-			demandOption: true,
-		},
-		cipher: {
-			describe:
-				"Sets `ssh -c`: Select the cipher specification for encrypting the session",
-			type: "string",
-		},
-		"log-file": {
-			describe:
-				"Sets `ssh -E`: Append debug logs to log_file instead of standard error",
-			type: "string",
-		},
-		"escape-char": {
-			describe:
-				"Sets `ssh -e`: Set the escape character for sessions with a pty (default: '~')",
-			type: "string",
-		},
-		"config-file": {
-			alias: "F",
-			describe:
-				"Sets `ssh -F`: Specify an alternative per-user ssh configuration file",
-			type: "string",
-		},
-		pkcs11: {
-			describe:
-				"Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
-			type: "string",
-		},
-		"identity-file": {
-			alias: "i",
-			describe:
-				"Sets `ssh -i`: Select a file from which the identity (private key) for public key authentication is read",
-			type: "string",
-		},
-		"mac-spec": {
-			describe:
-				"Sets `ssh -m`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
-			type: "string",
-		},
-		option: {
-			alias: "o",
-			describe:
-				"Sets `ssh -o`: Set options in the format used in the ssh configuration file. May be repeated",
-			type: "string",
-		},
-		tag: {
-			describe:
-				"Sets `ssh -P`: Specify a tag name that may be used to select configuration in ssh_config",
-			type: "string",
-		},
-	},
+	args: sshArgDefs,
 	positionalArgs: ["ID"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);

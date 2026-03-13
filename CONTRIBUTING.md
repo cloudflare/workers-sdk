@@ -345,6 +345,20 @@ If you need to test the interaction of Wrangler with a real Cloudflare account, 
 
 A summary of this repositories actions can be found [in the `.github/workflows` folder](.github/workflows/README.md)
 
+## Remote E2E Tests in CI
+
+E2E tests that hit the Cloudflare backend (deploying Workers, testing bindings, etc.) are inherently slow and can be flaky due to network and service dependencies. To keep PR feedback loops fast and reliable, **CI does not pass Cloudflare API credentials to E2E test jobs by default**. The E2E test suites still run on every PR, but tests that require remote access are automatically skipped when the API token is absent.
+
+Remote E2E tests run automatically in these cases:
+
+- **Version Packages PRs** (branch `changeset-release/main`) — acts as a pre-release safety net, catching remote-test failures before packages are published.
+- **Merge queue** — final check before code lands on `main`.
+
+If you need remote E2E tests on your PR (e.g. you're changing deployment logic or binding behavior), apply the **`run-remote-tests`** label. This triggers a re-run of the E2E workflows with API credentials enabled.
+
+> [!NOTE]
+> The `run-remote-tests` label has no effect on PRs from forks, because GitHub does not expose repository secrets to fork PRs.
+
 ## Running E2E tests locally
 
 A large number of Wrangler, C3 & Vite's E2E tests don't require any authentication, and can be run with no Cloudflare account credentials. These can be run as follows, optionally providing [`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` environment variables.](#creating-an-api-token):

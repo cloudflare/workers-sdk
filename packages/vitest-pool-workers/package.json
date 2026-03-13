@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
-	"version": "0.12.21",
+	"version": "0.13.0",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -87,9 +87,9 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "4.1.0-beta.4",
-		"@vitest/snapshot": "4.1.0-beta.4",
-		"vitest": "4.1.0-beta.4"
+		"@vitest/runner": "^4.1.0",
+		"@vitest/snapshot": "^4.1.0",
+		"vitest": "^4.1.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

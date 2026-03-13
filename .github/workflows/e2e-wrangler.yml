@@ -1,0 +1,89 @@
+name: Wrangler E2E
+
+on:
+  merge_group:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  e2e-wrangler-test:
+    name: ${{ format('Wrangler E2E ({0})', matrix.description) }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            description: macOS
+          - os: windows-latest
+            description: Windows
+          - os: ubuntu-latest
+            description: Linux
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
+      - name: Check if remote tests should run
+        id: check-remote
+        uses: ./.github/actions/check-remote-tests
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Bump package versions
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: node .github/changeset-version.js
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Run Wrangler E2E tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm run test:e2e:wrangler
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
+          HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
+          HYPERDRIVE_MYSQL_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_MYSQL_DATABASE_URL}}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.os }}
+
+      - name: Run getPlatformProxy() remote-bindings e2e tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm run test:e2e -F @fixture/get-platform-proxy-remote-bindings
+        env:
+          TEST_CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
+          TEST_CLOUDFLARE_ACCOUNT_ID: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          CI_OS: ${{ matrix.os }}
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs-${{ matrix.os }}
+          path: .turbo/runs

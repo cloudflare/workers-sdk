@@ -1,5 +1,27 @@
 # @cloudflare/vite-plugin
 
+## 1.28.0
+
+### Minor Changes
+
+- [#12855](https://github.com/cloudflare/workers-sdk/pull/12855) [`c2b76bc`](https://github.com/cloudflare/workers-sdk/commit/c2b76bc35bd038200b9919179f63b66e190e00eb) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support local explorer `/cdn-cgi/` routes
+
+  The local explorer UI can now be accessed at `/cdn-cgi/explorer`.
+
+### Patch Changes
+
+- [#12834](https://github.com/cloudflare/workers-sdk/pull/12834) [`64edac7`](https://github.com/cloudflare/workers-sdk/commit/64edac70799112a69e28202b9f2e9c1e3aada92c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Warn when the `assets` field is provided for auxiliary Workers
+
+  Auxiliary Workers do not support static assets. Previously, the `assets` field was silently ignored but we now warn if it is used.
+
+- [#12794](https://github.com/cloudflare/workers-sdk/pull/12794) [`b980af6`](https://github.com/cloudflare/workers-sdk/commit/b980af6603a08ae1d00020b3572dacfd6a0a541d) Thanks [@aron-cf](https://github.com/aron-cf)! - Fix Sandbox SDK preview URL WebSocket routing
+
+  When using Sandbox SDK preview URLs, WebSocket requests using the `vite-hmr` protocol could be dropped before they reached the worker, causing HMR to fail. The plugin now forwards Sandbox WebSocket traffic and preserves the original request origin/host so worker proxy logic receives the correct URL.
+
+- Updated dependencies [[`f7de0fd`](https://github.com/cloudflare/workers-sdk/commit/f7de0fdd6074089ba5a484df683647cb70fe06f6), [`ff543e3`](https://github.com/cloudflare/workers-sdk/commit/ff543e30d69694613ab9d2da4281488fd27fd1b9), [`8e89e85`](https://github.com/cloudflare/workers-sdk/commit/8e89e85cf4f75b483a2dce5aa6947f050e5f35cc), [`e63539d`](https://github.com/cloudflare/workers-sdk/commit/e63539de64308cd0706b8876a22e1b1ccabe0721), [`8d1e130`](https://github.com/cloudflare/workers-sdk/commit/8d1e130bba5fa4019edab855e817a17110b360d0), [`6ee18e1`](https://github.com/cloudflare/workers-sdk/commit/6ee18e1bda05ef3870dfe917510bd2a55310254b), [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31), [`1dda1c8`](https://github.com/cloudflare/workers-sdk/commit/1dda1c83cc286f5bc8bf7a13ed455265c50b0206), [`4bb61b9`](https://github.com/cloudflare/workers-sdk/commit/4bb61b9758bc4e4349ede7327a1075774178be64)]:
+  - miniflare@4.20260312.0
+  - wrangler@4.73.0
+
 ## 1.27.0
 
 ### Minor Changes
