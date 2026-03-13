@@ -75,7 +75,12 @@ export function getCurrentPath(): string {
  * Seed the KV namespace with test data.
  */
 export async function seedKV(): Promise<void> {
-	await fetch(`${workerUrl}/kv/seed`);
+	const response = await fetch(`${workerUrl}/kv/seed`, {
+		signal: AbortSignal.timeout(30_000),
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to seed KV: ${response.status}`);
+	}
 }
 
 /**
