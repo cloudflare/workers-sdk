@@ -129,7 +129,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation",
+			describe: "Skip confirmation and bypass data catalog validation",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -318,6 +318,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 			accountId,
 			bucket,
 			lifecycleRules,
+			force,
 			jurisdiction
 		);
 		logger.log(`✨ Added lifecycle rule '${name}' to bucket '${bucket}'.`);
@@ -379,6 +380,7 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 			accountId,
 			bucket,
 			lifecycleRules,
+			true, // Always bypass validation
 			jurisdiction
 		);
 		logger.log(`Lifecycle rule '${name}' removed from bucket '${bucket}'.`);
@@ -412,7 +414,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			type: "string",
 		},
 		force: {
-			describe: "Skip confirmation",
+			describe: "Skip confirmation and bypass data catalog validation",
 			type: "boolean",
 			alias: "y",
 			default: false,
@@ -458,6 +460,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			accountId,
 			bucket,
 			lifecyclePolicy.rules,
+			force,
 			jurisdiction
 		);
 		logger.log(`✨ Set lifecycle configuration for bucket '${bucket}'.`);

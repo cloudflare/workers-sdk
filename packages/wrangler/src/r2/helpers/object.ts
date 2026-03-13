@@ -10,6 +10,7 @@ import { fetchR2Objects } from "../../cfetch/internal";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../../dev/miniflare";
 import { MAX_UPLOAD_SIZE_BYTES } from "../constants";
+import { isDataCatalogConflict } from "./misc";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -84,6 +85,7 @@ export async function putRemoteObject(
 	objectName: string,
 	object: Readable | ReadableStream | Buffer,
 	options: Record<(typeof putHeaderKeys)[number], string | undefined>,
+	force: boolean,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -101,19 +103,32 @@ export async function putRemoteObject(
 	if (storageClass !== undefined) {
 		headers["cf-r2-storage-class"] = storageClass;
 	}
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
+	}
 
-	const result = await fetchR2Objects(
-		complianceConfig,
-		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
-		{
-			body: object,
-			headers,
-			method: "PUT",
-			duplex: "half",
+	try {
+		const result = await fetchR2Objects(
+			complianceConfig,
+			`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
+			{
+				body: object,
+				headers,
+				method: "PUT",
+				duplex: "half",
+			}
+		);
+		if (result === null) {
+			throw new UserError("The specified bucket does not exist.");
 		}
-	);
-	if (result === null) {
-		throw new UserError("The specified bucket does not exist.");
+	} catch (error) {
+		if (!force && isDataCatalogConflict(error)) {
+			throw new UserError(
+				`Data catalog validation failed: This operation could leave this bucket's data catalog in an invalid state.\n` +
+					`To bypass this check and proceed anyway, run the command again with the --force flag (-y).`
+			);
+		}
+		throw error;
 	}
 }
 /**
@@ -124,17 +139,31 @@ export async function deleteR2Object(
 	accountId: string,
 	bucketName: string,
 	objectName: string,
+	force: boolean,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
-	await fetchR2Objects(
-		complianceConfig,
-		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
-		{ method: "DELETE", headers }
-	);
+	if (!force) {
+		headers["cf-r2-data-catalog-check"] = "true";
+	}
+	try {
+		await fetchR2Objects(
+			complianceConfig,
+			`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
+			{ method: "DELETE", headers }
+		);
+	} catch (error) {
+		if (!force && isDataCatalogConflict(error)) {
+			throw new UserError(
+				`Data catalog validation failed: This operation could leave this bucket's data catalog in an invalid state.\n` +
+					`To bypass this check and proceed anyway, run the command again with the --force flag (-y).`
+			);
+		}
+		throw error;
+	}
 }
 
 export async function usingLocalBucket<T>(

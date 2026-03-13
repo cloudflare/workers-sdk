@@ -36,3 +36,33 @@ export function isNonNegativeNumber(str: string): boolean {
 	const num = Number(str);
 	return num >= 0;
 }
+
+/**
+ * Helper to detect if a command errored due to the data catalog validation.
+ *
+ * @param error The specific error returned by an API
+ * @returns True if failed due to data catalog check, false otherwise
+ */
+export function isDataCatalogConflict(error: unknown): boolean {
+	// Check APIError structure
+	if (error && typeof error === "object") {
+		if ("notes" in error && Array.isArray(error.notes)) {
+			const notes = error.notes as Array<{ text: string }>;
+			return notes.some((note) =>
+				note.text?.includes("Data Catalog is enabled for this bucket")
+			);
+		}
+	}
+
+	// Check regular Error structure
+	if (error instanceof Error) {
+		// Check for error code 409 and the specific data catalog error message
+		const errorMessage = "message" in error ? String(error.message) : "";
+		return (
+			errorMessage.includes("409") &&
+			errorMessage.includes("Data Catalog is enabled for this bucket")
+		);
+	}
+
+	return false;
+}

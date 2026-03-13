@@ -221,6 +221,12 @@ const commonPutArguments = {
 		requiresArg: false,
 		type: "string",
 	},
+	force: {
+		describe: "Bypass data catalog validation",
+		type: "boolean",
+		alias: "y",
+		default: false,
+	},
 } as const;
 
 export const r2ObjectPutCommand = createCommand({
@@ -378,6 +384,7 @@ export const r2ObjectPutCommand = createCommand({
 					"content-length": String(sizeBytes),
 					expires: yArgs.expires,
 				},
+				yArgs.force,
 				yArgs.jurisdiction,
 				yArgs.storageClass
 			);
@@ -419,6 +426,12 @@ export const r2ObjectDeleteCommand = createCommand({
 			requiresArg: true,
 			type: "string",
 		},
+		force: {
+			describe: "Bypass data catalog validation",
+			type: "boolean",
+			alias: "y",
+			default: false,
+		},
 	},
 	behaviour: {
 		printResourceLocation: true,
@@ -442,7 +455,14 @@ export const r2ObjectDeleteCommand = createCommand({
 			);
 		} else {
 			const accountId = await requireAuth(config);
-			await deleteR2Object(config, accountId, bucket, key, jurisdiction);
+			await deleteR2Object(
+				config,
+				accountId,
+				bucket,
+				key,
+				args.force,
+				jurisdiction
+			);
 		}
 
 		logger.log("Delete complete.");
@@ -608,6 +628,7 @@ export const r2BulkPutCommand = createCommand({
 								"content-length": String(entry.size),
 								expires: yArgs.expires,
 							},
+							yArgs.force,
 							yArgs.jurisdiction,
 							yArgs.storageClass
 						);
