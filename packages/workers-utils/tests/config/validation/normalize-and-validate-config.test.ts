@@ -123,6 +123,7 @@ describe("normalizeAndValidateConfig()", () => {
 			base_dir: undefined,
 			limits: undefined,
 			keep_names: undefined,
+			bundling_external: undefined,
 			assets: undefined,
 			observability: undefined,
 			cache: undefined,
@@ -1027,6 +1028,7 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: true,
 				minify: true,
+				bundling_external: ["external-a", "external-b"],
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
@@ -1127,6 +1129,7 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: "INVALID",
 				minify: "INVALID",
+				bundling_external: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
 				upload_source_maps: "INVALID",
@@ -1217,6 +1220,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - The field "define.DEF1" should be a string but got 1777.
 				  - Expected "no_bundle" to be of type boolean but got "INVALID".
 				  - Expected "minify" to be of type boolean but got "INVALID".
+				  - Expected "bundling_external" to be of type string array but got "INVALID".
 				  - Expected "first_party_worker" to be of type boolean but got "INVALID".
 				  - Expected "logpush" to be of type boolean but got "INVALID".
 				  - Expected "upload_source_maps" to be of type boolean but got "INVALID".
@@ -5351,6 +5355,7 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: true,
 				minify: true,
+				bundling_external: ["top-level-external"],
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
@@ -5403,6 +5408,7 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: false,
 				minify: false,
+				bundling_external: ["env-external"],
 				first_party_worker: false,
 				logpush: false,
 				upload_source_maps: false,
@@ -5429,6 +5435,7 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: true,
 				minify: true,
+				bundling_external: ["top-level-external"],
 				first_party_worker: true,
 				logpush: true,
 				upload_source_maps: true,
@@ -5790,6 +5797,7 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 				no_bundle: "INVALID",
 				minify: "INVALID",
+				bundling_external: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
 				upload_source_maps: "INVALID",
@@ -5828,6 +5836,7 @@ describe("normalizeAndValidateConfig()", () => {
 				    - Expected "main" to be of type string but got 1333.
 				    - Expected "no_bundle" to be of type boolean but got "INVALID".
 				    - Expected "minify" to be of type boolean but got "INVALID".
+				    - Expected "bundling_external" to be of type string array but got "INVALID".
 				    - Expected "first_party_worker" to be of type boolean but got "INVALID".
 				    - Expected "logpush" to be of type boolean but got "INVALID".
 				    - Expected "upload_source_maps" to be of type boolean but got "INVALID"."

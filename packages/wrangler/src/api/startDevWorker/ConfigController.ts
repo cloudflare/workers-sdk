@@ -344,6 +344,7 @@ async function resolveConfig(
 
 			minify: input.build?.minify ?? config.minify,
 			keepNames: input.build?.keepNames ?? config.keep_names,
+			external: input.build?.external ?? config.bundling_external,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,

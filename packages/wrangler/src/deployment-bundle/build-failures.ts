@@ -42,6 +42,52 @@ export function rewriteNodeCompatBuildFailure(
 		}
 	}
 }
+
+/**
+ * RegExp matching against esbuild's error text when it is unable to resolve
+ * a module. Used to detect when we should suggest the `bundling_external` config.
+ */
+const couldNotResolveErrorText = /^Could not resolve "(.+)"$/;
+
+/**
+ * Text that appears in esbuild's notes when it suggests marking a module as external.
+ */
+const markAsExternalNoteText = "as external to exclude it from the bundle";
+
+/**
+ * Rewrites esbuild BuildFailures for failing to resolve modules to suggest
+ * using the `bundling_external` or `alias` config options in wrangler.json.
+ */
+export function rewriteBundlingExternalBuildFailure(errors: esbuild.Message[]) {
+	for (const error of errors) {
+		const match = couldNotResolveErrorText.exec(error.text);
+		// Note: we skip the node built-in modules since these are handled by rewriteNodeCompatBuildFailure
+		if (match !== null && !nodeBuiltinResolveErrorText.test(error.text)) {
+			const moduleName = match[1];
+			// Check if esbuild's notes mention marking as external
+			const hasExternalSuggestion = error.notes?.some((note) =>
+				note.text?.includes(markAsExternalNoteText)
+			);
+			if (hasExternalSuggestion) {
+				// Filter out esbuild's "mark as external" suggestion since we provide our own
+				error.notes = [
+					...(error.notes ?? []).filter(
+						(note) => !note.text?.includes(markAsExternalNoteText)
+					),
+					{
+						location: null,
+						// TODO: Add documentation link for bundling_external once available
+						text:
+							`To fix this, you can:\n` +
+							`- Add "${moduleName}" to "bundling_external" in your Wrangler configuration to exclude it from the bundle\n` +
+							`- Add an entry to "alias" in your Wrangler configuration to map it to a different module (see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing)`,
+					},
+				];
+			}
+		}
+	}
+}
+
 /**
  * Returns true if the passed value looks like an esbuild BuildFailure object
  */

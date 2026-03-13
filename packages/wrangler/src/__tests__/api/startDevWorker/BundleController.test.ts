@@ -183,6 +183,32 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				`);
 		});
 
+		test("external modules via build.external", async () => {
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
+				import foo from 'external-module';
+				export default {
+					fetch(request, env, ctx) {
+						return new Response(foo)
+					}
+				} satisfies ExportedHandler
+			`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
+				build: {
+					external: ["external-module"],
+				},
+			});
+			const ev = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			const bundleSource = (await ev).bundle.entrypointSource;
+
+			// External import should be preserved, not bundled
+			expect(bundleSource).toMatch(/from\s*["']external-module["']/);
+		});
+
 		test("custom build", async () => {
 			await seed({
 				"custom_build_dir/index.ts": dedent/* javascript */ `
