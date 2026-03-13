@@ -141,4 +141,63 @@ describe("local explorer", () => {
 			expect(text).toBe("Hello World!");
 		});
 	});
+
+	// These tests verify that the local explorer API remains accessible when
+	// various host/routing options are configured. The security check for the
+	// explorer API must happen before header rewriting to work correctly.
+	describe.each([
+		{ name: "--route", flag: "--route=my-custom-site.com/*" },
+		{
+			name: "--local-upstream",
+			flag: "--local-upstream=my-upstream.example.com",
+		},
+		{ name: "--host", flag: "--host=my-host.example.com" },
+	])("with $name configured", ({ flag }) => {
+		let ip: string;
+		let port: number;
+		let stop: (() => Promise<unknown>) | undefined;
+
+		beforeAll(async () => {
+			({ ip, port, stop } = await runWranglerDev(
+				resolve(__dirname, ".."),
+				["--port=0", "--inspector-port=0", flag],
+				{ X_LOCAL_EXPLORER: "true" }
+			));
+		});
+
+		afterAll(async () => {
+			await stop?.();
+		});
+
+		it("local explorer API is still accessible via localhost", async ({
+			expect,
+		}) => {
+			const response = await fetch(
+				`http://${ip}:${port}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`
+			);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe("application/json");
+			const json = (await response.json()) as { success: boolean };
+			expect(json.success).toBe(true);
+		});
+
+		it(`serves explorer UI`, async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}${LOCAL_EXPLORER_BASE_PATH}`
+			);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe(
+				"text/html; charset=utf-8"
+			);
+			const text = await response.text();
+			expect(text).toContain("<!doctype html>");
+			expect(text).toContain("Cloudflare Local Explorer");
+		});
+
+		it("worker still responds to normal requests", async ({ expect }) => {
+			const response = await fetch(`http://${ip}:${port}/`);
+			const text = await response.text();
+			expect(text).toBe("Hello World!");
+		});
+	});
 });

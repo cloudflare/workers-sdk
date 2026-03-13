@@ -5,6 +5,8 @@ export { ApiError } from "./core/ApiError";
 export { CancelablePromise, CancelError } from "./core/CancelablePromise";
 export { OpenAPI } from "./core/OpenAPI";
 export type { OpenAPIConfig } from "./core/OpenAPI";
+export type { PaginatedResult, ResultInfo } from "./core/PaginatedResult";
+export { requestPaginated } from "./core/request";
 
 export type { AccountDefaults } from "./models/AccountDefaults";
 export type { AccountID } from "./models/AccountID";
@@ -55,6 +57,9 @@ export type { CreateImageRegistryRequestBody } from "./models/CreateImageRegistr
 export type { CreateSSHPublicKeyError } from "./models/CreateSSHPublicKeyError";
 export type { CreateSSHPublicKeyRequestBody } from "./models/CreateSSHPublicKeyRequestBody";
 export type { CustomerImageRegistry } from "./models/CustomerImageRegistry";
+export type { DashApplicationDurableObjectInstance } from "./models/DashApplicationDurableObjectInstance";
+export type { DashApplicationInstance } from "./models/DashApplicationInstance";
+export type { DashApplicationInstances } from "./models/DashApplicationInstances";
 export type { DeleteDeploymentError } from "./models/DeleteDeploymentError";
 export type { DeleteImageRegistryResponse } from "./models/DeleteImageRegistryResponse";
 export type { DeploymentAlreadyExists } from "./models/DeploymentAlreadyExists";
