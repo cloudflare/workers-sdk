@@ -39,11 +39,13 @@ jobs:
         id: changes
         with:
           filters: |
-            everything_but_markdown:
-              - '!**/*.md'
+            relevant:
+              - 'packages/local-explorer-ui/**'
+              - 'fixtures/worker-with-resources/**'
+              - 'fixtures/shared/**'
 
       - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           turbo-api: ${{ secrets.TURBO_API }}
@@ -52,11 +54,11 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
 
       - name: Install Playwright
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.relevant == 'true'
         run: pnpm --filter @cloudflare/local-explorer-ui playwright:install
 
       - name: Run Local Explorer UI E2E tests
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.relevant == 'true'
         run: pnpm test:e2e -F @cloudflare/local-explorer-ui --log-order=stream
         timeout-minutes: 10
         env:
