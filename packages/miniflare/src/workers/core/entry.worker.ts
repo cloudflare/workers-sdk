@@ -486,7 +486,7 @@ export default <ExportedHandler<Env>>{
 			// to check the original headers before any rewriting (e.g., for custom routes/upstream).
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
 				const preRewriteUrl = new URL(request.url);
-				if (preRewriteUrl.pathname.startsWith(LOCAL_EXPLORER_BASE_PATH)) {
+				if (preRewriteUrl.pathname === LOCAL_EXPLORER_BASE_PATH || preRewriteUrl.pathname.startsWith(`${LOCAL_EXPLORER_BASE_PATH}/`)) {
 					validateLocalExplorerRequest(
 						request,
 						env[CoreBindings.JSON_ROUTES],
