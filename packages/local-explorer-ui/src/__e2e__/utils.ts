@@ -302,3 +302,84 @@ export async function takeScreenshot(name: string): Promise<void> {
 		path: `screenshots/${name}.png`,
 	});
 }
+
+/**
+ * Wait for the `CodeMirror` SQL editor to be ready and interactive.
+ */
+export async function waitForQueryEditor(options?: {
+	timeout?: number;
+}): Promise<void> {
+	// Wait for the `CodeMirror` editor to be visible and have the `contenteditable` attribute
+	await page.waitForSelector(".cm-editor .cm-content[contenteditable]", {
+		state: "visible",
+		timeout: options?.timeout ?? 10_000,
+	});
+}
+
+/**
+ * Type SQL into the `CodeMirror` query editor.
+ * Clears any existing content first by selecting all.
+ */
+export async function typeInQueryEditor(sql: string): Promise<void> {
+	const editor = page.locator(".cm-editor .cm-content[contenteditable]");
+	await editor.click();
+
+	// Small delay to ensure the editor has focus
+	await page.waitForTimeout(100);
+
+	// Select all existing content & replace it
+	const isMac = process.platform === "darwin";
+	const selectAllKey = isMac ? "Meta+a" : "Control+a";
+	await page.keyboard.press(selectAllKey);
+
+	// Type the new SQL using fill() which is faster and more reliable
+	// Note: `CodeMirror`'s contenteditable doesn't support fill(), so we use keyboard.type
+	// But we can speed it up by removing the artificial delay
+	await page.keyboard.type(sql);
+}
+
+/**
+ * Click the "Run" button to execute the current SQL statement.
+ */
+export async function runQuery(): Promise<void> {
+	await page.getByRole("button", { name: "Run" }).click();
+}
+
+/**
+ * Run all SQL statements in the editor using the dropdown menu.
+ */
+export async function runAllQueries(): Promise<void> {
+	const runDropdown = page.locator(
+		'button:has(svg[class*="CaretDownIcon"]), button:has-text("Run") + button'
+	);
+	await runDropdown.click();
+
+	await page.getByText("Run all statements").click();
+}
+
+/**
+ * Open the table selector dropdown in the breadcrumb bar.
+ */
+export async function openTableSelector(): Promise<void> {
+	// The `TableSelect` uses a `Select.Trigger` which contains either "Select table" or the table name
+	// Find the `Select` trigger by looking for the text + caret icon combo
+	const tableSelector = page.locator('text="Select table"').first();
+	await tableSelector.click();
+
+	await page.waitForSelector('[role="listbox"]', {
+		state: "visible",
+		timeout: 5_000,
+	});
+}
+
+/**
+ * Wait for the query to finish executing.
+ * Looks for "Executed X/Y" text in the Summary pane.
+ */
+export async function waitForQueryResult(options?: {
+	timeout?: number;
+}): Promise<void> {
+	await page.waitForSelector("text=/Executed \\d+\\/\\d+/", {
+		timeout: options?.timeout ?? 10_000,
+	});
+}

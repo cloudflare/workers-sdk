@@ -3,9 +3,15 @@ import {
 	clickButton,
 	isTextVisible,
 	navigateToD1,
+	openTableSelector,
 	page,
+	runAllQueries,
+	runQuery,
 	seedD1,
+	typeInQueryEditor,
 	waitForDialog,
+	waitForQueryEditor,
+	waitForQueryResult,
 	waitForTableRows,
 	waitForText,
 } from "../utils";
@@ -161,6 +167,95 @@ describe("D1 Database Studio", () => {
 			// Breadcrumbs should show D1 and the database ID
 			await waitForText("D1");
 			await waitForText("DB");
+		});
+	});
+
+	describe("SQL queries", () => {
+		test("creates a table via SQL", async () => {
+			await navigateToD1("DB");
+			await waitForText("D1");
+			await waitForQueryEditor();
+
+			await typeInQueryEditor(`
+				DROP TABLE IF EXISTS products;
+				CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL);
+			`);
+			await runAllQueries();
+			await waitForQueryResult();
+
+			await openTableSelector();
+
+			const productsOption = page.getByRole("option", { name: "products" });
+			const isProductsVisible = await productsOption.isVisible();
+			expect(isProductsVisible).toBe(true);
+		});
+
+		test("inserts a row via SQL", async () => {
+			await navigateToD1("DB");
+			await waitForText("D1");
+			await waitForQueryEditor();
+
+			await typeInQueryEditor(
+				"INSERT INTO users (id, name) VALUES (3, 'Charlie');"
+			);
+			await runQuery();
+			await waitForQueryResult();
+
+			// Navigate to the users table and verify `Charlie` appears
+			await navigateToD1("DB", "users");
+			await waitForTableRows(1);
+			await waitForText("Charlie");
+		});
+
+		test("deletes a row via SQL", async () => {
+			await navigateToD1("DB");
+			await waitForText("D1");
+			await waitForQueryEditor();
+
+			await typeInQueryEditor("DELETE FROM users WHERE name = 'Bob';");
+			await runQuery();
+			await waitForQueryResult();
+
+			// Navigate to the users table and verify `Bob` is gone
+			await navigateToD1("DB", "users");
+			await waitForTableRows(1);
+
+			await waitForText("Alice");
+
+			const isBobVisible = await isTextVisible("Bob");
+			expect(isBobVisible).toBe(false);
+		});
+
+		test("adds a column via SQL", async () => {
+			await navigateToD1("DB");
+			await waitForText("D1");
+			await waitForQueryEditor();
+
+			await typeInQueryEditor("ALTER TABLE users ADD COLUMN email TEXT;");
+			await runQuery();
+			await waitForQueryResult();
+
+			await navigateToD1("DB", "users");
+			await waitForTableRows(1);
+			await waitForText("email");
+		});
+
+		test("executes a SELECT query and displays results", async () => {
+			await navigateToD1("DB");
+			await waitForText("D1");
+			await waitForQueryEditor();
+
+			await typeInQueryEditor("SELECT * FROM users;");
+			await runQuery();
+			await waitForQueryResult();
+
+			// The result tab should show the table name and dimensions
+			// e.g., "users • 2 x 2" (2 columns x 2 rows)
+			await waitForText("users");
+
+			// Verify both rows appear in the results
+			await waitForText("Alice");
+			await waitForText("Bob");
 		});
 	});
 });
