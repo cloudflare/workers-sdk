@@ -42,7 +42,7 @@ export const vectorizeListVectorsCommand = createCommand({
 		json: {
 			type: "boolean",
 			default: false,
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 		},
 	},
 	positionalArgs: ["name"],

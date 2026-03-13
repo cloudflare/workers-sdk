@@ -119,7 +119,7 @@ describe("containers instances", () => {
 
 			OPTIONS
 			      --per-page  Number of instances per page  [number] [default: 25]
-			      --json      Return output as clean JSON  [boolean] [default: false]"
+			      --json      Return output as JSON  [boolean] [default: false]"
 		`);
 	});
 
