@@ -270,7 +270,7 @@ export const versionsUploadCommand = createCommand({
 		},
 		"secrets-file": {
 			describe:
-				"Path to a file containing secrets to upload with the version (JSON or .env format)",
+				"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
 			type: "string",
 			requiresArg: true,
 		},
