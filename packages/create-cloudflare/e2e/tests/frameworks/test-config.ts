@@ -82,7 +82,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			nodeCompat: true,
+			nodeCompat: false,
 			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
