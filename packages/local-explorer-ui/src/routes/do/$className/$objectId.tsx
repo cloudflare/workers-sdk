@@ -1,4 +1,4 @@
-import { Button } from "@cloudflare/kumo";
+import { Button, Breadcrumbs as KumoBreadcrumbs } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	PencilIcon,
@@ -189,11 +189,12 @@ function ObjectView(): JSX.Element {
 						)}
 					</Link>,
 					<span
-						className="flex items-center gap-1.5 font-mono text-xs"
+						className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"
 						key="object-id"
 						title={params.objectId}
 					>
 						{shortObjectId}
+						<KumoBreadcrumbs.Clipboard text={params.objectId} />
 					</span>,
 					<TableSelect
 						key="table-selector"
