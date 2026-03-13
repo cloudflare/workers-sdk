@@ -76,7 +76,7 @@ export function getCurrentPath(): string {
  */
 export async function seedKV(): Promise<void> {
 	const response = await fetch(`${workerUrl}/kv/seed`, {
-		signal: AbortSignal.timeout(30_000),
+		signal: AbortSignal.timeout(90_000),
 	});
 	if (!response.ok) {
 		throw new Error(`Failed to seed KV: ${response.status}`);
