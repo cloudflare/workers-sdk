@@ -24,15 +24,17 @@ describe("D1 Database Studio", () => {
 				name: /Select a table|users/i,
 			});
 
-			if (await selectButton.isVisible()) {
-				// Open the dropdown
-				await selectButton.click();
-
-				// Should show the users table from seed data
-				const usersOption = page.getByRole("option", { name: "users" });
-				const isUsersVisible = await usersOption.isVisible();
-				expect(isUsersVisible).toBe(true);
+			if (!(await selectButton.isVisible())) {
+				return;
 			}
+
+			// Open the dropdown
+			await selectButton.click();
+
+			// Should show the users table from seed data
+			const usersOption = page.getByRole("option", { name: "users" });
+			const isUsersVisible = await usersOption.isVisible();
+			expect(isUsersVisible).toBe(true);
 		});
 	});
 
