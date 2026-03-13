@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { fork } from "node:child_process";
-import events from "node:events";
 import path from "node:path";
 import treeKill from "tree-kill";
 
