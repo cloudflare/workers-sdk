@@ -15,7 +15,7 @@ import type {
 	DashApplicationInstances,
 } from "@cloudflare/containers-shared";
 
-type ContainerState =
+type InstanceState =
 	| "provisioning"
 	| "running"
 	| "failed"
@@ -27,7 +27,7 @@ type ContainerState =
 
 function deriveInstanceState(
 	instance: DashApplicationInstance
-): ContainerState {
+): InstanceState {
 	const status = instance.current_placement?.status;
 	if (!status) {
 		return "unknown";
@@ -48,7 +48,7 @@ function deriveInstanceState(
 	}
 }
 
-function colorState(state: ContainerState): string {
+function colorState(state: InstanceState): string {
 	switch (state) {
 		case "running":
 			return green(state);
