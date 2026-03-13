@@ -195,6 +195,22 @@ describe("containers instances", () => {
 		expect(std.out).toContain("random-88");
 	});
 
+	it("should reject --per-page 0", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler(`containers instances ${APP_ID} --per-page 0`)
+		).rejects.toThrowError(/--per-page must be at least 1/);
+	});
+
+	it("should reject --per-page with negative value", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler(`containers instances ${APP_ID} --per-page -1`)
+		).rejects.toThrowError(/--per-page must be at least 1/);
+	});
+
 	it("should error on invalid ID format", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
