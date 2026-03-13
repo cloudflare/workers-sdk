@@ -165,7 +165,7 @@ function validateLocalExplorerRequest(
 	upstreamUrl: string | undefined
 ): void {
 	// Build allowed hostnames set from localhost + user configured routes
-	const allowedHostnames = new Set(LOCALHOST_HOSTNAMES);
+	const allowedHostnames = new Set<string>();
 	for (const route of routes) {
 		// route.hostname has already had the leading "*" stripped by parseRoutes,
 		// but may have a leading "." for wildcard routes (e.g., "*.example.com" -> ".example.com")
@@ -214,22 +214,23 @@ function validateLocalExplorerRequest(
 }
 
 /**
- * Check if a hostname is allowed, supporting wildcard routes.
- * For example, if allowedHostnames contains "example.com", then
- * "sub.example.com" would also be allowed if there was a wildcard route.
+ * Check if a hostname is allowed.
+ * - exactHostnames: must match exactly (localhost, upstream, non-wildcard routes)
+ * - wildcardHostnames: allow subdomain matching (for wildcard routes like *.example.com)
  */
 function isHostnameAllowed(
 	hostname: string,
 	allowedHostnames: Set<string>
 ): boolean {
-	// Direct match
-	if (allowedHostnames.has(hostname)) {
+	// Direct match against exact hostnames
+	if (LOCALHOST_HOSTNAMES.includes(hostname)) {
 		return true;
 	}
 
-	// Check for subdomain matches (for wildcard routes like *.example.com)
+	// Check for subdomain matches only against wildcard hostnames
 	for (const allowed of allowedHostnames) {
-		if (hostname.endsWith(`.${allowed}`)) {
+		// Match the base domain or any subdomain
+		if (hostname === allowed || hostname.endsWith(`.${allowed}`)) {
 			return true;
 		}
 	}

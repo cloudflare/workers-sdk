@@ -246,6 +246,14 @@ describe("Local Explorer API validation", () => {
 		expect(status).toBe(403);
 	});
 
+	test("blocks subdomains of localhost hostnames", async ({ expect }) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "http://sub.localhost:8787" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
 	describe("routing", () => {
 		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
 			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer");
