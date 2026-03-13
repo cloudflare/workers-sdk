@@ -405,4 +405,5 @@ export const defaultWranglerConfig: Config = {
 	streaming_tail_consumers: undefined,
 	pipelines: [],
 	vpc_services: [],
+	vpc_networks: [],
 };
