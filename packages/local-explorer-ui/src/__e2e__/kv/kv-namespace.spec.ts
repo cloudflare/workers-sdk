@@ -98,7 +98,7 @@ describe("KV Namespace", () => {
 			await page.locator("#add-value").fill("new-greeting-value");
 			await clickButton("Add entry");
 
-			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 			await waitForText("Overwrite key?");
 		});
 
@@ -112,9 +112,9 @@ describe("KV Namespace", () => {
 			await page.locator("#add-value").fill(mockValue);
 			await clickButton("Add entry");
 
-			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 			await page
-				.getByRole("alertdialog")
+				.getByRole("dialog")
 				.getByRole("button", { name: "Overwrite" })
 				.click();
 
@@ -183,7 +183,7 @@ describe("KV Namespace", () => {
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Delete" }).click();
 
-			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 			await waitForText("Delete key?");
 		});
 
@@ -195,13 +195,13 @@ describe("KV Namespace", () => {
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Delete" }).click();
 
-			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 			await page
-				.getByRole("alertdialog")
+				.getByRole("dialog")
 				.getByRole("button", { name: "Delete" })
 				.click();
 
-			await page.waitForSelector('[role="alertdialog"]', {
+			await page.waitForSelector('[role="dialog"]', {
 				state: "hidden",
 				timeout: 5_000,
 			});
@@ -219,9 +219,9 @@ describe("KV Namespace", () => {
 			await row.getByRole("button", { name: "Actions" }).click();
 			await page.getByRole("menuitem", { name: "Delete" }).click();
 
-			await waitForSelector('[role="alertdialog"]', { timeout: 5_000 });
+			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 			await page
-				.getByRole("alertdialog")
+				.getByRole("dialog")
 				.getByRole("button", { name: "Cancel" })
 				.click();
 
