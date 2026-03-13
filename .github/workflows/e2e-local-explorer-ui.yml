@@ -57,6 +57,10 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         run: pnpm --filter @cloudflare/local-explorer-ui playwright:install
 
+      - name: Build wrangler
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm turbo build --filter wrangler
+
       - name: Run Local Explorer UI E2E tests
         if: steps.changes.outputs.relevant == 'true'
         run: pnpm test:e2e -F @cloudflare/local-explorer-ui --log-order=stream
