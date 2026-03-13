@@ -29,4 +29,4 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 - Unit tests: `.spec.ts` in `__tests__/`
 - E2E tests: `.test.ts` in `e2e/`, own vitest config
-- Playground tests: Playwright-based, tested across Vite 6/7/8-beta in CI
+- Playground tests: Playwright-based, tested across Vite 6/7/8 in CI
