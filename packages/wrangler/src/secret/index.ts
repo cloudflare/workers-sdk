@@ -598,7 +598,7 @@ export async function parseBulkInputToObject(
 			secretFormat = "dotenv";
 			// dotenvParse does not error unless fileContent is undefined, no keys === error
 			if (Object.keys(content).length === 0) {
-				throw new UserError(`The contents of "${input}" is not valid"`);
+				throw new UserError(`The contents of "${input}" is not valid.`);
 			}
 		}
 		validateFileSecrets(content, input);

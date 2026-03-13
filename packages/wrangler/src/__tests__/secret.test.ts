@@ -1103,7 +1103,7 @@ describe("wrangler secret", () => {
 
 			await expect(
 				runWrangler("secret bulk ./secret.json --name script-name")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: The contents of "./secret.json" is not valid"]`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: The contents of "./secret.json" is not valid.]`);
 		});
 
 		it("should fail if JSON file contains a record with non-string values", async () => {
