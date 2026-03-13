@@ -384,6 +384,12 @@ describe("getRemoteConfigsDiff", () => {
 						service_id: "my-vpc",
 					},
 				],
+				vpc_networks: [
+					{
+						binding: "MY_VPC_NET",
+						tunnel_id: "my-tunnel",
+					},
+				],
 			},
 			{
 				name: "my-worker-id",
@@ -485,6 +491,13 @@ describe("getRemoteConfigsDiff", () => {
 					{
 						binding: "MY_VPC",
 						service_id: "my-vpc",
+						remote: true,
+					},
+				],
+				vpc_networks: [
+					{
+						binding: "MY_VPC_NET",
+						tunnel_id: "my-tunnel",
 						remote: true,
 					},
 				],
