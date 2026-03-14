@@ -134,6 +134,7 @@ export class Context extends RpcTarget {
 		const errorKey = `${cacheKey}-error`;
 		const stepNameWithCounter = `${name}-${count}`;
 		const stepStateKey = `${cacheKey}-metadata`;
+		const retryDelayDisableKey = `disable-retry-delay-${valueKey}`;
 
 		const maybeMap = await this.#state.storage.get([
 			valueKey,
@@ -242,8 +243,17 @@ export class Context extends RpcTarget {
 				);
 				// complete sleep if it didn't finish for some reason
 				if (retryEntryPQ !== undefined) {
+					const disableAllRetryDelays =
+						await this.#state.storage.get("disableRetryDelays");
+					const disableThisRetryDelay =
+						await this.#state.storage.get(retryDelayDisableKey);
+					const disableRetryDelay =
+						disableAllRetryDelays || disableThisRetryDelay;
+
 					await this.#engine.timeoutHandler.release(this.#engine);
-					await scheduler.wait(retryEntryPQ.targetTimestamp - Date.now());
+					await scheduler.wait(
+						disableRetryDelay ? 0 : retryEntryPQ.targetTimestamp - Date.now()
+					);
 					await this.#engine.timeoutHandler.acquire(this.#engine);
 					// @ts-expect-error priorityQueue is initiated in init
 					this.#engine.priorityQueue.remove({
@@ -460,17 +470,24 @@ export class Context extends RpcTarget {
 				if (stepState.attemptedCount <= config.retries.limit) {
 					// TODO (WOR-71): Think through if every Error should transition
 					const durationMs = calcRetryDuration(config, stepState);
+					const disableAllRetryDelays =
+						await this.#state.storage.get("disableRetryDelays");
+					const disableThisRetryDelay =
+						await this.#state.storage.get(retryDelayDisableKey);
+					const disableRetryDelay =
+						disableAllRetryDelays || disableThisRetryDelay;
+					const effectiveDuration = disableRetryDelay ? 0 : durationMs;
 
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 					// @ts-expect-error priorityQueue is initiated in init
 					await this.#engine.priorityQueue.add({
 						hash: priorityQueueHash,
-						targetTimestamp: Date.now() + durationMs,
+						targetTimestamp: Date.now() + effectiveDuration,
 						type: "retry",
 					});
 					await this.#engine.timeoutHandler.release(this.#engine);
 					// this may never finish because of the grace period - but waker will take of it
-					await scheduler.wait(durationMs);
+					await scheduler.wait(effectiveDuration);
 
 					// if it ever reaches here, we can try to remove it from the priority queue since it's no longer useful
 					// @ts-expect-error priorityQueue is initiated in init

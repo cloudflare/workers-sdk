@@ -76,6 +76,17 @@ export class WorkflowInstanceModifier extends RpcTarget {
 		}
 	}
 
+	async disableRetryDelays(steps?: StepSelector[]): Promise<void> {
+		if (!steps) {
+			await this.#state.storage.put("disableRetryDelays", true);
+		} else {
+			for (const step of steps) {
+				const valueKey = await this.#getStepCacheKey(step);
+				await this.#state.storage.put(`disable-retry-delay-${valueKey}`, true);
+			}
+		}
+	}
+
 	// step.do() flow: It first checks if a result or error is already in the cache and, if so, returns it immediately.
 	// If nothing is in the cache, it checks for remaining attempts and runs the user's code against the defined timeout.
 	// Since `step.do()` performs this initial cache check, directly changing the `valueKey` would cause it to
