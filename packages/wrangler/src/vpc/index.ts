@@ -17,6 +17,14 @@ export const vpcServiceNamespace = createNamespace({
 	},
 });
 
+export const vpcNetworkNamespace = createNamespace({
+	metadata: {
+		description: "🌐 Manage VPC networks",
+		status: "open beta",
+		owner: "Product: WVPC",
+	},
+});
+
 export enum ServiceType {
 	Http = "http",
 }
@@ -83,6 +91,41 @@ export interface ConnectivityServiceRequest {
 export interface ConnectivityServiceListParams {
 	service_type?: ServiceType;
 }
+
+export interface ConnectivityNetwork {
+	network_id: string;
+	name: string | null;
+	tunnel_id: string;
+	resolver_ips: string[] | null;
+	auto_provisioned: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ConnectivityNetworkCreateRequest {
+	name: string;
+	tunnel_id: string;
+	resolver_ips?: string[];
+}
+
+export interface ConnectivityNetworkUpdateRequest {
+	name?: string;
+	resolver_ips?: string[];
+}
+
+export const networkOptions = {
+	"tunnel-id": {
+		type: "string",
+		demandOption: true,
+		group: "Required Configuration",
+		description: "UUID of the Cloudflare tunnel",
+	},
+	"resolver-ips": {
+		type: "string",
+		description: "Comma-separated list of DNS resolver IPs",
+		group: "Optional Configuration",
+	},
+} as const;
 
 export const serviceOptions = {
 	name: {

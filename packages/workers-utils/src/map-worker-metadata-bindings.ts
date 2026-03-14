@@ -343,6 +343,19 @@ export function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "vpc_network":
+						{
+							configObj.vpc_networks = [
+								...(configObj.vpc_networks ?? []),
+								{
+									binding: binding.name,
+									...(binding.tunnel_id
+										? { tunnel_id: binding.tunnel_id }
+										: { network_id: binding.network_id }),
+								},
+							];
+						}
+						break;
 					default: {
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],

@@ -13,6 +13,9 @@ import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
+	ConnectivityNetwork,
+	ConnectivityNetworkCreateRequest,
+	ConnectivityNetworkUpdateRequest,
 	ConnectivityService,
 	ConnectivityServiceRequest,
 } from "../vpc/index";
@@ -34,6 +37,7 @@ describe("vpc help", () => {
 
 			COMMANDS
 			  wrangler vpc service  🔗 Manage VPC services
+			  wrangler vpc network  🌐 Manage VPC networks [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -624,3 +628,263 @@ function mockWvpcServiceList() {
 		)
 	);
 }
+
+// =============================================================================
+// VPC Network commands
+// =============================================================================
+
+const mockNetwork: ConnectivityNetwork = {
+	network_id: "network-uuid",
+	name: "test-network",
+	tunnel_id: "tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+	resolver_ips: ["8.8.8.8", "8.8.4.4"],
+	auto_provisioned: false,
+	created_at: "2024-01-01T00:00:00Z",
+	updated_at: "2024-01-01T00:00:00Z",
+};
+
+function mockWvpcNetworkCreate(): Promise<ConnectivityNetworkCreateRequest> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/connectivity/directory/networks",
+				async ({ request }) => {
+					const reqBody =
+						(await request.json()) as ConnectivityNetworkCreateRequest;
+					resolve(reqBody);
+
+					return HttpResponse.json(
+						createFetchResult(
+							{
+								network_id: "network-uuid",
+								name: reqBody.name,
+								tunnel_id: reqBody.tunnel_id,
+								resolver_ips: reqBody.resolver_ips ?? null,
+								auto_provisioned: false,
+								created_at: "2024-01-01T00:00:00Z",
+								updated_at: "2024-01-01T00:00:00Z",
+							},
+							true
+						)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
+}
+
+function mockWvpcNetworkUpdate(): Promise<ConnectivityNetworkUpdateRequest> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.put(
+				"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+				async ({ request }) => {
+					const reqBody =
+						(await request.json()) as ConnectivityNetworkUpdateRequest;
+					resolve(reqBody);
+
+					return HttpResponse.json(
+						createFetchResult(
+							{
+								...mockNetwork,
+								...(reqBody.name ? { name: reqBody.name } : {}),
+								...(reqBody.resolver_ips
+									? { resolver_ips: reqBody.resolver_ips }
+									: {}),
+							},
+							true
+						)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
+}
+
+function mockWvpcNetworkGetAndDelete() {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+			() => {
+				return HttpResponse.json(createFetchResult(mockNetwork, true));
+			},
+			{ once: true }
+		),
+		http.delete(
+			"*/accounts/:accountId/connectivity/directory/networks/:networkId",
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockWvpcNetworkList() {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/connectivity/directory/networks",
+			() => {
+				return HttpResponse.json(createFetchResult([mockNetwork], true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+describe("vpc network commands", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
+
+	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		// @ts-expect-error we're using a very simple setTimeout mock here
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+			setImmediate(fn);
+		});
+		setIsTTY(true);
+	});
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	it("should show network help text", async () => {
+		await runWrangler("vpc network");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler vpc network
+
+			🌐 Manage VPC networks [open beta]
+
+			COMMANDS
+			  wrangler vpc network create <name>        Create a new VPC network [open beta]
+			  wrangler vpc network delete <network-id>  Delete a VPC network [open beta]
+			  wrangler vpc network get <network-id>     Get a VPC network [open beta]
+			  wrangler vpc network list                 List VPC networks [open beta]
+			  wrangler vpc network update <network-id>  Update a VPC network [open beta]
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+
+	it("should handle creating a network", async () => {
+		const reqProm = mockWvpcNetworkCreate();
+		await runWrangler(
+			"vpc network create test-network --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "test-network",
+			  "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC network 'test-network'
+			✅ Created VPC network: network-uuid
+			   Name: test-network
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
+		`);
+	});
+
+	it("should handle creating a network with resolver IPs", async () => {
+		const reqProm = mockWvpcNetworkCreate();
+		await runWrangler(
+			"vpc network create test-dns-network --tunnel-id 550e8400-e29b-41d4-a716-446655440000 --resolver-ips 10.0.0.53,10.0.1.53"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "test-dns-network",
+			  "resolver_ips": [
+			    "10.0.0.53",
+			    "10.0.1.53",
+			  ],
+			  "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			}
+		`);
+	});
+
+	it("should handle listing networks", async () => {
+		mockWvpcNetworkList();
+		await runWrangler("vpc network list");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing VPC networks
+			┌─┬─┬─┬─┬─┬─┬─┐
+			│ id │ name │ tunnel │ resolver ips │ auto │ created │ modified │
+			├─┼─┼─┼─┼─┼─┼─┤
+			│ network-uuid │ test-network │ tunnel-y... │ 8.8.8.8, 8.8.4.4 │ no │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
+			└─┴─┴─┴─┴─┴─┴─┘"
+		`);
+	});
+
+	it("should handle getting a network", async () => {
+		mockWvpcNetworkGetAndDelete();
+		await runWrangler("vpc network get network-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC network 'network-uuid'
+			✅ Retrieved VPC network: network-uuid
+			   Name: test-network
+			   Tunnel ID: tunnel-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+			   Resolver IPs: 8.8.8.8, 8.8.4.4
+			   Auto-provisioned: no
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should handle deleting a network", async () => {
+		mockWvpcNetworkGetAndDelete();
+		await runWrangler("vpc network delete network-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🗑️  Deleting VPC network 'network-uuid'
+			✅ Deleted VPC network: network-uuid"
+		`);
+	});
+
+	it("should handle updating a network", async () => {
+		const reqProm = mockWvpcNetworkUpdate();
+		await runWrangler(
+			"vpc network update network-uuid --name updated-name --resolver-ips 10.0.0.53"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "name": "updated-name",
+			  "resolver_ips": [
+			    "10.0.0.53",
+			  ],
+			}
+		`);
+	});
+});

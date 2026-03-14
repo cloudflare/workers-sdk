@@ -517,6 +517,12 @@ const bindingsConfigMock: Omit<
 			service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 		},
 	],
+	vpc_networks: [
+		{
+			binding: "VPC_NETWORK_BINDING",
+			tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+		},
+	],
 };
 
 describe("generate types", () => {
@@ -755,6 +761,7 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					VPC_NETWORK_BINDING: Fetcher;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -867,6 +874,7 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					VPC_NETWORK_BINDING: Fetcher;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1042,6 +1050,7 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					VPC_NETWORK_BINDING: Fetcher;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -3284,6 +3293,105 @@ describe("generate types", () => {
 				interface Env {
 					VPC_API: Fetcher;
 					VPC_DATABASE: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for VPC networks bindings", async ({ expect }) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_NET.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-networks",
+				main: "./index.ts",
+				vpc_networks: [
+					{
+						binding: "VPC_NET",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "VPC_NET_2",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env {
+					VPC_NET: Fetcher;
+					VPC_NET_2: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for VPC networks bindings with network_id", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_NET.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-networks-by-id",
+				main: "./index.ts",
+				vpc_networks: [
+					{
+						binding: "VPC_NET",
+						network_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env {
+					VPC_NET: Fetcher;
 				}
 			}
 			interface Env extends Cloudflare.Env {}

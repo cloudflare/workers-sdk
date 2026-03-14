@@ -480,6 +480,7 @@ export function buildMiniflareBindingOptions(
 	const mtlsCertificates = extractBindingsOfType("mtls_certificate", bindings);
 	const vectorizeBindings = extractBindingsOfType("vectorize", bindings);
 	const vpcServices = extractBindingsOfType("vpc_service", bindings);
+	const vpcNetworks = extractBindingsOfType("vpc_network", bindings);
 	const secretsStoreSecrets = extractBindingsOfType(
 		"secrets_store_secret",
 		bindings
@@ -815,7 +816,22 @@ export function buildMiniflareBindingOptions(
 				];
 			})
 		),
-
+		vpcNetworks: Object.fromEntries(
+			vpcNetworks.map((vpc) => {
+				warnOrError("vpc_network", vpc.remote, "always-remote");
+				const targetId = vpc.network_id ?? vpc.tunnel_id;
+				return [
+					vpc.binding,
+					{
+						target_id: targetId,
+						remoteProxyConnectionString:
+							vpc.remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					},
+				];
+			})
+		),
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
 				warnOrError("dispatch_namespace", dispatchNamespace.remote, "remote");
