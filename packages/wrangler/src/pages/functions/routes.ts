@@ -49,6 +49,24 @@ type Arguments = {
 	srcDir: string;
 };
 
+const WINDOWS_DRIVE_LETTER = /^[a-zA-Z]:[\\/]/;
+
+function splitModulePath(modulePath: string) {
+	const separatorIndex = modulePath.indexOf(
+		":",
+		WINDOWS_DRIVE_LETTER.test(modulePath) ? 2 : 0
+	);
+
+	if (separatorIndex === -1) {
+		return { filepath: modulePath, name: "default" };
+	}
+
+	return {
+		filepath: modulePath.slice(0, separatorIndex),
+		name: modulePath.slice(separatorIndex + 1),
+	};
+}
+
 export async function writeRoutesModule({
 	config,
 	srcDir,
@@ -77,13 +95,14 @@ function parseConfig(config: Config, baseDir: string) {
 		}
 
 		return paths.map((modulePath) => {
-			const [filepath, name = "default"] = modulePath.split(":");
+			const { filepath, name } = splitModulePath(modulePath);
 			let { identifier } = importMap.get(modulePath) ?? {};
 
 			const resolvedPath = path.resolve(baseDir, filepath);
+			const relativePath = path.relative(baseDir, resolvedPath);
 
 			// ensure the filepath isn't attempting to resolve to anything outside of the project
-			if (path.relative(baseDir, resolvedPath).startsWith("..")) {
+			if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
 				throw new UserError(`Invalid module path "${filepath}"`);
 			}
 
