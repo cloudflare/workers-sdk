@@ -40,16 +40,6 @@ async function* getFiles(
 }
 
 /**
- * Checks if a given string is a valid Python package identifier.
- * See https://packaging.python.org/en/latest/specifications/name-normalization/
- * @param name The package name to validate
- */
-function isValidPythonPackageName(name: string): boolean {
-	const regex = /^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$/i;
-	return regex.test(name);
-}
-
-/**
  * Checks if a given module name is a Python vendor module.
  * @param moduleName The module name to check
  */
