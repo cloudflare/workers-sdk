@@ -1,10 +1,11 @@
 import { join } from "node:path";
 import { fetch } from "undici";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
+import { waitForFetch } from "../helpers/wait-for";
 import { WorkerdTests } from "./worker/index";
 
 type TestConfig = {
@@ -825,13 +826,13 @@ describe.each(groupedLocalConfigs)(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForFetch(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 }
 				);
 			}
 		);
@@ -883,13 +884,13 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForFetch(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 }
 				);
 			}
 		);
@@ -942,13 +943,13 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForFetch(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 }
 				);
 			}
 		);

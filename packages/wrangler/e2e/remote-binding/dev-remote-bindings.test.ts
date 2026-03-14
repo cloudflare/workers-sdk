@@ -3,13 +3,14 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { normalizeOutput } from "../helpers/normalize";
 import { makeRoot, seed } from "../helpers/setup";
+import { waitFor } from "../helpers/wait-for";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings",
@@ -174,9 +175,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
-			const normalizedOutput = normalizeOutput(worker.currentOutput);
+			await waitFor(() =>
+				expect(worker.currentOutput).toContain(
+					"Your Worker has access to the following bindings:"
+				)
+			);
 
-			expect(normalizedOutput).toMatchInlineSnapshot(`
+			expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding        Resource      Mode
 				env.AI         AI            remote
@@ -206,12 +211,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await vi.waitFor(
-					() =>
-						expect(worker.currentOutput).toContain(
-							"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found."
-						),
-					7_000
+				await waitFor(() =>
+					expect(worker.currentOutput).toContain(
+						"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found."
+					)
 				);
 			});
 
@@ -233,12 +236,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await vi.waitFor(
-					() =>
-						expect(worker.currentOutput).toContain(
-							"KV namespace 'non-existent-kv' is not valid."
-						),
-					7_000
+				await waitFor(() =>
+					expect(worker.currentOutput).toContain(
+						"KV namespace 'non-existent-kv' is not valid."
+					)
 				);
 			});
 		});

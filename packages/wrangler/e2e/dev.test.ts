@@ -1,11 +1,11 @@
-import assert, { fail } from "node:assert";
+import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as nodeNet from "node:net";
-import { scheduler, setTimeout } from "node:timers/promises";
+import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -20,6 +20,7 @@ import {
 	POSTGRES_SSL_REQUEST_PACKET,
 } from "./helpers/postgres-echo-handler";
 import { retry } from "./helpers/retry";
+import { waitFor, waitForFetch } from "./helpers/wait-for";
 import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 
 const HYPERDRIVE_DATABASES = [
@@ -97,7 +98,7 @@ describe.each([
 		// Regression test for issue where multiple request logs were being logged per request
 		expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
 
-		await expect(fetchText(url)).resolves.toMatchSnapshot();
+		await waitForFetch(() => expect(fetchText(url)).resolves.toMatchSnapshot());
 	});
 
 	it("works with basic service worker", async () => {
@@ -176,9 +177,11 @@ describe.each([
 
 		const { url } = await worker.waitForReady();
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+		await waitForFetch(() =>
+			expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot()
+		);
 
-		await expect(worker.currentOutput).not.toContain("[b] open a browser");
+		expect(worker.currentOutput).not.toContain("[b] open a browser");
 	});
 
 	describe(`--test-scheduled works with ${cmd}`, async () => {
@@ -286,13 +289,15 @@ describe.each([
 			const { hostname, port } = new URL(url);
 
 			// The warning should contain the actual port, not "undefined"
-			expect(worker.currentOutput).toContain(
-				"Scheduled Workers are not automatically triggered"
-			);
-			expect(worker.currentOutput).toContain(
-				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
-			);
-			expect(worker.currentOutput).not.toContain("undefined");
+			await waitFor(() => {
+				expect(worker.currentOutput).toContain(
+					"Scheduled Workers are not automatically triggered"
+				);
+				expect(worker.currentOutput).toContain(
+					`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+				);
+				expect(worker.currentOutput).not.toContain("undefined");
+			});
 		});
 
 		it("does not show warning when --test-scheduled is enabled", async () => {
@@ -2339,19 +2344,20 @@ This is a random email body.
 
 		expect(response.status).toBe(200);
 
-		expect(worker.currentOutput).includes(
-			"Email handler replied to sender with the following message:"
-		);
+		await waitFor(() => {
+			expect(worker.currentOutput).toContain(
+				"Email handler replied to sender with the following message:"
+			);
+		});
 
 		const pathRegexp = new RegExp(
 			"Email handler replied to sender with the following message:\\s*(\\S*)"
 		);
 
-		const maybeReplyPath = pathRegexp.exec(worker.currentOutput)?.[1];
-
-		if (maybeReplyPath === undefined) {
-			fail("Reply message does not contain path");
-		}
+		const maybeReplyPath = await vi.waitUntil(
+			() => pathRegexp.exec(worker.currentOutput)?.[1],
+			{ interval: 100, timeout: 5000 }
+		);
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
 			"References: <im-a-random-message-id@example.com>
@@ -2450,10 +2456,12 @@ This is a random email body.
 
 		expect(response.status).toBe(200);
 
-		expect(worker.currentOutput).includes(
-			`Email handler forwarded message with`
-		);
-		expect(worker.currentOutput).includes(`rcptTo: mark.s@example.com`);
+		await waitFor(() => {
+			expect(worker.currentOutput).toContain(
+				`Email handler forwarded message with`
+			);
+			expect(worker.currentOutput).toContain(`rcptTo: mark.s@example.com`);
+		});
 	});
 
 	it("should save file on send_email", async () => {
@@ -2504,21 +2512,20 @@ This is a random email body.
 
 		expect(response.status).toBe(200);
 
-		await scheduler.wait(1000);
-
-		expect(worker.currentOutput).includes(
-			"send_email binding called with the following message"
+		await waitFor(() =>
+			expect(worker.currentOutput).toContain(
+				"send_email binding called with the following message"
+			)
 		);
 
 		const pathRegexp = new RegExp(
 			"send_email binding called with the following message:\\s*(\\S*)"
 		);
 
-		const maybeReplyPath = pathRegexp.exec(worker.currentOutput)?.[1];
-
-		if (maybeReplyPath === undefined || maybeReplyPath === null) {
-			fail("send_email message does not contain path");
-		}
+		const maybeReplyPath = await vi.waitUntil(
+			() => pathRegexp.exec(worker.currentOutput)?.[1],
+			{ interval: 100, timeout: 5000 }
+		);
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
 			"From: someone <someone@example.com>

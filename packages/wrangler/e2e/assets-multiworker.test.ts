@@ -1,30 +1,12 @@
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { fetchJson } from "./helpers/fetch-json";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import type { RequestInit } from "undici";
-
-async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
-	return vi.waitFor(
-		async () => {
-			const text: string = await fetch(url, {
-				headers: { "MF-Disable-Pretty-Error": "true" },
-				...info,
-			}).then((r) => r.text());
-			try {
-				return JSON.parse(text) as T;
-			} catch (cause) {
-				const err = new Error(`Failed to parse JSON from:\n${text}`);
-				err.cause = cause;
-				throw err;
-			}
-		},
-		{ timeout: 5_000, interval: 250 }
-	);
-}
+import { waitForFetch } from "./helpers/wait-for";
 
 async function startWorkersDevRegistry(
 	wranglerDev: string,
@@ -249,18 +231,15 @@ describe.each(
 					false
 				);
 
-				await vi.waitFor(
+				await waitForFetch(
 					async () =>
 						await expect(
 							fetch(`${url}/hello-from-dee`).then((r) => r.text())
-						).resolves.toBe("hello world from dee"),
-					{ interval: 1000, timeout: 5_000 }
+						).resolves.toBe("hello world from dee")
 				);
 
-				await vi.waitFor(
-					async () =>
-						await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
-					{ interval: 1000, timeout: 10_000 }
+				await waitForFetch(
+					async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6")
 				);
 			});
 
@@ -275,24 +254,19 @@ describe.each(
 						false
 					);
 
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
 								"Hello through DO RPC"
-							),
-						{ interval: 1000, timeout: 10_000 }
+							)
 					);
-					await vi.waitFor(
-						async () =>
-							await expect(
-								fetchJson(`${url}/do`, {
-									headers: {
-										"X-Reset-Count": "true",
-									},
-								})
-							).resolves.toMatchObject({ count: 1 }),
-						{ interval: 1000, timeout: 10_000 }
-					);
+					await expect(
+						fetchJson(`${url}/do`, {
+							headers: {
+								"X-Reset-Count": "true",
+							},
+						})
+					).resolves.toMatchObject({ count: 1 });
 				}
 			);
 		});
@@ -337,12 +311,11 @@ describe.each(
 					assetWorker,
 					regularWorker
 				);
-				await vi.waitFor(
+				await waitForFetch(
 					async () =>
 						await expect(fetchText(`${url}/asset`)).resolves.toBe(
 							"<p>have an asset directly</p>"
-						),
-					{ interval: 1000, timeout: 5_000 }
+						)
 				);
 			});
 
@@ -353,12 +326,11 @@ describe.each(
 					assetWorker,
 					regularWorker
 				);
-				await vi.waitFor(
+				await waitForFetch(
 					async () =>
 						await expect(fetch(`${url}/not-an-asset`)).resolves.toMatchObject({
 							status: 404,
-						}),
-					{ interval: 1000, timeout: 5_000 }
+						})
 				);
 			});
 
@@ -369,13 +341,12 @@ describe.each(
 					assetWorker,
 					regularWorker
 				);
-				await vi.waitFor(
+				await waitForFetch(
 					async () =>
 						await expect(fetchText(`${url}/rpc`)).resolves.toContain(
 							// Cannot call RPC methods on assets-only workers
 							"The RPC receiver does not implement the method"
-						),
-					{ interval: 1000, timeout: 5_000 }
+						)
 				);
 			});
 		});
@@ -467,12 +438,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/asset`)).resolves.toBe(
 								"<p>have an asset directly</p>"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -483,12 +453,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
 								"hello world from a worker with assets"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -499,12 +468,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
 								"<p>have an asset via a binding</p>"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -515,10 +483,8 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
-						async () =>
-							await expect(fetchText(`${url}/rpc`)).resolves.toBe("2"),
-						{ interval: 1000, timeout: 5_000 }
+					await waitForFetch(
+						async () => await expect(fetchText(`${url}/rpc`)).resolves.toBe("2")
 					);
 				});
 			});
@@ -549,12 +515,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/asset`)).resolves.toBe(
 								"<p>have an asset directly</p>"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -565,12 +530,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
 								"hello world from a worker with assets"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -581,12 +545,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
 								"<p>have an asset via a binding</p>"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -597,10 +560,8 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
-						async () =>
-							await expect(fetchText(`${url}/rpc`)).resolves.toBe("2"),
-						{ interval: 1000, timeout: 5_000 }
+					await waitForFetch(
+						async () => await expect(fetchText(`${url}/rpc`)).resolves.toBe("2")
 					);
 				});
 			});
@@ -645,12 +606,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/asset`)).resolves.toBe(
 								"hello world from a worker with assets"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -661,12 +621,11 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
+					await waitForFetch(
 						async () =>
 							await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
 								"<p>have an asset via a binding</p>"
-							),
-						{ interval: 1000, timeout: 5_000 }
+							)
 					);
 				});
 
@@ -677,10 +636,8 @@ describe.each(
 						assetWorker,
 						regularWorker
 					);
-					await vi.waitFor(
-						async () =>
-							await expect(fetchText(`${url}/rpc`)).resolves.toBe("2"),
-						{ interval: 1000, timeout: 5_000 }
+					await waitForFetch(
+						async () => await expect(fetchText(`${url}/rpc`)).resolves.toBe("2")
 					);
 				});
 			});

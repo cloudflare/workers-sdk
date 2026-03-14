@@ -45,4 +45,21 @@ export default defineConfig([
 			"workers-sdk/no-vitest-import-expect": "error",
 		},
 	},
+
+	// Enforce using waitFor/waitForFetch helpers instead of bare vi.waitFor in e2e tests
+	{
+		files: ["e2e/**/*.ts"],
+		ignores: ["e2e/helpers/wait-for.ts"],
+		rules: {
+			"no-restricted-syntax": [
+				"error",
+				{
+					selector:
+						"CallExpression[callee.object.name='vi'][callee.property.name='waitFor']",
+					message:
+						"Use waitFor() or waitForFetch() from './helpers/wait-for' instead of vi.waitFor().",
+				},
+			],
+		},
+	},
 ]);
