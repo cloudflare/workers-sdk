@@ -11,11 +11,10 @@ export async function fetchJson<T>(
 	url: string,
 	info?: RequestInit
 ): Promise<T> {
-	const request = new Request(url, info);
-	const headers = new Headers(request.headers);
-	headers.set("MF-Disable-Pretty-Error", "true");
-
 	return waitForFetch(async () => {
+		const request = new Request(url, info);
+		const headers = new Headers(request.headers);
+		headers.set("MF-Disable-Pretty-Error", "true");
 		const text: string = await fetch(request, {
 			headers,
 		}).then((r) => r.text());
