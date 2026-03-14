@@ -325,6 +325,130 @@ describe("vpc service commands", () => {
 			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440002"
 		`);
 	});
+
+	it("should handle creating a TCP service with IPv4", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-tcp-db --type tcp --tcp-port 5432 --ipv4 10.0.0.5 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.5",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			    },
+			  },
+			  "name": "test-tcp-db",
+			  "tcp_port": 5432,
+			  "type": "tcp",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-tcp-db'
+			✅ Created VPC service: service-uuid
+			   Name: test-tcp-db
+			   Type: tcp
+			   TCP Port: 5432
+			   IPv4: 10.0.0.5
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
+		`);
+	});
+
+	it("should handle creating a TCP service with hostname", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-tcp-hostname --type tcp --tcp-port 3306 --hostname mysql.internal --tunnel-id 550e8400-e29b-41d4-a716-446655440001 --resolver-ips 10.0.0.1"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "hostname": "mysql.internal",
+			    "resolver_network": {
+			      "resolver_ips": [
+			        "10.0.0.1",
+			      ],
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
+			    },
+			  },
+			  "name": "test-tcp-hostname",
+			  "tcp_port": 3306,
+			  "type": "tcp",
+			}
+		`);
+	});
+
+	it("should reject TCP service creation without --tcp-port", async () => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-tcp-no-port --type tcp --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+			)
+		).rejects.toThrow("TCP services require a --tcp-port to be specified");
+	});
+
+	it("should handle updating a TCP service", async () => {
+		const reqProm = mockWvpcServiceUpdate();
+		await runWrangler(
+			"vpc service update service-uuid --name test-tcp-updated --type tcp --tcp-port 5433 --ipv4 10.0.0.6 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.6",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
+			    },
+			  },
+			  "name": "test-tcp-updated",
+			  "tcp_port": 5433,
+			  "type": "tcp",
+			}
+		`);
+	});
+
+	it("should handle getting a TCP service", async () => {
+		mockWvpcTcpServiceGet();
+		await runWrangler("vpc service get tcp-service-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC service 'tcp-service-uuid'
+			✅ Retrieved VPC service: tcp-service-uuid
+			   Name: test-tcp-service
+			   Type: tcp
+			   TCP Port: 5432
+			   IPv4: 10.0.0.5
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should handle listing TCP services with port in table", async () => {
+		mockWvpcTcpServiceList();
+		await runWrangler("vpc service list");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			📋 Listing VPC services
+			┌─┬─┬─┬─┬─┬─┬─┬─┐
+			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
+			├─┼─┼─┼─┼─┼─┼─┼─┤
+			│ tcp-service-uuid │ test-tcp-service │ tcp │ TCP:5432 │ 10.0.0.5 │ 550e8400... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
+			└─┴─┴─┴─┴─┴─┴─┴─┘"
+		`);
+	});
 });
 
 describe("hostname validation", () => {
@@ -527,6 +651,21 @@ const mockService: ConnectivityService = {
 	updated_at: "2024-01-01T00:00:00Z",
 };
 
+const mockTcpService: ConnectivityService = {
+	service_id: "tcp-service-uuid",
+	type: ServiceType.Tcp,
+	name: "test-tcp-service",
+	tcp_port: 5432,
+	host: {
+		ipv4: "10.0.0.5",
+		network: {
+			tunnel_id: "550e8400-e29b-41d4-a716-446655440000",
+		},
+	},
+	created_at: "2024-01-01T00:00:00Z",
+	updated_at: "2024-01-01T00:00:00Z",
+};
+
 // Mock API Handlers
 function mockWvpcServiceCreate(): Promise<ConnectivityServiceRequest> {
 	return new Promise((resolve) => {
@@ -619,6 +758,30 @@ function mockWvpcServiceList() {
 			"*/accounts/:accountId/connectivity/directory/services",
 			() => {
 				return HttpResponse.json(createFetchResult([mockService], true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockWvpcTcpServiceGet() {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/connectivity/directory/services/:serviceId",
+			() => {
+				return HttpResponse.json(createFetchResult(mockTcpService, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockWvpcTcpServiceList() {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/connectivity/directory/services",
+			() => {
+				return HttpResponse.json(createFetchResult([mockTcpService], true));
 			},
 			{ once: true }
 		)

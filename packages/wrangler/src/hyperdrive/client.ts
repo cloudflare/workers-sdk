@@ -49,11 +49,25 @@ export type NetworkOriginHostAndPort = {
 	access_client_secret?: never;
 };
 
+export type NetworkOriginVpcService = {
+	service_id: string;
+
+	// Ensure other network fields are not set
+	host?: never;
+	port?: never;
+	access_client_id?: never;
+	access_client_secret?: never;
+};
+
 // NetworkOrigin is never partial in the API, it must be submitted in it's entirety
-export type NetworkOrigin = NetworkOriginHoA | NetworkOriginHostAndPort;
+export type NetworkOrigin =
+	| NetworkOriginHoA
+	| NetworkOriginHostAndPort
+	| NetworkOriginVpcService;
 export type NetworkOriginWithSecrets =
 	| NetworkOriginHoAWithSecrets
-	| NetworkOriginHostAndPort;
+	| NetworkOriginHostAndPort
+	| NetworkOriginVpcService;
 
 // Public responses of the full PublicOrigin type are never partial in the API
 export type PublicOrigin = OriginDatabase & NetworkOrigin;
