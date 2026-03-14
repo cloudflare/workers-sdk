@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
+import dns from "node:dns/promises";
 import { Abortable } from "node:events";
 import fs from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -731,6 +732,113 @@ function getWorkerRoutes(
 	return allRoutes;
 }
 
+/**
+ * Checks all actual worker/entrypoint hostnames via DNS lookup (in parallel).
+ * Returns the list of hostnames that don't resolve to loopback.
+ */
+async function getUnresolvedSubdomains(
+	allEntrypointSubdomains: Record<string, Record<string, EntrypointEntry>>
+): Promise<string[]> {
+	const hostnames: string[] = [];
+	for (const [workerName, entrypoints] of Object.entries(
+		allEntrypointSubdomains
+	)) {
+		hostnames.push(`${workerName}.localhost`);
+		for (const alias of Object.keys(entrypoints)) {
+			hostnames.push(`${alias}.${workerName}.localhost`);
+		}
+	}
+
+	const results = await Promise.all(
+		hostnames.map<Promise<[string, string | null]>>(async (hostname) => {
+			try {
+				const result = await dns.lookup(hostname);
+				return [hostname, result.address];
+			} catch {
+				return [hostname, null];
+			}
+		})
+	);
+	return results.reduce<string[]>((unresolved, [hostname, address]) => {
+		if (address !== "127.0.0.1" && address !== "::1") {
+			unresolved.push(hostname);
+		}
+
+		return unresolved;
+	}, []);
+}
+
+type EntrypointEntry = {
+	export: string;
+	type: "DurableObject" | "WorkerEntrypoint" | "WorkflowEntrypoint";
+};
+
+function getEntrypointSubdomains(allWorkerOpts: PluginWorkerOptions[]) {
+	const result: Record<string, Record<string, EntrypointEntry>> = {};
+
+	for (const workerOpts of allWorkerOpts) {
+		const subdomains = workerOpts.core.unsafeEntrypointSubdomains;
+		if (!subdomains) {
+			continue;
+		}
+
+		const workerName = workerOpts.core.name ?? "";
+
+		const doClassNames = new Set(
+			Object.values(workerOpts.do.durableObjects ?? {}).map((v) =>
+				typeof v === "string" ? v : v.className
+			)
+		);
+		const workflowClassNames = new Set(
+			Object.values(workerOpts.workflows.workflows ?? {}).map(
+				(v) => v.className
+			)
+		);
+
+		// Check for collisions and invert to alias -> { export, type }
+		// for the entry worker's O(1) hostname lookup.
+		const aliasToEntry: Record<string, EntrypointEntry> = {};
+		const seenAliases = new Map<string, string>();
+
+		for (const [exportName, rawAlias] of Object.entries(subdomains)) {
+			const alias = rawAlias.toLowerCase();
+
+			const existing = seenAliases.get(alias);
+			if (existing !== undefined) {
+				throw new MiniflareCoreError(
+					"ERR_VALIDATION",
+					`Alias collision in worker "${workerName}": ` +
+						`entrypoints "${existing}" and "${exportName}" both map to alias "${alias}".`
+				);
+			}
+			seenAliases.set(alias, exportName);
+
+			let type: EntrypointEntry["type"];
+			if (doClassNames.has(exportName)) {
+				type = "DurableObject";
+			} else if (workflowClassNames.has(exportName)) {
+				type = "WorkflowEntrypoint";
+			} else {
+				type = "WorkerEntrypoint";
+			}
+
+			aliasToEntry[alias] = { export: exportName, type };
+		}
+
+		if (Object.keys(aliasToEntry).length === 0) {
+			continue;
+		}
+
+		result[workerName.toLowerCase()] = aliasToEntry;
+	}
+
+	if (Object.keys(result).length === 0) {
+		return undefined;
+	}
+
+	return result;
+}
+
 // Get the name of a binding in the `ProxyServer`'s `env`
 function getProxyBindingName(plugin: string, worker: string, binding: string) {
 	return [
@@ -927,6 +1035,7 @@ export class Miniflare {
 	#proxyClient?: ProxyClient;
 
 	#structuredWorkerdLogs: boolean;
+	#localhostSubdomainChecked = false;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1959,9 +2068,36 @@ export class Miniflare {
 			}
 		}
 
+		const allEntrypointSubdomains = getEntrypointSubdomains(allWorkerOpts);
+
+		if (allEntrypointSubdomains && !this.#localhostSubdomainChecked) {
+			this.#localhostSubdomainChecked = true;
+			const unresolved = await getUnresolvedSubdomains(allEntrypointSubdomains);
+			if (unresolved.length > 0) {
+				const maxEntries = 5;
+				const hostsEntries =
+					unresolved
+						.slice(0, maxEntries)
+						.map((h) => `  127.0.0.1 ${h}`)
+						.join("\n") +
+					(unresolved.length > maxEntries
+						? `\n  ... and ${unresolved.length - maxEntries} more`
+						: "");
+				this.#log.warn(
+					`Some .localhost subdomains do not resolve on your system.\n` +
+						`These URLs work in browsers (Chrome, Edge, Firefox) but not in tools like curl or Node.js.\n\n` +
+						`To fix this for all tools, add to /etc/hosts:\n` +
+						`${hostsEntries}\n\n` +
+						`Or for one-off requests, set the Host header manually:\n` +
+						`  curl -H "Host: ${unresolved[0]}" http://localhost:<port>/`
+				);
+			}
+		}
+
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
+			allEntrypointSubdomains,
 			/*
 			 * - if Workers + Assets project but NOT Vitest, the fallback Worker (see
 			 *   `MINIFLARE_USER_FALLBACK`) should point to the (assets) RPC Proxy Worker
