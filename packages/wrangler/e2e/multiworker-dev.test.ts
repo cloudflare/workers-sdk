@@ -453,8 +453,7 @@ describe("multiworker", () => {
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
 			await vi.waitFor(
-				async () =>
-					expect(worker.currentOutput).includes("received tail event"),
+				() => expect(worker.currentOutput).includes("received tail event"),
 				{ interval: 1000, timeout: 10_000 }
 			);
 		});
@@ -515,7 +514,7 @@ describe("multiworker", () => {
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
 			await vi.waitFor(
-				async () =>
+				() =>
 					expect(worker.currentOutput).includes("received tail stream event"),
 				{ interval: 1000, timeout: 10_000 }
 			);
@@ -665,12 +664,17 @@ describe("multiworker", () => {
 			const { url } = await worker.waitForReady(5_000);
 			const { hostname, port } = new URL(url);
 
-			// The warning should contain the actual port, not "undefined"
-			expect(worker.currentOutput).toContain(
-				"Scheduled Workers are not automatically triggered"
-			);
-			expect(worker.currentOutput).toContain(
-				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+			await vi.waitFor(
+				() => {
+					// The warning should contain the actual port, not "undefined"
+					expect(worker.currentOutput).toContain(
+						"Scheduled Workers are not automatically triggered"
+					);
+					expect(worker.currentOutput).toContain(
+						`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+					);
+				},
+				{ interval: 1000, timeout: 10_000 }
 			);
 			expect(worker.currentOutput).not.toContain("undefined");
 		});

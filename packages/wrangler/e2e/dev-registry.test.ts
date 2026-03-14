@@ -184,8 +184,12 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				{ interval: 1000, timeout: 10_000 }
 			);
 
-			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"connect to other Wrangler or Vite dev processes running locally"
+			await vi.waitFor(
+				async () =>
+					expect(normalizeOutput(workerA.currentOutput)).toContain(
+						"connect to other Wrangler or Vite dev processes running locally"
+					),
+				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
@@ -473,8 +477,12 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				{ interval: 1000, timeout: 10_000 }
 			);
 
-			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"connect to other Wrangler or Vite dev processes running locally"
+			await vi.waitFor(
+				async () =>
+					expect(normalizeOutput(workerA.currentOutput)).toContain(
+						"connect to other Wrangler or Vite dev processes running locally"
+					),
+				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 

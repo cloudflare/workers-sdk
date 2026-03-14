@@ -4,7 +4,7 @@ import { formatCompatibilityDate } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
@@ -63,8 +63,12 @@ describe.sequential("wrangler pages dev", () => {
 		const { url } = await worker.waitForReady();
 		const text = await fetchText(url);
 		expect(text).toBe("Testing [--experimental-local]");
-		expect(await worker.currentOutput).toContain(
-			`--experimental-local is no longer required and will be removed in a future version`
+		await vi.waitFor(
+			() =>
+				expect(worker.currentOutput).toContain(
+					`--experimental-local is no longer required and will be removed in a future version`
+				),
+			{ interval: 100, timeout: 5_000 }
 		);
 	});
 
@@ -85,20 +89,19 @@ describe.sequential("wrangler pages dev", () => {
 			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service test --kv = --do test --d1 = --r2 =`
 		);
 		await worker.waitForReady();
-		expect(await worker.currentOutput).toContain(
-			`Could not parse Service binding: test`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse KV binding: =`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse Durable Object binding: test`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse R2 binding: =`
-		);
-		expect(await worker.currentOutput).toContain(
-			`Could not parse D1 binding: =`
+		await vi.waitFor(
+			() => {
+				expect(worker.currentOutput).toContain(
+					`Could not parse Service binding: test`
+				);
+				expect(worker.currentOutput).toContain(`Could not parse KV binding: =`);
+				expect(worker.currentOutput).toContain(
+					`Could not parse Durable Object binding: test`
+				);
+				expect(worker.currentOutput).toContain(`Could not parse R2 binding: =`);
+				expect(worker.currentOutput).toContain(`Could not parse D1 binding: =`);
+			},
+			{ interval: 100, timeout: 5_000 }
 		);
 	});
 
@@ -116,6 +119,15 @@ describe.sequential("wrangler pages dev", () => {
 			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2 --compatibility-date=2025-05-21`
 		);
 		await worker.waitForReady();
+
+		await vi.waitFor(
+			() =>
+				expect(worker.currentOutput).toContain(
+					"Your Worker has access to the following bindings:"
+				),
+			{ interval: 100, timeout: 5_000 }
+		);
+
 		const bindingMessages = worker.currentOutput.split(
 			"Your Worker has access to the following bindings:"
 		);
@@ -336,6 +348,14 @@ describe.sequential("wrangler pages dev", () => {
 
 		await worker.readUntil(/GET \/ 200 OK/);
 
+		await vi.waitFor(
+			() =>
+				expect(worker.currentOutput).toContain(
+					"Your Worker has access to the following bindings:"
+				),
+			{ interval: 100, timeout: 5_000 }
+		);
+
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 			"✨ Compiled Worker successfully
 			Your Worker has access to the following bindings:
@@ -438,6 +458,14 @@ describe.sequential("wrangler pages dev", () => {
 			`,
 		});
 		await worker.waitForReady();
+
+		await vi.waitFor(
+			() =>
+				expect(worker.currentOutput).toContain(
+					"Your Worker has access to the following bindings:"
+				),
+			{ interval: 100, timeout: 5_000 }
+		);
 
 		// We only care about the list of bindings and warnings, so strip other output
 		const [prestartOutput] = normalizeOutput(worker.currentOutput).split(

@@ -174,9 +174,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
-			const normalizedOutput = normalizeOutput(worker.currentOutput);
-
-			expect(normalizedOutput).toMatchInlineSnapshot(`
+			await vi.waitFor(() => {
+				expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding        Resource      Mode
 				env.AI         AI            remote
@@ -185,6 +184,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				[wrangler:info] Ready on http://<HOST>:<PORT>
 				[wrangler:info] GET / 200 OK (TIMINGS)"
 			`);
+			}, 7_000);
 		});
 
 		describe("shows helpful error logs", () => {
