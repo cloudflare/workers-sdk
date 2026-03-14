@@ -7,7 +7,7 @@ const addInstance = new WebAssembly.Instance(addModule);
 const add = addInstance.exports.add as (a: number, b: number) => number;
 
 const add2Instance = new WebAssembly.Instance(addModule2);
-const add2 = addInstance.exports.add as (a: number, b: number) => number;
+const add2 = add2Instance.exports.add as (a: number, b: number) => number;
 
 export default <ExportedHandler>{
 	fetch(request, env, ctx) {
