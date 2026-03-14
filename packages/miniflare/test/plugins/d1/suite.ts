@@ -720,3 +720,51 @@ async function isDatabaseEqual(db: D1Database, db2: D1Database) {
 		expect(originalData).toEqual(mirrorData);
 	}
 }
+
+// Tests for D1 platform limits enforcement
+test("D1Database: enforces query batch size limit", async (t) => {
+	const { db } = t.context;
+
+	// Create a batch with more than 1000 queries (exceeds paid tier limit)
+	const queries = Array.from({ length: 1001 }, (_, i) =>
+		db.prepare(`SELECT ${i}`)
+	);
+
+	// Should throw error about exceeding batch size limit
+	await t.throwsAsync(
+		throwCause(db.batch(queries)),
+		{ message: /exceeding the limit of 1000 queries per batch/ }
+	);
+});
+
+test("D1Database: enforces SQL statement size limit", async (t) => {
+	const { db, tableColours } = t.context;
+
+	// Create a SQL statement larger than 100KB
+	// We'll create a very long INSERT with many values
+	const largeValue = "x".repeat(100_001);
+	const stmt = db.prepare(
+		`INSERT INTO ${tableColours} (id, name, rgb) VALUES (?, ?, ?)`
+	);
+
+	// Should throw error about exceeding statement size limit
+	await t.throwsAsync(
+		throwCause(stmt.bind(99, largeValue, 0xffffff).run()),
+		{ message: /SQL statement exceeds maximum size of 100000 bytes/ }
+	);
+});
+
+test("D1Database: enforces bound parameters limit", async (t) => {
+	const { db, tableColours } = t.context;
+
+	// Create a query with more than 100 bound parameters
+	const params = Array.from({ length: 101 }, (_, i) => i);
+	const placeholders = params.map(() => "?").join(",");
+	const stmt = db.prepare(`SELECT * FROM ${tableColours} WHERE id IN (${placeholders})`);
+
+	// Should throw error about exceeding parameters limit
+	await t.throwsAsync(
+		throwCause(stmt.bind(...params).all()),
+		{ message: /exceeding the limit of 100/ }
+	);
+});
