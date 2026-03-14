@@ -40,16 +40,6 @@ async function* getFiles(
 }
 
 /**
- * Checks if a given string is a valid Python package identifier.
- * See https://packaging.python.org/en/latest/specifications/name-normalization/
- * @param name The package name to validate
- */
-function isValidPythonPackageName(name: string): boolean {
-	const regex = /^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$/i;
-	return regex.test(name);
-}
-
-/**
  * Checks if a given module name is a Python vendor module.
  * @param moduleName The module name to check
  */
@@ -104,47 +94,15 @@ export async function findAdditionalModules(
 			name: m.name,
 		}));
 
-	// Try to find a cf-requirements.txt file
 	const isPythonEntrypoint =
 		getBundleType(entry.format, entry.file) === "python";
 
 	if (isPythonEntrypoint) {
-		let pythonRequirements = "";
-		try {
-			pythonRequirements = await readFile(
-				path.resolve(entry.projectRoot, "cf-requirements.txt"),
-				"utf-8"
-			);
-		} catch {
-			// We don't care if a cf-requirements.txt isn't found
-			logger.debug(
-				"Python entrypoint detected, but no cf-requirements.txt file found."
-			);
-		}
-
-		// If a `requirements.txt` file is found, show a warning instructing user to use `cf-requirements.txt` instead.
-		if (existsSync(path.resolve(entry.projectRoot, "requirements.txt"))) {
+		// If a `cf-requirements.txt` file is found, show a warning instructing user to use pywrangler instead.
+		if (existsSync(path.resolve(entry.projectRoot, "cf-requirements.txt"))) {
 			logger.warn(
-				"Found a `requirements.txt` file. Python requirements should now be in a `cf-requirements.txt` file."
+				"Found a `cf-requirements.txt` file. cf-requirements.txt is no longer used, instead put your dependencies in pyproject.toml and use pywrangler."
 			);
-		}
-
-		for (const requirement of pythonRequirements.split("\n")) {
-			if (requirement === "") {
-				continue;
-			}
-			if (!isValidPythonPackageName(requirement)) {
-				throw new UserError(
-					`Invalid Python package name "${requirement}" found in cf-requirements.txt. Note that cf-requirements.txt should contain package names only, not version specifiers.`
-				);
-			}
-
-			modules.push({
-				type: "python-requirement",
-				name: requirement,
-				content: "",
-				filePath: undefined,
-			});
 		}
 
 		// Look for a `python_modules` directory in the root of the project and add all the .py and .so files in it
