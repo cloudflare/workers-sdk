@@ -260,16 +260,13 @@ describe.each(
 								"Hello through DO RPC"
 							)
 					);
-					await waitForFetch(
-						async () =>
-							await expect(
-								fetchJson(`${url}/do`, {
-									headers: {
-										"X-Reset-Count": "true",
-									},
-								})
-							).resolves.toMatchObject({ count: 1 })
-					);
+					await expect(
+						fetchJson(`${url}/do`, {
+							headers: {
+								"X-Reset-Count": "true",
+							},
+						})
+					).resolves.toMatchObject({ count: 1 });
 				}
 			);
 		});

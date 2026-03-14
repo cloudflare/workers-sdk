@@ -343,16 +343,13 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 				await workerA.waitForReady(5_000);
 
-				await waitForFetch(
-					async () =>
-						await expect(
-							fetchJson(`${url}/do`, {
-								headers: {
-									"X-Reset-Count": "true",
-								},
-							})
-						).resolves.toMatchObject({ count: 1 })
-				);
+				await expect(
+					fetchJson(`${url}/do`, {
+						headers: {
+							"X-Reset-Count": "true",
+						},
+					})
+				).resolves.toMatchObject({ count: 1 });
 			}
 		);
 

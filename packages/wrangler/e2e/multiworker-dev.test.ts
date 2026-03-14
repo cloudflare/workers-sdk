@@ -7,7 +7,7 @@ import { fetchJson } from "./helpers/fetch-json";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import { waitForFetch } from "./helpers/wait-for";
+import { waitFor, waitForFetch } from "./helpers/wait-for";
 
 describe("multiworker", () => {
 	let workerName: string;
@@ -342,16 +342,13 @@ describe("multiworker", () => {
 			);
 			const { url } = await workerB.waitForReady(5_000);
 
-			await waitForFetch(
-				async () =>
-					await expect(
-						fetchJson(`${url}/do`, {
-							headers: {
-								"X-Reset-Count": "true",
-							},
-						})
-					).resolves.toMatchObject({ count: 1 })
-			);
+			await expect(
+				fetchJson(`${url}/do`, {
+					headers: {
+						"X-Reset-Count": "true",
+					},
+				})
+			).resolves.toMatchObject({ count: 1 });
 		});
 
 		it("can fetch remote DO attached to a through b with RPC", async () => {
@@ -425,7 +422,7 @@ describe("multiworker", () => {
 
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
-			await waitForFetch(() =>
+			await waitFor(() =>
 				expect(worker.currentOutput).includes("received tail event")
 			);
 		});
