@@ -480,9 +480,10 @@ describe("multiworker", () => {
 			);
 			const { url } = await worker.waitForReady(5_000);
 
-			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
-
 			await waitForFetch(() =>
+				expect(fetchText(`${url}`)).resolves.toBe("hello from a")
+			);
+			await waitFor(() =>
 				expect(worker.currentOutput).includes("received tail stream event")
 			);
 		});
@@ -628,7 +629,7 @@ describe("multiworker", () => {
 			const { url } = await worker.waitForReady(5_000);
 			const { hostname, port } = new URL(url);
 
-			await waitForFetch(() => {
+			await waitFor(() => {
 				// The warning should contain the actual port, not "undefined"
 				expect(worker.currentOutput).toContain(
 					"Scheduled Workers are not automatically triggered"
