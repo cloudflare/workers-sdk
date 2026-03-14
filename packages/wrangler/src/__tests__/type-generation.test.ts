@@ -3756,4 +3756,255 @@ describe("pipeline schema type generation", () => {
 			"
 		`);
 	});
+
+	describe("cron trigger types", () => {
+		it("should generate `crons` as literal union types in `GlobalProps`", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "./index.ts",
+					compatibility_date: "2024-01-01",
+					triggers: { crons: ["0 * * * *", "*/5 * * * *"] },
+				})
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						crons: "0 * * * *" | "*/5 * * * *";
+					}
+					interface Env {
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should generate `crons` as `string` type when empty array is provided", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "./index.ts",
+					compatibility_date: "2024-01-01",
+					triggers: { crons: [] },
+				})
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						crons: string;
+					}
+					interface Env {
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should not include `crons` in `GlobalProps` when no `triggers` are defined", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "./index.ts",
+					compatibility_date: "2024-01-01",
+				})
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+					}
+					interface Env {
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should aggregate `crons` from all environments", async ({ expect }) => {
+			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "./index.ts",
+					compatibility_date: "2024-01-01",
+					triggers: { crons: ["0 0 * * *"] },
+					env: {
+						staging: {
+							triggers: { crons: ["*/10 * * * *"] },
+						},
+						production: {
+							triggers: { crons: ["0 12 * * *", "0 0 * * 0"] },
+						},
+					},
+				})
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						crons: "0 0 * * *" | "*/10 * * * *" | "0 12 * * *" | "0 0 * * 0";
+					}
+					interface StagingEnv {}
+					interface ProductionEnv {}
+					interface Env {
+
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should only include `crons` from specified --env", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "./index.ts",
+					compatibility_date: "2024-01-01",
+					triggers: { crons: ["0 0 * * *"] },
+					env: {
+						staging: {
+							triggers: { crons: ["*/10 * * * *"] },
+						},
+						production: {
+							triggers: { crons: ["0 12 * * *"] },
+						},
+					},
+				})
+			);
+
+			await runWrangler("types --include-runtime=false --env staging");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface GlobalProps {
+						mainModule: typeof import("./index");
+						crons: "*/10 * * * *";
+					}
+					interface Env {
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should not include `crons` in `GlobalProps` for service-worker format", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				"./index.js",
+				`addEventListener("fetch", (event) => { event.respondWith(new Response("Hello")); });`
+			);
+			fs.writeFileSync(
+				"./wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-01-01",
+					triggers: { crons: ["0 * * * *"] },
+				})
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			// Service worker format doesn't have `GlobalProps`, so crons are not included
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				No project types to add.
+
+				────────────────────────────────────────────────────────────
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+	});
 });
