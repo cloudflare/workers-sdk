@@ -18,6 +18,7 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import { waitFor } from "./helpers/wait-for";
 import type { DevToolsEvent } from "../src/api";
 
 const OPTIONS = [
@@ -37,9 +38,6 @@ function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
 		});
 	});
 }
-
-const waitFor: typeof vi.waitFor = (cb) =>
-	vi.waitFor(cb, { interval: 200, timeout: 5000 });
 
 function collectMessagesContaining<T>(
 	ws: WebSocket,

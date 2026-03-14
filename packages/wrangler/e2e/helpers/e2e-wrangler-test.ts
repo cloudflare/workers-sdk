@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { expect, onTestFinished, vi } from "vitest";
+import { expect, onTestFinished } from "vitest";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -11,6 +11,7 @@ import {
 } from "./cert";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
+import { waitForFetch } from "./wait-for";
 import {
 	MINIFLARE_IMPORT,
 	runWrangler,
@@ -324,13 +325,10 @@ export class WranglerE2ETestHelper {
 		await setTimeout(2_000);
 
 		// Wait for the worker to become available
-		await vi.waitFor(
-			async () => {
-				const response = await fetch(deployedUrl);
-				expect(response.status).toBe(200);
-			},
-			{ timeout: 10_000, interval: 500 }
-		);
+		await waitForFetch(async () => {
+			const response = await fetch(deployedUrl);
+			expect(response.status).toBe(200);
+		});
 
 		const cleanup = async () => {
 			await this.bestEffortRun(`wrangler delete --name ${workerName} --force`);
