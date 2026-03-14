@@ -96,46 +96,54 @@ export const r2BucketCORSSetCommand = createCommand({
 		},
 	},
 	async handler({ bucket, file, jurisdiction, force }, { config }) {
-        const accountId = await requireAuth(config);
+		const accountId = await requireAuth(config);
 
-        const jsonFilePath = path.resolve(file);
+		const jsonFilePath = path.resolve(file);
 
-        const corsConfig = parseJSON(readFileSync(jsonFilePath), jsonFilePath) as Record<string, unknown>;
+		const corsConfig = parseJSON(
+			readFileSync(jsonFilePath),
+			jsonFilePath
+		) as Record<string, unknown>;
 
-        // 1. Detect AWS S3 Top-level format (CORSRules instead of rules)
-        if (corsConfig.CORSRules) {
-            throw new UserError(
-                "Wrangler detected an AWS S3 CORS configuration format.\n" +
-                "Cloudflare R2 expects a 'rules' array instead of 'CORSRules'.\n" +
-                "See: https://developers.cloudflare.com/r2/buckets/cors/#example"
-            );
-        }
+		// Detect AWS S3 top-level format (CORSRules instead of rules)
+		if (corsConfig.CORSRules) {
+			throw new UserError(
+				"Wrangler detected an AWS S3 CORS configuration format.\n" +
+					"Cloudflare R2 expects a 'rules' array instead of 'CORSRules'.\n" +
+					"See: https://developers.cloudflare.com/r2/buckets/cors/#example"
+			);
+		}
 
-        // 2. Validate existence of rules array
-        const rules = corsConfig.rules;
-        if (!rules || !Array.isArray(rules)) {
-            throw new UserError(
-                `The CORS configuration file must contain a 'rules' array as expected by the R2 API: ` +
-                    `https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
-            );
-        }
+		// Validate existence of rules array
+		const rules = corsConfig.rules;
+		if (!rules || !Array.isArray(rules)) {
+			throw new UserError(
+				`The CORS configuration file must contain a 'rules' array as expected by the R2 API: ` +
+					`https://developers.cloudflare.com/api/operations/r2-put-bucket-cors-policy`
+			);
+		}
 
-        // 3. Detect AWS S3 individual rule format (AllowedOrigins, AllowedMethods, AllowedHeaders)
-        const hasS3Keys = (rules as Record<string, unknown>[]).some((rule) =>
-			rule && typeof rule === "object" && !Array.isArray(rule) &&
-			("AllowedOrigins" in rule || "AllowedMethods" in rule || "AllowedHeaders" in rule)
-);
+		// Detect AWS S3 individual rule format (AllowedOrigins, AllowedMethods, AllowedHeaders)
+		const hasS3Keys = (rules as Record<string, unknown>[]).some(
+			(rule) =>
+				rule &&
+				typeof rule === "object" &&
+				!Array.isArray(rule) &&
+				("AllowedOrigins" in rule ||
+					"AllowedMethods" in rule ||
+					"AllowedHeaders" in rule)
+		);
 
-        if (hasS3Keys) {
-            throw new UserError(
-                "Wrangler detected AWS S3 style keys (e.g. 'AllowedOrigins').\n" +
-                "Cloudflare R2 requires lowercase keys nested inside an 'allowed' object.\n" +
-                "Example: { \"allowed\": { \"origins\": [\"*\"], \"methods\": [\"GET\"] } }\n" +
-                "See: https://developers.cloudflare.com/r2/buckets/cors/#example"
-            );
-        }
+		if (hasS3Keys) {
+			throw new UserError(
+				"Wrangler detected AWS S3 style keys (e.g. 'AllowedOrigins').\n" +
+					"Cloudflare R2 requires lowercase keys nested inside an 'allowed' object.\n" +
+					'Example: { "allowed": { "origins": ["*"], "methods": ["GET"] } }\n' +
+					"See: https://developers.cloudflare.com/r2/buckets/cors/#example"
+			);
+		}
 
-        if (!force) {
+		if (!force) {
 			const confirmedRemoval = await confirm(
 				`Are you sure you want to overwrite the existing CORS configuration for bucket '${bucket}'?`
 			);
