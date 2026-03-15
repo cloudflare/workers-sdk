@@ -15,6 +15,7 @@
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
 		"check:format": "prettier . --check --ignore-unknown --cache",
+		"check:format:changesets": "prettier .changeset/*.md --check",
 		"check:lint": "dotenv -- turbo check:lint",
 		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",

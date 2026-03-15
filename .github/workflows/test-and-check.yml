@@ -44,6 +44,13 @@ jobs:
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
+      - name: Check for changeset formatting errors
+        # Note: we want to run the changesets format check before running the changeset step which deletes the changeset files
+        run: pnpm run check:format:changesets
+        env:
+          CI_OS: ${{ runner.os }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
       - name: Bump package versions
         run: node .github/changeset-version.js
         env:
