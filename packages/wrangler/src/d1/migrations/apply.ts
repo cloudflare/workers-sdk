@@ -10,12 +10,9 @@ import { isLocal } from "../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
-import {
-	getMigrationsPath,
-	getUnappliedMigrations,
-	initMigrationsTable,
-} from "./helpers";
+import { getMigrationsPath, getUnappliedMigrations, initMigrationsTable } from "./helpers";
 import type { ParseError } from "@cloudflare/workers-utils";
+
 
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {
@@ -66,9 +63,17 @@ export const d1MigrationsApplyCommand = createCommand({
 				"Specify directory to use for local persistence (you must use --local with this flag)",
 			requiresArg: true,
 		},
+		force: {
+			type: "boolean",
+			description: "Automatically apply all pending migrations without prompt",
+			default: false,
+		},
 	},
 	positionalArgs: ["database"],
-	async handler({ database, local, remote, persistTo, preview }, { config }) {
+	async handler(
+		{ database, local, remote, persistTo, preview, force },
+		{ config }
+	) {
 		if (!config.configPath) {
 			throw new UserError(
 				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
@@ -144,12 +149,19 @@ export const d1MigrationsApplyCommand = createCommand({
 		logger.log("Migrations to be applied:");
 		logger.table(unappliedMigrations.map((m) => ({ name: m.name })));
 
-		const ok = await confirm(
-			`About to apply ${unappliedMigrations.length} migration(s)
+		if (!force) {
+			const ok = await confirm(
+				`About to apply ${unappliedMigrations.length} migration(s)
 Your database may not be available to serve requests during the migration, continue?`
-		);
-		if (!ok) {
-			return;
+			);
+
+			if (!ok) {
+				return;
+			}
+		} else {
+			logger.log(
+				`--force passed, applying ${unappliedMigrations.length} migration(s) without prompt`
+			);
 		}
 
 		for (const migration of unappliedMigrations) {
