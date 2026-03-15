@@ -19,7 +19,7 @@
 		"create-vike": "0.0.592",
 		"create-vue": "3.22.0",
 		"create-waku": "0.12.5-1.0.0-alpha.5-0",
-		"@tanstack/create-start": "0.59.8",
+		"@tanstack/create-start": "0.59.10",
 		"gatsby": "5.16.1",
 		"sv": "0.12.4",
 		"nuxi": "3.33.1"
