@@ -1,5 +1,15 @@
 # miniflare
 
+## 4.20260312.1
+
+### Patch Changes
+
+- [#12869](https://github.com/cloudflare/workers-sdk/pull/12869) [`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8) Thanks [@emily-shen](https://github.com/emily-shen)! - Local explorer: validate host and origin headers before Miniflare modifies them
+
+  If `routes` are set, Miniflare will alter the host and origin headers to match, causing the local explorer to mistakenly identify and block same-origin requests.
+
+  Note the local explorer is a WIP experimental feature.
+
 ## 4.20260312.0
 
 ### Patch Changes
