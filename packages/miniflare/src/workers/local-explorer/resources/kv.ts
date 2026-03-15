@@ -207,13 +207,11 @@ async function executeListKeys(
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/get/
  */
-export async function getKVValue(c: AppContext) {
-	const namespace_id = c.req.param("namespace_id");
-	const key_name = c.req.param("key_name");
-	if (!namespace_id || !key_name) {
-		return errorResponse(400, 10000, "Missing required path parameters");
-	}
-
+export async function getKVValue(
+	c: AppContext,
+	namespace_id: string,
+	key_name: string
+) {
 	// Try local first
 	const kv = getKVBinding(c.env, namespace_id);
 	if (kv) {
@@ -248,13 +246,11 @@ export async function getKVValue(c: AppContext) {
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/update/
  */
-export async function putKVValue(c: AppContext) {
-	const namespace_id = c.req.param("namespace_id");
-	const key_name = c.req.param("key_name");
-	if (!namespace_id || !key_name) {
-		return errorResponse(400, 10000, "Missing required path parameters");
-	}
-
+export async function putKVValue(
+	c: AppContext,
+	namespace_id: string,
+	key_name: string
+) {
 	// Try local first
 	const kv = getKVBinding(c.env, namespace_id);
 	if (kv) {
@@ -349,13 +345,11 @@ async function executePutKVValue(
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/delete/
  */
-export async function deleteKVValue(c: AppContext) {
-	const namespace_id = c.req.param("namespace_id");
-	const key_name = c.req.param("key_name");
-	if (!namespace_id || !key_name) {
-		return errorResponse(400, 10000, "Missing required path parameters");
-	}
-
+export async function deleteKVValue(
+	c: AppContext,
+	namespace_id: string,
+	key_name: string
+) {
 	// Try local first
 	const kv = getKVBinding(c.env, namespace_id);
 	if (kv) {

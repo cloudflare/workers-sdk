@@ -165,17 +165,16 @@ app.get(
 	(c) => listKVKeys(c, c.req.valid("query"))
 );
 
-app.get(
-	"/api/storage/kv/namespaces/:namespace_id/values/:key_name",
-	getKVValue
+app.get("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
+	getKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
-app.put(
-	"/api/storage/kv/namespaces/:namespace_id/values/:key_name",
-	putKVValue
+
+app.put("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
+	putKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
-app.delete(
-	"/api/storage/kv/namespaces/:namespace_id/values/:key_name",
-	deleteKVValue
+
+app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
+	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
 
 app.post(
@@ -199,7 +198,7 @@ app.get(
 app.post(
 	"/api/d1/database/:database_id/raw",
 	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
-	(c) => rawD1Database(c, c.req.valid("json"))
+	(c) => rawD1Database(c, c.req.param("database_id"), c.req.valid("json"))
 );
 
 // ============================================================================

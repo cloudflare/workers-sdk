@@ -176,13 +176,9 @@ type RawDatabaseBody = z.output<typeof zD1RawDatabaseQueryData.shape.body>;
  */
 export async function rawD1Database(
 	c: AppContext,
+	databaseId: string,
 	body: RawDatabaseBody
 ): Promise<Response> {
-	const databaseId = c.req.param("database_id");
-	if (!databaseId) {
-		return errorResponse(400, 10000, "Missing database_id parameter");
-	}
-
 	// Try local first
 	const db = getD1Binding(c.env, databaseId);
 	if (db) {
