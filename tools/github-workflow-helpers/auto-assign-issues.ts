@@ -42,6 +42,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	vectorize: { em: "sejoker", pm: "jonesphillip" },
 	"vite-plugin": { em: "lrapoport-cf", pm: "mattietk" },
 	vitest: { em: "lrapoport-cf", pm: "mattietk" },
+	"workers for platforms": { pm: "dinasaur404" },
 	"workers vpc": { em: "efalcao", pm: "thomasgauvin" },
 	"Workers + Assets": { em: "dcartertwo", pm: "irvinebroque" },
 	"workers ai": { em: "jkipp-cloudflare" },
