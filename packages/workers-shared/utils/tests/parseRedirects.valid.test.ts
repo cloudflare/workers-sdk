@@ -345,15 +345,23 @@ test("parseRedirects should support inline comments with multiple hashes in URL 
 	});
 });
 
+test("parseRedirects should accept a line when only the comment causes it to exceed max line length", () => {
+	const maxLineLength = 20;
+	const result = parseRedirects(`/a /b 301 # ${"x".repeat(maxLineLength)}`, {
+		maxLineLength,
+	});
+	expect(result.invalid).toHaveLength(0);
+});
+
 test("parseRedirects should support custom limits", () => {
-	const aaa = Array(1001).fill("a").join("");
-	const bbb = Array(1001).fill("b").join("");
+	const aaa = "a".repeat(1001);
+	const bbb = "b".repeat(1001);
 	const huge_line = `/${aaa} /${bbb} 301`;
 	let input = `
     # Valid entry
     /a /b
     # Jumbo comment line OK, ignored as normal
-    ${Array(1001).fill("#").join("")}
+    ${"#".repeat(1001)}
     # Huge path names rejected
     ${huge_line}
   `;
