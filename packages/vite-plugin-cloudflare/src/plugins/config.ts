@@ -174,14 +174,16 @@ function getEnvironmentsConfig(
 						environmentName ===
 							ctx.resolvedPluginConfig.entryWorkerEnvironmentName);
 
+				const parentEnvironmentOptions = createCloudflareEnvironmentOptions({
+					...sharedOptions,
+					environmentName,
+					isEntryWorker,
+					parentEnvironmentOptions: undefined,
+				});
+
 				const parentConfig = [
 					environmentName,
-					createCloudflareEnvironmentOptions({
-						...sharedOptions,
-						environmentName,
-						isEntryWorker,
-						isParentEnvironment: true,
-					}),
+					parentEnvironmentOptions,
 				] as const;
 
 				const childConfigs = childEnvironmentNames.map(
@@ -192,7 +194,7 @@ function getEnvironmentsConfig(
 								...sharedOptions,
 								environmentName: childEnvironmentName,
 								isEntryWorker: false,
-								isParentEnvironment: false,
+								parentEnvironmentOptions,
 							}),
 						] as const
 				);
