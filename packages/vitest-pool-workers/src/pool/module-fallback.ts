@@ -335,6 +335,13 @@ export function findCjsEntryInExports(
 	exports: Record<string, unknown>,
 	esmRelPath: string
 ): string | undefined {
+	// Handle exports sugar syntax where the exports field is directly a
+	// conditions map (no subpath keys starting with ".")
+	const keys = Object.keys(exports);
+	if (keys.length > 0 && !keys.some((k) => k.startsWith("."))) {
+		return findCjsEntryInConditions(exports, esmRelPath);
+	}
+
 	for (const value of Object.values(exports)) {
 		if (typeof value !== "object" || value === null) {
 			continue;
