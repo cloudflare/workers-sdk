@@ -6,7 +6,6 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { isLocal } from "../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
@@ -75,8 +74,10 @@ export const d1MigrationsApplyCommand = createCommand({
 			);
 		}
 
+		// Migrations config lookup is only for local metadata (folder/table names).
+		// Remote execution resolves the real database UUID separately.
 		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
-			requireDatabaseId: !isLocal({ local, remote }),
+			requireDatabaseId: false,
 		});
 
 		if (!databaseInfo && remote) {

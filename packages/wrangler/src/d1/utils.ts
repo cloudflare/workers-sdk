@@ -53,15 +53,28 @@ export const getDatabaseByNameOrBinding = async (
 	accountId: string,
 	name: string
 ): Promise<Database> => {
-	const dbFromConfig = getDatabaseInfoFromConfig(config, name);
-	if (dbFromConfig) {
+	/**
+	 * Resolve a D1 database from a config binding/name for remote operations.
+	 *
+	 * If the binding in config already has a `database_id`, return that directly.
+	 * If it doesn't (for example, resource provisioning happened at deploy time),
+	 * fall back to account-level lookup by `database_name` so remote commands still work.
+	 */
+	const dbFromConfig = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
+	if (
+		dbFromConfig?.uuid !== undefined &&
+		dbFromConfig.uuid !== dbFromConfig.binding
+	) {
 		return dbFromConfig;
 	}
 
 	const allDBs = await listDatabases(config, accountId);
-	const matchingDB = allDBs.find((db) => db.name === name);
+	const remoteLookupName = dbFromConfig?.name ?? name;
+	const matchingDB = allDBs.find((db) => db.name === remoteLookupName);
 	if (!matchingDB) {
-		throw new UserError(`Couldn't find DB with name '${name}'`);
+		throw new UserError(`Couldn't find DB with name '${remoteLookupName}'`);
 	}
 	return matchingDB;
 };
