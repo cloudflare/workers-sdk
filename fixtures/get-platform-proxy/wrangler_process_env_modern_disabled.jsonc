@@ -1,0 +1,18 @@
+{
+	// Modern compat date but with explicit disable flag
+	// This should NOT auto-enable process.env population
+	"name": "get-platform-proxy-process-env-modern-disabled",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-01",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"nodejs_compat_do_not_populate_process_env",
+	],
+	"vars": {
+		"MY_VAR": "my-var-value",
+		"MY_JSON_VAR": {
+			"test": true,
+			"nested": { "value": 123 },
+		},
+	},
+}
