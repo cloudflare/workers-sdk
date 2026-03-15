@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
 import dotenvExpand from "dotenv-expand";
@@ -5,6 +6,27 @@ import { logger } from "../logger";
 import { caseInsensitiveEnv } from "./case-insensitive-env";
 
 const isWindows = process.platform === "win32";
+
+/**
+ * Regular expression to match a WRANGLER_IGNORE comment line.
+ * Matches lines like "# WRANGLER_IGNORE", "  #   WRANGLER_IGNORE  ", etc.
+ * Whitespace is allowed before the #, between # and WRANGLER_IGNORE, and after.
+ */
+const WRANGLER_IGNORE_PATTERN = /^\s*#\s*WRANGLER_IGNORE\s*$/;
+
+/**
+ * Checks if a file's contents indicate it should be ignored by Wrangler.
+ * A file is ignored if it contains a line matching "# WRANGLER_IGNORE"
+ * (whitespaces in the comment's line are ignored).
+ *
+ * @param contents - The contents of the file to check.
+ * @returns `true` if the file should be ignored, `false` otherwise.
+ */
+export function shouldIgnoreEnvFile(contents: string): boolean {
+	return contents
+		.split("\n")
+		.some((line) => WRANGLER_IGNORE_PATTERN.test(line));
+}
 
 /**
  * Generates the default array of `envFiles` for .env file loading.
@@ -45,21 +67,39 @@ export function loadDotEnv(
 	// The `parsedEnv` object will be mutated to contain the merged values.
 	const parsedEnv = isWindows ? caseInsensitiveEnv() : {};
 	for (const envPath of envPaths) {
-		// The `parsed` object only contains the values from the loaded .env file.
-		const { error, parsed } = dotenv.config({
-			path: envPath,
-			processEnv: parsedEnv,
-			override: true,
-		});
-		if (error) {
-			if ("code" in error && error.code === "ENOENT") {
+		// Read file contents first to check for ignore comment
+		let contents: string;
+		try {
+			contents = readFileSync(envPath, "utf-8");
+		} catch (error) {
+			if (
+				error instanceof Error &&
+				"code" in error &&
+				error.code === "ENOENT"
+			) {
 				logger.debug(
 					`.env file not found at "${envPath}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 				);
 			} else {
 				logger.debug(`Failed to load .env file "${envPath}":`, error);
 			}
-		} else if (parsed && !silent) {
+			continue;
+		}
+
+		// Check if file should be ignored
+		if (shouldIgnoreEnvFile(contents)) {
+			if (!silent) {
+				logger.info(
+					`Ignoring .env file "${envPath}" due to WRANGLER_IGNORE comment`
+				);
+			}
+			continue;
+		}
+
+		const parsed = dotenv.parse(contents);
+		Object.assign(parsedEnv, parsed);
+
+		if (!silent) {
 			const relativePath = path.relative(process.cwd(), envPath);
 			logger.log(`Using secrets defined in ${relativePath}`);
 		}
