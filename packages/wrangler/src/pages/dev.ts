@@ -85,7 +85,7 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<service>[^@#\s]+)(@(?<environment>.*)$)?(#(?<entrypoint>.*))?$/
 );
 
-const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
+const DEFAULT_IP = "127.0.0.1";
 const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
 
