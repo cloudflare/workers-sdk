@@ -15,11 +15,12 @@ export class Angular extends Framework {
 		outputDir,
 		dryRun,
 		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await updateAngularJson(workerName);
 			await overrideServerFile();
-			await installAdditionalDependencies(packageManager);
+			await installAdditionalDependencies(packageManager, isWorkspaceRoot);
 		}
 		return {
 			wranglerConfig: {
@@ -80,11 +81,15 @@ async function overrideServerFile() {
 	);
 }
 
-async function installAdditionalDependencies(packageManager: PackageManager) {
+async function installAdditionalDependencies(
+	packageManager: PackageManager,
+	isWorkspaceRoot: boolean
+) {
 	await installPackages(packageManager, ["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
 		doneText: `${brandColor("installed")}`,
+		isWorkspaceRoot,
 	});
 }
 
