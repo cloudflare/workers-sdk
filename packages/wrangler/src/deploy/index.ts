@@ -232,8 +232,8 @@ export const deployCommand = createCommand({
 		},
 		"containers-rollout": {
 			describe:
-				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
-			choices: ["immediate", "gradual"] as const,
+				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. If set to none, the Worker will be deployed without building or updating any Containers.",
+			choices: ["immediate", "gradual", "none"] as const,
 		},
 		tag: {
 			describe: "A tag for this Worker Version",
