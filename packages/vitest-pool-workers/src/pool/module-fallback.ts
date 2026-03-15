@@ -295,6 +295,123 @@ async function viteResolve(
 	return trimViteVersionHash(resolved.id);
 }
 
+/**
+ * When require() resolves to an ESM file (via the "import" export condition),
+ * find the CJS alternative from the package's exports map.
+ * workerd always uses the "import" condition even for require() calls,
+ * so we need to look up the "require" or "default" entry instead.
+ */
+export function findCjsExportAlternative(esmFilePath: string): string | undefined {
+	const cleanPath = esmFilePath.replace(/\?.*$/, "");
+	let dir = posixPath.dirname(cleanPath);
+	while (dir !== posixPath.dirname(dir)) {
+		const pkgPath = posixPath.join(dir, "package.json");
+		try {
+			const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+			if (pkg.exports) {
+				const relPath =
+					"./" + posixPath.relative(dir, cleanPath).replace(/\\/g, "/");
+				const cjsEntry = findCjsEntryInExports(pkg.exports, relPath);
+				if (cjsEntry) {
+					const cjsPath = posixPath.join(dir, cjsEntry);
+					if (isFile(cjsPath)) {
+						return cjsPath;
+					}
+				}
+			}
+			if (pkg.name) {
+				break;
+			}
+		} catch (e: unknown) {
+			if (!isFileNotFoundError(e)) {
+				throw e;
+			}
+		}
+		dir = posixPath.dirname(dir);
+	}
+}
+
+export function findCjsEntryInExports(
+	exports: Record<string, unknown>,
+	esmRelPath: string
+): string | undefined {
+	// Handle exports sugar syntax where the exports field is directly a
+	// conditions map (no subpath keys starting with ".")
+	const keys = Object.keys(exports);
+	if (keys.length > 0 && !keys.some((k) => k.startsWith("."))) {
+		return findCjsEntryInConditions(exports, esmRelPath);
+	}
+
+	for (const value of Object.values(exports)) {
+		if (typeof value !== "object" || value === null) {
+			continue;
+		}
+		const result = findCjsEntryInConditions(
+			value as Record<string, unknown>,
+			esmRelPath
+		);
+		if (result) {
+			return result;
+		}
+	}
+}
+
+export function findCjsEntryInConditions(
+	conditions: Record<string, unknown>,
+	resolvedRelPath: string
+): string | undefined {
+	// Case 1: resolved file came from "import", find CJS alternative
+	const importEntry = conditions.import;
+	const requireEntry = conditions.require || conditions.default;
+	if (
+		typeof importEntry === "string" &&
+		importEntry === resolvedRelPath &&
+		typeof requireEntry === "string" &&
+		requireEntry !== importEntry
+	) {
+		return requireEntry;
+	}
+
+	// Case 2: resolved file came from "default", but a "workerd"/"worker" condition
+	// exists at the same level with a better entry (e.g. pg-cloudflare)
+	const defaultEntry = conditions.default;
+	if (typeof defaultEntry === "string" && defaultEntry === resolvedRelPath) {
+		for (const condName of ["workerd", "worker"]) {
+			const condValue = conditions[condName];
+			if (condValue == null) {
+				continue;
+			}
+			if (typeof condValue === "string") {
+				if (condValue !== resolvedRelPath) {
+					return condValue;
+				}
+			} else if (typeof condValue === "object") {
+				const condObj = condValue as Record<string, unknown>;
+				const entry = condObj.require || condObj.default || condObj.import;
+				if (typeof entry === "string" && entry !== resolvedRelPath) {
+					return entry;
+				}
+			}
+		}
+	}
+
+	// Recurse into nested conditions
+	for (const [key, value] of Object.entries(conditions)) {
+		if (key === "import" || key === "require" || key === "default") {
+			continue;
+		}
+		if (typeof value === "object" && value !== null) {
+			const result = findCjsEntryInConditions(
+				value as Record<string, unknown>,
+				resolvedRelPath
+			);
+			if (result) {
+				return result;
+			}
+		}
+	}
+}
+
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: Vite.ViteDevServer,
@@ -307,6 +424,12 @@ async function resolve(
 
 	let filePath = maybeGetTargetFilePath(target);
 	if (filePath !== undefined) {
+		if (method === "require" && !specifier.startsWith("node:")) {
+			const cjsAlt = findCjsExportAlternative(filePath);
+			if (cjsAlt) {
+				return cjsAlt;
+			}
+		}
 		return filePath;
 	}
 
@@ -331,7 +454,19 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	const resolved = await viteResolve(
+		vite,
+		specifier,
+		referrer,
+		method === "require"
+	);
+	if (method === "require" && !specifier.startsWith("node:")) {
+		const cjsAlt = findCjsExportAlternative(resolved);
+		if (cjsAlt) {
+			return cjsAlt;
+		}
+	}
+	return resolved;
 }
 
 function buildRedirectResponse(filePath: string) {
