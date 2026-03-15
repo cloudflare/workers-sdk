@@ -12,6 +12,7 @@ export const queuesSubscriptionGetCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["queue"],
 	args: {

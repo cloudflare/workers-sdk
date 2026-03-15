@@ -96,6 +96,7 @@ export const r2ObjectGetCommand = createCommand({
 		printResourceLocation(args) {
 			return !args?.pipe;
 		},
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["objectPath"],
 	async handler(objectGetYargs, { config }) {
@@ -256,6 +257,7 @@ export const r2ObjectPutCommand = createCommand({
 		printResourceLocation(args) {
 			return !args?.pipe;
 		},
+		skipConfigValidationErrors: true,
 	},
 	async handler(yArgs, { config }) {
 		const { file, pipe } = yArgs;
@@ -422,6 +424,7 @@ export const r2ObjectDeleteCommand = createCommand({
 	},
 	behaviour: {
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	async handler(args) {
 		const localMode = isLocal(args);
@@ -481,6 +484,7 @@ export const r2BulkPutCommand = createCommand({
 	},
 	behaviour: {
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	async handler(yArgs, { config }) {
 		if (!isValidR2BucketName(yArgs.bucket)) {

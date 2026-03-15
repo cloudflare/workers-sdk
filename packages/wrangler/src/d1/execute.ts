@@ -52,6 +52,7 @@ export const d1ExecuteCommand = createCommand({
 	behaviour: {
 		printBanner: (args) => !args.json,
 		printResourceLocation: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		database: {

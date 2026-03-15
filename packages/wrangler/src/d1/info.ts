@@ -19,6 +19,7 @@ export const d1InfoCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

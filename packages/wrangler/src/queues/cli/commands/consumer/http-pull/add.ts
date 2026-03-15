@@ -10,6 +10,9 @@ export const queuesConsumerHttpAddCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		"queue-name": {
 			type: "string",

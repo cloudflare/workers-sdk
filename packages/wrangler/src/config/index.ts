@@ -29,6 +29,12 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	// Used by the Vite plugin
 	// If set to `true`, the `main` field is not converted to an absolute path
 	preserveOriginalMain?: boolean;
+	/**
+	 * If `true`, config validation errors are demoted to warnings instead of
+	 * throwing a fatal error. Use this for commands that operate on account-level
+	 * resources and don't actually require a valid worker configuration.
+	 */
+	skipValidationErrors?: boolean;
 };
 
 /**
@@ -71,7 +77,13 @@ export function readConfig(
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
-		throw new UserError(diagnostics.renderErrors());
+		if (options?.skipValidationErrors) {
+			logger.warn(
+				`This command does not require a valid Wrangler configuration, but the following errors were found:\n${diagnostics.renderErrors()}`
+			);
+		} else {
+			throw new UserError(diagnostics.renderErrors());
+		}
 	}
 
 	return config;

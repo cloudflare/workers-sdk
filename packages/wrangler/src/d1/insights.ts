@@ -63,6 +63,7 @@ export const d1InsightsCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

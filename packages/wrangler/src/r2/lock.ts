@@ -27,6 +27,9 @@ export const r2BucketLockListCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -69,6 +72,9 @@ export const r2BucketLockAddCommand = createCommand({
 		description: "Add a lock rule to an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket", "name", "prefix"],
 	args: {
@@ -257,6 +263,9 @@ export const r2BucketLockRemoveCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -321,6 +330,9 @@ export const r2BucketLockSetCommand = createCommand({
 		description: "Set the lock configuration for an R2 bucket from a JSON file",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

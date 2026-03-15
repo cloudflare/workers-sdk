@@ -212,6 +212,38 @@ describe("r2", () => {
 					creation_date:  01-01-2001"
 				`);
 			});
+
+			it("should proceed with a warning when wrangler.json has validation errors", async () => {
+				// Write a config with an invalid r2 bucket name (angle brackets are not allowed)
+				// This simulates the common case of a placeholder value being left in wrangler.json
+				writeWranglerConfig({
+					r2_buckets: [{ binding: "R2", bucket_name: "<my-bucket-name>" }],
+				});
+
+				const mockBuckets = [{ name: "real-bucket", creation_date: "01-01-2001" }];
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets",
+						async () => {
+							return HttpResponse.json(
+								createFetchResult({ buckets: mockBuckets })
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				// Should NOT throw even though the config has a validation error
+				await runWrangler("r2 bucket list");
+
+				// The command output should include the bucket listing
+				expect(std.out).toContain("real-bucket");
+				// A warning about the invalid config should be emitted, not a fatal error
+				expect(std.warn).toContain(
+					"This command does not require a valid Wrangler configuration"
+				);
+				expect(std.err).toBe("");
+			});
 		});
 
 		describe("info", () => {

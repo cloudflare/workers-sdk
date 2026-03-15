@@ -15,6 +15,9 @@ export const hyperdriveUpdateCommand = createCommand({
 		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		id: {
 			type: "string",

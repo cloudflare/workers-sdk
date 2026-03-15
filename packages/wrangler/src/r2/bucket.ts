@@ -39,6 +39,9 @@ export const r2BucketCreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["name"],
 	args: {
 		name: {
@@ -133,6 +136,9 @@ export const r2BucketUpdateStorageClassCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["name"],
 	args: {
 		name: {
@@ -183,6 +189,9 @@ export const r2BucketListCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		jurisdiction: {
 			describe: "The jurisdiction to list",
@@ -229,6 +238,7 @@ export const r2BucketInfoCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 
 	async handler(args, { config }) {
@@ -274,6 +284,9 @@ export const r2BucketDeleteCommand = createCommand({
 		description: "Delete an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

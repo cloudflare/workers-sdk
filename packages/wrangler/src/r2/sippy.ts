@@ -23,6 +23,9 @@ export const r2BucketSippyEnableCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["name"],
 	args: {
 		name: {
@@ -260,6 +263,9 @@ export const r2BucketSippyDisableCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["name"],
 	args: {
 		name: {
@@ -288,6 +294,9 @@ export const r2BucketSippyGetCommand = createCommand({
 		description: "Check the status of Sippy on an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["name"],
 	args: {

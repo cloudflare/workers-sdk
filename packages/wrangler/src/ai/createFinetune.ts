@@ -17,6 +17,9 @@ export const aiFineTuneCreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: AI",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		model_name: {
 			type: "string",

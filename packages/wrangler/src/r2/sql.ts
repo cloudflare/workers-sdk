@@ -78,6 +78,9 @@ export const r2SqlQueryCommand = createCommand({
 		status: "open beta",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["warehouse", "query"],
 	args: {
 		warehouse: {

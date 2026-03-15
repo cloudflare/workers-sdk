@@ -38,6 +38,9 @@ export const r2BucketCatalogEnableCommand = createCommand({
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -77,6 +80,9 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		description: "Disable the data catalog for an R2 bucket",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -121,6 +127,9 @@ export const r2BucketCatalogGetCommand = createCommand({
 		description: "Get the status of the data catalog for an R2 bucket",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -183,6 +192,9 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 			"Enable automatic file compaction for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -280,6 +292,9 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
 		bucket: {
@@ -365,6 +380,9 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 			"Enable automatic snapshot expiration for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -467,6 +485,9 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			"Disable automatic snapshot expiration for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {

@@ -25,6 +25,7 @@ export const d1ExportCommand = createCommand({
 	},
 	behaviour: {
 		printResourceLocation: true,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

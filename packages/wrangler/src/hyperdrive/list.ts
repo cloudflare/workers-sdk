@@ -9,6 +9,9 @@ export const hyperdriveListCommand = createCommand({
 		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {},
 	async handler(_, { config }) {
 		logger.log(`📋 Listing Hyperdrive configs`);
