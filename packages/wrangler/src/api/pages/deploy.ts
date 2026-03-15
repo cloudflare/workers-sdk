@@ -6,6 +6,8 @@ import { cwd } from "node:process";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	ParseError,
+	parseJSON,
 } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
@@ -33,6 +35,7 @@ import { getPagesTmpDir, truncateUtf8Bytes } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import type { Deployment, Project } from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -388,7 +391,10 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
+				const routesCustomJSON = parseJSON(
+					_routesCustom,
+					join(directory, "_routes.json")
+				) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
@@ -399,6 +405,16 @@ export async function deploy({
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
+				} else if (err instanceof ParseError) {
+					throw new FatalError(
+						`Malformed JSON in _routes.json at ${join(directory, "_routes.json")}: ${err.message}`,
+						1
+					);
+				} else {
+					throw new FatalError(
+						`Could not process _routes.json at ${join(directory, "_routes.json")}: ${err}`,
+						1
+					);
 				}
 			}
 		}
@@ -423,7 +439,10 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
+				const routesCustomJSON = parseJSON(
+					_routesCustom,
+					join(directory, "_routes.json")
+				) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
@@ -434,6 +453,16 @@ export async function deploy({
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
+				} else if (err instanceof ParseError) {
+					throw new FatalError(
+						`Malformed JSON in _routes.json at ${join(directory, "_routes.json")}: ${err.message}`,
+						1
+					);
+				} else {
+					throw new FatalError(
+						`Could not process _routes.json at ${join(directory, "_routes.json")}: ${err}`,
+						1
+					);
 				}
 			}
 		} else if (routesOutputPath) {
