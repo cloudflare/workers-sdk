@@ -33,7 +33,7 @@ import {
 	listStores,
 } from "../secrets-store/client";
 import { validateSecretName } from "../secrets-store/commands";
-import { getAccountId } from "../user";
+import { getOrSelectAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { formatError } from "./deploy";
 import { containersScope } from ".";
@@ -162,7 +162,7 @@ async function registryConfigureCommand(
 	let private_credential: ImageRegistryAuth["private_credential"];
 	if (!isFedRAMPHigh) {
 		log("\nSetting up integration with Secrets Store...\n");
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 
 		if (!secretStoreId) {
 			const stores = await listStores(config, accountId);
@@ -466,7 +466,7 @@ async function registryDeleteCommand(
 			}
 		}
 
-		const accountId = await getAccountId(config);
+		const accountId = await getOrSelectAccountId(config);
 
 		try {
 			const secretId = await promiseSpinner(

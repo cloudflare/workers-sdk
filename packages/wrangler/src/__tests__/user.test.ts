@@ -9,11 +9,14 @@ import {
 import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
+import { saveToConfigCache } from "../config-cache";
 import {
+	fetchAllAccounts,
 	getAccountFromCache,
-	getAccountId,
+	getActiveAccountId,
 	getAuthConfigFilePath,
 	getOAuthTokenFromLocalState,
+	getOrSelectAccountId,
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	requireAuth,
@@ -600,7 +603,7 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
 		});
 
-		it("should only prompt for account selection once when getAccountId is called multiple times", async ({
+		it("should only prompt for account selection once when getOrSelectAccountId is called multiple times", async ({
 			expect,
 		}) => {
 			setIsTTY(true);
@@ -626,7 +629,7 @@ describe("User", () => {
 			});
 
 			// First call - should prompt for account selection
-			const firstAccountId = await getAccountId({});
+			const firstAccountId = await getOrSelectAccountId({});
 			expect(firstAccountId).toBe("account-1");
 
 			// Verify account is cached
@@ -634,11 +637,11 @@ describe("User", () => {
 			expect(cachedAccount).toEqual({ id: "account-1", name: "Account One" });
 
 			// Second call - should use cached account, not prompt again
-			const secondAccountId = await getAccountId({});
+			const secondAccountId = await getOrSelectAccountId({});
 			expect(secondAccountId).toBe("account-1");
 
 			// Third call - should still use cached account
-			const thirdAccountId = await getAccountId({});
+			const thirdAccountId = await getOrSelectAccountId({});
 			expect(thirdAccountId).toBe("account-1");
 
 			// If mockSelect was called more than once, the test would fail because
@@ -649,7 +652,9 @@ describe("User", () => {
 			expect,
 		}) => {
 			// When config has account_id, it should be used directly without prompting
-			const accountId = await getAccountId({ account_id: "config-account-id" });
+			const accountId = await getOrSelectAccountId({
+				account_id: "config-account-id",
+			});
 			expect(accountId).toBe("config-account-id");
 
 			// Cache should not be populated when using config account_id
@@ -668,7 +673,7 @@ describe("User", () => {
 				},
 			]);
 
-			const accountId = await getAccountId({});
+			const accountId = await getOrSelectAccountId({});
 			expect(accountId).toBe("single-account");
 
 			// Account should still be cached even without prompting
@@ -688,8 +693,186 @@ describe("User", () => {
 			]);
 
 			// Second call should use cache
-			const secondAccountId = await getAccountId({});
+			const secondAccountId = await getOrSelectAccountId({});
 			expect(secondAccountId).toBe("single-account");
+		});
+	});
+
+	describe("getActiveAccountId", () => {
+		it("should return config.account_id when set", ({ expect }) => {
+			const result = getActiveAccountId({ account_id: "from-config" });
+			expect(result).toBe("from-config");
+		});
+
+		it("should return CLOUDFLARE_ACCOUNT_ID env var when config has no account_id", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+			const result = getActiveAccountId({});
+			expect(result).toBe("from-env");
+		});
+
+		it("should prefer config.account_id over env var and cache", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+			// Prime the cache via the config cache file
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "from-cache", name: "Cached Account" },
+			});
+
+			const result = getActiveAccountId({ account_id: "from-config" });
+			expect(result).toBe("from-config");
+		});
+
+		it("should prefer env var over cache", ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "from-cache", name: "Cached Account" },
+			});
+
+			const result = getActiveAccountId({});
+			expect(result).toBe("from-env");
+		});
+
+		it("should return cached account when config and env var are not set", ({
+			expect,
+		}) => {
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "from-cache", name: "Cached Account" },
+			});
+
+			const result = getActiveAccountId({});
+			expect(result).toBe("from-cache");
+		});
+
+		it("should return undefined when no source is available", ({ expect }) => {
+			const result = getActiveAccountId({});
+			expect(result).toBeUndefined();
+		});
+	});
+
+	describe("fetchAllAccounts", () => {
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
+		});
+
+		it("should return accounts from the API", async ({ expect }) => {
+			mockGetMemberships([
+				{
+					id: "membership-1",
+					account: { id: "account-1", name: "Account One" },
+				},
+				{
+					id: "membership-2",
+					account: { id: "account-2", name: "Account Two" },
+				},
+			]);
+
+			const accounts = await fetchAllAccounts({});
+			expect(accounts).toEqual([
+				{ id: "account-1", name: "Account One" },
+				{ id: "account-2", name: "Account Two" },
+			]);
+		});
+
+		it("should throw when no accounts are found", async ({ expect }) => {
+			mockGetMemberships([]);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/Failed to automatically retrieve account IDs for the logged in user/
+			);
+		});
+
+		it("should throw a helpful error on 9109 permission error", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					"*/memberships",
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [{ code: 9109, message: "Insufficient permissions" }],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(fetchAllAccounts({})).rejects.toThrowError(
+				/incorrect permissions on your API token/
+			);
+		});
+	});
+
+	describe("getOrSelectAccountId with env var", () => {
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
+		});
+
+		it("should return env var without making API calls", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
+
+			// No mockGetMemberships — if an API call is made, it will fail
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("env-account-id");
+		});
+
+		it("should prefer env var over cached account", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
+			saveToConfigCache("wrangler-account.json", {
+				account: { id: "cached-account-id", name: "Cached Account" },
+			});
+
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("env-account-id");
+		});
+
+		it("should not write to cache when using env var", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id");
+
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("env-account-id");
+
+			// Cache should remain empty — env var path is side-effect-free
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toBeUndefined();
+		});
+
+		it("should not write to cache when using config account_id", async ({
+			expect,
+		}) => {
+			const accountId = await getOrSelectAccountId({
+				account_id: "config-account-id",
+			});
+			expect(accountId).toBe("config-account-id");
+
+			// Cache should remain empty — config path is side-effect-free
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toBeUndefined();
+		});
+
+		it("should write to cache when account is resolved via API", async ({
+			expect,
+		}) => {
+			mockGetMemberships([
+				{
+					id: "membership-1",
+					account: { id: "api-account", name: "API Account" },
+				},
+			]);
+
+			const accountId = await getOrSelectAccountId({});
+			expect(accountId).toBe("api-account");
+
+			// Cache should be populated from the API path
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toEqual({
+				id: "api-account",
+				name: "API Account",
+			});
 		});
 	});
 });
