@@ -8,6 +8,7 @@ export type ConfigurationOptions = {
 	workerName: string;
 	dryRun: boolean;
 	packageManager: PackageManager;
+	isWorkspaceRoot: boolean;
 };
 
 export type PackageJsonScriptsOverrides = {

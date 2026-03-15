@@ -103,11 +103,14 @@ export async function runAutoConfig(
 
 		const { packageManager } = autoConfigDetails;
 
+		const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
+
 		const dryRunConfigurationResults =
 			await autoConfigDetails.framework.configure({
 				outputDir: autoConfigDetails.outputDir,
 				projectPath: autoConfigDetails.projectPath,
 				workerName: autoConfigDetails.workerName,
+				isWorkspaceRoot,
 				dryRun: true,
 				packageManager,
 			});
@@ -165,13 +168,14 @@ export async function runAutoConfig(
 		);
 
 		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-			await installWrangler(packageManager);
+			await installWrangler(packageManager, isWorkspaceRoot);
 		}
 
 		const configurationResults = await autoConfigDetails.framework.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
+			isWorkspaceRoot,
 			dryRun: false,
 			packageManager,
 		});
