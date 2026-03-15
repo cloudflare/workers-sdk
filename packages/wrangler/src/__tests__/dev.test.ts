@@ -1237,14 +1237,14 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("ip", () => {
-		it("should default ip to localhost", async () => {
+		it("should default ip to 127.0.0.1", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
 			expect(config.dev.server?.hostname).toEqual(
-				process.platform === "win32" ? "127.0.0.1" : "localhost"
+				"127.0.0.1"
 			);
 		});
 
@@ -1558,7 +1558,7 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
 			expect(config.dev.server?.hostname).toEqual(
-				process.platform === "win32" ? "127.0.0.1" : "localhost"
+				"127.0.0.1"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
