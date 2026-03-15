@@ -555,24 +555,31 @@ export class InspectorProxyWorker implements DurableObject {
 			);
 		} else {
 			devtools.addEventListener("message", this.handleDevToolsIncomingMessage);
+			const disconnectDevtools = () => {
+				if (this.websockets.devtools === devtools) {
+					this.websockets.devtools = undefined;
+
+					// Notify the runtime to disable the debugger when DevTools disconnects.
+					if (this.websockets.runtime) {
+						this.sendRuntimeMessage({
+							id: this.nextCounter(),
+							method: "Debugger.disable",
+						});
+					}
+				}
+			};
 			devtools.addEventListener("close", (event) => {
 				this.sendDebugLog(
 					"DEVTOOLS WEBSOCKET CLOSED",
 					event.code,
 					event.reason
 				);
-
-				if (this.websockets.devtools === devtools) {
-					this.websockets.devtools = undefined;
-				}
+				disconnectDevtools();
 			});
 			devtools.addEventListener("error", (event) => {
 				const error = serialiseError(event.error);
 				this.sendDebugLog("DEVTOOLS WEBSOCKET ERROR", error);
-
-				if (this.websockets.devtools === devtools) {
-					this.websockets.devtools = undefined;
-				}
+				disconnectDevtools();
 			});
 
 			// Since Wrangler proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
