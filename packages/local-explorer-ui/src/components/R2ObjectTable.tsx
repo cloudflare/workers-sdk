@@ -1,0 +1,308 @@
+import { Menu } from "@base-ui/react/menu";
+import { cn } from "@cloudflare/kumo";
+import {
+	DotsThreeIcon,
+	DownloadIcon,
+	FileIcon,
+	FolderIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
+import type { R2Object } from "../api";
+
+interface R2ObjectTableProps {
+	bucketName: string;
+	objects: R2Object[];
+	delimitedPrefixes: string[];
+	currentPrefix: string;
+	onNavigateToPrefix: (prefix: string) => void;
+	onDelete: (keys: string[]) => void;
+}
+
+function formatSize(bytes: number | undefined): string {
+	if (bytes === undefined || bytes === 0) {
+		return "-";
+	}
+	const units = ["B", "KB", "MB", "GB", "TB"];
+	let unitIndex = 0;
+	let size = bytes;
+	while (size >= 1024 && unitIndex < units.length - 1) {
+		size /= 1024;
+		unitIndex++;
+	}
+	return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
+}
+
+function formatDate(dateString: string | undefined): string {
+	if (!dateString) {
+		return "-";
+	}
+	try {
+		const date = new Date(dateString);
+		return date.toLocaleDateString(undefined, {
+			year: "numeric",
+			month: "short",
+			day: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+	} catch {
+		return "-";
+	}
+}
+
+function getDisplayName(key: string, currentPrefix: string): string {
+	const withoutPrefix = key.startsWith(currentPrefix)
+		? key.slice(currentPrefix.length)
+		: key;
+	return withoutPrefix;
+}
+
+function getContentType(obj: R2Object): string {
+	return obj.http_metadata?.contentType ?? "application/octet-stream";
+}
+
+interface ActionMenuProps {
+	onDownload?: () => void;
+	onDelete: () => void;
+	isDirectory?: boolean;
+}
+
+function ActionMenu({ onDownload, onDelete, isDirectory }: ActionMenuProps) {
+	return (
+		<Menu.Root>
+			<Menu.Trigger
+				className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-text-secondary transition-[background-color,color] hover:bg-border hover:text-text"
+				aria-label="Actions"
+			>
+				<DotsThreeIcon size={16} weight="bold" />
+			</Menu.Trigger>
+			<Menu.Portal>
+				<Menu.Positioner sideOffset={4} align="end">
+					<Menu.Popup className="z-[100] min-w-24 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-[ending-style]:-translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:-translate-y-1 data-[starting-style]:opacity-0">
+						{!isDirectory && onDownload && (
+							<>
+								<Menu.Item
+									className="inline-flex w-full cursor-pointer items-center gap-1 border-none bg-transparent px-3 py-2 text-left text-sm text-text transition-colors hover:bg-bg-secondary data-[highlighted]:bg-bg-secondary dark:hover:bg-bg-tertiary dark:data-[highlighted]:bg-bg-tertiary"
+									onClick={onDownload}
+								>
+									<DownloadIcon />
+									<span>Download</span>
+								</Menu.Item>
+								<Menu.Separator className="h-px bg-border" />
+							</>
+						)}
+						<Menu.Item
+							className="inline-flex w-full cursor-pointer items-center gap-1 border-none bg-transparent px-3 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/8 data-[highlighted]:bg-danger/8"
+							onClick={onDelete}
+						>
+							<TrashIcon />
+							<span>Delete</span>
+						</Menu.Item>
+					</Menu.Popup>
+				</Menu.Positioner>
+			</Menu.Portal>
+		</Menu.Root>
+	);
+}
+
+export function R2ObjectTable({
+	bucketName,
+	objects,
+	delimitedPrefixes,
+	currentPrefix,
+	onNavigateToPrefix,
+	onDelete,
+}: R2ObjectTableProps) {
+	const handleDownload = (obj: R2Object) => {
+		if (!obj.key) {
+			return;
+		}
+		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(bucketName)}/objects/${encodeURIComponent(obj.key)}`;
+		const link = document.createElement("a");
+		link.href = downloadUrl;
+		link.download = obj.key.split("/").pop() || "download";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	};
+
+	// Combine directories and files for display
+	const items: Array<
+		{ type: "directory"; prefix: string } | { type: "file"; object: R2Object }
+	> = [
+		...delimitedPrefixes.map((prefix) => ({
+			type: "directory" as const,
+			prefix,
+		})),
+		...objects
+			.filter((obj) => {
+				// Filter out "directory marker" objects (zero-byte objects ending in /)
+				const key = obj.key ?? "";
+				if (key.endsWith("/") && obj.size === 0) {
+					return false;
+				}
+				return true;
+			})
+			.map((object) => ({ type: "file" as const, object })),
+	];
+
+	if (items.length === 0) {
+		return null;
+	}
+
+	return (
+		<table className="w-full border-separate border-spacing-0 rounded-lg border border-border bg-bg">
+			<thead>
+				<tr>
+					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase first:rounded-tl-[7px]">
+						Objects
+					</th>
+					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase">
+						Type
+					</th>
+					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase">
+						Size
+					</th>
+					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase">
+						Modified
+					</th>
+					<th className="w-12 border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase last:rounded-tr-[7px]"></th>
+				</tr>
+			</thead>
+			<tbody>
+				{items.map((item, index) => {
+					const isLast = index === items.length - 1;
+
+					if (item.type === "directory") {
+						const displayName = getDisplayName(item.prefix, currentPrefix);
+						return (
+							<tr key={item.prefix} className="group hover:bg-bg-tertiary">
+								<td
+									className={cn(
+										"px-3 py-2 text-left",
+										isLast
+											? "border-b-0 first:rounded-bl-[7px]"
+											: "border-b border-border"
+									)}
+								>
+									<button
+										className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
+										onClick={() => onNavigateToPrefix(item.prefix)}
+									>
+										<FolderIcon
+											size={16}
+											className="text-orange-600 dark:text-orange-400"
+										/>
+										<span className="font-medium">{displayName}</span>
+									</button>
+								</td>
+								<td
+									className={cn(
+										"px-3 py-2 text-text-secondary",
+										isLast ? "border-b-0" : "border-b border-border"
+									)}
+								>
+									Directory
+								</td>
+								<td
+									className={cn(
+										"px-3 py-2 text-text-secondary",
+										isLast ? "border-b-0" : "border-b border-border"
+									)}
+								>
+									-
+								</td>
+								<td
+									className={cn(
+										"px-3 py-2 text-text-secondary",
+										isLast ? "border-b-0" : "border-b border-border"
+									)}
+								>
+									-
+								</td>
+								<td
+									className={cn(
+										"px-3 py-2 text-right whitespace-nowrap",
+										isLast
+											? "border-b-0 last:rounded-br-[7px]"
+											: "border-b border-border"
+									)}
+								>
+									<ActionMenu
+										isDirectory
+										onDelete={() => onDelete([item.prefix])}
+									/>
+								</td>
+							</tr>
+						);
+					}
+
+					const obj = item.object;
+					const key = obj.key ?? "";
+					const displayName = getDisplayName(key, currentPrefix);
+					const contentType = getContentType(obj);
+
+					return (
+						<tr key={key} className="group hover:bg-bg-tertiary">
+							<td
+								className={cn(
+									"px-3 py-2 text-left",
+									isLast
+										? "border-b-0 first:rounded-bl-[7px]"
+										: "border-b border-border"
+								)}
+							>
+								<Link
+									to="/r2/$bucketName/object/$"
+									params={{ bucketName, _splat: key }}
+									className="flex items-center gap-2 text-text no-underline hover:text-primary"
+								>
+									<FileIcon size={16} className="text-muted" />
+									<span className="font-medium">{displayName}</span>
+								</Link>
+							</td>
+							<td
+								className={cn(
+									"px-3 py-2 font-mono text-xs text-text-secondary",
+									isLast ? "border-b-0" : "border-b border-border"
+								)}
+							>
+								{contentType}
+							</td>
+							<td
+								className={cn(
+									"px-3 py-2 text-text-secondary",
+									isLast ? "border-b-0" : "border-b border-border"
+								)}
+							>
+								{formatSize(obj.size)}
+							</td>
+							<td
+								className={cn(
+									"px-3 py-2 text-text-secondary",
+									isLast ? "border-b-0" : "border-b border-border"
+								)}
+							>
+								{formatDate(obj.last_modified)}
+							</td>
+							<td
+								className={cn(
+									"px-3 py-2 text-right whitespace-nowrap",
+									isLast
+										? "border-b-0 last:rounded-br-[7px]"
+										: "border-b border-border"
+								)}
+							>
+								<ActionMenu
+									onDownload={() => handleDownload(obj)}
+									onDelete={() => onDelete([key])}
+								/>
+							</td>
+						</tr>
+					);
+				})}
+			</tbody>
+		</table>
+	);
+}
