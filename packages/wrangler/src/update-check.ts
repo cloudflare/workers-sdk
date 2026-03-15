@@ -6,6 +6,13 @@ import {
 import type { Result } from "update-check";
 
 async function doUpdateCheck(): Promise<string | undefined> {
+	// Allow overriding the latest version for testing purposes
+	// This is useful for testing the agentic version warning without waiting for a real update
+	const fakeVersion = process.env.__WRANGLER_TEST_FAKE_LATEST_VERSION__;
+	if (fakeVersion) {
+		return fakeVersion;
+	}
+
 	let update: Result | null = null;
 	// `check-update` only requires the name and version to check. This way we
 	// don't have to bundle the entire `package.json` in the final build.
