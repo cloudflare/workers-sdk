@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
+import {
+	clearOscProgress,
+	ProgressState,
+	registerOscProgressCleanup,
+	writeOscProgress,
+} from "@cloudflare/cli";
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import {
 	isOptionalProperty,
@@ -300,11 +306,17 @@ function logBulkProgress(
 	index: number,
 	total: number
 ) {
+	const percent = Math.floor((100 * index) / total);
 	logger.log(
-		`${operation === "put" ? "Uploaded" : "Deleted"} ${Math.floor(
-			(100 * index) / total
-		)}% (${formatNumber(index)} out of ${formatNumber(total)})`
+		`${operation === "put" ? "Uploaded" : "Deleted"} ${percent}% (${formatNumber(index)} out of ${formatNumber(total)})`
 	);
+
+	writeOscProgress(ProgressState.Normal, percent);
+
+	// Clear progress when complete
+	if (index >= total) {
+		clearOscProgress();
+	}
 }
 
 type BulkGetResponse = {
@@ -343,6 +355,10 @@ export async function putKVBulkKeyValue(
 	quiet = false,
 	abortSignal?: AbortSignal
 ) {
+	if (!quiet && keyValues.length > BATCH_KEY_MAX) {
+		registerOscProgressCleanup();
+	}
+
 	for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
 		if (!quiet && keyValues.length > BATCH_KEY_MAX) {
 			logBulkProgress("put", index, keyValues.length);
@@ -373,6 +389,10 @@ export async function deleteKVBulkKeyValue(
 	keys: string[],
 	quiet = false
 ) {
+	if (!quiet && keys.length > BATCH_KEY_MAX) {
+		registerOscProgressCleanup();
+	}
+
 	for (let index = 0; index < keys.length; index += BATCH_KEY_MAX) {
 		if (!quiet && keys.length > BATCH_KEY_MAX) {
 			logBulkProgress("delete", index, keys.length);

@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import {
+	clearOscProgress,
+	ProgressState,
+	registerOscProgressCleanup,
+	writeOscProgress,
+} from "@cloudflare/cli";
 import { createPatternMatcher } from "@cloudflare/workers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -271,6 +277,7 @@ export async function syncWorkersSite(
 	if (uploadCount > 0) {
 		const s = pluralise(uploadCount);
 		logger.info(`Uploading ${formatNumber(uploadCount)} new asset${s}...`);
+		registerOscProgressCleanup();
 	}
 	if (skipCount > 0) {
 		const s = pluralise(skipCount);
@@ -341,11 +348,13 @@ export async function syncWorkersSite(
 					uploadedCount
 				)} out of ${formatNumber(uploadCount)}]`
 			);
+			writeOscProgress(ProgressState.Normal, percent);
 		}
 	});
 	try {
 		// Wait for all uploaders to complete, or one to fail
 		await Promise.all(uploaders);
+		clearOscProgress();
 	} catch (e) {
 		// If any uploader fails, abort the others
 		logger.info(`Upload failed, aborting...`);

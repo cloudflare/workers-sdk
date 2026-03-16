@@ -278,3 +278,10 @@ export const error = (
 
 export { checkMacOSVersion } from "./check-macos-version";
 export { showCursor } from "./cursor";
+export {
+	clearOscProgress,
+	ProgressState,
+	registerOscProgressCleanup,
+	supportsOscProgress,
+	writeOscProgress,
+} from "./osc-progress";

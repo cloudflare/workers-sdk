@@ -8,6 +8,12 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { CancelError } from "./error";
+import {
+	clearOscProgress,
+	ProgressState,
+	registerOscProgressCleanup,
+	writeOscProgress,
+} from "./osc-progress";
 import SelectRefreshablePrompt from "./select-list";
 import { stdout } from "./streams";
 import {
@@ -638,12 +644,22 @@ export const spinner = (
 	let loop: ReturnType<typeof setTimeout> | null = null;
 	let startMsg: string;
 	let currentMsg: string;
+	let hasOscProgress = false;
 
 	function clearLoop() {
 		if (loop) {
 			clearTimeout(loop);
 		}
 		loop = null;
+	}
+
+	function ensureOscCleanup(): void {
+		if (hasOscProgress) {
+			return;
+		}
+
+		registerOscProgressCleanup();
+		hasOscProgress = true;
 	}
 
 	return {
@@ -672,10 +688,20 @@ export const spinner = (
 				logRaw(`${leftT} ${startMsg}`);
 			}
 		},
-		update(msg: string) {
+		update(msg: string, options?: { progress?: number }) {
 			currentMsg = msg;
+
+			if (options?.progress !== undefined) {
+				this.setProgress(options.progress);
+			}
 		},
 		stop(msg?: string) {
+			// Clear OSC progress indicator, if it was used
+			if (hasOscProgress) {
+				clearOscProgress();
+				hasOscProgress = false;
+			}
+
 			if (isInteractive()) {
 				// Write the final message and clear the loop
 				logUpdate.clear();
@@ -691,6 +717,47 @@ export const spinner = (
 				}
 				newline();
 			}
+		},
+
+		/**
+		 * Set determinate progress (0-100).
+		 *
+		 * Displays progress in the terminal tab/taskbar on supported terminals.
+		 */
+		setProgress(percentage: number) {
+			ensureOscCleanup();
+			writeOscProgress(ProgressState.Normal, percentage);
+		},
+
+		/**
+		 * Set indeterminate (spinner/loading) state.
+		 *
+		 * Displays a loading indicator in the terminal tab/taskbar on supported terminals.
+		 */
+		setIndeterminate() {
+			ensureOscCleanup();
+			writeOscProgress(ProgressState.Indeterminate);
+		},
+
+		/**
+		 * Set error state and clear after a brief display.
+		 *
+		 * Displays an error indicator in the terminal tab/taskbar on supported terminals.
+		 */
+		setError() {
+			writeOscProgress(ProgressState.Error, 100);
+			setTimeout(() => clearOscProgress(), 500);
+			hasOscProgress = false;
+		},
+
+		/**
+		 * Set warning/paused state.
+		 *
+		 * Displays a warning indicator in the terminal tab/taskbar on supported terminals.
+		 */
+		setWarning() {
+			ensureOscCleanup();
+			writeOscProgress(ProgressState.Warning, 100);
 		},
 	};
 };
@@ -714,6 +781,9 @@ export const spinnerWhile = async <T>(opts: {
 		const result = await unwrapFactory(opts.promise);
 
 		return result;
+	} catch (error) {
+		s.setError();
+		throw error;
 	} finally {
 		s.stop(unwrapFactory(opts.endMessage));
 	}

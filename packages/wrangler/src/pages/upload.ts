@@ -446,8 +446,12 @@ function renderProgress(done: number, total: number) {
 	const s = spinner();
 	if (isInteractive()) {
 		s.start(`Uploading... (${done}/${total})\n`);
+		s.setProgress(total > 0 ? Math.round((done / total) * 100) : 0);
 		return {
-			update: (d: number, t: number) => s.update(`Uploading... (${d}/${t})\n`),
+			update: (d: number, t: number) => {
+				s.update(`Uploading... (${d}/${t})\n`);
+				s.setProgress(t > 0 ? Math.round((d / t) * 100) : 0);
+			},
 			stop: s.stop,
 		};
 	} else {
