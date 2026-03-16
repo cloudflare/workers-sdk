@@ -1,3 +1,4 @@
+import { Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
@@ -81,21 +82,23 @@ function RootLayout() {
 	const currentPath = routerState.location.pathname;
 
 	return (
-		<div className="flex min-h-screen">
-			<Sidebar
-				currentPath={currentPath}
-				d1Error={loaderData.d1Error}
-				databases={loaderData.databases}
-				doError={loaderData.doError}
-				doNamespaces={loaderData.doNamespaces}
-				kvError={loaderData.kvError}
-				kvNamespaces={loaderData.kvNamespaces}
-				r2Buckets={loaderData.r2Buckets}
-				r2Error={loaderData.r2Error}
-			/>
-			<main className="flex flex-1 flex-col overflow-y-auto">
-				<Outlet />
-			</main>
-		</div>
+		<Toasty>
+			<div className="flex min-h-screen">
+				<Sidebar
+					currentPath={currentPath}
+					d1Error={loaderData.d1Error}
+					databases={loaderData.databases}
+					doError={loaderData.doError}
+					doNamespaces={loaderData.doNamespaces}
+					kvError={loaderData.kvError}
+					kvNamespaces={loaderData.kvNamespaces}
+					r2Buckets={loaderData.r2Buckets}
+					r2Error={loaderData.r2Error}
+				/>
+				<main className="flex flex-1 flex-col overflow-y-auto">
+					<Outlet />
+				</main>
+			</div>
+		</Toasty>
 	);
 }

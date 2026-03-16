@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, Table } from "@cloudflare/kumo";
+import { Button, Checkbox, DropdownMenu, Table } from "@cloudflare/kumo";
 import {
 	DotsThreeIcon,
 	DownloadIcon,
@@ -16,7 +16,10 @@ interface R2ObjectTableProps {
 	delimitedPrefixes: string[];
 	objects: R2Object[];
 	onDelete: (keys: string[]) => void;
+	onDownload: (keys: string[]) => void;
 	onNavigateToPrefix: (prefix: string) => void;
+	onSelectionChange: (keys: Set<string>) => void;
+	selectedKeys: Set<string>;
 }
 
 function getDisplayName(key: string, currentPrefix: string): string {
@@ -83,28 +86,71 @@ function ActionMenu({
 	);
 }
 
+interface BulkActionMenuProps {
+	disabled: boolean;
+	onDelete: () => void;
+	onDownload: () => void;
+	selectedCount: number;
+}
+
+function BulkActionMenu({
+	disabled,
+	onDelete,
+	onDownload,
+	selectedCount,
+}: BulkActionMenuProps): JSX.Element {
+	return (
+		<DropdownMenu>
+			<DropdownMenu.Trigger
+				render={
+					<Button
+						aria-label="Bulk actions"
+						className="h-7! w-7!"
+						disabled={disabled}
+						shape="square"
+						variant="ghost"
+					>
+						<DotsThreeIcon size={16} weight="bold" />
+					</Button>
+				}
+			/>
+
+			<DropdownMenu.Content align="end" sideOffset={4}>
+				<DropdownMenu.Item
+					className="flex items-center gap-2"
+					onClick={onDownload}
+				>
+					<DownloadIcon />
+					<span>
+						Download {selectedCount} {selectedCount === 1 ? "file" : "files"}
+					</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Separator />
+				<DropdownMenu.Item
+					className="flex items-center gap-2 text-danger"
+					onClick={onDelete}
+				>
+					<TrashIcon />
+					<span>
+						Delete {selectedCount} {selectedCount === 1 ? "file" : "files"}
+					</span>
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</DropdownMenu>
+	);
+}
+
 export function R2ObjectTable({
 	bucketName,
 	currentPrefix,
 	delimitedPrefixes,
 	objects,
 	onDelete,
+	onDownload,
 	onNavigateToPrefix,
+	onSelectionChange,
+	selectedKeys,
 }: R2ObjectTableProps): JSX.Element | null {
-	function handleDownload(obj: R2Object): void {
-		if (!obj.key) {
-			return;
-		}
-
-		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(bucketName)}/objects/${encodeURIComponent(obj.key)}`;
-		const link = document.createElement("a");
-		link.href = downloadUrl;
-		link.download = obj.key.split("/").pop() || "download";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-	}
-
 	// Combine directories and files for display
 	const items: Array<
 		| {
@@ -136,6 +182,43 @@ export function R2ObjectTable({
 			})),
 	];
 
+	// Get only file items (not directories) for selection purposes
+	const selectableFiles = items.filter(
+		(item): item is { object: R2Object; type: "file" } => item.type === "file"
+	);
+
+	const selectableKeys = selectableFiles
+		.map((item) => item.object.key)
+		.filter((key): key is string => key !== undefined);
+
+	const allFilesSelected =
+		selectableKeys.length > 0 &&
+		selectableKeys.every((key) => selectedKeys.has(key));
+
+	const someFilesSelected = selectableKeys.some((key) => selectedKeys.has(key));
+
+	function handleSelectAll(): void {
+		// Deselect all
+		if (allFilesSelected) {
+			onSelectionChange(new Set());
+			return;
+		}
+
+		// Select all files
+		onSelectionChange(new Set(selectableKeys));
+	}
+
+	function handleSelectFile(key: string): void {
+		const newSelection = new Set(selectedKeys);
+		if (newSelection.has(key)) {
+			newSelection.delete(key);
+		} else {
+			newSelection.add(key);
+		}
+
+		onSelectionChange(newSelection);
+	}
+
 	if (items.length === 0) {
 		return null;
 	}
@@ -145,11 +228,27 @@ export function R2ObjectTable({
 			<Table>
 				<Table.Header>
 					<Table.Row>
+						<Table.Head className="w-12">
+							<Checkbox
+								aria-label="Select all files"
+								checked={allFilesSelected}
+								disabled={selectableKeys.length === 0}
+								indeterminate={someFilesSelected && !allFilesSelected}
+								onCheckedChange={handleSelectAll}
+							/>
+						</Table.Head>
 						<Table.Head>Objects</Table.Head>
 						<Table.Head>Type</Table.Head>
 						<Table.Head>Size</Table.Head>
 						<Table.Head>Modified</Table.Head>
-						<Table.Head className="w-12" />
+						<Table.Head className="w-12">
+							<BulkActionMenu
+								disabled={selectedKeys.size === 0}
+								onDelete={() => onDelete(Array.from(selectedKeys))}
+								onDownload={() => onDownload(Array.from(selectedKeys))}
+								selectedCount={selectedKeys.size}
+							/>
+						</Table.Head>
 					</Table.Row>
 				</Table.Header>
 
@@ -159,6 +258,12 @@ export function R2ObjectTable({
 							const displayName = getDisplayName(item.prefix, currentPrefix);
 							return (
 								<Table.Row key={item.prefix} className="group">
+									<Table.Cell>
+										<Checkbox
+											aria-label={`${displayName} cannot be selected`}
+											disabled={true}
+										/>
+									</Table.Cell>
 									<Table.Cell>
 										<button
 											className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
@@ -194,6 +299,13 @@ export function R2ObjectTable({
 						return (
 							<Table.Row key={key} className="group">
 								<Table.Cell>
+									<Checkbox
+										aria-label={`Select ${displayName}`}
+										checked={selectedKeys.has(key)}
+										onCheckedChange={() => handleSelectFile(key)}
+									/>
+								</Table.Cell>
+								<Table.Cell>
 									<Link
 										to="/r2/$bucketName/object/$"
 										params={{ bucketName, _splat: key }}
@@ -214,7 +326,7 @@ export function R2ObjectTable({
 								</Table.Cell>
 								<Table.Cell className="text-right whitespace-nowrap">
 									<ActionMenu
-										onDownload={() => handleDownload(obj)}
+										onDownload={() => onDownload([key])}
 										onDelete={() => onDelete([key])}
 									/>
 								</Table.Cell>

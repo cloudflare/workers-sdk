@@ -1,4 +1,9 @@
-import { Button, Dialog, DropdownMenu } from "@cloudflare/kumo";
+import {
+	Button,
+	Dialog,
+	DropdownMenu,
+	useKumoToastManager,
+} from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	CaretDownIcon,
@@ -80,8 +85,10 @@ function BucketView(): JSX.Element {
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	const [newDirectoryName, setNewDirectoryName] = useState<string>("");
 	const [objects, setObjects] = useState<R2Object[]>(loaderData.objects);
+	const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 	const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false);
 
+	const toastManager = useKumoToastManager();
 	const directoryView = search.delimiter !== false;
 
 	useEffect(() => {
@@ -92,6 +99,7 @@ function BucketView(): JSX.Element {
 		setError(null);
 		setDeleteTargets([]);
 		setDeleting(false);
+		setSelectedKeys(new Set());
 	}, [loaderData]);
 
 	const fetchObjects = useCallback(
@@ -185,6 +193,28 @@ function BucketView(): JSX.Element {
 		setDeleteTargets(keys);
 	}
 
+	function handleDownload(keys: string[]): void {
+		for (const key of keys) {
+			const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(key)}`;
+			const link = document.createElement("a");
+			link.href = downloadUrl;
+			link.download = key.split("/").pop() || "download";
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
+
+		if (keys.length > 1) {
+			toastManager.add({
+				title: "Downloads started",
+				description: `Downloading ${keys.length} files`,
+			});
+		}
+
+		// Clear selection after download
+		setSelectedKeys(new Set());
+	}
+
 	async function handleConfirmDelete(): Promise<void> {
 		if (deleteTargets.length === 0) {
 			return;
@@ -205,6 +235,7 @@ function BucketView(): JSX.Element {
 				prev.filter((prefix) => !deleteTargets.includes(prefix))
 			);
 			setDeleteTargets([]);
+			setSelectedKeys(new Set());
 		} catch (err) {
 			let errorMessage = "Failed to delete objects";
 			if (err instanceof Error) {
@@ -396,7 +427,10 @@ function BucketView(): JSX.Element {
 							delimitedPrefixes={delimitedPrefixes}
 							objects={objects}
 							onDelete={handleDelete}
+							onDownload={handleDownload}
 							onNavigateToPrefix={handleNavigateToPrefix}
+							onSelectionChange={setSelectedKeys}
+							selectedKeys={selectedKeys}
 						/>
 						{isTruncated && cursor && (
 							<div className="p-4 text-center">
