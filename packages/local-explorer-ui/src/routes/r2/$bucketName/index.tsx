@@ -274,13 +274,11 @@ function BucketView(): JSX.Element {
 
 				<div className="mb-4 flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<label className="flex items-center gap-2 text-sm">
-							<Switch
-								checked={directoryView}
-								onCheckedChange={handleDirectoryViewChange}
-							/>
-							<span>View prefixes as directories</span>
-						</label>
+						<Switch
+							checked={directoryView}
+							label="Group by prefix"
+							onCheckedChange={handleDirectoryViewChange}
+						/>
 					</div>
 
 					<div className="flex items-center gap-2">
