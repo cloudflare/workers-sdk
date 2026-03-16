@@ -29,7 +29,7 @@ Full documentation can be found [here](https://developers.cloudflare.com/workers
 
 ## Use cases
 
-- [TanStack Start](https://tanstack.com/start/) 
+- [TanStack Start](https://tanstack.com/start/)
 - [React Router v7](https://reactrouter.com/)
 - Support for more full-stack frameworks is coming soon
 - Static sites, such as single-page applications, with or without an integrated backend API
