@@ -1,10 +1,5 @@
 import { beforeEach, describe, test, vi } from "vitest";
-import {
-	clearOscProgress,
-	ProgressState,
-	supportsOscProgress,
-	writeOscProgress,
-} from "../osc-progress";
+import { ProgressState, terminalProgress } from "../osc-progress";
 import * as streams from "../streams";
 
 vi.mock("../streams", () => ({
@@ -29,143 +24,90 @@ describe("osc-progress", () => {
 		delete process.env.TERM;
 	});
 
-	describe("supportsOscProgress", () => {
+	describe("terminalProgress.isSupported", () => {
 		test("returns `false` when `WRANGLER_NO_OSC_PROGRESS` is set", ({
 			expect,
 		}) => {
 			process.env.WRANGLER_NO_OSC_PROGRESS = "1";
 			process.env.TERM_PROGRAM = "ghostty";
 
-			expect(supportsOscProgress()).toBe(false);
+			expect(terminalProgress.isSupported).toBe(false);
 		});
 
 		test("returns `false` when `stdout` is not a TTY", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = false;
 			process.env.TERM_PROGRAM = "ghostty";
 
-			expect(supportsOscProgress()).toBe(false);
+			expect(terminalProgress.isSupported).toBe(false);
 		});
 
 		test("returns `true` for Ghostty terminal", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM_PROGRAM = "ghostty";
 
-			expect(supportsOscProgress()).toBe(true);
+			expect(terminalProgress.isSupported).toBe(true);
 		});
 
 		test("returns `true` for WezTerm terminal", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM_PROGRAM = "WezTerm";
 
-			expect(supportsOscProgress()).toBe(true);
+			expect(terminalProgress.isSupported).toBe(true);
 		});
 
 		test("returns `true` for iTerm terminal", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM_PROGRAM = "iTerm.app";
 
-			expect(supportsOscProgress()).toBe(true);
+			expect(terminalProgress.isSupported).toBe(true);
 		});
 
 		test("returns `true` for Windows Terminal", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.WT_SESSION = "some-session-id";
 
-			expect(supportsOscProgress()).toBe(true);
+			expect(terminalProgress.isSupported).toBe(true);
 		});
 
 		test("returns `true` for ConEmu with ANSI enabled", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.ConEmuANSI = "ON";
 
-			expect(supportsOscProgress()).toBe(true);
+			expect(terminalProgress.isSupported).toBe(true);
 		});
 
 		test("returns `true` for xterm-compatible terminals", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM = "xterm-256color";
 
-			expect(supportsOscProgress()).toBe(true);
+			expect(terminalProgress.isSupported).toBe(true);
 		});
 
 		test("returns `false` for unknown terminals", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM = "some-random-terminal";
 
-			expect(supportsOscProgress()).toBe(false);
+			expect(terminalProgress.isSupported).toBe(false);
 		});
 	});
 
-	describe("writeOscProgress", () => {
+	describe("terminalProgress.setProgress", () => {
 		test("writes normal progress sequence", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM_PROGRAM = "ghostty";
 
-			writeOscProgress(ProgressState.Normal, 50);
+			terminalProgress.setProgress(50);
 
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;1;50\x07");
-		});
-
-		test("writes indeterminate progress sequence", ({ expect }) => {
-			vi.mocked(streams.stdout).isTTY = true;
-			process.env.TERM_PROGRAM = "ghostty";
-
-			writeOscProgress(ProgressState.Indeterminate);
-
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;3;0\x07");
-		});
-
-		test("writes error state sequence", ({ expect }) => {
-			vi.mocked(streams.stdout).isTTY = true;
-			process.env.TERM_PROGRAM = "ghostty";
-
-			writeOscProgress(ProgressState.Error, 100);
-
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;2;100\x07");
-		});
-
-		test("writes warning state sequence", ({ expect }) => {
-			vi.mocked(streams.stdout).isTTY = true;
-			process.env.TERM_PROGRAM = "ghostty";
-
-			writeOscProgress(ProgressState.Warning, 75);
-
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;4;75\x07");
-		});
-
-		test("clamps percentage above 100", ({ expect }) => {
-			vi.mocked(streams.stdout).isTTY = true;
-			process.env.TERM_PROGRAM = "ghostty";
-
-			// Use Error state which is not throttled
-			writeOscProgress(ProgressState.Error, 150);
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;2;100\x07");
-		});
-
-		test("clamps percentage below 0", ({ expect }) => {
-			vi.mocked(streams.stdout).isTTY = true;
-			process.env.TERM_PROGRAM = "ghostty";
-
-			// Use Warning state which is not throttled
-			writeOscProgress(ProgressState.Warning, -50);
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;4;0\x07");
-		});
-
-		test("rounds percentage to integer", ({ expect }) => {
-			vi.mocked(streams.stdout).isTTY = true;
-			process.env.TERM_PROGRAM = "ghostty";
-
-			// Use Indeterminate first to avoid throttling, then Error state
-			writeOscProgress(ProgressState.Error, 33.7);
-
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;2;34\x07");
+			expect(streams.stdout.write).toHaveBeenCalledWith(
+				`\x1b]9;4;${ProgressState.Normal};50\x07`
+			);
 		});
 
 		test("does not write when terminal is not supported", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM = "dumb";
 
-			writeOscProgress(ProgressState.Normal, 50);
+			terminalProgress.setProgress(50);
 
 			expect(streams.stdout.write).not.toHaveBeenCalled();
 		});
@@ -175,27 +117,78 @@ describe("osc-progress", () => {
 			process.env.TERM_PROGRAM = "ghostty";
 			process.env.WRANGLER_NO_OSC_PROGRESS = "1";
 
-			writeOscProgress(ProgressState.Normal, 50);
+			terminalProgress.setProgress(50);
 
 			expect(streams.stdout.write).not.toHaveBeenCalled();
 		});
 	});
 
-	describe("clearOscProgress", () => {
+	describe("terminalProgress.setIndeterminate", () => {
+		test("writes indeterminate progress sequence", ({ expect }) => {
+			vi.mocked(streams.stdout).isTTY = true;
+			process.env.TERM_PROGRAM = "ghostty";
+
+			terminalProgress.setIndeterminate();
+
+			expect(streams.stdout.write).toHaveBeenCalledWith(
+				`\x1b]9;4;${ProgressState.Indeterminate};0\x07`
+			);
+		});
+	});
+
+	describe("terminalProgress.setError", () => {
+		test("writes error state sequence", ({ expect }) => {
+			vi.useFakeTimers();
+			vi.mocked(streams.stdout).isTTY = true;
+			process.env.TERM_PROGRAM = "ghostty";
+
+			terminalProgress.setError();
+
+			expect(streams.stdout.write).toHaveBeenCalledWith(
+				`\x1b]9;4;${ProgressState.Error};100\x07`
+			);
+
+			// Advance timers to trigger auto-clear
+			vi.advanceTimersByTime(500);
+
+			expect(streams.stdout.write).toHaveBeenCalledWith(
+				`\x1b]9;4;${ProgressState.Hidden};0\x07`
+			);
+
+			vi.useRealTimers();
+		});
+	});
+
+	describe("terminalProgress.setWarning", () => {
+		test("writes warning state sequence", ({ expect }) => {
+			vi.mocked(streams.stdout).isTTY = true;
+			process.env.TERM_PROGRAM = "ghostty";
+
+			terminalProgress.setWarning();
+
+			expect(streams.stdout.write).toHaveBeenCalledWith(
+				`\x1b]9;4;${ProgressState.Warning};100\x07`
+			);
+		});
+	});
+
+	describe("terminalProgress.clear", () => {
 		test("writes hidden state sequence", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM_PROGRAM = "ghostty";
 
-			clearOscProgress();
+			terminalProgress.clear();
 
-			expect(streams.stdout.write).toHaveBeenCalledWith("\x1b]9;4;0;0\x07");
+			expect(streams.stdout.write).toHaveBeenCalledWith(
+				`\x1b]9;4;${ProgressState.Hidden};0\x07`
+			);
 		});
 
 		test("does not write when terminal is not supported", ({ expect }) => {
 			vi.mocked(streams.stdout).isTTY = true;
 			process.env.TERM = "dumb";
 
-			clearOscProgress();
+			terminalProgress.clear();
 
 			expect(streams.stdout.write).not.toHaveBeenCalled();
 		});

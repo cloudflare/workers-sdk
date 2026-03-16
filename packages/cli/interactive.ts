@@ -8,12 +8,7 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { CancelError } from "./error";
-import {
-	clearOscProgress,
-	ProgressState,
-	registerOscProgressCleanup,
-	writeOscProgress,
-} from "./osc-progress";
+import { terminalProgress } from "./osc-progress";
 import SelectRefreshablePrompt from "./select-list";
 import { stdout } from "./streams";
 import {
@@ -658,7 +653,7 @@ export const spinner = (
 			return;
 		}
 
-		registerOscProgressCleanup();
+		terminalProgress.ensureCleanup();
 		hasOscProgress = true;
 	}
 
@@ -698,7 +693,7 @@ export const spinner = (
 		stop(msg?: string) {
 			// Clear OSC progress indicator, if it was used
 			if (hasOscProgress) {
-				clearOscProgress();
+				terminalProgress.clear();
 				hasOscProgress = false;
 			}
 
@@ -726,7 +721,7 @@ export const spinner = (
 		 */
 		setProgress(percentage: number) {
 			ensureOscCleanup();
-			writeOscProgress(ProgressState.Normal, percentage);
+			terminalProgress.setProgress(percentage);
 		},
 
 		/**
@@ -736,7 +731,7 @@ export const spinner = (
 		 */
 		setIndeterminate() {
 			ensureOscCleanup();
-			writeOscProgress(ProgressState.Indeterminate);
+			terminalProgress.setIndeterminate();
 		},
 
 		/**
@@ -745,8 +740,7 @@ export const spinner = (
 		 * Displays an error indicator in the terminal tab/taskbar on supported terminals.
 		 */
 		setError() {
-			writeOscProgress(ProgressState.Error, 100);
-			setTimeout(() => clearOscProgress(), 500);
+			terminalProgress.setError();
 			hasOscProgress = false;
 		},
 
@@ -757,7 +751,7 @@ export const spinner = (
 		 */
 		setWarning() {
 			ensureOscCleanup();
-			writeOscProgress(ProgressState.Warning, 100);
+			terminalProgress.setWarning();
 		},
 	};
 };

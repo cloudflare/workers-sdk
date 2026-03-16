@@ -2,12 +2,7 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
-import {
-	clearOscProgress,
-	ProgressState,
-	registerOscProgressCleanup,
-	writeOscProgress,
-} from "@cloudflare/cli";
+import { terminalProgress } from "@cloudflare/cli";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
@@ -150,7 +145,7 @@ export const syncAssets = async (
 	let completionJwt = "";
 	let uploadedAssetsCount = 0;
 
-	registerOscProgressCleanup();
+	terminalProgress.ensureCleanup();
 
 	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
 		attempts = 0;
@@ -365,11 +360,11 @@ function logAssetsUploadStatus(
 	}
 
 	const percent = Math.round((uploadedAssetsCount / numberFilesToUpload) * 100);
-	writeOscProgress(ProgressState.Normal, percent);
+	terminalProgress.setProgress(percent);
 
 	// Clear progress when complete
 	if (uploadedAssetsCount >= numberFilesToUpload) {
-		clearOscProgress();
+		terminalProgress.clear();
 	}
 }
 

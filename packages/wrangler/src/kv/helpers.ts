@@ -1,12 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
-import {
-	clearOscProgress,
-	ProgressState,
-	registerOscProgressCleanup,
-	writeOscProgress,
-} from "@cloudflare/cli";
+import { terminalProgress } from "@cloudflare/cli";
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import {
 	isOptionalProperty,
@@ -311,11 +306,11 @@ function logBulkProgress(
 		`${operation === "put" ? "Uploaded" : "Deleted"} ${percent}% (${formatNumber(index)} out of ${formatNumber(total)})`
 	);
 
-	writeOscProgress(ProgressState.Normal, percent);
+	terminalProgress.setProgress(percent);
 
 	// Clear progress when complete
 	if (index >= total) {
-		clearOscProgress();
+		terminalProgress.clear();
 	}
 }
 
@@ -356,7 +351,7 @@ export async function putKVBulkKeyValue(
 	abortSignal?: AbortSignal
 ) {
 	if (!quiet && keyValues.length > BATCH_KEY_MAX) {
-		registerOscProgressCleanup();
+		terminalProgress.ensureCleanup();
 	}
 
 	for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
@@ -390,7 +385,7 @@ export async function deleteKVBulkKeyValue(
 	quiet = false
 ) {
 	if (!quiet && keys.length > BATCH_KEY_MAX) {
-		registerOscProgressCleanup();
+		terminalProgress.ensureCleanup();
 	}
 
 	for (let index = 0; index < keys.length; index += BATCH_KEY_MAX) {
