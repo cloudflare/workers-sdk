@@ -392,34 +392,28 @@ function BucketView(): JSX.Element {
 			</Breadcrumbs>
 
 			<div className="px-6 py-6">
-				{loading && objects.length === 0 && delimitedPrefixes.length === 0 ? (
-					<div className="p-12 text-center text-text-secondary">Loading...</div>
-				) : (
-					<>
-						<R2ObjectTable
-							bucketName={params.bucketName}
-							currentPrefix={search.prefix || ""}
-							delimitedPrefixes={delimitedPrefixes}
-							objects={objects}
-							onDelete={handleDelete}
-							onDownload={handleDownload}
-							onNavigateToPrefix={handleNavigateToPrefix}
-							onSelectionChange={setSelectedKeys}
-							selectedKeys={selectedKeys}
-						/>
-						{isTruncated && cursor && (
-							<div className="p-4 text-center">
-								<Button
-									disabled={loadingMore}
-									loading={loadingMore}
-									onClick={handleLoadMore}
-									variant="secondary"
-								>
-									{loadingMore ? "Loading..." : "Load More"}
-								</Button>
-							</div>
-						)}
-					</>
+				<R2ObjectTable
+					bucketName={params.bucketName}
+					currentPrefix={search.prefix || ""}
+					delimitedPrefixes={delimitedPrefixes}
+					objects={objects}
+					onDelete={handleDelete}
+					onDownload={handleDownload}
+					onNavigateToPrefix={handleNavigateToPrefix}
+					onSelectionChange={setSelectedKeys}
+					selectedKeys={selectedKeys}
+				/>
+				{isTruncated && cursor && (
+					<div className="p-4 text-center">
+						<Button
+							disabled={loadingMore}
+							loading={loadingMore}
+							onClick={handleLoadMore}
+							variant="secondary"
+						>
+							{loadingMore ? "Loading..." : "Load More"}
+						</Button>
+					</div>
 				)}
 
 				{/* Delete Confirmation Dialog */}
