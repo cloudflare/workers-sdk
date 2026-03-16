@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import { fetch } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
+import { waitForLong } from "../helpers/wait-for";
 import { WorkerdTests } from "./worker/index";
 
 type TestConfig = {
@@ -868,7 +868,7 @@ describe.each(groupedLocalConfigs)(
 			// Wait for the Worker to be actually responding.
 			const readyResp = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(`${url}/ping`)
+				async () => await fetch(`${url}/ping`),
 			);
 			await expect(readyResp.text()).resolves.toEqual("pong");
 
@@ -888,17 +888,17 @@ describe.each(groupedLocalConfigs)(
 			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForLong(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 },
 				);
-			}
+			},
 		);
-	}
+	},
 );
 
 // Run the remote tests only if the user is logged in (e.g. not for a PR from a forked repo)
@@ -926,7 +926,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			// Wait for the Worker to be actually responding.
 			const readyResp = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(`${url}/ping`)
+				async () => await fetch(`${url}/ping`),
 			);
 			await expect(readyResp.text()).resolves.toEqual("pong");
 
@@ -946,17 +946,17 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForLong(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 },
 				);
-			}
+			},
 		);
-	}
+	},
 );
 
 // Run the remote tests only if the user is logged in (e.g. not for a PR from a forked repo)
@@ -985,7 +985,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			// Wait for the Worker to be actually responding.
 			const readyResp = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(`${url}/ping`)
+				async () => await fetch(`${url}/ping`),
 			);
 			await expect(readyResp.text()).resolves.toEqual("pong");
 
@@ -1005,17 +1005,17 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForLong(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 },
 				);
-			}
+			},
 		);
-	}
+	},
 );
 
 type ConfigGroup = {
@@ -1045,7 +1045,7 @@ function groupByWranglerConfig(configs: TestConfig[]): ConfigGroup[] {
 		if (existing) {
 			existing.name += `, ${config.name}`;
 			for (const [flag, value] of Object.entries(
-				config.expectRuntimeFlags ?? {}
+				config.expectRuntimeFlags ?? {},
 			)) {
 				if (
 					flag in existing.expectRuntimeFlags &&
@@ -1053,7 +1053,7 @@ function groupByWranglerConfig(configs: TestConfig[]): ConfigGroup[] {
 				) {
 					throw new Error(
 						`Conflicting expectRuntimeFlags for "${flag}" in group "${existing.name}": ` +
-							`existing=${existing.expectRuntimeFlags[flag]}, new=${value} (from "${config.name}")`
+							`existing=${existing.expectRuntimeFlags[flag]}, new=${value} (from "${config.name}")`,
 					);
 				}
 				existing.expectRuntimeFlags[flag] = value;
@@ -1107,7 +1107,7 @@ function collectEnabledFlags(configs: TestConfig[]): string[] {
 				enableFlags.add(flag);
 			} else if (!flag.startsWith("disable_")) {
 				throw new Error(
-					`Only enable_... and disable_... flags are handled, got "${flag}"`
+					`Only enable_... and disable_... flags are handled, got "${flag}"`,
 				);
 			}
 		}

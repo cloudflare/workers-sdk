@@ -11,7 +11,6 @@ import {
 	describe,
 	expect,
 	it,
-	vi,
 } from "vitest";
 /* eslint-enable no-restricted-imports */
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -19,6 +18,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput, validateAssetUploadLogs } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
+import { waitForLong } from "./helpers/wait-for";
 
 const TIMEOUT = 50_000;
 
@@ -65,7 +65,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const response = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+				async () => await fetch(deployedUrl),
 			);
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
@@ -100,7 +100,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const response = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+				async () => await fetch(deployedUrl),
 			);
 			await expect(response.text()).resolves.toEqual("Updated Worker!");
 		});
@@ -129,7 +129,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		it("rolls back", async ({ expect }) => {
 			const output = await helper.run(
-				`wrangler rollback --message "A test message"`
+				`wrangler rollback --message "A test message"`,
 			);
 			expect(normalizeOutput(output.stdout)).toMatchInlineSnapshot(`
 				"├ Fetching latest deployment
@@ -195,7 +195,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				                 Message:  -"
 			`);
 		});
-	}
+	},
 );
 
 type AssetTestCase = {
@@ -223,7 +223,7 @@ function generateInitialAssets(workerName: string) {
 
 async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 	for (const testCase of testCases) {
-		await vi.waitFor(
+		await waitForLong(
 			async () => {
 				const r = await fetch(new URL(testCase.path, deployedUrl));
 				const text = await r.text();
@@ -232,25 +232,22 @@ async function checkAssets(testCases: AssetTestCase[], deployedUrl: string) {
 				if (testCase.content) {
 					expect(
 						text,
-						`expected content for ${testCase.path} to be ${testCase.content}`
+						`expected content for ${testCase.path} to be ${testCase.content}`,
 					).toContain(testCase.content);
 				}
 				if (testCase.redirect) {
 					expect(
 						new URL(url).pathname,
-						`expected redirect for ${testCase.path} to be ${testCase.redirect}`
+						`expected redirect for ${testCase.path} to be ${testCase.redirect}`,
 					).toEqual(new URL(testCase.redirect, deployedUrl).pathname);
 				} else {
 					expect(
 						new URL(url).pathname,
-						`unexpected pathname for ${testCase.path}`
+						`unexpected pathname for ${testCase.path}`,
 					).toEqual(new URL(testCase.path, deployedUrl).pathname);
 				}
 			},
-			{
-				interval: 1_000,
-				timeout: 40_000,
-			}
+			{ timeout: 40_000 },
 		);
 	}
 }
@@ -323,7 +320,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
 					return temp;
-				}
+				},
 			);
 			expect(text).toBeFalsy();
 		});
@@ -396,7 +393,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
 					return temp;
-				}
+				},
 			);
 			expect(text).toContain("<h1>404.html</h1>");
 		});
@@ -422,7 +419,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			validateAssetUploadLogs(
 				output,
 				["/404.html", "/index.html", "/[boop].html"],
-				{ includeDebug: true }
+				{ includeDebug: true },
 			);
 
 			const deployedUrl = getDeployedUrl(output);
@@ -455,7 +452,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
 					return temp;
-				}
+				},
 			);
 			expect(text).toBeFalsy();
 		});
@@ -596,10 +593,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 		afterEach(async () => {
 			// clean up dispatch Worker
 			await helper.bestEffortRun(
-				`wrangler delete -c dispatch-worker/wrangler.toml`
+				`wrangler delete -c dispatch-worker/wrangler.toml`,
 			);
 			await helper.bestEffortRun(
-				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
+				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`,
 			);
 		});
 
@@ -618,16 +615,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// create a dispatch namespace && verify output
 			let output = await helper.run(
-				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`,
 			);
 			let normalizedStdout = normalizeOutput(output.stdout);
 			expect(normalizedStdout).toContain(
-				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`
+				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`,
 			);
 
 			// upload user Worker to the dispatch namespace && verify output
 			output = await helper.run(
-				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
+				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`,
 			);
 			validateAssetUploadLogs(output, [
 				"/404.html",
@@ -637,7 +634,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
-				`wrangler deploy -c dispatch-worker/wrangler.toml`
+				`wrangler deploy -c dispatch-worker/wrangler.toml`,
 			);
 			normalizedStdout = normalizeOutput(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
@@ -679,7 +676,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
 					return temp;
-				}
+				},
 			);
 			expect(text).toBeFalsy();
 		});
@@ -715,16 +712,16 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// create a dispatch namespace && verify output
 			let output = await helper.run(
-				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`,
 			);
 			let normalizedStdout = normalizeOutput(output.stdout);
 			expect(normalizedStdout).toContain(
-				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`
+				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`,
 			);
 
 			// upload user Worker to the dispatch namespace && verify output
 			output = await helper.run(
-				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
+				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`,
 			);
 			validateAssetUploadLogs(output, [
 				"/404.html",
@@ -734,7 +731,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
-				`wrangler deploy -c dispatch-worker/wrangler.toml`
+				`wrangler deploy -c dispatch-worker/wrangler.toml`,
 			);
 			normalizedStdout = normalizeOutput(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
@@ -779,7 +776,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
 					return temp;
-				}
+				},
 			);
 			expect(text).toContain("<h1>404.html</h1>");
 		});
@@ -810,16 +807,16 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// create a dispatch namespace && verify output
 			let output = await helper.run(
-				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`,
 			);
 			let normalizedStdout = normalizeOutput(output.stdout);
 			expect(normalizedStdout).toContain(
-				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`
+				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`,
 			);
 
 			// upload user Worker to the dispatch namespace && verify output
 			output = await helper.run(
-				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
+				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`,
 			);
 			validateAssetUploadLogs(output, [
 				"/404.html",
@@ -829,7 +826,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 			// deploy dispatch Worker && verify output
 			output = await helper.run(
-				`wrangler deploy -c dispatch-worker/wrangler.toml`
+				`wrangler deploy -c dispatch-worker/wrangler.toml`,
 			);
 			normalizedStdout = normalizeOutput(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
@@ -959,7 +956,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 		// clean up user Worker after each test
 		const deleteWorker = helper.bestEffortRun(`wrangler delete`);
 		const deleteContainer = helper.bestEffortRun(
-			`wrangler containers delete ${applicationId}`
+			`wrangler containers delete ${applicationId}`,
 		);
 		await Promise.allSettled([deleteWorker, deleteContainer]);
 	});
@@ -973,39 +970,37 @@ describe.skipIf(skipContainersTest)("containers", () => {
 			deployedUrl = getDeployedUrl(outputOne);
 
 			const matchApplicationId = outputOne.stdout.match(
-				/([(]Application ID: (?<applicationId>.+?)[)])/
+				/([(]Application ID: (?<applicationId>.+?)[)])/,
 			);
 			applicationId = matchApplicationId?.groups?.applicationId;
 			assert(matchApplicationId?.groups);
 
 			const outputTwo = await helper.run(`wrangler deploy`);
 			expect(outputTwo.stdout).toContain(`No changes to be made`);
-		}
+		},
 	);
 
 	it(
 		"can fetch DO container",
 		{ timeout: 60 * 2 * 1000 },
 		async ({ expect }) => {
-			await vi.waitFor(
+			await waitForLong(
 				async () => {
 					const response = await fetch(`${deployedUrl}/do`, {
 						signal: AbortSignal.timeout(5_000),
 					});
 					if (!response.ok) {
 						throw new Error(
-							"Durable object transient error: " + (await response.text())
+							"Durable object transient error: " + (await response.text()),
 						);
 					}
 
 					expect(await response.text()).toEqual("hello from container");
 				},
-
-				// big timeout for containers
-				// (3m)
-				{ timeout: 60 * 2 * 1000, interval: 1000 }
+				// big timeout for containers (2m)
+				{ timeout: 60 * 2 * 1000, interval: 1000 },
 			);
-		}
+		},
 	);
 });
 
@@ -1014,7 +1009,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
  */
 function getDeployedUrl(output: { stdout: string }) {
 	const match = output.stdout.match(
-		/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+		/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/,
 	);
 	assert(match?.groups);
 	return match.groups.url;

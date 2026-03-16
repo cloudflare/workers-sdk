@@ -1,31 +1,13 @@
 import { randomUUID } from "node:crypto";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { beforeEach, describe, it, vi } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { fetchJson } from "./helpers/fetch-json";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import type { RequestInit } from "undici";
-
-async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
-	return vi.waitFor(
-		async () => {
-			const text: string = await fetch(url, {
-				headers: { "MF-Disable-Pretty-Error": "true" },
-				...info,
-			}).then((r) => r.text());
-			try {
-				return JSON.parse(text) as T;
-			} catch (cause) {
-				const err = new Error(`Failed to parse JSON from:\n${text}`);
-				err.cause = cause;
-				throw err;
-			}
-		},
-		{ timeout: 10_000, interval: 250 }
-	);
-}
+import { waitFor, waitForLong } from "./helpers/wait-for";
 
 describe("multiworker", () => {
 	let workerName: string;
@@ -210,20 +192,19 @@ describe("multiworker", () => {
 			const { url } = await worker.waitForReady(5_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-				"hello world"
+				"hello world",
 			);
 		});
 
 		it("can fetch b through a", async ({ expect }) => {
 			const workerA = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
@@ -232,34 +213,30 @@ describe("multiworker", () => {
 		}) => {
 			const workerA = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
 		it("can access service props through a binding", async ({ expect }) => {
 			const workerA = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () => {
-					const response = await fetch(`${url}/props`);
-					const props = await response.json();
-					expect(props).toEqual({
-						foo: 123,
-						bar: { baz: "hello from props" },
-					});
-				},
-				{ interval: 1000, timeout: 10_000 }
-			);
+			await waitForLong(async () => {
+				const response = await fetch(`${url}/props`);
+				const props = await response.json();
+				expect(props).toEqual({
+					foo: 123,
+					bar: { baz: "hello from props" },
+				});
+			});
 		});
 
 		it("shows runtime error when fetching non-existent service", async ({
@@ -280,17 +257,16 @@ describe("multiworker", () => {
 
 			const workerA = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () =>
 					await expect(fetchText(url)).resolves.toBe(
-						`Couldn't find a local dev session for the "default" entrypoint of service "${service}" to proxy to`
+						`Couldn't find a local dev session for the "default" entrypoint of service "${service}" to proxy to`,
 					),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 	});
@@ -313,16 +289,15 @@ describe("multiworker", () => {
 		it("can fetch service worker c through a", async ({ expect }) => {
 			const workerA = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${c}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () =>
 					await expect(fetchText(`${url}/service`)).resolves.toBe(
-						"Hello from service worker"
+						"Hello from service worker",
 					),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 	});
@@ -360,28 +335,24 @@ describe("multiworker", () => {
 					headers: {
 						"X-Reset-Count": "true",
 					},
-				})
+				}),
 			).resolves.toMatchObject({ count: 1 });
 		});
 
 		it("can fetch remote DO attached to a through b", async ({ expect }) => {
 			const workerB = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${a}/wrangler.toml`,
-				{ cwd: b }
+				{ cwd: b },
 			);
 			const { url } = await workerB.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () =>
-					await expect(
-						fetchJson(`${url}/do`, {
-							headers: {
-								"X-Reset-Count": "true",
-							},
-						})
-					).resolves.toMatchObject({ count: 1 }),
-				{ interval: 1000, timeout: 10_000 }
-			);
+			await expect(
+				fetchJson(`${url}/do`, {
+					headers: {
+						"X-Reset-Count": "true",
+					},
+				}),
+			).resolves.toMatchObject({ count: 1 });
 		});
 
 		it("can fetch remote DO attached to a through b with RPC", async ({
@@ -389,16 +360,15 @@ describe("multiworker", () => {
 		}) => {
 			const workerB = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${a}/wrangler.toml`,
-				{ cwd: b }
+				{ cwd: b },
 			);
 			const { url } = await workerB.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () =>
 					await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
-						"Hello through DO RPC"
+						"Hello through DO RPC",
 					),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 	});
@@ -452,16 +422,14 @@ describe("multiworker", () => {
 		it("tail event sent to b", async ({ expect }) => {
 			const worker = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await worker.waitForReady(5_000);
 
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
-			await vi.waitFor(
-				async () =>
-					expect(worker.currentOutput).includes("received tail event"),
-				{ interval: 1000, timeout: 10_000 }
+			await waitFor(() =>
+				expect(worker.currentOutput).includes("received tail event"),
 			);
 		});
 	});
@@ -514,16 +482,15 @@ describe("multiworker", () => {
 		it("logs tail event sent to b", async ({ expect }) => {
 			const worker = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await worker.waitForReady(5_000);
 
-			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
-
-			await vi.waitFor(
-				async () =>
-					expect(worker.currentOutput).includes("received tail stream event"),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(`${url}`)).resolves.toBe("hello from a"),
+			);
+			await waitFor(() =>
+				expect(worker.currentOutput).includes("received tail stream event"),
 			);
 		});
 	});
@@ -559,46 +526,43 @@ describe("multiworker", () => {
 		it("pages project assets", async ({ expect }) => {
 			const pages = helper.runLongLived(
 				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await pages.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () =>
 					await expect(fetchText(`${url}`)).resolves.toBe(
-						"<h1>hello pages assets</h1>"
+						"<h1>hello pages assets</h1>",
 					),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
 		it("pages project fetching service worker", async ({ expect }) => {
 			const pages = helper.runLongLived(
 				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await pages.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () =>
 					await expect(fetchText(`${url}/cee`)).resolves.toBe(
-						"Hello from service worker"
+						"Hello from service worker",
 					),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
 		it("pages project fetching module worker", async ({ expect }) => {
 			const pages = helper.runLongLived(
 				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await pages.waitForReady(5_000);
 
-			await vi.waitFor(
+			await waitForLong(
 				async () =>
 					await expect(fetchText(`${url}/bee`)).resolves.toBe("hello world"),
-				{ interval: 1000, timeout: 10_000 }
 			);
 		});
 
@@ -607,10 +571,10 @@ describe("multiworker", () => {
 		}) => {
 			const pages = helper.runLongLived(
 				`wrangler pages dev -c wrangler.toml -c wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			await pages.readUntil(
-				/You cannot use a Pages project as a service binding target/
+				/You cannot use a Pages project as a service binding target/,
 			);
 		});
 	});
@@ -669,20 +633,22 @@ describe("multiworker", () => {
 		}) => {
 			const worker = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 
 			const { url } = await worker.waitForReady(5_000);
 			const { hostname, port } = new URL(url);
 
-			// The warning should contain the actual port, not "undefined"
-			expect(worker.currentOutput).toContain(
-				"Scheduled Workers are not automatically triggered"
-			);
-			expect(worker.currentOutput).toContain(
-				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
-			);
-			expect(worker.currentOutput).not.toContain("undefined");
+			await waitFor(() => {
+				// The warning should contain the actual port, not "undefined"
+				expect(worker.currentOutput).toContain(
+					"Scheduled Workers are not automatically triggered",
+				);
+				expect(worker.currentOutput).toContain(
+					`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`,
+				);
+				expect(worker.currentOutput).not.toContain("undefined");
+			});
 		});
 	});
 });

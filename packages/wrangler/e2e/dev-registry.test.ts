@@ -1,36 +1,14 @@
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch, Request } from "undici";
-import { beforeEach, describe, it, vi } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { fetchJson } from "./helpers/fetch-json";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import type { RequestInit } from "undici";
-
-async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
-	const request = new Request(url, info);
-	const headers = new Headers(request.headers);
-
-	headers.set("MF-Disable-Pretty-Error", "true");
-
-	return vi.waitFor(
-		async () => {
-			const text: string = await fetch(request, {
-				headers,
-			}).then((r) => r.text());
-			try {
-				return JSON.parse(text) as T;
-			} catch (cause) {
-				const err = new Error(`Failed to parse JSON from:\n${text}`);
-				err.cause = cause;
-				throw err;
-			}
-		},
-		{ timeout: 10_000, interval: 250 }
-	);
-}
+import { waitFor, waitForLong } from "./helpers/wait-for";
 
 describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 	let workerName: string;
@@ -167,7 +145,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const { url } = await worker.waitForReady(5_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-				"hello world"
+				"hello world",
 			);
 		});
 
@@ -179,13 +157,14 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const workerA = helper.runLongLived(cmd, { cwd: a });
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(url)).resolves.toBe("hello world"),
 			);
 
-			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"connect to other Wrangler or Vite dev processes running locally"
+			await waitFor(async () =>
+				expect(normalizeOutput(workerA.currentOutput)).toContain(
+					"connect to other Wrangler or Vite dev processes running locally",
+				),
 			);
 		});
 
@@ -196,9 +175,8 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			await workerB.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () => await expect(fetchText(url)).resolves.toBe("hello world"),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(url)).resolves.toBe("hello world"),
 			);
 		});
 	});
@@ -229,12 +207,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () =>
-					await expect(fetchText(`${url}/service`)).resolves.toBe(
-						"Hello from service worker"
-					),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(`${url}/service`)).resolves.toBe(
+					"Hello from service worker",
+				),
 			);
 		});
 
@@ -249,14 +225,12 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 				await workerC.waitForReady(5_000);
 
-				await vi.waitFor(
-					async () =>
-						await expect(fetchText(`${url}/service`)).resolves.toBe(
-							"Hello from service worker"
-						),
-					{ interval: 1000, timeout: 10_000 }
+				await waitForLong(() =>
+					expect(fetchText(`${url}/service`)).resolves.toBe(
+						"Hello from service worker",
+					),
 				);
-			}
+			},
 		);
 	});
 
@@ -315,13 +289,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
-			await vi.waitFor(
-				async () => {
-					await fetchText(`${url}`);
-					expect(workerB.currentOutput).includes("received tail event");
-				},
-				{ interval: 1000, timeout: 10_000 }
-			);
+			await waitForLong(async () => {
+				await fetchText(`${url}`);
+				expect(workerB.currentOutput).includes("received tail event");
+			});
 		});
 	});
 
@@ -358,7 +329,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 					headers: {
 						"X-Reset-Count": "true",
 					},
-				})
+				}),
 			).resolves.toMatchObject({ count: 1 });
 		});
 
@@ -372,18 +343,14 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 				await workerA.waitForReady(5_000);
 
-				await vi.waitFor(
-					async () =>
-						await expect(
-							fetchJson(`${url}/do`, {
-								headers: {
-									"X-Reset-Count": "true",
-								},
-							})
-						).resolves.toMatchObject({ count: 1 }),
-					{ interval: 1000, timeout: 10_000 }
-				);
-			}
+				await expect(
+					fetchJson(`${url}/do`, {
+						headers: {
+							"X-Reset-Count": "true",
+						},
+					}),
+				).resolves.toMatchObject({ count: 1 });
+			},
 		);
 
 		it("can fetch remote DO attached to a through b (start a, start b)", async ({
@@ -396,16 +363,14 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 
 			const { url } = await workerB.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () =>
-					await expect(
-						fetch(`${url}/do`, {
-							headers: {
-								"X-Reset-Count": "true",
-							},
-						}).then((r) => r.json())
-					).resolves.toMatchObject({ count: 1 }),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(
+					fetch(`${url}/do`, {
+						headers: {
+							"X-Reset-Count": "true",
+						},
+					}).then((r) => r.json()),
+				).resolves.toMatchObject({ count: 1 }),
 			);
 		});
 	});
@@ -439,7 +404,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const { url } = await worker.waitForReady(5_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-				"hello world"
+				"hello world",
 			);
 		});
 
@@ -447,13 +412,13 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const port = await getPort();
 			const worker = helper.runLongLived(
 				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 
 			const { url } = await worker.waitForReady(5_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-				"Hello from Pages"
+				"Hello from Pages",
 			);
 		});
 
@@ -465,20 +430,18 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const port = await getPort();
 			const workerA = helper.runLongLived(
 				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () =>
-					await expect(fetchText(`${url}/service`)).resolves.toBe(
-						"hello world"
-					),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(`${url}/service`)).resolves.toBe("hello world"),
 			);
 
-			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"connect to other Wrangler or Vite dev processes running locally"
+			await waitFor(async () =>
+				expect(normalizeOutput(workerA.currentOutput)).toContain(
+					"connect to other Wrangler or Vite dev processes running locally",
+				),
 			);
 		});
 
@@ -486,19 +449,15 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const port = await getPort();
 			const workerA = helper.runLongLived(
 				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			await workerB.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () =>
-					await expect(fetchText(`${url}/service`)).resolves.toBe(
-						"hello world"
-					),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(`${url}/service`)).resolves.toBe("hello world"),
 			);
 		});
 
@@ -512,19 +471,15 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			const port = await getPort();
 			const workerA = helper.runLongLived(
 				`${cmd.replace("wrangler dev", "wrangler pages dev")} dist --service BEE=${workerName2} --port ${port}`,
-				{ cwd: a }
+				{ cwd: a },
 			);
 			const { url } = await workerA.waitForReady(5_000);
 
 			const workerB = helper.runLongLived(cmd, { cwd: b });
 			await workerB.waitForReady(5_000);
 
-			await vi.waitFor(
-				async () =>
-					await expect(fetchText(`${url}/service`)).resolves.toBe(
-						"hello world"
-					),
-				{ interval: 1000, timeout: 10_000 }
+			await waitForLong(() =>
+				expect(fetchText(`${url}/service`)).resolves.toBe("hello world"),
 			);
 		});
 	});
