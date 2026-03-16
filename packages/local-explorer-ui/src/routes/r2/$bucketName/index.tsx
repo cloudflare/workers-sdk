@@ -1,5 +1,4 @@
-import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { Button, Switch } from "@cloudflare/kumo";
+import { Button, Dialog, Switch } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	FolderPlusIcon,
@@ -356,54 +355,53 @@ function BucketView(): JSX.Element {
 				)}
 
 				{/* Delete Confirmation Dialog */}
-				<AlertDialog.Root
+				<Dialog.Root
 					onOpenChange={(open) => !open && setDeleteTargets([])}
 					open={deleteTargets.length > 0}
 				>
-					<AlertDialog.Portal>
-						<AlertDialog.Backdrop className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
-						<AlertDialog.Popup className="fixed top-1/2 left-1/2 z-1001 w-full max-w-125 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-							<AlertDialog.Title className="mb-4 text-lg font-semibold">
-								Delete {deleteTargets.length === 1 ? "object" : "objects"}?
-							</AlertDialog.Title>
+					<Dialog className="p-6">
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Title className="mb-4 text-lg font-semibold">
+							Delete {deleteTargets.length === 1 ? "object" : "objects"}?
+						</Dialog.Title>
 
-							<AlertDialog.Description className="mb-2 text-text-secondary">
-								{deleteTargets.length === 1 ? (
-									<>
-										Are you sure you want to delete &ldquo;{deleteTargets[0]}
-										&rdquo;? This cannot be undone.
-									</>
-								) : (
-									<>
-										Are you sure you want to delete {deleteTargets.length}{" "}
-										objects? This cannot be undone.
-									</>
-								)}
-							</AlertDialog.Description>
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Description className="mb-2 text-text-secondary">
+							{deleteTargets.length === 1 ? (
+								<>
+									Are you sure you want to delete &ldquo;{deleteTargets[0]}
+									&rdquo;? This cannot be undone.
+								</>
+							) : (
+								<>
+									Are you sure you want to delete {deleteTargets.length}{" "}
+									objects? This cannot be undone.
+								</>
+							)}
+						</Dialog.Description>
 
-							<div className="mt-6 flex justify-end gap-2">
-								<Button
-									disabled={deleting}
-									onClick={() => setDeleteTargets([])}
-									variant="secondary"
-								>
-									Cancel
-								</Button>
-								<Button
-									disabled={deleting}
-									loading={deleting}
-									onClick={handleConfirmDelete}
-									variant="destructive"
-								>
-									{deleting ? "Deleting..." : "Delete"}
-								</Button>
-							</div>
-						</AlertDialog.Popup>
-					</AlertDialog.Portal>
-				</AlertDialog.Root>
+						<div className="mt-6 flex justify-end gap-2">
+							<Button
+								disabled={deleting}
+								onClick={() => setDeleteTargets([])}
+								variant="secondary"
+							>
+								Cancel
+							</Button>
+							<Button
+								disabled={deleting}
+								loading={deleting}
+								onClick={handleConfirmDelete}
+								variant="destructive"
+							>
+								{deleting ? "Deleting..." : "Delete"}
+							</Button>
+						</div>
+					</Dialog>
+				</Dialog.Root>
 
 				{/* Add Directory Dialog */}
-				<AlertDialog.Root
+				<Dialog.Root
 					onOpenChange={(open) => {
 						if (!open) {
 							setAddDirectoryOpen(false);
@@ -412,61 +410,60 @@ function BucketView(): JSX.Element {
 					}}
 					open={addDirectoryOpen}
 				>
-					<AlertDialog.Portal>
-						<AlertDialog.Backdrop className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
-						<AlertDialog.Popup className="fixed top-1/2 left-1/2 z-1001 w-full max-w-125 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg p-6 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-							<AlertDialog.Title className="mb-4 text-lg font-semibold">
-								Add directory
-							</AlertDialog.Title>
+					<Dialog className="p-6">
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Title className="mb-4 text-lg font-semibold">
+							Add directory
+						</Dialog.Title>
 
-							<AlertDialog.Description className="mb-4 text-text-secondary">
-								Enter a name for the new directory.
-							</AlertDialog.Description>
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Description className="mb-4 text-text-secondary">
+							Enter a name for the new directory.
+						</Dialog.Description>
 
-							<div className="mb-4">
-								<label className="mb-1 block text-sm font-medium text-text">
-									Directory name
-								</label>
-								<input
-									type="text"
-									className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
-									value={newDirectoryName}
-									onChange={(e) => setNewDirectoryName(e.target.value)}
-									placeholder="my-directory"
-									autoFocus
-								/>
-								{search.prefix && (
-									<p className="mt-1 text-xs text-text-secondary">
-										Will be created at: {search.prefix}
-										{newDirectoryName || "..."}/
-									</p>
-								)}
-							</div>
+						<div className="mb-4">
+							<label className="mb-1 block text-sm font-medium text-text">
+								Directory name
+							</label>
+							<input
+								type="text"
+								className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+								value={newDirectoryName}
+								onChange={(e) => setNewDirectoryName(e.target.value)}
+								placeholder="my-directory"
+								autoFocus
+							/>
+							{search.prefix && (
+								<p className="mt-1 text-xs text-text-secondary">
+									Will be created at: {search.prefix}
+									{newDirectoryName || "..."}/
+								</p>
+							)}
+						</div>
 
-							<div className="flex justify-end gap-2">
-								<Button
-									disabled={creatingDirectory}
-									onClick={() => {
-										setAddDirectoryOpen(false);
-										setNewDirectoryName("");
-									}}
-									variant="secondary"
-								>
-									Cancel
-								</Button>
+						<div className="flex justify-end gap-2">
+							<Button
+								disabled={creatingDirectory}
+								onClick={() => {
+									setAddDirectoryOpen(false);
+									setNewDirectoryName("");
+								}}
+								variant="secondary"
+							>
+								Cancel
+							</Button>
 
-								<Button
-									disabled={creatingDirectory || !newDirectoryName.trim()}
-									loading={creatingDirectory}
-									onClick={handleCreateDirectory}
-									variant="primary"
-								>
-									{creatingDirectory ? "Creating..." : "Create"}
-								</Button>
-							</div>
-						</AlertDialog.Popup>
-					</AlertDialog.Portal>
-				</AlertDialog.Root>
+							<Button
+								disabled={creatingDirectory || !newDirectoryName.trim()}
+								loading={creatingDirectory}
+								onClick={handleCreateDirectory}
+								variant="primary"
+							>
+								{creatingDirectory ? "Creating..." : "Create"}
+							</Button>
+						</div>
+					</Dialog>
+				</Dialog.Root>
 
 				{/* Upload Dialog */}
 				<R2UploadDialog

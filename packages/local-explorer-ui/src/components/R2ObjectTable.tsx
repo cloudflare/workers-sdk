@@ -1,5 +1,4 @@
-import { Menu } from "@base-ui/react/menu";
-import { cn } from "@cloudflare/kumo";
+import { Button, cn, DropdownMenu } from "@cloudflare/kumo";
 import {
 	DotsThreeIcon,
 	DownloadIcon,
@@ -78,40 +77,43 @@ function ActionMenu({
 	onDownload,
 }: ActionMenuProps): JSX.Element {
 	return (
-		<Menu.Root>
-			<Menu.Trigger
-				className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-text-secondary transition-[background-color,color] hover:bg-border hover:text-text"
-				aria-label="Actions"
-			>
-				<DotsThreeIcon size={16} weight="bold" />
-			</Menu.Trigger>
+		<DropdownMenu>
+			<DropdownMenu.Trigger
+				render={
+					<Button
+						aria-label="Actions"
+						className="h-7! w-7!"
+						shape="square"
+						variant="ghost"
+					>
+						<DotsThreeIcon size={16} weight="bold" />
+					</Button>
+				}
+			/>
 
-			<Menu.Portal>
-				<Menu.Positioner sideOffset={4} align="end">
-					<Menu.Popup className="z-100 min-w-24 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
-						{!isDirectory && onDownload && (
-							<>
-								<Menu.Item
-									className="inline-flex w-full cursor-pointer items-center gap-1 border-none bg-transparent px-3 py-2 text-left text-sm text-text transition-colors hover:bg-bg-secondary data-highlighted:bg-bg-secondary dark:hover:bg-bg-tertiary dark:data-highlighted:bg-bg-tertiary"
-									onClick={onDownload}
-								>
-									<DownloadIcon />
-									<span>Download</span>
-								</Menu.Item>
-								<Menu.Separator className="h-px bg-border" />
-							</>
-						)}
-						<Menu.Item
-							className="inline-flex w-full cursor-pointer items-center gap-1 border-none bg-transparent px-3 py-2 text-left text-sm text-danger transition-colors hover:bg-danger/8 data-highlighted:bg-danger/8"
-							onClick={onDelete}
+			<DropdownMenu.Content align="end" sideOffset={4}>
+				{!isDirectory && onDownload && (
+					<>
+						<DropdownMenu.Item
+							className="flex items-center gap-2"
+							onClick={onDownload}
 						>
-							<TrashIcon />
-							<span>Delete</span>
-						</Menu.Item>
-					</Menu.Popup>
-				</Menu.Positioner>
-			</Menu.Portal>
-		</Menu.Root>
+							<DownloadIcon />
+							<span>Download</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+					</>
+				)}
+
+				<DropdownMenu.Item
+					className="flex items-center gap-2 text-danger"
+					onClick={onDelete}
+				>
+					<TrashIcon />
+					<span>Delete</span>
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</DropdownMenu>
 	);
 }
 
