@@ -218,7 +218,7 @@ const instancesArgs = {
 		default: 25,
 	},
 	json: {
-		describe: "Return output as clean JSON",
+		describe: "Return output as JSON",
 		type: "boolean",
 		default: false,
 	},
