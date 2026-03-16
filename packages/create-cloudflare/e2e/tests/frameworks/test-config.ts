@@ -21,7 +21,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "react-router",
 			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
-			// Test timeout again
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
 				route: "/",
