@@ -44,7 +44,7 @@ function formatSize(bytes: number | undefined): string {
 		return "0 B";
 	}
 
-	const units = ["B", "KB", "MB", "GB", "TB"];
+	const units = ["B", "KB", "MB", "GB", "TB"] satisfies string[];
 	let unitIndex = 0;
 	let size = bytes;
 	while (size >= 1024 && unitIndex < units.length - 1) {

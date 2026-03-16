@@ -7,9 +7,9 @@ import { r2BucketPutObject } from "../api";
 interface R2UploadDialogProps {
 	bucketName: string;
 	currentPrefix: string;
-	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onUploadComplete: () => void;
+	open: boolean;
 }
 
 interface MetadataEntry {
@@ -17,47 +17,49 @@ interface MetadataEntry {
 	value: string;
 }
 
+const MIME_TYPES = {
+	css: "text/css",
+	gif: "image/gif",
+	html: "text/html",
+	jpeg: "image/jpeg",
+	jpg: "image/jpeg",
+	js: "application/javascript",
+	json: "application/json",
+	mp3: "audio/mpeg",
+	mp4: "video/mp4",
+	pdf: "application/pdf",
+	png: "image/png",
+	svg: "image/svg+xml",
+	txt: "text/plain",
+	wasm: "application/wasm",
+	webp: "image/webp",
+	xml: "application/xml",
+	zip: "application/zip",
+} as Record<string, string>;
+
 function getMimeType(file: File): string {
 	if (file.type) {
 		return file.type;
 	}
+
 	const ext = file.name.split(".").pop()?.toLowerCase();
-	const mimeTypes: Record<string, string> = {
-		txt: "text/plain",
-		html: "text/html",
-		css: "text/css",
-		js: "application/javascript",
-		json: "application/json",
-		xml: "application/xml",
-		png: "image/png",
-		jpg: "image/jpeg",
-		jpeg: "image/jpeg",
-		gif: "image/gif",
-		svg: "image/svg+xml",
-		webp: "image/webp",
-		pdf: "application/pdf",
-		zip: "application/zip",
-		mp3: "audio/mpeg",
-		mp4: "video/mp4",
-		wasm: "application/wasm",
-	};
-	return mimeTypes[ext ?? ""] ?? "application/octet-stream";
+	return MIME_TYPES[ext ?? ""] ?? "application/octet-stream";
 }
 
 export function R2UploadDialog({
 	bucketName,
 	currentPrefix,
-	open,
 	onOpenChange,
 	onUploadComplete,
-}: R2UploadDialogProps) {
-	const [file, setFile] = useState<File | null>(null);
-	const [objectKey, setObjectKey] = useState("");
-	const [contentType, setContentType] = useState("");
+	open,
+}: R2UploadDialogProps): JSX.Element {
+	const [contentType, setContentType] = useState<string>("");
 	const [customMetadata, setCustomMetadata] = useState<MetadataEntry[]>([]);
-	const [uploading, setUploading] = useState(false);
+	const [dragOver, setDragOver] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
-	const [dragOver, setDragOver] = useState(false);
+	const [file, setFile] = useState<File | null>(null);
+	const [objectKey, setObjectKey] = useState<string>("");
+	const [uploading, setUploading] = useState<boolean>(false);
 
 	const resetForm = useCallback(() => {
 		setFile(null);
@@ -67,60 +69,73 @@ export function R2UploadDialog({
 		setError(null);
 	}, []);
 
-	const handleFileSelect = (selectedFile: File) => {
+	function handleFileSelect(selectedFile: File): void {
 		setFile(selectedFile);
 		setObjectKey(currentPrefix + selectedFile.name);
 		setContentType(getMimeType(selectedFile));
-	};
+	}
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const selectedFile = e.target.files?.[0];
-		if (selectedFile) {
-			handleFileSelect(selectedFile);
+	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>): void {
+		const [selectedFile] = e.target.files ?? [];
+		if (!selectedFile) {
+			return;
 		}
-	};
 
-	const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+		handleFileSelect(selectedFile);
+	}
+
+	function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
 		e.preventDefault();
 		setDragOver(false);
-		const droppedFile = e.dataTransfer.files[0];
-		if (droppedFile) {
-			handleFileSelect(droppedFile);
-		}
-	};
 
-	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+		const droppedFile = e.dataTransfer.files[0];
+		if (!droppedFile) {
+			return;
+		}
+
+		handleFileSelect(droppedFile);
+	}
+
+	function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
 		e.preventDefault();
 		setDragOver(true);
-	};
+	}
 
-	const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+	function handleDragLeave(e: React.DragEvent<HTMLDivElement>): void {
 		e.preventDefault();
 		setDragOver(false);
-	};
+	}
 
-	const handleAddMetadata = () => {
-		setCustomMetadata([...customMetadata, { key: "", value: "" }]);
-	};
+	function handleAddMetadata(): void {
+		setCustomMetadata([
+			...customMetadata,
+			{
+				key: "",
+				value: "",
+			},
+		]);
+	}
 
-	const handleRemoveMetadata = (index: number) => {
+	function handleRemoveMetadata(index: number): void {
 		setCustomMetadata(customMetadata.filter((_, i) => i !== index));
-	};
+	}
 
-	const handleMetadataChange = (
+	function handleMetadataChange(
 		index: number,
 		field: "key" | "value",
 		value: string
-	) => {
+	): void {
 		const updated = [...customMetadata];
 		const entry = updated[index];
-		if (entry) {
-			entry[field] = value;
-			setCustomMetadata(updated);
+		if (!entry) {
+			return;
 		}
-	};
 
-	const handleUpload = async () => {
+		entry[field] = value;
+		setCustomMetadata(updated);
+	}
+
+	async function handleUpload(): Promise<void> {
 		if (!file || !objectKey.trim()) {
 			setError("Please select a file and provide an object key");
 			return;
@@ -156,14 +171,15 @@ export function R2UploadDialog({
 		} finally {
 			setUploading(false);
 		}
-	};
+	}
 
-	const handleOpenChange = (newOpen: boolean) => {
+	function handleOpenChange(newOpen: boolean): void {
 		if (!newOpen) {
 			resetForm();
 		}
+
 		onOpenChange(newOpen);
-	};
+	}
 
 	return (
 		<AlertDialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -187,18 +203,20 @@ export function R2UploadDialog({
 								? "border-primary bg-primary/5"
 								: "border-border hover:border-primary/50"
 						}`}
-						onDrop={handleDrop}
-						onDragOver={handleDragOver}
-						onDragLeave={handleDragLeave}
 						onClick={() => document.getElementById("file-input")?.click()}
+						onDragLeave={handleDragLeave}
+						onDragOver={handleDragOver}
+						onDrop={handleDrop}
 					>
 						<input
-							id="file-input"
-							type="file"
 							className="hidden"
+							id="file-input"
 							onChange={handleFileChange}
+							type="file"
 						/>
+
 						<UploadIcon size={32} className="mb-2 text-text-secondary" />
+
 						{file ? (
 							<>
 								<p className="text-sm font-medium text-text">{file.name}</p>
@@ -224,11 +242,11 @@ export function R2UploadDialog({
 							Object key
 						</label>
 						<input
-							type="text"
 							className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
-							value={objectKey}
 							onChange={(e) => setObjectKey(e.target.value)}
 							placeholder={currentPrefix + "filename.ext"}
+							type="text"
+							value={objectKey}
 						/>
 						<p className="mt-1 text-xs text-text-secondary">
 							The full path where the object will be stored
@@ -241,11 +259,11 @@ export function R2UploadDialog({
 							Content-Type
 						</label>
 						<input
-							type="text"
 							className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
-							value={contentType}
 							onChange={(e) => setContentType(e.target.value)}
 							placeholder="application/octet-stream"
+							type="text"
+							value={contentType}
 						/>
 					</div>
 
@@ -263,6 +281,7 @@ export function R2UploadDialog({
 								Add
 							</Button>
 						</div>
+
 						{customMetadata.length === 0 ? (
 							<p className="text-sm text-text-secondary italic">
 								No custom metadata
@@ -272,22 +291,22 @@ export function R2UploadDialog({
 								{customMetadata.map((entry, index) => (
 									<div key={index} className="flex items-center gap-2">
 										<input
-											type="text"
 											className="flex-1 rounded-md border border-border bg-bg px-2 py-1.5 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
-											value={entry.key}
 											onChange={(e) =>
 												handleMetadataChange(index, "key", e.target.value)
 											}
 											placeholder="key"
+											type="text"
+											value={entry.key}
 										/>
 										<input
-											type="text"
 											className="flex-1 rounded-md border border-border bg-bg px-2 py-1.5 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
-											value={entry.value}
 											onChange={(e) =>
 												handleMetadataChange(index, "value", e.target.value)
 											}
 											placeholder="value"
+											type="text"
+											value={entry.value}
 										/>
 										<Button
 											className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-text-secondary transition-colors hover:bg-danger/10 hover:text-danger"
@@ -310,11 +329,12 @@ export function R2UploadDialog({
 						>
 							Cancel
 						</AlertDialog.Close>
+
 						<Button
 							className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
-							onClick={handleUpload}
 							disabled={uploading || !file}
 							focusableWhenDisabled
+							onClick={handleUpload}
 						>
 							{uploading ? "Uploading..." : "Upload"}
 						</Button>
