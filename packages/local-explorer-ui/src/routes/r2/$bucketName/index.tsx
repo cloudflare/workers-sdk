@@ -267,7 +267,68 @@ function BucketView(): JSX.Element {
 
 	return (
 		<>
-			<Breadcrumbs icon={R2Icon} title="R2" items={breadcrumbItems} />
+			<Breadcrumbs icon={R2Icon} title="R2" items={breadcrumbItems}>
+				<DropdownMenu>
+					<DropdownMenu.Trigger
+						render={
+							<Button variant="secondary">
+								{directoryView ? (
+									<FoldersIcon size={16} />
+								) : (
+									<ListIcon size={16} />
+								)}
+
+								{directoryView ? "Grouped" : "Ungrouped"}
+
+								<CaretDownIcon size={14} />
+							</Button>
+						}
+					/>
+					<DropdownMenu.Content align="end" sideOffset={4}>
+						<DropdownMenu.Item
+							className="flex items-center gap-2"
+							icon={FoldersIcon}
+							onClick={() => handleDirectoryViewChange(true)}
+						>
+							<span>Grouped</span>
+							{directoryView && <CheckIcon className="ml-auto" size={14} />}
+						</DropdownMenu.Item>
+
+						<DropdownMenu.Item
+							className="flex items-center gap-2"
+							icon={ListIcon}
+							onClick={() => handleDirectoryViewChange(false)}
+						>
+							<span>Ungrouped</span>
+							{!directoryView && <CheckIcon className="ml-auto" size={14} />}
+						</DropdownMenu.Item>
+					</DropdownMenu.Content>
+				</DropdownMenu>
+
+				<Button
+					icon={UploadIcon}
+					onClick={() => setUploadDialogOpen(true)}
+					variant="secondary"
+				>
+					Upload
+				</Button>
+				<Button
+					icon={FolderPlusIcon}
+					onClick={() => setAddDirectoryOpen(true)}
+					variant="secondary"
+				>
+					Add directory
+				</Button>
+				<Button
+					aria-label="Refresh"
+					disabled={loading}
+					icon={ArrowClockwiseIcon}
+					loading={loading}
+					onClick={handleRefresh}
+					shape="square"
+					variant="secondary"
+				></Button>
+			</Breadcrumbs>
 
 			<div className="px-6 py-6">
 				{error && (
@@ -275,68 +336,6 @@ function BucketView(): JSX.Element {
 						{error}
 					</div>
 				)}
-
-				<div className="mb-4 flex items-center justify-end gap-2">
-					<DropdownMenu>
-						<DropdownMenu.Trigger
-							render={
-								<Button variant="secondary">
-									{directoryView ? (
-										<FoldersIcon size={16} />
-									) : (
-										<ListIcon size={16} />
-									)}
-
-									{directoryView ? "Grouped" : "Ungrouped"}
-
-									<CaretDownIcon size={14} />
-								</Button>
-							}
-						/>
-						<DropdownMenu.Content align="end" sideOffset={4}>
-							<DropdownMenu.Item
-								className="flex items-center gap-2"
-								icon={FoldersIcon}
-								onClick={() => handleDirectoryViewChange(true)}
-							>
-								<span>Grouped</span>
-								{directoryView && <CheckIcon className="ml-auto" size={14} />}
-							</DropdownMenu.Item>
-
-							<DropdownMenu.Item
-								className="flex items-center gap-2"
-								icon={ListIcon}
-								onClick={() => handleDirectoryViewChange(false)}
-							>
-								<span>Ungrouped</span>
-								{!directoryView && <CheckIcon className="ml-auto" size={14} />}
-							</DropdownMenu.Item>
-						</DropdownMenu.Content>
-					</DropdownMenu>
-					<Button
-						icon={UploadIcon}
-						onClick={() => setUploadDialogOpen(true)}
-						variant="secondary"
-					>
-						Upload
-					</Button>
-					<Button
-						icon={FolderPlusIcon}
-						onClick={() => setAddDirectoryOpen(true)}
-						variant="secondary"
-					>
-						Add directory
-					</Button>
-					<Button
-						disabled={loading}
-						icon={ArrowClockwiseIcon}
-						loading={loading}
-						onClick={handleRefresh}
-						variant="secondary"
-					>
-						Refresh
-					</Button>
-				</div>
 
 				{loading ? (
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
