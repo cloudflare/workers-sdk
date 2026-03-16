@@ -156,15 +156,15 @@ describe("containers instances", () => {
 		);
 		await runWrangler(`containers instances ${APP_ID}`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		// Table output contains column headers and data
-		expect(std.out).toContain("INSTANCE");
-		expect(std.out).toContain("STATE");
-		expect(std.out).toContain("LOCATION");
-		expect(std.out).toContain("VERSION");
-		expect(std.out).toContain("CREATED");
-		// Verify instance data appears in the table
-		expect(std.out).toContain("11111111-1111-1111-1111-111111111111");
-		expect(std.out).toContain("22222222-2222-2222-2222-222222222222");
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┬─┬─┐
+			│ INSTANCE │ STATE │ LOCATION │ VERSION │ CREATED │
+			├─┼─┼─┼─┼─┤
+			│ 11111111-1111-1111-1111-111111111111 │ running │ sfo06 │ 3 │ 2025-06-01T10:00:00Z │
+			├─┼─┼─┼─┼─┤
+			│ 22222222-2222-2222-2222-222222222222 │ provisioning │ iad01 │ 2 │ 2025-06-01T11:00:00Z │
+			└─┴─┴─┴─┴─┘"
+		`);
 	});
 
 	it("should render DO instance table (non-TTY)", async () => {
@@ -186,13 +186,15 @@ describe("containers instances", () => {
 			)
 		);
 		await runWrangler(`containers instances ${APP_ID}`);
-		// Table should contain DO-specific columns and data
-		expect(std.out).toContain("INSTANCE");
-		expect(std.out).toContain("NAME");
-		expect(std.out).toContain("do-instance-1111");
-		expect(std.out).toContain("random-76");
-		expect(std.out).toContain("do-instance-2222");
-		expect(std.out).toContain("random-88");
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┬─┬─┬─┐
+			│ INSTANCE │ NAME │ STATE │ LOCATION │ VERSION │ CREATED │
+			├─┼─┼─┼─┼─┼─┤
+			│ do-instance-1111 │ random-76 │ running │ dfw01 │ 57 │ 2025-06-01T10:00:00Z │
+			├─┼─┼─┼─┼─┼─┤
+			│ do-instance-2222 │ random-88 │ inactive │ - │ - │ 2025-05-26T10:00:00Z │
+			└─┴─┴─┴─┴─┴─┘"
+		`);
 	});
 
 	it("should reject --per-page 0", async () => {

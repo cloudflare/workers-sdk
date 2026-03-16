@@ -158,17 +158,19 @@ describe("containers list", () => {
 		);
 		await runWrangler("containers list");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		// Table output contains column headers and data
-		expect(std.out).toContain("ID");
-		expect(std.out).toContain("NAME");
-		expect(std.out).toContain("STATE");
-		expect(std.out).toContain("LIVE INSTANCES");
-		expect(std.out).toContain("LAST MODIFIED");
-		// Verify data appears in the table
-		expect(std.out).toContain("my-active-app");
-		expect(std.out).toContain("my-degraded-app");
-		expect(std.out).toContain("my-provisioning-app");
-		expect(std.out).toContain("my-ready-app");
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┬─┬─┐
+			│ ID │ NAME │ STATE │ LIVE INSTANCES │ LAST MODIFIED │
+			├─┼─┼─┼─┼─┤
+			│ aaaaaaaa-1111-1111-1111-111111111111 │ my-active-app │ active │ 2 │ 2025-06-10T12:00:00Z │
+			├─┼─┼─┼─┼─┤
+			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 3 │ 2025-06-11T09:30:00Z │
+			├─┼─┼─┼─┼─┤
+			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 4 │ 2025-06-12T16:45:00Z │
+			├─┼─┼─┼─┼─┤
+			│ dddddddd-4444-4444-4444-444444444444 │ my-ready-app │ ready │ 0 │ 2025-06-13T07:15:00Z │
+			└─┴─┴─┴─┴─┘"
+		`);
 	});
 
 	it("should handle empty results (non-TTY)", async () => {
@@ -208,11 +210,19 @@ describe("containers list", () => {
 		);
 		await runWrangler("containers list");
 		expect(requestCount).toBe(1);
-		// Table output should contain all four apps
-		expect(std.out).toContain("my-active-app");
-		expect(std.out).toContain("my-degraded-app");
-		expect(std.out).toContain("my-provisioning-app");
-		expect(std.out).toContain("my-ready-app");
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┬─┬─┐
+			│ ID │ NAME │ STATE │ LIVE INSTANCES │ LAST MODIFIED │
+			├─┼─┼─┼─┼─┤
+			│ aaaaaaaa-1111-1111-1111-111111111111 │ my-active-app │ active │ 2 │ 2025-06-10T12:00:00Z │
+			├─┼─┼─┼─┼─┤
+			│ bbbbbbbb-2222-2222-2222-222222222222 │ my-degraded-app │ degraded │ 3 │ 2025-06-11T09:30:00Z │
+			├─┼─┼─┼─┼─┤
+			│ cccccccc-3333-3333-3333-333333333333 │ my-provisioning-app │ provisioning │ 4 │ 2025-06-12T16:45:00Z │
+			├─┼─┼─┼─┼─┤
+			│ dddddddd-4444-4444-4444-444444444444 │ my-ready-app │ ready │ 0 │ 2025-06-13T07:15:00Z │
+			└─┴─┴─┴─┴─┘"
+		`);
 	});
 
 	describe("state derivation", () => {
