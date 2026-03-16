@@ -3,8 +3,12 @@
 "miniflare": minor
 ---
 
-local explorer: add local R2 browser
+Add R2 support to the local explorer.
 
-The local explorer now supports viewing and modifying local R2 buckets.
+The local explorer now supports the following:
 
-Note: the local explorer is an experimental WIP feature.
+- Viewing, modifying & deleting objects
+- Uploading files
+- Creating directories / prefixes
+
+Note: The local explorer is an experimental WIP feature.
