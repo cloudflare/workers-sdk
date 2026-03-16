@@ -5,5 +5,6 @@ export const tunnelNamespace = createNamespace({
 		description: "🚇 Manage Cloudflare Tunnels",
 		status: "experimental",
 		owner: "Product: Tunnels",
+		category: "Networking & security",
 	},
 });

@@ -39,8 +39,6 @@ describe("wrangler", () => {
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
 
-				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
-
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
@@ -80,6 +78,7 @@ describe("wrangler", () => {
 				NETWORKING & SECURITY
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -112,8 +111,6 @@ describe("wrangler", () => {
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
 
-				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
-
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
@@ -153,6 +150,7 @@ describe("wrangler", () => {
 				NETWORKING & SECURITY
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]

@@ -157,8 +157,10 @@ async function queryUpdateService(
 	let data: VersionResponse;
 	try {
 		data = (await response.json()) as VersionResponse;
-	} catch {
-		// Response was not valid JSON (e.g. bot-challenge page)
+	} catch (e) {
+		logger.debug(
+			`Update service returned non-JSON response: ${e instanceof Error ? e.message : String(e)}`
+		);
 		return null;
 	}
 
