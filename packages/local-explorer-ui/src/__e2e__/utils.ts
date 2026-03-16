@@ -1,14 +1,42 @@
-import {
-	navigateTo,
-	page,
-	seedD1,
-	seedDO,
-	seedKV,
-	viteUrl,
-	waitForPageLoad,
-} from "./setup";
+import { page, viteUrl, workerUrl } from "./setup";
 
-export { page, viteUrl, navigateTo, waitForPageLoad, seedKV, seedD1, seedDO };
+export { page, viteUrl };
+
+/**
+ * Navigate to a specific path in the app.
+ */
+async function navigateTo(path: string): Promise<void> {
+	const url = new URL(path, viteUrl);
+	await page.goto(url.toString());
+}
+
+/**
+ * Wait for the page to finish loading (no pending network requests).
+ */
+async function waitForPageLoad(): Promise<void> {
+	await page.waitForLoadState("networkidle");
+}
+
+/**
+ * Seed the KV namespace with test data.
+ */
+export async function seedKV(): Promise<void> {
+	await fetch(`${workerUrl}/kv/seed`);
+}
+
+/**
+ * Seed the D1 database with test data.
+ */
+export async function seedD1(): Promise<void> {
+	await fetch(`${workerUrl}/d1`);
+}
+
+/**
+ * Seed a Durable Object with test data.
+ */
+export async function seedDO(objectId: string = "test-object"): Promise<void> {
+	await fetch(`${workerUrl}/do?id=${objectId}`);
+}
 
 /**
  * Common wait options for `vi.waitFor`

@@ -7,8 +7,8 @@ export let page: Page;
 export let viteUrl: string;
 export let workerUrl: string;
 
-export const browserLogs = new Array<string>();
-export const browserErrors = new Array<Error>();
+const browserLogs = new Array<string>();
+const browserErrors = new Array<Error>();
 
 declare module "vitest" {
 	export interface ProvidedContext {
@@ -47,47 +47,3 @@ beforeAll(async () => {
 		browserErrors.length = 0;
 	};
 }, 30_000);
-
-/**
- * Navigate to a specific path in the app.
- */
-export async function navigateTo(path: string): Promise<void> {
-	const url = new URL(path, viteUrl);
-	await page.goto(url.toString());
-}
-
-/**
- * Wait for the page to finish loading (no pending network requests).
- */
-export async function waitForPageLoad(): Promise<void> {
-	await page.waitForLoadState("networkidle");
-}
-
-/**
- * Get the current URL path.
- */
-export function getCurrentPath(): string {
-	const url = new URL(page.url());
-	return url.pathname + url.search;
-}
-
-/**
- * Seed the KV namespace with test data.
- */
-export async function seedKV(): Promise<void> {
-	await fetch(`${workerUrl}/kv/seed`);
-}
-
-/**
- * Seed the D1 database with test data.
- */
-export async function seedD1(): Promise<void> {
-	await fetch(`${workerUrl}/d1`);
-}
-
-/**
- * Seed a Durable Object with test data.
- */
-export async function seedDO(objectId: string = "test-object"): Promise<void> {
-	await fetch(`${workerUrl}/do?id=${objectId}`);
-}
