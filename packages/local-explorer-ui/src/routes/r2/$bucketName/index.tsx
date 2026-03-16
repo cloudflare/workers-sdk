@@ -394,23 +394,6 @@ function BucketView(): JSX.Element {
 			<div className="px-6 py-6">
 				{loading && objects.length === 0 && delimitedPrefixes.length === 0 ? (
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
-				) : objects.length === 0 && delimitedPrefixes.length === 0 ? (
-					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
-						{search.prefix ? (
-							<p className="text-sm font-light">
-								No objects found at prefix &quot;{search.prefix}&quot;.
-							</p>
-						) : (
-							<>
-								<h2 className="text-2xl font-medium">
-									No objects in this bucket
-								</h2>
-								<p className="text-sm font-light">
-									Upload an object using the button above.
-								</p>
-							</>
-						)}
-					</div>
 				) : (
 					<>
 						<R2ObjectTable

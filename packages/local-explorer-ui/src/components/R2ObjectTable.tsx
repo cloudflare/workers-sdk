@@ -227,7 +227,18 @@ export function R2ObjectTable({
 	}
 
 	if (items.length === 0) {
-		return null;
+		return (
+			<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+				<h2 className="text-2xl font-medium">
+					{currentPrefix
+						? "No objects in this directory"
+						: "No objects in this bucket"}
+				</h2>
+				<p className="text-sm font-light">
+					Upload an object using the button above.
+				</p>
+			</div>
+		);
 	}
 
 	return (
