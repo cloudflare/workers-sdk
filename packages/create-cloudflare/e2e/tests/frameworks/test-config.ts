@@ -67,6 +67,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
