@@ -59,6 +59,7 @@
 		"**/*.mjs",
 		"**/node_modules/**/*",
 		"**/dist/**/*",
+		"**/dist-types/**/*",
 		".e2e-test-report/**",
 		"**/vitest.config.mts",
 		"**/vitest.config.ts",
@@ -66,13 +67,33 @@
 		"**/tsup.config.ts",
 		"**/tsdown.config.ts",
 		"fixtures/**",
+		"packages/containers-shared/src/client/**",
+		"packages/create-cloudflare/e2e/**/fixtures/**",
+		"packages/create-cloudflare/**/templates/**/*.*",
+		"!packages/create-cloudflare/**/templates*/**/c3.ts",
+		"packages/create-cloudflare/scripts/**",
+		"packages/local-explorer-ui/src/api/generated/**",
+		"packages/local-explorer-ui/src/routeTree.gen.ts",
+		"packages/miniflare/src/runtime/config/workerd.*",
+		"packages/miniflare/test/fixtures/**",
+		"packages/miniflare/scripts/**",
 		"packages/quick-edit-extension/vscode.d.ts",
 		"packages/quick-edit-extension/vscode.proposed.*.d.ts",
 		"packages/quick-edit-extension/scripts/**",
-		"packages/miniflare/scripts/**",
-		"packages/containers-shared/src/client/**",
-		"packages/local-explorer-ui/src/api/generated/**",
-		"packages/local-explorer-ui/src/routeTree.gen.ts"
+		"packages/vite-plugin-cloudflare/scripts/**",
+		"packages/vite-plugin-cloudflare/src/__tests__/fixtures/**",
+		"packages/vite-plugin-cloudflare/playground/**",
+		"packages/vite-plugin-cloudflare/e2e/**",
+		"packages/wrangler/vendor",
+		"packages/wrangler/*-dist",
+		"packages/wrangler/pages/functions/template-worker.ts",
+		"packages/wrangler/emitted-types",
+		"packages/wrangler/**/templates/**/*.*",
+		"packages/wrangler/.tmp",
+		"packages/workers-utils/vendor",
+		"packages/workers-utils/*-dist",
+		"packages/workers-utils/emitted-types",
+		"packages/workers-utils/**/templates/**/*.*"
 	],
 	"jsPlugins": [
 		"eslint-plugin-turbo",
@@ -151,6 +172,121 @@
 			"rules": {
 				"workers-sdk/no-unsafe-command-execution": "off",
 				"workers-sdk/no-vitest-import-expect": "error"
+			}
+		},
+		{
+			"files": [
+				"packages/cli/**/*.ts",
+				"packages/create-cloudflare/**/*.ts",
+				"packages/miniflare/**/*.ts",
+				"packages/wrangler/**/*.ts",
+				"packages/workers-utils/**/*.ts"
+			],
+			"rules": {
+				"no-console": "error"
+			}
+		},
+		{
+			"files": [
+				"packages/miniflare/src/workers/**/*.ts",
+				"packages/wrangler/**/*.test.ts",
+				"packages/wrangler/**/*.test.mts",
+				"packages/wrangler/**/*.test.tsx",
+				"packages/wrangler/**/test/**/*.ts",
+				"packages/wrangler/**/__tests__/**/*.ts",
+				"packages/wrangler/**/__tests__/**/*.mts",
+				"packages/wrangler/**/__tests__/**/*.tsx",
+				"packages/wrangler/**/e2e/**/*.ts",
+				"packages/wrangler/**/e2e/**/*.mts",
+				"packages/wrangler/scripts/**/*.ts",
+				"packages/workers-utils/**/*.test.ts",
+				"packages/workers-utils/**/test/**/*.ts",
+				"packages/workers-utils/**/__tests__/**/*.ts",
+				"packages/workers-utils/**/e2e/**/*.ts",
+				"packages/workers-utils/tsup/**/*.ts"
+			],
+			"rules": {
+				"no-console": "off"
+			}
+		},
+		{
+			"files": [
+				"packages/wrangler/**/*.ts",
+				"packages/workers-utils/**/*.ts"
+			],
+			"rules": {
+				"no-restricted-globals": [
+					"error",
+					{
+						"name": "__dirname",
+						"message": "Use `getBasePath()` instead."
+					},
+					{
+						"name": "__filename",
+						"message": "Use `getBasePath()` instead."
+					},
+					{
+						"name": "fetch",
+						"message": "Use undici's fetch instead"
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"packages/wrangler/**/*.test.ts",
+				"packages/wrangler/**/*.test.mts",
+				"packages/wrangler/**/*.test.tsx",
+				"packages/wrangler/**/test/**/*.ts",
+				"packages/wrangler/**/__tests__/**/*.ts",
+				"packages/wrangler/**/__tests__/**/*.mts",
+				"packages/wrangler/**/__tests__/**/*.tsx",
+				"packages/wrangler/**/e2e/**/*.ts",
+				"packages/wrangler/**/e2e/**/*.mts",
+				"packages/wrangler/scripts/**/*.ts",
+				"packages/workers-utils/**/*.test.ts",
+				"packages/workers-utils/**/test/**/*.ts",
+				"packages/workers-utils/**/__tests__/**/*.ts",
+				"packages/workers-utils/**/e2e/**/*.ts",
+				"packages/workers-utils/tsup/**/*.ts"
+			],
+			"rules": {
+				"no-restricted-globals": "off"
+			}
+		},
+		{
+			"files": ["packages/miniflare/**/*.ts"],
+			"rules": {
+				"curly": "off",
+				"@typescript-eslint/no-explicit-any": "off",
+				"@typescript-eslint/ban-ts-comment": "off",
+				"@typescript-eslint/consistent-type-imports": "off",
+				"@typescript-eslint/no-floating-promises": "off",
+				"no-shadow": "off",
+				"no-useless-escape": "off",
+				"no-unsafe-optional-chaining": "off",
+				"no-control-regex": "off",
+				"no-case-declarations": "off",
+				"no-empty-pattern": "off",
+				"turbo/no-undeclared-env-vars": "off"
+			}
+		},
+		{
+			"files": ["packages/vite-plugin-cloudflare/**/*.ts"],
+			"rules": {
+				"workers-sdk/no-wrangler-named-imports": "error"
+			}
+		},
+		{
+			"files": [
+				"packages/wrangler/e2e/**/*.ts",
+				"packages/wrangler/src/__tests__/**/helpers.ts",
+				"packages/wrangler/src/__tests__/**/utils.ts",
+				"packages/wrangler/src/__tests__/**/mock-*.ts",
+				"packages/wrangler/src/__tests__/helpers/**/*.ts"
+			],
+			"rules": {
+				"workers-sdk/no-vitest-import-expect": "off"
 			}
 		}
 	]
