@@ -47,7 +47,6 @@
 	"scripts": {
 		"build": "tsdown",
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
@@ -61,7 +60,6 @@
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
@@ -75,7 +73,6 @@
 		"birpc": "0.2.14",
 		"capnp-es": "catalog:default",
 		"devalue": "^5.6.3",
-		"eslint": "catalog:default",
 		"get-port": "^7.1.0",
 		"jscodeshift": "^17.3.0",
 		"semver": "^7.7.1",

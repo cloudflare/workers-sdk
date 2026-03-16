@@ -40,7 +40,7 @@
 			"persistent": true,
 			"cache": false
 		},
-		"check:lint": {},
+		"//#check:lint": {},
 		"check:type": {
 			"dependsOn": ["build"]
 		},

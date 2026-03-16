@@ -18,8 +18,7 @@ packages:
 catalog:
   "@hey-api/openapi-ts": "^0.94.0"
   "@types/node": "^20.19.9"
-  "@typescript-eslint/eslint-plugin": "^8.35.1"
-  "@typescript-eslint/parser": "^8.35.1"
+
   "@vitest/runner": 4.1.0
   "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
@@ -35,7 +34,6 @@ catalog:
   playwright-chromium: "^1.56.1"
   "@cloudflare/workers-types": "^4.20260317.1"
   workerd: "1.20260317.1"
-  eslint: "^9.39.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
   msw: "2.12.4"

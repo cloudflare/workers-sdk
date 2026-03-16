@@ -17,7 +17,6 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "echo 'no deploy'",
 		"test:ci": "vitest run"
@@ -27,11 +26,9 @@
 	},
 	"devDependencies": {
 		"@clack/core": "^0.3.2",
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"chalk": "^5.2.0",
-		"eslint": "catalog:default",
 		"log-update": "^5.0.1"
 	},
 	"volta": {

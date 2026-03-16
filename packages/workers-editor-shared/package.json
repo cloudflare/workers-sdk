@@ -23,7 +23,6 @@
 	],
 	"scripts": {
 		"build": "tsc && vite build",
-		"check:lint": "eslint lib --max-warnings=0 --cache",
 		"check:type": "tsc && tsc -p tsconfig.node.json --noEmit",
 		"dev": "vite"
 	},
@@ -31,13 +30,11 @@
 		"react-split-pane": "^0.1.92"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/style-const": "^5.7.2",
 		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/react": "^18.3.3",
 		"@vitejs/plugin-react": "^4.3.3",
-		"eslint": "catalog:default",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"typescript": "catalog:default",

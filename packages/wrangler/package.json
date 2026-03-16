@@ -52,7 +52,6 @@
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "pnpm run clean && pnpm tsup && pnpm run generate-json-schema",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc -p ./tsconfig.json && tsc -p ./templates/tsconfig.json",
 		"clean": "node -r esbuild-register ../../tools/clean/clean.ts wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src --watch ../cli\" \"pnpm run check:type --watch --preserveWatchOutput\"",
@@ -80,7 +79,6 @@
 		"@bomb.sh/tab": "^0.0.12",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
@@ -128,7 +126,6 @@
 		"dotenv": "^16.3.1",
 		"dotenv-expand": "^12.0.2",
 		"empathic": "^2.0.0",
-		"eslint": "catalog:default",
 		"esprima": "4.0.1",
 		"execa": "^6.1.0",
 		"get-port": "^7.0.0",

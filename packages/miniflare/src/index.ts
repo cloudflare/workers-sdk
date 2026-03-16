@@ -942,6 +942,7 @@ export class Miniflare {
 
 	// Store `#init()` `Promise`, so we can propagate initialisation errors in
 	// `ready`. We would have no way of catching these otherwise.
+	// eslint-disable-next-line no-unused-private-class-members — oxlint is wrong here, this variable _is_ used
 	readonly #initPromise: Promise<void>;
 
 	// Aborted when dispose() is called

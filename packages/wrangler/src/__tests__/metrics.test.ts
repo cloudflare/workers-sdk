@@ -37,11 +37,12 @@ vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
 vi.mocked(getMetricsConfig).mockReset();
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
+/* eslint-disable @typescript-eslint/no-namespace, no-shadow-restricted-names, no-unused-vars */
 declare namespace globalThis {
 	let ALGOLIA_APP_ID: string | undefined;
 	let ALGOLIA_PUBLIC_KEY: string | undefined;
 }
+/* eslint-enable @typescript-eslint/no-namespace, no-shadow-restricted-names, no-unused-vars */
 
 describe("metrics", () => {
 	const std = mockConsoleMethods();

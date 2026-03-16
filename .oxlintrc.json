@@ -1,0 +1,181 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "import", "unicorn", "vitest"],
+	"categories": {
+		"correctness": "off"
+	},
+	"ignorePatterns": [
+		"**/node_modules/**/*",
+		"**/dist/**/*",
+		".e2e-test-report/**",
+		"**/vitest.config.mts",
+		"**/vitest.config.ts",
+		"**/vite.config.ts",
+		"**/tsup.config.ts",
+		"**/tsdown.config.ts",
+		"fixtures/**",
+		"packages/quick-edit-extension/vscode.d.ts",
+		"packages/quick-edit-extension/vscode.proposed.*.d.ts",
+		"packages/quick-edit-extension/scripts/**",
+		"packages/miniflare/scripts/**"
+	],
+	"jsPlugins": [
+		"eslint-plugin-turbo",
+		"eslint-plugin-unused-imports",
+		{
+			"name": "workers-sdk",
+			"specifier": "./packages/eslint-config-shared/oxlint-plugin.mjs"
+		}
+	],
+	"overrides": [
+		{
+			"files": ["**/*.ts", "**/*.mts", "**/*.tsx"],
+			"rules": {
+				"for-direction": "error",
+				"no-async-promise-executor": "error",
+				"no-case-declarations": "error",
+				"no-compare-neg-zero": "error",
+				"no-cond-assign": "error",
+				"no-constant-binary-expression": "error",
+				"no-constant-condition": "error",
+				"no-control-regex": "error",
+				"no-debugger": "error",
+				"no-delete-var": "error",
+				"no-dupe-else-if": "error",
+				"no-duplicate-case": "error",
+				"no-empty": "off",
+				"no-empty-character-class": "error",
+				"no-empty-pattern": "error",
+				"no-empty-static-block": "error",
+				"no-ex-assign": "error",
+				"no-extra-boolean-cast": "error",
+				"no-fallthrough": "error",
+				"no-global-assign": "error",
+				"no-invalid-regexp": "error",
+				"no-irregular-whitespace": "error",
+				"no-loss-of-precision": "error",
+				"no-misleading-character-class": "error",
+				"no-nonoctal-decimal-escape": "error",
+				"no-prototype-builtins": "error",
+				"no-regex-spaces": "error",
+				"no-self-assign": "error",
+				"no-shadow-restricted-names": "error",
+				"no-sparse-arrays": "error",
+				"no-unexpected-multiline": "error",
+				"no-unsafe-finally": "error",
+				"no-unsafe-optional-chaining": "error",
+				"no-unused-labels": "error",
+				"no-unused-private-class-members": "error",
+				"no-useless-backreference": "error",
+				"no-useless-catch": "error",
+				"no-useless-escape": "error",
+				"require-yield": "off",
+				"use-isnan": "error",
+				"valid-typeof": "error",
+				"no-var": "error",
+				"prefer-const": "error",
+				"prefer-rest-params": "error",
+				"prefer-spread": "error",
+				"constructor-super": "off",
+				"no-class-assign": "off",
+				"no-const-assign": "off",
+				"no-dupe-class-members": "off",
+				"no-dupe-keys": "off",
+				"no-func-assign": "off",
+				"no-import-assign": "off",
+				"no-new-native-nonconstructor": "off",
+				"no-obj-calls": "off",
+				"no-redeclare": "off",
+				"no-setter-return": "off",
+				"no-this-before-super": "off",
+				"no-unsafe-negation": "off",
+				"no-with": "off",
+				"@typescript-eslint/ban-ts-comment": "error",
+				"no-array-constructor": "error",
+				"@typescript-eslint/no-duplicate-enum-values": "error",
+				"@typescript-eslint/no-empty-object-type": "error",
+				"@typescript-eslint/no-explicit-any": "error",
+				"@typescript-eslint/no-extra-non-null-assertion": "error",
+				"@typescript-eslint/no-misused-new": "error",
+				"@typescript-eslint/no-namespace": "error",
+				"@typescript-eslint/no-non-null-asserted-optional-chain": "error",
+				"@typescript-eslint/no-require-imports": "error",
+				"@typescript-eslint/no-this-alias": "error",
+				"@typescript-eslint/no-unnecessary-type-constraint": "error",
+				"@typescript-eslint/no-unsafe-declaration-merging": "error",
+				"@typescript-eslint/no-unsafe-function-type": "error",
+				"no-unused-expressions": "error",
+				"@typescript-eslint/no-wrapper-object-types": "error",
+				"@typescript-eslint/prefer-as-const": "error",
+				"@typescript-eslint/prefer-namespace-keyword": "error",
+				"@typescript-eslint/triple-slash-reference": "error",
+				"curly": ["error", "all"],
+				"no-empty-function": "off",
+				"@typescript-eslint/consistent-type-imports": ["error"],
+				"@typescript-eslint/no-floating-promises": "error",
+				"@typescript-eslint/no-non-null-assertion": "error",
+				"no-shadow": "error",
+				"no-unused-vars": [
+					"error",
+					{
+						"argsIgnorePattern": ".*",
+						"varsIgnorePattern": "^_",
+						"ignoreRestSiblings": true
+					}
+				],
+				"unicorn/prefer-node-protocol": "error",
+				"vitest/no-focused-tests": "error",
+				"turbo/no-undeclared-env-vars": "error",
+				"unused-imports/no-unused-imports": "error",
+				"unused-imports/no-unused-vars": [
+					"error",
+					{
+						"vars": "all",
+						"varsIgnorePattern": "^_",
+						"args": "after-used",
+						"argsIgnorePattern": "^_"
+					}
+				],
+				"workers-sdk/no-direct-recursive-rm": "error",
+				"workers-sdk/no-unsafe-command-execution": "error",
+				"no-restricted-imports": [
+					"error",
+					{
+						"paths": [
+							{
+								"name": "ci-info",
+								"importNames": [
+									"isCI",
+									"CLOUDFLARE_PAGES",
+									"CLOUDFLARE_WORKERS",
+									"isPR",
+									"name"
+								],
+								"message": "Use default import (`import ci from \"ci-info\"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks."
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"**/*.test.ts",
+				"**/*.test.mts",
+				"**/*.test.tsx",
+				"**/test/**/*.ts",
+				"**/__tests__/**/*.ts",
+				"**/__tests__/**/*.mts",
+				"**/__tests__/**/*.tsx",
+				"**/e2e/**/*.ts",
+				"**/e2e/**/*.mts",
+				"**/fixtures/**/*.ts",
+				"**/fixtures/**/*.mts"
+			],
+			"rules": {
+				"workers-sdk/no-unsafe-command-execution": "off",
+				"workers-sdk/no-vitest-import-expect": "error"
+			}
+		}
+	]
+}

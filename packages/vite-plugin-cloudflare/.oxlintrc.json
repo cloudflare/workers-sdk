@@ -1,0 +1,53 @@
+{
+	"$schema": "../../node_modules/oxlint/configuration_schema.json",
+	"extends": ["../../.oxlintrc.json"],
+	"categories": {
+		"correctness": "off"
+	},
+	"ignorePatterns": [
+		"**/dist",
+		"scripts/**",
+		"tsdown.config.ts",
+		"vitest.config.ts",
+		"src/__tests__/fixtures/**",
+		"playground/**",
+		"e2e/**"
+	],
+	"jsPlugins": [
+		"eslint-plugin-turbo",
+		"eslint-plugin-unused-imports",
+		{
+			"name": "workers-sdk",
+			"specifier": "../eslint-config-shared/oxlint-plugin.mjs"
+		}
+	],
+	"rules": {
+		"no-restricted-imports": [
+			"error",
+			{
+				"paths": [
+					{
+						"name": "ci-info",
+						"importNames": [
+							"isCI",
+							"CLOUDFLARE_PAGES",
+							"CLOUDFLARE_WORKERS",
+							"isPR",
+							"name"
+						],
+						"message": "Use default import (`import ci from \"ci-info\"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks."
+					},
+					{
+						"name": "vitest",
+						"importNames": ["expect"],
+						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })"
+					},
+					{
+						"name": "wrangler",
+						"message": "Use namespace import: import * as wrangler from \"wrangler\""
+					}
+				]
+			}
+		]
+	}
+}

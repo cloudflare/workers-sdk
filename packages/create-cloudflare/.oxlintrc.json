@@ -1,0 +1,24 @@
+{
+	"$schema": "../../node_modules/oxlint/configuration_schema.json",
+	"extends": ["../../.oxlintrc.json"],
+	"categories": {
+		"correctness": "off"
+	},
+	"ignorePatterns": [
+		"e2e/**/fixtures/**",
+		"**/templates/**/*.*",
+		"!**/templates*/**/c3.ts",
+		"scripts/**"
+	],
+	"jsPlugins": [
+		"eslint-plugin-turbo",
+		"eslint-plugin-unused-imports",
+		{
+			"name": "workers-sdk",
+			"specifier": "../eslint-config-shared/oxlint-plugin.mjs"
+		}
+	],
+	"rules": {
+		"no-console": "error"
+	}
+}
