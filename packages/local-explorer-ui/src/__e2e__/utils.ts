@@ -33,9 +33,11 @@ export async function navigateToD1(
 	databaseId: string,
 	table?: string
 ): Promise<void> {
-	const path = table
-		? `/cdn-cgi/explorer/d1/${databaseId}?table=${table}`
-		: `/cdn-cgi/explorer/d1/${databaseId}`;
+	let path = `/cdn-cgi/explorer/d1/${databaseId}`;
+	if (table) {
+		path += `?table=${encodeURIComponent(table)}`;
+	}
+
 	await navigateTo(path);
 	await waitForPageLoad();
 }
