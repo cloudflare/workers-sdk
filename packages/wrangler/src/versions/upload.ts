@@ -557,6 +557,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	if (config.bundling_external?.length && format === "service-worker") {
+		throw new UserError(
+			`You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+
+For example:
+{
+  "alias": {
+    "${config.bundling_external[0]}": "./my-local-implementation.js"
+  }
+}
+
+See https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing`
+		);
+	}
+
 	let hasPreview = false;
 
 	try {

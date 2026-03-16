@@ -386,6 +386,24 @@ async function resolveConfig(
 		);
 	}
 
+	if (
+		resolved.build.external?.length &&
+		resolved.build.format === "service-worker"
+	) {
+		throw new UserError(
+			`You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+
+For example:
+{
+  "alias": {
+    "${resolved.build.external[0]}": "./my-local-implementation.js"
+  }
+}
+
+See https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing`
+		);
+	}
+
 	validateAssetsArgsAndConfig(resolved);
 
 	const services = extractBindingsOfType("service", resolved.bindings);

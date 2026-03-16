@@ -658,6 +658,28 @@ describe("deploy", () => {
 				  - Add the "nodejs_compat" compatibility flag to your project."
 			`);
 		});
+
+		it("should error when using bundling_external with service-worker format", async () => {
+			writeWranglerConfig({
+				bundling_external: ["external-module"],
+			});
+			writeWorkerSource({ type: "sw" });
+
+			await expect(
+				runWrangler("deploy index.js")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+
+For example:
+{
+  "alias": {
+    "external-module": "./my-local-implementation.js"
+  }
+}
+
+See https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing]`
+			);
+		});
 	});
 	describe("--node-compat", () => {
 		it("should error when using node compatibility mode", async () => {
