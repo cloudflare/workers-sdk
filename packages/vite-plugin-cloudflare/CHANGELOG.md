@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 1.29.0
+
+### Minor Changes
+
+- [#12885](https://github.com/cloudflare/workers-sdk/pull/12885) [`12505c9`](https://github.com/cloudflare/workers-sdk/commit/12505c97c280e3516ace4354fef0a8434f87cdf4) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Vite 8 to the supported peer dependency range
+
+  The package now lists Vite 8 in its peer dependency range, so installs with Vite 8 no longer show a peer dependency warning.
+
+### Patch Changes
+
+- [#12859](https://github.com/cloudflare/workers-sdk/pull/12859) [`876108a`](https://github.com/cloudflare/workers-sdk/commit/876108a04b19f6577843f7cf9884639e17d37fb7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix crash when plugins send HMR events before runner initialization
+
+  Previously, if another Vite plugin (such as `vite-plugin-vue-devtools`) sent HMR events during `configureServer` before the Cloudflare plugin had initialized its runner, the dev server would crash with `AssertionError: The WebSocket is undefined`. The environment's WebSocket send operations are now deferred until the runner is fully initialized, allowing early HMR events to be handled gracefully.
+
+- Updated dependencies [[`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68), [`65f1092`](https://github.com/cloudflare/workers-sdk/commit/65f1092281866333118e5e8ebf0f5234bf695baf), [`7b0d8f5`](https://github.com/cloudflare/workers-sdk/commit/7b0d8f5830e9b317c69abdcd452a79d88811f000), [`351e1e1`](https://github.com/cloudflare/workers-sdk/commit/351e1e1efa808a19b84b5888d747cd4aa4566921), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68)]:
+  - miniflare@4.20260312.1
+  - wrangler@4.74.0
+
 ## 1.28.0
 
 ### Minor Changes
