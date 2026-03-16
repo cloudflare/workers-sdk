@@ -147,113 +147,117 @@ export const syncAssets = async (
 
 	terminalProgress.ensureCleanup();
 
-	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
-		attempts = 0;
-		let gatewayErrors = 0;
-		const doUpload = async (): Promise<UploadResponse> => {
-			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
-			// This is so we don't run out of memory trying to upload the files.
-			const payload = new FormData();
-			const uploadedFiles: string[] = [];
-			for (const manifestEntry of bucket) {
-				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
-				uploadedFiles.push(manifestEntry[0]);
-				payload.append(
-					manifestEntry[1].hash,
-					new File(
-						[(await readFile(absFilePath)).toString("base64")],
+	try {
+		for (const [bucketIndex, bucket] of assetBuckets.entries()) {
+			attempts = 0;
+			let gatewayErrors = 0;
+			const doUpload = async (): Promise<UploadResponse> => {
+				// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
+				// This is so we don't run out of memory trying to upload the files.
+				const payload = new FormData();
+				const uploadedFiles: string[] = [];
+				for (const manifestEntry of bucket) {
+					const absFilePath = path.join(assetDirectory, manifestEntry[0]);
+					uploadedFiles.push(manifestEntry[0]);
+					payload.append(
 						manifestEntry[1].hash,
-						{
-							// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
-							// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
-							// So, to make it easier for any other clients, we'll just parse "application/null" on the API
-							// to mean actually null (signal to not send a Content-Type header with the response)
-							type: getContentType(absFilePath) ?? "application/null",
-						}
-					),
-					manifestEntry[1].hash
-				);
-			}
-
-			try {
-				const res = await fetchResult<UploadResponse>(
-					complianceConfig,
-					`/accounts/${accountId}/workers/assets/upload?base64=true`,
-					{
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
-						},
-						body: payload,
-					}
-				);
-				uploadedAssetsCount += bucket.length;
-				logAssetsUploadStatus(
-					numberFilesToUpload,
-					uploadedAssetsCount,
-					uploadedFiles
-				);
-				return res;
-			} catch (e) {
-				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					logger.info(chalk.dim(`Asset upload failed. Retrying...\n`, e));
-					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
-					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
+						new File(
+							[(await readFile(absFilePath)).toString("base64")],
+							manifestEntry[1].hash,
+							{
+								// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
+								// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
+								// So, to make it easier for any other clients, we'll just parse "application/null" on the API
+								// to mean actually null (signal to not send a Content-Type header with the response)
+								type: getContentType(absFilePath) ?? "application/null",
+							}
+						),
+						manifestEntry[1].hash
 					);
-					if (e instanceof APIError && e.isGatewayError()) {
-						// Gateway problem, wait for some additional time and set concurrency to 1
-						queue.concurrency = 1;
+				}
+
+				try {
+					const res = await fetchResult<UploadResponse>(
+						complianceConfig,
+						`/accounts/${accountId}/workers/assets/upload?base64=true`,
+						{
+							method: "POST",
+							headers: {
+								Authorization: `Bearer ${initializeAssetsResponse.jwt}`,
+							},
+							body: payload,
+						}
+					);
+					uploadedAssetsCount += bucket.length;
+					logAssetsUploadStatus(
+						numberFilesToUpload,
+						uploadedAssetsCount,
+						uploadedFiles
+					);
+					return res;
+				} catch (e) {
+					if (attempts < MAX_UPLOAD_ATTEMPTS) {
+						logger.info(chalk.dim(`Asset upload failed. Retrying...\n`, e));
+						// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 						await new Promise((resolvePromise) =>
-							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
+							setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 						);
-						gatewayErrors++;
-						// only count as a failed attempt after a few initial gateway errors
-						if (gatewayErrors >= MAX_UPLOAD_GATEWAY_ERRORS) {
+						if (e instanceof APIError && e.isGatewayError()) {
+							// Gateway problem, wait for some additional time and set concurrency to 1
+							queue.concurrency = 1;
+							await new Promise((resolvePromise) =>
+								setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
+							);
+							gatewayErrors++;
+							// only count as a failed attempt after a few initial gateway errors
+							if (gatewayErrors >= MAX_UPLOAD_GATEWAY_ERRORS) {
+								attempts++;
+							}
+						} else {
 							attempts++;
 						}
+						return doUpload();
+					} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
+						throw new FatalError(
+							`Upload took too long.\n` +
+								`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
+								`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
+							undefined,
+							{ telemetryMessage: "Asset upload took too long" }
+						);
 					} else {
-						attempts++;
+						throw e;
 					}
-					return doUpload();
-				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
-					throw new FatalError(
-						`Upload took too long.\n` +
-							`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
-							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
-						undefined,
-						{ telemetryMessage: "Asset upload took too long" }
-					);
-				} else {
-					throw e;
 				}
-			}
-		};
-		// add to queue and run it if we haven't reached concurrency limit
-		queuePromises.push(
-			queue.add(() =>
-				doUpload().then((res) => {
-					completionJwt = res.jwt || completionJwt;
-				})
-			)
-		);
-	}
-	queue.on("error", (error) => {
-		logger.error(error.message);
-		throw error;
-	});
-	// using Promise.all() here instead of queue.onIdle() to ensure
-	// we actually throw errors that occur within queued promises.
-	await Promise.all(queuePromises);
+			};
+			// add to queue and run it if we haven't reached concurrency limit
+			queuePromises.push(
+				queue.add(() =>
+					doUpload().then((res) => {
+						completionJwt = res.jwt || completionJwt;
+					})
+				)
+			);
+		}
+		queue.on("error", (error) => {
+			logger.error(error.message);
+			throw error;
+		});
+		// using Promise.all() here instead of queue.onIdle() to ensure
+		// we actually throw errors that occur within queued promises.
+		await Promise.all(queuePromises);
 
-	// if queue finishes without receiving JWT from asset upload service (AUS)
-	// AUS only returns this in the final bucket upload response
-	if (!completionJwt) {
-		throw new FatalError(
-			"Failed to complete asset upload. Please try again.",
-			1,
-			{ telemetryMessage: true }
-		);
+		// if queue finishes without receiving JWT from asset upload service (AUS)
+		// AUS only returns this in the final bucket upload response
+		if (!completionJwt) {
+			throw new FatalError(
+				"Failed to complete asset upload. Please try again.",
+				1,
+				{ telemetryMessage: true }
+			);
+		}
+	} finally {
+		terminalProgress.clear();
 	}
 
 	const uploadMs = Date.now() - start;
