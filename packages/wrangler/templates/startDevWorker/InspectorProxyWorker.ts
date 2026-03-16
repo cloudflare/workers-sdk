@@ -398,10 +398,18 @@ export class InspectorProxyWorker implements DurableObject {
 			{ method: "Runtime.enable", id: this.nextCounter() },
 			runtime
 		);
-		this.sendRuntimeMessage(
-			{ method: "Debugger.enable", id: this.nextCounter() },
-			runtime
-		);
+		// Only send Debugger.enable if DevTools is already attached.
+		// When DevTools first connects, it sends its own Debugger.enable message.
+		// However, on runtime reconnect (e.g., after worker reload), DevTools won't
+		// re-send Debugger.enable since it considers the session still active.
+		// Without this, Debugger.scriptParsed events won't be emitted on the new
+		// runtime connection, breaking source maps, breakpoints, and debugger pausing.
+		if (this.websockets.devtools !== undefined) {
+			this.sendRuntimeMessage(
+				{ method: "Debugger.enable", id: this.nextCounter() },
+				runtime
+			);
+		}
 		this.sendRuntimeMessage(
 			{ method: "Network.enable", id: this.nextCounter() },
 			runtime
@@ -547,24 +555,31 @@ export class InspectorProxyWorker implements DurableObject {
 			);
 		} else {
 			devtools.addEventListener("message", this.handleDevToolsIncomingMessage);
+			const disconnectDevtools = () => {
+				if (this.websockets.devtools === devtools) {
+					this.websockets.devtools = undefined;
+
+					// Notify the runtime to disable the debugger when DevTools disconnects.
+					if (this.websockets.runtime) {
+						this.sendRuntimeMessage({
+							id: this.nextCounter(),
+							method: "Debugger.disable",
+						});
+					}
+				}
+			};
 			devtools.addEventListener("close", (event) => {
 				this.sendDebugLog(
 					"DEVTOOLS WEBSOCKET CLOSED",
 					event.code,
 					event.reason
 				);
-
-				if (this.websockets.devtools === devtools) {
-					this.websockets.devtools = undefined;
-				}
+				disconnectDevtools();
 			});
 			devtools.addEventListener("error", (event) => {
 				const error = serialiseError(event.error);
 				this.sendDebugLog("DEVTOOLS WEBSOCKET ERROR", error);
-
-				if (this.websockets.devtools === devtools) {
-					this.websockets.devtools = undefined;
-				}
+				disconnectDevtools();
 			});
 
 			// Since Wrangler proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
