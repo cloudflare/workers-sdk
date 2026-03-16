@@ -409,6 +409,14 @@ class ProxyStubHandler<T extends object>
 		assert(!isClientError(res.status));
 
 		const typeHeader = res.headers.get(CoreHeaders.OP_RESULT_TYPE);
+		if (typeHeader === null) {
+			const result = parseWithReadableStreams(
+				NODE_PLATFORM_IMPL,
+				{ value: await res.text() },
+				this.revivers
+			);
+			return this.#maybeThrow(res, result, this.#parseAsyncResponse);
+		}
 		if (typeHeader === "Promise, ReadableStream") return res.body;
 		assert(typeHeader === "Promise"); // Must be async
 

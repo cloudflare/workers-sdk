@@ -26,6 +26,7 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfRateLimit,
+	CfStreamBinding,
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
 	CfService,
@@ -62,6 +63,7 @@ export type WorkerMetadataBinding =
 	| { type: "browser"; name: string; raw?: boolean }
 	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
 	| { type: "images"; name: string; raw?: boolean }
+	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
@@ -298,6 +300,7 @@ export type Binding =
 	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
 	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
 	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
+	| ({ type: "stream" } & BindingOmit<CfStreamBinding>)
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)

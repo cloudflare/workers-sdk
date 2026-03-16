@@ -248,6 +248,29 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "stream",
+			config: {
+				stream: {
+					binding: "STREAM",
+					remote: true,
+				},
+			},
+			expectedProxyWorkerBindings: {
+				STREAM: {
+					remote: true,
+					type: "stream",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					stream: {
+						binding: "STREAM",
+						remoteProxyConnectionString,
+					},
+				}),
+			],
+		},
+		{
 			name: "vectorize",
 			config: {
 				vectorize: [

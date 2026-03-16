@@ -70,6 +70,7 @@ import {
 	SharedOptions,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
+	STREAM_PLUGIN_NAME,
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
@@ -150,6 +151,7 @@ import type {
 	KVNamespaceListKey,
 	Queue,
 	R2Bucket,
+	StreamBinding,
 } from "@cloudflare/workers-types/experimental";
 import type { Process } from "@puppeteer/browsers";
 
@@ -2748,6 +2750,12 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<ImagesBinding>> {
 		return this.#getProxy(IMAGES_PLUGIN_NAME, bindingName, workerName);
+	}
+	getStreamBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<StreamBinding>> {
+		return this.#getProxy(STREAM_PLUGIN_NAME, bindingName, workerName);
 	}
 	getHelloWorldBinding(
 		bindingName: string,

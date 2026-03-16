@@ -31,6 +31,7 @@ import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
+import { STREAM_PLUGIN, STREAM_PLUGIN_NAME } from "./stream";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
 import {
 	VERSION_METADATA_PLUGIN,
@@ -69,6 +70,7 @@ export const PLUGINS = {
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
+	[STREAM_PLUGIN_NAME]: STREAM_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
@@ -133,6 +135,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options> &
 	z.input<typeof MEDIA_PLUGIN.options> &
+	z.input<typeof STREAM_PLUGIN.options> &
 	z.input<typeof VERSION_METADATA_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
@@ -145,7 +148,8 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
 	z.input<typeof IMAGES_PLUGIN.sharedOptions> &
-	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions>;
+	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions> &
+	z.input<typeof STREAM_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
@@ -212,4 +216,5 @@ export * from "./mtls";
 export * from "./hello-world";
 export * from "./worker-loader";
 export * from "./media";
+export * from "./stream";
 export * from "./version-metadata";

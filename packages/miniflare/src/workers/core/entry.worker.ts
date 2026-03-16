@@ -26,6 +26,7 @@ type Env = {
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
+	[CoreBindings.JSON_STREAM_BINDINGS]: string[];
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
@@ -512,6 +513,39 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
+			if (url.pathname.startsWith("/cdn-cgi/handler/stream/")) {
+				const match = url.pathname.match(
+					/^\/cdn-cgi\/handler\/stream\/([^/]+)(\/.*)?$/
+				);
+				if (!match) {
+					return new Response("Invalid Stream handler path", { status: 404 });
+				}
+
+				const bindingName = decodeURIComponent(match[1]);
+				if (!env[CoreBindings.JSON_STREAM_BINDINGS].includes(bindingName)) {
+					return new Response(
+						`Unknown Stream binding ${JSON.stringify(bindingName)}`,
+						{ status: 404 }
+					);
+				}
+				const binding = (env as Record<string, unknown>)[bindingName];
+				if (
+					!binding ||
+					typeof binding !== "object" ||
+					!("fetch" in binding) ||
+					typeof binding.fetch !== "function"
+				) {
+					return new Response(
+						`Unknown Stream binding ${JSON.stringify(bindingName)}`,
+						{ status: 404 }
+					);
+				}
+
+				const forwardURL = new URL(request.url);
+				forwardURL.pathname = match[2] ?? "/";
+				return await binding.fetch(new Request(forwardURL, request));
+			}
+
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
 				if (
 					url.pathname === LOCAL_EXPLORER_BASE_PATH ||
@@ -554,7 +588,7 @@ export default <ExportedHandler<Env>>{
 
 				if (url.pathname.startsWith("/cdn-cgi/handler/")) {
 					return new Response(
-						`"${url.pathname}" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`,
+						`"${url.pathname}" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled", "/cdn-cgi/handler/email", or "/cdn-cgi/handler/stream/:binding/..."?`,
 						{ status: 404 }
 					);
 				}

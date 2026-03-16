@@ -1483,6 +1483,50 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(url);
 			await expect(res.text()).resolves.toBe("env.IMAGES is available");
 		});
+		it("should support Stream bindings", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						if (env.STREAM === undefined) {
+							return new Response("missing", { status: 500 });
+						}
+						const upload = await env.STREAM.createDirectUpload({
+							maxDurationSeconds: 60,
+						});
+						return Response.json({ uploadURL: upload.uploadURL });
+					}
+				}`);
+
+			const config = configDefaults({
+				bindings: {
+					STREAM: {
+						type: "stream",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const res = await fetch(url);
+			await expect(res.json()).resolves.toEqual({
+				uploadURL: expect.stringMatching(
+					/^\/cdn-cgi\/handler\/stream\/STREAM\/direct-upload\//
+				),
+			});
+		});
 		it.todo("should support Media bindings"); // Media bindings are only available remotely
 		it.todo("supports Workflow bindings");
 		it.todo("exposes send email bindings");
