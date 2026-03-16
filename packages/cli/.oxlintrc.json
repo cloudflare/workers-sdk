@@ -1,9 +1,7 @@
 {
 	"$schema": "../../node_modules/oxlint/configuration_schema.json",
 	"extends": ["../../.oxlintrc.json"],
-	"categories": {
-		"correctness": "off"
-	},
+	"ignorePatterns": ["**/*.js"],
 	"jsPlugins": [
 		"eslint-plugin-turbo",
 		"eslint-plugin-unused-imports",

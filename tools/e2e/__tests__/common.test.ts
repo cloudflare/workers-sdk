@@ -1,5 +1,5 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
 	deleteDatabase,
 	deleteKVNamespace,
@@ -40,7 +40,7 @@ afterEach(() => {
 });
 
 describe("listTmpE2EProjects()", () => {
-	it("makes paged REST requests and returns a filtered list of projects", async () => {
+	it("makes paged REST requests and returns a filtered list of projects", async ({ expect }) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -111,7 +111,7 @@ describe("listTmpE2EProjects()", () => {
 });
 
 describe("deleteProject()", () => {
-	it("makes a REST request to delete the given project", async () => {
+	it("makes a REST request to delete the given project", async ({ expect }) => {
 		const MOCK_PROJECT = "mock-pages-project";
 		agent
 			.get("https://api.cloudflare.com")
@@ -125,7 +125,7 @@ describe("deleteProject()", () => {
 });
 
 describe("listTmpKVNamespaces()", () => {
-	it("makes a REST request and returns a filtered list of kv namespaces", async () => {
+	it("makes a REST request and returns a filtered list of kv namespaces", async ({ expect }) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -190,7 +190,7 @@ describe("listTmpKVNamespaces()", () => {
 });
 
 describe("deleteKVNamespace()", () => {
-	it("makes a REST request to delete the given project", async () => {
+	it("makes a REST request to delete the given project", async ({ expect }) => {
 		const MOCK_KV = "tmp_e2e_kv";
 		agent
 			.get("https://api.cloudflare.com")
@@ -204,7 +204,7 @@ describe("deleteKVNamespace()", () => {
 });
 
 describe("listTmpDatabases()", () => {
-	it("makes a REST request and returns a filtered list of d1 databases", async () => {
+	it("makes a REST request and returns a filtered list of d1 databases", async ({ expect }) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -281,7 +281,7 @@ describe("listTmpDatabases()", () => {
 });
 
 describe("deleteDatabase()", () => {
-	it("makes a REST request to delete the given project", async () => {
+	it("makes a REST request to delete the given project", async ({ expect }) => {
 		const MOCK_DB = "tmp-e2e-db";
 		agent
 			.get("https://api.cloudflare.com")
@@ -295,7 +295,7 @@ describe("deleteDatabase()", () => {
 });
 
 describe("listTmpE2EWorkers()", () => {
-	it("makes a REST request and returns a filtered list of workers", async () => {
+	it("makes a REST request and returns a filtered list of workers", async ({ expect }) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -336,7 +336,7 @@ describe("listTmpE2EWorkers()", () => {
 });
 
 describe("deleteWorker()", () => {
-	it("makes a REST request to delete the given project", async () => {
+	it("makes a REST request to delete the given project", async ({ expect }) => {
 		const MOCK_WORKER = "mock-worker";
 		agent
 			.get("https://api.cloudflare.com")
@@ -350,7 +350,7 @@ describe("deleteWorker()", () => {
 });
 
 describe("listTmpR2Buckets()", () => {
-	it("makes a REST request and returns a filtered list of R2 buckets", async () => {
+	it("makes a REST request and returns a filtered list of R2 buckets", async ({ expect }) => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -392,7 +392,7 @@ describe("listTmpR2Buckets()", () => {
 });
 
 describe("deleteR2Bucket()", () => {
-	it("makes a REST request to delete the given R2 bucket", async () => {
+	it("makes a REST request to delete the given R2 bucket", async ({ expect }) => {
 		const MOCK_BUCKET = "tmp-e2e-abc123-next--workers-opennext-cache";
 		agent
 			.get("https://api.cloudflare.com")
