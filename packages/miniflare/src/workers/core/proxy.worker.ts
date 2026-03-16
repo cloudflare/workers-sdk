@@ -29,14 +29,22 @@ const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 
 // Constant-time comparison that avoids `crypto.subtle.timingSafeEqual`,
 // which can be disallowed within Durable Object I/O gates in newer workerd.
+function toUint8Array(v: ArrayBufferLike | ArrayBufferView): Uint8Array {
+	if (v instanceof Uint8Array) {
+		return v;
+	}
+	if (ArrayBuffer.isView(v)) {
+		return new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+	}
+	return new Uint8Array(v);
+}
+
 function constantTimeEqual(
 	a: ArrayBufferLike | ArrayBufferView,
 	b: ArrayBufferLike | ArrayBufferView
 ): boolean {
-	const viewA =
-		a instanceof Uint8Array ? a : new Uint8Array("buffer" in a ? a.buffer : a);
-	const viewB =
-		b instanceof Uint8Array ? b : new Uint8Array("buffer" in b ? b.buffer : b);
+	const viewA = toUint8Array(a);
+	const viewB = toUint8Array(b);
 	if (viewA.byteLength !== viewB.byteLength) {
 		return false;
 	}
