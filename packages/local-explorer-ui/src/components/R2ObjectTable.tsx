@@ -7,6 +7,7 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { formatDate, formatSize } from "../utils/format";
 import type { R2Object } from "../api";
 
 interface R2ObjectTableProps {
@@ -16,41 +17,6 @@ interface R2ObjectTableProps {
 	objects: R2Object[];
 	onDelete: (keys: string[]) => void;
 	onNavigateToPrefix: (prefix: string) => void;
-}
-
-function formatSize(bytes: number | undefined): string {
-	if (bytes === undefined || bytes === 0) {
-		return "-";
-	}
-
-	const units = ["B", "KB", "MB", "GB", "TB"] satisfies string[];
-	let unitIndex = 0;
-	let size = bytes;
-	while (size >= 1024 && unitIndex < units.length - 1) {
-		size /= 1024;
-		unitIndex++;
-	}
-
-	return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
-}
-
-function formatDate(dateString: string | undefined): string {
-	if (!dateString) {
-		return "-";
-	}
-
-	try {
-		const date = new Date(dateString);
-		return date.toLocaleDateString(undefined, {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	} catch {
-		return "-";
-	}
 }
 
 function getDisplayName(key: string, currentPrefix: string): string {

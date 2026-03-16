@@ -6,6 +6,7 @@ import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CopyButton } from "../../../components/CopyButton";
+import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
 
 export const Route = createFileRoute("/r2/$bucketName/object/$")({
@@ -37,51 +38,6 @@ export const Route = createFileRoute("/r2/$bucketName/object/$")({
 		};
 	},
 });
-
-function formatSize(bytes: number | undefined): string {
-	if (bytes === undefined || bytes === 0) {
-		return "0 B";
-	}
-
-	const units = ["B", "KB", "MB", "GB", "TB"] satisfies string[];
-	let unitIndex = 0;
-	let size = bytes;
-	while (size >= 1024 && unitIndex < units.length - 1) {
-		size /= 1024;
-		unitIndex++;
-	}
-
-	return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
-}
-
-function formatDate(dateString: string | undefined): string {
-	if (!dateString) {
-		return "-";
-	}
-
-	try {
-		const date = new Date(dateString);
-
-		// Format: "13 May 2025 01:11:37 GMT"
-		const day = date.getUTCDate();
-		const month = date.toLocaleString("en-US", {
-			month: "short",
-			timeZone: "UTC",
-		});
-		const year = date.getUTCFullYear();
-		const time = date.toLocaleString("en-US", {
-			hour: "2-digit",
-			hour12: false,
-			minute: "2-digit",
-			second: "2-digit",
-			timeZone: "UTC",
-		});
-
-		return `${day} ${month} ${year} ${time} GMT`;
-	} catch {
-		return "-";
-	}
-}
 
 interface ObjectDetailsCardProps {
 	object: R2HeadObjectResult;
