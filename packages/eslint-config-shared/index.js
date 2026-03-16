@@ -53,6 +53,14 @@ export default defineConfig(
 		],
 		rules: {
 			curly: ["error", "all"],
+			"max-lines": [
+				"error",
+				{
+					max: 500,
+					skipBlankLines: true,
+					skipComments: true,
+				},
+			],
 			"no-empty": "off",
 			"no-empty-function": "off",
 			"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
