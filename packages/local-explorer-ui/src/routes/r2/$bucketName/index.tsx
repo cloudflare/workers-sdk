@@ -19,8 +19,8 @@ import { R2UploadDialog } from "../../../components/R2UploadDialog";
 import type { R2Object } from "../../../api";
 
 export interface R2BucketSearch {
-	prefix?: string;
 	delimiter?: boolean;
+	prefix?: string;
 }
 
 export const Route = createFileRoute("/r2/$bucketName/")({
@@ -35,11 +35,13 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 	}),
 	loader: async ({ params, deps }) => {
 		const response = await r2BucketListObjects({
-			path: { bucket_name: params.bucketName },
+			path: {
+				bucket_name: params.bucketName,
+			},
 			query: {
-				prefix: deps.prefix || undefined,
 				delimiter: deps.delimiter !== false ? "/" : undefined,
 				per_page: 100,
+				prefix: deps.prefix || undefined,
 			},
 		});
 
@@ -53,29 +55,29 @@ export const Route = createFileRoute("/r2/$bucketName/")({
 	},
 });
 
-function BucketView() {
-	const { bucketName } = Route.useParams();
-	const { prefix, delimiter } = Route.useSearch();
+function BucketView(): JSX.Element {
+	const params = Route.useParams();
+	const search = Route.useSearch();
 	const loaderData = Route.useLoaderData();
 	const navigate = useNavigate();
 
-	const [objects, setObjects] = useState<R2Object[]>(loaderData.objects);
+	const [addDirectoryOpen, setAddDirectoryOpen] = useState<boolean>(false);
+	const [creatingDirectory, setCreatingDirectory] = useState<boolean>(false);
+	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
+	const [deleteTargets, setDeleteTargets] = useState<string[]>([]);
+	const [deleting, setDeleting] = useState<boolean>(false);
 	const [delimitedPrefixes, setDelimitedPrefixes] = useState<string[]>(
 		loaderData.delimitedPrefixes
 	);
-	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
-	const [isTruncated, setIsTruncated] = useState(loaderData.isTruncated);
 	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(false);
-	const [loadingMore, setLoadingMore] = useState(false);
-	const [deleteTargets, setDeleteTargets] = useState<string[]>([]);
-	const [deleting, setDeleting] = useState(false);
-	const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-	const [addDirectoryOpen, setAddDirectoryOpen] = useState(false);
-	const [newDirectoryName, setNewDirectoryName] = useState("");
-	const [creatingDirectory, setCreatingDirectory] = useState(false);
+	const [isTruncated, setIsTruncated] = useState(loaderData.isTruncated);
+	const [loading, setLoading] = useState<boolean>(false);
+	const [loadingMore, setLoadingMore] = useState<boolean>(false);
+	const [newDirectoryName, setNewDirectoryName] = useState<string>("");
+	const [objects, setObjects] = useState<R2Object[]>(loaderData.objects);
+	const [uploadDialogOpen, setUploadDialogOpen] = useState<boolean>(false);
 
-	const directoryView = delimiter !== false;
+	const directoryView = search.delimiter !== false;
 
 	useEffect(() => {
 		setObjects(loaderData.objects);
@@ -100,9 +102,11 @@ function BucketView() {
 				setError(null);
 
 				const response = await r2BucketListObjects({
-					path: { bucket_name: bucketName },
+					path: {
+						bucket_name: params.bucketName,
+					},
 					query: {
-						prefix: prefix || undefined,
+						prefix: search.prefix || undefined,
 						delimiter: withDelimiter ? "/" : undefined,
 						cursor: nextCursor,
 						per_page: 100,
@@ -132,44 +136,48 @@ function BucketView() {
 				setLoadingMore(false);
 			}
 		},
-		[bucketName, prefix]
+		[params.bucketName, search.prefix]
 	);
 
-	const handleRefresh = () => {
-		void fetchObjects(undefined, directoryView);
-	};
+	async function handleRefresh(): Promise<void> {
+		await fetchObjects(undefined, directoryView);
+	}
 
-	const handleLoadMore = () => {
+	async function handleLoadMore(): Promise<void> {
 		if (cursor && !loadingMore) {
-			void fetchObjects(cursor, directoryView);
+			await fetchObjects(cursor, directoryView);
 		}
-	};
+	}
 
-	const handleDirectoryViewChange = (checked: boolean) => {
+	async function handleDirectoryViewChange(checked: boolean): Promise<void> {
 		// Navigate with the new delimiter setting (and back to root if in a subdirectory)
-		void navigate({
-			to: "/r2/$bucketName",
-			params: { bucketName },
+		await navigate({
+			params: {
+				bucketName: params.bucketName,
+			},
 			search: {
-				prefix: prefix && checked ? prefix : undefined,
+				prefix: search.prefix && checked ? search.prefix : undefined,
 				delimiter: checked ? undefined : false,
 			},
-		});
-	};
-
-	const handleNavigateToPrefix = (newPrefix: string) => {
-		void navigate({
 			to: "/r2/$bucketName",
-			params: { bucketName },
-			search: { prefix: newPrefix || undefined },
 		});
-	};
+	}
 
-	const handleDelete = (keys: string[]) => {
+	async function handleNavigateToPrefix(newPrefix: string): Promise<void> {
+		await navigate({
+			params: {
+				bucketName: params.bucketName,
+			},
+			search: { prefix: newPrefix || undefined },
+			to: "/r2/$bucketName",
+		});
+	}
+
+	function handleDelete(keys: string[]): void {
 		setDeleteTargets(keys);
-	};
+	}
 
-	const handleConfirmDelete = async () => {
+	async function handleConfirmDelete(): Promise<void> {
 		if (deleteTargets.length === 0) {
 			return;
 		}
@@ -177,7 +185,9 @@ function BucketView() {
 		try {
 			setDeleting(true);
 			await r2BucketDeleteObjects({
-				path: { bucket_name: bucketName },
+				path: {
+					bucket_name: params.bucketName,
+				},
 				body: deleteTargets,
 			});
 			setObjects((prev) =>
@@ -189,23 +199,24 @@ function BucketView() {
 		} finally {
 			setDeleting(false);
 		}
-	};
+	}
 
-	const handleUploadComplete = () => {
+	async function handleUploadComplete(): Promise<void> {
 		setUploadDialogOpen(false);
-		void fetchObjects(undefined, directoryView);
-	};
+		await fetchObjects(undefined, directoryView);
+	}
 
-	const handleCreateDirectory = async () => {
+	async function handleCreateDirectory(): Promise<void> {
 		if (!newDirectoryName.trim()) {
 			return;
 		}
 
 		try {
 			setCreatingDirectory(true);
-			const directoryKey = (prefix || "") + newDirectoryName.trim() + "/";
+			const directoryKey =
+				(search.prefix || "") + newDirectoryName.trim() + "/";
 			await r2BucketPutObject({
-				path: { bucket_name: bucketName, object_key: directoryKey },
+				path: { bucket_name: params.bucketName, object_key: directoryKey },
 				body: new Blob([]),
 			});
 			setAddDirectoryOpen(false);
@@ -218,29 +229,32 @@ function BucketView() {
 		} finally {
 			setCreatingDirectory(false);
 		}
-	};
+	}
 
 	// Build breadcrumb items
-	const pathSegments = prefix ? prefix.split("/").filter(Boolean) : [];
+	const pathSegments = search.prefix
+		? search.prefix.split("/").filter(Boolean)
+		: [];
 	const breadcrumbItems = [
 		<Link
-			key="bucket"
-			to="/r2/$bucketName"
-			params={{ bucketName }}
-			search={{}}
 			className="text-text no-underline hover:text-primary"
+			key="bucket"
+			params={{ bucketName: params.bucketName }}
+			search={{}}
+			to="/r2/$bucketName"
 		>
-			{bucketName}
+			{params.bucketName}
 		</Link>,
 		...pathSegments.map((segment, index) => {
 			const segmentPrefix = pathSegments.slice(0, index + 1).join("/") + "/";
+
 			return (
 				<Link
-					key={segmentPrefix}
-					to="/r2/$bucketName"
-					params={{ bucketName }}
-					search={{ prefix: segmentPrefix }}
 					className="text-text no-underline hover:text-primary"
+					key={segmentPrefix}
+					params={{ bucketName: params.bucketName }}
+					search={{ prefix: segmentPrefix }}
+					to="/r2/$bucketName"
 				>
 					{segment}
 				</Link>
@@ -301,9 +315,9 @@ function BucketView() {
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : objects.length === 0 && delimitedPrefixes.length === 0 ? (
 					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
-						{prefix ? (
+						{search.prefix ? (
 							<p className="text-sm font-light">
-								No objects found at prefix &quot;{prefix}&quot;.
+								No objects found at prefix &quot;{search.prefix}&quot;.
 							</p>
 						) : (
 							<>
@@ -319,12 +333,12 @@ function BucketView() {
 				) : (
 					<>
 						<R2ObjectTable
-							bucketName={bucketName}
-							objects={objects}
+							bucketName={params.bucketName}
+							currentPrefix={search.prefix || ""}
 							delimitedPrefixes={delimitedPrefixes}
-							currentPrefix={prefix || ""}
-							onNavigateToPrefix={handleNavigateToPrefix}
+							objects={objects}
 							onDelete={handleDelete}
+							onNavigateToPrefix={handleNavigateToPrefix}
 						/>
 						{isTruncated && cursor && (
 							<div className="p-4 text-center">
@@ -343,8 +357,8 @@ function BucketView() {
 
 				{/* Delete Confirmation Dialog */}
 				<AlertDialog.Root
-					open={deleteTargets.length > 0}
 					onOpenChange={(open) => !open && setDeleteTargets([])}
+					open={deleteTargets.length > 0}
 				>
 					<AlertDialog.Portal>
 						<AlertDialog.Backdrop className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
@@ -352,6 +366,7 @@ function BucketView() {
 							<AlertDialog.Title className="mb-4 text-lg font-semibold">
 								Delete {deleteTargets.length === 1 ? "object" : "objects"}?
 							</AlertDialog.Title>
+
 							<AlertDialog.Description className="mb-2 text-text-secondary">
 								{deleteTargets.length === 1 ? (
 									<>
@@ -365,6 +380,7 @@ function BucketView() {
 									</>
 								)}
 							</AlertDialog.Description>
+
 							<div className="mt-6 flex justify-end gap-2">
 								<Button
 									disabled={deleting}
@@ -388,13 +404,13 @@ function BucketView() {
 
 				{/* Add Directory Dialog */}
 				<AlertDialog.Root
-					open={addDirectoryOpen}
 					onOpenChange={(open) => {
 						if (!open) {
 							setAddDirectoryOpen(false);
 							setNewDirectoryName("");
 						}
 					}}
+					open={addDirectoryOpen}
 				>
 					<AlertDialog.Portal>
 						<AlertDialog.Backdrop className="fixed inset-0 z-1000 flex items-center justify-center bg-black/50 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0" />
@@ -402,9 +418,11 @@ function BucketView() {
 							<AlertDialog.Title className="mb-4 text-lg font-semibold">
 								Add directory
 							</AlertDialog.Title>
+
 							<AlertDialog.Description className="mb-4 text-text-secondary">
 								Enter a name for the new directory.
 							</AlertDialog.Description>
+
 							<div className="mb-4">
 								<label className="mb-1 block text-sm font-medium text-text">
 									Directory name
@@ -417,13 +435,14 @@ function BucketView() {
 									placeholder="my-directory"
 									autoFocus
 								/>
-								{prefix && (
+								{search.prefix && (
 									<p className="mt-1 text-xs text-text-secondary">
-										Will be created at: {prefix}
+										Will be created at: {search.prefix}
 										{newDirectoryName || "..."}/
 									</p>
 								)}
 							</div>
+
 							<div className="flex justify-end gap-2">
 								<Button
 									disabled={creatingDirectory}
@@ -435,6 +454,7 @@ function BucketView() {
 								>
 									Cancel
 								</Button>
+
 								<Button
 									disabled={creatingDirectory || !newDirectoryName.trim()}
 									loading={creatingDirectory}
@@ -450,11 +470,11 @@ function BucketView() {
 
 				{/* Upload Dialog */}
 				<R2UploadDialog
-					bucketName={bucketName}
-					currentPrefix={prefix || ""}
-					open={uploadDialogOpen}
+					bucketName={params.bucketName}
+					currentPrefix={search.prefix || ""}
 					onOpenChange={setUploadDialogOpen}
 					onUploadComplete={handleUploadComplete}
+					open={uploadDialogOpen}
 				/>
 			</div>
 		</>

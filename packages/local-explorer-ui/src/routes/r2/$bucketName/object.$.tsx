@@ -18,8 +18,13 @@ export const Route = createFileRoute("/r2/$bucketName/object/$")({
 		}
 
 		const response = await r2BucketGetObject({
-			path: { bucket_name: params.bucketName, object_key: objectKey },
-			headers: { "cf-metadata-only": "true" },
+			path: {
+				bucket_name: params.bucketName,
+				object_key: objectKey,
+			},
+			headers: {
+				"cf-metadata-only": "true",
+			},
 		});
 
 		const result = response.data?.result;
@@ -38,6 +43,7 @@ function formatSize(bytes: number | undefined): string {
 	if (bytes === undefined || bytes === 0) {
 		return "0 B";
 	}
+
 	const units = ["B", "KB", "MB", "GB", "TB"];
 	let unitIndex = 0;
 	let size = bytes;
@@ -45,6 +51,7 @@ function formatSize(bytes: number | undefined): string {
 		size /= 1024;
 		unitIndex++;
 	}
+
 	return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
 }
 
@@ -52,8 +59,10 @@ function formatDate(dateString: string | undefined): string {
 	if (!dateString) {
 		return "-";
 	}
+
 	try {
 		const date = new Date(dateString);
+
 		// Format: "13 May 2025 01:11:37 GMT"
 		const day = date.getUTCDate();
 		const month = date.toLocaleString("en-US", {
@@ -63,11 +72,12 @@ function formatDate(dateString: string | undefined): string {
 		const year = date.getUTCFullYear();
 		const time = date.toLocaleString("en-US", {
 			hour: "2-digit",
+			hour12: false,
 			minute: "2-digit",
 			second: "2-digit",
-			hour12: false,
 			timeZone: "UTC",
 		});
+
 		return `${day} ${month} ${year} ${time} GMT`;
 	} catch {
 		return "-";
@@ -78,7 +88,7 @@ interface ObjectDetailsCardProps {
 	object: R2HeadObjectResult;
 }
 
-function ObjectDetailsCard({ object }: ObjectDetailsCardProps) {
+function ObjectDetailsCard({ object }: ObjectDetailsCardProps): JSX.Element {
 	const contentType =
 		object.http_metadata?.contentType ?? "application/octet-stream";
 	const formattedDate = formatDate(object.last_modified);
@@ -119,7 +129,9 @@ interface CustomMetadataCardProps {
 	metadata: Record<string, string> | undefined;
 }
 
-function CustomMetadataCard({ metadata }: CustomMetadataCardProps) {
+function CustomMetadataCard({
+	metadata,
+}: CustomMetadataCardProps): JSX.Element {
 	const entries = metadata ? Object.entries(metadata) : [];
 
 	return (
@@ -127,15 +139,14 @@ function CustomMetadataCard({ metadata }: CustomMetadataCardProps) {
 			<h3 className="mb-4 text-base font-semibold text-text">
 				Custom Metadata
 			</h3>
+
 			{entries.length === 0 ? (
 				<p className="text-sm text-text-secondary">No custom metadata set</p>
 			) : (
 				<dl className="space-y-2 text-sm">
 					{entries.map(([key, value]) => (
 						<div key={key} className="flex gap-4">
-							<dt className="min-w-[120px] font-mono text-text-secondary">
-								{key}
-							</dt>
+							<dt className="min-w-30 font-mono text-text-secondary">{key}</dt>
 							<dd className="font-mono text-text">{value}</dd>
 						</div>
 					))}
@@ -145,40 +156,44 @@ function CustomMetadataCard({ metadata }: CustomMetadataCardProps) {
 	);
 }
 
-function ObjectDetailView() {
-	const { bucketName } = Route.useParams();
-	const { object, objectKey } = Route.useLoaderData();
+function ObjectDetailView(): JSX.Element {
+	const params = Route.useParams();
+	const search = Route.useLoaderData();
 	const navigate = useNavigate();
 
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [deleting, setDeleting] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+	const [deleting, setDeleting] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleDownload = () => {
-		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(bucketName)}/objects/${encodeURIComponent(objectKey)}`;
+	function handleDownload(): void {
+		const downloadUrl = `/cdn-cgi/explorer/api/r2/buckets/${encodeURIComponent(params.bucketName)}/objects/${encodeURIComponent(search.objectKey)}`;
 		const link = document.createElement("a");
 		link.href = downloadUrl;
-		link.download = objectKey.split("/").pop() || "download";
+		link.download = search.objectKey.split("/").pop() || "download";
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
-	};
+	}
 
-	const handleDelete = async () => {
+	async function handleDelete(): Promise<void> {
 		try {
 			setDeleting(true);
 			await r2BucketDeleteObjects({
-				path: { bucket_name: bucketName },
-				body: [objectKey],
+				path: {
+					bucket_name: params.bucketName,
+				},
+				body: [search.objectKey],
 			});
 			// Navigate back to bucket root or parent prefix
-			const parentPrefix = objectKey.includes("/")
-				? objectKey.substring(0, objectKey.lastIndexOf("/") + 1)
+			const parentPrefix = search.objectKey.includes("/")
+				? search.objectKey.substring(0, search.objectKey.lastIndexOf("/") + 1)
 				: undefined;
 			void navigate({
-				to: "/r2/$bucketName",
-				params: { bucketName },
+				params: {
+					bucketName: params.bucketName,
+				},
 				search: parentPrefix ? { prefix: parentPrefix } : {},
+				to: "/r2/$bucketName",
 			});
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to delete object");
@@ -186,30 +201,30 @@ function ObjectDetailView() {
 		} finally {
 			setDeleting(false);
 		}
-	};
+	}
 
 	// Build breadcrumb items - bucket, parent folders, and object name
-	const pathSegments = objectKey.split("/").filter(Boolean);
-	const fileName = pathSegments.pop() || objectKey;
+	const pathSegments = search.objectKey.split("/").filter(Boolean);
+	const fileName = pathSegments.pop() || search.objectKey;
 	const breadcrumbItems = [
 		<Link
-			key="bucket"
-			to="/r2/$bucketName"
-			params={{ bucketName }}
-			search={{}}
 			className="text-text no-underline hover:text-primary"
+			key="bucket"
+			params={{ bucketName: params.bucketName }}
+			search={{}}
+			to="/r2/$bucketName"
 		>
-			{bucketName}
+			{params.bucketName}
 		</Link>,
 		...pathSegments.map((segment, index) => {
 			const segmentPrefix = pathSegments.slice(0, index + 1).join("/") + "/";
 			return (
 				<Link
-					key={segmentPrefix}
-					to="/r2/$bucketName"
-					params={{ bucketName }}
-					search={{ prefix: segmentPrefix }}
 					className="text-text no-underline hover:text-primary"
+					key={segmentPrefix}
+					params={{ bucketName: params.bucketName }}
+					search={{ prefix: segmentPrefix }}
+					to="/r2/$bucketName"
 				>
 					{segment}
 				</Link>
@@ -231,11 +246,15 @@ function ObjectDetailView() {
 
 				<div className="mb-6 flex items-center justify-between">
 					<div className="flex min-w-0 items-center gap-2">
-						<h1 className="truncate text-base text-text" title={objectKey}>
-							{objectKey}
+						<h1
+							className="truncate text-base text-text"
+							title={search.objectKey}
+						>
+							{search.objectKey}
 						</h1>
-						<CopyButton text={objectKey} />
+						<CopyButton text={search.objectKey} />
 					</div>
+
 					<div className="flex shrink-0 items-center gap-2">
 						<Button
 							className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-bg-tertiary active:translate-y-px"
@@ -255,8 +274,8 @@ function ObjectDetailView() {
 				</div>
 
 				<div className="space-y-6">
-					<ObjectDetailsCard object={object} />
-					<CustomMetadataCard metadata={object.custom_metadata} />
+					<ObjectDetailsCard object={search.object} />
+					<CustomMetadataCard metadata={search.object.custom_metadata} />
 				</div>
 
 				{/* Delete Confirmation Dialog */}
@@ -271,8 +290,8 @@ function ObjectDetailView() {
 								Delete object?
 							</AlertDialog.Title>
 							<AlertDialog.Description className="mb-2 text-text-secondary">
-								Are you sure you want to delete &ldquo;{objectKey}&rdquo;? This
-								cannot be undone.
+								Are you sure you want to delete &ldquo;{search.objectKey}
+								&rdquo;? This cannot be undone.
 							</AlertDialog.Description>
 							<div className="mt-6 flex justify-end gap-2">
 								<AlertDialog.Close
