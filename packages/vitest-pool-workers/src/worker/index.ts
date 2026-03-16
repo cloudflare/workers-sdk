@@ -75,20 +75,23 @@ const monkeypatchedSetTimeout = (...args: Parameters<typeof setTimeout>) => {
 		/\/node_modules\/(\.pnpm\/|\.store\/)?vitest/.test(callerFileName ?? "") ||
 		/\/packages\/vitest\/dist/.test(callerFileName ?? "");
 
-	// If this `setTimeout()` isn't from Vitest, or has a non-zero delay,
-	// just call the original function
-	if (!fromVitest || delay) {
-		return originalSetTimeout.apply(globalThis, args);
-	}
-
 	// HACK: `vitest/dist/vendor/vi.js` attempts to call `setTimeout` when setting
 	// up global mocks. Unfortunately, the runner Durable Object's IO context
 	// isn't preserved through `import()` so this fails. To get around this, look
 	// for the `setTimeout()` call and return a recognisable timeout value that's
-	// still `number` typed
+	// still `number` typed.
+	// Check NOOP before the fromVitest guard so vitest-compatible runners
+	// (e.g. @voidzero-dev/vite-plus-test) that don't match the vitest path
+	// regex are also handled.
 	// (https://github.com/sinonjs/fake-timers/blob/c85ef142837afdbc732b0f73fdba30c3bd037965/src/fake-timers-src.js#L154)
-	if (callbackName === "NOOP") {
+	if (callbackName === "NOOP" && !delay) {
 		return -0.5;
+	}
+
+	// If this `setTimeout()` isn't from Vitest, or has a non-zero delay,
+	// just call the original function
+	if (!fromVitest || delay) {
+		return originalSetTimeout.apply(globalThis, args);
 	}
 
 	// Make sure `setTimeout()`s from Vitest without delays are `waitUntil()`ed
