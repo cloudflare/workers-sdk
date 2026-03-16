@@ -27,6 +27,26 @@ const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();
 const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 
+// Constant-time comparison that avoids `crypto.subtle.timingSafeEqual`,
+// which can be disallowed within Durable Object I/O gates in newer workerd.
+function constantTimeEqual(
+	a: ArrayBufferLike | ArrayBufferView,
+	b: ArrayBufferLike | ArrayBufferView
+): boolean {
+	const viewA =
+		a instanceof Uint8Array ? a : new Uint8Array("buffer" in a ? a.buffer : a);
+	const viewB =
+		b instanceof Uint8Array ? b : new Uint8Array("buffer" in b ? b.buffer : b);
+	if (viewA.byteLength !== viewB.byteLength) {
+		return false;
+	}
+	let result = 0;
+	for (let i = 0; i < viewA.length; i++) {
+		result |= viewA[i] ^ viewB[i];
+	}
+	return result === 0;
+}
+
 const WORKERS_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
 	Blob,
 	File,
@@ -199,10 +219,7 @@ export class ProxyServer implements DurableObject {
 		if (secretHex == null) return new Response(null, { status: 401 });
 		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
 		const secretBuffer = Buffer.from(secretHex, "hex");
-		if (
-			secretBuffer.byteLength !== expectedSecret.byteLength ||
-			!crypto.subtle.timingSafeEqual(secretBuffer, expectedSecret)
-		) {
+		if (!constantTimeEqual(secretBuffer, expectedSecret)) {
 			return new Response(null, { status: 401 });
 		}
 
