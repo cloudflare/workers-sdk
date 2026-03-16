@@ -1,7 +1,11 @@
-import { Button, Dialog, Switch } from "@cloudflare/kumo";
+import { Button, Dialog, DropdownMenu } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
+	CaretDownIcon,
+	CheckIcon,
 	FolderPlusIcon,
+	FoldersIcon,
+	ListIcon,
 	UploadIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -272,40 +276,66 @@ function BucketView(): JSX.Element {
 					</div>
 				)}
 
-				<div className="mb-4 flex items-center justify-between">
-					<div className="flex items-center gap-3">
-						<Switch
-							checked={directoryView}
-							label="Group by prefix"
-							onCheckedChange={handleDirectoryViewChange}
-						/>
-					</div>
+				<div className="mb-4 flex items-center justify-end gap-2">
+					<DropdownMenu>
+						<DropdownMenu.Trigger
+							render={
+								<Button variant="secondary">
+									{directoryView ? (
+										<FoldersIcon size={16} />
+									) : (
+										<ListIcon size={16} />
+									)}
 
-					<div className="flex items-center gap-2">
-						<Button
-							icon={UploadIcon}
-							onClick={() => setUploadDialogOpen(true)}
-							variant="secondary"
-						>
-							Upload
-						</Button>
-						<Button
-							icon={FolderPlusIcon}
-							onClick={() => setAddDirectoryOpen(true)}
-							variant="secondary"
-						>
-							Add directory
-						</Button>
-						<Button
-							disabled={loading}
-							icon={ArrowClockwiseIcon}
-							loading={loading}
-							onClick={handleRefresh}
-							variant="secondary"
-						>
-							Refresh
-						</Button>
-					</div>
+									{directoryView ? "Grouped" : "Ungrouped"}
+
+									<CaretDownIcon size={14} />
+								</Button>
+							}
+						/>
+						<DropdownMenu.Content align="end" sideOffset={4}>
+							<DropdownMenu.Item
+								className="flex items-center gap-2"
+								icon={FoldersIcon}
+								onClick={() => handleDirectoryViewChange(true)}
+							>
+								<span>Grouped</span>
+								{directoryView && <CheckIcon className="ml-auto" size={14} />}
+							</DropdownMenu.Item>
+
+							<DropdownMenu.Item
+								className="flex items-center gap-2"
+								icon={ListIcon}
+								onClick={() => handleDirectoryViewChange(false)}
+							>
+								<span>Ungrouped</span>
+								{!directoryView && <CheckIcon className="ml-auto" size={14} />}
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu>
+					<Button
+						icon={UploadIcon}
+						onClick={() => setUploadDialogOpen(true)}
+						variant="secondary"
+					>
+						Upload
+					</Button>
+					<Button
+						icon={FolderPlusIcon}
+						onClick={() => setAddDirectoryOpen(true)}
+						variant="secondary"
+					>
+						Add directory
+					</Button>
+					<Button
+						disabled={loading}
+						icon={ArrowClockwiseIcon}
+						loading={loading}
+						onClick={handleRefresh}
+						variant="secondary"
+					>
+						Refresh
+					</Button>
 				</div>
 
 				{loading ? (
