@@ -1,4 +1,4 @@
-import { Button, cn, DropdownMenu } from "@cloudflare/kumo";
+import { Button, DropdownMenu, Table } from "@cloudflare/kumo";
 import {
 	DotsThreeIcon,
 	DownloadIcon,
@@ -175,158 +175,88 @@ export function R2ObjectTable({
 	}
 
 	return (
-		<table className="w-full border-separate border-spacing-0 rounded-lg border border-border bg-bg">
-			<thead>
-				<tr>
-					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase first:rounded-tl-[7px]">
-						Objects
-					</th>
-					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase">
-						Type
-					</th>
-					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase">
-						Size
-					</th>
-					<th className="border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase">
-						Modified
-					</th>
-					<th className="w-12 border-b border-border bg-bg px-3 py-2.5 text-left text-xs font-semibold tracking-wide text-text-secondary uppercase last:rounded-tr-[7px]"></th>
-				</tr>
-			</thead>
+		<div className="overflow-hidden rounded-lg border border-border">
+			<Table>
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>Objects</Table.Head>
+						<Table.Head>Type</Table.Head>
+						<Table.Head>Size</Table.Head>
+						<Table.Head>Modified</Table.Head>
+						<Table.Head className="w-12" />
+					</Table.Row>
+				</Table.Header>
 
-			<tbody>
-				{items.map((item, index) => {
-					const isLast = index === items.length - 1;
-
-					if (item.type === "directory") {
-						const displayName = getDisplayName(item.prefix, currentPrefix);
-						return (
-							<tr key={item.prefix} className="group hover:bg-bg-tertiary">
-								<td
-									className={cn(
-										"px-3 py-2 text-left",
-										isLast
-											? "border-b-0 first:rounded-bl-[7px]"
-											: "border-b border-border"
-									)}
-								>
-									<button
-										className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
-										onClick={() => onNavigateToPrefix(item.prefix)}
-									>
-										<FolderIcon
-											size={16}
-											className="text-orange-600 dark:text-orange-400"
+				<Table.Body>
+					{items.map((item) => {
+						if (item.type === "directory") {
+							const displayName = getDisplayName(item.prefix, currentPrefix);
+							return (
+								<Table.Row key={item.prefix} className="group">
+									<Table.Cell>
+										<button
+											className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
+											onClick={() => onNavigateToPrefix(item.prefix)}
+										>
+											<FolderIcon
+												size={16}
+												className="text-orange-600 dark:text-orange-400"
+											/>
+											<span className="font-medium">{displayName}</span>
+										</button>
+									</Table.Cell>
+									<Table.Cell className="text-text-secondary">
+										Directory
+									</Table.Cell>
+									<Table.Cell className="text-text-secondary">-</Table.Cell>
+									<Table.Cell className="text-text-secondary">-</Table.Cell>
+									<Table.Cell className="text-right whitespace-nowrap">
+										<ActionMenu
+											isDirectory
+											onDelete={() => onDelete([item.prefix])}
 										/>
+									</Table.Cell>
+								</Table.Row>
+							);
+						}
+
+						const obj = item.object;
+						const key = obj.key ?? "";
+						const displayName = getDisplayName(key, currentPrefix);
+						const contentType = getContentType(obj);
+
+						return (
+							<Table.Row key={key} className="group">
+								<Table.Cell>
+									<Link
+										to="/r2/$bucketName/object/$"
+										params={{ bucketName, _splat: key }}
+										className="flex items-center gap-2 text-text no-underline hover:text-primary"
+									>
+										<FileIcon size={16} className="text-muted" />
 										<span className="font-medium">{displayName}</span>
-									</button>
-								</td>
-								<td
-									className={cn(
-										"px-3 py-2 text-text-secondary",
-										isLast ? "border-b-0" : "border-b border-border"
-									)}
-								>
-									Directory
-								</td>
-								<td
-									className={cn(
-										"px-3 py-2 text-text-secondary",
-										isLast ? "border-b-0" : "border-b border-border"
-									)}
-								>
-									-
-								</td>
-								<td
-									className={cn(
-										"px-3 py-2 text-text-secondary",
-										isLast ? "border-b-0" : "border-b border-border"
-									)}
-								>
-									-
-								</td>
-								<td
-									className={cn(
-										"px-3 py-2 text-right whitespace-nowrap",
-										isLast
-											? "border-b-0 last:rounded-br-[7px]"
-											: "border-b border-border"
-									)}
-								>
+									</Link>
+								</Table.Cell>
+								<Table.Cell className="font-mono text-xs text-text-secondary">
+									{contentType}
+								</Table.Cell>
+								<Table.Cell className="text-text-secondary">
+									{formatSize(obj.size)}
+								</Table.Cell>
+								<Table.Cell className="text-text-secondary">
+									{formatDate(obj.last_modified)}
+								</Table.Cell>
+								<Table.Cell className="text-right whitespace-nowrap">
 									<ActionMenu
-										isDirectory
-										onDelete={() => onDelete([item.prefix])}
+										onDownload={() => handleDownload(obj)}
+										onDelete={() => onDelete([key])}
 									/>
-								</td>
-							</tr>
+								</Table.Cell>
+							</Table.Row>
 						);
-					}
-
-					const obj = item.object;
-					const key = obj.key ?? "";
-					const displayName = getDisplayName(key, currentPrefix);
-					const contentType = getContentType(obj);
-
-					return (
-						<tr key={key} className="group hover:bg-bg-tertiary">
-							<td
-								className={cn(
-									"px-3 py-2 text-left",
-									isLast
-										? "border-b-0 first:rounded-bl-[7px]"
-										: "border-b border-border"
-								)}
-							>
-								<Link
-									to="/r2/$bucketName/object/$"
-									params={{ bucketName, _splat: key }}
-									className="flex items-center gap-2 text-text no-underline hover:text-primary"
-								>
-									<FileIcon size={16} className="text-muted" />
-									<span className="font-medium">{displayName}</span>
-								</Link>
-							</td>
-							<td
-								className={cn(
-									"px-3 py-2 font-mono text-xs text-text-secondary",
-									isLast ? "border-b-0" : "border-b border-border"
-								)}
-							>
-								{contentType}
-							</td>
-							<td
-								className={cn(
-									"px-3 py-2 text-text-secondary",
-									isLast ? "border-b-0" : "border-b border-border"
-								)}
-							>
-								{formatSize(obj.size)}
-							</td>
-							<td
-								className={cn(
-									"px-3 py-2 text-text-secondary",
-									isLast ? "border-b-0" : "border-b border-border"
-								)}
-							>
-								{formatDate(obj.last_modified)}
-							</td>
-							<td
-								className={cn(
-									"px-3 py-2 text-right whitespace-nowrap",
-									isLast
-										? "border-b-0 last:rounded-br-[7px]"
-										: "border-b border-border"
-								)}
-							>
-								<ActionMenu
-									onDownload={() => handleDownload(obj)}
-									onDelete={() => onDelete([key])}
-								/>
-							</td>
-						</tr>
-					);
-				})}
-			</tbody>
-		</table>
+					})}
+				</Table.Body>
+			</Table>
+		</div>
 	);
 }
