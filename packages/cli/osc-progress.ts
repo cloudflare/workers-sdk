@@ -212,15 +212,9 @@ class OscProgressController {
 
 		process.on("exit", cleanup);
 
-		process.on("SIGINT", () => {
-			cleanup();
-			process.exit(130);
-		});
+		process.on("SIGINT", cleanup);
 
-		process.on("SIGTERM", () => {
-			cleanup();
-			process.exit(143);
-		});
+		process.on("SIGTERM", cleanup);
 	}
 
 	/**
