@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.12.0
+
+### Minor Changes
+
+- [#12873](https://github.com/cloudflare/workers-sdk/pull/12873) [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68) Thanks [@gpanders](https://github.com/gpanders)! - Add `wrangler containers instances <application_id>` command to list container instances
+
+  Lists all container instances for a given application, matching the Dash instances view. Displays instance ID, state, location, version, and creation time. Supports pagination for applications with many instances. Also adds paginated request support to the containers-shared API client.
+
 ## 0.11.0
 
 ### Minor Changes
