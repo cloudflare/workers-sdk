@@ -344,7 +344,7 @@ async function resolveConfig(
 
 			minify: input.build?.minify ?? config.minify,
 			keepNames: input.build?.keepNames ?? config.keep_names,
-			external: input.build?.external ?? config.bundling_external,
+			external: input.build?.external ?? config.bundle?.external,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,
@@ -391,7 +391,7 @@ async function resolveConfig(
 		resolved.build.format === "service-worker"
 	) {
 		throw new UserError(
-			`You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+			`You cannot configure \`bundle.external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
 
 For example:
 {

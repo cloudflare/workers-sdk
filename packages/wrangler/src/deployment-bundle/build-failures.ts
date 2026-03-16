@@ -45,7 +45,7 @@ export function rewriteNodeCompatBuildFailure(
 
 /**
  * RegExp matching against esbuild's error text when it is unable to resolve
- * a module. Used to detect when we should suggest the `bundling_external` config.
+ * a module. Used to detect when we should suggest the `bundle.external` config.
  */
 const couldNotResolveErrorText = /^Could not resolve "(.+)"$/;
 
@@ -56,7 +56,7 @@ const markAsExternalNoteText = "as external to exclude it from the bundle";
 
 /**
  * Rewrites esbuild BuildFailures for failing to resolve modules to suggest
- * using the `bundling_external` or `alias` config options in wrangler.json.
+ * using the `bundle.external` or `alias` config options in wrangler.json.
  */
 export function rewriteBundlingExternalBuildFailure(errors: esbuild.Message[]) {
 	for (const error of errors) {
@@ -76,10 +76,10 @@ export function rewriteBundlingExternalBuildFailure(errors: esbuild.Message[]) {
 					),
 					{
 						location: null,
-						// TODO: Add documentation link for bundling_external once available
+						// TODO: Add documentation link for bundle.external once available
 						text:
 							`To fix this, you can:\n` +
-							`- Add "${moduleName}" to "bundling_external" in your Wrangler configuration to exclude it from the bundle\n` +
+							`- Add "${moduleName}" to "bundle.external" in your Wrangler configuration to exclude it from the bundle\n` +
 							`- Add an entry to "alias" in your Wrangler configuration to map it to a different module (see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing)`,
 					},
 				];

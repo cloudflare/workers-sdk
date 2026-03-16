@@ -381,7 +381,7 @@ export const defaultWranglerConfig: Config = {
 	no_bundle: undefined,
 	minify: undefined,
 	keep_names: undefined,
-	bundling_external: undefined,
+	bundle: {},
 	dispatch_namespaces: [],
 	first_party_worker: undefined,
 	logfwdr: { bindings: [] },

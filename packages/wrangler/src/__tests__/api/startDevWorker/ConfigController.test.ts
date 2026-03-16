@@ -311,7 +311,7 @@ describe("ConfigController", () => {
 		expect(warningCount).toBe(1);
 	});
 
-	it("should error when using bundling_external with service-worker format", async () => {
+	it("should error when using bundle.external with service-worker format", async () => {
 		await seed({
 			"src/index.js": dedent/* javascript */ `
 				addEventListener('fetch', event => {
@@ -322,7 +322,8 @@ describe("ConfigController", () => {
 				name = "my-worker"
 				main = "src/index.js"
 				compatibility_date = "2024-06-01"
-				bundling_external = ["external-module"]
+				[bundle]
+				external = ["external-module"]
 			`,
 		});
 
@@ -334,7 +335,7 @@ describe("ConfigController", () => {
 
 		expect(error.reason).toBe("Error resolving config");
 		expect((error.cause as Error).message).toMatchInlineSnapshot(
-			`"You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+			`"You cannot configure \`bundle.external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
 
 For example:
 {

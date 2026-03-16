@@ -1916,13 +1916,13 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
-		bundling_external: inheritable(
+		bundle: inheritable(
 			diagnostics,
 			topLevelEnv,
 			rawEnv,
-			"bundling_external",
-			isStringArray,
-			undefined
+			"bundle",
+			validateBundle,
+			{}
 		),
 		first_party_worker: inheritable(
 			diagnostics,
@@ -5052,6 +5052,37 @@ const validateCache: ValidatorFn = (diagnostics, field, value) => {
 	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
 			"enabled",
+		]) && isValid;
+
+	return isValid;
+};
+
+const validateBundle: ValidatorFn = (diagnostics, field, value) => {
+	if (value === undefined) {
+		return true;
+	}
+
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	const val = value as NonNullable<Environment["bundle"]>;
+	let isValid = true;
+
+	isValid =
+		validateOptionalTypedArray(
+			diagnostics,
+			`${field}.external`,
+			val.external,
+			"string"
+		) && isValid;
+
+	isValid =
+		validateAdditionalProperties(diagnostics, field, Object.keys(val), [
+			"external",
 		]) && isValid;
 
 	return isValid;

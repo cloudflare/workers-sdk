@@ -528,12 +528,17 @@ interface EnvironmentInheritable {
 	no_bundle: boolean | undefined;
 
 	/**
-	 * A list of modules to be considered external during bundling (not applicable when bundling is disabled).
-	 * Corresponds with esbuild's `external` config (https://esbuild.github.io/api/#external).
+	 * Configuration for Wrangler's bundling.
 	 *
 	 * @inheritable
 	 */
-	bundling_external: string[] | undefined;
+	bundle?: {
+		/**
+		 * A list of modules to be considered external during bundling (not applicable when bundling is disabled).
+		 * Corresponds with esbuild's `external` config (https://esbuild.github.io/api/#external).
+		 */
+		external?: string[];
+	};
 
 	/**
 	 * Minify the script before uploading.

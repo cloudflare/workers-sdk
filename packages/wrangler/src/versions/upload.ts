@@ -503,9 +503,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
-		if (props.noBundle && config.bundling_external?.length) {
+		if (props.noBundle && config.bundle?.external?.length) {
 			logger.warn(
-				"`bundling_external` and `--no-bundle` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process."
+				"`bundle.external` and `--no-bundle` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process."
 			);
 		}
 	}
@@ -557,14 +557,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (config.bundling_external?.length && format === "service-worker") {
+	if (config.bundle?.external?.length && format === "service-worker") {
 		throw new UserError(
-			`You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+			`You cannot configure \`bundle.external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
 
 For example:
 {
   "alias": {
-    "${config.bundling_external[0]}": "./my-local-implementation.js"
+    "${config.bundle.external[0]}": "./my-local-implementation.js"
   }
 }
 
@@ -661,7 +661,7 @@ See https://developers.cloudflare.com/workers/wrangler/configuration/#module-ali
 						entryName: undefined,
 						inject: undefined,
 						isOutfile: undefined,
-						external: config.bundling_external,
+						external: config.bundle?.external,
 
 						// These options are dev-only
 						testScheduled: undefined,

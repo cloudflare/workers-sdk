@@ -513,11 +513,11 @@ describe("deploy", () => {
 			await runWrangler("deploy -e testEnv index.js");
 		});
 	});
-	describe("bundling_external", () => {
-		it("should mark modules as external when `bundling_external` is configured", async () => {
+	describe("bundle.external", () => {
+		it("should mark modules as external when `bundle.external` is configured", async () => {
 			writeWranglerConfig({
 				main: "./index.js",
-				bundling_external: ["external-module"],
+				bundle: { external: ["external-module"] },
 			});
 			fs.writeFileSync(
 				"./index.js",
@@ -555,13 +555,13 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should mark modules as external when `bundling_external` is configured in environment", async () => {
+		it("should mark modules as external when `bundle.external` is configured in environment", async () => {
 			writeWranglerConfig({
 				main: "./index.js",
 				legacy_env: false,
 				env: {
 					testEnv: {
-						bundling_external: ["env-external-module"],
+						bundle: { external: ["env-external-module"] },
 					},
 				},
 			});
@@ -602,7 +602,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should recommend bundling_external when a non-Node module cannot be resolved", async () => {
+		it("should recommend bundle.external when a non-Node module cannot be resolved", async () => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -629,12 +629,12 @@ describe("deploy", () => {
 				        ╵                 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 				  To fix this, you can:
-				  - Add "some-nonexistent-module" to "bundling_external" in your Wrangler configuration to exclude it from the bundle
+				  - Add "some-nonexistent-module" to "bundle.external" in your Wrangler configuration to exclude it from the bundle
 				  - Add an entry to "alias" in your Wrangler configuration to map it to a different module (see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing)"
 			`);
 		});
 
-		it("should NOT recommend bundling_external for Node built-in modules", async () => {
+		it("should NOT recommend bundle.external for Node built-in modules", async () => {
 			writeWranglerConfig();
 			fs.writeFileSync("index.js", "import fs from 'fs';");
 
@@ -659,16 +659,16 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error when using bundling_external with service-worker format", async () => {
+		it("should error when using bundle.external with service-worker format", async () => {
 			writeWranglerConfig({
-				bundling_external: ["external-module"],
+				bundle: { external: ["external-module"] },
 			});
 			writeWorkerSource({ type: "sw" });
 
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: You cannot configure \`bundling_external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
+				`[Error: You cannot configure \`bundle.external\` with a service-worker format worker. Instead, configure \`alias\` to substitute modules with alternative implementations.
 
 For example:
 {
@@ -1292,10 +1292,13 @@ See https://developers.cloudflare.com/workers/wrangler/configuration/#module-ali
 				"deploy index.js --no-bundle --minify --dry-run --outdir dist"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
 
-			"
-		`);
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundle\` and \`--no-bundle\` can't be used together. Please choose the one that is most appropriate for your use case.[0m
+
+				"
+			`);
 		});
 
 		it("should warn that no-bundle and minify can't be used together", async () => {
@@ -1311,14 +1314,17 @@ See https://developers.cloudflare.com/workers/wrangler/configuration/#module-ali
 			expect(std.warn).toMatchInlineSnapshot(`
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
 
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundle\` and \`--no-bundle\` can't be used together. Please choose the one that is most appropriate for your use case.[0m
+
 				"
 			`);
 		});
 	});
-	describe("--no-bundle bundling_external", () => {
-		it("should warn that no-bundle and bundling_external can't be used together (CLI flag)", async () => {
+	describe("--no-bundle bundle.external", () => {
+		it("should warn that no-bundle and bundle.external can't be used together (CLI flag)", async () => {
 			writeWranglerConfig({
-				bundling_external: ["external-module"],
+				bundle: { external: ["external-module"] },
 			});
 			const scriptContent = `
 				import foo from 'external-module';
@@ -1327,16 +1333,16 @@ See https://developers.cloudflare.com/workers/wrangler/configuration/#module-ali
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundling_external\` and \`--no-bundle\` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundle\` and \`--no-bundle\` can't be used together. Please choose the one that is most appropriate for your use case.[0m
 
 				"
 			`);
 		});
 
-		it("should warn that no-bundle and bundling_external can't be used together (config)", async () => {
+		it("should warn that no-bundle and bundle.external can't be used together (config)", async () => {
 			writeWranglerConfig({
 				no_bundle: true,
-				bundling_external: ["external-module"],
+				bundle: { external: ["external-module"] },
 			});
 			const scriptContent = `
 				import foo from 'external-module';
@@ -1345,7 +1351,7 @@ See https://developers.cloudflare.com/workers/wrangler/configuration/#module-ali
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundling_external\` and \`--no-bundle\` can't be used together. If you want to exclude modules from your bundle and disable Wrangler's bundling, please handle external modules as part of your own bundling process.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`bundle\` and \`--no-bundle\` can't be used together. Please choose the one that is most appropriate for your use case.[0m
 
 				"
 			`);
