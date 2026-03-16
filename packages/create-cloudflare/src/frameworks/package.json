@@ -22,6 +22,6 @@
 		"@tanstack/create-start": "0.59.8",
 		"gatsby": "5.16.1",
 		"sv": "0.12.4",
-		"nuxi": "3.33.1"
+		"nuxi": "3.34.0"
 	}
 }
