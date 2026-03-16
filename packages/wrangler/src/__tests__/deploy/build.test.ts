@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 /* eslint-disable workers-sdk/no-vitest-import-expect */
 
 import { Buffer } from "node:buffer";

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { useDispose, useTmp } from "./test-shared";

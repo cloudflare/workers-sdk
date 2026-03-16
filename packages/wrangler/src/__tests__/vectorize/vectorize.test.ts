@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { http, HttpResponse } from "msw";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- large file with MSW handlers */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

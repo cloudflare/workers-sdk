@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { CancelError } from "@cloudflare/cli/error";
 import { detectPackageManager } from "helpers/packageManagers";
 import { hasSparrowSourceKey, sendEvent } from "helpers/sparrow";

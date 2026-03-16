@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";

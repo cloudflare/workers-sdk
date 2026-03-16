@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";

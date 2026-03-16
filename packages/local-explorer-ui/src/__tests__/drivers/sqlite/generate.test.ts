@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { describe, expect, test } from "vitest";
 import { buildSQLiteSchemaDiffStatement } from "../../../drivers/sqlite/generate";
 import type {

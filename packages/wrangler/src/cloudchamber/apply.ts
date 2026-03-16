@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 /**
  * Important! You are probably looking for containers/deploy.ts!
  * This is used for cloudchamber apply, but has been duplicated and modified in containers/deploy.ts to deploy containers during wrangler deploy.

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { join } from "node:path";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, test, vi } from "vitest";

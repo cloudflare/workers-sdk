@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { describe, it } from "vitest";
 import { EventSourceType } from "../../queues/subscription-types";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";

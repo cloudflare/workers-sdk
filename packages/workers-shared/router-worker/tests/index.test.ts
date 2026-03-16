@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { createExecutionContext } from "cloudflare:test";
 import { describe, it } from "vitest";
 import worker from "../src/worker";

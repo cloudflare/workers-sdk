@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";

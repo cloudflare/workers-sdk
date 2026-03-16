@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import path from "node:path";
 import dedent from "ts-dedent";
 import { afterAll, assert, beforeAll, describe, expect, it } from "vitest";

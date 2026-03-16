@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../../cfetch";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";

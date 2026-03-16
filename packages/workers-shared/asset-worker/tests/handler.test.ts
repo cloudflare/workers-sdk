@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { describe, it, vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";

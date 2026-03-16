@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 /* Based heavily on code from https://github.com/BitySA/oauth2-auth-code-pkce */
 
 /*

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { randomUUID } from "node:crypto";
 import dedent from "ts-dedent";
 import { fetch } from "undici";

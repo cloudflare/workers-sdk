@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import type { RawConfig } from "./config";
 import type { Diagnostics } from "./diagnostics";
 import type { Environment, RawEnvironment } from "./environment";

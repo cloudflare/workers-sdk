@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 // Adapted from https://github.com/microsoft/vscode-web-playground/blob/main/src/memfs.ts
 // Original license:
 /*---------------------------------------------------------------------------------------------

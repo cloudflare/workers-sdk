@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 function formatDate(date: Date) {
 	const formatter = new Intl.DateTimeFormat("en-CA", {
 		// en-CA for YYYY-MM-DD

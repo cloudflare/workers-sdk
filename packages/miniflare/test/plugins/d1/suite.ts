@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import { type D1Database } from "@cloudflare/workers-types/experimental";

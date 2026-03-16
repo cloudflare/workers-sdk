@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";

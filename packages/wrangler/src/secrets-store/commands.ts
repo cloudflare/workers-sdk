@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { createCommand } from "../core/create-command";

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Buffer } from "node:buffer";
 import * as fs from "node:fs";

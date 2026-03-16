@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { spinner } from "@cloudflare/cli/interactive";

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import assert from "node:assert";
 import * as cli from "@cloudflare/cli";
 import { brandColor, gray, white } from "@cloudflare/cli/colors";

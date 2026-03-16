@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";

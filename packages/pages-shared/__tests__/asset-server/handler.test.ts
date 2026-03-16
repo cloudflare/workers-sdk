@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 // eslint-disable-next-line workers-sdk/no-vitest-import-expect
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {

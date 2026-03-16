@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { basename, join, resolve } from "node:path";

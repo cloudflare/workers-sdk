@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { beforeEach, describe, it, vi } from "vitest";
 import { getErrorType, handleError } from "../../core/handle-errors";
 import { mockConsoleMethods } from "../helpers/mock-console";

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { existsSync } from "node:fs";
 import { cp, mkdtemp, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";

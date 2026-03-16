@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { RpcTarget } from "cloudflare:workers";
 import { ms } from "itty-time";
 import { INSTANCE_METADATA, InstanceEvent, InstanceStatus } from "./instance";

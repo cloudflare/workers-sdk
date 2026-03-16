@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 import { assert, describe, it } from "vitest";
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";

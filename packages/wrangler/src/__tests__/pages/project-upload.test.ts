@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- This file was already too big before the max-lines rule was introduced (TODO: split this file) */
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
 import ci from "ci-info";
