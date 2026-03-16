@@ -99,8 +99,6 @@ function BucketView(): JSX.Element {
 					setLoadingMore(true);
 				} else {
 					setLoading(true);
-					setObjects([]);
-					setDelimitedPrefixes([]);
 				}
 				setError(null);
 
@@ -321,7 +319,6 @@ function BucketView(): JSX.Element {
 				</Button>
 				<Button
 					aria-label="Refresh"
-					disabled={loading}
 					icon={ArrowClockwiseIcon}
 					loading={loading}
 					onClick={handleRefresh}
@@ -337,7 +334,7 @@ function BucketView(): JSX.Element {
 					</div>
 				)}
 
-				{loading ? (
+				{loading && objects.length === 0 && delimitedPrefixes.length === 0 ? (
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : objects.length === 0 && delimitedPrefixes.length === 0 ? (
 					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
