@@ -196,7 +196,7 @@ export function R2UploadDialog({
 
 				{/* File Drop Zone */}
 				<div
-					className={`mb-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
+					className={`mb-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors duration-200 ${
 						dragOver
 							? "border-primary bg-primary/5"
 							: "border-border hover:border-primary/50"
@@ -236,13 +236,13 @@ export function R2UploadDialog({
 
 				{/* Object Key */}
 				<div className="mb-4">
-					<label className="mb-1 block text-sm font-medium text-text">
+					<label className="mb-2 block text-sm font-medium text-text">
 						Object key
 					</label>
 					<input
-						className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+						className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder-text-secondary! focus:border-primary focus:shadow-focus-primary focus:outline-none"
 						onChange={(e) => setObjectKey(e.target.value)}
-						placeholder={currentPrefix + "filename.ext"}
+						placeholder={currentPrefix + "file.png"}
 						type="text"
 						value={objectKey}
 					/>
@@ -253,13 +253,13 @@ export function R2UploadDialog({
 
 				{/* Content Type */}
 				<div className="mb-4">
-					<label className="mb-1 block text-sm font-medium text-text">
+					<label className="mb-2 block text-sm font-medium text-text">
 						Content-Type
 					</label>
 					<input
-						className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+						className="w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder-text-secondary! focus:border-primary focus:shadow-focus-primary focus:outline-none"
 						onChange={(e) => setContentType(e.target.value)}
-						placeholder="application/octet-stream"
+						placeholder="image/png"
 						type="text"
 						value={contentType}
 					/>

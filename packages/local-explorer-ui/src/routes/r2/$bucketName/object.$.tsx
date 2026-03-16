@@ -211,15 +211,18 @@ function ObjectDetailView(): JSX.Element {
 					</div>
 
 					<div className="flex shrink-0 items-center gap-2">
-						<Button onClick={handleDownload} variant="secondary">
-							<DownloadIcon size={16} />
+						<Button
+							icon={DownloadIcon}
+							onClick={handleDownload}
+							variant="secondary"
+						>
 							Download
 						</Button>
 						<Button
+							icon={TrashIcon}
 							onClick={() => setDeleteDialogOpen(true)}
-							variant="destructive"
+							variant="secondary-destructive"
 						>
-							<TrashIcon size={16} />
 							Delete
 						</Button>
 					</div>
