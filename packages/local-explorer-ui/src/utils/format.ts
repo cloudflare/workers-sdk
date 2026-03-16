@@ -31,6 +31,10 @@ export function formatDate(dateString: string | undefined): string {
 	try {
 		const date = new Date(dateString);
 
+		if (isNaN(date.getTime())) {
+			return "-";
+		}
+
 		// Format: "13 May 2025 01:11:37 GMT"
 		const day = date.getUTCDate();
 		const month = date.toLocaleString("en-US", {
