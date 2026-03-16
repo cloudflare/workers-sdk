@@ -13,6 +13,7 @@ import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,
 	rewriteNodeCompatBuildFailure,
+	rewriteUnresolvedModuleBuildFailure,
 } from "./build-failures";
 import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
@@ -477,6 +478,7 @@ export async function bundleWorker(
 	} catch (e) {
 		if (isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, nodejsCompatMode);
+			rewriteUnresolvedModuleBuildFailure(e.errors);
 		}
 		throw e;
 	}
