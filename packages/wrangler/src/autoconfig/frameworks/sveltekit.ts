@@ -9,6 +9,7 @@ export class SvelteKit extends Framework {
 	async configure({
 		dryRun,
 		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { dlx } = packageManager;
 		if (!dryRun) {
@@ -34,6 +35,7 @@ export class SvelteKit extends Framework {
 			await installPackages(packageManager, [], {
 				startText: "Installing packages",
 				doneText: `${brandColor("installed")}`,
+				isWorkspaceRoot,
 			});
 		}
 		return {

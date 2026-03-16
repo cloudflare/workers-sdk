@@ -54,6 +54,7 @@ import {
 	containersImagesListCommand,
 	containersImagesNamespace,
 	containersInfoCommand,
+	containersInstancesCommand,
 	containersListCommand,
 	containersNamespace,
 	containersPushCommand,
@@ -1540,6 +1541,10 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler containers", definition: containersNamespace },
 		{ command: "wrangler containers list", definition: containersListCommand },
 		{ command: "wrangler containers info", definition: containersInfoCommand },
+		{
+			command: "wrangler containers instances",
+			definition: containersInstancesCommand,
+		},
 		{
 			command: "wrangler containers delete",
 			definition: containersDeleteCommand,

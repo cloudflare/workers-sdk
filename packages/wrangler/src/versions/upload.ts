@@ -52,6 +52,7 @@ import { writeOutput } from "../output";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { parseBulkInputToObject } from "../secret";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -104,6 +105,7 @@ type Props = {
 	tag: string | undefined;
 	message: string | undefined;
 	previewAlias: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -266,6 +268,12 @@ export const versionsUploadCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"secrets-file": {
+			describe:
+				"Path to a file containing secrets to upload with the version (JSON or .env format). Secrets from previous deployments will not be deleted - see `--keep-secrets`",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -391,6 +399,7 @@ export const versionsUploadCommand = createCommand({
 				previewAlias: previewAlias,
 				experimentalAutoCreate: args.experimentalAutoCreate,
 				outFile: args.outfile,
+				secretsFile: args.secretsFile,
 			});
 
 		writeOutput({
@@ -687,6 +696,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
+		if (props.secretsFile) {
+			const secretsResult = await parseBulkInputToObject(props.secretsFile);
+			if (secretsResult) {
+				for (const [secretName, secretValue] of Object.entries(
+					secretsResult.content
+				)) {
+					bindings[secretName] = {
+						type: "secret_text",
+						value: secretValue,
+					};
+				}
+			}
+		}
+
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -708,7 +731,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars: props.keepVars ?? false,
-			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
+			// we never delete secret bindings when uploading, even if we are setting secrets from a file
+			// so inherit all unchanged secrets from the previous Worker Version
+			keepSecrets: true,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,

@@ -1,5 +1,4 @@
-import { Button } from "@base-ui/react/button";
-import { cn } from "@cloudflare/kumo";
+import { Button, cn } from "@cloudflare/kumo";
 import { useEffect, useState } from "react";
 import { validateKey } from "../utils/kv-validation";
 
@@ -64,7 +63,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				<input
 					id="add-key"
 					className={cn(
-						"w-full rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary",
+						"h-9 w-full rounded-md border border-border bg-bg px-3 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary",
 						{
 							"border-danger focus:shadow-focus-danger": keyError,
 						}
@@ -84,7 +83,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				</label>
 				<textarea
 					id="add-value"
-					className="max-h-32 w-full resize-none overflow-y-auto rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary lg:field-sizing-content"
+					className="max-h-32 min-h-9 w-full resize-none overflow-y-auto rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-text placeholder:text-text! focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary lg:field-sizing-content"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
@@ -93,9 +92,10 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="inline-flex w-full shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-white transition-[background-color,color,transform] hover:bg-primary-hover focus:border-primary focus:shadow-focus-primary focus:outline-none active:translate-y-px data-disabled:cursor-not-allowed data-disabled:bg-primary/50 data-disabled:text-white/70 data-disabled:active:translate-y-0 lg:w-auto"
+				className="w-full shrink-0 lg:w-auto"
+				variant="primary"
 				disabled={saving || isKeyInvalid}
-				focusableWhenDisabled
+				loading={saving}
 			>
 				{saving ? "Adding..." : "Add entry"}
 			</Button>

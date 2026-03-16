@@ -147,6 +147,7 @@ export class ReactRouter extends Framework {
 		dryRun,
 		projectPath,
 		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const viteEnvironmentKey = configPropertyName(projectPath);
 		if (!dryRun) {
@@ -154,6 +155,7 @@ export class ReactRouter extends Framework {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+				isWorkspaceRoot,
 			});
 
 			mkdirSync("workers");
@@ -191,6 +193,7 @@ export class ReactRouter extends Framework {
 				dev: true,
 				startText: "Installing the isbot package",
 				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
+				isWorkspaceRoot,
 			});
 
 			if (!existsSync("app/entry.server.tsx")) {
