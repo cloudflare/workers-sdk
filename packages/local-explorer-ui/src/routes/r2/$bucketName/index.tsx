@@ -7,6 +7,7 @@ import {
 	FoldersIcon,
 	ListIcon,
 	UploadIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
@@ -200,9 +201,28 @@ function BucketView(): JSX.Element {
 			setObjects((prev) =>
 				prev.filter((obj) => !deleteTargets.includes(obj.key ?? ""))
 			);
+			setDelimitedPrefixes((prev) =>
+				prev.filter((prefix) => !deleteTargets.includes(prefix))
+			);
 			setDeleteTargets([]);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to delete objects");
+			let errorMessage = "Failed to delete objects";
+			if (err instanceof Error) {
+				errorMessage = err.message;
+			} else if (
+				typeof err === "object" &&
+				err !== null &&
+				"errors" in err &&
+				Array.isArray((err as { errors: unknown }).errors)
+			) {
+				const apiError = err as { errors: Array<{ message?: string }> };
+				if (apiError.errors[0]?.message) {
+					errorMessage = apiError.errors[0].message;
+				}
+			}
+
+			setError(errorMessage);
+			setDeleteTargets([]);
 		} finally {
 			setDeleting(false);
 		}
@@ -335,8 +355,17 @@ function BucketView(): JSX.Element {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
-						{error}
+					<div className="mb-4 flex items-center justify-between gap-2 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+						<p>{error}</p>
+						<Button
+							aria-label="Dismiss error"
+							onClick={() => setError(null)}
+							shape="square"
+							type="button"
+							variant="secondary-destructive"
+						>
+							<XIcon size={16} />
+						</Button>
 					</div>
 				)}
 
