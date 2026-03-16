@@ -402,24 +402,6 @@ export async function deleteR2Objects(
 	// Try local first
 	const r2 = getR2Binding(c.env, bucket_name);
 	if (r2) {
-		// Check if any directories being deleted are non-empty
-		for (const key of keys) {
-			if (!key.endsWith("/")) {
-				continue;
-			}
-
-			const listResult = await r2.list({ prefix: key, limit: 2 });
-
-			const hasContents = listResult.objects.some((obj) => obj.key !== key);
-			if (hasContents) {
-				return errorResponse(
-					400,
-					10002,
-					`Cannot delete directory "${key}" because it is not empty. Delete all objects inside it first.`
-				);
-			}
-		}
-
 		await r2.delete(keys);
 		return c.json(wrapResponse(keys.map((key) => ({ key }))));
 	}
