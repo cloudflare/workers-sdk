@@ -5,12 +5,12 @@
 		"so that we can use dependabot to update these dependencies automatically."
 	],
 	"dependencies": {
-		"create-astro": "4.13.2",
+		"create-astro": "5.0.0",
 		"create-analog": "2.3.1",
 		"@angular/create": "21.2.2",
 		"create-docusaurus": "3.9.2",
 		"create-hono": "0.19.4",
-		"create-next-app": "15.5.6",
+		"create-next-app": "16.1.6",
 		"create-qwik": "1.19.2",
 		"create-vite": "8.3.0",
 		"create-rwsdk": "3.1.3",
