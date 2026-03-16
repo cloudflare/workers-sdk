@@ -19,6 +19,7 @@ import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { R2ObjectTable } from "../../../components/R2ObjectTable";
 import { R2UploadDialog } from "../../../components/R2UploadDialog";
+import { withMinimumDelay } from "../../../utils/async";
 import type { R2Object } from "../../../api";
 
 export interface R2BucketSearch {
@@ -102,7 +103,7 @@ function BucketView(): JSX.Element {
 				}
 				setError(null);
 
-				const response = await r2BucketListObjects({
+				const apiCall = r2BucketListObjects({
 					path: {
 						bucket_name: params.bucketName,
 					},
@@ -113,6 +114,11 @@ function BucketView(): JSX.Element {
 						per_page: 100,
 					},
 				});
+
+				// Apply minimum delay only for refresh (not load more) to ensure spinner is visible
+				const response = nextCursor
+					? await apiCall
+					: await withMinimumDelay(apiCall);
 
 				const newObjects = response.data?.result ?? [];
 				const newPrefixes = response.data?.result_info?.delimited ?? [];
