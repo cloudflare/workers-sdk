@@ -354,6 +354,7 @@ export async function syncWorkersSite(
 		// If any uploader fails, abort the others
 		logger.info(`Upload failed, aborting...`);
 		controller.abort();
+		terminalProgress.setError();
 		throw e;
 	}
 
