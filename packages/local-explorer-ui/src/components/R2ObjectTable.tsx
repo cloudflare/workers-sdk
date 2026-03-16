@@ -90,14 +90,16 @@ interface BulkActionMenuProps {
 	disabled: boolean;
 	onDelete: () => void;
 	onDownload: () => void;
-	selectedCount: number;
+	selectedFileCount: number;
+	selectedTotalCount: number;
 }
 
 function BulkActionMenu({
 	disabled,
 	onDelete,
 	onDownload,
-	selectedCount,
+	selectedFileCount,
+	selectedTotalCount,
 }: BulkActionMenuProps): JSX.Element {
 	return (
 		<DropdownMenu>
@@ -116,23 +118,29 @@ function BulkActionMenu({
 			/>
 
 			<DropdownMenu.Content align="end" sideOffset={4}>
-				<DropdownMenu.Item
-					className="flex items-center gap-2"
-					onClick={onDownload}
-				>
-					<DownloadIcon />
-					<span>
-						Download {selectedCount} {selectedCount === 1 ? "file" : "files"}
-					</span>
-				</DropdownMenu.Item>
-				<DropdownMenu.Separator />
+				{selectedFileCount > 0 && (
+					<>
+						<DropdownMenu.Item
+							className="flex items-center gap-2"
+							onClick={onDownload}
+						>
+							<DownloadIcon />
+							<span>
+								Download {selectedFileCount}{" "}
+								{selectedFileCount === 1 ? "file" : "files"}
+							</span>
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+					</>
+				)}
 				<DropdownMenu.Item
 					className="flex items-center gap-2 text-danger"
 					onClick={onDelete}
 				>
 					<TrashIcon />
 					<span>
-						Delete {selectedCount} {selectedCount === 1 ? "file" : "files"}
+						Delete {selectedTotalCount}{" "}
+						{selectedTotalCount === 1 ? "item" : "items"}
 					</span>
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>
@@ -182,40 +190,39 @@ export function R2ObjectTable({
 			})),
 	];
 
-	// Get only file items (not directories) for selection purposes
-	const selectableFiles = items.filter(
-		(item): item is { object: R2Object; type: "file" } => item.type === "file"
-	);
-
-	const selectableKeys = selectableFiles
-		.map((item) => item.object.key)
+	// Get all selectable keys (both files and directories)
+	const selectableKeys = items
+		.map((item) => (item.type === "directory" ? item.prefix : item.object.key))
 		.filter((key): key is string => key !== undefined);
 
-	const allFilesSelected =
+	// Get selected file keys (excluding directories) for download
+	const selectedFileKeys = Array.from(selectedKeys).filter(
+		(key) => !key.endsWith("/")
+	);
+
+	const allItemsSelected =
 		selectableKeys.length > 0 &&
 		selectableKeys.every((key) => selectedKeys.has(key));
 
-	const someFilesSelected = selectableKeys.some((key) => selectedKeys.has(key));
+	const someItemsSelected = selectableKeys.some((key) => selectedKeys.has(key));
 
 	function handleSelectAll(): void {
-		// Deselect all
-		if (allFilesSelected) {
+		if (allItemsSelected) {
+			// Deselect all
 			onSelectionChange(new Set());
-			return;
+		} else {
+			// Select all items
+			onSelectionChange(new Set(selectableKeys));
 		}
-
-		// Select all files
-		onSelectionChange(new Set(selectableKeys));
 	}
 
-	function handleSelectFile(key: string): void {
+	function handleSelectItem(key: string): void {
 		const newSelection = new Set(selectedKeys);
 		if (newSelection.has(key)) {
 			newSelection.delete(key);
 		} else {
 			newSelection.add(key);
 		}
-
 		onSelectionChange(newSelection);
 	}
 
@@ -230,10 +237,10 @@ export function R2ObjectTable({
 					<Table.Row>
 						<Table.Head className="w-12">
 							<Checkbox
-								aria-label="Select all files"
-								checked={allFilesSelected}
+								aria-label="Select all"
+								checked={allItemsSelected}
 								disabled={selectableKeys.length === 0}
-								indeterminate={someFilesSelected && !allFilesSelected}
+								indeterminate={someItemsSelected && !allItemsSelected}
 								onCheckedChange={handleSelectAll}
 							/>
 						</Table.Head>
@@ -245,8 +252,9 @@ export function R2ObjectTable({
 							<BulkActionMenu
 								disabled={selectedKeys.size === 0}
 								onDelete={() => onDelete(Array.from(selectedKeys))}
-								onDownload={() => onDownload(Array.from(selectedKeys))}
-								selectedCount={selectedKeys.size}
+								onDownload={() => onDownload(selectedFileKeys)}
+								selectedFileCount={selectedFileKeys.length}
+								selectedTotalCount={selectedKeys.size}
 							/>
 						</Table.Head>
 					</Table.Row>
@@ -260,8 +268,9 @@ export function R2ObjectTable({
 								<Table.Row key={item.prefix} className="group">
 									<Table.Cell>
 										<Checkbox
-											aria-label={`${displayName} cannot be selected`}
-											disabled={true}
+											aria-label={`Select ${displayName}`}
+											checked={selectedKeys.has(item.prefix)}
+											onCheckedChange={() => handleSelectItem(item.prefix)}
 										/>
 									</Table.Cell>
 									<Table.Cell>
@@ -302,7 +311,7 @@ export function R2ObjectTable({
 									<Checkbox
 										aria-label={`Select ${displayName}`}
 										checked={selectedKeys.has(key)}
-										onCheckedChange={() => handleSelectFile(key)}
+										onCheckedChange={() => handleSelectItem(key)}
 									/>
 								</Table.Cell>
 								<Table.Cell>
