@@ -107,7 +107,7 @@ export const d1InsightsCommand = createCommand({
 		},
 		json: {
 			type: "boolean",
-			description: "return output as clean JSON",
+			description: "return output as JSON",
 			default: false,
 		},
 	},

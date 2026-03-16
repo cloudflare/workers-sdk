@@ -43,7 +43,7 @@ export const vectorizeInsertCommand = createCommand({
 			default: VECTORIZE_UPSERT_BATCH_SIZE,
 		},
 		json: {
-			describe: "return output as clean JSON",
+			describe: "return output as JSON",
 			type: "boolean",
 			default: false,
 		},
