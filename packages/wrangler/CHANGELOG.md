@@ -1,5 +1,45 @@
 # wrangler
 
+## 4.74.0
+
+### Minor Changes
+
+- [#10896](https://github.com/cloudflare/workers-sdk/pull/10896) [`351e1e1`](https://github.com/cloudflare/workers-sdk/commit/351e1e1efa808a19b84b5888d747cd4aa4566921) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - feat: add `--secrets-file` parameter to `wrangler deploy` and `wrangler versions upload`
+
+  You can now upload secrets alongside your Worker code in a single operation using the `--secrets-file` parameter on both `wrangler deploy` and `wrangler versions upload`. The file format matches what's used by `wrangler versions secret bulk`, supporting both JSON and .env formats.
+
+  Example usage:
+
+  ```bash
+  wrangler deploy --secrets-file .env.production
+  wrangler versions upload --secrets-file secrets.json
+  ```
+
+  Secrets not included in the file will be inherited from the previous version, matching the behavior of `wrangler versions secret bulk`.
+
+- [#12873](https://github.com/cloudflare/workers-sdk/pull/12873) [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68) Thanks [@gpanders](https://github.com/gpanders)! - Add `wrangler containers instances <application_id>` command to list container instances
+
+  Lists all container instances for a given application, matching the Dash instances view. Displays instance ID, state, location, version, and creation time. Supports pagination for applications with many instances. Also adds paginated request support to the containers-shared API client.
+
+### Patch Changes
+
+- [#12873](https://github.com/cloudflare/workers-sdk/pull/12873) [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68) Thanks [@gpanders](https://github.com/gpanders)! - Add `escapeCodeTimeout` option to `onKeyPress` utility for faster Esc key detection
+
+  The `onKeyPress` utility now accepts an optional `escapeCodeTimeout` parameter that controls how long readline waits to disambiguate a standalone Esc press from multi-byte escape sequences (e.g. arrow keys). The default remains readline's built-in 500ms, but callers can pass a lower value (e.g. 25ms) for near-instant Esc handling in interactive prompts.
+
+- [#12676](https://github.com/cloudflare/workers-sdk/pull/12676) [`65f1092`](https://github.com/cloudflare/workers-sdk/commit/65f1092281866333118e5e8ebf0f5234bf695baf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix autoconfig package installation always failing at workspace roots
+
+  When running autoconfig at the root of a monorepo workspace, package installation commands now include the appropriate workspace root flags (`--workspace-root` for pnpm, `-W` for yarn). This prevents errors like "Running this command will add the dependency to the workspace root" that previously occurred when configuring projects at the workspace root.
+
+  Additionally, autoconfig now allows running at the workspace root if the root directory itself is listed as a workspace package (e.g., `workspaces: ["packages/*", "."]`).
+
+- [#12841](https://github.com/cloudflare/workers-sdk/pull/12841) [`7b0d8f5`](https://github.com/cloudflare/workers-sdk/commit/7b0d8f5830e9b317c69abdcd452a79d88811f000) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix unclear error when assets upload session returns a `null` response
+
+  When deploying assets, if the Cloudflare API returns a `null` response object, Wrangler now provides a clear error message asking users to retry instead of failing with a confusing error.
+
+- Updated dependencies [[`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8)]:
+  - miniflare@4.20260312.1
+
 ## 4.73.0
 
 ### Minor Changes

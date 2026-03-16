@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.64.8
+
+### Patch Changes
+
+- [#12837](https://github.com/cloudflare/workers-sdk/pull/12837) [`2363d48`](https://github.com/cloudflare/workers-sdk/commit/2363d485a67b8c5abdffd01eee1bd3eb6bd53b10) Thanks [@edmundhung](https://github.com/edmundhung)! - Update Astro Workers template for Astro v6
+
+  The Astro Workers template now scaffolds projects using Astro v6. The adapter uses the Cloudflare Vite plugin under the hood, so `astro dev` runs on the workerd runtime locally and `wrangler.jsonc` fields like `main` and `assets` are no longer needed in the template.
+
+  For existing projects, see the [Astro Cloudflare adapter migration guide](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#upgrading-to-v13-and-astro-6).
+
+- [#12866](https://github.com/cloudflare/workers-sdk/pull/12866) [`077c4d5`](https://github.com/cloudflare/workers-sdk/commit/077c4d54cbf068aeca86927620332b9aeceec762) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix React app creation flow skipping Cloudflare setup
+
+  Creating a React app with create-cloudflare no longer allows the Cloudflare setup step to be skipped by accepting create-vite's `Install and start now` prompt.
+
 ## 2.64.7
 
 ### Patch Changes

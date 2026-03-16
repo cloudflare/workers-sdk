@@ -1,5 +1,13 @@
 # @cloudflare/local-explorer-ui
 
+## 0.8.2
+
+### Patch Changes
+
+- [#12877](https://github.com/cloudflare/workers-sdk/pull/12877) [`7dc3fb3`](https://github.com/cloudflare/workers-sdk/commit/7dc3fb36b1af4740f14409d8cdf9c50d8942a4df) Thanks [@NuroDev](https://github.com/NuroDev)! - Fixed table selection dropdown incorrect z-index.
+
+  Previously, the dropdown you used to select a table in the data studio had an incorrect or missing z-index, meanint it conflicted with the table row header & was partially cut off when you had too many tables. This change ensures that the dropdown is always "on top" and visible.
+
 ## 0.8.1
 
 ### Patch Changes
