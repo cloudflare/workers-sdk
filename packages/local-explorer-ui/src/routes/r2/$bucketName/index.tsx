@@ -1,6 +1,5 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { Button } from "@base-ui/react/button";
-import { Switch } from "@cloudflare/kumo";
+import { Button, Switch } from "@cloudflare/kumo";
 import {
 	ArrowClockwiseIcon,
 	FolderPlusIcon,
@@ -273,25 +272,26 @@ function BucketView() {
 
 					<div className="flex items-center gap-2">
 						<Button
-							className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px"
+							icon={UploadIcon}
 							onClick={() => setUploadDialogOpen(true)}
+							variant="secondary"
 						>
-							<UploadIcon size={16} />
 							Upload
 						</Button>
 						<Button
-							className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px"
+							icon={FolderPlusIcon}
 							onClick={() => setAddDirectoryOpen(true)}
+							variant="secondary"
 						>
-							<FolderPlusIcon size={16} />
 							Add directory
 						</Button>
 						<Button
-							className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px"
-							onClick={handleRefresh}
 							disabled={loading}
+							icon={ArrowClockwiseIcon}
+							loading={loading}
+							onClick={handleRefresh}
+							variant="secondary"
 						>
-							<ArrowClockwiseIcon size={16} />
 							Refresh
 						</Button>
 					</div>
@@ -329,10 +329,10 @@ function BucketView() {
 						{isTruncated && cursor && (
 							<div className="p-4 text-center">
 								<Button
-									className="inline-flex cursor-pointer items-center justify-center rounded-md border border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
-									onClick={handleLoadMore}
 									disabled={loadingMore}
-									focusableWhenDisabled
+									loading={loadingMore}
+									onClick={handleLoadMore}
+									variant="secondary"
 								>
 									{loadingMore ? "Loading..." : "Load More"}
 								</Button>
@@ -366,19 +366,18 @@ function BucketView() {
 								)}
 							</AlertDialog.Description>
 							<div className="mt-6 flex justify-end gap-2">
-								<AlertDialog.Close
-									render={
-										<Button className="inline-flex cursor-pointer items-center justify-center rounded-md border border-none border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0" />
-									}
+								<Button
 									disabled={deleting}
+									onClick={() => setDeleteTargets([])}
+									variant="secondary"
 								>
 									Cancel
-								</AlertDialog.Close>
+								</Button>
 								<Button
-									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-danger px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-danger-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
-									onClick={handleConfirmDelete}
 									disabled={deleting}
-									focusableWhenDisabled
+									loading={deleting}
+									onClick={handleConfirmDelete}
+									variant="destructive"
 								>
 									{deleting ? "Deleting..." : "Delete"}
 								</Button>
@@ -426,19 +425,21 @@ function BucketView() {
 								)}
 							</div>
 							<div className="flex justify-end gap-2">
-								<AlertDialog.Close
-									render={
-										<Button className="inline-flex cursor-pointer items-center justify-center rounded-md border border-none border-border bg-bg-tertiary px-4 py-2 text-sm font-medium text-text transition-[background-color,transform] hover:bg-border active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0" />
-									}
+								<Button
 									disabled={creatingDirectory}
+									onClick={() => {
+										setAddDirectoryOpen(false);
+										setNewDirectoryName("");
+									}}
+									variant="secondary"
 								>
 									Cancel
-								</AlertDialog.Close>
+								</Button>
 								<Button
-									className="inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-primary px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-hover active:translate-y-px data-disabled:cursor-not-allowed data-disabled:opacity-60 data-disabled:active:translate-y-0"
-									onClick={handleCreateDirectory}
 									disabled={creatingDirectory || !newDirectoryName.trim()}
-									focusableWhenDisabled
+									loading={creatingDirectory}
+									onClick={handleCreateDirectory}
+									variant="primary"
 								>
 									{creatingDirectory ? "Creating..." : "Create"}
 								</Button>
