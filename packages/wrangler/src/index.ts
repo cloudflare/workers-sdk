@@ -97,6 +97,32 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
+import { emailRoutingAddressesCreateCommand } from "./email-routing/addresses/create";
+import { emailRoutingAddressesDeleteCommand } from "./email-routing/addresses/delete";
+import { emailRoutingAddressesGetCommand } from "./email-routing/addresses/get";
+import { emailRoutingAddressesListCommand } from "./email-routing/addresses/list";
+import { emailRoutingDisableCommand } from "./email-routing/disable";
+import { emailRoutingDnsGetCommand } from "./email-routing/dns-get";
+import { emailRoutingDnsUnlockCommand } from "./email-routing/dns-unlock";
+import { emailRoutingEnableCommand } from "./email-routing/enable";
+import {
+	emailNamespace,
+	emailRoutingAddressesNamespace,
+	emailRoutingCatchAllNamespace,
+	emailRoutingDnsNamespace,
+	emailRoutingNamespace,
+	emailRoutingRulesNamespace,
+} from "./email-routing/index";
+import { emailRoutingListCommand } from "./email-routing/list";
+import { emailRoutingCatchAllGetCommand } from "./email-routing/rules/catch-all-get";
+import { emailRoutingCatchAllUpdateCommand } from "./email-routing/rules/catch-all-update";
+import { emailRoutingRulesCreateCommand } from "./email-routing/rules/create";
+import { emailRoutingRulesDeleteCommand } from "./email-routing/rules/delete";
+import { emailRoutingRulesGetCommand } from "./email-routing/rules/get";
+import { emailRoutingRulesListCommand } from "./email-routing/rules/list";
+import { emailRoutingRulesUpdateCommand } from "./email-routing/rules/update";
+import { emailRoutingSettingsCommand } from "./email-routing/settings";
+import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -1840,6 +1866,96 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("vpc");
+
+	registry.define([
+		{ command: "wrangler email", definition: emailNamespace },
+		{ command: "wrangler email routing", definition: emailRoutingNamespace },
+		{
+			command: "wrangler email routing list",
+			definition: emailRoutingListCommand,
+		},
+		{
+			command: "wrangler email routing settings",
+			definition: emailRoutingSettingsCommand,
+		},
+		{
+			command: "wrangler email routing enable",
+			definition: emailRoutingEnableCommand,
+		},
+		{
+			command: "wrangler email routing disable",
+			definition: emailRoutingDisableCommand,
+		},
+		{
+			command: "wrangler email routing dns",
+			definition: emailRoutingDnsNamespace,
+		},
+		{
+			command: "wrangler email routing dns get",
+			definition: emailRoutingDnsGetCommand,
+		},
+		{
+			command: "wrangler email routing dns unlock",
+			definition: emailRoutingDnsUnlockCommand,
+		},
+		{
+			command: "wrangler email routing rules",
+			definition: emailRoutingRulesNamespace,
+		},
+		{
+			command: "wrangler email routing rules list",
+			definition: emailRoutingRulesListCommand,
+		},
+		{
+			command: "wrangler email routing rules get",
+			definition: emailRoutingRulesGetCommand,
+		},
+		{
+			command: "wrangler email routing rules create",
+			definition: emailRoutingRulesCreateCommand,
+		},
+		{
+			command: "wrangler email routing rules update",
+			definition: emailRoutingRulesUpdateCommand,
+		},
+		{
+			command: "wrangler email routing rules delete",
+			definition: emailRoutingRulesDeleteCommand,
+		},
+		{
+			command: "wrangler email routing rules catch-all",
+			definition: emailRoutingCatchAllNamespace,
+		},
+		{
+			command: "wrangler email routing rules catch-all get",
+			definition: emailRoutingCatchAllGetCommand,
+		},
+		{
+			command: "wrangler email routing rules catch-all update",
+			definition: emailRoutingCatchAllUpdateCommand,
+		},
+		{
+			command: "wrangler email routing addresses",
+			definition: emailRoutingAddressesNamespace,
+		},
+		{
+			command: "wrangler email routing addresses list",
+			definition: emailRoutingAddressesListCommand,
+		},
+		{
+			command: "wrangler email routing addresses get",
+			definition: emailRoutingAddressesGetCommand,
+		},
+		{
+			command: "wrangler email routing addresses create",
+			definition: emailRoutingAddressesCreateCommand,
+		},
+		{
+			command: "wrangler email routing addresses delete",
+			definition: emailRoutingAddressesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("email");
 
 	registry.define([
 		{ command: "wrangler hello-world", definition: helloWorldNamespace },
