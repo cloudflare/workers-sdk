@@ -379,5 +379,127 @@ describe("R2 API", () => {
 			// Consume response body to avoid unhandled error
 			await response.json();
 		});
+
+		test("returns error when deleting non-empty directory", async ({
+			expect,
+		}) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+
+			await r2.put("non-empty-dir/", ""); // directory marker
+			await r2.put("non-empty-dir/file1.txt", "content1");
+			await r2.put("non-empty-dir/file2.txt", "content2");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects`,
+				{
+					body: JSON.stringify(["non-empty-dir/"]),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "DELETE",
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({
+				success: false,
+				errors: [
+					expect.objectContaining({
+						code: 10002,
+						message: expect.stringContaining("not empty"),
+					}),
+				],
+			});
+
+			// Verify nothing was deleted
+			expect(await r2.head("non-empty-dir/")).not.toBeNull();
+			expect(await r2.head("non-empty-dir/file1.txt")).not.toBeNull();
+			expect(await r2.head("non-empty-dir/file2.txt")).not.toBeNull();
+		});
+
+		test("successfully deletes empty directory", async ({ expect }) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+
+			await r2.put("empty-dir/", "");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects`,
+				{
+					body: JSON.stringify(["empty-dir/"]),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "DELETE",
+				}
+			);
+
+			const data = await expectValidResponse(
+				response,
+				zR2BucketDeleteObjectsResponse
+			);
+			expect(data.result).toEqual(
+				expect.arrayContaining([expect.objectContaining({ key: "empty-dir/" })])
+			);
+
+			// Verify the directory marker was deleted
+			expect(await r2.head("empty-dir/")).toBeNull();
+		});
+
+		test("returns error when batch delete includes non-empty directory", async ({
+			expect,
+		}) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+
+			await r2.put("batch-dir/", "");
+			await r2.put("batch-dir/nested.txt", "content");
+			await r2.put("batch-file.txt", "content");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects`,
+				{
+					body: JSON.stringify(["batch-file.txt", "batch-dir/"]),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "DELETE",
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({
+				success: false,
+				errors: [
+					expect.objectContaining({
+						code: 10002,
+						message: expect.stringContaining("batch-dir/"),
+					}),
+				],
+			});
+
+			// Verify nothing was deleted (entire batch should fail)
+			expect(await r2.head("batch-file.txt")).not.toBeNull();
+			expect(await r2.head("batch-dir/")).not.toBeNull();
+			expect(await r2.head("batch-dir/nested.txt")).not.toBeNull();
+		});
+
+		test("allows deleting directory without marker when it has no contents", async ({
+			expect,
+		}) => {
+			// This tests the case where a "directory" is purely virtual (no marker object)
+			// and has no contents - the delete should succeed (deleting nothing)
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects`,
+				{
+					body: JSON.stringify(["virtual-empty-dir/"]),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "DELETE",
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+		});
 	});
 });
