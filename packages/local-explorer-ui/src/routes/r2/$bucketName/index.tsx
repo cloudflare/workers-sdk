@@ -12,7 +12,6 @@ import {
 	FoldersIcon,
 	ListIcon,
 	UploadIcon,
-	XIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
@@ -79,7 +78,7 @@ function BucketView(): JSX.Element {
 	const [delimitedPrefixes, setDelimitedPrefixes] = useState<string[]>(
 		loaderData.delimitedPrefixes
 	);
-	const [error, setError] = useState<string | null>(null);
+
 	const [isTruncated, setIsTruncated] = useState(loaderData.isTruncated);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -96,7 +95,6 @@ function BucketView(): JSX.Element {
 		setDelimitedPrefixes(loaderData.delimitedPrefixes);
 		setCursor(loaderData.cursor);
 		setIsTruncated(loaderData.isTruncated);
-		setError(null);
 		setDeleteTargets([]);
 		setDeleting(false);
 		setSelectedKeys(new Set());
@@ -110,7 +108,6 @@ function BucketView(): JSX.Element {
 				} else {
 					setLoading(true);
 				}
-				setError(null);
 
 				const apiCall = r2BucketListObjects({
 					path: {
@@ -144,9 +141,12 @@ function BucketView(): JSX.Element {
 				setCursor(newCursor ?? null);
 				setIsTruncated(response.data?.result_info?.is_truncated === "true");
 			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to fetch objects"
-				);
+				toastManager.add({
+					title: "Failed to fetch objects",
+					description:
+						err instanceof Error ? err.message : "An unknown error occurred",
+					variant: "error",
+				});
 			} finally {
 				setLoading(false);
 				setLoadingMore(false);
@@ -252,7 +252,11 @@ function BucketView(): JSX.Element {
 				}
 			}
 
-			setError(errorMessage);
+			toastManager.add({
+				title: "Delete failed",
+				description: errorMessage,
+				variant: "error",
+			});
 			setDeleteTargets([]);
 		} finally {
 			setDeleting(false);
@@ -281,9 +285,12 @@ function BucketView(): JSX.Element {
 			setNewDirectoryName("");
 			void fetchObjects(undefined, directoryView);
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to create directory"
-			);
+			toastManager.add({
+				title: "Failed to create directory",
+				description:
+					err instanceof Error ? err.message : "An unknown error occurred",
+				variant: "error",
+			});
 		} finally {
 			setCreatingDirectory(false);
 		}
@@ -385,21 +392,6 @@ function BucketView(): JSX.Element {
 			</Breadcrumbs>
 
 			<div className="px-6 py-6">
-				{error && (
-					<div className="mb-4 flex items-center justify-between gap-2 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
-						<p>{error}</p>
-						<Button
-							aria-label="Dismiss error"
-							onClick={() => setError(null)}
-							shape="square"
-							type="button"
-							variant="secondary-destructive"
-						>
-							<XIcon size={16} />
-						</Button>
-					</div>
-				)}
-
 				{loading && objects.length === 0 && delimitedPrefixes.length === 0 ? (
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : objects.length === 0 && delimitedPrefixes.length === 0 ? (
