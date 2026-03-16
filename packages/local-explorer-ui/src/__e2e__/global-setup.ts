@@ -11,7 +11,6 @@ let browserServer: BrowserServer | undefined;
 let viteServer: ViteDevServer | undefined;
 let stopWorker: (() => Promise<unknown>) | undefined;
 
-const VITE_PORT = 5173;
 const WORKER_PORT = 8787;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -48,12 +47,11 @@ export async function setup({ provide }: TestProject): Promise<void> {
 	console.log("Starting Vite dev server...");
 	viteServer = await createServer({
 		root: PACKAGE_DIR,
-		server: {
-			port: VITE_PORT,
-		},
 	});
 	await viteServer.listen();
-	console.log(`Vite dev server is ready at http://localhost:${VITE_PORT}`);
+	console.log(
+		`Vite dev server is ready at http://localhost:${viteServer.config.server.port}`
+	);
 
 	// Launch Playwright browser server
 	console.log("Launching browser server...");
@@ -64,7 +62,7 @@ export async function setup({ provide }: TestProject): Promise<void> {
 		headless: true,
 	});
 
-	provide("viteUrl", `http://localhost:${VITE_PORT}`);
+	provide("viteUrl", `http://localhost:${viteServer.config.server.port}`);
 	provide("workerUrl", workerUrl);
 	provide("wsEndpoint", browserServer.wsEndpoint());
 
