@@ -63,11 +63,11 @@ const shardCount = process.env.E2E_SHARD_COUNT
 	: undefined;
 
 if (shardIndex !== undefined && shardCount !== undefined) {
+	assert(shardCount >= 1, `E2E_SHARD_COUNT must be >= 1, got ${shardCount}`);
 	assert(
 		shardIndex >= 1 && shardIndex <= shardCount,
 		`E2E_SHARD must be between 1 and E2E_SHARD_COUNT (${shardCount}), got ${shardIndex}`
 	);
-	assert(shardCount >= 1, `E2E_SHARD_COUNT must be >= 1, got ${shardCount}`);
 
 	// Estimated durations (seconds) from CI measurements (with remote tests enabled).
 	// Used for load-balancing across shards. Doesn't need to be exact — just roughly
