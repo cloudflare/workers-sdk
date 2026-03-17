@@ -4,11 +4,16 @@ import { useState } from "react";
 
 interface SearchFormProps {
 	disabled?: boolean;
+	initialValue?: string;
 	onSearch: (prefix: string) => void;
 }
 
-export function SearchForm({ disabled = false, onSearch }: SearchFormProps) {
-	const [prefix, setPrefix] = useState("");
+export function SearchForm({
+	disabled = false,
+	initialValue = "",
+	onSearch,
+}: SearchFormProps) {
+	const [prefix, setPrefix] = useState<string>(initialValue);
 
 	const handleSubmit = (e: React.SyntheticEvent) => {
 		e.preventDefault();
@@ -20,6 +25,7 @@ export function SearchForm({ disabled = false, onSearch }: SearchFormProps) {
 			<label className="sr-only" htmlFor="search-prefix">
 				Search keys by prefix
 			</label>
+
 			<div className="relative">
 				<MagnifyingGlassIcon className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted" />
 				<input
@@ -31,6 +37,7 @@ export function SearchForm({ disabled = false, onSearch }: SearchFormProps) {
 					value={prefix}
 				/>
 			</div>
+
 			<Button disabled={disabled} type="submit" variant="secondary">
 				Search
 			</Button>

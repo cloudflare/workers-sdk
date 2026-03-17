@@ -1,5 +1,9 @@
 import { Button, Dialog } from "@cloudflare/kumo";
-import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	getRouteApi,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	workersKvNamespaceDeleteKeyValuePair,
@@ -18,10 +22,21 @@ import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
-	loader: async ({ params }) => {
+	validateSearch: (search) => ({
+		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
+	}),
+	loaderDeps: ({ search }) => ({
+		prefix: search.prefix,
+	}),
+	loader: async ({ params, deps }) => {
 		const keysResponse = await workersKvNamespaceListANamespace_SKeys({
-			path: { namespace_id: params.namespaceId },
-			query: { limit: 50 },
+			path: {
+				namespace_id: params.namespaceId,
+			},
+			query: {
+				limit: 50,
+				prefix: deps.prefix,
+			},
 		});
 		const keys = keysResponse.data?.result ?? [];
 
@@ -53,6 +68,7 @@ export const Route = createFileRoute("/kv/$namespaceId")({
 			cursor,
 			entries,
 			hasMore: !!cursor,
+			prefix: deps.prefix,
 		};
 	},
 });
@@ -81,6 +97,7 @@ const rootRoute = getRouteApi("__root__");
 function NamespaceView() {
 	const { namespaceId } = Route.useParams();
 	const loaderData = Route.useLoaderData();
+	const navigate = useNavigate();
 	const rootData = rootRoute.useLoaderData();
 
 	// Get namespace title (binding name) from root loader data
@@ -110,8 +127,8 @@ function NamespaceView() {
 	const [overwriting, setOverwriting] = useState<boolean>(false);
 	// Signal to clear AddKVForm after successful overwrite
 	const [clearAddForm, setClearAddForm] = useState<number>(0);
-	// Search prefix filter
-	const [prefix, setPrefix] = useState<string | undefined>(undefined);
+	// Search prefix filter (initialized from URL via loader data)
+	const [prefix, setPrefix] = useState<string | undefined>(loaderData.prefix);
 
 	useEffect(() => {
 		setEntries(loaderData.entries);
@@ -122,7 +139,7 @@ function NamespaceView() {
 		setOverwriteConfirm(null);
 		setOverwriting(false);
 		setError(null);
-		setPrefix(undefined);
+		setPrefix(loaderData.prefix);
 		setLoading(false);
 		setLoadingMore(false);
 	}, [loaderData]);
@@ -192,6 +209,13 @@ function NamespaceView() {
 	const handleSearch = (searchPrefix: string) => {
 		const newPrefix = searchPrefix || undefined;
 		setPrefix(newPrefix);
+		void navigate({
+			replace: true,
+			search: {
+				prefix: newPrefix,
+			},
+			to: ".",
+		});
 		void fetchEntries(undefined, newPrefix);
 	};
 
@@ -383,7 +407,8 @@ function NamespaceView() {
 					title="KV"
 				>
 					<SearchForm
-						key={namespaceId}
+						key={`${namespaceId}-${loaderData.prefix ?? ""}`}
+						initialValue={loaderData.prefix ?? ""}
 						onSearch={handleSearch}
 						disabled={loading}
 					/>
