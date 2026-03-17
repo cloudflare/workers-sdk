@@ -191,9 +191,9 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 									</div>
 								)}
 							</Table.Cell>
-							<Table.Cell className="group/cell max-w-[400px] font-mono text-[13px]">
+							<Table.Cell className="group/cell max-w-100 font-mono text-[13px]">
 								{isEditing && editData ? (
-									<div className="flex flex-col gap-2">
+									<div className="flex items-start gap-2">
 										<label
 											className="sr-only"
 											htmlFor={`edit-value-${entry.key.name}`}
@@ -202,7 +202,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</label>
 										<textarea
 											id={`edit-value-${entry.key.name}`}
-											className="[field-sizing:content] max-h-[200px] min-h-8 w-full resize-none overflow-y-auto rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
+											className="field-sizing-content max-h-50 min-h-8 flex-1 resize-none overflow-y-auto rounded border border-primary bg-bg px-2 py-1.5 font-mono text-[13px] text-text focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
 											value={editData.value}
 											onChange={(e) =>
 												setEditData({ ...editData, value: e.target.value })
@@ -210,21 +210,21 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											onKeyDown={handleKeyDown}
 											disabled={saving}
 										/>
-										<div className="flex justify-end gap-1.5">
+										<div className="flex shrink-0 gap-1.5">
 											<Button
-												variant="secondary"
-												size="sm"
-												onClick={handleCancel}
 												disabled={saving}
+												onClick={handleCancel}
+												// size="sm"
+												variant="secondary"
 											>
 												Cancel
 											</Button>
 											<Button
-												variant="primary"
-												size="sm"
-												onClick={handleSave}
 												disabled={saving || isKeyInvalid}
 												loading={saving}
+												onClick={handleSave}
+												// size="sm"
+												variant="primary"
 											>
 												{saving ? "Saving..." : "Save"}
 											</Button>
