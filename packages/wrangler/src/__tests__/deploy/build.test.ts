@@ -958,6 +958,7 @@ describe("deploy", () => {
 				  If these are unnecessary, consider removing them
 
 
+
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
 				  workers.api.error.script_too_large [code: 10027]

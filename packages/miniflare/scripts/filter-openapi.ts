@@ -361,6 +361,7 @@ function resolveAllRefs(
 	const toResolve = [...initialRefs];
 
 	while (toResolve.length > 0) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- length check on line above guarantees pop() returns a value
 		const ref = toResolve.pop()!;
 		if (resolved.has(ref)) {
 			continue;
@@ -400,6 +401,7 @@ function filterComponents(
 		const component = components[parsed.type]?.[parsed.name];
 		if (component) {
 			filtered[parsed.type] ??= {};
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- ??= on line above guarantees this exists
 			filtered[parsed.type]![parsed.name] = component;
 		}
 	}

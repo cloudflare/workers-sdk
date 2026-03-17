@@ -931,6 +931,7 @@ addEventListener('fetch', event => {});`
 					──────────────────
 
 
+
 					No compatibility date found Defaulting to today: 2024-01-01
 
 					Wrote
@@ -1009,6 +1010,7 @@ addEventListener('fetch', event => {});`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
 
 
 					No compatibility date found Defaulting to today: 2024-01-01
@@ -1238,6 +1240,7 @@ addEventListener('fetch', event => {});`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
 
 
 					No compatibility date found Defaulting to today: 2024-01-01

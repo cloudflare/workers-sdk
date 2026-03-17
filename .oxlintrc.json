@@ -44,7 +44,10 @@
 		"@typescript-eslint/no-unnecessary-type-constraint": "error",
 		"unicorn/prefer-node-protocol": "error",
 		"vitest/no-focused-tests": "error",
+		"@typescript-eslint/no-non-null-assertion": "error",
 		"turbo/no-undeclared-env-vars": "error",
+		"workers-sdk/no-unsafe-command-execution": "error",
+		"workers-sdk/no-direct-recursive-rm": "error",
 
 		"no-unused-vars": [
 			"error",
@@ -105,7 +108,6 @@
 	],
 	"overrides": [
 		// Published packages which all have their own "logger" class that should be used instead.
-		// Additionally, only apply workers-sdk/no-unsafe-command-execution & workers-sdk/no-direct-recursive-rm here to improve linting performance
 		{
 			"files": [
 				"packages/cli/**",
@@ -115,9 +117,7 @@
 				"packages/workers-utils/**"
 			],
 			"rules": {
-				"no-console": "error",
-				"workers-sdk/no-unsafe-command-execution": "error",
-				"workers-sdk/no-direct-recursive-rm": "error"
+				"no-console": "error"
 			}
 		},
 		// TODO: remove these overrides. This is a legacy of Miniflare's history, not intentional
@@ -172,7 +172,9 @@
 				"packages/wrangler/e2e/**",
 				"packages/wrangler/scripts/**",
 				"packages/miniflare/scripts/**",
+				"packages/cli/src/__tests__/**",
 				"packages/create-cloudflare/scripts/**",
+				"packages/create-cloudflare/src/__tests__/**",
 				"packages/workers-utils/tests/**",
 				"packages/vite-plugin-cloudflare/e2e/**"
 			],
