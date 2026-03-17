@@ -67,7 +67,7 @@ test(
 					compatibilityFlags: ["nodejs_compat"],
 				},
 			}),
-			"index.test.ts": dedent/* javascript */ `
+			"index.test.ts": dedent /* javascript */ `
 				import { SELF } from "cloudflare:test";
 				import { it, expect } from "vitest";
 				it("sends request", async () => {
@@ -92,7 +92,7 @@ test(
 					compatibilityFlags: ["nodejs_compat"],
 				},
 			}),
-			"index.ts": dedent/* javascript */ `
+			"index.ts": dedent /* javascript */ `
 				addEventListener("fetch", (event) => {
 					event.respondWith(new Response("body"));
 				});

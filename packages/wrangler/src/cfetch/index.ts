@@ -254,12 +254,12 @@ export function renderError(err: FetchError | ErrorData, level = 0): string {
 	const indent = "  ".repeat(level);
 	const chainedMessages =
 		"error_chain" in err
-			? err.error_chain
+			? (err.error_chain
 					?.map(
 						(chainedError) =>
 							`\n\n${indent}- ${renderError(chainedError, level + 1)}`
 					)
-					.join("\n") ?? ""
+					.join("\n") ?? "")
 			: "";
 	return (
 		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +

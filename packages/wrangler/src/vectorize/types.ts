@@ -174,8 +174,7 @@ export type VectorizeIndexDetails = {
 	processedUpToMutation: string;
 };
 
-export interface VectorizeMetadataIndexProperty
-	extends VectorizeMetadataIndexPropertyName {
+export interface VectorizeMetadataIndexProperty extends VectorizeMetadataIndexPropertyName {
 	/** Specifies the type of metadata property to index. */
 	indexType: VectorizeVectorMetadataValueString;
 }

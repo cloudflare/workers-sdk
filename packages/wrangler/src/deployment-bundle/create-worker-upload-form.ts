@@ -456,7 +456,7 @@ export function createWorkerUploadForm(
 						? source.contents
 						: readFileSync(source.path as string),
 				],
-				"path" in source ? source.path ?? name : name,
+				"path" in source ? (source.path ?? name) : name,
 				{ type: "application/wasm" }
 			)
 		);
@@ -549,7 +549,7 @@ export function createWorkerUploadForm(
 						? source.contents
 						: readFileSync(source.path as string),
 				],
-				"path" in source ? source.path ?? name : name,
+				"path" in source ? (source.path ?? name) : name,
 				{ type: "application/octet-stream" }
 			)
 		);
