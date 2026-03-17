@@ -70,7 +70,7 @@ export function logConsoleMessage(
 					args.push(
 						ro.subtype === "null"
 							? "null"
-							: ro.description ?? "<no-description>"
+							: (ro.description ?? "<no-description>")
 					);
 				} else {
 					args.push(ro.preview.description ?? "<no-description>");

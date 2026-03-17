@@ -414,7 +414,7 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 		const tableMatch = selectedTab.identifier.match(
 			/^(?:table|edit-table)\/[^.]+\.(.+)$/
 		);
-		lastOpenedTable.current = tableMatch ? tableMatch[1] ?? null : null;
+		lastOpenedTable.current = tableMatch ? (tableMatch[1] ?? null) : null;
 		onTableChange(tableMatch?.[1]);
 	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 

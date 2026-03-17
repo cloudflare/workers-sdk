@@ -260,7 +260,6 @@ parameter in module format Workers.
   have any _npm_ imports, and `modules: true` must be set.
 
 - `modules?: boolean | ModuleDefinition[]`
-
   - If `true`, Miniflare will treat `script`/`scriptPath` as an ES Module and
     automatically locate transitive module dependencies according to
     `modulesRules`. Note that automatic location is not perfect: if the
@@ -335,7 +334,6 @@ parameter in module format Workers.
   `{ fetch: typeof fetch }`
   [service bindings](https://developers.cloudflare.com/workers/platform/bindings/about-service-bindings/)
   into this Worker.
-
   - If the designator is a `string`, requests will be dispatched to the Worker
     with that `name`.
   - If the designator is `(await import("miniflare")).kCurrentWorker`, requests
@@ -535,7 +533,6 @@ parameter in module format Workers.
 
   Record mapping binding name to Durable Object class designators to inject as
   `DurableObjectNamespace` bindings into this Worker.
-
   - If the designator is a `string`, it should be the name of a `class` exported
     by this Worker.
   - If the designator is an object, and `scriptName` is `undefined`, `className`
@@ -569,11 +566,9 @@ parameter in module format Workers.
 
   If set, only files with paths _not_ matching these glob patterns will be
   served.
-
   - `assetsPath?: string`
 
   Path to serve Workers assets from.
-
   - `assetsKVBindingName?: string`
     Name of the binding to the KV namespace that the assets are in. If `assetsPath` is set, this binding will be injected into this Worker.
 
@@ -763,7 +758,6 @@ Options shared between all Workers/"nanoservices".
 - `cf?: boolean | string | Record<string, any>`
 
   Controls the object returned from incoming `Request`'s `cf` property.
-
   - If set to a falsy value, an object with default placeholder values will be
     used
   - If set to an object, that object will be used

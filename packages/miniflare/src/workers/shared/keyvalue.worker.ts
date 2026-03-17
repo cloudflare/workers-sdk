@@ -20,8 +20,9 @@ export interface KeyEntry<Metadata = unknown> {
 export interface KeyValueEntry<Metadata = unknown> extends KeyEntry<Metadata> {
 	value: ReadableStream<Uint8Array>;
 }
-export interface KeyMultipartValueEntry<Metadata = unknown>
-	extends KeyEntry<Metadata> {
+export interface KeyMultipartValueEntry<
+	Metadata = unknown,
+> extends KeyEntry<Metadata> {
 	value: MultipartReadableStream;
 }
 
