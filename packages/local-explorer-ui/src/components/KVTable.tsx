@@ -41,7 +41,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 					<Button
 						variant="ghost"
 						shape="square"
-						className="!h-7 !w-7"
+						className="h-7! w-7!"
 						aria-label="Actions"
 					>
 						<DotsThreeIcon size={16} weight="bold" />

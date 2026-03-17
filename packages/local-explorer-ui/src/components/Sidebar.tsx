@@ -231,7 +231,7 @@ export function Sidebar({
 		>
 			{/* Header with logo */}
 			<a
-				className="box-border flex min-h-16 items-center gap-2.5 overflow-hidden p-3"
+				className="mt-2 box-border flex min-h-16 items-center gap-2.5 overflow-hidden p-3"
 				href="/cdn-cgi/explorer/"
 			>
 				<CloudflareLogo variant="glyph" className="h-8 w-8 shrink-0" />

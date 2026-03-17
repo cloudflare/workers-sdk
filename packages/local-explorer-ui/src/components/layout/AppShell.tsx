@@ -11,7 +11,7 @@ export function AppShell({ children, className, sidebar }: AppShellProps) {
 	return (
 		<div className={cn("flex min-h-screen bg-app-bg", className)}>
 			{sidebar}
-			<div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+			<div className="z-0 flex flex-1 flex-col overflow-hidden">{children}</div>
 		</div>
 	);
 }
