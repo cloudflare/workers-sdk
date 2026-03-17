@@ -10,7 +10,7 @@
 		"check:type": "tsc",
 		"deploy": "pnpm run build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy",
 		"dev": "vite",
-		"generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.js"
+		"generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec oxfmt ./src/QuickEditor/defaultHashes.js"
 	},
 	"dependencies": {
 		"@cloudflare/component-button": "^7.0.11",
