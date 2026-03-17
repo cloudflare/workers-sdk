@@ -30,7 +30,7 @@ describe("Cli", () => {
 			expect(result.showHelpMessage).toBe(true);
 			expect(result.args).not.toBe(null);
 			expect(result.errorMessage).toBe(
-				"Too many positional arguments provided",
+				"Too many positional arguments provided"
 			);
 		});
 
@@ -126,13 +126,13 @@ describe("Cli", () => {
 		test.for(stringArgs)("%s requires an argument", async (arg, { expect }) => {
 			const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 			await expect(
-				parseArgs(["my-react-project", `--${arg}`]),
+				parseArgs(["my-react-project", `--${arg}`])
 			).resolves.toEqual({
 				type: "unknown",
 				args: null,
 			});
 			expect(logSpy).toHaveBeenCalledWith(
-				expect.stringContaining(`Not enough arguments following: ${arg}`),
+				expect.stringContaining(`Not enough arguments following: ${arg}`)
 			);
 		});
 

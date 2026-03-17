@@ -36,7 +36,7 @@ describe("Compatibility Date Helpers", () => {
 			expect(date).toBe(expectedDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(expectedDate),
+				expect.stringContaining(expectedDate)
 			);
 		});
 
@@ -52,7 +52,7 @@ describe("Compatibility Date Helpers", () => {
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(fallbackDate),
+				expect.stringContaining(fallbackDate)
 			);
 		});
 	});

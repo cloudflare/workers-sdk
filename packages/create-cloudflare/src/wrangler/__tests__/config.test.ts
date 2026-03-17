@@ -18,13 +18,13 @@ describe("update wrangler config", () => {
 	beforeEach(() => {
 		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(mockCompatDate);
 		vi.mocked(existsSync).mockImplementation((f) =>
-			(f as string).endsWith(".toml"),
+			(f as string).endsWith(".toml")
 		);
 		mockWorkersTypesDirectory();
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`,
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
 		);
 	});
 
@@ -144,7 +144,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement `<TBD>` (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<TBD>",
@@ -213,7 +213,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<WORKER_NAME>",
@@ -282,7 +282,7 @@ describe("update wrangler config", () => {
 
 	test("string literal replacement", async ({ expect }) => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
-			"\n",
+			"\n"
 		);
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -442,7 +442,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement with Workflows (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<WORKER_NAME>",
@@ -567,7 +567,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -586,7 +586,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -606,7 +606,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -643,7 +643,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -679,7 +679,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const pythonCtx = createTestContext("test", {
 			...ctx.args,
