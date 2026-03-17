@@ -29,6 +29,7 @@ interface SidebarItemGroupProps {
 			to: FileRouteTypes["to"];
 		};
 	}>;
+	storageKey: string;
 	title: string;
 }
 
@@ -38,21 +39,35 @@ function SidebarItemGroup({
 	error,
 	icon: Icon,
 	items,
+	storageKey,
 	title,
 }: SidebarItemGroupProps): JSX.Element {
 	const [popoverOpen, setPopoverOpen] = useState<boolean>(false);
+	const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+		if (typeof window !== "undefined") {
+			const stored = localStorage.getItem(`sidebar-group-${storageKey}`);
+			// Default to expanded (true) if no stored value
+			return stored !== "false";
+		}
+		return true;
+	});
+
+	function handleExpandedChange(open: boolean): void {
+		setIsExpanded(open);
+		localStorage.setItem(`sidebar-group-${storageKey}`, String(open));
+	}
 
 	// When collapsed, show icon with popover containing the list
 	if (collapsed) {
 		return (
-			<div className="flex justify-center px-2 py-1">
+			<div className="flex items-center px-3 py-1">
 				<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
 					<Popover.Trigger
 						className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-tertiary hover:text-text"
 						delay={100}
 						openOnHover={true}
 					>
-						<Icon className="h-5 w-5" />
+						<Icon className="h-4 w-4" />
 					</Popover.Trigger>
 
 					<Popover.Content
@@ -87,14 +102,6 @@ function SidebarItemGroup({
 												search={item.link.search}
 												to={item.link.to}
 											>
-												<Icon
-													className={cn(
-														"h-4 w-4 transition-colors",
-														item.isActive
-															? "text-primary"
-															: "text-muted group-hover:text-text"
-													)}
-												/>
 												{item.label}
 											</Link>
 										</li>
@@ -115,9 +122,16 @@ function SidebarItemGroup({
 
 	// When expanded, show collapsible group with clean design
 	return (
-		<Collapsible.Root defaultOpen className="py-1">
-			<Collapsible.Trigger className="group flex w-full cursor-pointer items-center gap-1 bg-transparent px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text">
-				{title}
+		<Collapsible.Root
+			open={isExpanded}
+			onOpenChange={handleExpandedChange}
+			className="py-1"
+		>
+			<Collapsible.Trigger className="group flex w-full cursor-pointer items-center gap-2 bg-transparent px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text">
+				<span className="flex h-9 w-9 shrink-0 items-center justify-center">
+					<Icon className="h-4 w-4" />
+				</span>
+				<span className="flex-1 text-left">{title}</span>
 				<CaretDownIcon
 					className="h-3 w-3 transition-transform duration-200 group-data-panel-closed:-rotate-90"
 					weight="bold"
@@ -138,20 +152,13 @@ function SidebarItemGroup({
 											"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm no-underline transition-colors",
 											item.isActive
 												? "bg-primary/10 font-medium text-primary hover:bg-primary/15"
-												: "text-text hover:bg-surface-tertiary"
+												: "text-text hover:bg-surface-tertiary",
+											"mx-2" // Indent to align with title text
 										)}
 										params={item.link.params}
 										search={item.link.search}
 										to={item.link.to}
 									>
-										<Icon
-											className={cn(
-												"h-4 w-4 transition-colors",
-												item.isActive
-													? "text-primary"
-													: "text-muted group-hover:text-text"
-											)}
-										/>
 										{item.label}
 									</Link>
 								</li>
@@ -159,7 +166,7 @@ function SidebarItemGroup({
 						: null}
 
 					{!error && items.length === 0 && (
-						<li className="px-2.5 py-2 text-sm text-text-secondary italic">
+						<li className="ml-11 px-2.5 py-2 text-sm text-text-secondary italic">
 							{emptyLabel}
 						</li>
 					)}
@@ -236,6 +243,7 @@ export function Sidebar({
 							to: "/kv/$namespaceId",
 						},
 					}))}
+					storageKey="kv"
 					title="KV Namespaces"
 				/>
 
@@ -254,6 +262,7 @@ export function Sidebar({
 							to: "/d1/$databaseId",
 						},
 					}))}
+					storageKey="d1"
 					title="D1 Databases"
 				/>
 
@@ -276,6 +285,7 @@ export function Sidebar({
 							},
 						};
 					})}
+					storageKey="do"
 					title="Durable Objects"
 				/>
 			</nav>
