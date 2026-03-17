@@ -62,7 +62,6 @@ export function rewriteUnresolvedModuleBuildFailure(errors: esbuild.Message[]) {
 		const match = couldNotResolveErrorText.exec(error.text);
 		// Note: we skip Node built-in modules since these are handled by rewriteNodeCompatBuildFailure
 		if (match !== null && !nodeBuiltinResolveErrorText.test(error.text)) {
-			const moduleName = match[1];
 			const hasExternalSuggestion = error.notes?.some((note) =>
 				note.text?.includes(markAsExternalNoteText)
 			);
