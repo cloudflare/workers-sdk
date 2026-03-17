@@ -341,12 +341,12 @@ function formatVersions(
 
 /**
  * Prompts the user to select which versions they want to deploy.
- * The list of possible versions will include:
- * - versions within the latest deployment
- * - the latest 10 uploaded versions
- * - the versions the user provided as args (if any)
+ * The list of possible versions will include all deployable versions.
  *
- * sorted by upload date (latest first)
+ * Versions are sorted by upload date (latest first). The interactive
+ * prompt displays 3 versions at a time with scrolling, and supports
+ * type-to-search filtering to quickly find a specific version by ID,
+ * tag, message, or creation date.
  *
  * @param accountId
  * @param workerName
@@ -396,8 +396,9 @@ async function promptVersionsToDeploy(
 	const question = "Which version(s) do you want to deploy?";
 
 	const result = await inputPrompt<string[]>({
-		type: "multiselect",
+		type: "multiselect-search",
 		question,
+		maxItemsPerPage: 5,
 		options: selectableVersions.map((version) => ({
 			value: version.id,
 			label: version.id,
@@ -412,7 +413,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${
             `),
 		})),
 		label: "",
-		helpText: "Use SPACE to select/unselect version(s) and ENTER to submit.",
+		helpText: "Type to search, SPACE to select, ENTER to submit.",
 		defaultValue: defaultSelectedVersionIds,
 		acceptDefault: yesFlag,
 		validate(versionIds) {

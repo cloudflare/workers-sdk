@@ -8,6 +8,7 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { CancelError } from "./error";
+import MultiSelectSearchPrompt from "./multiselect-search";
 import SelectRefreshablePrompt from "./select-list";
 import { stdout } from "./streams";
 import {
@@ -83,6 +84,10 @@ export type MultiSelectPromptConfig = BaseSelectPromptConfig & {
 	type: "multiselect";
 };
 
+export type MultiSelectSearchPromptConfig = BaseSelectPromptConfig & {
+	type: "multiselect-search";
+};
+
 export type ConfirmPromptConfig = BasePromptConfig & {
 	type: "confirm";
 	activeText?: string;
@@ -100,11 +105,13 @@ export type PromptConfig =
 	| ConfirmPromptConfig
 	| SelectPromptConfig
 	| MultiSelectPromptConfig
+	| MultiSelectSearchPromptConfig
 	| ListPromptConfig;
 
 type RenderProps =
 	| Omit<SelectPrompt<Option>, "prompt">
 	| Omit<MultiSelectPrompt<Option>, "prompt">
+	| Omit<MultiSelectSearchPrompt, "prompt">
 	| Omit<TextPrompt, "prompt">
 	| Omit<ConfirmPrompt, "prompt">
 	| Omit<SelectRefreshablePrompt, "prompt">;
@@ -142,6 +149,7 @@ export const inputPrompt = async <T = string>(
 		| TextPrompt
 		| ConfirmPrompt
 		| MultiSelectPrompt<Option>
+		| MultiSelectSearchPrompt
 		| SelectRefreshablePrompt;
 
 	// Looks up the needed renderer by the current state ('initial', 'submitted', etc.)
@@ -201,6 +209,26 @@ export const inputPrompt = async <T = string>(
 		}
 
 		prompt = new MultiSelectPrompt({
+			...promptConfig,
+			options: promptConfig.options,
+			initialValues: initialValues,
+			render() {
+				return dispatchRender(this, prompt);
+			},
+		});
+	} else if (promptConfig.type === "multiselect-search") {
+		let initialValues: string[] | undefined;
+		if (Array.isArray(promptConfig.defaultValue)) {
+			initialValues = promptConfig.defaultValue;
+		} else if (promptConfig.defaultValue !== undefined) {
+			initialValues = [String(promptConfig.defaultValue)];
+		}
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValues as T);
+		}
+
+		prompt = new MultiSelectSearchPrompt({
 			...promptConfig,
 			options: promptConfig.options,
 			initialValues: initialValues,
@@ -291,6 +319,8 @@ export const getRenderers = (config: PromptConfig) => {
 			return getTextRenderers(config);
 		case "multiselect":
 			return getSelectRenderers(config);
+		case "multiselect-search":
+			return getMultiSelectSearchRenderers(config);
 		case "list":
 			return getSelectListRenderers(config);
 	}
@@ -426,6 +456,126 @@ const getSelectRenderers = (
 				``
 			);
 		}
+
+		return lines;
+	};
+
+	return {
+		initial: defaultRenderer,
+		active: defaultRenderer,
+		confirm: defaultRenderer,
+		error: (opts: { value: Arg; error: string }, prompt: Prompt) => {
+			return [
+				`${leftT} ${status.error} ${dim(opts.error)}`,
+				`${grayBar}`,
+				...defaultRenderer(opts, prompt),
+			];
+		},
+		submit: ({ value }: { value: Arg }) => {
+			if (Array.isArray(value)) {
+				return renderSubmit(
+					config,
+					options
+						.filter((o) => value.includes(o.value))
+						.map((o) => o.label)
+						.join(", ")
+				);
+			}
+
+			return renderSubmit(
+				config,
+				options.find((o) => o.value === value)?.label as string
+			);
+		},
+		cancel: defaultRenderer,
+	};
+};
+
+const getMultiSelectSearchRenderers = (
+	config: MultiSelectSearchPromptConfig
+) => {
+	const { options, question, helpText: _helpText } = config;
+	const helpText = _helpText ?? "";
+	const maxItemsPerPage = config.maxItemsPerPage ?? 5;
+
+	const defaultRenderer: Renderer = (props, prompt: Prompt) => {
+		const { cursor = 0, value } = props;
+		const searchPrompt = prompt as unknown as MultiSelectSearchPrompt;
+		const searchText = searchPrompt.search ?? "";
+		const filtered = searchPrompt.filteredOptions ?? options;
+
+		const selectedCount = Array.isArray(value) ? value.length : 0;
+
+		const renderOption = (opt: Option, i: number) => {
+			const { label: optionLabel, value: optionValue } = opt;
+			const active = i === cursor;
+			const isSelected = Array.isArray(value) && value.includes(optionValue);
+
+			// Use a clear checkmark for selected items, empty box for unselected
+			let indicator: string;
+			let text: string;
+			let sublabel: string;
+			if (isSelected) {
+				indicator = brandColor("✔");
+				text = active
+					? brandColor.underline(optionLabel)
+					: brandColor(optionLabel);
+				sublabel = opt.sublabel ? brandColor.grey(opt.sublabel) : "";
+			} else {
+				const color = active ? blue : white;
+				indicator = dim("○");
+				text = active ? color.underline(optionLabel) : color(optionLabel);
+				sublabel = opt.sublabel ? color.grey(opt.sublabel) : "";
+			}
+
+			const pointer = active ? blue("❯ ") : "  ";
+
+			return `${space(2)}${pointer}${indicator} ${text} ${sublabel}`;
+		};
+
+		// Sliding window: only scroll when cursor reaches the edge of the viewport
+		let windowStart = 0;
+		if (filtered.length > maxItemsPerPage) {
+			// Keep the cursor visible within the window
+			if (cursor >= windowStart + maxItemsPerPage) {
+				windowStart = cursor - maxItemsPerPage + 1;
+			}
+			if (cursor < windowStart) {
+				windowStart = cursor;
+			}
+			// Clamp to valid range
+			windowStart = Math.max(
+				0,
+				Math.min(windowStart, filtered.length - maxItemsPerPage)
+			);
+		}
+		const windowEnd = Math.min(windowStart + maxItemsPerPage, filtered.length);
+		const windowedOptions = filtered.slice(windowStart, windowEnd);
+		const hasMoreAbove = windowStart > 0;
+		const hasMoreBelow = windowEnd < filtered.length;
+
+		const searchLine = searchText
+			? `${space(2)}${dim("Search:")} ${white(searchText)}${dim("▏")}`
+			: `${space(2)}${dim("Type to search, SPACE to select, ENTER to submit")}`;
+
+		const selectedLine =
+			selectedCount > 0
+				? `${space(2)}${brandColor(`${selectedCount} selected`)}`
+				: "";
+
+		const lines = [
+			`${blCorner} ${bold(question)} ${dim(helpText)}`,
+			searchLine,
+			...(selectedLine ? [selectedLine] : []),
+			`${hasMoreAbove ? `${space(2)}${dim("...")}\n` : ""}${
+				filtered.length > 0
+					? windowedOptions
+							.map((opt, i) => renderOption(opt, windowStart + i))
+							.join(`\n`)
+					: `${space(2)}${dim("No matching versions")}`
+			}${hasMoreBelow ? `\n${space(2)}${dim("...")}` : ""}`,
+			``, // extra line for readability
+		];
 
 		return lines;
 	};
