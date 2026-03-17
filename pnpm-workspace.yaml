@@ -48,6 +48,8 @@ catalogs:
   vite-plugin:
     "vite": "^8.0.0"
     "@types/node": "^22.10.1"
+  vitest-4:
+    "vite": "^8.0.0"
   vitest-3:
     "vitest": 3.2.4
     "@vitest/ui": 3.2.4
