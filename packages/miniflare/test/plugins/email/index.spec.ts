@@ -4,7 +4,7 @@ import dedent from "ts-dedent";
 import { test, vi } from "vitest";
 import { TestLog, useDispose } from "../../test-shared";
 
-const SEND_EMAIL_WORKER = dedent/* javascript */ `
+const SEND_EMAIL_WORKER = dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
 
 	export default {
@@ -23,7 +23,7 @@ const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	};
 `;
 
-const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent/* javascript */ `
+const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
 
 	export default {
@@ -984,7 +984,7 @@ test("reply: references generated correctly", async ({ expect }) => {
 	).toBe(true);
 });
 
-const MESSAGE_BUILDER_WORKER = dedent/* javascript */ `
+const MESSAGE_BUILDER_WORKER = dedent /* javascript */ `
 	export default {
 		async fetch(request, env) {
 			const builder = await request.json();

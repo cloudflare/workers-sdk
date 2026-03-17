@@ -49,7 +49,7 @@ function embedWorkersPlugin() {
 				this.addWatchFile(file);
 			}
 
-			return dedent/*javascript*/ `
+			return dedent /*javascript*/ `
 				export default ${absoluteScriptPath};
 			`;
 		},

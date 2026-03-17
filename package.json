@@ -44,7 +44,7 @@
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
 		"jsonc-parser": "catalog:default",
-		"prettier": "^3.2.5",
+		"prettier": "^3.8.1",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"tree-kill": "^1.2.2",
