@@ -67,7 +67,7 @@ function SidebarItemGroup({
 	// When collapsed, show icon with popover containing the list
 	if (collapsed) {
 		return (
-			<div className="flex items-center px-3 py-1">
+			<div className="flex items-center px-3">
 				<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
 					<Popover.Trigger
 						className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-tertiary hover:text-text"
@@ -99,9 +99,9 @@ function SidebarItemGroup({
 										<li key={item.id}>
 											<Link
 												className={cn(
-													"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm no-underline transition-colors",
+													"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium no-underline transition-colors",
 													item.isActive
-														? "bg-primary/10 font-medium text-primary hover:bg-primary/15"
+														? "bg-primary/10 text-primary hover:bg-primary/15"
 														: "text-text hover:bg-surface-tertiary"
 												)}
 												onClick={() => setPopoverOpen(false)}
@@ -129,18 +129,14 @@ function SidebarItemGroup({
 
 	// When expanded, show collapsible group with clean design
 	return (
-		<Collapsible.Root
-			open={isExpanded}
-			onOpenChange={handleExpandedChange}
-			className="py-1"
-		>
-			<Collapsible.Trigger className="group flex w-full cursor-pointer items-center gap-2 bg-transparent px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text">
+		<Collapsible.Root open={isExpanded} onOpenChange={handleExpandedChange}>
+			<Collapsible.Trigger className="group mx-2 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-2 rounded-lg bg-transparent px-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text">
 				<span className="flex h-9 w-9 shrink-0 items-center justify-center">
 					<Icon className="h-4 w-4" />
 				</span>
 				<span className="flex-1 text-left">{title}</span>
 				<CaretDownIcon
-					className="h-3 w-3 transition-transform duration-200 group-data-panel-closed:-rotate-90"
+					className="h-3 w-3 rotate-90 transition-transform duration-300 group-data-panel-open:rotate-0"
 					weight="bold"
 				/>
 			</Collapsible.Trigger>
@@ -156,9 +152,9 @@ function SidebarItemGroup({
 								<li key={item.id}>
 									<Link
 										className={cn(
-											"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm no-underline transition-colors",
+											"group flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm font-medium no-underline transition-colors",
 											item.isActive
-												? "bg-primary/10 font-medium text-primary hover:bg-primary/15"
+												? "bg-primary/10 text-primary hover:bg-primary/15"
 												: "text-text hover:bg-surface-tertiary",
 											"mx-2" // Indent to align with title text
 										)}
@@ -255,7 +251,7 @@ export function Sidebar({
 			</a>
 
 			{/* Navigation groups */}
-			<nav className="flex-1 overflow-x-hidden overflow-y-auto py-2">
+			<nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto py-2">
 				<SidebarItemGroup
 					collapsed={collapsed}
 					emptyLabel="No namespaces"
