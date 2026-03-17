@@ -17,7 +17,7 @@ export const offerGit = async (ctx: C3Context) => {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
 			updateStatus(
-				"Couldn't find `git` installed on your machine. Continuing without git.",
+				"Couldn't find `git` installed on your machine. Continuing without git."
 			);
 		}
 
@@ -43,7 +43,7 @@ export const offerGit = async (ctx: C3Context) => {
 	const gitConfigured = await isGitConfigured();
 	if (!gitConfigured) {
 		updateStatus(
-			"Must configure `user.name` and user.email` to use git. Continuing without git.",
+			"Must configure `user.name` and user.email` to use git. Continuing without git."
 		);
 
 		// override ctx.args.git to false (don't use git)
@@ -61,7 +61,7 @@ export const gitCommit = async (ctx: C3Context) => {
 	assert.notStrictEqual(
 		ctx.args.git,
 		undefined,
-		"Expected git context to be defined by now",
+		"Expected git context to be defined by now"
 	);
 	// Note: createCommitMessage stores the message in ctx so that it can
 	//       be used later even if we're not in a git repository, that's why
@@ -92,14 +92,14 @@ export const gitCommit = async (ctx: C3Context) => {
 			{
 				silent: true,
 				cwd: ctx.project.path,
-			},
+			}
 		);
 
 		s.stop(`${brandColor("git")} ${dim(`commit`)}`);
 	} catch {
 		s.stop(`${brandColor("git")} ${dim(`commit failed`)}`);
 		updateStatus(
-			"Failed to create initial commit. You can commit manually later.",
+			"Failed to create initial commit. You can commit manually later."
 		);
 	}
 };
@@ -226,13 +226,13 @@ export async function initializeGit(cwd: string) {
 		// Get the default init branch name
 		const defaultBranchName = await runCommand(
 			["git", "config", "--get", "init.defaultBranch"],
-			{ useSpinner: false, silent: true, cwd },
+			{ useSpinner: false, silent: true, cwd }
 		);
 
 		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
 		await runCommand(
 			["git", "init", "--initial-branch", defaultBranchName.trim() ?? "main"], // branch names can't contain spaces, so this is safe
-			{ useSpinner: false, silent: true, cwd },
+			{ useSpinner: false, silent: true, cwd }
 		);
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
@@ -251,7 +251,7 @@ export async function getProductionBranch(cwd: string) {
 				cwd,
 				useSpinner: false,
 				captureOutput: true,
-			},
+			}
 		);
 
 		return productionBranch.trim();

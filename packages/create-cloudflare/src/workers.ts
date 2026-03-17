@@ -96,7 +96,7 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
  */
 export async function updateTsConfig(
 	ctx: C3Context,
-	{ usesNodeCompat }: { usesNodeCompat: boolean },
+	{ usesNodeCompat }: { usesNodeCompat: boolean }
 ) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
@@ -121,7 +121,7 @@ export async function updateTsConfig(
 			}
 			const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 			const explicitEntrypoint = currentTypes.some((t) =>
-				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
+				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/)
 			);
 			// If a type declaration with an explicit entrypoint exists, leave the types as is.
 			// Otherwise, add the latest entrypoint
@@ -134,17 +134,17 @@ export async function updateTsConfig(
 
 			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(
-				ctx.template.typesPath ?? "./worker-configuration.d.ts",
+				ctx.template.typesPath ?? "./worker-configuration.d.ts"
 			).split("\n");
 			if (
 				typegen.some((line) =>
-					line.includes("// Runtime types generated with workerd"),
+					line.includes("// Runtime types generated with workerd")
 				)
 			) {
 				newTypes = new Set(
 					[...newTypes].filter(
-						(type) => !type.startsWith("@cloudflare/workers-types"),
-					),
+						(type) => !type.startsWith("@cloudflare/workers-types")
+					)
 				);
 			}
 		}
@@ -164,7 +164,7 @@ export async function updateTsConfig(
 			[...newTypes].sort(),
 			{
 				formattingOptions: { insertSpaces: useSpaces },
-			},
+			}
 		);
 		const updated = jsonc.applyEdits(tsconfig, edits);
 		writeFile(tsconfigPath, updated);

@@ -66,7 +66,7 @@ export const readToml = (path: string) => {
 export const writeJSON = (
 	path: string,
 	object: unknown,
-	stringifySpace = "\t",
+	stringifySpace = "\t"
 ) => {
 	writeFile(path, stringify(object, null, stringifySpace));
 };

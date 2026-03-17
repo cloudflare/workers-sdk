@@ -47,7 +47,7 @@ describe("frameworks", () => {
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				[pmCmd, cli, "-p", "my-project", "--template", "potato"],
-				{ env },
+				{ env }
 			);
 		});
 	});
