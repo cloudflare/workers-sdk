@@ -32,7 +32,7 @@ export class Astro extends Framework {
 
 		const { npx } = packageManager;
 		if (!dryRun) {
-			if (semiver(astroVersion, "6.0.0") > 0) {
+			if (semiver(astroVersion, "6.0.0") >= 0) {
 				// For Astro 6.0.0+ use the native `astro add cloudflare` command
 				await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 					silent: true,
