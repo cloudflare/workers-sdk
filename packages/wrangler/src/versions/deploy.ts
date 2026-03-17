@@ -344,8 +344,8 @@ function formatVersions(
  * The list of possible versions will include all deployable versions.
  *
  * Versions are sorted by upload date (latest first). The interactive
- * prompt displays 3 versions at a time with scrolling, and supports
- * type-to-search filtering to quickly find a specific version by ID,
+ * Versions are sorted by upload date (latest first). The interactive
+ * prompt displays 5 versions at a time with scrolling, and supports
  * tag, message, or creation date.
  *
  * @param accountId
