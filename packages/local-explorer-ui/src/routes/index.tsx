@@ -1,5 +1,5 @@
-import { CloudflareLogo } from "@cloudflare/kumo";
 import { createFileRoute } from "@tanstack/react-router";
+import { AnimatedCloudflareLogo } from "../components/AnimatedCloudflareLogo";
 import { PageLayout } from "../components/layout";
 
 export const Route = createFileRoute("/")({
@@ -10,7 +10,7 @@ function IndexPage() {
 	return (
 		<PageLayout header={<div className="h-6" />}>
 			<div className="flex h-full flex-col items-center justify-center space-y-2 text-center">
-				<CloudflareLogo variant="glyph" className="h-24 w-24" />
+				<AnimatedCloudflareLogo size={96} />
 
 				<h2 className="text-3xl font-bold text-text">
 					Welcome to Local Explorer
