@@ -9,8 +9,8 @@
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"partyserver": "^0.0.64",
-		"partysocket": "^1.0.3",
+		"partyserver": "^0.3.3",
+		"partysocket": "^1.1.16",
 		"react": "^19.2.1",
 		"react-dom": "^19.2.1"
 	},
