@@ -213,7 +213,13 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
-	const singleBindingFields = ["browser", "ai", "images", "stream", "media"] as const;
+	const singleBindingFields = [
+		"browser",
+		"ai",
+		"images",
+		"stream",
+		"media",
+	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (
 			normalizedConfig[singleBindingField] &&

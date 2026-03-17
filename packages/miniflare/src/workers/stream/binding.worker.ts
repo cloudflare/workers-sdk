@@ -83,34 +83,34 @@ interface StoredUploadParams {
 	maxSizeBytes?: number;
 }
 
-const STREAM_SCHEMA = `
-CREATE TABLE IF NOT EXISTS videos (
-	id TEXT PRIMARY KEY,
-	blob_id TEXT NOT NULL,
-	created_at TEXT NOT NULL,
-	updated_at TEXT NOT NULL,
-	record_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS direct_uploads (
-	token TEXT PRIMARY KEY,
-	video_id TEXT NOT NULL,
-	expires_at TEXT,
-	used_at TEXT,
-	record_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS captions (
-	video_id TEXT NOT NULL,
-	language TEXT NOT NULL,
-	blob_id TEXT,
-	record_json TEXT NOT NULL,
-	PRIMARY KEY (video_id, language)
-);
-CREATE TABLE IF NOT EXISTS watermarks (
-	id TEXT PRIMARY KEY,
-	blob_id TEXT,
-	record_json TEXT NOT NULL
-);
-`;
+const STREAM_SCHEMA = [
+	`CREATE TABLE IF NOT EXISTS videos (
+		id TEXT PRIMARY KEY,
+		blob_id TEXT NOT NULL,
+		created_at TEXT NOT NULL,
+		updated_at TEXT NOT NULL,
+		record_json TEXT NOT NULL
+	);`,
+	`CREATE TABLE IF NOT EXISTS direct_uploads (
+		token TEXT PRIMARY KEY,
+		video_id TEXT NOT NULL,
+		expires_at TEXT,
+		used_at TEXT,
+		record_json TEXT NOT NULL
+	);`,
+	`CREATE TABLE IF NOT EXISTS captions (
+		video_id TEXT NOT NULL,
+		language TEXT NOT NULL,
+		blob_id TEXT,
+		record_json TEXT NOT NULL,
+		PRIMARY KEY (video_id, language)
+	);`,
+	`CREATE TABLE IF NOT EXISTS watermarks (
+		id TEXT PRIMARY KEY,
+		blob_id TEXT,
+		record_json TEXT NOT NULL
+	);`,
+] as const;
 
 function nowISOString() {
 	return new Date().toISOString();
@@ -279,7 +279,9 @@ class StreamStore {
 	}
 
 	async ensureSchema() {
-		await this.env.STREAM_DB.exec(STREAM_SCHEMA);
+		for (const statement of STREAM_SCHEMA) {
+			await this.env.STREAM_DB.prepare(statement).run();
+		}
 	}
 
 	private async insertVideo(video: StoredVideo): Promise<StreamVideo> {
@@ -584,8 +586,8 @@ class StreamStore {
 			.bind(
 				token,
 				videoId,
-				directUpload.expiresAt,
-				directUpload.usedAt,
+				directUpload.expiresAt ?? null,
+				directUpload.usedAt ?? null,
 				JSON.stringify(directUpload)
 			)
 			.run();
@@ -755,7 +757,7 @@ class StreamStore {
 			`INSERT INTO watermarks (id, blob_id, record_json)
 			 VALUES (?1, ?2, ?3)`
 		)
-			.bind(id, watermark.blobId, JSON.stringify(watermark))
+			.bind(id, watermark.blobId ?? null, JSON.stringify(watermark))
 			.run();
 		return toStreamWatermark(watermark);
 	}
