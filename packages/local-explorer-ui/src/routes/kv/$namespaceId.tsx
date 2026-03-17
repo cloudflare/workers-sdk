@@ -456,12 +456,12 @@ function NamespaceView() {
 							/>
 						</div>
 						{hasMore && (
-							<div className="shrink-0 border-t border-border py-4 text-center">
+							<div className="flex shrink-0 justify-center border-t border-border p-4 text-center">
 								<Button
-									variant="secondary"
-									onClick={handleLoadMore}
 									disabled={loadingMore}
 									loading={loadingMore}
+									onClick={handleLoadMore}
+									variant="secondary"
 								>
 									{loadingMore ? "Loading..." : "Load More"}
 								</Button>
