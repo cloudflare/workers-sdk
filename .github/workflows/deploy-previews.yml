@@ -53,6 +53,7 @@ jobs:
         if: contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches')
         run: |
           output=$(pnpm --filter @cloudflare/chrome-devtools-patches run deploy:preview)
+          echo "Command output: $output"
           echo "Extracting deployed URL from command output"
           url=$(echo "$output" | sed -nE "s/.*Version Preview URL: (\S+).*/\1/p")
           echo "Extracted URL: $url"
