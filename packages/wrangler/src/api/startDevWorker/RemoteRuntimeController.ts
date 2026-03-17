@@ -17,6 +17,7 @@ import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
 import { getAccessToken } from "../../user/access";
+import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { unwrapHook } from "./utils";
@@ -60,12 +61,18 @@ export class RemoteRuntimeController extends RuntimeController {
 			const { workerAccount, workerContext } =
 				await getWorkerAccountAndContext(props);
 
-			return await createPreviewSession(
-				props.complianceConfig,
-				workerAccount,
-				workerContext,
-				this.#abortController.signal,
-				props.name
+			return await retryOnAPIFailure(
+				() =>
+					createPreviewSession(
+						props.complianceConfig,
+						workerAccount,
+						workerContext,
+						this.#abortController.signal,
+						props.name
+					),
+				undefined,
+				undefined,
+				this.#abortController.signal
 			);
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -94,6 +101,9 @@ export class RemoteRuntimeController extends RuntimeController {
 		if (!this.#session) {
 			return;
 		}
+		// Capture session in a local variable so TypeScript can narrow
+		// the type inside the retryOnAPIFailure closure below.
+		const session = this.#session;
 
 		try {
 			/*
@@ -156,14 +166,20 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
-			const workerPreviewToken = await createWorkerPreview(
-				props.complianceConfig,
-				init,
-				workerAccount,
-				workerContext,
-				this.#session,
-				this.#abortController.signal,
-				props.minimal_mode
+			const workerPreviewToken = await retryOnAPIFailure(
+				() =>
+					createWorkerPreview(
+						props.complianceConfig,
+						init,
+						workerAccount,
+						workerContext,
+						session,
+						this.#abortController.signal,
+						props.minimal_mode
+					),
+				undefined,
+				undefined,
+				this.#abortController.signal
 			);
 
 			if (workerPreviewToken.tailUrl) {

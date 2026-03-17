@@ -16,7 +16,8 @@ const MAX_ATTEMPTS = 3;
 export async function retryOnAPIFailure<T>(
 	action: () => T | Promise<T>,
 	backoff = 0,
-	attempts = MAX_ATTEMPTS
+	attempts = MAX_ATTEMPTS,
+	abortSignal?: AbortSignal
 ): Promise<T> {
 	try {
 		return await action();
@@ -36,11 +37,12 @@ export async function retryOnAPIFailure<T>(
 			throw err;
 		}
 
-		await setTimeout(backoff);
+		await setTimeout(backoff, undefined, { signal: abortSignal });
 		return retryOnAPIFailure(
 			action,
 			backoff + (MAX_ATTEMPTS - attempts) * 1000,
-			attempts - 1
+			attempts - 1,
+			abortSignal
 		);
 	}
 }
