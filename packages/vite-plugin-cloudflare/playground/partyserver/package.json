@@ -9,8 +9,8 @@
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"partyserver": "^0.0.64",
-		"partysocket": "^1.0.3",
+		"partyserver": "^0.3.3",
+		"partysocket": "^1.1.16",
 		"react": "^19.2.1",
 		"react-dom": "^19.2.1"
 	},
@@ -21,7 +21,7 @@
 		"@tailwindcss/vite": "^4.0.15",
 		"@types/react": "19.1.0",
 		"@types/react-dom": "19.1.0",
-		"@vitejs/plugin-react": "^4.7.0",
+		"@vitejs/plugin-react": "^5.2.0",
 		"tailwindcss": "^4.0.15",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",

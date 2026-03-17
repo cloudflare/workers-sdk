@@ -291,7 +291,6 @@ export function createCloudflareEnvironmentOptions({
 			noDiscovery: false,
 			// Workaround for https://github.com/vitejs/vite/issues/20867
 			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
-			// @ts-expect-error - option added in Vite 7.3.1
 			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
@@ -316,7 +315,6 @@ export function createCloudflareEnvironmentOptions({
 							},
 							plugins: [
 								// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
-								// @ts-expect-error: added in Vite 8
 								vite.esmExternalRequirePlugin({
 									external: [nodeBuiltinsRE],
 									skipDuplicateCheck: true,
