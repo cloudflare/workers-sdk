@@ -11,6 +11,7 @@
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish",
+		"deploy:preview": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish-preview",
 		"testenv": "make testenv"
 	},
 	"devDependencies": {
