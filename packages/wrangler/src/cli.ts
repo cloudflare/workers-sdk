@@ -1,7 +1,7 @@
 /**
  * This file contains:
  *
- * - The main entrypoint for the CLI, which calls `main()` from `index.ts`.
+ * - The main entrypoint for the CLI, which calls `main()` from `index.ts`
  * - The exports for the public API of the package.
  */
 
