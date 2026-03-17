@@ -1,12 +1,13 @@
 import { Button } from "@cloudflare/kumo";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 interface SearchFormProps {
-	onSearch: (prefix: string) => void;
 	disabled?: boolean;
+	onSearch: (prefix: string) => void;
 }
 
-export function SearchForm({ onSearch, disabled = false }: SearchFormProps) {
+export function SearchForm({ disabled = false, onSearch }: SearchFormProps) {
 	const [prefix, setPrefix] = useState("");
 
 	const handleSubmit = (e: React.SyntheticEvent) => {
@@ -19,15 +20,18 @@ export function SearchForm({ onSearch, disabled = false }: SearchFormProps) {
 			<label className="sr-only" htmlFor="search-prefix">
 				Search keys by prefix
 			</label>
-			<input
-				id="search-prefix"
-				className="h-9 max-w-100 flex-1 rounded-md border border-border bg-bg px-3 font-mono text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-bg-secondary disabled:text-text-secondary"
-				placeholder="Search keys by prefix..."
-				value={prefix}
-				onChange={(e) => setPrefix(e.target.value)}
-				disabled={disabled}
-			/>
-			<Button type="submit" variant="secondary" disabled={disabled}>
+			<div className="relative">
+				<MagnifyingGlassIcon className="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted" />
+				<input
+					className="h-9 w-56 rounded-md border border-border bg-card-bg py-2 pr-3 pl-8 font-mono text-sm text-text placeholder:text-muted focus:border-primary focus:shadow-focus-primary focus:outline-none disabled:bg-surface-secondary disabled:text-text-secondary"
+					disabled={disabled}
+					id="search-prefix"
+					onChange={(e) => setPrefix(e.target.value)}
+					placeholder="Search by prefix..."
+					value={prefix}
+				/>
+			</div>
+			<Button disabled={disabled} type="submit" variant="secondary">
 				Search
 			</Button>
 		</form>

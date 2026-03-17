@@ -9,9 +9,10 @@ import {
 	workersKvNamespaceWriteKeyValuePairWithMetadata,
 } from "../../api";
 import KVIcon from "../../assets/icons/kv.svg?react";
-import { AddKVForm } from "../../components/AddKVForm";
+import { AddKVDialog } from "../../components/AddKVForm";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { KVTable } from "../../components/KVTable";
+import { PageLayout } from "../../components/layout";
 import { SearchForm } from "../../components/SearchForm";
 import type { KVEntry } from "../../api";
 
@@ -363,45 +364,49 @@ function NamespaceView() {
 	};
 
 	return (
-		<>
-			<Breadcrumbs
-				icon={KVIcon}
-				title="KV"
-				items={[
-					<span className="flex items-center gap-1.5" key="namespace-id">
-						{namespaceTitle && namespaceTitle !== namespaceId ? (
-							<>
-								{namespaceTitle}
-								<span className="text-text-secondary">({namespaceId})</span>
-							</>
-						) : (
-							namespaceId
-						)}
-					</span>,
-				]}
-			/>
-
-			<div className="px-6 py-6">
+		<PageLayout
+			header={
+				<Breadcrumbs
+					icon={KVIcon}
+					items={[
+						<span className="flex items-center gap-1.5" key="namespace-id">
+							{namespaceTitle && namespaceTitle !== namespaceId ? (
+								<>
+									{namespaceTitle}
+									<span className="text-text-secondary">({namespaceId})</span>
+								</>
+							) : (
+								namespaceId
+							)}
+						</span>,
+					]}
+					title="KV"
+				>
+					<SearchForm
+						key={namespaceId}
+						onSearch={handleSearch}
+						disabled={loading}
+					/>
+					<AddKVDialog
+						onAdd={handleAdd}
+						clearSignal={clearAddForm}
+						disabled={loading}
+					/>
+				</Breadcrumbs>
+			}
+			noPadding
+		>
+			<div className="flex h-full flex-col overflow-hidden">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mx-4 mt-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
 						{error}
 					</div>
 				)}
 
-				<SearchForm
-					key={namespaceId}
-					onSearch={handleSearch}
-					disabled={loading}
-				/>
-
-				<hr className="my-4 border-border" />
-
-				<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
-
 				{loading ? (
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : entries.length === 0 ? (
-					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+					<div className="flex flex-1 flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
 						{prefix ? (
 							<p className="text-sm font-light">{`No keys found matching prefix "${prefix}".`}</p>
 						) : (
@@ -410,14 +415,15 @@ function NamespaceView() {
 									No keys in this namespace
 								</h2>
 								<p className="text-sm font-light">
-									Add an entry using the form above.
+									Click &ldquo;Add Entry&rdquo; to create your first key-value
+									pair.
 								</p>
 							</>
 						)}
 					</div>
 				) : (
-					<>
-						<div className="rounded-lg">
+					<div className="flex flex-1 flex-col overflow-hidden">
+						<div className="flex-1 overflow-auto">
 							<KVTable
 								entries={entries}
 								onSave={handleEditSave}
@@ -425,7 +431,7 @@ function NamespaceView() {
 							/>
 						</div>
 						{hasMore && (
-							<div className="py-4 text-center">
+							<div className="shrink-0 border-t border-border py-4 text-center">
 								<Button
 									variant="secondary"
 									onClick={handleLoadMore}
@@ -436,7 +442,7 @@ function NamespaceView() {
 								</Button>
 							</div>
 						)}
-					</>
+					</div>
 				)}
 
 				<Dialog.Root
@@ -450,8 +456,8 @@ function NamespaceView() {
 						</Dialog.Title>
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Description className="mb-2 text-text-secondary">
-							Are you sure you want to delete &ldquo;{deleteTarget}&rdquo;? This
-							cannot be undone.
+							Are you sure you want to delete &ldquo;{deleteTarget}
+							&rdquo;? This cannot be undone.
 						</Dialog.Description>
 						<div className="mt-6 flex justify-end gap-2">
 							<Button
@@ -507,6 +513,6 @@ function NamespaceView() {
 					</Dialog>
 				</Dialog.Root>
 			</div>
-		</>
+		</PageLayout>
 	);
 }

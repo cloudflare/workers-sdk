@@ -13,6 +13,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import D1Icon from "../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
+import { PageLayout } from "../../components/layout";
 import { Studio } from "../../components/studio";
 import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
@@ -160,75 +161,76 @@ function DatabaseView(): JSX.Element {
 	}, [deleteTarget, handleTableDeleted]);
 
 	return (
-		<div className="flex h-full flex-col">
-			<Breadcrumbs
-				icon={D1Icon}
-				title="D1"
-				items={[
-					<span className="flex items-center gap-1.5" key="database-id">
-						{databaseName && databaseName !== params.databaseId ? (
-							<>
-								{databaseName}
-								<span className="text-text-secondary">
-									({params.databaseId})
-								</span>
-							</>
-						) : (
-							params.databaseId
-						)}
-					</span>,
-					<TableSelect
-						key="table-selector"
-						selectedTable={searchParams.table}
-						studioRef={studioRef}
-						tables={loaderData.tables}
-					/>,
-				]}
-			>
-				<div className="flex-1" />
-
-				<Button
-					aria-label="Refresh tables"
-					className="disabled:cursor-progress"
-					disabled={isRefreshing}
-					onClick={handleTableRefresh}
-					shape="square"
+		<PageLayout
+			header={
+				<Breadcrumbs
+					icon={D1Icon}
+					items={[
+						<span className="flex items-center gap-1.5" key="database-id">
+							{databaseName && databaseName !== params.databaseId ? (
+								<>
+									{databaseName}
+									<span className="text-text-secondary">
+										({params.databaseId})
+									</span>
+								</>
+							) : (
+								params.databaseId
+							)}
+						</span>,
+						<TableSelect
+							key="table-selector"
+							selectedTable={searchParams.table}
+							studioRef={studioRef}
+							tables={loaderData.tables}
+						/>,
+					]}
+					title="D1"
 				>
-					<ArrowsCounterClockwiseIcon
-						className={isRefreshing ? "animate-spin" : undefined}
-						size={14}
+					<Button
+						aria-label="Refresh tables"
+						className="disabled:cursor-progress"
+						disabled={isRefreshing}
+						onClick={handleTableRefresh}
+						shape="square"
+					>
+						<ArrowsCounterClockwiseIcon
+							className={isRefreshing ? "animate-spin" : undefined}
+							size={14}
+						/>
+					</Button>
+
+					<StudioTableActionsDropdown
+						currentTable={currentTable}
+						driver={driver}
 					/>
-				</Button>
 
-				<StudioTableActionsDropdown
-					currentTable={currentTable}
-					driver={driver}
-				/>
+					<Button
+						aria-label="Edit table schema"
+						disabled={!currentTable}
+						icon={PencilIcon}
+						onClick={(): void => {
+							if (currentTable) {
+								studioRef.current?.openEditTableTab("main", currentTable);
+							}
+						}}
+					>
+						Edit Schema
+					</Button>
 
-				<Button
-					aria-label="Edit table schema"
-					disabled={!currentTable}
-					icon={PencilIcon}
-					onClick={(): void => {
-						if (currentTable) {
-							studioRef.current?.openEditTableTab("main", currentTable);
-						}
-					}}
-				>
-					Edit Schema
-				</Button>
-
-				<Button
-					aria-label="Delete table"
-					disabled={!currentTable}
-					icon={TrashIcon}
-					onClick={handleDeleteClick}
-					variant="secondary-destructive"
-				>
-					Delete Table
-				</Button>
-			</Breadcrumbs>
-
+					<Button
+						aria-label="Delete table"
+						disabled={!currentTable}
+						icon={TrashIcon}
+						onClick={handleDeleteClick}
+						variant="secondary-destructive"
+					>
+						Delete Table
+					</Button>
+				</Breadcrumbs>
+			}
+			noPadding
+		>
 			{deleteTarget && (
 				<DropTableConfirmationModal
 					closeModal={handleCloseDeleteModal}
@@ -240,7 +242,7 @@ function DatabaseView(): JSX.Element {
 				/>
 			)}
 
-			<div className="flex-1 overflow-hidden">
+			<div className="flex h-full flex-col overflow-hidden">
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
@@ -250,6 +252,6 @@ function DatabaseView(): JSX.Element {
 					resource={resource}
 				/>
 			</div>
-		</div>
+		</PageLayout>
 	);
 }

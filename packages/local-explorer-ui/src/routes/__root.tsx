@@ -3,11 +3,13 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 import {
 	d1ListDatabases,
 	durableObjectsNamespaceListNamespaces,
 	workersKvNamespaceListNamespaces,
 } from "../api";
+import { AppShell } from "../components/layout";
 import { Sidebar } from "../components/Sidebar";
 import type {
 	D1DatabaseResponse,
@@ -66,20 +68,38 @@ function RootLayout() {
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+		if (typeof window !== "undefined") {
+			return localStorage.getItem("sidebar-collapsed") === "true";
+		}
+		return false;
+	});
+
+	const handleToggle = useCallback(() => {
+		setSidebarCollapsed((prev) => {
+			const next = !prev;
+			localStorage.setItem("sidebar-collapsed", String(next));
+			return next;
+		});
+	}, []);
+
 	return (
-		<div className="flex min-h-screen">
-			<Sidebar
-				currentPath={currentPath}
-				d1Error={loaderData.d1Error}
-				databases={loaderData.databases}
-				doError={loaderData.doError}
-				doNamespaces={loaderData.doNamespaces}
-				kvError={loaderData.kvError}
-				kvNamespaces={loaderData.kvNamespaces}
-			/>
-			<main className="flex flex-1 flex-col overflow-y-auto">
-				<Outlet />
-			</main>
-		</div>
+		<AppShell
+			sidebar={
+				<Sidebar
+					collapsed={sidebarCollapsed}
+					currentPath={currentPath}
+					d1Error={loaderData.d1Error}
+					databases={loaderData.databases}
+					doError={loaderData.doError}
+					doNamespaces={loaderData.doNamespaces}
+					kvError={loaderData.kvError}
+					kvNamespaces={loaderData.kvNamespaces}
+					onToggle={handleToggle}
+				/>
+			}
+		>
+			<Outlet />
+		</AppShell>
 	);
 }

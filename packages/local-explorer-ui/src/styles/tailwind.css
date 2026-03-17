@@ -6,49 +6,68 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme {
-	/* Cloudflare Workers brand colors - Light mode (default) */
-	--color-bg: #fffdfb;
-	--color-bg-secondary: #fef7ed;
-	--color-bg-tertiary: #fffbf5;
-	--color-text: #521000;
-	--color-text-secondary: #521000b3;
-	--color-border: #ebd5c1;
-	--color-primary: #ff4801;
-	--color-primary-hover: #ff7038;
-	--color-danger: #fb2c36;
-	--color-danger-hover: #dc2626;
-	--color-success: #16a34a;
+	/* App shell backgrounds */
+	--color-app-bg: #ffffff;
+	--color-card-bg: oklch(0.99 0 0); /* Kumo neutral-25 */
 
-	/* Surface colors */
-	--color-surface: #fef7ed;
-	--color-surface-secondary: #f5f0eb;
-	--color-surface-tertiary: #ebe3db;
-	--color-muted: #8a6e5c;
-	--color-accent: #f0e6dc;
-	--color-background: #fffdfb;
-	--color-border-active: #ff4801;
-	--color-tooltip-bg: #3d2e24;
-	--color-tooltip-text: #ffeee6;
-	--color-resizer: #d4c4b6;
+	/* Text colors - aligned with Kumo neutral scale */
+	--color-text: oklch(21% 0.006 285.885); /* neutral-900 */
+	--color-text-secondary: oklch(55.6% 0 0); /* neutral-500 */
+	--color-muted: oklch(70.8% 0 0); /* neutral-400 */
+
+	/* Border colors */
+	--color-border: oklch(92.2% 0 0); /* neutral-200 */
+	--color-border-active: #f38020;
+
+	/* Primary/accent - Cloudflare orange */
+	--color-primary: #f38020;
+	--color-primary-hover: #e06d10;
+
+	/* Semantic colors */
+	--color-danger: oklch(63.7% 0.237 25.331); /* Kumo red-500 */
+	--color-danger-hover: oklch(55% 0.238 27.4);
+	--color-success: oklch(72.3% 0.219 149.579); /* Kumo green-500 */
+
+	/* Surface colors - for cards and interactive elements */
+	--color-surface: oklch(98.5% 0 0); /* neutral-50 */
+	--color-surface-secondary: oklch(96% 0 0); /* neutral-150 */
+	--color-surface-tertiary: oklch(92.2% 0 0); /* neutral-200 */
+
+	/* Legacy mappings for existing components */
+	--color-bg: oklch(0.99 0 0);
+	--color-bg-secondary: oklch(98.5% 0 0);
+	--color-bg-tertiary: oklch(96% 0 0);
+	--color-accent: oklch(96% 0 0);
+	--color-background: oklch(0.99 0 0);
+
+	/* Sidebar dimensions */
+	--width-sidebar: 240px;
+	--width-sidebar-collapsed: 56px;
+
+	/* Card styling */
+	--radius-card: 0.5rem;
+	--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+
+	/* Tooltip colors */
+	--color-tooltip-bg: oklch(20.5% 0 0); /* neutral-900 */
+	--color-tooltip-text: oklch(97% 0 0); /* neutral-100 */
 
 	/* SQL editor chrome */
-	--color-selection: rgba(82, 16, 0, 0.12);
-	--color-active-line: rgba(82, 16, 0, 0.05);
+	--color-selection: oklch(92.2% 0 0);
+	--color-active-line: oklch(98.5% 0 0);
+	--color-resizer: oklch(87% 0 0);
 
 	/* SQL editor syntax highlighting */
-	--color-syntax-keyword: #0000ff;
+	--color-syntax-keyword: oklch(42.4% 0.199 265.638); /* blue-800 */
 	--color-syntax-string: #d16969;
 	--color-syntax-number: #098658;
-	--color-syntax-comment: #6a737d;
-	--color-syntax-operator: #5a5a5a;
-	--color-syntax-table: #e84393;
+	--color-syntax-comment: oklch(55.6% 0 0);
+	--color-syntax-operator: oklch(43.9% 0 0);
+	--color-syntax-table: oklch(63.7% 0.237 25.331);
 
 	/* Focus ring shadows */
-	--shadow-focus-primary: 0 0 0 3px rgba(255, 72, 1, 0.15);
+	--shadow-focus-primary: 0 0 0 3px rgba(246, 130, 31, 0.15);
 	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
-
-	/* Custom sizing */
-	--width-sidebar: 240px;
 }
 
 /*
@@ -92,43 +111,58 @@
 /* Dark mode color overrides */
 @media (prefers-color-scheme: dark) {
 	:root {
-		--color-bg: #1a1412;
-		--color-bg-secondary: #0f0c0a;
-		--color-bg-tertiary: #231c18;
-		--color-text: #ffeee6;
-		--color-text-secondary: #ffeee6b3;
-		--color-border: #3d2e24;
-		--color-primary: #ff6b33;
-		--color-primary-hover: #ff8855;
-		--color-danger: #ff4d55;
-		--color-danger-hover: #ef4444;
-		--color-success: #22c55e;
+		/* App shell backgrounds */
+		--color-app-bg: #000000;
+		--color-card-bg: oklch(14.5% 0 0); /* neutral-950 */
 
-		/* Studio surface colors — dark mode */
-		--color-surface: #0f0c0a;
-		--color-surface-secondary: #231c18;
-		--color-surface-tertiary: #3d2e24;
-		--color-muted: #a08678;
-		--color-accent: #2e221a;
-		--color-background: #1a1412;
-		--color-border-active: #ff6b33;
-		--color-tooltip-bg: #3d2e24;
-		--color-tooltip-text: #ffeee6;
-		--color-resizer: #3d2e24;
+		/* Text colors */
+		--color-text: oklch(97% 0 0); /* neutral-100 */
+		--color-text-secondary: oklch(70.8% 0 0); /* neutral-400 */
+		--color-muted: oklch(55.6% 0 0); /* neutral-500 */
 
-		/* SQL editor chrome — dark mode */
-		--color-selection: rgba(255, 238, 230, 0.15);
-		--color-active-line: rgba(255, 238, 230, 0.06);
+		/* Border colors */
+		--color-border: oklch(26.9% 0 0); /* neutral-800 */
 
-		/* SQL editor syntax highlighting — dark mode */
-		--color-syntax-keyword: #4078f2;
-		--color-syntax-string: #d16969;
-		--color-syntax-number: #808080;
-		--color-syntax-comment: #6a737d;
-		--color-syntax-operator: #bfbfbf;
-		--color-syntax-table: #fd79a8;
+		/* Primary/accent */
+		--color-primary: #f38020;
+		--color-primary-hover: #ff9633;
 
-		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
+		/* Semantic colors */
+		--color-danger: oklch(70.4% 0.191 22.216); /* red-400 */
+		--color-success: oklch(72.3% 0.219 149.579);
+
+		/* Surface colors */
+		--color-surface: oklch(17.5% 0 0); /* ~neutral-925 */
+		--color-surface-secondary: oklch(23% 0 0); /* neutral-850 */
+		--color-surface-tertiary: oklch(26.9% 0 0); /* neutral-800 */
+
+		/* Legacy mappings */
+		--color-bg: oklch(14.5% 0 0);
+		--color-bg-secondary: oklch(17.5% 0 0);
+		--color-bg-tertiary: oklch(23% 0 0);
+		--color-accent: oklch(23% 0 0);
+		--color-background: oklch(14.5% 0 0);
+
+		/* Card styling */
+		--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+
+		/* Tooltip colors */
+		--color-tooltip-bg: oklch(26.9% 0 0);
+		--color-tooltip-text: oklch(97% 0 0);
+
+		/* SQL editor chrome */
+		--color-selection: oklch(26.9% 0 0);
+		--color-active-line: oklch(20% 0 0);
+		--color-resizer: oklch(37.1% 0 0);
+
+		/* SQL editor syntax highlighting */
+		--color-syntax-keyword: oklch(70.7% 0.165 254.624); /* blue-400 */
+		--color-syntax-comment: oklch(55.6% 0 0);
+		--color-syntax-operator: oklch(70.8% 0 0);
+		--color-syntax-table: oklch(70.4% 0.191 22.216);
+
+		/* Focus ring shadows */
+		--shadow-focus-primary: 0 0 0 3px rgba(255, 154, 71, 0.25);
 		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
 
 		/* Kumo tooltip overrides for dark mode */
@@ -141,6 +175,15 @@
 	body {
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
 			Ubuntu, sans-serif;
-		@apply text-text bg-bg-secondary text-sm leading-normal;
+		@apply bg-app-bg text-text text-sm leading-normal;
+	}
+}
+
+/* Subtle Kumo button borders in dark mode to blend better */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-kumo-line: oklch(
+			26.9% 0 0
+		); /* neutral-800 - subtle border for buttons */
 	}
 }

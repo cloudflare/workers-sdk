@@ -7,6 +7,7 @@ import {
 } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { PageLayout } from "../../../components/layout";
 import type { WorkersObject } from "../../../api";
 
 export const Route = createFileRoute("/do/$className/")({
@@ -117,23 +118,26 @@ function NamespaceView() {
 	}
 
 	return (
-		<>
-			<Breadcrumbs
-				icon={DOIcon}
-				items={[
-					<span className="flex items-center gap-1.5" key="class-name">
-						{params.className}
-						{namespaceId !== params.className && (
-							<span className="text-text-secondary">({namespaceId})</span>
-						)}
-					</span>,
-				]}
-				title="Durable Objects"
-			/>
-
-			<div className="px-6 py-6">
+		<PageLayout
+			header={
+				<Breadcrumbs
+					icon={DOIcon}
+					items={[
+						<span className="flex items-center gap-1.5" key="class-name">
+							{params.className}
+							{namespaceId !== params.className && (
+								<span className="text-text-secondary">({namespaceId})</span>
+							)}
+						</span>,
+					]}
+					title="Durable Objects"
+				/>
+			}
+			noPadding
+		>
+			<div className="flex h-full flex-col overflow-hidden">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mx-4 mt-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
 						{error}
 					</div>
 				)}
@@ -141,7 +145,7 @@ function NamespaceView() {
 				{loading ? (
 					<div className="p-12 text-center text-text-secondary">Loading...</div>
 				) : objects.length === 0 ? (
-					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+					<div className="flex flex-1 flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
 						<h2 className="text-2xl font-medium">
 							No Durable Objects with stored data
 						</h2>
@@ -150,10 +154,10 @@ function NamespaceView() {
 						</p>
 					</div>
 				) : (
-					<>
-						<div className="overflow-hidden rounded-lg border border-border">
+					<div className="flex flex-1 flex-col overflow-hidden">
+						<div className="flex-1 overflow-auto">
 							<Table>
-								<Table.Header>
+								<Table.Header className="sticky top-0 bg-card-bg">
 									<Table.Row>
 										<Table.Head>Object ID</Table.Head>
 										<Table.Head />
@@ -186,7 +190,7 @@ function NamespaceView() {
 						</div>
 
 						{hasMore && (
-							<div className="py-4 text-center">
+							<div className="shrink-0 border-t border-border py-4 text-center">
 								<Button
 									variant="secondary"
 									disabled={loadingMore}
@@ -197,9 +201,9 @@ function NamespaceView() {
 								</Button>
 							</div>
 						)}
-					</>
+					</div>
 				)}
 			</div>
-		</>
+		</PageLayout>
 	);
 }
