@@ -3,7 +3,7 @@
 @import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 
-@custom-variant dark (@media (prefers-color-scheme: dark));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
 	/* App shell backgrounds */
@@ -128,87 +128,83 @@
 }
 
 /* Dark mode color overrides */
-@media (prefers-color-scheme: dark) {
-	:root {
-		/* App shell backgrounds */
-		--color-app-bg: #000000;
-		--color-card-bg: oklch(14.5% 0 0); /* neutral-950 */
+:root.dark {
+	/* App shell backgrounds */
+	--color-app-bg: #000000;
+	--color-card-bg: oklch(14.5% 0 0); /* neutral-950 */
 
-		/* Text colors */
-		--color-text: oklch(97% 0 0); /* neutral-100 */
-		--color-text-secondary: oklch(70.8% 0 0); /* neutral-400 */
-		--color-muted: oklch(55.6% 0 0); /* neutral-500 */
+	/* Text colors */
+	--color-text: oklch(97% 0 0); /* neutral-100 */
+	--color-text-secondary: oklch(70.8% 0 0); /* neutral-400 */
+	--color-muted: oklch(55.6% 0 0); /* neutral-500 */
 
-		/* Border colors */
-		--color-border: oklch(26.9% 0 0); /* neutral-800 */
+	/* Border colors */
+	--color-border: oklch(26.9% 0 0); /* neutral-800 */
 
-		/* Primary/accent */
-		--color-primary: #f38020;
-		--color-primary-hover: #ff9633;
+	/* Primary/accent */
+	--color-primary: #f38020;
+	--color-primary-hover: #ff9633;
 
-		/* Semantic colors */
-		--color-danger: oklch(70.4% 0.191 22.216); /* red-400 */
-		--color-success: oklch(72.3% 0.219 149.579);
+	/* Semantic colors */
+	--color-danger: oklch(70.4% 0.191 22.216); /* red-400 */
+	--color-success: oklch(72.3% 0.219 149.579);
 
-		/* Surface colors */
-		--color-surface: oklch(17.5% 0 0); /* ~neutral-925 */
-		--color-surface-secondary: oklch(23% 0 0); /* neutral-850 */
-		--color-surface-tertiary: oklch(26.9% 0 0); /* neutral-800 */
+	/* Surface colors */
+	--color-surface: oklch(17.5% 0 0); /* ~neutral-925 */
+	--color-surface-secondary: oklch(23% 0 0); /* neutral-850 */
+	--color-surface-tertiary: oklch(26.9% 0 0); /* neutral-800 */
 
-		/* Legacy mappings */
-		--color-bg: oklch(14.5% 0 0);
-		--color-bg-secondary: oklch(17.5% 0 0);
-		--color-bg-tertiary: oklch(23% 0 0);
-		--color-accent: oklch(23% 0 0);
-		--color-background: oklch(14.5% 0 0);
+	/* Legacy mappings */
+	--color-bg: oklch(14.5% 0 0);
+	--color-bg-secondary: oklch(17.5% 0 0);
+	--color-bg-tertiary: oklch(23% 0 0);
+	--color-accent: oklch(23% 0 0);
+	--color-background: oklch(14.5% 0 0);
 
-		/* Card styling */
-		--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+	/* Card styling */
+	--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
 
-		/* Tooltip colors */
-		--color-tooltip-bg: oklch(26.9% 0 0);
-		--color-tooltip-text: oklch(97% 0 0);
+	/* Tooltip colors */
+	--color-tooltip-bg: oklch(26.9% 0 0);
+	--color-tooltip-text: oklch(97% 0 0);
 
-		/* SQL editor chrome */
-		--color-selection: oklch(26.9% 0 0);
-		--color-active-line: oklch(20% 0 0);
-		--color-resizer: var(--color-border);
+	/* SQL editor chrome */
+	--color-selection: oklch(26.9% 0 0);
+	--color-active-line: oklch(20% 0 0);
+	--color-resizer: var(--color-border);
 
-		/* SQL editor syntax highlighting */
-		--color-syntax-keyword: oklch(70.7% 0.165 254.624); /* blue-400 */
-		--color-syntax-comment: oklch(55.6% 0 0);
-		--color-syntax-operator: oklch(70.8% 0 0);
-		--color-syntax-table: oklch(70.4% 0.191 22.216);
+	/* SQL editor syntax highlighting */
+	--color-syntax-keyword: oklch(70.7% 0.165 254.624); /* blue-400 */
+	--color-syntax-comment: oklch(55.6% 0 0);
+	--color-syntax-operator: oklch(70.8% 0 0);
+	--color-syntax-table: oklch(70.4% 0.191 22.216);
 
-		/* Focus ring shadows */
-		--shadow-focus-primary: 0 0 0 3px rgba(255, 154, 71, 0.25);
-		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
+	/* Focus ring shadows */
+	--shadow-focus-primary: 0 0 0 3px rgba(255, 154, 71, 0.25);
+	--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
 
-		/* Kumo tooltip overrides for dark mode */
-		--color-kumo-tip-shadow: transparent;
-		--color-kumo-tip-stroke: var(--color-border);
+	/* Kumo tooltip overrides for dark mode */
+	--color-kumo-tip-shadow: transparent;
+	--color-kumo-tip-stroke: var(--color-border);
 
-		/* Studio table state colors - dark mode */
-		--color-state-new: oklch(22% 0.05 145); /* subtle green for new rows */
-		--color-state-new-selected: oklch(30% 0.1 145); /* selected new rows */
-		--color-state-changed: oklch(
-			22% 0.06 85
-		); /* subtle amber for changed cells */
-		--color-state-changed-selected: oklch(
-			30% 0.12 85
-		); /* selected changed cells */
-		--color-state-removed: oklch(22% 0.05 25); /* subtle red for removed rows */
-		--color-state-removed-selected: oklch(
-			30% 0.1 25
-		); /* selected removed rows */
+	/* Studio table state colors - dark mode */
+	--color-state-new: oklch(22% 0.05 145); /* subtle green for new rows */
+	--color-state-new-selected: oklch(30% 0.1 145); /* selected new rows */
+	--color-state-changed: oklch(
+		22% 0.06 85
+	); /* subtle amber for changed cells */
+	--color-state-changed-selected: oklch(
+		30% 0.12 85
+	); /* selected changed cells */
+	--color-state-removed: oklch(22% 0.05 25); /* subtle red for removed rows */
+	--color-state-removed-selected: oklch(30% 0.1 25); /* selected removed rows */
 
-		/* Studio table selection border */
-		--color-selection-border: oklch(97% 0 0); /* neutral-100 */
+	/* Studio table selection border */
+	--color-selection-border: oklch(97% 0 0); /* neutral-100 */
 
-		/* Studio highlight colors */
-		--color-highlight-bg: oklch(35% 0.1 85); /* yellow highlight background */
-		--color-highlight-text: oklch(97% 0 0); /* light text on highlight */
-	}
+	/* Studio highlight colors */
+	--color-highlight-bg: oklch(35% 0.1 85); /* yellow highlight background */
+	--color-highlight-text: oklch(97% 0 0); /* light text on highlight */
 }
 
 @layer base {

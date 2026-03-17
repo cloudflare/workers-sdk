@@ -11,6 +11,7 @@ import {
 } from "../api";
 import { AppShell } from "../components/layout";
 import { Sidebar } from "../components/Sidebar";
+import { useTheme } from "../hooks/useTheme";
 import type {
 	D1DatabaseResponse,
 	WorkersKvNamespace,
@@ -68,6 +69,8 @@ function RootLayout() {
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 
+	const theme = useTheme();
+
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
 		if (typeof window !== "undefined") {
 			return localStorage.getItem("sidebar-collapsed") === "true";
@@ -95,7 +98,10 @@ function RootLayout() {
 					doNamespaces={loaderData.doNamespaces}
 					kvError={loaderData.kvError}
 					kvNamespaces={loaderData.kvNamespaces}
+					onThemeToggle={theme.cycleNext}
 					onToggle={handleToggle}
+					resolvedTheme={theme.resolvedTheme}
+					themePreference={theme.preference}
 				/>
 			}
 		>

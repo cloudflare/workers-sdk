@@ -1,6 +1,12 @@
-import { CloudflareLogo, cn, Popover } from "@cloudflare/kumo";
+import { Button, CloudflareLogo, cn, Popover } from "@cloudflare/kumo";
 import { Collapsible } from "@cloudflare/kumo/primitives/collapsible";
-import { CaretDownIcon, SidebarSimpleIcon } from "@phosphor-icons/react";
+import {
+	CaretDownIcon,
+	DesktopIcon,
+	MoonIcon,
+	SidebarSimpleIcon,
+	SunIcon,
+} from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -11,6 +17,7 @@ import type {
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
+import type { ResolvedTheme, ThemePreference } from "../hooks/useTheme";
 import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
 
@@ -185,7 +192,10 @@ interface SidebarProps {
 	doNamespaces: WorkersNamespace[];
 	kvError: string | null;
 	kvNamespaces: WorkersKvNamespace[];
+	onThemeToggle: () => void;
 	onToggle: () => void;
+	resolvedTheme: ResolvedTheme;
+	themePreference: ThemePreference;
 }
 
 export function Sidebar({
@@ -197,8 +207,25 @@ export function Sidebar({
 	doNamespaces,
 	kvError,
 	kvNamespaces,
+	onThemeToggle,
 	onToggle,
+	resolvedTheme,
+	themePreference,
 }: SidebarProps) {
+	const ThemeIcon =
+		themePreference === "system"
+			? DesktopIcon
+			: resolvedTheme === "dark"
+				? MoonIcon
+				: SunIcon;
+
+	const themeLabel =
+		themePreference === "system"
+			? `System (${resolvedTheme === "dark" ? "Dark" : "Light"})`
+			: themePreference === "dark"
+				? "Dark"
+				: "Light";
+
 	return (
 		<aside
 			className={cn(
@@ -290,17 +317,27 @@ export function Sidebar({
 				/>
 			</nav>
 
-			{/* Toggle button at bottom */}
-			<div className="shrink-0 p-2">
-				<button
+			{/* Footer buttons */}
+			<div className="shrink-0 space-y-1 p-2">
+				<Button
+					aria-label={`Theme: ${themeLabel}. Click to cycle.`}
+					onClick={onThemeToggle}
+					shape="square"
+					title={`Theme: ${themeLabel}`}
+					type="button"
+					variant="ghost"
+					icon={<ThemeIcon className="h-5 w-5" weight="regular" />}
+				/>
+
+				<Button
 					aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-transparent text-muted transition-colors hover:bg-surface-tertiary hover:text-text"
 					onClick={onToggle}
+					shape="square"
 					title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
 					type="button"
-				>
-					<SidebarSimpleIcon className="h-5 w-5" weight="regular" />
-				</button>
+					variant="ghost"
+					icon={<SidebarSimpleIcon className="h-5 w-5" weight="regular" />}
+				/>
 			</div>
 		</aside>
 	);
