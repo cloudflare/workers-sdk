@@ -26,6 +26,7 @@ export class Astro extends Framework {
 		dryRun,
 		packageManager,
 		projectPath,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const astroVersion = getAstroVersion(projectPath);
 		validateMinimumAstroVersion(astroVersion);
@@ -49,6 +50,7 @@ export class Astro extends Framework {
 				const astroMajorVersion = semiver(astroVersion, "5.0.0") >= 0 ? 5 : 4;
 				await configureAstroLegacy(
 					projectPath,
+					isWorkspaceRoot,
 					packageManager,
 					astroMajorVersion
 				);
@@ -282,11 +284,13 @@ function updateTsConfig(projectPath: string) {
  * is not available or behaves differently in older Astro versions.
  *
  * @param projectPath The path of the project
+ * @param isWorkspaceRoot Whether the project is at the root of a workspace (affects package installation flags)
  * @param packageManager The package manager to use for installing dependencies
  * @param astroMajorVersion The major version of Astro (4 or 5) to determine the correct adapter version
  */
 async function configureAstroLegacy(
 	projectPath: string,
+	isWorkspaceRoot: boolean,
 	packageManager: PackageManager,
 	astroMajorVersion: 4 | 5
 ): Promise<void> {
@@ -298,6 +302,7 @@ async function configureAstroLegacy(
 		{
 			startText: `Installing @astrojs/cloudflare adapter (version ${astroCloudflarePackageVersion})`,
 			doneText: `${brandColor("installed")} ${dim("@astrojs/cloudflare")}`,
+			isWorkspaceRoot,
 		}
 	);
 	updateAstroConfig(projectPath, astroMajorVersion);
