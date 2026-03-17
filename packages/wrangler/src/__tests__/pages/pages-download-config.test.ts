@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { supportedCompatibilityDate } from "miniflare";
 import { http, HttpResponse } from "msw";
-import { afterAll, beforeEach, describe, it } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -481,7 +482,9 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should generate preview override if preview has limits and production does not", async ({ expect }) => {
+	it("should generate preview override if preview has limits and production does not", async ({
+		expect,
+	}) => {
 		await runWrangler(`pages download config NO_PROD_LIMITS`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -699,7 +702,9 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should not duplicate inheritable properties if they're equal", async ({ expect }) => {
+	it("should not duplicate inheritable properties if they're equal", async ({
+		expect,
+	}) => {
 		await runWrangler(`pages download config INHERIT`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -1008,7 +1013,9 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should not overwrite existing file w/o --force (non-interactive)", async ({ expect }) => {
+		it("should not overwrite existing file w/o --force (non-interactive)", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			await writeWranglerConfig({ name: "some-project" });
 			await expect(

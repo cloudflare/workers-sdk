@@ -12,6 +12,7 @@ import {
 	RequestInit,
 	Response,
 } from "miniflare";
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,

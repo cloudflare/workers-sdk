@@ -2,6 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
 import { Miniflare, MiniflareOptions } from "miniflare";
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import { useDispose, useTmp, utf8Encode } from "../../test-shared";
 import { binding, ctx, getDatabase, opts } from "./test";

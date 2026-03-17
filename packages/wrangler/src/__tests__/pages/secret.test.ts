@@ -1,7 +1,8 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -179,7 +180,9 @@ describe("wrangler pages secret", () => {
 			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should trim stdin secret value, from piped input", async ({ expect }) => {
+			it("should trim stdin secret value, from piped input", async ({
+				expect,
+			}) => {
 				mockProjectRequests({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
@@ -244,7 +247,9 @@ describe("wrangler pages secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async ({ expect }) => {
+				it("should error if request for memberships fails", async ({
+					expect,
+				}) => {
 					mockGetMembershipsFail();
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
@@ -263,7 +268,9 @@ describe("wrangler pages secret", () => {
 					`);
 				});
 
-				it("should error if a user has multiple accounts, and has not specified an account", async ({ expect }) => {
+				it("should error if a user has multiple accounts, and has not specified an account", async ({
+					expect,
+				}) => {
 					mockGetMemberships([
 						{
 							id: "1",
@@ -526,7 +533,9 @@ describe("wrangler pages secret", () => {
 				})
 			);
 		}
-		it("should fail secret bulk w/ no pipe or JSON input", async ({ expect }) => {
+		it("should fail secret bulk w/ no pipe or JSON input", async ({
+			expect,
+		}) => {
 			mockProjectRequests([]);
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface
@@ -676,7 +685,9 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should count success and network failure on secret bulk", async ({ expect }) => {
+		it("should count success and network failure on secret bulk", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({

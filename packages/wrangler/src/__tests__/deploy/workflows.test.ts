@@ -1,7 +1,8 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { WORKFLOW_NOT_FOUND_CODE } from "../../deploy/check-workflow-conflicts";
 import { clearOutputFilePath } from "../../output";
@@ -226,7 +227,9 @@ describe("deploy", () => {
 			expect(std.out).toContain("workflow: my-workflow");
 		});
 
-		it("should not call Workflow's API if the workflow binds to another script", async ({ expect }) => {
+		it("should not call Workflow's API if the workflow binds to another script", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				name: "this-script",
@@ -290,7 +293,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error when deploying a workflow with limits that references an external script", async ({ expect }) => {
+		it("should error when deploying a workflow with limits that references an external script", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				name: "this-script",
@@ -331,7 +336,9 @@ describe("deploy", () => {
 		});
 
 		describe("workflow script_name validation with environments", () => {
-			it("should error when script_name matches top-level name but not env-suffixed name and limits are set", async ({ expect }) => {
+			it("should error when script_name matches top-level name but not env-suffixed name and limits are set", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					name: "my-app",
@@ -361,7 +368,9 @@ describe("deploy", () => {
 				);
 			});
 
-			it("should allow limits when script_name matches the env-suffixed name", async ({ expect }) => {
+			it("should allow limits when script_name matches the env-suffixed name", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					name: "my-app",
@@ -415,7 +424,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("workflow: my-workflow");
 			});
 
-			it("should deploy external script_name under env without limits", async ({ expect }) => {
+			it("should deploy external script_name under env without limits", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					name: "my-app",
@@ -507,7 +518,9 @@ describe("deploy", () => {
 				);
 			}
 
-			it("should warn when deploying a workflow that belongs to a different worker", async ({ expect }) => {
+			it("should warn when deploying a workflow that belongs to a different worker", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -560,7 +573,9 @@ describe("deploy", () => {
 				);
 			});
 
-			it("should abort deploy when user declines the workflow conflict confirmation", async ({ expect }) => {
+			it("should abort deploy when user declines the workflow conflict confirmation", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -604,7 +619,9 @@ describe("deploy", () => {
 				expect(std.out).not.toContain("Uploaded");
 			});
 
-			it("should not warn when workflow belongs to the same worker", async ({ expect }) => {
+			it("should not warn when workflow belongs to the same worker", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -647,7 +664,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("should not warn when workflow does not exist yet", async ({ expect }) => {
+			it("should not warn when workflow does not exist yet", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -683,7 +702,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("should warn about multiple conflicting workflows", async ({ expect }) => {
+			it("should warn about multiple conflicting workflows", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					main: "index.js",
 					workflows: [
@@ -747,7 +768,9 @@ describe("deploy", () => {
 				);
 			});
 
-			it("should skip workflow conflict check in non-interactive mode without --strict", async ({ expect }) => {
+			it("should skip workflow conflict check in non-interactive mode without --strict", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				writeWranglerConfig({
@@ -783,7 +806,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
-			it("should abort deploy in non-interactive strict mode when workflow belongs to different worker", async ({ expect }) => {
+			it("should abort deploy in non-interactive strict mode when workflow belongs to different worker", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				writeWranglerConfig({

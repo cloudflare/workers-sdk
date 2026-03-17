@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterEach, describe, expect, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -59,7 +60,9 @@ describe("pages deployment list", () => {
 		`);
 	});
 
-	it("should make request to list deployments and return result as json", async ({ expect }) => {
+	it("should make request to list deployments and return result as json", async ({
+		expect,
+	}) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",

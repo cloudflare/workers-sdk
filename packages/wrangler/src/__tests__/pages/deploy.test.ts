@@ -6,7 +6,8 @@ import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version } from "../../../package.json";
 import { logger } from "../../logger";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
@@ -87,7 +88,9 @@ describe("pages deploy", () => {
 		`);
 	});
 
-	it("should error if no `[<directory>]` arg is specified in the `pages deploy` command", async ({ expect }) => {
+	it("should error if no `[<directory>]` arg is specified in the `pages deploy` command", async ({
+		expect,
+	}) => {
 		await expect(
 			runWrangler("pages deploy")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -95,7 +98,9 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should error if no `[--project-name]` is specified", async ({ expect }) => {
+	it("should error if no `[--project-name]` is specified", async ({
+		expect,
+	}) => {
 		await expect(
 			runWrangler("pages deploy public")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -103,7 +108,9 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should error if the [--config] command line arg was specififed", async ({ expect }) => {
+	it("should error if the [--config] command line arg was specififed", async ({
+		expect,
+	}) => {
 		await expect(
 			runWrangler("pages deploy public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -111,7 +118,9 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should error if the [--env] command line arg was specififed", async ({ expect }) => {
+	it("should error if the [--env] command line arg was specififed", async ({
+		expect,
+	}) => {
 		await expect(
 			runWrangler("pages deploy public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -828,7 +837,9 @@ describe("pages deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should refetch a JWT if it expires while uploading", async ({ expect }) => {
+	it("should refetch a JWT if it expires while uploading", async ({
+		expect,
+	}) => {
 		writeFileSync("logo.txt", "foobar");
 
 		// JWT is fetched 3 times:
@@ -1040,7 +1051,9 @@ describe("pages deploy", () => {
 		`);
 	});
 
-	it("should try to use multiple buckets (up to the max concurrency)", async ({ expect }) => {
+	it("should try to use multiple buckets (up to the max concurrency)", async ({
+		expect,
+	}) => {
 		writeFileSync("logo.txt", "foobar");
 		writeFileSync("logo.png", "foobar");
 		writeFileSync("logo.html", "foobar");
@@ -1631,7 +1644,9 @@ describe("pages deploy", () => {
 		`);
 	});
 
-	it("should not error when directory names contain periods and houses a extensionless file", async ({ expect }) => {
+	it("should not error when directory names contain periods and houses a extensionless file", async ({
+		expect,
+	}) => {
 		mkdirSync(".well-known");
 		// Note: same content as previous test, but since it's a different extension,
 		// it hashes to a different value
@@ -1774,7 +1789,9 @@ describe("pages deploy", () => {
 	});
 
 	// regression test for issue #3629
-	it("should not error when deploying a new project with a new repo", async ({ expect }) => {
+	it("should not error when deploying a new project with a new repo", async ({
+		expect,
+	}) => {
 		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
 		await execa("git", ["init"]);
@@ -2229,7 +2246,9 @@ describe("pages deploy", () => {
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should bundle Functions and resolve its external module imports", async ({ expect }) => {
+		it("should bundle Functions and resolve its external module imports", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -2488,7 +2507,9 @@ async function onRequest() {
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should upload _routes.json for Functions projects, if provided", async ({ expect }) => {
+		it("should upload _routes.json for Functions projects, if provided", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -2760,7 +2781,9 @@ async function onRequest() {
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should not deploy Functions projects that provide an invalid custom _routes.json file", async ({ expect }) => {
+		it("should not deploy Functions projects that provide an invalid custom _routes.json file", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -2887,7 +2910,9 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
-		it("should fail with the appropriate error message, if the deployment of the project failed", async ({ expect }) => {
+		it("should fail with the appropriate error message, if the deployment of the project failed", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -3295,7 +3320,9 @@ and that at least one include rule is provided.
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should bundle _worker.js and resolve its external module imports", async ({ expect }) => {
+		it("should bundle _worker.js and resolve its external module imports", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -3569,7 +3596,9 @@ and that at least one include rule is provided.
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should upload _routes.json for Advanced Mode projects, if provided", async ({ expect }) => {
+		it("should upload _routes.json for Advanced Mode projects, if provided", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -3840,7 +3869,9 @@ and that at least one include rule is provided.
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not deploy Advanced Mode projects that provide an invalid _routes.json file", async ({ expect }) => {
+		it("should not deploy Advanced Mode projects that provide an invalid _routes.json file", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -3970,7 +4001,9 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
-		it("should ignore the entire /functions directory if _worker.js is provided", async ({ expect }) => {
+		it("should ignore the entire /functions directory if _worker.js is provided", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -4203,7 +4236,9 @@ and that at least one include rule is provided.
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should error with --no-bundle and a single _worker.js file", async ({ expect }) => {
+		it("should error with --no-bundle and a single _worker.js file", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -4324,7 +4359,9 @@ and that at least one include rule is provided.
 			);
 		});
 
-		it("should not error with --no-bundle and an index.js in a _worker.js/ directory", async ({ expect }) => {
+		it("should not error with --no-bundle and an index.js in a _worker.js/ directory", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -4511,7 +4548,9 @@ and that at least one include rule is provided.
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should fail with the appropriate logs, if the deployment of the project failed", async ({ expect }) => {
+		it("should fail with the appropriate logs, if the deployment of the project failed", async ({
+			expect,
+		}) => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -4915,13 +4954,17 @@ and that at least one include rule is provided.
 				expect(std.err).toBe("");
 			});
 
-			it("should error if user attempts to specify a custom config file path", async ({ expect }) => {
+			it("should error if user attempts to specify a custom config file path", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("pages deploy --config foo.toml")
 				).rejects.toThrowErrorMatchingSnapshot();
 			});
 
-			it("should warn and ignore the config file, if it doesn't specify the `pages_build_output_dir` field", async ({ expect }) => {
+			it("should warn and ignore the config file, if it doesn't specify the `pages_build_output_dir` field", async ({
+				expect,
+			}) => {
 				// set up the directory of static files to upload.
 				mkdirSync("public");
 				writeFileSync("public/index.html", "Greetings from Pages");
@@ -4960,7 +5003,9 @@ and that at least one include rule is provided.
 				);
 			});
 
-			it("should always deploy to the Pages project specified by the top-level `name` configuration field, regardless of the corresponding env-level configuration", async ({ expect }) => {
+			it("should always deploy to the Pages project specified by the top-level `name` configuration field, regardless of the corresponding env-level configuration", async ({
+				expect,
+			}) => {
 				// set up the directory of static files to upload.
 				mkdirSync("public");
 				writeFileSync("public/README.md", "This is a readme");
@@ -5280,7 +5325,9 @@ and that at least one include rule is provided.
 		const workerIsBundled = async (contents: FormDataEntryValue | null) =>
 			(await toString(contents)).includes("worker_default as default");
 
-		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async ({ expect }) => {
+		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async ({
+			expect,
+		}) => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
 			);
@@ -5288,7 +5335,9 @@ and that at least one include rule is provided.
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
-		it("should not bundle the _worker.js when `--no-bundle` is set", async ({ expect }) => {
+		it("should not bundle the _worker.js when `--no-bundle` is set", async ({
+			expect,
+		}) => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
@@ -5296,7 +5345,9 @@ and that at least one include rule is provided.
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
-		it("should not allow 3rd party imports when not bundling", async ({ expect }) => {
+		it("should not allow 3rd party imports when not bundling", async ({
+			expect,
+		}) => {
 			// Add in a 3rd party import to the bundle
 			writeFileSync(
 				"public/_worker.js",
@@ -5325,7 +5376,9 @@ and that at least one include rule is provided.
 			);
 		});
 
-		it("should allow `cloudflare:...` imports when not bundling", async ({ expect }) => {
+		it("should allow `cloudflare:...` imports when not bundling", async ({
+			expect,
+		}) => {
 			// Add in a 3rd party import to the bundle
 			writeFileSync(
 				"public/_worker.js",
@@ -5347,7 +5400,9 @@ and that at least one include rule is provided.
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
-		it("should allow `node:...` imports when not bundling and marked with nodejs_compat", async ({ expect }) => {
+		it("should allow `node:...` imports when not bundling and marked with nodejs_compat", async ({
+			expect,
+		}) => {
 			// Add in a node built-in import to the bundle
 			writeFileSync(
 				"public/_worker.js",
@@ -5370,7 +5425,9 @@ and that at least one include rule is provided.
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
-		it("should not allow `node:...` imports when not bundling and not marked nodejs_compat", async ({ expect }) => {
+		it("should not allow `node:...` imports when not bundling and not marked nodejs_compat", async ({
+			expect,
+		}) => {
 			// Add in a node built-in import to the bundle
 			writeFileSync(
 				"public/_worker.js",
@@ -5398,7 +5455,9 @@ and that at least one include rule is provided.
 			);
 		});
 
-		it("should not bundle the _worker.js when `--bundle` is set to false", async ({ expect }) => {
+		it("should not bundle the _worker.js when `--bundle` is set to false", async ({
+			expect,
+		}) => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
 			);
@@ -5408,7 +5467,9 @@ and that at least one include rule is provided.
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
-		it("should bundle the _worker.js when the `--no-bundle` is set to false", async ({ expect }) => {
+		it("should bundle the _worker.js when the `--no-bundle` is set to false", async ({
+			expect,
+		}) => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
 			);
@@ -5418,7 +5479,9 @@ and that at least one include rule is provided.
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
-		it("should bundle the _worker.js when the `--bundle` is set to true", async ({ expect }) => {
+		it("should bundle the _worker.js when the `--bundle` is set to true", async ({
+			expect,
+		}) => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).resolves.toBeTruthy()
 			);
@@ -5494,7 +5557,9 @@ and that at least one include rule is provided.
 			);
 		});
 
-		it("should upload sourcemaps for functions directory projects", async ({ expect }) => {
+		it("should upload sourcemaps for functions directory projects", async ({
+			expect,
+		}) => {
 			mkdirSync("functions");
 			writeFileSync(
 				"functions/[[path]].ts",
@@ -5519,7 +5584,9 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy");
 		});
 
-		it("should upload sourcemaps for _worker.js file projects", async ({ expect }) => {
+		it("should upload sourcemaps for _worker.js file projects", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"dist/_worker.js",
 				dedent`
@@ -5543,7 +5610,9 @@ and that at least one include rule is provided.
 			await runWrangler("pages deploy");
 		});
 
-		it("should upload sourcemaps for _worker.js directory projects", async ({ expect }) => {
+		it("should upload sourcemaps for _worker.js directory projects", async ({
+			expect,
+		}) => {
 			mkdirSync("dist/_worker.js");
 			mkdirSync("dist/_worker.js/chunks");
 			writeFileSync(
@@ -5779,7 +5848,9 @@ and that at least one include rule is provided.
 			logger.resetLoggerLevel();
 		});
 
-		it("should output debug logs for git detection when WRANGLER_LOG=debug", async ({ expect }) => {
+		it("should output debug logs for git detection when WRANGLER_LOG=debug", async ({
+			expect,
+		}) => {
 			vi.stubEnv("WRANGLER_LOG", "debug");
 			logger.loggerLevel = "debug";
 
@@ -5874,7 +5945,9 @@ and that at least one include rule is provided.
 			expect(std.debug).toContain("pages deploy: Git information summary");
 		});
 
-		it("should log git summary even when flags are provided outside a git repo", async ({ expect }) => {
+		it("should log git summary even when flags are provided outside a git repo", async ({
+			expect,
+		}) => {
 			vi.stubEnv("WRANGLER_LOG", "debug");
 			logger.loggerLevel = "debug";
 
@@ -6037,17 +6110,23 @@ and that at least one include rule is provided.
 			 - Deploy configuration file: ".wrangler/deploy/config.json"
 		`;
 
-		it("should work without a branch specified (i.e. defaulting to the production environment)", async ({ expect }) => {
+		it("should work without a branch specified (i.e. defaulting to the production environment)", async ({
+			expect,
+		}) => {
 			await runWrangler("pages deploy");
 			expect(std.info).toContain(expectedInfo);
 		});
 
-		it("should work with the main branch (i.e. the production environment)", async ({ expect }) => {
+		it("should work with the main branch (i.e. the production environment)", async ({
+			expect,
+		}) => {
 			await runWrangler("pages deploy --branch main");
 			expect(std.info).toContain(expectedInfo);
 		});
 
-		it("should work with any branch (i.e. the preview environment)", async ({ expect }) => {
+		it("should work with any branch (i.e. the preview environment)", async ({
+			expect,
+		}) => {
 			await runWrangler("pages deploy --branch my-branch");
 			expect(std.info).toContain(expectedInfo);
 		});
@@ -6132,7 +6211,9 @@ and that at least one include rule is provided.
 			);
 		});
 
-		it("should error when file count exceeds limit from JWT", async ({ expect }) => {
+		it("should error when file count exceeds limit from JWT", async ({
+			expect,
+		}) => {
 			// JWT with max_file_count_allowed: 5 (less than the 6 files we created)
 			const jwt =
 				"header." +
@@ -6149,7 +6230,9 @@ and that at least one include rule is provided.
 			);
 		});
 
-		it("should respect higher file count limit from JWT", async ({ expect }) => {
+		it("should respect higher file count limit from JWT", async ({
+			expect,
+		}) => {
 			// JWT with max_file_count_allowed: 10 (more than the 6 files we created)
 			const jwt =
 				"header." +

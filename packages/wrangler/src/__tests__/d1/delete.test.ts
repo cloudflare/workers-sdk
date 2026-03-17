@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { beforeEach, describe, expect, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -23,7 +24,9 @@ describe("delete", () => {
 		mockDatabaseList("test-db", "db-uuid-123");
 	});
 
-	it("should not delete database when confirmation is rejected", async ({ expect }) => {
+	it("should not delete database when confirmation is rejected", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 
 		mockConfirm({
@@ -46,7 +49,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should delete database when confirmation is accepted", async ({ expect }) => {
+	it("should delete database when confirmation is accepted", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 
 		mockConfirm({
@@ -72,7 +77,9 @@ describe("delete", () => {
 		`);
 	});
 
-	it("should skip confirmation when --skip-confirmation flag is used", async ({ expect }) => {
+	it("should skip confirmation when --skip-confirmation flag is used", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 
 		mockDatabaseDelete("db-uuid-123");

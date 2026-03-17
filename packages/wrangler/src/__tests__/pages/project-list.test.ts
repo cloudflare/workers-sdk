@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, it, vi } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -55,7 +56,9 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
-	it("should make multiple requests for paginated results", async ({ expect }) => {
+	it("should make multiple requests for paginated results", async ({
+		expect,
+	}) => {
 		const projects: Project[] = [];
 		for (let i = 0; i < 15; i++) {
 			projects.push({
@@ -77,7 +80,9 @@ describe("pages project list", () => {
 		expect(requests.count).toEqual(2);
 	});
 
-	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({ expect }) => {
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
+		expect,
+	}) => {
 		vi.mock("getConfigCache", () => {
 			return {
 				account_id: "original-account-id",
@@ -90,7 +95,9 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
-	it("should return JSON output when --json flag is provided", async ({ expect }) => {
+	it("should return JSON output when --json flag is provided", async ({
+		expect,
+	}) => {
 		const projects: Project[] = [
 			{
 				name: "dogs",

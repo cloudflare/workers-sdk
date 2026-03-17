@@ -1,6 +1,7 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+// eslint-disable-next-line no-restricted-imports
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { getSubdomainValues } from "../../triggers/deploy";
@@ -203,7 +204,9 @@ describe("deploy", () => {
 			vi.useRealTimers();
 		});
 
-		it("should include Cloudflare-Workers-Script-Api-Date header", async ({ expect }) => {
+		it("should include Cloudflare-Workers-Script-Api-Date header", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -242,7 +245,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to a workers.dev domain if workers_dev is undefined", async ({ expect }) => {
+		it("should deploy to a workers.dev domain if workers_dev is undefined", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -266,7 +271,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy successfully if the /subdomain POST request is flaky", async ({ expect }) => {
+		it("should deploy successfully if the /subdomain POST request is flaky", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -290,7 +297,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to the workers.dev domain if workers_dev is `true`", async ({ expect }) => {
+		it("should deploy to the workers.dev domain if workers_dev is `true`", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 			});
@@ -316,7 +325,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not try to enable the workers.dev domain if it has been enabled before and previews are in sync", async ({ expect }) => {
+		it("should not try to enable the workers.dev domain if it has been enabled before and previews are in sync", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 			});
@@ -341,7 +352,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should sync the workers.dev domain if it has been enabled before but previews should be enabled", async ({ expect }) => {
+		it("should sync the workers.dev domain if it has been enabled before but previews should be enabled", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 			});
@@ -367,7 +380,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should sync the workers.dev domain if it has been enabled before but previews should be enabled", async ({ expect }) => {
+		it("should sync the workers.dev domain if it has been enabled before but previews should be enabled", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 				preview_urls: false,
@@ -394,7 +409,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should disable the workers.dev domain if workers_dev is `false`", async ({ expect }) => {
+		it("should disable the workers.dev domain if workers_dev is `false`", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 			});
@@ -418,7 +435,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not try to disable the workers.dev domain if it is not already available and previews are in sync", async ({ expect }) => {
+		it("should not try to disable the workers.dev domain if it is not already available and previews are in sync", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 			});
@@ -443,7 +462,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should sync the workers.dev domain if it is not available but previews should be enabled", async ({ expect }) => {
+		it("should sync the workers.dev domain if it is not available but previews should be enabled", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 			});
@@ -467,7 +488,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should sync the workers.dev domain if it is not available but previews should be disabled", async ({ expect }) => {
+		it("should sync the workers.dev domain if it is not available but previews should be disabled", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				preview_urls: false,
@@ -492,7 +515,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should disable the workers.dev domain if workers_dev is undefined but overwritten to `false` in environment", async ({ expect }) => {
+		it("should disable the workers.dev domain if workers_dev is undefined but overwritten to `false` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				env: {
 					dev: {
@@ -523,7 +548,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should disable the workers.dev domain if workers_dev is `true` but overwritten to `false` in environment", async ({ expect }) => {
+		it("should disable the workers.dev domain if workers_dev is `true` but overwritten to `false` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 				env: {
@@ -554,7 +581,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async ({ expect }) => {
+		it("should deploy to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				env: {
 					dev: {
@@ -587,7 +616,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async ({ expect }) => {
+		it("should deploy to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				env: {
@@ -621,7 +652,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the global compatibility_date and compatibility_flags if they are not overwritten by the environment", async ({ expect }) => {
+		it("should use the global compatibility_date and compatibility_flags if they are not overwritten by the environment", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["no_global_navigator"],
@@ -655,7 +688,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the environment specific compatibility_date and compatibility_flags", async ({ expect }) => {
+		it("should use the environment specific compatibility_date and compatibility_flags", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["no_global_navigator"],
@@ -692,7 +727,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the command line --compatibility-date and --compatibility-flags if they are specified", async ({ expect }) => {
+		it("should use the command line --compatibility-date and --compatibility-flags if they are specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["no_global_navigator"],
@@ -730,7 +767,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error if a compatibility_date is not available in wrangler.toml or cli args", async ({ expect }) => {
+		it("should error if a compatibility_date is not available in wrangler.toml or cli args", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
@@ -749,7 +788,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if a compatibility_date is missing and suggest the correct date", async ({ expect }) => {
+		it("should error if a compatibility_date is missing and suggest the correct date", async ({
+			expect,
+		}) => {
 			vi.setSystemTime(new Date(2020, 11, 1));
 
 			writeWorkerSource();
@@ -766,7 +807,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async ({ expect }) => {
+		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -790,7 +833,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should enable the workers.dev domain if workers_dev is true and subdomain is not already available", async ({ expect }) => {
+		it("should enable the workers.dev domain if workers_dev is true and subdomain is not already available", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({ workers_dev: true });
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -814,7 +859,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail to deploy to the workers.dev domain if email is unverified", async ({ expect }) => {
+		it("should fail to deploy to the workers.dev domain if email is unverified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({ workers_dev: true });
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -848,7 +895,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async ({ expect }) => {
+		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 			});
@@ -869,7 +918,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not deploy to workers.dev if there are any routes defined", async ({ expect }) => {
+		it("should not deploy to workers.dev if there are any routes defined", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["http://example.com/*"],
 			});
@@ -897,7 +948,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not deploy to workers.dev if there are any routes defined (environments)", async ({ expect }) => {
+		it("should not deploy to workers.dev if there are any routes defined (environments)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				routes: ["http://example.com/*"],
 				env: {
@@ -940,7 +993,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not deploy to workers.dev if there are any routes defined (only in environments)", async ({ expect }) => {
+		it("should not deploy to workers.dev if there are any routes defined (only in environments)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				env: {
 					production: {
@@ -983,7 +1038,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined", async ({ expect }) => {
+		it("can deploy to both workers.dev and routes if both defined", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 				routes: ["http://example.com/*"],
@@ -1019,7 +1076,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined (environments: 1)", async ({ expect }) => {
+		it("can deploy to both workers.dev and routes if both defined (environments: 1)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 				env: {
@@ -1068,7 +1127,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined (environments: 2)", async ({ expect }) => {
+		it("can deploy to both workers.dev and routes if both defined (environments: 2)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				env: {
 					production: {
@@ -1117,7 +1178,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("will deploy only to routes when workers_dev is false (environments 1) ", async ({ expect }) => {
+		it("will deploy only to routes when workers_dev is false (environments 1) ", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				env: {
@@ -1161,7 +1224,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("will deploy only to routes when workers_dev is false (environments 2) ", async ({ expect }) => {
+		it("will deploy only to routes when workers_dev is false (environments 2) ", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				env: {
 					production: {
@@ -1205,7 +1270,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn the user if workers_dev default is different from remote", async ({ expect }) => {
+		it("should warn the user if workers_dev default is different from remote", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({}); // Default workers_dev should be true, since there's no routes.
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1236,7 +1303,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should warn the user if preview_urls default is different from remote", async ({ expect }) => {
+		it("should warn the user if preview_urls default is different from remote", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({}); // Default preview_urls should be same as workers_dev (i.e. true).
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1276,7 +1345,9 @@ describe("deploy", () => {
 			vi.unstubAllEnvs();
 		});
 
-		it("should not warn when config is the same as remote", async ({ expect }) => {
+		it("should not warn when config is the same as remote", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				preview_urls: true,
@@ -1301,7 +1372,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn when workers_dev=false,preview_urls=false", async ({ expect }) => {
+		it("should not warn when workers_dev=false,preview_urls=false", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				preview_urls: false,
@@ -1327,7 +1400,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn when workers_dev=true,preview_urls=true", async ({ expect }) => {
+		it("should not warn when workers_dev=true,preview_urls=true", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 				preview_urls: true,
@@ -1354,7 +1429,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn when workers_dev=false,preview_urls=true", async ({ expect }) => {
+		it("should warn when workers_dev=false,preview_urls=true", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				preview_urls: true,
@@ -1391,7 +1468,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should warn when workers_dev=true,preview_urls=false", async ({ expect }) => {
+		it("should warn when workers_dev=true,preview_urls=false", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				workers_dev: true,
 				preview_urls: false,
