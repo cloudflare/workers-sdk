@@ -241,7 +241,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
 		>
-			<div className="flex w-full flex-col bg-surface">
+			<div className="flex w-full flex-col bg-card-bg">
 				<div className="grow overflow-hidden">
 					<StudioSQLEditor
 						autoCompleteSchema={autoCompelteSchema}
@@ -320,7 +320,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 				</div>
 			</div>
 
-			<div className="h-full w-full bg-surface">
+			<div className="h-full w-full bg-card-bg">
 				{queryTabs && queryTabs.length > 0 && (
 					<StudioWindowTab
 						key="main-window-tab"

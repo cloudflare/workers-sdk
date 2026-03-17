@@ -9,11 +9,13 @@ export function StudioWindowTabMenu({
 }: StudioWindowTabMenuProps): JSX.Element {
 	return (
 		<button
-			className="sticky right-0 flex h-10 cursor-pointer items-center gap-2 border-b border-border px-4 py-3 text-xs font-semibold tracking-wide text-muted hover:bg-border disabled:cursor-not-allowed"
+			className="relative flex items-center gap-2 border-b border-neutral-200 px-2 text-left text-xs text-neutral-500 dark:border-neutral-800"
 			onClick={onClick}
 			type="button"
 		>
-			<PlusIcon /> New Query
+			<div className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-bg-tertiary hover:text-black dark:hover:text-white">
+				<PlusIcon /> New Query
+			</div>
 		</button>
 	);
 }

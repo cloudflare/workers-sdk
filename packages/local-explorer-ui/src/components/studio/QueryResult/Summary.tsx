@@ -60,7 +60,7 @@ export function StudioQueryResultSummary({
 						<CodeBlock language="sql" code={detail.sql} />
 
 						{!!detail.error && (
-							<div className="mt-2 mb-2 ml-2 font-mono text-xs text-red-500">
+							<div className="mt-2 mb-2 ml-2 font-mono text-xs text-danger">
 								{detail.error}
 							</div>
 						)}

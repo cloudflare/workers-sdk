@@ -55,7 +55,7 @@ export function StudioCommitConfirmation({
 				<Dialog.Description className="text-kumo-subtle">
 					<div className="flex flex-col gap-4 text-sm">
 						{!!errorMessage && (
-							<div className="font-mono text-red-500">{errorMessage}</div>
+							<div className="font-mono text-danger">{errorMessage}</div>
 						)}
 
 						<div>

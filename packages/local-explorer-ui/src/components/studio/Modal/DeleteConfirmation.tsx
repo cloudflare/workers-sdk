@@ -77,7 +77,7 @@ export const StudioDeleteConfirmationModal = ({
 									Type <strong>{challenge}</strong> to confirm
 								</Text>
 								<input
-									className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+									className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
 									value={challengeInput}
 									onChange={(e) => setChallengeInput(e.target.value)}
 									autoComplete="off"
@@ -87,7 +87,7 @@ export const StudioDeleteConfirmationModal = ({
 						)}
 
 						{deleteFailed && (
-							<div className="rounded-md bg-red-50 p-3 text-red-700">
+							<div className="rounded-md border border-danger/20 bg-danger/10 p-3 text-danger">
 								{failureText}
 							</div>
 						)}

@@ -40,7 +40,7 @@ export function StudioWindowTab({
 
 	return (
 		<div className="flex h-full w-full flex-col">
-			<div className="relative flex shrink-0 grow-0 overflow-x-auto bg-surface-secondary">
+			<div className="relative flex shrink-0 grow-0 overflow-x-auto bg-card-bg">
 				{tabs.map((tab, tabIndex) => {
 					// Handles tab closure. If the closed tab is the currently active one,
 					// automatically select the nearest remaining tab to preserve continuity.

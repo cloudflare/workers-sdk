@@ -71,10 +71,10 @@ function ExplainNodes({ data }: ExplainNodesProps): JSX.Element {
 						<div className="flex h-8 items-center gap-2">
 							<div
 								className={cn("inline-flex rounded-full border", {
-									"bg-green-500": performance === "fast",
-									"bg-red-500": performance === "slow",
-									"bg-yellow-500": performance === "medium",
-									"bg-gray-500": performance === "neutral",
+									"bg-success": performance === "fast",
+									"bg-danger": performance === "slow",
+									"bg-primary": performance === "medium",
+									"bg-muted": performance === "neutral",
 								})}
 								style={{ width: 10, height: 10, marginLeft: -5 }}
 							/>
@@ -137,12 +137,12 @@ function describeExplainNode(d: string): {
 								<div>
 									This subquery depends on values from the outer query, so
 									it&apos;s evaluated once per outer row.{" "}
-									<strong className="text-red-500">
+									<strong className="text-danger">
 										Can be slow on large inputs
 									</strong>
 									.
 								</div>
-								<div className="text-green-500">
+								<div className="text-success">
 									Mitigate by indexing the correlated columns or rewriting as a
 									JOIN + aggregate.
 								</div>
@@ -182,14 +182,14 @@ function describeExplainNode(d: string): {
 					content={
 						<div className="flex flex-col gap-2">
 							<div>
-								SQLite can’t return rows in the requested order/grouping
+								SQLite can&apos;t return rows in the requested order/grouping
 								directly, so it gathers them into a temporary structure and
 								processes them before returning results.{" "}
-								<span className="text-red-500">
+								<strong className="text-danger">
 									This adds extra work and grows with result size.
-								</span>
+								</strong>
 							</div>
-							<div className="text-green-500">
+							<div className="text-success">
 								Add an index that matches the clause (ORDER BY / GROUP BY /
 								DISTINCT) to avoid the temp structure.
 							</div>

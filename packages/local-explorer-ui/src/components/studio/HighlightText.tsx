@@ -41,7 +41,7 @@ export const StudioHighlightText = memo(
 			}
 
 			result.push(
-				<span key={key++} className="bg-yellow-300 text-black">
+				<span key={key++} className="bg-highlight-bg text-highlight-text">
 					{text.slice(matchIndex, matchIndex + highlight.length)}
 				</span>
 			);

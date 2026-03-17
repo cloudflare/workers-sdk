@@ -68,6 +68,25 @@
 	/* Focus ring shadows */
 	--shadow-focus-primary: 0 0 0 3px rgba(246, 130, 31, 0.15);
 	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
+
+	/* Studio table state colors - light mode */
+	--color-state-new: oklch(96% 0.05 145); /* subtle green for new rows */
+	--color-state-new-selected: oklch(90% 0.1 145); /* selected new rows */
+	--color-state-changed: oklch(
+		96% 0.06 85
+	); /* subtle amber for changed cells */
+	--color-state-changed-selected: oklch(
+		90% 0.12 85
+	); /* selected changed cells */
+	--color-state-removed: oklch(96% 0.05 25); /* subtle red for removed rows */
+	--color-state-removed-selected: oklch(90% 0.1 25); /* selected removed rows */
+
+	/* Studio table selection border */
+	--color-selection-border: oklch(21% 0.006 285.885); /* neutral-900 */
+
+	/* Studio highlight colors */
+	--color-highlight-bg: oklch(94% 0.12 85); /* yellow highlight background */
+	--color-highlight-text: oklch(21% 0.006 285.885); /* dark text on highlight */
 }
 
 /*
@@ -168,6 +187,27 @@
 		/* Kumo tooltip overrides for dark mode */
 		--color-kumo-tip-shadow: transparent;
 		--color-kumo-tip-stroke: var(--color-border);
+
+		/* Studio table state colors - dark mode */
+		--color-state-new: oklch(22% 0.05 145); /* subtle green for new rows */
+		--color-state-new-selected: oklch(30% 0.1 145); /* selected new rows */
+		--color-state-changed: oklch(
+			22% 0.06 85
+		); /* subtle amber for changed cells */
+		--color-state-changed-selected: oklch(
+			30% 0.12 85
+		); /* selected changed cells */
+		--color-state-removed: oklch(22% 0.05 25); /* subtle red for removed rows */
+		--color-state-removed-selected: oklch(
+			30% 0.1 25
+		); /* selected removed rows */
+
+		/* Studio table selection border */
+		--color-selection-border: oklch(97% 0 0); /* neutral-100 */
+
+		/* Studio highlight colors */
+		--color-highlight-bg: oklch(35% 0.1 85); /* yellow highlight background */
+		--color-highlight-text: oklch(97% 0 0); /* light text on highlight */
 	}
 }
 

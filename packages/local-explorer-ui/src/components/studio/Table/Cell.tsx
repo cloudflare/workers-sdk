@@ -49,31 +49,29 @@ export function StudioTableCell<HeaderMetadata = unknown>({
 
 	if (isSelected) {
 		if (isRemoved) {
-			cellBackgroundColor = "bg-red-200 dark:bg-red-800";
+			cellBackgroundColor = "bg-state-removed-selected";
 		} else if (isChanged) {
-			cellBackgroundColor = "bg-yellow-200 dark:bg-yellow-600";
+			cellBackgroundColor = "bg-state-changed-selected";
 		} else if (isNew) {
-			cellBackgroundColor = "bg-green-200 dark:bg-green-700";
+			cellBackgroundColor = "bg-state-new-selected";
 		} else {
 			cellBackgroundColor = "";
 		}
 	} else if (isChanged) {
-		cellBackgroundColor = "bg-[#ffe693] dark:bg-[#916b20]";
+		cellBackgroundColor = "bg-state-changed";
 	} else if (isNew) {
-		cellBackgroundColor = "bg-green-100 dark:bg-green-900";
+		cellBackgroundColor = "bg-state-new";
 	} else if (isRemoved) {
-		cellBackgroundColor = "bg-red-100 dark:bg-red-900";
+		cellBackgroundColor = "bg-state-removed";
 	}
 
 	return (
 		<td
 			className={cn(
 				"box-border overflow-hidden border-r border-b border-border hover:bg-accent",
-				isSelected && "border-neutral-900 dark:border-neutral-100",
-				isBorderBottom &&
-					"border-b border-b-neutral-900 dark:border-b-neutral-100",
-				isBorderRight &&
-					"border-r border-r-neutral-900 dark:border-r-neutral-100",
+				isSelected && "border-selection-border",
+				isBorderBottom && "border-b border-b-selection-border",
+				isBorderRight && "border-r border-r-selection-border",
 				isFocus &&
 					"shadow-[0_0_0_1px_rgba(0,0,0,0.5)_inset] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.5)_inset]",
 				isSticky && "sticky",

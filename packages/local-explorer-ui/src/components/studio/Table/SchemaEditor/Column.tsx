@@ -175,7 +175,7 @@ export function StudioColumnSchemaEditor({
 		<tr
 			className={
 				highlightSchemaChanges && column.new && !column.old
-					? "bg-green-100 dark:bg-green-800"
+					? "bg-state-new"
 					: ""
 			}
 			key={column.key}
@@ -192,7 +192,7 @@ export function StudioColumnSchemaEditor({
 				onClick={!readOnlyExistingColumns ? onPrimaryKeyClicked : undefined}
 			>
 				{isPrimaryKey ? (
-					<KeyIcon weight="bold" className="text-blue-500" />
+					<KeyIcon weight="bold" className="text-primary" />
 				) : (
 					!readOnlyExistingColumns && (
 						<KeyIcon className="opacity-25 hover:opacity-100" />

@@ -56,11 +56,11 @@ function BlobCellValue({ value, vector }: BlobCellValueProps): JSX.Element {
 		return (
 			<div className="flex">
 				<div className="mr-2 flex-col items-center justify-center">
-					<span className="inline rounded bg-blue-500 p-1 pr-2 pl-2 text-white">
+					<span className="inline rounded bg-primary p-1 pr-2 pl-2 text-white">
 						vec({floatArray.length})
 					</span>
 				</div>
-				<div className="text-orange-600">[{floatArrayText}]</div>
+				<div className="text-primary">[{floatArrayText}]</div>
 			</div>
 		);
 	}
@@ -69,11 +69,11 @@ function BlobCellValue({ value, vector }: BlobCellValueProps): JSX.Element {
 
 	return (
 		<div className="flex w-full">
-			<span className="flex-1 truncate text-orange-600 dark:text-orange-400">
+			<span className="flex-1 truncate text-primary">
 				{prettifyBytes(bytes.subarray(0, 64))}
 			</span>
 			<div className="ml-2 flex-col items-center justify-center">
-				<span className="inline rounded bg-blue-500 p-1 pr-2 pl-2 text-white">
+				<span className="inline rounded bg-primary p-1 pr-2 pl-2 text-white">
 					{bytes.length.toLocaleString(undefined, {
 						maximumFractionDigits: 0,
 					})}
@@ -127,7 +127,7 @@ export const StudioTableDisplayCell = forwardRef<
 				<span
 					className={cn(
 						"flex-1 truncate",
-						"block grow text-right text-blue-700 dark:text-blue-300"
+						"block grow text-right text-primary"
 					)}
 				>
 					{value}

@@ -1,4 +1,4 @@
-import { cn, DropdownMenu } from "@cloudflare/kumo";
+import { DropdownMenu } from "@cloudflare/kumo";
 import {
 	CopyIcon,
 	FlowArrowIcon,
@@ -180,10 +180,7 @@ export function StudioResultTable({
 							<DropdownMenuColumnInfo
 								description={primaryColumnList}
 								icon={
-									<KeyIcon
-										weight="duotone"
-										className="size-5 text-green-600 dark:text-green-400"
-									/>
+									<KeyIcon weight="duotone" className="size-5 text-primary" />
 								}
 								title={"Primary Key"}
 							/>
@@ -193,14 +190,7 @@ export function StudioResultTable({
 							<DropdownMenuColumnInfo
 								description={idx.columns.join(", ")}
 								icon={
-									<KeyIcon
-										weight="duotone"
-										className={cn("size-5", {
-											"text-blue-600 dark:text-blue-400": idx.type === "KEY",
-											"text-orange-600 dark:text-orange-400":
-												idx.type === "UNIQUE",
-										})}
-									/>
+									<KeyIcon weight="duotone" className="size-5 text-primary" />
 								}
 								key={idx.name}
 								title={idx.name}
@@ -213,7 +203,7 @@ export function StudioResultTable({
 								icon={
 									<FlowArrowIcon
 										weight="duotone"
-										className="size-5 text-blue-600 dark:text-blue-400"
+										className="size-5 text-primary"
 									/>
 								}
 								title={"Reference To"}
@@ -225,9 +215,7 @@ export function StudioResultTable({
 								description={
 									header.metadata.columnSchema.constraint.generatedExpression
 								}
-								icon={
-									<SigmaIcon className="size-5 text-purple-600 dark:text-purple-400" />
-								}
+								icon={<SigmaIcon className="size-5 text-primary" />}
 								title={"Generated Expression"}
 							/>
 						)}

@@ -252,7 +252,7 @@ function renderCellList<HeaderMetadata = unknown>({
 					"bg-surface-secondary font-bold text-text"
 				);
 				tdClass =
-					"sticky left-0 bg-surface-secondary dark:bg-blue-800 border-r border-b border-border";
+					"sticky left-0 bg-surface-secondary border-r border-b border-border";
 			} else {
 				textClass =
 					"flex items-center justify-end h-full pr-2 font-mono text-text font-bold";

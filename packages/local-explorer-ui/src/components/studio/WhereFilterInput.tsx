@@ -117,7 +117,7 @@ export function StudioWhereFilterInput({
 		if (parsingError) {
 			return (
 				<>
-					<span className="text-red-500">●</span>
+					<span className="text-danger">●</span>
 					<span>Apply</span>
 				</>
 			);

@@ -141,7 +141,7 @@ export function StudioTableSchemaEditor({
 			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
 		>
-			<div className="flex h-full w-full flex-col overflow-hidden bg-surface text-xs">
+			<div className="flex h-full w-full flex-col overflow-hidden bg-card-bg text-xs">
 				<div className="flex gap-2 border-b border-border p-4 py-2 shadow-xs">
 					<input
 						autoFocus
@@ -219,7 +219,7 @@ export function StudioTableSchemaEditor({
 					</div>
 				</div>
 			</div>
-			<div className="grow overflow-hidden bg-surface">
+			<div className="grow overflow-hidden bg-card-bg">
 				<StudioSQLEditor
 					className="h-full w-full grow"
 					readOnly

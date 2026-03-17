@@ -392,7 +392,7 @@ export function StudioTableExplorerTab({
 	);
 
 	return (
-		<div className="flex h-full w-full flex-col bg-surface">
+		<div className="flex h-full w-full flex-col bg-card-bg">
 			<div className="flex shrink-0 items-center gap-2 border-b border-border p-2">
 				<Button aria-label="Refresh" onClick={onRefreshClicked} shape="square">
 					<ArrowsCounterClockwiseIcon size={14} />
@@ -458,7 +458,7 @@ export function StudioTableExplorerTab({
 					/>
 				)}
 
-				{error && <div className="p-4 text-base text-red-500">{error}</div>}
+				{error && <div className="p-4 text-base text-danger">{error}</div>}
 
 				{loading && (
 					<>

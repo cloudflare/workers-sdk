@@ -80,7 +80,7 @@ export function DropTableConfirmationModal({
 						</div>
 
 						{error && (
-							<div className="rounded-md bg-red-50 p-3 text-red-700">
+							<div className="rounded-md border border-danger/20 bg-danger/10 p-3 text-danger">
 								{error}
 							</div>
 						)}
