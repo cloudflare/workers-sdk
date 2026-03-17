@@ -261,7 +261,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 					</div>
 
 					<Button
-						className="h-8 text-xs transition hover:bg-border"
+						className="h-8 text-xs transition"
 						onClick={handleFormat}
 						variant="ghost"
 					>
@@ -270,7 +270,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 
 					<div className="flex overflow-hidden">
 						<Button
-							className="h-8 rounded-r-none pr-2! text-xs transition hover:bg-border"
+							className="h-8 rounded-r-none pr-2! text-xs transition"
 							icon={<PlayIcon weight="fill" />}
 							loading={loading}
 							onClick={onRunCurrentClicked}
@@ -283,7 +283,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 							<DropdownMenu.Trigger
 								render={
 									<Button
-										className="ml-0 h-8 rounded-l-none rounded-r-md px-2 text-xs transition hover:bg-border"
+										className="ml-0 h-8 rounded-l-none rounded-r-md px-2 text-xs transition"
 										disabled={loading}
 										variant="primary"
 									>
