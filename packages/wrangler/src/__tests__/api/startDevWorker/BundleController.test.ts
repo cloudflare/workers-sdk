@@ -571,9 +571,8 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				      1 │ import foo from 'some-nonexistent-module';
 				        ╵                 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-				  To fix this, you can add an entry to "alias" in your Wrangler configuration
-				  to substitute "some-nonexistent-module" with an alternative implementation.
-				  See https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing"
+				  To fix this, you can add an entry to "alias" in your Wrangler configuration.
+				  For more guidance see: https://developers.cloudflare.com/workers/wrangler/configuration/#bundling-issues"
 			`);
 		});
 

@@ -75,9 +75,8 @@ export function rewriteUnresolvedModuleBuildFailure(errors: esbuild.Message[]) {
 					{
 						location: null,
 						text:
-							`To fix this, you can add an entry to "alias" in your Wrangler configuration\n` +
-							`to substitute "${moduleName}" with an alternative implementation.\n` +
-							`See https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing\n`,
+							`To fix this, you can add an entry to "alias" in your Wrangler configuration.\n` +
+							`For more guidance see: https://developers.cloudflare.com/workers/wrangler/configuration/#bundling-issues\n`,
 					},
 				];
 			}
