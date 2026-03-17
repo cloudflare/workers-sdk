@@ -1676,7 +1676,10 @@ export class Miniflare {
 		// Start loopback server (how the runtime accesses Node.js) using the same
 		// host as the main runtime server. This means we can use the loopback
 		// server for live reload updates too.
-		const loopbackHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		// Use 127.0.0.1 instead of localhost to prevent IPv6/IPv4 mismatch issues.
+		const configuredLoopbackHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		const loopbackHost =
+			configuredLoopbackHost === "localhost" ? "127.0.0.1" : configuredLoopbackHost;
 		// If we've already started the loopback server...
 		if (this.#loopbackServer !== undefined) {
 			// ...and it's using the correct host, reuse it
@@ -2230,9 +2233,15 @@ export class Miniflare {
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
 		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		// For internal loopback communication with workerd, always use 127.0.0.1
+		// when localhost is configured. This prevents IPv6/IPv4 mismatch issues
+		// where Node.js binds to [::1] but workerd resolves localhost to 127.0.0.1.
+		// See: https://github.com/cloudflare/workers-sdk/issues/12910
 		const loopbackHost =
-			maybeGetLocallyAccessibleHost(configuredHost) ??
-			getURLSafeHost(configuredHost);
+			configuredHost === "localhost"
+				? "127.0.0.1"
+				: (maybeGetLocallyAccessibleHost(configuredHost) ??
+						getURLSafeHost(configuredHost));
 		const loopbackPort = await this.#getLoopbackPort();
 		const proxyAddress = await this.#devRegistry.initializeProxyWorker();
 		const config = await this.#assembleConfig(loopbackPort, proxyAddress);
