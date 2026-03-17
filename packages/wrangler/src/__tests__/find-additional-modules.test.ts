@@ -21,7 +21,7 @@ describe("traverse module graph", () => {
 	it("should not detect JS without module rules", async ({ expect }) => {
 		await writeFile(
 			"./index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -32,7 +32,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -58,7 +58,7 @@ describe("traverse module graph", () => {
 	])("should detect JS as %s", async ([type, format], { expect }) => {
 		await writeFile(
 			"./index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -69,7 +69,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -93,7 +93,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -104,7 +104,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -129,7 +129,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -140,7 +140,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -165,7 +165,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "../other.js"
 			export default {
 				async fetch(request) {
@@ -176,7 +176,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -201,7 +201,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -212,7 +212,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/wrangler.jsonc",
-			dedent/* jsonc */ `
+			dedent /* jsonc */ `
 			{
 				"compatibility_date": "2025/01/01"
 			}
@@ -252,7 +252,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			import HELLO from "../other.txt"
 			export default {
 				async fetch(request) {
@@ -263,7 +263,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.txt",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);
@@ -290,7 +290,7 @@ describe("traverse module graph", () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export default {
 				async fetch(request) {
 					return new Response(HELLO)
@@ -300,7 +300,7 @@ describe("traverse module graph", () => {
 		);
 		await writeFile(
 			"./src/other.txt",
-			dedent/* javascript */ `
+			dedent /* javascript */ `
 			export const HELLO = "WORLD"
 			`
 		);

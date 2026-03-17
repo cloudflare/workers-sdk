@@ -463,7 +463,7 @@ export class CommandRegistry {
 		const { subtree } =
 			node.definition.type !== "alias"
 				? node
-				: this.#findNodeFor(resolvedDef.command) ?? node;
+				: (this.#findNodeFor(resolvedDef.command) ?? node);
 
 		const definition: InternalDefinition = {
 			// take all properties from the resolved alias

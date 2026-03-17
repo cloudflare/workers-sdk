@@ -131,9 +131,7 @@ export function readPagesConfig(
 		throw new UserError(diagnostics.renderErrors());
 	}
 
-	logger.debug(
-		`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
-	);
+	logger.debug(`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`);
 
 	const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
 	const projectName = rawConfig?.name;

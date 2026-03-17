@@ -139,7 +139,7 @@ importers:
         version: 0.4.1
       '@ianvs/prettier-plugin-sort-imports':
         specifier: 4.2.1
-        version: 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)
+        version: 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.8.1)
       '@manypkg/cli':
         specifier: ^0.23.0
         version: 0.23.0
@@ -165,14 +165,14 @@ importers:
         specifier: catalog:default
         version: 3.2.0
       prettier:
-        specifier: ^3.2.5
-        version: 3.2.5
+        specifier: ^3.8.1
+        version: 3.8.1
       prettier-plugin-packagejson:
         specifier: ^2.2.18
-        version: 2.2.18(prettier@3.2.5)
+        version: 2.2.18(prettier@3.8.1)
       prettier-plugin-tailwindcss:
         specifier: ^0.7.2
-        version: 0.7.2(@ianvs/prettier-plugin-sort-imports@4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5))(prettier@3.2.5)
+        version: 0.7.2(@ianvs/prettier-plugin-sort-imports@4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.8.1))(prettier@3.8.1)
       tree-kill:
         specifier: ^1.2.2
         version: 1.2.2
@@ -14138,19 +14138,9 @@ packages:
       prettier-plugin-svelte:
         optional: true
 
-  prettier@2.7.1:
-    resolution: {integrity: sha512-ujppO+MkdPqoVINuDFDRLClm7D78qbDt0/NR+wp5FqEZOoTNAjPHWj17QRhu7geIHJfcNhRk1XVQmF8Bp3ye+g==}
-    engines: {node: '>=10.13.0'}
-    hasBin: true
-
   prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
     engines: {node: '>=10.13.0'}
-    hasBin: true
-
-  prettier@3.2.5:
-    resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
-    engines: {node: '>=14'}
     hasBin: true
 
   prettier@3.8.1:
@@ -17530,7 +17520,7 @@ snapshots:
       '@changesets/types': 6.1.0
       fs-extra: 7.0.1
       human-id: 4.1.1
-      prettier: 2.7.1
+      prettier: 2.8.8
 
   '@chevrotain/cst-dts-gen@10.5.0':
     dependencies:
@@ -18767,14 +18757,14 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@ianvs/prettier-plugin-sort-imports@4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)':
+  '@ianvs/prettier-plugin-sort-imports@4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.8.1)':
     dependencies:
       '@babel/core': 7.26.0
       '@babel/generator': 7.26.3
       '@babel/parser': 7.26.3
       '@babel/traverse': 7.25.9
       '@babel/types': 7.26.3
-      prettier: 3.2.5
+      prettier: 3.8.1
       semver: 7.7.3
     optionalDependencies:
       '@vue/compiler-sfc': 3.3.4
@@ -26422,22 +26412,18 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
-  prettier-plugin-packagejson@2.2.18(prettier@3.2.5):
+  prettier-plugin-packagejson@2.2.18(prettier@3.8.1):
     dependencies:
-      prettier: 3.2.5
+      prettier: 3.8.1
       sort-package-json: 1.57.0
 
-  prettier-plugin-tailwindcss@0.7.2(@ianvs/prettier-plugin-sort-imports@4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5))(prettier@3.2.5):
+  prettier-plugin-tailwindcss@0.7.2(@ianvs/prettier-plugin-sort-imports@4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.8.1))(prettier@3.8.1):
     dependencies:
-      prettier: 3.2.5
+      prettier: 3.8.1
     optionalDependencies:
-      '@ianvs/prettier-plugin-sort-imports': 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.2.5)
-
-  prettier@2.7.1: {}
+      '@ianvs/prettier-plugin-sort-imports': 4.2.1(@vue/compiler-sfc@3.3.4)(prettier@3.8.1)
 
   prettier@2.8.8: {}
-
-  prettier@3.2.5: {}
 
   prettier@3.8.1: {}
 

@@ -40,9 +40,7 @@ export async function introspectWorkflowInstance(
 	return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
 }
 
-class WorkflowInstanceIntrospectorHandle
-	implements WorkflowInstanceIntrospector
-{
+class WorkflowInstanceIntrospectorHandle implements WorkflowInstanceIntrospector {
 	#workflow: WorkflowBinding;
 	#instanceId: string;
 	#instanceModifier: WorkflowInstanceModifier | undefined;

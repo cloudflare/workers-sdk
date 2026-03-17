@@ -148,9 +148,8 @@ async function generateAssetsFetch(
 	).default;
 	await polyfill();
 
-	const { generateHandler, parseQualityWeightedList } = await import(
-		"@cloudflare/pages-shared/asset-server/handler"
-	);
+	const { generateHandler, parseQualityWeightedList } =
+		await import("@cloudflare/pages-shared/asset-server/handler");
 
 	const headersFile = join(directory, "_headers");
 	const redirectsFile = join(directory, "_redirects");

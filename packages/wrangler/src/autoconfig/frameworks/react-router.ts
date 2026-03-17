@@ -162,7 +162,7 @@ export class ReactRouter extends Framework {
 
 			writeFileSync(
 				"workers/app.ts",
-				dedent/* javascript */ `
+				dedent /* javascript */ `
 					import { createRequestHandler } from "react-router";
 
 					declare module "react-router" {
@@ -199,7 +199,7 @@ export class ReactRouter extends Framework {
 			if (!existsSync("app/entry.server.tsx")) {
 				writeFileSync(
 					`app/entry.server.tsx`,
-					dedent/* javascript */ `
+					dedent /* javascript */ `
 					import type { AppLoadContext, EntryContext } from "react-router";
 					import { ServerRouter } from "react-router";
 					import { isbot } from "isbot";
