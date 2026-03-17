@@ -55,7 +55,7 @@
 	/* SQL editor chrome */
 	--color-selection: oklch(92.2% 0 0);
 	--color-active-line: oklch(98.5% 0 0);
-	--color-resizer: oklch(87% 0 0);
+	--color-resizer: var(--color-border);
 
 	/* SQL editor syntax highlighting */
 	--color-syntax-keyword: oklch(42.4% 0.199 265.638); /* blue-800 */
@@ -172,7 +172,7 @@
 		/* SQL editor chrome */
 		--color-selection: oklch(26.9% 0 0);
 		--color-active-line: oklch(20% 0 0);
-		--color-resizer: oklch(37.1% 0 0);
+		--color-resizer: var(--color-border);
 
 		/* SQL editor syntax highlighting */
 		--color-syntax-keyword: oklch(70.7% 0.165 254.624); /* blue-400 */
