@@ -152,7 +152,7 @@ function BucketView(): JSX.Element {
 				setLoadingMore(false);
 			}
 		},
-		[params.bucketName, search.prefix]
+		[params.bucketName, search.prefix, toastManager]
 	);
 
 	async function handleRefresh(): Promise<void> {
