@@ -215,10 +215,10 @@ function updateAstroConfig(
 			const propsToAdd: recast.types.namedTypes.ObjectProperty[] = [];
 
 			if (astroMajorVersion === 4) {
-				// Astro 4 requires explicit output: "server" for SSR
+				// Astro 4 requires explicit output: "hybrid" for SSR
 				const outputProp = b.objectProperty(
 					b.identifier("output"),
-					b.literal("server")
+					b.literal("hybrid")
 				);
 				propsToAdd.push(outputProp);
 			}
