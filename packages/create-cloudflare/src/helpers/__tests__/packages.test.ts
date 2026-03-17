@@ -35,7 +35,7 @@ describe("Package Helpers", () => {
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["npm", "install"],
-				expect.anything(),
+				expect.anything()
 			);
 		});
 
@@ -45,7 +45,7 @@ describe("Package Helpers", () => {
 			await npmInstall(createTestContext());
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["pnpm", "install"],
-				expect.anything(),
+				expect.anything()
 			);
 		});
 	});
@@ -80,13 +80,13 @@ describe("Package Helpers", () => {
 
 				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 					[...initialArgs, ...packages, ...(additionalArgs ?? [])],
-					expect.anything(),
+					expect.anything()
 				);
 
 				if (pm === "npm") {
 					// Check that package.json was updated for npm
 					expect(mockReadJSON).toHaveBeenCalledWith(
-						resolve(process.cwd(), "package.json"),
+						resolve(process.cwd(), "package.json")
 					);
 					expect(mockWriteJSON).toHaveBeenCalledWith(
 						resolve(process.cwd(), "package.json"),
@@ -96,10 +96,10 @@ describe("Package Helpers", () => {
 								bar: "^2.0.0",
 								baz: "1.2.3",
 							},
-						}),
+						})
 					);
 				}
-			},
+			}
 		);
 
 		const devCases: TestCase[] = [
@@ -125,13 +125,13 @@ describe("Package Helpers", () => {
 
 				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 					[...initialArgs, ...packages, ...(additionalArgs ?? [])],
-					expect.anything(),
+					expect.anything()
 				);
 
 				if (pm === "npm") {
 					// Check that package.json was updated for npm
 					expect(mockReadJSON).toHaveBeenCalledWith(
-						resolve(process.cwd(), "package.json"),
+						resolve(process.cwd(), "package.json")
 					);
 					expect(mockWriteJSON).toHaveBeenCalledWith(
 						resolve(process.cwd(), "package.json"),
@@ -141,10 +141,10 @@ describe("Package Helpers", () => {
 								bar: "^2.0.0",
 								baz: "1.2.3",
 							},
-						}),
+						})
 					);
 				}
-			},
+			}
 		);
 	});
 
@@ -158,7 +158,7 @@ describe("Package Helpers", () => {
 
 		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 			["npm", "install", "--save-dev", "wrangler@latest"],
-			expect.anything(),
+			expect.anything()
 		);
 	});
 });
