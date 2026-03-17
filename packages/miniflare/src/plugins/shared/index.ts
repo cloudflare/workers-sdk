@@ -79,6 +79,7 @@ export interface PluginServicesOptions<
 	tmpPath: string;
 	defaultPersistRoot: string | undefined;
 	workerNames: string[];
+	loopbackHost: string;
 	loopbackPort: number;
 	unsafeStickyBlobs: boolean;
 
