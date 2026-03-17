@@ -19,10 +19,10 @@
 		"@cloudflare/workers-types": "^4.20250204.0",
 		"@types/react": "19.1.0",
 		"@types/react-dom": "19.1.0",
-		"@vitejs/plugin-react": "^4.7.0",
+		"@vitejs/plugin-react": "^5.2.0",
 		"globals": "^15.14.0",
 		"typescript": "~5.7.2",
-		"vite": "^7.0.0",
+		"vite": "^8.0.0",
 		"wrangler": "*"
 	}
 }

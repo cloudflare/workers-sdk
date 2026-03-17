@@ -16,7 +16,7 @@
 		"globals": "^15.14.0",
 		"miniflare": "*",
 		"typescript": "~5.7.2",
-		"vite": "^7.0.0",
+		"vite": "^8.0.0",
 		"wrangler": "*"
 	}
 }
