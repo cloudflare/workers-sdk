@@ -1,12 +1,10 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -97,7 +95,7 @@ describe("deploy", () => {
 	});
 
 	describe("--dry-run", () => {
-		it("should not deploy the worker if --dry-run is specified", async () => {
+		it("should not deploy the worker if --dry-run is specified", async ({ expect }) => {
 			writeWranglerConfig({
 				// add a durable object with migrations
 				// to make sure we _don't_ fetch migration status
@@ -137,7 +135,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("--keep-vars", () => {
-		it("should send keepVars when keep-vars is passed in", async () => {
+		it("should send keepVars when keep-vars is passed in", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 			setIsTTY(false);
@@ -164,7 +162,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not send keepVars by default", async () => {
+		it("should not send keepVars by default", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 			setIsTTY(false);
@@ -191,7 +189,7 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should send keepVars when `keep_vars = true`", async () => {
+		it("should send keepVars when `keep_vars = true`", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 			setIsTTY(false);
@@ -221,7 +219,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("--dispatch-namespace", () => {
-		it("should upload to dispatch namespace", async () => {
+		it("should upload to dispatch namespace", async ({ expect }) => {
 			writeWranglerConfig();
 			const scriptContent = `
       export default {
@@ -252,7 +250,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("[observability]", () => {
-		it("should allow uploading workers with observability", async () => {
+		it("should allow uploading workers with observability", async ({ expect }) => {
 			writeWranglerConfig({
 				observability: {
 					enabled: true,
@@ -282,7 +280,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should allow uploading workers with nested observability logs setting", async () => {
+		it("should allow uploading workers with nested observability logs setting", async ({ expect }) => {
 			writeWranglerConfig({
 				observability: {
 					enabled: true,
@@ -326,7 +324,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should allow uploading workers with nested observability traces setting", async () => {
+		it("should allow uploading workers with nested observability traces setting", async ({ expect }) => {
 			writeWranglerConfig({
 				observability: {
 					enabled: true,
@@ -368,7 +366,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should disable observability if not explicitly defined", async () => {
+		it("should disable observability if not explicitly defined", async ({ expect }) => {
 			writeWranglerConfig({});
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
@@ -434,7 +432,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index.js");
 		});
 
-		it("should error if the region is set in both env var and configured, and they conflict", async () => {
+		it("should error if the region is set in both env var and configured, and they conflict", async ({ expect }) => {
 			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "public");
 			writeWranglerConfig({ compliance_region: "fedramp_high" });
 			writeWorkerSource();
@@ -474,7 +472,7 @@ describe("deploy", () => {
 			setIsTTY(false);
 		});
 
-		test("has environments, no existing tags, top-level env", async () => {
+		test("has environments, no existing tags, top-level env", async ({ expect }) => {
 			mockGetScriptWithTags(null);
 			mockUploadWorkerRequest();
 
@@ -495,7 +493,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["cf:service=test-name"]);
 		});
 
-		test("has environments, no existing tags, named env", async () => {
+		test("has environments, no existing tags, named env", async ({ expect }) => {
 			mockGetScriptWithTags(null);
 			mockUploadWorkerRequest({
 				env: "production",
@@ -522,7 +520,7 @@ describe("deploy", () => {
 			]);
 		});
 
-		test("has environments, missing tags, top-level env", async () => {
+		test("has environments, missing tags, top-level env", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest();
 
@@ -543,7 +541,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
-		test("has environments, missing tags, named env", async () => {
+		test("has environments, missing tags, named env", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				env: "production",
@@ -571,7 +569,7 @@ describe("deploy", () => {
 			]);
 		});
 
-		test("has environments, missing environment tag, named env", async () => {
+		test("has environments, missing environment tag, named env", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
 			mockUploadWorkerRequest({
 				env: "production",
@@ -599,7 +597,7 @@ describe("deploy", () => {
 			]);
 		});
 
-		test("has environments, stale service tag, top-level env", async () => {
+		test("has environments, stale service tag, top-level env", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag", "cf:service=some-other-service"]);
 			mockUploadWorkerRequest();
 
@@ -620,7 +618,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
-		test("has environments, stale service tag, named env", async () => {
+		test("has environments, stale service tag, named env", async ({ expect }) => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=some-other-service",
@@ -652,7 +650,7 @@ describe("deploy", () => {
 			]);
 		});
 
-		test("has environments, stale environment tag, top-level env", async () => {
+		test("has environments, stale environment tag, top-level env", async ({ expect }) => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=test-name",
@@ -677,7 +675,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
-		test("has environments, stale environment tag, named env", async () => {
+		test("has environments, stale environment tag, named env", async ({ expect }) => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=test-name",
@@ -709,7 +707,7 @@ describe("deploy", () => {
 			]);
 		});
 
-		test("has environments, has expected tags, top-level env", async () => {
+		test("has environments, has expected tags, top-level env", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag", "cf:service=test-name"]);
 			mockUploadWorkerRequest();
 
@@ -730,7 +728,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag", "cf:service=test-name"]);
 		});
 
-		test("has environments, has expected tags, named env", async () => {
+		test("has environments, has expected tags, named env", async ({ expect }) => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=test-name",
@@ -762,7 +760,7 @@ describe("deploy", () => {
 			]);
 		});
 
-		test("no environments", async () => {
+		test("no environments", async ({ expect }) => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=some-other-service",
@@ -784,7 +782,7 @@ describe("deploy", () => {
 			).resolves.toHaveProperty("tags", ["some-tag"]);
 		});
 
-		test("no top-level name", async () => {
+		test("no top-level name", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag", "cf:service=undefined"]);
 			mockUploadWorkerRequest({
 				env: "production",
@@ -816,7 +814,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		test("displays warning when error updating tags", async () => {
+		test("displays warning when error updating tags", async ({ expect }) => {
 			mockGetScriptWithTags([
 				"some-tag",
 				"cf:service=some-other-service",
@@ -851,7 +849,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		test("environments with redirected config", async () => {
+		test("environments with redirected config", async ({ expect }) => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				expectedScriptName: "test-name-production",
@@ -903,7 +901,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("multi-env warning", () => {
-		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async ({ expect }) => {
 			writeWorkerSource();
 			writeWranglerConfig({
 				main: "./index.js",
@@ -928,7 +926,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async ({ expect }) => {
 			writeWorkerSource();
 			writeWranglerConfig({
 				main: "./index.js",
@@ -947,7 +945,7 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({ expect }) => {
 			writeWorkerSource();
 			writeWranglerConfig({
 				main: "./index.js",
@@ -961,7 +959,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("--tag and --message", () => {
-		it("should send tag and message annotations via the new versions API", async () => {
+		it("should send tag and message annotations via the new versions API", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -980,7 +978,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("Current Version ID: Galaxy-Class");
 		});
 
-		it("should send tag and message annotations via the legacy PUT API", async () => {
+		it("should send tag and message annotations via the legacy PUT API", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -998,7 +996,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("Uploaded test-name");
 		});
 
-		it("should send only --tag without --message", async () => {
+		it("should send only --tag without --message", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1014,7 +1012,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("Uploaded test-name");
 		});
 
-		it("should send only --message without --tag", async () => {
+		it("should send only --message without --tag", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1030,7 +1028,7 @@ describe("deploy", () => {
 			expect(std.out).toContain("Uploaded test-name");
 		});
 
-		it("should not set annotations when neither --tag nor --message is provided", async () => {
+		it("should not set annotations when neither --tag nor --message is provided", async ({ expect }) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();

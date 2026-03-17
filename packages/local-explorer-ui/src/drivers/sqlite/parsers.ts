@@ -52,8 +52,6 @@ class CursorV2 {
 		) {
 			this.tokens.pop();
 		}
-
-		this.tokens = tokens;
 	}
 
 	/**

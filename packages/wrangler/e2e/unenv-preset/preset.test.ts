@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { fetch } from "undici";
+// eslint-disable-next-line no-restricted-imports
 import { beforeAll, describe, expect, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
@@ -822,7 +823,7 @@ describe.each(groupedLocalConfigs)(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName) => {
+			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await vi.waitFor(
@@ -880,7 +881,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName) => {
+			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await vi.waitFor(
@@ -939,7 +940,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName) => {
+			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await vi.waitFor(

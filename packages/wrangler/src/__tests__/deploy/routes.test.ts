@@ -1,8 +1,6 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -125,7 +123,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 		});
 
-		it("should deploy with an empty string route", async () => {
+		it("should deploy with an empty string route", async ({ expect }) => {
 			writeWranglerConfig({
 				route: "",
 			});
@@ -158,7 +156,7 @@ describe("deploy", () => {
 				}
 			`);
 		});
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async ({ expect }) => {
 			writeWranglerConfig({
 				routes: [
 					"some-example.com/some-route/*",
@@ -247,7 +245,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a SaaS domain", async () => {
+		it("should deploy to a route with a SaaS domain", async ({ expect }) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				routes: [
@@ -290,7 +288,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a SaaS subdomain", async () => {
+		it("should deploy to a route with a SaaS subdomain", async ({ expect }) => {
 			writeWranglerConfig({
 				workers_dev: false,
 				routes: [
@@ -333,7 +331,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async ({ expect }) => {
 			writeWranglerConfig({
 				env: {
 					staging: {
@@ -533,7 +531,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 		});
 
-		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async () => {
+		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async ({ expect }) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 			});
@@ -588,7 +586,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async () => {
+		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async ({ expect }) => {
 			writeWranglerConfig({
 				routes: ["example.com/some-route/*"],
 				legacy_env: false,
@@ -621,7 +619,7 @@ describe("deploy", () => {
 		});
 
 		describe("custom domains", () => {
-			it("should deploy routes marked with 'custom_domain' as separate custom domains", async () => {
+			it("should deploy routes marked with 'custom_domain' as separate custom domains", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -646,7 +644,7 @@ describe("deploy", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain deploy would override an existing domain", async () => {
+			it("should confirm override if custom domain deploy would override an existing domain", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -696,7 +694,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain deploy contains a conflicting DNS record", async () => {
+			it("should confirm override if custom domain deploy contains a conflicting DNS record", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -738,7 +736,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm for conflicting custom domains and then again for conflicting dns", async () => {
+			it("should confirm for conflicting custom domains and then again for conflicting dns", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -807,7 +805,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should throw if an invalid custom domain is requested", async () => {
+			it("should throw if an invalid custom domain is requested", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "*.example.com", custom_domain: true }],
 				});
@@ -835,7 +833,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should not continue with publishing an override if user does not confirm", async () => {
+			it("should not continue with publishing an override if user does not confirm", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -878,7 +876,7 @@ Update them to point to this script instead?`,
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
 			});
-			it("should deploy domains passed via --domain flag as custom domains", async () => {
+			it("should deploy domains passed via --domain flag as custom domains", async ({ expect }) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -898,7 +896,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should deploy multiple domains passed via --domain flags", async () => {
+			it("should deploy multiple domains passed via --domain flags", async ({ expect }) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -924,7 +922,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("app.example.com (custom domain)");
 			});
 
-			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async () => {
+			it("should deploy --domain flags alongside routes (from config when no CLI routes)", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: ["example.com/api/*"],
 				});
@@ -982,7 +980,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should validate domain flags and reject invalid domains with wildcards", async () => {
+			it("should validate domain flags and reject invalid domains with wildcards", async ({ expect }) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 
@@ -994,7 +992,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should validate domain flags and reject invalid domains with paths", async () => {
+			it("should validate domain flags and reject invalid domains with paths", async ({ expect }) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 
@@ -1007,7 +1005,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should handle both --route and --domain flags together", async () => {
+			it("should handle both --route and --domain flags together", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: ["config.com/api/*"],
 				});
@@ -1075,7 +1073,7 @@ Update them to point to this script instead?`,
 		});
 
 		describe("deploy asset routes", () => {
-			it("shouldn't error on routes with paths if there are no assets", async () => {
+			it("shouldn't error on routes with paths if there are no assets", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path",
@@ -1107,7 +1105,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should warn on mounted paths", async () => {
+			it("should warn on mounted paths", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path/*",
@@ -1213,7 +1211,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("does not mention 404s hit a Worker if it's assets only", async () => {
+			it("does not mention 404s hit a Worker if it's assets only", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [
 						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
@@ -1283,7 +1281,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("does mention hitting the Worker on 404 if there is one", async () => {
+			it("does mention hitting the Worker on 404 if there is one", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [
 						{ pattern: "example.com/blog/*", zone_id: "example-com-id" },
@@ -1357,7 +1355,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should not warn on mounted paths if run_worker_first = false", async () => {
+			it("should not warn on mounted paths if run_worker_first = false", async ({ expect }) => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path/*",

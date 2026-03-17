@@ -8,7 +8,6 @@ import {
 	beforeAll,
 	beforeEach,
 	describe,
-	expect,
 	it,
 	vi,
 } from "vitest";
@@ -234,7 +233,7 @@ for (const source of imageSource) {
 				);
 			}
 		});
-		it(`will build or pull containers when miniflare starts`, async () => {
+		it(`will build or pull containers when miniflare starts`, async ({ expect }) => {
 			const worker = helper.runLongLived("wrangler dev");
 			await worker.readUntil(/Preparing container/);
 			if (source === "pull") {
@@ -246,7 +245,7 @@ for (const source of imageSource) {
 			await worker.readUntil(/Container image\(s\) ready/);
 		});
 
-		it(`will be able to interact with the container`, async () => {
+		it(`will be able to interact with the container`, async ({ expect }) => {
 			const worker = helper.runLongLived("wrangler dev");
 			const ready = await worker.waitForReady();
 
@@ -310,7 +309,7 @@ for (const source of imageSource) {
 			await worker.stop();
 		});
 
-		it("should clean up duplicate image tags after build", async () => {
+		it("should clean up duplicate image tags after build", async ({ expect }) => {
 			const dockerPath = getDockerPath();
 			const fakeBuildID = generateContainerBuildId();
 			const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
@@ -351,7 +350,7 @@ for (const source of imageSource) {
 			}).toThrow();
 		});
 
-		it("won't start the container service if no containers are present", async () => {
+		it("won't start the container service if no containers are present", async ({ expect }) => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					...wranglerConfig,
@@ -365,7 +364,7 @@ for (const source of imageSource) {
 			expect(output).not.toContain("Preparing container image(s)...");
 		});
 
-		it("won't start the container service if enable_containers is set to false via config", async () => {
+		it("won't start the container service if enable_containers is set to false via config", async ({ expect }) => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					...wranglerConfig,
@@ -380,7 +379,7 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("will display the ready-on message after the container(s) have been built/pulled", async () => {
+		it("will display the ready-on message after the container(s) have been built/pulled", async ({ expect }) => {
 			const worker = helper.runLongLived("wrangler dev");
 			const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
 			await worker.readUntil(readyRegexp);
@@ -398,7 +397,7 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("won't start the container service if --enable-containers is set to false via CLI", async () => {
+		it("won't start the container service if --enable-containers is set to false via CLI", async ({ expect }) => {
 			const worker = helper.runLongLived(
 				"wrangler dev --enable-containers=false"
 			);
@@ -409,7 +408,7 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("errors if no ports are exposed", async () => {
+		it("errors if no ports are exposed", async ({ expect }) => {
 			await helper.seed({
 				Dockerfile: dedent`
 								FROM alpine:latest
@@ -426,7 +425,7 @@ for (const source of imageSource) {
 			expect(await worker.output).toContain("does not expose any ports");
 		});
 
-		it("errors if docker is not installed", async () => {
+		it("errors if docker is not installed", async ({ expect }) => {
 			vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
 			const worker = helper.runLongLived("wrangler dev");
 			expect(await worker.exitCode).toBe(1);

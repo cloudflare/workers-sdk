@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -220,7 +220,7 @@ describe.each(
 			});
 		});
 		describe("worker with assets -> regular worker", () => {
-			it("can fetch a worker with assets", async () => {
+			it("can fetch a worker with assets", async ({ expect }) => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -240,7 +240,7 @@ describe.each(
 				).resolves.toBe("hello world from a worker with assets");
 			});
 
-			it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
+			it("can fetch a regular worker through a worker with assets, including with rpc", async ({ expect }) => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -266,7 +266,7 @@ describe.each(
 
 			it.skipIf(style === "dev registry")(
 				"can fetch a DO through a worker with assets, including with rpc",
-				async () => {
+				async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -330,7 +330,7 @@ describe.each(
 				});
 			});
 
-			it(".fetch() existing asset", async () => {
+			it(".fetch() existing asset", async ({ expect }) => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -346,7 +346,7 @@ describe.each(
 				);
 			});
 
-			it(".fetch() non-existing asset", async () => {
+			it(".fetch() non-existing asset", async ({ expect }) => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -362,7 +362,7 @@ describe.each(
 				);
 			});
 
-			it(".increment()", async () => {
+			it(".increment()", async ({ expect }) => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -460,7 +460,7 @@ describe.each(
 									`,
 					});
 				});
-				it(".fetch() existing asset", async () => {
+				it(".fetch() existing asset", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -476,7 +476,7 @@ describe.each(
 					);
 				});
 
-				it(".fetch() non-existing asset", async () => {
+				it(".fetch() non-existing asset", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -492,7 +492,7 @@ describe.each(
 					);
 				});
 
-				it(".fetch() asset via binding", async () => {
+				it(".fetch() asset via binding", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -508,7 +508,7 @@ describe.each(
 					);
 				});
 
-				it(".increment()", async () => {
+				it(".increment()", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -542,7 +542,7 @@ describe.each(
 									`,
 					});
 				});
-				it(".fetch() existing asset", async () => {
+				it(".fetch() existing asset", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -558,7 +558,7 @@ describe.each(
 					);
 				});
 
-				it(".fetch() non-existing asset", async () => {
+				it(".fetch() non-existing asset", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -574,7 +574,7 @@ describe.each(
 					);
 				});
 
-				it(".fetch() asset via binding", async () => {
+				it(".fetch() asset via binding", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -590,7 +590,7 @@ describe.each(
 					);
 				});
 
-				it(".increment()", async () => {
+				it(".increment()", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -638,7 +638,7 @@ describe.each(
 							`,
 					});
 				});
-				it(".fetch()", async () => {
+				it(".fetch()", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -654,7 +654,7 @@ describe.each(
 					);
 				});
 
-				it(".fetch() asset via binding", async () => {
+				it(".fetch() asset via binding", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -670,7 +670,7 @@ describe.each(
 					);
 				});
 
-				it(".increment()", async () => {
+				it(".increment()", async ({ expect }) => {
 					const url = await start(
 						wranglerDev,
 						helper,

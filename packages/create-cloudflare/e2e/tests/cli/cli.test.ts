@@ -2,8 +2,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
-import { beforeAll, describe, expect } from "vitest";
+import { beforeAll, describe } from "vitest";
 import { version } from "../../../package.json";
 import {
 	CLOUDFLARE_API_TOKEN,
@@ -23,18 +22,18 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe.skipIf(isExperimental)("E2E: Basic C3 functionality ", () => {
-		test("--version", async ({ logStream }) => {
+		test("--version", async ({ expect, logStream }) => {
 			const { output } = await runC3(["--version"], [], logStream);
 			expect(output).toEqual(version);
 		});
 
-		test("--version with positionals", async ({ logStream }) => {
+		test("--version with positionals", async ({ expect, logStream }) => {
 			const argv = ["foo", "bar", "baz", "--version"];
 			const { output } = await runC3(argv, [], logStream);
 			expect(output).toEqual(version);
 		});
 
-		test("--version with flags", async ({ logStream }) => {
+		test("--version with flags", async ({ expect, logStream }) => {
 			const argv = [
 				"foo",
 				"--type",
@@ -48,7 +47,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows || isExperimental)(
 			"Using arrow keys + enter",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
 					[project.path],
 					[
@@ -90,7 +89,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Typing custom responses",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
 					[],
 					[
@@ -136,7 +135,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Mixed args and interactive",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const projectName = basename(project.path);
 				const existingProjectName = Array.from(projectName).reverse().join("");
 				const existingProjectPath = project.path.replace(
@@ -201,7 +200,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Cloning remote template with full GitHub URL",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
 					[
 						project.path,
@@ -234,7 +233,7 @@ describe("Create Cloudflare CLI", () => {
 		// ```
 		test.skipIf(isWindows || pm === "npm")(
 			"Cloning remote template that uses wrangler.json",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
 					[
 						project.path,
@@ -271,7 +270,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Inferring the category, type and language if the type is `hello-world-python`",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				// The `hello-world-python` template is now the python variant of the `hello-world` template
 				const { output } = await runC3(
 					[
@@ -294,7 +293,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Filtering templates when --lang=python is specified",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
 					[
 						project.path,
@@ -317,7 +316,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Error when --lang=python is used with a category that has no Python templates",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { errors } = await runC3(
 					[
 						project.path,
@@ -347,7 +346,7 @@ describe("Create Cloudflare CLI", () => {
 		 */
 		test.skipIf(isWindows || pm === "yarn")(
 			"Selecting template by description",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const { output } = await runC3(
 					[project.path, "--no-deploy", "--git=false", "--no-agents"],
 					[
@@ -381,7 +380,7 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows)(
 			"Going back and forth between the category, type, framework and lang prompts",
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				const testProjectPath = "/test-project-path";
 				const { output } = await runC3(
 					[testProjectPath, "--git=false", "--no-deploy", "--no-agents"],
@@ -492,7 +491,7 @@ describe("Create Cloudflare CLI", () => {
 		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
 			"--existing-script",
 			{ timeout: 120_000 },
-			async ({ logStream, project }) => {
+			async ({ expect, logStream, project }) => {
 				// Ensure the worker to download exists
 				try {
 					if (
@@ -542,7 +541,7 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe("help text", () => {
-		test("--help", async ({ logStream }) => {
+		test("--help", async ({ expect, logStream }) => {
 			if (isExperimental) {
 				const { output } = await runC3(
 					["--help", "--experimental"],
@@ -738,6 +737,7 @@ describe("Create Cloudflare CLI", () => {
 	describe("frameworks related", () => {
 		["solid", "next"].forEach((framework) =>
 			test(`error when trying to create a ${framework} app on Pages`, async ({
+				expect,
 				logStream,
 			}) => {
 				const { errors } = await runC3(
@@ -752,6 +752,7 @@ describe("Create Cloudflare CLI", () => {
 		);
 
 		test("error when using invalid --variant for React framework", async ({
+			expect,
 			logStream,
 		}) => {
 			const { errors } = await runC3(
@@ -772,6 +773,7 @@ describe("Create Cloudflare CLI", () => {
 		});
 
 		test("error when using invalid --variant for React Pages framework", async ({
+			expect,
 			logStream,
 		}) => {
 			const { errors } = await runC3(
@@ -792,6 +794,7 @@ describe("Create Cloudflare CLI", () => {
 		});
 
 		test("accepts --variant for React Pages framework without prompting", async ({
+			expect,
 			logStream,
 		}) => {
 			const { output } = await runC3(

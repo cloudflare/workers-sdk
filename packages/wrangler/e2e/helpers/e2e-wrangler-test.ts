@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
+// eslint-disable-next-line no-restricted-imports
 import { expect, onTestFinished, vi } from "vitest";
 import {
 	generateLeafCertificate,

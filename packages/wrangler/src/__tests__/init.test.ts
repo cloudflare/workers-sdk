@@ -6,9 +6,8 @@ import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";

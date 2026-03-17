@@ -1,6 +1,7 @@
 import ci from "ci-info";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
+/* eslint-disable no-restricted-imports */
 import {
 	afterAll,
 	afterEach,
@@ -12,6 +13,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+/* eslint-enable no-restricted-imports */
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -35,7 +37,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await helper.bestEffortRun(`wrangler delete`);
 		});
 
-		it("deploys a Worker", async () => {
+		it("deploys a Worker", async ({ expect }) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -68,7 +70,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
-		it("lists 1 deployment", async () => {
+		it("lists 1 deployment", async ({ expect }) => {
 			const output = await helper.run(`wrangler deployments list`);
 
 			expect(normalizeOutput(output.stdout)).toMatchInlineSnapshot(`
@@ -83,7 +85,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("modifies & deploys a Worker", async () => {
+		it("modifies & deploys a Worker", async ({ expect }) => {
 			await helper.seed({
 				"src/index.ts": dedent`
         export default {
@@ -103,7 +105,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await expect(response.text()).resolves.toEqual("Updated Worker!");
 		});
 
-		it("lists 2 deployments", async () => {
+		it("lists 2 deployments", async ({ expect }) => {
 			const dep = await helper.run(`wrangler deployments list`);
 			expect(normalizeOutput(dep.stdout)).toMatchInlineSnapshot(`
 				"Created:     TIMESTAMP
@@ -125,7 +127,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("rolls back", async () => {
+		it("rolls back", async ({ expect }) => {
 			const output = await helper.run(
 				`wrangler rollback --message "A test message"`
 			);
@@ -164,7 +166,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("lists deployments", async () => {
+		it("lists deployments", async ({ expect }) => {
 			const dep = await helper.run(`wrangler deployments list`);
 			expect(normalizeOutput(dep.stdout)).toMatchInlineSnapshot(`
 				"Created:     TIMESTAMP
@@ -270,7 +272,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			await helper.bestEffortRun(`wrangler delete`);
 		});
 
-		it("deploys a Workers + Assets project with assets only", async () => {
+		it("deploys a Workers + Assets project with assets only", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -324,7 +328,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toBeFalsy();
 		});
 
-		it("deploys a Worker with static assets and user Worker", async () => {
+		it("deploys a Worker with static assets and user Worker", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -395,7 +401,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toContain("<h1>404.html</h1>");
 		});
 
-		it("deploys a Workers + Assets project with helpful debug logs", async () => {
+		it("deploys a Workers + Assets project with helpful debug logs", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -452,7 +460,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			expect(text).toBeFalsy();
 		});
 
-		it("runs the user Worker ahead of matching assets when run_worker_first = true", async () => {
+		it("runs the user Worker ahead of matching assets when run_worker_first = true", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -501,7 +511,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			await checkAssets(testCases, deployedUrl);
 		});
 
-		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async () => {
+		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -591,7 +603,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			);
 		});
 
-		it("deploys a Workers + Assets project with assets only", async () => {
+		it("deploys a Workers + Assets project with assets only", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -670,7 +684,9 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			expect(text).toBeFalsy();
 		});
 
-		it("deploys a Worker with static assets and user Worker", async () => {
+		it("deploys a Worker with static assets and user Worker", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -768,7 +784,9 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			expect(text).toContain("<h1>404.html</h1>");
 		});
 
-		it("runs the user Worker ahead of matching assets when run_worker_first = true", async () => {
+		it("runs the user Worker ahead of matching assets when run_worker_first = true", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 							name = "${workerName}"
@@ -949,7 +967,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 	it(
 		"won't rebuild unchanged containers",
 		{ timeout: 60 * 2 * 1000 },
-		async () => {
+		async ({ expect }) => {
 			const outputOne = await helper.run(`wrangler deploy`);
 
 			deployedUrl = getDeployedUrl(outputOne);
@@ -965,26 +983,30 @@ describe.skipIf(skipContainersTest)("containers", () => {
 		}
 	);
 
-	it("can fetch DO container", { timeout: 60 * 2 * 1000 }, async () => {
-		await vi.waitFor(
-			async () => {
-				const response = await fetch(`${deployedUrl}/do`, {
-					signal: AbortSignal.timeout(5_000),
-				});
-				if (!response.ok) {
-					throw new Error(
-						"Durable object transient error: " + (await response.text())
-					);
-				}
+	it(
+		"can fetch DO container",
+		{ timeout: 60 * 2 * 1000 },
+		async ({ expect }) => {
+			await vi.waitFor(
+				async () => {
+					const response = await fetch(`${deployedUrl}/do`, {
+						signal: AbortSignal.timeout(5_000),
+					});
+					if (!response.ok) {
+						throw new Error(
+							"Durable object transient error: " + (await response.text())
+						);
+					}
 
-				expect(await response.text()).toEqual("hello from container");
-			},
+					expect(await response.text()).toEqual("hello from container");
+				},
 
-			// big timeout for containers
-			// (3m)
-			{ timeout: 60 * 2 * 1000, interval: 1000 }
-		);
-	});
+				// big timeout for containers
+				// (3m)
+				{ timeout: 60 * 2 * 1000, interval: 1000 }
+			);
+		}
+	);
 });
 
 /**

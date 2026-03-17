@@ -1,9 +1,8 @@
 import path from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";

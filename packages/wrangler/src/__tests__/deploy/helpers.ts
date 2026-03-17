@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { http, HttpResponse } from "msw";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import {

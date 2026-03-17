@@ -5,51 +5,78 @@
 		"correctness": "error"
 	},
 	"rules": {
-		"constructor-super": "off",
-		"no-class-assign": "off",
-		"no-const-assign": "off",
-		"no-dupe-class-members": "off",
-		"no-dupe-keys": "off",
-		"no-empty": "off",
-		"no-empty-function": "off",
-		"no-func-assign": "off",
-		"no-import-assign": "off",
-		"no-new-native-nonconstructor": "off",
-		"no-obj-calls": "off",
-		"no-redeclare": "off",
-		"no-setter-return": "off",
-		"no-this-before-super": "off",
-		"no-unsafe-negation": "off",
-		"no-with": "off",
-		"require-yield": "off",
 		"@typescript-eslint/await-thenable": "off",
 		"@typescript-eslint/no-base-to-string": "off",
 		"@typescript-eslint/no-duplicate-type-constituents": "off",
 		"@typescript-eslint/no-for-in-array": "off",
-		"@typescript-eslint/no-implied-eval": "off",
 		"@typescript-eslint/no-misused-spread": "off",
 		"@typescript-eslint/no-redundant-type-constituents": "off",
 		"@typescript-eslint/restrict-template-expressions": "off",
 		"@typescript-eslint/unbound-method": "off",
 		"no-meaningless-void-operator": "off",
-		"no-unassigned-vars": "off",
-		"no-unnecessary-parameter-property-assignment": "off",
-		"no-useless-rename": "off",
 		"require-array-sort-compare": "off",
 		"unicorn/no-new-array": "off",
 		"unicorn/no-thenable": "off",
 		"unicorn/no-useless-fallback-in-spread": "off",
 		"unicorn/no-useless-spread": "off",
-		"unicorn/prefer-string-starts-ends-with": "off",
 		"vitest/hoisted-apis-on-top": "off",
 		"vitest/warn-todo": "off",
 		"vitest/no-conditional-tests": "off",
+		"no-case-declarations": "error",
+		"no-fallthrough": "error",
+		"no-prototype-builtins": "error",
+		"no-array-constructor": "error",
+		"@typescript-eslint/ban-ts-comment": "error",
+		"@typescript-eslint/no-unsafe-function-type": "error",
+		"curly": ["error", "all"],
+		"prefer-const": "error",
+		"prefer-rest-params": "error",
+		"prefer-spread": "error",
+		"@typescript-eslint/consistent-type-imports": ["error"],
+		"no-var": "error",
+		"no-regex-spaces": "error",
+		"@typescript-eslint/no-empty-object-type": "error",
+		"@typescript-eslint/no-explicit-any": "error",
+		"@typescript-eslint/no-namespace": "error",
+		"@typescript-eslint/no-require-imports": "error",
+		"no-shadow": ["error", { "allow": ["expect"] }],
+		"no-unexpected-multiline": "error",
+		"@typescript-eslint/no-unnecessary-type-constraint": "error",
+		"unicorn/prefer-node-protocol": "error",
+		"vitest/no-focused-tests": "error",
+		"turbo/no-undeclared-env-vars": "error",
+		"unused-imports/no-unused-imports": "error",
+		"workers-sdk/no-direct-recursive-rm": "error",
+		"workers-sdk/no-unsafe-command-execution": "error",
 		"no-unused-vars": [
 			"error",
 			{
 				"argsIgnorePattern": ".*",
 				"varsIgnorePattern": "^_",
 				"ignoreRestSiblings": true
+			}
+		],
+		"no-restricted-imports": [
+			"error",
+			{
+				"paths": [
+					{
+						"name": "ci-info",
+						"importNames": [
+							"isCI",
+							"CLOUDFLARE_PAGES",
+							"CLOUDFLARE_WORKERS",
+							"isPR",
+							"name"
+						],
+						"message": "Use default import (`import ci from \"ci-info\"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks."
+					},
+					{
+						"name": "vitest",
+						"importNames": ["expect"],
+						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })"
+					}
+				]
 			}
 		]
 	},
@@ -93,116 +120,39 @@
 		}
 	],
 	"overrides": [
-		{
-			"files": ["**/*.ts", "**/*.mts", "**/*.tsx"],
-			"rules": {
-				"no-case-declarations": "error",
-				"no-fallthrough": "error",
-				"no-prototype-builtins": "error",
-				"no-array-constructor": "error",
-				"@typescript-eslint/ban-ts-comment": "error",
-				"@typescript-eslint/no-unsafe-function-type": "error",
-				"curly": ["error", "all"],
-				"prefer-const": "error",
-				"prefer-rest-params": "error",
-				"prefer-spread": "error",
-				"@typescript-eslint/consistent-type-imports": ["error"],
-				"no-var": "error",
-				"no-regex-spaces": "error",
-				"@typescript-eslint/no-empty-object-type": "error",
-				"@typescript-eslint/no-explicit-any": "error",
-				"@typescript-eslint/no-namespace": "error",
-				"@typescript-eslint/no-non-null-assertion": "error",
-				"@typescript-eslint/no-require-imports": "error",
-				"no-shadow": "error",
-				"no-unexpected-multiline": "error",
-				"@typescript-eslint/no-unnecessary-type-constraint": "error",
-				"@typescript-eslint/no-floating-promises": "error",
-				"unicorn/prefer-node-protocol": "error",
-				"vitest/no-focused-tests": "error",
-				"turbo/no-undeclared-env-vars": "error",
-				"unused-imports/no-unused-imports": "error",
-				"workers-sdk/no-direct-recursive-rm": "error",
-				"workers-sdk/no-unsafe-command-execution": "error",
-				"no-restricted-imports": [
-					"error",
-					{
-						"paths": [
-							{
-								"name": "ci-info",
-								"importNames": [
-									"isCI",
-									"CLOUDFLARE_PAGES",
-									"CLOUDFLARE_WORKERS",
-									"isPR",
-									"name"
-								],
-								"message": "Use default import (`import ci from \"ci-info\"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks."
-							}
-						]
-					}
-				]
-			}
-		},
+		// Published packages which all have their own "logger" class that should be used instead
 		{
 			"files": [
-				"**/*.test.ts",
-				"**/*.test.mts",
-				"**/*.test.tsx",
-				"**/test/**/*.ts",
-				"**/__tests__/**/*.ts",
-				"**/__tests__/**/*.mts",
-				"**/__tests__/**/*.tsx",
-				"**/e2e/**/*.ts",
-				"**/e2e/**/*.mts",
-				"**/fixtures/**/*.ts",
-				"**/fixtures/**/*.mts"
-			],
-			"rules": {
-				"workers-sdk/no-unsafe-command-execution": "off",
-				"workers-sdk/no-vitest-import-expect": "error"
-			}
-		},
-		{
-			"files": [
-				"packages/cli/**/*.ts",
-				"packages/create-cloudflare/**/*.ts",
-				"packages/miniflare/**/*.ts",
-				"packages/wrangler/**/*.ts",
-				"packages/workers-utils/**/*.ts"
+				"packages/cli/**",
+				"packages/create-cloudflare/**",
+				"packages/miniflare/**",
+				"packages/wrangler/**",
+				"packages/workers-utils/**"
 			],
 			"rules": {
 				"no-console": "error"
 			}
 		},
+		// TODO: remove these overrides. This is a legacy of Miniflare's history, not intentional
 		{
-			"files": [
-				"packages/miniflare/src/workers/**/*.ts",
-				"packages/wrangler/**/*.test.ts",
-				"packages/wrangler/**/*.test.mts",
-				"packages/wrangler/**/*.test.tsx",
-				"packages/wrangler/**/test/**/*.ts",
-				"packages/wrangler/**/__tests__/**/*.ts",
-				"packages/wrangler/**/__tests__/**/*.mts",
-				"packages/wrangler/**/__tests__/**/*.tsx",
-				"packages/wrangler/**/e2e/**/*.ts",
-				"packages/wrangler/**/e2e/**/*.mts",
-				"packages/wrangler/scripts/**/*.ts",
-				"packages/workers-utils/**/*.test.ts",
-				"packages/workers-utils/**/test/**/*.ts",
-				"packages/workers-utils/**/__tests__/**/*.ts",
-				"packages/workers-utils/**/e2e/**/*.ts",
-				"packages/workers-utils/tsup/**/*.ts"
-			],
+			"files": ["packages/miniflare/**"],
 			"rules": {
-				"no-console": "off"
+				"curly": "off",
+				"@typescript-eslint/no-explicit-any": "off",
+				"@typescript-eslint/ban-ts-comment": "off",
+				"@typescript-eslint/consistent-type-imports": "off",
+				"@typescript-eslint/no-floating-promises": "off",
+				"no-shadow": "off",
+				"no-useless-escape": "off",
+				"no-unsafe-optional-chaining": "off",
+				"no-control-regex": "off",
+				"no-case-declarations": "off",
+				"no-empty-pattern": "off",
+				"turbo/no-undeclared-env-vars": "off"
 			}
 		},
 		{
-			"files": [
-				"packages/wrangler/**/*.ts",
-				"packages/workers-utils/**/*.ts"
-			],
+			"files": ["packages/wrangler/**", "packages/workers-utils/**"],
 			"rules": {
 				"no-restricted-globals": [
 					"error",
@@ -221,61 +171,32 @@
 				]
 			}
 		},
+		// Although in _general_ Miniflare shouldn't use console.log(), it's Workers can and should
+		{
+			"files": ["packages/miniflare/src/workers/**/*.ts"],
+			"rules": {
+				"no-console": "off"
+			}
+		},
+		// Relax some rules for test files
 		{
 			"files": [
-				"packages/wrangler/**/*.test.ts",
-				"packages/wrangler/**/*.test.mts",
-				"packages/wrangler/**/*.test.tsx",
-				"packages/wrangler/**/test/**/*.ts",
-				"packages/wrangler/**/__tests__/**/*.ts",
-				"packages/wrangler/**/__tests__/**/*.mts",
-				"packages/wrangler/**/__tests__/**/*.tsx",
-				"packages/wrangler/**/e2e/**/*.ts",
-				"packages/wrangler/**/e2e/**/*.mts",
-				"packages/wrangler/scripts/**/*.ts",
-				"packages/workers-utils/**/*.test.ts",
-				"packages/workers-utils/**/test/**/*.ts",
-				"packages/workers-utils/**/__tests__/**/*.ts",
-				"packages/workers-utils/**/e2e/**/*.ts",
-				"packages/workers-utils/tsup/**/*.ts"
+				"packages/wrangler/src/__tests__/**",
+				"packages/wrangler/e2e/**",
+				"packages/wrangler/scripts/**",
+				"packages/workers-utils/tests/**"
 			],
 			"rules": {
-				"no-restricted-globals": "off"
+				"no-console": "off",
+				"no-restricted-globals": "off",
+				"workers-sdk/no-unsafe-command-execution": "off"
 			}
 		},
+		// Make sure Wrangler's version checking logic in vite-plugin-cloudflare can run properly
 		{
-			"files": ["packages/miniflare/**/*.ts"],
-			"rules": {
-				"curly": "off",
-				"@typescript-eslint/no-explicit-any": "off",
-				"@typescript-eslint/ban-ts-comment": "off",
-				"@typescript-eslint/consistent-type-imports": "off",
-				"@typescript-eslint/no-floating-promises": "off",
-				"no-shadow": "off",
-				"no-useless-escape": "off",
-				"no-unsafe-optional-chaining": "off",
-				"no-control-regex": "off",
-				"no-case-declarations": "off",
-				"no-empty-pattern": "off",
-				"turbo/no-undeclared-env-vars": "off"
-			}
-		},
-		{
-			"files": ["packages/vite-plugin-cloudflare/**/*.ts"],
+			"files": ["packages/vite-plugin-cloudflare/**"],
 			"rules": {
 				"workers-sdk/no-wrangler-named-imports": "error"
-			}
-		},
-		{
-			"files": [
-				"packages/wrangler/e2e/**/*.ts",
-				"packages/wrangler/src/__tests__/**/helpers.ts",
-				"packages/wrangler/src/__tests__/**/utils.ts",
-				"packages/wrangler/src/__tests__/**/mock-*.ts",
-				"packages/wrangler/src/__tests__/helpers/**/*.ts"
-			],
-			"rules": {
-				"workers-sdk/no-vitest-import-expect": "off"
 			}
 		}
 	]
