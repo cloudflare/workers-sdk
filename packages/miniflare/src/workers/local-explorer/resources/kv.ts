@@ -209,13 +209,13 @@ async function executeListKeys(
  */
 export async function getKVValue(
 	c: AppContext,
-	namespace_id: string,
-	key_name: string
+	namespaceId: string,
+	keyName: string
 ) {
 	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
+	const kv = getKVBinding(c.env, namespaceId);
 	if (kv) {
-		const value = await kv.get(key_name, { type: "arrayBuffer" });
+		const value = await kv.get(keyName, { type: "arrayBuffer" });
 		if (value === null) {
 			return errorResponse(404, KV_ERROR_KEY_NOT_FOUND, "get: 'key not found'");
 		}
@@ -223,11 +223,11 @@ export async function getKVValue(
 		return new Response(value);
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`
+			`/storage/kv/namespaces/${encodeURIComponent(namespaceId)}/values/${encodeURIComponent(keyName)}`
 		);
 		if (response) return response;
 	}
@@ -248,21 +248,21 @@ export async function getKVValue(
  */
 export async function putKVValue(
 	c: AppContext,
-	namespace_id: string,
-	key_name: string
+	namespaceId: string,
+	keyName: string
 ) {
 	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
+	const kv = getKVBinding(c.env, namespaceId);
 	if (kv) {
-		return executePutKVValue(c, kv, key_name);
+		return executePutKVValue(c, kv, keyName);
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const body = await c.req.arrayBuffer();
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+			`/storage/kv/namespaces/${encodeURIComponent(namespaceId)}/values/${encodeURIComponent(keyName)}`,
 			{
 				method: "PUT",
 				headers: {
@@ -347,21 +347,21 @@ async function executePutKVValue(
  */
 export async function deleteKVValue(
 	c: AppContext,
-	namespace_id: string,
-	key_name: string
+	namespaceId: string,
+	keyName: string
 ) {
 	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
+	const kv = getKVBinding(c.env, namespaceId);
 	if (kv) {
-		await kv.delete(key_name);
+		await kv.delete(keyName);
 		return c.json(wrapResponse({}));
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+			`/storage/kv/namespaces/${encodeURIComponent(namespaceId)}/values/${encodeURIComponent(keyName)}`,
 			{ method: "DELETE" }
 		);
 		if (response) return response;
