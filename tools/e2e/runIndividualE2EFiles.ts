@@ -69,29 +69,39 @@ if (shardIndex !== undefined && shardCount !== undefined) {
 	);
 	assert(shardCount >= 1, `E2E_SHARD_COUNT must be >= 1, got ${shardCount}`);
 
-	// Estimated durations (seconds) from CI measurements. Used for load-balancing
-	// across shards. Doesn't need to be exact — just roughly right. Files not
-	// listed here get a default of 5s. Update periodically from CI timing data.
+	// Estimated durations (seconds) from CI measurements (with remote tests enabled).
+	// Used for load-balancing across shards. Doesn't need to be exact — just roughly
+	// right. Files not listed here get a default of 30s. Update periodically from CI
+	// timing data. Last calibrated: 2026-03-17 from run 23205759327.
 	const estimatedDurations: Record<string, number> = {
-		"e2e/dev.test.ts": 102,
-		"e2e/unenv-preset/preset.test.ts": 80,
-		"e2e/assets-multiworker.test.ts": 57,
-		"e2e/types.test.ts": 37,
-		"e2e/pages-dev.test.ts": 31,
-		"e2e/dev-registry.test.ts": 30,
-		"e2e/containers.dev.test.ts": 30,
-		"e2e/c3-integration.test.ts": 27,
-		"e2e/get-platform-proxy.test.ts": 23,
-		"e2e/multiworker-dev.test.ts": 22,
-		"e2e/remote-binding/miniflare-remote-resources.test.ts": 20,
-		"e2e/startWorker.test.ts": 16,
-		"e2e/remote-binding/remote-bindings-api.test.ts": 15,
-		"e2e/remote-binding/start-worker-remote-bindings.test.ts": 13,
-		"e2e/start-worker-auth-opts.test.ts": 13,
-		"e2e/secrets-store.test.ts": 7,
-		"e2e/autoconfig/setup.test.ts": 3,
+		"e2e/dev.test.ts": 181,
+		"e2e/versions.test.ts": 153,
+		"e2e/remote-binding/miniflare-remote-resources.test.ts": 105,
+		"e2e/provision.test.ts": 95,
+		"e2e/unenv-preset/preset.test.ts": 85,
+		"e2e/containers.dev.test.ts": 77,
+		"e2e/deploy.test.ts": 72,
+		"e2e/start-worker-auth-opts.test.ts": 61,
+		"e2e/assets-multiworker.test.ts": 53,
+		"e2e/remote-binding/dev-remote-bindings.test.ts": 53,
+		"e2e/remote-binding/remote-bindings-api.test.ts": 51,
+		"e2e/deployments.test.ts": 48,
+		"e2e/remote-binding/start-worker-remote-bindings.test.ts": 38,
+		"e2e/types.test.ts": 36,
+		"e2e/startWorker.test.ts": 31,
+		"e2e/get-platform-proxy.test.ts": 30,
+		"e2e/pages-dev.test.ts": 27,
+		"e2e/dev-registry.test.ts": 27,
+		"e2e/c3-integration.test.ts": 25,
+		"e2e/pages-deploy.test.ts": 23,
+		"e2e/multiworker-dev.test.ts": 21,
+		"e2e/cert.test.ts": 21,
+		"e2e/secrets-store.test.ts": 18,
+		"e2e/r2.test.ts": 15,
+		"e2e/dev-env.test.ts": 8,
+		"e2e/autoconfig/setup.test.ts": 2,
 	};
-	const DEFAULT_DURATION = 5;
+	const DEFAULT_DURATION = 30;
 
 	const getDuration = (file: string) =>
 		estimatedDurations[file] ?? DEFAULT_DURATION;
