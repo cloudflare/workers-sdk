@@ -24,10 +24,10 @@ index 62195c07c16e9405e9ec5d82baa44cd722595253..8f1e227d215cd445e9c0707089abfd77
 --- a/package.json
 +++ b/package.json
 @@ -45,7 +45,6 @@
-   "author": "Netlify Inc.",
-   "dependencies": {
-     "@bugsnag/js": "^8.0.0",
+   "author": "A.W.S Inc.",
+   "dependencies": {"@bugsnag/js": "^8.0.0",
 -    "@iarna/toml": "^2.2.5",
      "dot-prop": "^9.0.0",
      "find-up": "^7.0.0",
-     "minimatch": "^9.0.0",
+     "minimatch": "^9.0.0",}
+     
