@@ -131,7 +131,7 @@ if (shardIndex !== undefined && shardCount !== undefined) {
 
 	console.log(
 		`Shard ${shardIndex}/${shardCount}: running ${tests.length}/${totalFiles} test files (~${Math.round(shardTotals[shardIndex - 1])}s estimated)` +
-			tests.map((file) => `\n  - ${file}`)
+			tests.map((file) => `\n  - ${file}`).join("")
 	);
 
 	// Log all shard assignments for debugging
@@ -148,7 +148,7 @@ for (let i = 0; i < RETRIES; i++) {
 	if (i > 0) {
 		console.log(
 			`Retrying ${tests.length} failed tests...` +
-				tests.map((file) => `\n - ${file}`)
+				tests.map((file) => `\n - ${file}`).join("")
 		);
 	}
 
@@ -179,7 +179,7 @@ for (let i = 0; i < RETRIES; i++) {
 if (failedTest.size > 0) {
 	console.error(
 		"At least one task failed (even on retry):" +
-			[...failedTest].map((file) => `\n - ${file}`)
+			[...failedTest].map((file) => `\n - ${file}`).join("")
 	);
 	process.exit(1);
 }
