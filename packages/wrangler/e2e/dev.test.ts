@@ -374,7 +374,9 @@ describe.each([
 			});
 			const worker = helper.runLongLived(cmd);
 
-			const { url } = await worker.waitForReady();
+			// Remote mode with assets involves session creation + asset upload +
+			// bundle upload to edge-preview, which can be slow on Windows CI.
+			const { url } = await worker.waitForReady(30_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
 
@@ -387,7 +389,7 @@ describe.each([
 							}`,
 			});
 
-			await worker.waitForReload();
+			await worker.waitForReload(30_000);
 
 			await expect(fetchText(url)).resolves.toMatchSnapshot();
 		});
@@ -422,7 +424,7 @@ describe.each([
 			});
 			const worker = helper.runLongLived(cmd);
 
-			const { url } = await worker.waitForReady();
+			const { url } = await worker.waitForReady(30_000);
 
 			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
 
@@ -431,7 +433,7 @@ describe.each([
 								Welcome to updated Workers + Assets readme!`,
 			});
 
-			await worker.waitForReload();
+			await worker.waitForReload(30_000);
 
 			await expect(fetchText(url)).resolves.toMatchSnapshot();
 		});

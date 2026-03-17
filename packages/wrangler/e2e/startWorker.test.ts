@@ -10,7 +10,7 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
-import { waitFor } from "./helpers/wait-for";
+import { waitFor, waitForLong } from "./helpers/wait-for";
 import type { DevToolsEvent } from "../src/api";
 
 const OPTIONS = [
@@ -87,7 +87,7 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script.replace("body:1", "body:2"),
 			});
 
-			await waitFor(async () => {
+			await waitForLong(async () => {
 				res = await worker.fetch("http://dummy");
 				expect(await res.text()).toBe("body:2");
 			});

@@ -23,7 +23,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 			cleanOnTestFinished: false,
 		});
 		return cleanup;
-	}, 35_000);
+	}, 60_000);
 
 	it("allows connecting to a remote worker", async ({ expect }) => {
 		await helper.seed({
