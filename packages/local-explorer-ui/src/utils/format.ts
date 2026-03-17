@@ -44,7 +44,7 @@ export function formatDate(dateString: string | undefined): string {
 		const year = date.getUTCFullYear();
 		const time = date.toLocaleString("en-US", {
 			hour: "2-digit",
-			hour12: false,
+			hourCycle: "h23",
 			minute: "2-digit",
 			second: "2-digit",
 			timeZone: "UTC",
