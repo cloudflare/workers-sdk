@@ -1,6 +1,6 @@
 import { CloudflareLogo, cn, Popover } from "@cloudflare/kumo";
 import { Collapsible } from "@cloudflare/kumo/primitives/collapsible";
-import { CaretRightIcon, SidebarSimpleIcon } from "@phosphor-icons/react";
+import { CaretDownIcon, SidebarSimpleIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
@@ -48,7 +48,7 @@ function SidebarItemGroup({
 			<div className="flex justify-center px-2 py-1">
 				<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
 					<Popover.Trigger
-						className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+						className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-tertiary hover:text-text"
 						delay={100}
 						openOnHover={true}
 					>
@@ -62,10 +62,12 @@ function SidebarItemGroup({
 						sideOffset={8}
 					>
 						<div className="border-b border-border px-3 py-2">
-							<span className="text-xs font-semibold text-text">{title}</span>
+							<span className="text-xs font-medium text-text-secondary">
+								{title}
+							</span>
 						</div>
 
-						<ul className="list-none space-y-0.5 p-1">
+						<ul className="list-none space-y-0.5 p-1.5">
 							{error ? (
 								<li className="px-2 py-1.5 text-sm text-danger">{error}</li>
 							) : null}
@@ -75,17 +77,24 @@ function SidebarItemGroup({
 										<li key={item.id}>
 											<Link
 												className={cn(
-													"block cursor-pointer rounded-md px-2 py-1.5 text-sm text-text no-underline transition-colors hover:bg-primary/15 hover:text-primary",
-													{
-														"bg-primary/10 font-medium text-primary":
-															item.isActive,
-													}
+													"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm no-underline transition-colors",
+													item.isActive
+														? "bg-primary/10 font-medium text-primary hover:bg-primary/15"
+														: "text-text hover:bg-surface-tertiary"
 												)}
 												onClick={() => setPopoverOpen(false)}
 												params={item.link.params}
 												search={item.link.search}
 												to={item.link.to}
 											>
+												<Icon
+													className={cn(
+														"h-4 w-4 transition-colors",
+														item.isActive
+															? "text-primary"
+															: "text-muted group-hover:text-text"
+													)}
+												/>
 												{item.label}
 											</Link>
 										</li>
@@ -104,22 +113,21 @@ function SidebarItemGroup({
 		);
 	}
 
-	// When expanded, show collapsible group
+	// When expanded, show collapsible group with clean design
 	return (
-		<Collapsible.Root defaultOpen className="px-2 py-0.5">
-			<Collapsible.Trigger className="group flex w-full cursor-pointer items-center gap-2 rounded-md bg-transparent px-2 py-2 text-xs font-semibold text-text transition-colors hover:bg-primary/10 hover:text-primary">
-				<CaretRightIcon
-					className="h-3.5 w-3.5 text-muted transition-transform duration-200 group-data-panel-open:rotate-90"
+		<Collapsible.Root defaultOpen className="py-1">
+			<Collapsible.Trigger className="group flex w-full cursor-pointer items-center gap-1 bg-transparent px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text">
+				{title}
+				<CaretDownIcon
+					className="h-3 w-3 transition-transform duration-200 group-data-panel-closed:-rotate-90"
 					weight="bold"
 				/>
-				<Icon className="h-4 w-4 text-muted" />
-				{title}
 			</Collapsible.Trigger>
 
 			<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0">
-				<ul className="mt-1 list-none space-y-0.5 pl-6">
+				<ul className="mt-0.5 list-none space-y-0.5 px-2">
 					{error ? (
-						<li className="px-2 py-1.5 text-sm text-danger">{error}</li>
+						<li className="px-2.5 py-2 text-sm text-danger">{error}</li>
 					) : null}
 
 					{!error
@@ -127,15 +135,23 @@ function SidebarItemGroup({
 								<li key={item.id}>
 									<Link
 										className={cn(
-											"block cursor-pointer rounded-md px-2 py-2 text-sm text-text no-underline transition-colors hover:bg-primary/15 hover:text-primary",
-											{
-												"bg-primary/10 font-medium text-primary": item.isActive,
-											}
+											"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm no-underline transition-colors",
+											item.isActive
+												? "bg-primary/10 font-medium text-primary hover:bg-primary/15"
+												: "text-text hover:bg-surface-tertiary"
 										)}
 										params={item.link.params}
 										search={item.link.search}
 										to={item.link.to}
 									>
+										<Icon
+											className={cn(
+												"h-4 w-4 transition-colors",
+												item.isActive
+													? "text-primary"
+													: "text-muted group-hover:text-text"
+											)}
+										/>
 										{item.label}
 									</Link>
 								</li>
@@ -143,7 +159,7 @@ function SidebarItemGroup({
 						: null}
 
 					{!error && items.length === 0 && (
-						<li className="px-2 py-1.5 text-sm text-text-secondary italic">
+						<li className="px-2.5 py-2 text-sm text-text-secondary italic">
 							{emptyLabel}
 						</li>
 					)}
@@ -205,7 +221,7 @@ export function Sidebar({
 			</a>
 
 			{/* Navigation groups */}
-			<nav className="flex-1 overflow-x-hidden overflow-y-auto">
+			<nav className="flex-1 overflow-x-hidden overflow-y-auto py-2">
 				<SidebarItemGroup
 					collapsed={collapsed}
 					emptyLabel="No namespaces"
@@ -268,7 +284,7 @@ export function Sidebar({
 			<div className="shrink-0 p-2">
 				<button
 					aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md bg-transparent text-muted transition-colors hover:bg-primary/10 hover:text-primary"
+					className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-transparent text-muted transition-colors hover:bg-surface-tertiary hover:text-text"
 					onClick={onToggle}
 					title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
 					type="button"
