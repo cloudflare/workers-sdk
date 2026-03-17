@@ -1,5 +1,19 @@
 # @cloudflare/pages-shared
 
+## 0.13.116
+
+### Patch Changes
+
+- Updated dependencies [[`c9b3184`](https://github.com/cloudflare/workers-sdk/commit/c9b31840631585418b8926e8228db486b619b4c7), [`13df6c7`](https://github.com/cloudflare/workers-sdk/commit/13df6c75be49ac32fc1c57e2e24523e86ced2115), [`df0d112`](https://github.com/cloudflare/workers-sdk/commit/df0d1120a856bd65553bf92b4bc6380c15e81cc7), [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a)]:
+  - miniflare@4.20260317.0
+
+## 0.13.115
+
+### Patch Changes
+
+- Updated dependencies [[`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8)]:
+  - miniflare@4.20260312.1
+
 ## 0.13.114
 
 ### Patch Changes
@@ -431,7 +445,6 @@
 ### Patch Changes
 
 - [#9817](https://github.com/cloudflare/workers-sdk/pull/9817) [`6a0d990`](https://github.com/cloudflare/workers-sdk/commit/6a0d99066ef0633fb28d8ab3989ce943a02ec514) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add `x-cf-pages-analytics` header when Web Analytics token is injected
-
   - Emit `x-cf-pages-analytics: 1` header when analytics script is added to HTML responses
   - Add comprehensive tests covering HTML with/without body, non-HTML responses, and missing analytics config
   - Header indicates when analytics injection is attempted regardless of HTMLRewriter success
@@ -1146,7 +1159,6 @@
 ### Patch Changes
 
 - [#4797](https://github.com/cloudflare/workers-sdk/pull/4797) [`007ba93`](https://github.com/cloudflare/workers-sdk/commit/007ba9397be9a2914254d0b59e0695df1a518b52) Thanks [@jahands](https://github.com/jahands)! - refactor: Store asset key instead of body in preservation cache
-
   - Add HTTP method to cache key to prevent returning null bodies in cached GET requests that follow a HEAD request
   - Only write unchanged assets to preservation cache every 24-36 hours instead of on every request
 

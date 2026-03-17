@@ -336,6 +336,10 @@ function getWebsocketURL(host: string, port: number): URL {
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [
 	"devtools.devprod.cloudflare.dev",
+	// Workers + Assets (current deployment)
+	"cloudflare-devtools.devprod.workers.dev",
+	/^[a-z0-9]+-cloudflare-devtools\.devprod\.workers\.dev$/,
+	// Cloudflare Pages (legacy deployment)
 	"cloudflare-devtools.pages.dev",
 	/^[a-z0-9]+\.cloudflare-devtools\.pages\.dev$/,
 	"127.0.0.1",

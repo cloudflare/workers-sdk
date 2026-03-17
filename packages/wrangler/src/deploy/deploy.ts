@@ -54,6 +54,7 @@ import {
 	putConsumer,
 	putConsumerById,
 } from "../queues/client";
+import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
@@ -136,6 +137,7 @@ type Props = {
 	strict: boolean | undefined;
 	tag: string | undefined;
 	message: string | undefined;
+	secretsFile: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -824,6 +826,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			};
 		}
 
+		if (props.secretsFile) {
+			const secretsResult = await parseBulkInputToObject(props.secretsFile);
+			if (secretsResult) {
+				for (const [secretName, secretValue] of Object.entries(
+					secretsResult.content
+				)) {
+					bindings[secretName] = {
+						type: "secret_text",
+						value: secretValue,
+					};
+				}
+			}
+		}
+
 		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
@@ -854,7 +870,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars,
-			keepSecrets: keepVars, // keepVars implies keepSecrets
+			keepSecrets: keepVars || !!props.secretsFile,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,

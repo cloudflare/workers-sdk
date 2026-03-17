@@ -122,7 +122,7 @@ describe("vectorize help", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			      --json           Return output as clean JSON  [boolean] [default: false]
+			      --json           Return output as JSON  [boolean] [default: false]
 			      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]"
 		`);
 	});
@@ -1048,7 +1048,7 @@ describe("vectorize commands", () => {
 			OPTIONS
 			      --count   Maximum number of vectors to return (1-1000)  [number]
 			      --cursor  Cursor for pagination to get the next page of results  [string]
-			      --json    Return output as clean JSON  [boolean] [default: false]
+			      --json    Return output as JSON  [boolean] [default: false]
 
 			EXAMPLES
 			  wrangler vectorize list-vectors my-index                  List vector identifiers in the index 'my-index'

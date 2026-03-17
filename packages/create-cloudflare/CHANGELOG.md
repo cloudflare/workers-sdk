@@ -1,5 +1,63 @@
 # create-cloudflare
 
+## 2.64.9
+
+### Patch Changes
+
+- [#11639](https://github.com/cloudflare/workers-sdk/pull/11639) [`e9f5f30`](https://github.com/cloudflare/workers-sdk/commit/e9f5f30d536e89d0f182e336a0abc0e246bdc615) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.5.6 | 16.1.6 |
+
+- [#12905](https://github.com/cloudflare/workers-sdk/pull/12905) [`e7ef325`](https://github.com/cloudflare/workers-sdk/commit/e7ef325cd069e55116d35f1fea572a87cb919dab) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.33.1 | 3.34.0 |
+
+- [#12907](https://github.com/cloudflare/workers-sdk/pull/12907) [`92402f6`](https://github.com/cloudflare/workers-sdk/commit/92402f677a9640a08cd7bff4b0d1bb301c52b030) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To    |
+  | ------------ | ------ | ----- |
+  | create-astro | 4.13.2 | 5.0.0 |
+
+- [#12908](https://github.com/cloudflare/workers-sdk/pull/12908) [`eadb0fd`](https://github.com/cloudflare/workers-sdk/commit/eadb0fdc56db7984253dd725c4178c83dd70d948) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.2.1 | 21.2.2 |
+
+- [#12909](https://github.com/cloudflare/workers-sdk/pull/12909) [`75fa04b`](https://github.com/cloudflare/workers-sdk/commit/75fa04bf029a730513a58c1c1b26f33e93227137) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.19.1 | 1.19.2 |
+
+## 2.64.8
+
+### Patch Changes
+
+- [#12837](https://github.com/cloudflare/workers-sdk/pull/12837) [`2363d48`](https://github.com/cloudflare/workers-sdk/commit/2363d485a67b8c5abdffd01eee1bd3eb6bd53b10) Thanks [@edmundhung](https://github.com/edmundhung)! - Update Astro Workers template for Astro v6
+
+  The Astro Workers template now scaffolds projects using Astro v6. The adapter uses the Cloudflare Vite plugin under the hood, so `astro dev` runs on the workerd runtime locally and `wrangler.jsonc` fields like `main` and `assets` are no longer needed in the template.
+
+  For existing projects, see the [Astro Cloudflare adapter migration guide](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#upgrading-to-v13-and-astro-6).
+
+- [#12866](https://github.com/cloudflare/workers-sdk/pull/12866) [`077c4d5`](https://github.com/cloudflare/workers-sdk/commit/077c4d54cbf068aeca86927620332b9aeceec762) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix React app creation flow skipping Cloudflare setup
+
+  Creating a React app with create-cloudflare no longer allows the Cloudflare setup step to be skipped by accepting create-vite's `Install and start now` prompt.
+
 ## 2.64.7
 
 ### Patch Changes
@@ -247,7 +305,6 @@
   New Workers projects created via `create-cloudflare` now include an `AGENTS.md` file that provides AI coding agents with retrieval-led guidance for Cloudflare APIs. This helps agents avoid using outdated knowledge from their training data and instead consult current documentation.
 
   The file includes:
-
   - Links to Cloudflare documentation and MCP servers
   - Essential wrangler commands (`dev`, `deploy`, `types`)
   - Pointers to product-specific documentation for limits and APIs
@@ -626,7 +683,6 @@
 - [#11520](https://github.com/cloudflare/workers-sdk/pull/11520) [`85ec269`](https://github.com/cloudflare/workers-sdk/commit/85ec26985a05b2cc5e0dd3c4904f5b96b9e2de80) Thanks [@vicb](https://github.com/vicb)! - Add placeholder substitution in wrangler config files.
 
   When c3 updates the config file:
-
   - The value `"<WORKER_NAME>"` is replaced with the worker name.
   - The value `"<COMPATIBILITY_DATE>"` is replaced with the latest worked compatibility date.
 
@@ -1101,7 +1157,6 @@
 - [#10766](https://github.com/cloudflare/workers-sdk/pull/10766) [`bd5b720`](https://github.com/cloudflare/workers-sdk/commit/bd5b720c44f8bc04ac153154c1f8b8a291af7139) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not override any `.env` settings in `.gitignore` files
 
   Previously we only looked for `.env*` in the `gitignore` but now we cover more cases such as:
-
   - `.env`
   - `.env\*`
   - `.env.<local|production|staging|...>`
@@ -2417,7 +2472,6 @@
   | @angular/create | 19.1.5 | 19.1.6 |
 
 - [#7854](https://github.com/cloudflare/workers-sdk/pull/7854) [`bff209d`](https://github.com/cloudflare/workers-sdk/commit/bff209d853ae081ec692c41a080071956bf4ae2d) Thanks [@beratbayram](https://github.com/beratbayram)! - Update the Next.js template
-
   - Removed top-level `await` in `next.config.ts` as it is not allowed there and not required.
   - Improved `setupDevPlatform()` comment
 
@@ -2550,7 +2604,6 @@
   | nuxi       | 3.17.2 | 3.20.0 |
 
 - [#7743](https://github.com/cloudflare/workers-sdk/pull/7743) [`5955dac`](https://github.com/cloudflare/workers-sdk/commit/5955dac5ef2c6a0b6eea6dc28d11491966c07c2b) Thanks [@vicb](https://github.com/vicb)! - Update the Next.js experimental template
-
   - Use create-next-app@^14.2.23
   - Rename wrangler types output to cloudflare-env.d.ts
 
@@ -3772,7 +3825,6 @@
 - [#5675](https://github.com/cloudflare/workers-sdk/pull/5675) [`235c439`](https://github.com/cloudflare/workers-sdk/commit/235c4398268322b6c0c13060bc3da91f52b4b066) Thanks [@jculvey](https://github.com/jculvey)! - feat: Improvements to `hono` template.
 
   The `hono` template has been updated as follows:
-
   - Bumps `create-hono` to `0.7.0`
   - Automatically installs dependencies and specifies the detected package manager to avoid interactive prompts
   - Adds a `wrangler.toml` file with commented out examples of all available bindings to match other templates.
@@ -3923,7 +3975,6 @@
 ### Patch Changes
 
 - [#5218](https://github.com/cloudflare/workers-sdk/pull/5218) [`0c535e7`](https://github.com/cloudflare/workers-sdk/commit/0c535e7236cbfc4bf856889454298bb434e48650) Thanks [@jculvey](https://github.com/jculvey)! - refactor: Refactor C3 internal helpers. Includes a few small changes:
-
   - Drops `--save` from internal `pnpm` and `npm` install invocations
   - Switches to `git branch --show-current` for detecting current branch
 
@@ -4137,7 +4188,6 @@
 - [#4754](https://github.com/cloudflare/workers-sdk/pull/4754) [`06f85613`](https://github.com/cloudflare/workers-sdk/commit/06f85613228066ccb323c2818b443e9460b02c94) Thanks [@jculvey](https://github.com/jculvey)! - Adds C3 support for external templates hosted in git repositories via the `--template <source>` option.
 
   The source may be specified as any of the following:
-
   - `user/repo`
   - `git@github.com:user/repo`
   - `https://github.com/user/repo`
@@ -4150,7 +4200,6 @@
   See the `degit` [docs](https://github.com/Rich-Harris/degit) for more details.
 
   At a minimum, templates must contain the following:
-
   - `package.json`
   - `wrangler.toml`
   - `src/` containing a worker script referenced from `wrangler.toml`
@@ -4351,7 +4400,6 @@
 * [#4530](https://github.com/cloudflare/workers-sdk/pull/4530) [`774b16c9`](https://github.com/cloudflare/workers-sdk/commit/774b16c9138bbe7e7d42a8a27048755191010167) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.3` to `17.0.5`
 
 - [#4481](https://github.com/cloudflare/workers-sdk/pull/4481) [`18a4dd92`](https://github.com/cloudflare/workers-sdk/commit/18a4dd92456f955ccbb35567a88475beafda01c0) Thanks [@jculvey](https://github.com/jculvey)! - Minor improvements when using the `--existing-script scriptName` flag:
-
   - Format the type as "Pre-existing Worker (from Dashboard)"
   - Defaults the project name to `scriptName`
 
@@ -4620,7 +4668,6 @@
   (such arguments will be completely ignored by C3)
 
 * [#3822](https://github.com/cloudflare/workers-sdk/pull/3822) [`3db34519`](https://github.com/cloudflare/workers-sdk/commit/3db3451988988c0af82023cc53975bbaef14ac8a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update the frameworks' cli versions used in C3
-
   - `@angular/cli` from 16.1.x to 16.2.0
   - `create-next-app` from 13.4.2 to 13.4.19
   - `create-remix` from 1.16.0 to 1.19.3

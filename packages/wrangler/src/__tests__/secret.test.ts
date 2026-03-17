@@ -1103,8 +1103,8 @@ describe("wrangler secret", () => {
 
 			await expect(
 				runWrangler("secret bulk ./secret.json --name script-name")
-			).rejects.toThrowError(
-				`The contents of "./secret.json" is not valid JSON`
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The contents of "./secret.json" is not valid.]`
 			);
 		});
 

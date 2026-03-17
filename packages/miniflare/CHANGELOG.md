@@ -1,5 +1,43 @@
 # miniflare
 
+## 4.20260317.0
+
+### Patch Changes
+
+- [#12927](https://github.com/cloudflare/workers-sdk/pull/12927) [`c9b3184`](https://github.com/cloudflare/workers-sdk/commit/c9b31840631585418b8926e8228db486b619b4c7) Thanks [@penalosa](https://github.com/penalosa)! - Bump undici from 7.18.2 to 7.24.4
+
+- [#12875](https://github.com/cloudflare/workers-sdk/pull/12875) [`13df6c7`](https://github.com/cloudflare/workers-sdk/commit/13df6c75be49ac32fc1c57e2e24523e86ced2115) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260312.1 | 1.20260316.1 |
+
+- [#12935](https://github.com/cloudflare/workers-sdk/pull/12935) [`df0d112`](https://github.com/cloudflare/workers-sdk/commit/df0d1120a856bd65553bf92b4bc6380c15e81cc7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260316.1 | 1.20260317.1 |
+
+- [#12928](https://github.com/cloudflare/workers-sdk/pull/12928) [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Migrate chrome-devtools-patches deployment from Cloudflare Pages to Workers + Assets
+
+  The DevTools frontend is now deployed as a Cloudflare Workers + Assets project instead of a Cloudflare Pages project. This uses `wrangler deploy` for production deployments and `wrangler versions upload` for PR preview deployments.
+
+  The inspector proxy origin allowlists in both wrangler and miniflare have been updated to accept connections from the new `workers.dev` domain patterns, while retaining the legacy `pages.dev` patterns for backward compatibility.
+
+## 4.20260312.1
+
+### Patch Changes
+
+- [#12869](https://github.com/cloudflare/workers-sdk/pull/12869) [`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8) Thanks [@emily-shen](https://github.com/emily-shen)! - Local explorer: validate host and origin headers before Miniflare modifies them
+
+  If `routes` are set, Miniflare will alter the host and origin headers to match, causing the local explorer to mistakenly identify and block same-origin requests.
+
+  Note the local explorer is a WIP experimental feature.
+
 ## 4.20260312.0
 
 ### Patch Changes
@@ -15,7 +53,6 @@
 - [#12864](https://github.com/cloudflare/workers-sdk/pull/12864) [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer route matching to be more precise
 
   Previously, the route matching used `startsWith("/cdn-cgi/explorer")` which would incorrectly match paths like `/cdn-cgi/explorerfoo` or `/cdn-cgi/explorereeeeee`, causing unexpected behavior. The route matching has been improved to only match:
-
   - `/cdn-cgi/explorer` (exact match)
   - `/cdn-cgi/explorer/` and any sub-paths (e.g., `/cdn-cgi/explorer/api/*`)
 
@@ -253,7 +290,6 @@
 - [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `MINIFLARE_CACHE_DIR` environment variable and smart cache directory detection
 
   Miniflare now intelligently detects where to store its cf.json cache file:
-
   1. Use `MINIFLARE_CACHE_DIR` env var if set
   2. Use existing cache directory if found (`node_modules/.mf` or `.wrangler/cache`)
   3. Create cache in `node_modules/.mf` if `node_modules` exists
@@ -294,7 +330,6 @@
 - [#12469](https://github.com/cloudflare/workers-sdk/pull/12469) [`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add environment variables to control cf.json fetching behavior
 
   You can now use environment variables to control how Miniflare handles the `Request.cf` object caching:
-
   - `CLOUDFLARE_CF_FETCH_ENABLED` - Set to "false" to disable fetching entirely and use fallback data. No `node_modules/.mf/cf.json` file will be created. Defaults to "true".
   - `CLOUDFLARE_CF_FETCH_PATH` - Set to a custom path to use a different location for caching the cf.json file instead of the default `node_modules/.mf/cf.json`.
 
@@ -351,7 +386,6 @@
 - [#12267](https://github.com/cloudflare/workers-sdk/pull/12267) [`83adb2c`](https://github.com/cloudflare/workers-sdk/commit/83adb2cb7f909857d79208474b78cdb7ac4e0638) Thanks [@NuroDev](https://github.com/NuroDev)! - Implement local D1 API for experimental/WIP local resource explorer
 
   The following APIs have been implemented:
-
   - `GET /d1/database` - Returns a list of D1 databases.
   - `POST /d1/database/{database_id}/raw` - Returns the query result rows as arrays rather than objects.
 
@@ -503,7 +537,6 @@
   into miniflare and @cloudflare/vitest-pool-workers.
 
   Other dependencies remain external for technical reasons:
-
   - `sharp`: Native binary with platform-specific builds
   - `undici`: Dynamically required at runtime in worker threads
   - `ws`: Has optional native bindings for performance
@@ -617,7 +650,6 @@
   reducing the number of external dependencies users need to trust.
 
   Bundled dependencies:
-
   - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
   - **kv-asset-handler**: `mime`
   - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
@@ -676,7 +708,6 @@
 ### Minor Changes
 
 - [#11648](https://github.com/cloudflare/workers-sdk/pull/11648) [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows test handlers in vitest-pool-workers to get the Workflow instance output and error:
-
   - `getOutput()`: Returns the output of the successfully completed Workflow instance.
   - `getError()`: Returns the error information of the errored Workflow instance.
 
@@ -1604,7 +1635,6 @@
 - [#9313](https://github.com/cloudflare/workers-sdk/pull/9313) [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add Dev Registry support
 
   This change introduces two new options to support cross-process service bindings, durable objects and tail consumers via a file-system based registry, with backward compatibility to Wrangler’s implementation:
-
   - **`unsafeDevRegistryPath`** (`string`): Filesystem path to the Dev Registry directory.
   - **`unsafeDevRegistryDurableObjectProxy`** (`boolean`): When enabled, exposes internal Durable Objects to other local dev sessions and allows Workers to connect to external Durable Objects.
 
@@ -1626,7 +1656,6 @@
 - [#9440](https://github.com/cloudflare/workers-sdk/pull/9440) [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1) Thanks [@penalosa](https://github.com/penalosa)! - Preserve original error messages
 
 - [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
-
   - AI
   - Browser
   - Images
@@ -2643,7 +2672,6 @@
 - [#6058](https://github.com/cloudflare/workers-sdk/pull/6058) [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99) Thanks [@threepointone](https://github.com/threepointone)! - chore: Quieter builds
 
   This patch cleans up warnings we were seeing when doing a full build. Specifically:
-
   - fixtures/remix-pages-app had a bunch of warnings about impending features that it should be upgraded to, so I did that. (tbh this one needs a full upgrade of packages, but we'll get to that later when we're upgrading across the codebase)
   - updated `@microsoft/api-extractor` so it didn't complain that it didn't match the `typescript` version (that we'd recently upgraded)
   - it also silenced a bunch of warnings when exporting types from `wrangler`. We'll need to fix those, but we'll do that when we work on unstable_dev etc.
@@ -3013,7 +3041,6 @@
 - [#5191](https://github.com/cloudflare/workers-sdk/pull/5191) [`27fb22b`](https://github.com/cloudflare/workers-sdk/commit/27fb22b7c6b224aecc852915d9fee600d9d86efc) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure redirect responses handled correctly with `dispatchFetch()`
 
   Previously, if your Worker returned a redirect response, calling `dispatchFetch(url)` would send another request to the original `url` rather than the redirect. This change ensures redirects are followed correctly.
-
   - If your Worker returns a relative redirect or an absolute redirect with the same origin as the original `url`, the request will be sent to the Worker.
   - If your Worker instead returns an absolute redirect with a different origin, the request will be sent to the Internet.
   - If a redirected request to a different origin returns an absolute redirect with the same origin as the original `url`, the request will also be sent to the Worker.

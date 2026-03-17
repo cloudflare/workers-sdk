@@ -66,19 +66,24 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		{
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
-			quarantine: true,
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Hello, Astronaut!",
 			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello, Astronaut!",
+				devArgs: ["--host=127.0.0.1"],
+			},
 			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
+				previewArgs: ["--host=127.0.0.1"],
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			nodeCompat: true,
+			nodeCompat: false,
 			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
@@ -643,7 +648,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
  * Gets the list of experimental framework test configurations.
  */
 function getExperimentalFrameworkTestConfig(
-	pm: string,
+	pm: string
 ): NamedFrameworkTestConfig[] {
 	return [
 		{

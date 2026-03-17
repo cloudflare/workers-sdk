@@ -30,7 +30,7 @@ const configure = async () => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``,
+			`via \`${npx} astro add cloudflare\``
 		)}`,
 	});
 
@@ -56,12 +56,12 @@ const configure = async () => {
 						b.identifier("platformProxy"),
 						b.objectExpression([
 							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
-						]),
+						])
 					),
 					// imageService: "cloudflare",
 					b.objectProperty(
 						b.identifier("imageService"),
-						b.stringLiteral("cloudflare"),
+						b.stringLiteral("cloudflare")
 					),
 				]),
 			];

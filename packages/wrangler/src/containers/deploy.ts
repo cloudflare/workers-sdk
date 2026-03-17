@@ -347,7 +347,7 @@ export async function apply(
 	// however deployments that fail after push may result in no previous app but the image still existing
 	const imageRef =
 		"remoteDigest" in args.imageRef
-			? prevApp?.configuration.image ?? args.imageRef.remoteDigest
+			? (prevApp?.configuration.image ?? args.imageRef.remoteDigest)
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 

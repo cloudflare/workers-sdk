@@ -18,6 +18,7 @@ export {
 	containersDeleteCommand,
 } from "./containers";
 
+export { containersInstancesCommand } from "./instances";
 export { containersSshCommand } from "./ssh";
 
 export {

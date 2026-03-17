@@ -1,5 +1,35 @@
 # @cloudflare/vite-plugin
 
+## 1.29.1
+
+### Patch Changes
+
+- [#12936](https://github.com/cloudflare/workers-sdk/pull/12936) [`cff91ff`](https://github.com/cloudflare/workers-sdk/commit/cff91ff4bbbfcc2b59eb9b0d26b5ae8188823197) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Select the appropriate `vite/module-runner` implementation during dev based on the user's Vite version
+
+  The plugin now builds against Vite 8 and ships two bundled copies of `vite/module-runner`: one from Vite 8 and one from Vite 7.1.12 (the last version before a breaking change to the module runner in Vite 7.2.0). At dev server startup, the correct implementation is selected based on the user's installed Vite version. This is Vite 8's module runner for users on Vite >= 7.2.0, and the legacy module runner for users on older versions.
+
+- Updated dependencies [[`c9b3184`](https://github.com/cloudflare/workers-sdk/commit/c9b31840631585418b8926e8228db486b619b4c7), [`13df6c7`](https://github.com/cloudflare/workers-sdk/commit/13df6c75be49ac32fc1c57e2e24523e86ced2115), [`df0d112`](https://github.com/cloudflare/workers-sdk/commit/df0d1120a856bd65553bf92b4bc6380c15e81cc7), [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a), [`c600ce0`](https://github.com/cloudflare/workers-sdk/commit/c600ce0a45ad334a5a961cf7774758860581d9d2), [`f509d13`](https://github.com/cloudflare/workers-sdk/commit/f509d13b97a832a28ed6bc568c7bcf6fc7d4a4ff), [`3b81fc6`](https://github.com/cloudflare/workers-sdk/commit/3b81fc6a75857d5c158824f17d9316adc55878fc), [`0a7fef9`](https://github.com/cloudflare/workers-sdk/commit/0a7fef9ee924b6d0817a69be9d893dc8a40c9a19)]:
+  - wrangler@4.75.0
+  - miniflare@4.20260317.0
+
+## 1.29.0
+
+### Minor Changes
+
+- [#12885](https://github.com/cloudflare/workers-sdk/pull/12885) [`12505c9`](https://github.com/cloudflare/workers-sdk/commit/12505c97c280e3516ace4354fef0a8434f87cdf4) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Vite 8 to the supported peer dependency range
+
+  The package now lists Vite 8 in its peer dependency range, so installs with Vite 8 no longer show a peer dependency warning.
+
+### Patch Changes
+
+- [#12859](https://github.com/cloudflare/workers-sdk/pull/12859) [`876108a`](https://github.com/cloudflare/workers-sdk/commit/876108a04b19f6577843f7cf9884639e17d37fb7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix crash when plugins send HMR events before runner initialization
+
+  Previously, if another Vite plugin (such as `vite-plugin-vue-devtools`) sent HMR events during `configureServer` before the Cloudflare plugin had initialized its runner, the dev server would crash with `AssertionError: The WebSocket is undefined`. The environment's WebSocket send operations are now deferred until the runner is fully initialized, allowing early HMR events to be handled gracefully.
+
+- Updated dependencies [[`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68), [`65f1092`](https://github.com/cloudflare/workers-sdk/commit/65f1092281866333118e5e8ebf0f5234bf695baf), [`7b0d8f5`](https://github.com/cloudflare/workers-sdk/commit/7b0d8f5830e9b317c69abdcd452a79d88811f000), [`351e1e1`](https://github.com/cloudflare/workers-sdk/commit/351e1e1efa808a19b84b5888d747cd4aa4566921), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68)]:
+  - miniflare@4.20260312.1
+  - wrangler@4.74.0
+
 ## 1.28.0
 
 ### Minor Changes
@@ -302,7 +332,6 @@
   reducing the number of external dependencies users need to trust.
 
   Bundled dependencies:
-
   - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
   - **kv-asset-handler**: `mime`
   - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
@@ -1006,7 +1035,6 @@
   Wrangler and Vite will continue to load `.env` files in order to configure themselves as a tool.
 
   Further details:
-
   - In `vite build` the local vars will be computed and stored in a `.dev.vars` file next to the compiled Worker code, so that `vite preview` can use them.
   - The `wrangler types` command will similarly read the `.env` files (if no `.dev.vars` files) in order to generate the `Env` interface.
   - If the `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` environment variable is `"false"` then local dev variables will not be loaded from `.env` files.
@@ -1259,7 +1287,6 @@
   Assets that are imported in the entry Worker are now automatically moved to the client build output. This enables importing assets in your Worker and accessing them via the [assets binding](https://developers.cloudflare.com/workers/static-assets/binding/#binding). See [Static Asset Handling](https://vite.dev/guide/assets) to find out about all the ways you can import assets in Vite.
 
   Additionally, a broader range of build scenarios are now supported. These are:
-
   - Assets only build with client entry/entries
   - Assets only build with no client entry/entries that includes `public` directory assets
   - Worker(s) + assets build with client entry/entries

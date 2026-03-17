@@ -78,6 +78,7 @@ describe("wrangler", () => {
 				NETWORKING & SECURITY
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -149,6 +150,7 @@ describe("wrangler", () => {
 				NETWORKING & SECURITY
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler tunnel                 🚇 Manage Cloudflare Tunnels [experimental]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
