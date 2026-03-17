@@ -3,40 +3,38 @@
 	"version": "4.74.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
-		"wrangler",
+		"assembly",
+		"cli",
 		"cloudflare",
-		"workers",
 		"cloudflare workers",
-		"edge",
 		"compute",
+		"edge",
+		"emscripten",
+		"graphql",
+		"http",
+		"router",
+		"rust",
 		"serverless",
 		"serverless application",
 		"serverless module",
+		"typescript",
 		"wasm",
 		"web",
-		"assembly",
 		"webassembly",
-		"rust",
-		"emscripten",
-		"typescript",
-		"graphql",
-		"router",
-		"http",
-		"cli"
+		"workers",
+		"wrangler"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/wrangler"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
-	"main": "wrangler-dist/cli.js",
-	"types": "wrangler-dist/cli.d.ts",
 	"bin": {
 		"wrangler": "./bin/wrangler.js",
 		"wrangler2": "./bin/wrangler.js"
@@ -49,6 +47,8 @@
 		"kv-asset-handler.js",
 		"config-schema.json"
 	],
+	"main": "wrangler-dist/cli.js",
+	"types": "wrangler-dist/cli.d.ts",
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "pnpm run clean && pnpm tsup && pnpm run generate-json-schema",

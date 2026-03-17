@@ -84,7 +84,9 @@ describe("pages deployment delete", () => {
 		expect(std.out).not.toContain("Successfully deleted");
 	});
 
-	it("should delete without asking if --force is provided", async ({ expect }) => {
+	it("should delete without asking if --force is provided", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",

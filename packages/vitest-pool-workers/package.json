@@ -4,28 +4,34 @@
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
-		"workers",
-		"worker",
-		"vitest",
-		"jest",
-		"pool",
 		"environment",
-		"miniflare",
-		"unit",
 		"integration",
-		"test"
+		"jest",
+		"miniflare",
+		"pool",
+		"test",
+		"unit",
+		"vitest",
+		"worker",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vitest-pool-workers#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vitest-pool-workers"
 	},
-	"license": "MIT",
+	"files": [
+		"dist",
+		"types/cloudflare-test.d.ts"
+	],
 	"type": "module",
+	"main": "dist/pool/index.mjs",
+	"types": "dist/pool/index.d.mts",
 	"exports": {
 		".": {
 			"types": "./dist/pool/index.d.mts",
@@ -38,12 +44,6 @@
 			"import": "./dist/codemods/vitest-v3-to-v4.mjs"
 		}
 	},
-	"main": "dist/pool/index.mjs",
-	"types": "dist/pool/index.d.mts",
-	"files": [
-		"dist",
-		"types/cloudflare-test.d.ts"
-	],
 	"scripts": {
 		"build": "tsdown",
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",

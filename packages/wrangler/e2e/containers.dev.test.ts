@@ -3,14 +3,7 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import { buildImage } from "../../containers-shared/src/build";
 import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { dedent } from "../src/utils/dedent";
@@ -233,7 +226,9 @@ for (const source of imageSource) {
 				);
 			}
 		});
-		it(`will build or pull containers when miniflare starts`, async ({ expect }) => {
+		it(`will build or pull containers when miniflare starts`, async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived("wrangler dev");
 			await worker.readUntil(/Preparing container/);
 			if (source === "pull") {
@@ -309,7 +304,9 @@ for (const source of imageSource) {
 			await worker.stop();
 		});
 
-		it("should clean up duplicate image tags after build", async ({ expect }) => {
+		it("should clean up duplicate image tags after build", async ({
+			expect,
+		}) => {
 			const dockerPath = getDockerPath();
 			const fakeBuildID = generateContainerBuildId();
 			const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
@@ -350,7 +347,9 @@ for (const source of imageSource) {
 			}).toThrow();
 		});
 
-		it("won't start the container service if no containers are present", async ({ expect }) => {
+		it("won't start the container service if no containers are present", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					...wranglerConfig,
@@ -364,7 +363,9 @@ for (const source of imageSource) {
 			expect(output).not.toContain("Preparing container image(s)...");
 		});
 
-		it("won't start the container service if enable_containers is set to false via config", async ({ expect }) => {
+		it("won't start the container service if enable_containers is set to false via config", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					...wranglerConfig,
@@ -379,7 +380,9 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("will display the ready-on message after the container(s) have been built/pulled", async ({ expect }) => {
+		it("will display the ready-on message after the container(s) have been built/pulled", async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived("wrangler dev");
 			const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
 			await worker.readUntil(readyRegexp);
@@ -397,7 +400,9 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("won't start the container service if --enable-containers is set to false via CLI", async ({ expect }) => {
+		it("won't start the container service if --enable-containers is set to false via CLI", async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived(
 				"wrangler dev --enable-containers=false"
 			);

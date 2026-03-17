@@ -6,7 +6,7 @@
 	"trailingComma": "es5",
 	"sortImports": {
 		"groups": ["builtin", "external", "parent", "sibling", "index", "type"],
-		"newlinesBetween": true
+		"newlinesBetween": false
 	},
 	"sortTailwindcss": {},
 	"sortPackageJson": {},

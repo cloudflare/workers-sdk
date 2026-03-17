@@ -80,7 +80,9 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("not pinned to a commit SHA");
 	});
 
-	it("should fail for third-party actions pinned to a semver tag", ({ expect }) => {
+	it("should fail for third-party actions pinned to a semver tag", ({
+		expect,
+	}) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -110,7 +112,9 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("changesets/action@main");
 	});
 
-	it("should skip first-party actions/* regardless of pinning", ({ expect }) => {
+	it("should skip first-party actions/* regardless of pinning", ({
+		expect,
+	}) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -217,7 +221,9 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("unpinned/action@v1");
 	});
 
-	it("should fail for third-party actions with no version reference at all", ({ expect }) => {
+	it("should fail for third-party actions with no version reference at all", ({
+		expect,
+	}) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`

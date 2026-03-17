@@ -295,7 +295,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 		});
 
-		it("should rollback to implicit Worker version (1st version)", async ({ expect }) => {
+		it("should rollback to implicit Worker version (1st version)", async ({
+			expect,
+		}) => {
 			const rollback = await helper.run(
 				`wrangler rollback --message "Rollback via e2e test" --yes`
 			);
@@ -405,7 +407,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 		});
 
-		it("should rollback to specific Worker version (0th version)", async ({ expect }) => {
+		it("should rollback to specific Worker version (0th version)", async ({
+			expect,
+		}) => {
 			const rollback = await helper.run(
 				`wrangler rollback ${versionId0} --message "Rollback to old version" --yes`
 			);
@@ -580,7 +584,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			validateAssetUploadLogs(upload, ["/asset.txt"]);
 		});
 
-		it("should upload version of Worker with assets only", async ({ expect }) => {
+		it("should upload version of Worker with assets only", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -619,7 +625,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("should upload version of Worker with preview_urls enabled", async ({ expect }) => {
+		it("should upload version of Worker with preview_urls enabled", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -658,7 +666,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 		});
 
-		it("should include version preview url in output file", async ({ expect }) => {
+		it("should include version preview url in output file", async ({
+			expect,
+		}) => {
 			const outputFile = path.join(helper.tmpPath, "output.jsonnd");
 			const upload = await helper.run(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload"`,

@@ -129,7 +129,7 @@ describe.each(
 					`,
 				"public/asset-binding.html": "<p>have an asset via a binding</p>",
 				"public/asset.html": "<p>have an asset directly</p>",
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -176,7 +176,7 @@ describe.each(
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
 			`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					import { DurableObject, WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
 					export default{
 						async fetch(req, env) {
@@ -240,7 +240,9 @@ describe.each(
 				).resolves.toBe("hello world from a worker with assets");
 			});
 
-			it("can fetch a regular worker through a worker with assets, including with rpc", async ({ expect }) => {
+			it("can fetch a regular worker through a worker with assets, including with rpc", async ({
+				expect,
+			}) => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -308,7 +310,7 @@ describe.each(
 						binding = "AW"
 						service = '${assetWorkerName}'
 				`,
-					"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent /* javascript */ `
 						export default {
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -392,7 +394,7 @@ describe.each(
 							binding = "AW"
 							service = '${assetWorkerName}'
 					`,
-					"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent /* javascript */ `
 							export default {
 								async fetch(req, env) {
 									const url = new URL(req.url)
@@ -413,7 +415,7 @@ describe.each(
 								directory = "public"
 								binding = "ASSETS"
 						`,
-					"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent /* javascript */ `
 							import { WorkerEntrypoint } from "cloudflare:workers"
 
 							export default {
@@ -444,7 +446,7 @@ describe.each(
 			describe("default export object", () => {
 				beforeEach(async () => {
 					await baseSeed(assetWorker, {
-						"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent /* javascript */ `
 									import { WorkerEntrypoint } from "cloudflare:workers"
 
 									export default {
@@ -526,7 +528,7 @@ describe.each(
 			describe("default export WorkerEntrypoint class", () => {
 				beforeEach(async () => {
 					await baseSeed(assetWorker, {
-						"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent /* javascript */ `
 									import { WorkerEntrypoint } from "cloudflare:workers"
 
 									export default class Worker extends WorkerEntrypoint {
@@ -608,7 +610,7 @@ describe.each(
 			describe("named export WorkerEntrypoint class", () => {
 				beforeEach(async () => {
 					await baseSeed(assetWorker, {
-						"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent /* javascript */ `
 									import { WorkerEntrypoint } from "cloudflare:workers"
 
 									export default {fetch() {}}

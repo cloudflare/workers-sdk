@@ -453,7 +453,7 @@ export async function apply(
 					name: application.name,
 					rollout_step_percentage:
 						application.durable_objects !== undefined
-							? appConfigNoDefaults.rollout_step_percentage ?? 25
+							? (appConfigNoDefaults.rollout_step_percentage ?? 25)
 							: appConfigNoDefaults.rollout_step_percentage,
 					rollout_kind:
 						appConfigNoDefaults.rollout_kind == "full_manual"

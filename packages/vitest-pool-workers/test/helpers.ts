@@ -15,7 +15,7 @@ const debuglog = util.debuglog("vitest-pool-workers:test");
 export const vitestConfig = (
 	cfOptions: Record<string, unknown> = {},
 	testOptions: Record<string, unknown> = {}
-) => dedent/* javascript */ `
+) => dedent /* javascript */ `
 	import { cloudflareTest } from "@cloudflare/vitest-pool-workers"
 
 	import { BaseSequencer } from "vitest/node";

@@ -39,7 +39,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			return () => Promise.allSettled(cleanups.map((cleanup) => cleanup()));
 		}, 35_000);
 
-		it("handles both remote and local service bindings at the same time", async ({ expect }) => {
+		it("handles both remote and local service bindings at the same time", async ({
+			expect,
+		}) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -125,7 +127,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 		});
 
-		it("handles workers AI alongside a local service binding", async ({ expect }) => {
+		it("handles workers AI alongside a local service binding", async ({
+			expect,
+		}) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -152,7 +156,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		`);
 		});
 
-		it("doesn't show any logs from startRemoteProxySession()", async ({ expect }) => {
+		it("doesn't show any logs from startRemoteProxySession()", async ({
+			expect,
+		}) => {
 			await spawnLocalWorker(helper);
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
@@ -188,7 +194,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		describe("shows helpful error logs", () => {
-			it("when a remote service binding is not properly configured", async ({ expect }) => {
+			it("when a remote service binding is not properly configured", async ({
+				expect,
+			}) => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: "remote-bindings-mixed-bindings-test",
@@ -215,7 +223,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				);
 			});
 
-			it("when a remote KV binding is not properly configured", async ({ expect }) => {
+			it("when a remote KV binding is not properly configured", async ({
+				expect,
+			}) => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: "remote-bindings-mixed-bindings-test",
@@ -244,7 +254,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		describe("multi-worker", () => {
-			it("handles both remote and local service bindings at the same time in all workers", async ({ expect }) => {
+			it("handles both remote and local service bindings at the same time in all workers", async ({
+				expect,
+			}) => {
 				await helper.seed({
 					"wrangler.json": JSON.stringify({
 						name: "remote-bindings-mixed-bindings-multi-worker-test",

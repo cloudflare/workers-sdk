@@ -148,7 +148,9 @@ describe("tokenizeSQL", () => {
 		expect(tokens.map((t) => t.value).join("")).toBe(sql);
 	});
 
-	test("placeholders inside strings and comments are not treated as placeholders", ({ expect }) => {
+	test("placeholders inside strings and comments are not treated as placeholders", ({
+		expect,
+	}) => {
 		const sql = `SELECT * FROM t WHERE name = ':name' AND "code" =:code -- only :code is a placeholder`;
 		const tokens = tokenizeSQL(sql, "sqlite");
 

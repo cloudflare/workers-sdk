@@ -12,8 +12,10 @@ import type {
 } from "./Code/Mirror";
 import type { Extension } from "@codemirror/state";
 
-interface SutdioSQLWhereEditor
-	extends Omit<StudioCodeMirrorProps, "extensions"> {
+interface SutdioSQLWhereEditor extends Omit<
+	StudioCodeMirrorProps,
+	"extensions"
+> {
 	columnNames?: string[];
 	functionNames?: string[];
 	onEnterPressed?: () => void;

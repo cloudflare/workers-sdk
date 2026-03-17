@@ -183,7 +183,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 
 			await run(experimentalFlags, async () => {
 				const config =
-					def.behaviour?.provideConfig ?? true
+					(def.behaviour?.provideConfig ?? true)
 						? readConfig(args, {
 								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
 								useRedirectIfAvailable:

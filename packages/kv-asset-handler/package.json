@@ -3,30 +3,33 @@
 	"version": "0.4.2",
 	"description": "Routes requests to KV assets",
 	"keywords": [
-		"kv",
+		"assets",
 		"cloudflare",
+		"kv",
 		"workers",
-		"wrangler",
-		"assets"
+		"wrangler"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/kv-asset-handler"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
-	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
 	"files": [
 		"src",
 		"dist"
 	],
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "tsup",
 		"check:type": "tsc",
@@ -49,9 +52,6 @@
 	},
 	"volta": {
 		"extends": "../../package.json"
-	},
-	"publishConfig": {
-		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true

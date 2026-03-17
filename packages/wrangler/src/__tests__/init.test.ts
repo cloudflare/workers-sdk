@@ -215,7 +215,7 @@ describe("init", () => {
 			usage_model = "bundled",
 			tags = [],
 			compatibility_date = "1987-09-27",
-			content = dedent/*javascript*/ `
+			content = dedent /*javascript*/ `
 							export default {
 								async fetch(request, env, ctx) {
 									return new Response("Hello World!");
@@ -1326,7 +1326,7 @@ describe("init", () => {
 				"index.js",
 				new File(
 					[
-						dedent/*javascript*/ `
+						dedent /*javascript*/ `
 								import handleRequest from './other.js';
 
 								export default {
@@ -1344,7 +1344,7 @@ describe("init", () => {
 				"other.js",
 				new File(
 					[
-						dedent/*javascript*/ `
+						dedent /*javascript*/ `
 								export default function (request, env, ctx) {
 									return new Response("Hello World!");
 								}

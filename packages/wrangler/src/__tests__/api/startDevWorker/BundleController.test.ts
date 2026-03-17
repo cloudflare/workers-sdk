@@ -71,7 +71,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	describe("happy path bundle + watch", () => {
 		test("single ts source file", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -104,7 +104,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			// Now update the source file and see that we re-bundle
 			const ev2 = bus.waitFor("bundleComplete");
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -131,7 +131,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 		test("multiple ts source files", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 				import name from "./other"
 				export default {
 					fetch(request, env, ctx) {
@@ -140,7 +140,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					}
 				} satisfies ExportedHandler
 			`,
-				"src/other.ts": dedent/* javascript */ `
+				"src/other.ts": dedent /* javascript */ `
 				export default "someone"
 			`,
 			});
@@ -170,7 +170,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			// Now update the secondary source file and see that we re-bundle
 			ev = bus.waitFor("bundleComplete");
 			await seed({
-				"src/other.ts": dedent/* javascript */ `
+				"src/other.ts": dedent /* javascript */ `
 					export default "someone else"
 				`,
 			});
@@ -184,7 +184,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 		test("custom build", async () => {
 			await seed({
-				"custom_build_dir/index.ts": dedent/* javascript */ `
+				"custom_build_dir/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -226,7 +226,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				async () => {
 					ev = bus.waitFor("bundleComplete");
 					await seed({
-						"custom_build_dir/index.ts": dedent/* javascript */ `
+						"custom_build_dir/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -258,7 +258,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 	test("module aliasing", async () => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				import name from "foo"
 				export default {
 					fetch(request, env, ctx) {
@@ -267,10 +267,10 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					}
 				} satisfies ExportedHandler
 			`,
-			"node_modules/foo": dedent/* javascript */ `
+			"node_modules/foo": dedent /* javascript */ `
 				export default "foo"
 			`,
-			"node_modules/bar": dedent/* javascript */ `
+			"node_modules/bar": dedent /* javascript */ `
 				export default "bar"
 			`,
 		});
@@ -281,8 +281,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 		let ev = bus.waitFor("bundleComplete");
 		controller.onConfigUpdate({ type: "configUpdate", config });
 
-		expect((await ev).bundle.entrypointSource)
-			.toContain(dedent/* javascript */ `
+		expect((await ev).bundle.entrypointSource).toContain(dedent`
             // ../node_modules/foo
             var foo_default = "foo"
         `);
@@ -300,8 +299,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				},
 			},
 		});
-		expect((await ev).bundle.entrypointSource)
-			.toContain(dedent/* javascript */ `
+		expect((await ev).bundle.entrypointSource).toContain(dedent`
             // ../node_modules/bar
             var bar_default = "bar"
         `);
@@ -310,7 +308,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	describe("switching", () => {
 		test("esbuild -> custom builds", { timeout: 500000 }, async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -346,7 +344,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 			// Now switch to custom builds and see that it rebundles
 			await seed({
-				"custom_build_dir/index.ts": dedent/* javascript */ `
+				"custom_build_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -396,7 +394,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 						500000
 					);
 					await seed({
-						"custom_build_dir/index.ts": dedent/* javascript */ `
+						"custom_build_dir/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -430,7 +428,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 		test("custom builds -> esbuild", async () => {
 			await seed({
-				"custom_build_dir/index.ts": dedent/* javascript */ `
+				"custom_build_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -472,7 +470,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					"
 				`);
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -511,7 +509,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			// Now change the source file and see that we still rebundle
 			ev = bus.waitFor("bundleComplete");
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment

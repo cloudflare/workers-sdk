@@ -94,7 +94,9 @@ describe("deploy", () => {
 	});
 
 	describe("(legacy) asset upload", () => {
-		it("should upload all the files in the directory specified by `config.site.bucket`", async ({ expect }) => {
+		it("should upload all the files in the directory specified by `config.site.bucket`", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -141,7 +143,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not contain backslash for assets with nested directories", async ({ expect }) => {
+		it("should not contain backslash for assets with nested directories", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
 				{ filePath: "subdir/file-2.txt", content: "Content of file-2" },
@@ -201,7 +205,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async ({ expect }) => {
+		it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -268,7 +274,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async ({ expect }) => {
+		it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async ({
+			expect,
+		}) => {
 			const assets = [
 				// Using `.text` extension instead of `.txt` means files won't be
 				// treated as additional modules
@@ -385,7 +393,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should make environment specific kv namespace for assets, even for service envs", async ({ expect }) => {
+		it("should make environment specific kv namespace for assets, even for service envs", async ({
+			expect,
+		}) => {
 			// This is the same test as the one before this, but with an env arg
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -444,7 +454,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should make environment specific kv namespace for assets, even for wrangler environments", async ({ expect }) => {
+		it("should make environment specific kv namespace for assets, even for wrangler environments", async ({
+			expect,
+		}) => {
 			// And this is the same test as the one before this, but with useServiceEnvironments:false
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -503,7 +515,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should only upload files that are not already in the KV namespace", async ({ expect }) => {
+		it("should only upload files that are not already in the KV namespace", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -547,7 +561,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should only upload files that match the `site-include` arg", async ({ expect }) => {
+		it("should only upload files that match the `site-include` arg", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -597,7 +613,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not upload files that match the `site-exclude` arg", async ({ expect }) => {
+		it("should not upload files that match the `site-exclude` arg", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -647,7 +665,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should only upload files that match the `site.include` config", async ({ expect }) => {
+		it("should only upload files that match the `site.include` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -698,7 +718,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not upload files that match the `site.exclude` config", async ({ expect }) => {
+		it("should not upload files that match the `site.exclude` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -749,7 +771,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use `site-include` arg over `site.include` config", async ({ expect }) => {
+		it("should use `site-include` arg over `site.include` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -800,7 +824,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use `site-exclude` arg over `site.exclude` config", async ({ expect }) => {
+		it("should use `site-exclude` arg over `site.exclude` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -904,7 +930,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should skip hidden files and directories except `.well-known`", async ({ expect }) => {
+		it("should skip hidden files and directories except `.well-known`", async ({
+			expect,
+		}) => {
 			const assets = [
 				{
 					filePath: ".hidden-file.txt",
@@ -1112,7 +1140,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		}, 30_000);
 
-		it("should error if the asset key is over 512 characters", async ({ expect }) => {
+		it("should error if the asset key is over 512 characters", async ({
+			expect,
+		}) => {
 			const longFilePathAsset = {
 				filePath: "folder/".repeat(100) + "file.txt",
 				content: "content of file",
@@ -1157,7 +1187,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should delete uploaded assets that aren't included anymore", async ({ expect }) => {
+		it("should delete uploaded assets that aren't included anymore", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -1226,7 +1258,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should generate an asset manifest with keys relative to site.bucket", async ({ expect }) => {
+		it("should generate an asset manifest with keys relative to site.bucket", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -1289,7 +1323,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the relative path from current working directory to Worker directory when using `--site`", async ({ expect }) => {
+		it("should use the relative path from current working directory to Worker directory when using `--site`", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 			});
@@ -1338,7 +1374,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should abort other bucket uploads if one bucket upload fails", async ({ expect }) => {
+		it("should abort other bucket uploads if one bucket upload fails", async ({
+			expect,
+		}) => {
 			// Write 9 20MiB files, should end up with 3 buckets
 			const content = "X".repeat(20 * 1024 * 1024);
 			const assets = Array.from({ length: 9 }, (_, index) => ({

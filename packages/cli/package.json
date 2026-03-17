@@ -4,18 +4,18 @@
 	"private": true,
 	"description": "An SDK to build workers-sdk CLIs",
 	"keywords": [
+		"cli",
 		"cloudflare",
-		"workers",
 		"cloudflare workers",
-		"cli"
+		"workers"
 	],
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/cli"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"check:type": "tsc",
 		"deploy": "echo 'no deploy'",

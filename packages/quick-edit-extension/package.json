@@ -15,6 +15,12 @@
 		"vscode:prepublish": "pnpm run package-web",
 		"watch-web": "pnpm run package-web -- --watch"
 	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"@cloudflare/workers-types": "catalog:default",
+		"esbuild": "catalog:default",
+		"esbuild-register": "^3.5.0"
+	},
 	"contributes": {
 		"commands": [
 			{
@@ -40,12 +46,6 @@
 	"activationEvents": [
 		"onFileSystem:cfs"
 	],
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:^",
-		"@cloudflare/workers-types": "catalog:default",
-		"esbuild": "catalog:default",
-		"esbuild-register": "^3.5.0"
-	},
 	"engines": {
 		"vscode": "^1.76.0"
 	},

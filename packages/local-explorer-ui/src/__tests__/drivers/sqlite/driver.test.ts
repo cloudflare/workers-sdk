@@ -133,7 +133,9 @@ describe("StudioSQLiteDriver", () => {
 			expect(result).toBe("EXPLAIN QUERY PLAN SELECT * FROM users");
 		});
 
-		test("upgrades existing `EXPLAIN` to `EXPLAIN QUERY PLAN`", ({ expect }) => {
+		test("upgrades existing `EXPLAIN` to `EXPLAIN QUERY PLAN`", ({
+			expect,
+		}) => {
 			const result = driver.buildExplainStatement(
 				"EXPLAIN SELECT * FROM users"
 			);

@@ -49,9 +49,8 @@ export class HTMLRewriter {
 				const {
 					HTMLRewriter: BaseHTMLRewriter,
 					// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-				}: typeof import("html-rewriter-wasm") = await import(
-					"html-rewriter-wasm"
-				);
+				}: typeof import("html-rewriter-wasm") =
+					await import("html-rewriter-wasm");
 				rewriter = new BaseHTMLRewriter((output) => {
 					// enqueue will throw on empty chunks
 					if (output.length !== 0) {

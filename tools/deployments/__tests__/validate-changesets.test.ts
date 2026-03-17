@@ -17,7 +17,9 @@ import {
 import type { PackageJSON } from "../validate-changesets";
 
 describe("findPackageNames()", () => {
-	it("should return all the private packages which contain deploy scripts", ({ expect }) => {
+	it("should return all the private packages which contain deploy scripts", ({
+		expect,
+	}) => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
@@ -65,7 +67,9 @@ describe("readChangesets()", () => {
 		}
 	});
 
-	it("should load files from the changeset directory that look like changesets", ({ expect }) => {
+	it("should load files from the changeset directory that look like changesets", ({
+		expect,
+	}) => {
 		writeFileSync(resolve(tmpDir, "README.md"), "Some text");
 		writeFileSync(resolve(tmpDir, ".hidden.md"), "Some text");
 		writeFileSync(resolve(tmpDir, "change-set-one.md"), "Some text");

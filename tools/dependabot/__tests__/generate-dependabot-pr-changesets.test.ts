@@ -27,7 +27,9 @@ beforeEach(() => {
 });
 
 describe("getPackageJsonDiff()", () => {
-	it("should call spawnSync to the appropriate git diff command", ({ expect }) => {
+	it("should call spawnSync to the appropriate git diff command", ({
+		expect,
+	}) => {
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		getPackageJsonDiff("/path/to/package.json");
 		expect(spawnSync).toHaveBeenCalledOnce();
@@ -63,7 +65,9 @@ describe("getPackageJsonDiff()", () => {
 });
 
 describe("parseDiffForChanges()", () => {
-	it("should return a map containing the changes for each package", ({ expect }) => {
+	it("should return a map containing the changes for each package", ({
+		expect,
+	}) => {
 		const changes = parseDiffForChanges([
 			`-               "package": "^0.0.1"`,
 			`+               "package": "^0.0.2",`,
@@ -85,7 +89,9 @@ describe("parseDiffForChanges()", () => {
 });
 
 describe("generateChangesetHeader()", () => {
-	it("should return a header with a single package and 'patch' version bump", ({ expect }) => {
+	it("should return a header with a single package and 'patch' version bump", ({
+		expect,
+	}) => {
 		const header = generateChangesetHeader(["package-name"]);
 		expect(header).toMatchInlineSnapshot(`
 			"---
@@ -94,7 +100,9 @@ describe("generateChangesetHeader()", () => {
 		`);
 	});
 
-	it("should return a header with multiple packages and 'patch' version bump", ({ expect }) => {
+	it("should return a header with multiple packages and 'patch' version bump", ({
+		expect,
+	}) => {
 		const header = generateChangesetHeader(["package-name", "another-package"]);
 		expect(header).toMatchInlineSnapshot(`
 			"---
@@ -106,7 +114,9 @@ describe("generateChangesetHeader()", () => {
 });
 
 describe("generateCommitMessage()", () => {
-	it("should return a commit message about a single changed package", ({ expect }) => {
+	it("should return a commit message about a single changed package", ({
+		expect,
+	}) => {
 		const message = generateCommitMessage(["@namespace/package"], new Map());
 		expect(message).toMatchInlineSnapshot(`
 			"Update dependencies of "@namespace/package"
@@ -133,7 +143,9 @@ describe("generateCommitMessage()", () => {
 		`);
 	});
 
-	it("should return a commit message containing a row for each change", ({ expect }) => {
+	it("should return a commit message containing a row for each change", ({
+		expect,
+	}) => {
 		const message = generateCommitMessage(
 			["package-name"],
 			new Map([
@@ -156,7 +168,9 @@ describe("generateCommitMessage()", () => {
 });
 
 describe("writeChangeSet()", () => {
-	it("should call writeFileSync with appropriate changeset path and body", ({ expect }) => {
+	it("should call writeFileSync with appropriate changeset path and body", ({
+		expect,
+	}) => {
 		const header = dedent`
 			---
 			"package-name": patch

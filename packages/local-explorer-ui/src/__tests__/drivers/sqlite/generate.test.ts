@@ -331,7 +331,9 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("CHECK (val > 0)");
 		});
 
-		test("creates table with `FOREIGN KEY` table-level constraint", ({ expect }) => {
+		test("creates table with `FOREIGN KEY` table-level constraint", ({
+			expect,
+		}) => {
 			const change = {
 				name: { old: null, new: "orders" },
 				columns: [
@@ -544,7 +546,9 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"people"');
 		});
 
-		test("rename + add column produces multiple `ALTER` statements", ({ expect }) => {
+		test("rename + add column produces multiple `ALTER` statements", ({
+			expect,
+		}) => {
 			const change = {
 				name: { old: "users", new: "people" },
 				columns: [
@@ -579,7 +583,9 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result).toEqual([]);
 		});
 
-		test("unchanged column (same name and type) produces no statements", ({ expect }) => {
+		test("unchanged column (same name and type) produces no statements", ({
+			expect,
+		}) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [

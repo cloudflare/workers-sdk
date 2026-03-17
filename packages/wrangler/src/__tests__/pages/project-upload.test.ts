@@ -37,7 +37,9 @@ describe("pages project upload", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should upload a directory of files with a provided JWT", async ({ expect }) => {
+	it("should upload a directory of files with a provided JWT", async ({
+		expect,
+	}) => {
 		writeFileSync("logo.png", "foobar");
 
 		msw.use(
@@ -418,7 +420,9 @@ describe("pages project upload", () => {
 		`);
 	});
 
-	it("should try to use multiple buckets (up to the max concurrency)", async ({ expect }) => {
+	it("should try to use multiple buckets (up to the max concurrency)", async ({
+		expect,
+	}) => {
 		writeFileSync("logo.txt", "foobar");
 		writeFileSync("logo.png", "foobar");
 		writeFileSync("logo.html", "foobar");
@@ -595,7 +599,9 @@ describe("pages project upload", () => {
 		expect(uploadedAssets).toEqual(assets);
 	}, 60_000);
 
-	it("should not error when directory names contain periods and houses a extensionless file", async ({ expect }) => {
+	it("should not error when directory names contain periods and houses a extensionless file", async ({
+		expect,
+	}) => {
 		mkdirSync(".well-known");
 		// Note: same content as previous test, but since it's a different extension,
 		// it hashes to a different value
@@ -672,7 +678,9 @@ describe("pages project upload", () => {
 });
 
 describe("maxFileCountAllowedFromClaims", () => {
-	it("should return the value from max_file_count_allowed claim when present", ({ expect }) => {
+	it("should return the value from max_file_count_allowed claim when present", ({
+		expect,
+	}) => {
 		// JWT payload: {"max_file_count_allowed": 100000}
 		const jwt =
 			"header." +
@@ -683,7 +691,9 @@ describe("maxFileCountAllowedFromClaims", () => {
 		expect(maxFileCountAllowedFromClaims(jwt)).toBe(100000);
 	});
 
-	it("should return default value when max_file_count_allowed is not a number", ({ expect }) => {
+	it("should return default value when max_file_count_allowed is not a number", ({
+		expect,
+	}) => {
 		// JWT payload: {"max_file_count_allowed": "invalid"}
 		const jwt =
 			"header." +
@@ -694,7 +704,9 @@ describe("maxFileCountAllowedFromClaims", () => {
 		expect(maxFileCountAllowedFromClaims(jwt)).toBe(20000);
 	});
 
-	it("should return default value when JWT does not have max_file_count_allowed claim", ({ expect }) => {
+	it("should return default value when JWT does not have max_file_count_allowed claim", ({
+		expect,
+	}) => {
 		// JWT payload: {}
 		const jwt =
 			"header." +
@@ -703,7 +715,9 @@ describe("maxFileCountAllowedFromClaims", () => {
 		expect(maxFileCountAllowedFromClaims(jwt)).toBe(20000);
 	});
 
-	it("should return default value for test tokens without parsing", ({ expect }) => {
+	it("should return default value for test tokens without parsing", ({
+		expect,
+	}) => {
 		expect(maxFileCountAllowedFromClaims("<<funfetti-auth-jwt>>")).toBe(20000);
 		expect(maxFileCountAllowedFromClaims("<<funfetti-auth-jwt2>>")).toBe(20000);
 		expect(maxFileCountAllowedFromClaims("<<aus-completion-token>>")).toBe(

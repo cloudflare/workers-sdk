@@ -59,7 +59,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`""`);
 		});
 
-		it("show subdomain warnings on 2nd deploy, workers_dev", async ({ expect }) => {
+		it("show subdomain warnings on 2nd deploy, workers_dev", async ({
+			expect,
+		}) => {
 			// Set remote state using `wrangler triggers deploy`.
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -95,7 +97,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 			`);
 		});
 
-		it("show subdomain warnings on 3rd deploy, preview_urls", async ({ expect }) => {
+		it("show subdomain warnings on 3rd deploy, preview_urls", async ({
+			expect,
+		}) => {
 			// Set remote state using `wrangler triggers deploy`.
 			await helper.seed({
 				"wrangler.toml": dedent`

@@ -31,7 +31,7 @@ describe("getEntry()", () => {
 
 	it("--script index.ts", async () => {
 		await seed({
-			"index.ts": dedent/* javascript */ `
+			"index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -53,7 +53,7 @@ describe("getEntry()", () => {
 
 	it("--script src/index.ts", async () => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -75,7 +75,7 @@ describe("getEntry()", () => {
 
 	it("main = index.ts", async () => {
 		await seed({
-			"index.ts": dedent/* javascript */ `
+			"index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -97,7 +97,7 @@ describe("getEntry()", () => {
 
 	it("main = src/index.ts", async () => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -119,7 +119,7 @@ describe("getEntry()", () => {
 
 	it("main = src/index.ts w/ configPath", async () => {
 		await seed({
-			"other-worker/src/index.ts": dedent/* javascript */ `
+			"other-worker/src/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 

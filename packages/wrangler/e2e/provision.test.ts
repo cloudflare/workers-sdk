@@ -129,7 +129,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
-		it("can inherit bindings on re-deploy and won't re-provision", async ({ expect }) => {
+		it("can inherit bindings on re-deploy and won't re-provision", async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived(`wrangler deploy`);
 			await worker.exitCode;
 			const output = await worker.output;
@@ -181,7 +183,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				env.R2_WITH_NAME (does-not-exist)                                              R2 Bucket"
 			`);
 		});
-		it("can inherit and provision resources on version upload", async ({ expect }) => {
+		it("can inherit and provision resources on version upload", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 						name = "${workerName}"

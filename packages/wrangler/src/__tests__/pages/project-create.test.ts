@@ -114,7 +114,9 @@ describe("pages project create", () => {
 		`);
 	});
 
-	it("should create a project with a compatibility date", async ({ expect }) => {
+	it("should create a project with a compatibility date", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pages/projects",
@@ -159,7 +161,9 @@ describe("pages project create", () => {
 		`);
 	});
 
-	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({ expect }) => {
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.post(
 				"*/accounts/:accountId/pages/projects",

@@ -128,7 +128,7 @@ const testCases: TestCase[] = [
 		setup: async (helper) => {
 			const targetWorkerName = generateResourceName();
 			await helper.seed({
-				"target-worker.js": dedent/* javascript */ `
+				"target-worker.js": dedent /* javascript */ `
 					import { WorkerEntrypoint } from "cloudflare:workers"
 					export default {
 						fetch(request) {
@@ -375,7 +375,7 @@ const testCases: TestCase[] = [
 
 			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
-				"customer-worker.js": dedent/* javascript */ `
+				"customer-worker.js": dedent /* javascript */ `
 					import {WorkerEntrypoint} from "cloudflare:workers"
 					export default class W extends WorkerEntrypoint {
 						fetch(request) {
@@ -617,7 +617,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					],
 				};
 				await helper.seed({
-					"worker.js": dedent/* javascript */ `
+					"worker.js": dedent /* javascript */ `
 						export default {
 							fetch(request) { return new Response("Hello"); }
 						}

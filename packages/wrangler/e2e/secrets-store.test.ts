@@ -167,17 +167,20 @@ describe.each(RUNTIMES)(
 ✅ Deleted store! (ID: 00000000000000000000000000000000)`);
 		});
 
-		it.skipIf(runtime === "local")("validates a store is deleted", async ({ expect }) => {
-			const output = await helper.run(
-				`wrangler secrets-store secret get ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
-			);
+		it.skipIf(runtime === "local")(
+			"validates a store is deleted",
+			async ({ expect }) => {
+				const output = await helper.run(
+					`wrangler secrets-store secret get ${cachedStoreId} --secret-id ${cachedSecretId} ${flags}`
+				);
 
-			expect(normalize(output.stdout)).toContain(
-				"🔐 Getting secret... (ID: 00000000000000000000000000000000)"
-			);
-			expect(normalize(output.stderr)).toContain(
-				"store_not_found [code: 1001]"
-			);
-		});
+				expect(normalize(output.stdout)).toContain(
+					"🔐 Getting secret... (ID: 00000000000000000000000000000000)"
+				);
+				expect(normalize(output.stderr)).toContain(
+					"store_not_found [code: 1001]"
+				);
+			}
+		);
 	}
 );

@@ -87,7 +87,9 @@ describe("deploy", () => {
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to deploy durable objects without migrations", async ({ expect }) => {
+		it("should warn when you try to deploy durable objects without migrations", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [{ name: "SOMENAME", class_name: "SomeClass" }],
@@ -138,7 +140,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("does not warn if all the durable object bindings are to external classes", async ({ expect }) => {
+		it("does not warn if all the durable object bindings are to external classes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -227,7 +231,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload migrations past a previously uploaded tag", async ({ expect }) => {
+		it("should upload migrations past a previously uploaded tag", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -286,7 +292,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not send migrations if they've all already been sent", async ({ expect }) => {
+		it("should not send migrations if they've all already been sent", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -397,7 +405,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should deploy all migrations on first deploy (--env)", async ({ expect }) => {
+			it("should deploy all migrations on first deploy (--env)", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -467,7 +477,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should use a script's current migration tag when publishing migrations", async ({ expect }) => {
+			it("should use a script's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -534,7 +546,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should use an environment's current migration tag when publishing migrations", async ({ expect }) => {
+			it("should use an environment's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -666,7 +680,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should use a script's current migration tag when publishing migrations", async ({ expect }) => {
+			it("should use a script's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -724,7 +740,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("tail consumers", () => {
-		it("should allow specifying workers as tail consumers", async ({ expect }) => {
+		it("should allow specifying workers as tail consumers", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				tail_consumers: [
 					{ service: "listener " },
@@ -760,7 +778,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("user limits", () => {
-		it("should allow specifying a cpu millisecond limit", async ({ expect }) => {
+		it("should allow specifying a cpu millisecond limit", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				limits: { cpu_ms: 15_000 },
 			});
@@ -885,7 +905,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("python", () => {
-		it("should upload python module defined in wrangler.toml", async ({ expect }) => {
+		it("should upload python module defined in wrangler.toml", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.py",
 				compatibility_flags: ["python_workers"],
@@ -997,7 +1019,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should upload python module specified in CLI args", async ({ expect }) => {
+		it("should upload python module specified in CLI args", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_flags: ["python_workers"],
 			});

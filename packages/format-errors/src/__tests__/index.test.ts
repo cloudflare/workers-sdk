@@ -97,7 +97,9 @@ describe("reviveError", () => {
 		expect((error.cause as Error).message).toBe("inner");
 	});
 
-	it("should fall back to Error for unknown error names", async ({ expect }) => {
+	it("should fall back to Error for unknown error names", async ({
+		expect,
+	}) => {
 		const { reviveError } = await import("../index");
 		const error = reviveError({
 			message: "custom",

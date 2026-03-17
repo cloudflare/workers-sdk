@@ -1,5 +1,5 @@
-import * as index_bg from "./index_bg.js";
 import _wasm from "../index_bg.wasm";
+import * as index_bg from "./index_bg.js";
 
 const _wasm_memory = new WebAssembly.Memory({ initial: 512 });
 let importsObject = {

@@ -252,7 +252,9 @@ describe.each([
 	});
 
 	describe(`scheduled worker warning with ${cmd}`, () => {
-		it("shows warning with correct port when cron trigger is configured", async ({ expect }) => {
+		it("shows warning with correct port when cron trigger is configured", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -295,7 +297,9 @@ describe.each([
 			expect(worker.currentOutput).not.toContain("undefined");
 		});
 
-		it("does not show warning when --test-scheduled is enabled", async ({ expect }) => {
+		it("does not show warning when --test-scheduled is enabled", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -647,7 +651,9 @@ describe.each([{ cmd: "wrangler dev" }])(
 			await worker.readUntil(/end/);
 		});
 
-		it(`prints additional modules when vendored modules are present during ${cmd}`, async ({ expect }) => {
+		it(`prints additional modules when vendored modules are present during ${cmd}`, async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -867,7 +873,9 @@ describe.each(HYPERDRIVE_DATABASES)(
 			await socketMsgPromise;
 		});
 
-		it("uses HYPERDRIVE_LOCAL_CONNECTION_STRING for the localConnectionString variable in the binding", async ({ expect }) => {
+		it("uses HYPERDRIVE_LOCAL_CONNECTION_STRING for the localConnectionString variable in the binding", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			let port: number = defaultPort;
 			if (server.address() && typeof server.address() !== "string") {
@@ -1034,7 +1042,7 @@ describe("writes debug logs to hidden file", () => {
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
 				`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(req, env) {
 							return new Response('A' + req.url);
@@ -1071,7 +1079,7 @@ describe("writes debug logs to hidden file", () => {
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(req, env) {
 						return new Response('A' + req.url);
@@ -1100,7 +1108,9 @@ describe("analytics engine", () => {
 		"mock analytics engine datasets: $cmd",
 		({ cmd }) => {
 			describe("module worker", () => {
-				it("analytics engine datasets are mocked in dev", async ({ expect }) => {
+				it("analytics engine datasets are mocked in dev", async ({
+					expect,
+				}) => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
 						"wrangler.toml": dedent`
@@ -1145,7 +1155,9 @@ describe("analytics engine", () => {
 			});
 
 			describe("service worker", async () => {
-				it("using analytics engine datasets logs a warning in dev", async ({ expect }) => {
+				it("using analytics engine datasets logs a warning in dev", async ({
+					expect,
+				}) => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
 						"wrangler.toml": dedent`
@@ -1296,7 +1308,9 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 			);
 		});
 
-		it("fails with useful error message if host is not routable", async ({ expect }) => {
+		it("fails with useful error message if host is not routable", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -1333,7 +1347,9 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 );
 
 describe("custom builds", () => {
-	it("does not hang when custom build does not cause esbuild to run", async ({ expect }) => {
+	it("does not hang when custom build does not cause esbuild to run", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"wrangler.toml": dedent`
@@ -1435,7 +1451,9 @@ describe("watch mode", () => {
 	describe.each([{ cmd: "wrangler dev" }])(
 		"Workers watch mode: $cmd",
 		({ cmd }) => {
-			it(`supports modifying the Worker script during dev session`, async ({ expect }) => {
+			it(`supports modifying the Worker script during dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1486,7 +1504,9 @@ describe("watch mode", () => {
 	describe.each([{ cmd: "wrangler dev" }])(
 		"Workers + Assets watch mode: $cmd",
 		({ cmd }) => {
-			it(`supports modifying existing assets during dev session`, async ({ expect }) => {
+			it(`supports modifying existing assets during dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1529,7 +1549,9 @@ describe("watch mode", () => {
 				expect(response.headers.get("etag")).not.toBe(originalETag);
 			});
 
-			it(`supports adding new assets during dev session`, async ({ expect }) => {
+			it(`supports adding new assets during dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1583,7 +1605,9 @@ describe("watch mode", () => {
 				expect(response.status).toBe(304);
 			});
 
-			it(`supports removing existing assets during dev session`, async ({ expect }) => {
+			it(`supports removing existing assets during dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1633,7 +1657,9 @@ describe("watch mode", () => {
 				expect(response.status).toBe(404);
 			});
 
-			it("supports adding new metafiles during dev session", async ({ expect }) => {
+			it("supports adding new metafiles during dev session", async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1685,7 +1711,9 @@ describe("watch mode", () => {
 				expect(response.headers.get("X-Header")).toBe("Custom-Value");
 			});
 
-			it(`supports modifying the assets directory in wrangler.toml during dev session`, async ({ expect }) => {
+			it(`supports modifying the assets directory in wrangler.toml during dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1741,7 +1769,9 @@ describe("watch mode", () => {
 				);
 			});
 
-			it(`supports switching from Workers without assets to assets-only Workers during the current dev session`, async ({ expect }) => {
+			it(`supports switching from Workers without assets to assets-only Workers during the current dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1805,7 +1835,9 @@ describe("watch mode", () => {
 				expect(response.status).toBe(404);
 			});
 
-			it(`supports switching from Workers without assets to Workers with assets during the current dev session`, async ({ expect }) => {
+			it(`supports switching from Workers without assets to Workers with assets during the current dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1871,7 +1903,9 @@ describe("watch mode", () => {
 				expect(await response.text()).toBe("Hello from user Worker!");
 			});
 
-			it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async ({ expect }) => {
+			it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1927,7 +1961,9 @@ describe("watch mode", () => {
 				expect(await response.text()).toBe("Hello from user Worker!");
 			});
 
-			it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async ({ expect }) => {
+			it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -1983,7 +2019,9 @@ describe("watch mode", () => {
 				expect(response.status).toBe(404);
 			});
 
-			it("debounces runtime restarts when assets are modified", async ({ expect }) => {
+			it("debounces runtime restarts when assets are modified", async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -2030,7 +2068,9 @@ describe("watch mode", () => {
 				await expect(fetchText(url)).resolves.toBe("Hello from Assets");
 			});
 
-			it(`warns on mounted paths when routes are configured in the configuration file`, async ({ expect }) => {
+			it(`warns on mounted paths when routes are configured in the configuration file`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -2153,7 +2193,9 @@ describe("watch mode", () => {
 				expect(response.status).toBe(404);
 			});
 
-			it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async ({ expect }) => {
+			it(`supports switching from assets-only Workers to Workers with assets during the current dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -2203,7 +2245,9 @@ describe("watch mode", () => {
 				expect(await response.text()).toBe("Hello from user Worker!");
 			});
 
-			it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async ({ expect }) => {
+			it(`supports switching from Workers with assets to assets-only Workers during the current dev session`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -2252,7 +2296,9 @@ describe("watch mode", () => {
 				expect(response.status).toBe(404);
 			});
 
-			it(`warns on mounted paths when routes are configured in the configuration file`, async ({ expect }) => {
+			it(`warns on mounted paths when routes are configured in the configuration file`, async ({
+				expect,
+			}) => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
 					"wrangler.toml": dedent`
@@ -2577,7 +2623,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should not load local dev variables from .env files if there is a .dev.vars file", async ({ expect }) => {
+	it("should not load local dev variables from .env files if there is a .dev.vars file", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2605,7 +2653,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should not load dev variables from .env files if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async ({ expect }) => {
+	it("should not load dev variables from .env files if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2629,7 +2679,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should load environment variables from .env.staging if it exists and --env=staging", async ({ expect }) => {
+	it("should load environment variables from .env.staging if it exists and --env=staging", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2651,7 +2703,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should prefer to load environment variables from .env.staging over .env, if --env=staging", async ({ expect }) => {
+	it("should prefer to load environment variables from .env.staging over .env, if --env=staging", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2679,7 +2733,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should load environment variables from .env file if --env=xxx and .env.xxx does not exist", async ({ expect }) => {
+	it("should load environment variables from .env file if --env=xxx and .env.xxx does not exist", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2707,7 +2763,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should prefer to load environment variables from .env.local over .env", async ({ expect }) => {
+	it("should prefer to load environment variables from .env.local over .env", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2735,7 +2793,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should prefer to load environment variables from .env.staging.local over .env.staging, etc", async ({ expect }) => {
+	it("should prefer to load environment variables from .env.staging.local over .env.staging, etc", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2777,7 +2837,9 @@ describe(".env support in local dev", () => {
 		`);
 	});
 
-	it("should load environment variables from process.env if CLOUDFLARE_INCLUDE_PROCESS_ENV is true", async ({ expect }) => {
+	it("should load environment variables from process.env if CLOUDFLARE_INCLUDE_PROCESS_ENV is true", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({
@@ -2804,7 +2866,9 @@ describe(".env support in local dev", () => {
 		);
 	});
 
-	it("should load environment variables from the .env files pointed to by `--env-file`", async ({ expect }) => {
+	it("should load environment variables from the .env files pointed to by `--env-file`", async ({
+		expect,
+	}) => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed(seedFiles);
 		await helper.seed({

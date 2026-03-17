@@ -3,14 +3,7 @@ import path from "node:path";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import {
-	assert,
-	beforeEach,
-	describe,
-	it,
-	onTestFinished,
-	vi,
-} from "vitest";
+import { assert, beforeEach, describe, it, onTestFinished, vi } from "vitest";
 import WebSocket from "ws";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
@@ -63,7 +56,9 @@ describe("DevEnv", { sequential: true }, () => {
 	});
 
 	describe.each(OPTIONS)("(remote: $remote)", ({ remote }) => {
-		it("ProxyWorker buffers requests while runtime reloads", async ({ expect }) => {
+		it("ProxyWorker buffers requests while runtime reloads", async ({
+			expect,
+		}) => {
 			const script = dedent`
 			export default {
 				fetch() {
@@ -286,7 +281,9 @@ describe("DevEnv", { sequential: true }, () => {
 			}
 		);
 
-		it("config.dev.{server,inspector} changes, restart the server instance", async ({ expect }) => {
+		it("config.dev.{server,inspector} changes, restart the server instance", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {
@@ -567,7 +564,9 @@ describe("DevEnv", { sequential: true }, () => {
 			);
 		});
 
-		it("inflight requests are retried during UserWorker reloads", async ({ expect }) => {
+		it("inflight requests are retried during UserWorker reloads", async ({
+			expect,
+		}) => {
 			// to simulate inflight requests failing during UserWorker reloads,
 			// we will use a UserWorker with a longish `await setTimeout(...)`
 			// so that we can guarantee the race condition is hit when workerd is eventually terminated
@@ -627,7 +626,9 @@ describe("DevEnv", { sequential: true }, () => {
 			await expect(res.text()).resolves.toBe("UserWorker:3");
 		});
 
-		it("vars from .env (next to config file) override vars from Wrangler config file", async ({ expect }) => {
+		it("vars from .env (next to config file) override vars from Wrangler config file", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -684,7 +685,9 @@ describe("DevEnv", { sequential: true }, () => {
 			`);
 		});
 
-		it("vars are not loaded from .env if there is a .dev.vars file (next to config file)", async ({ expect }) => {
+		it("vars are not loaded from .env if there is a .dev.vars file (next to config file)", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -733,7 +736,9 @@ describe("DevEnv", { sequential: true }, () => {
 			`);
 		});
 
-		it("vars from inline config override vars from both .env and config file", async ({ expect }) => {
+		it("vars from inline config override vars from both .env and config file", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -795,7 +800,9 @@ describe("DevEnv", { sequential: true }, () => {
 			`);
 		});
 
-		it("vars from .env pointed at by `envFile` override vars from Wrangler config file and .env files local to the config file", async ({ expect }) => {
+		it("vars from .env pointed at by `envFile` override vars from Wrangler config file and .env files local to the config file", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 					export default {
@@ -857,7 +864,9 @@ describe("DevEnv", { sequential: true }, () => {
 
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/11038
 		// When envFiles is explicitly provided, .dev.vars should be completely ignored
-		it(".dev.vars is ignored when envFiles is explicitly provided (PR #11195)", async ({ expect }) => {
+		it(".dev.vars is ignored when envFiles is explicitly provided (PR #11195)", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {
@@ -905,7 +914,9 @@ describe("DevEnv", { sequential: true }, () => {
 
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/11264
 		// When envFiles is an empty array, .dev.vars should still be loaded
-		it(".dev.vars is loaded when envFiles is empty array (PR #11278)", async ({ expect }) => {
+		it(".dev.vars is loaded when envFiles is empty array (PR #11278)", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"src/index.ts": dedent`
 				export default {

@@ -17,7 +17,7 @@ const run = async () => {
 		format: "cjs",
 		define: {
 			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
-				process.env.SPARROW_SOURCE_KEY ?? "",
+				process.env.SPARROW_SOURCE_KEY ?? ""
 			),
 		},
 	};

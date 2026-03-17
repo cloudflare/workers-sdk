@@ -189,9 +189,8 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 
 		cwd = wd.cwd;
 
-		const { init, runBaseTests, setupEnvironment } = await import(
-			"vitest/worker"
-		);
+		const { init, runBaseTests, setupEnvironment } =
+			await import("vitest/worker");
 
 		poolSocket.accept();
 

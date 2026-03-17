@@ -53,7 +53,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = insertJSONProperty(
 			wranglerJson,
 			"$schema",
-			"node_modules/wrangler/config-schema.json",
+			"node_modules/wrangler/config-schema.json"
 		);
 
 		wranglerJson = appendJSONProperty(wranglerJson, "name", ctx.project.name);
@@ -62,8 +62,8 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			"compatibility_date",
 			await getCompatibilityDate(
 				wranglerJson.compatibility_date,
-				ctx.project.path,
-			),
+				ctx.project.path
+			)
 		);
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
@@ -88,7 +88,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerToml.name = ctx.project.name;
 		wranglerToml.compatibility_date = await getCompatibilityDate(
 			wranglerToml.compatibility_date,
-			ctx.project.path,
+			ctx.project.path
 		);
 		wranglerToml.observability ??= { enabled: true };
 		// Skip adding nodejs_compat for Python projects since it's not compatible with Python workers
@@ -102,7 +102,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 # For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/
 ${TOML.stringify(wranglerToml)}
 ${generateHintsAsTomlComments(wranglerToml)}
-`,
+`
 		);
 	}
 };
@@ -147,7 +147,7 @@ export const readWranglerToml = (ctx: C3Context) => {
  */
 export const readWranglerJsonOrJsonc = (
 	ctx: C3Context,
-	reviver?: Reviver,
+	reviver?: Reviver
 ): CommentObject => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
@@ -209,7 +209,7 @@ export const addVscodeConfig = (ctx: C3Context) => {
  */
 async function getCompatibilityDate(
 	tentativeDate: unknown,
-	projectPath: string,
+	projectPath: string
 ): Promise<string> {
 	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
 		// Use the tentative date when it is valid.
@@ -265,7 +265,7 @@ function addHintsAsJsonComments(wranglerConfig: CommentObject) {
 	addJSONComment(
 		wranglerConfig,
 		"before-all",
-		"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
+		"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n "
 	);
 
 	const commentsToAdd = [];
@@ -275,7 +275,7 @@ function addHintsAsJsonComments(wranglerConfig: CommentObject) {
 		if (!(key in wranglerConfig)) {
 			// Add block comment with the hint description
 			commentsToAdd.push(
-				`*\n\t * ${hint.comment.split("\n").join("\n\t * ")}\n\t `,
+				`*\n\t * ${hint.comment.split("\n").join("\n\t * ")}\n\t `
 			);
 
 			// Add line comment with the example value
@@ -319,7 +319,7 @@ function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
 						.trimEnd()
 						.split("\n")
 						.map((line) => `# ${line}`)
-						.join("\n"),
+						.join("\n")
 				);
 			}
 

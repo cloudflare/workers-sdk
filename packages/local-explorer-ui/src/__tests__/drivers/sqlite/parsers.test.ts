@@ -181,7 +181,9 @@ describe("parseSQLiteCreateTableScript", () => {
 		expect(schema.fts5.contentRowId).toBeUndefined();
 	});
 
-	test("table with column type parameters like `VARCHAR(255)`", ({ expect }) => {
+	test("table with column type parameters like `VARCHAR(255)`", ({
+		expect,
+	}) => {
 		const sql = `CREATE TABLE users (id INTEGER, name VARCHAR(255))`;
 		const schema = parseSQLiteCreateTableScript("main", sql);
 

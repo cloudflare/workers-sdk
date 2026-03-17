@@ -37,7 +37,9 @@ describe("getUpdatedPackages()", () => {
 		expect(getUpdatedPackages()).toEqual(expectedPackages);
 	});
 
-	it("should validate the shape of the PUBLISHED_PACKAGES JSON", ({ expect }) => {
+	it("should validate the shape of the PUBLISHED_PACKAGES JSON", ({
+		expect,
+	}) => {
 		process.env = {
 			PUBLISHED_PACKAGES: `"bad"`,
 		};
@@ -90,7 +92,9 @@ describe("getUpdatedPackages()", () => {
 });
 
 describe("findDeployablePackageNames()", () => {
-	it("should return all the private packages which contain deploy scripts", ({ expect }) => {
+	it("should return all the private packages which contain deploy scripts", ({
+		expect,
+	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
 			  "@cloudflare/chrome-devtools-patches",
@@ -108,7 +112,9 @@ describe("findDeployablePackageNames()", () => {
 });
 
 describe("deployPackage", () => {
-	it("should run `pnpm deploy` for the given package via `spawnSync`", ({ expect }) => {
+	it("should run `pnpm deploy` for the given package via `spawnSync`", ({
+		expect,
+	}) => {
 		deployPackage("foo", new Map());
 		expect(spawnSync).toHaveBeenCalledWith(
 			"pnpm",
@@ -129,7 +135,9 @@ describe("deployPackage", () => {
 });
 
 describe("deployNonNpmPackages()", () => {
-	it("should run `pnpm deploy` on each deployable updated package", ({ expect }) => {
+	it("should run `pnpm deploy` on each deployable updated package", ({
+		expect,
+	}) => {
 		const updatedPackages: UpdatedPackage[] = [
 			{ name: "a", version: "1.0.0" },
 			{ name: "b", version: "2.0.4" },
@@ -151,7 +159,9 @@ describe("deployNonNpmPackages()", () => {
 		`);
 	});
 
-	it("should run display an informative message if no packages to deploy", ({ expect }) => {
+	it("should run display an informative message if no packages to deploy", ({
+		expect,
+	}) => {
 		const updatedPackages: UpdatedPackage[] = [];
 		const deployablePackageNames = new Set(["a", "c", "e"]);
 		vitest.spyOn(console, "log").mockImplementation(() => {});
