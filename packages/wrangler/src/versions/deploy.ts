@@ -417,7 +417,10 @@ ${ZERO_WIDTH_SPACE}       Message:  ${
 		defaultValue: defaultSelectedVersionIds,
 		acceptDefault: yesFlag,
 		validate(versionIds) {
-			if (versionIds === undefined) {
+			if (
+				versionIds === undefined ||
+				(Array.isArray(versionIds) && versionIds.length === 0)
+			) {
 				return `You must select at least 1 version to deploy.`;
 			}
 		},

@@ -13,6 +13,11 @@ export type MultiSelectSearchOptions = {
 	validate?: (value: string[] | undefined) => string | void;
 };
 
+// Keys that @clack/core maps to cursor events when trackValue is false.
+// These are emitted as both "cursor" and "key" events, so we must ignore
+// them in the "key" handler to avoid double-handling (navigate + search append).
+const VIM_NAV_KEYS = new Set(["h", "j", "k", "l"]);
+
 /**
  * A multiselect prompt with type-to-search filtering.
  *
@@ -24,20 +29,30 @@ export type MultiSelectSearchOptions = {
  *
  * `this.search` contains the current search text.
  * `this.filteredOptions` contains the options matching the search.
- * `this.value` is the array of selected option values.
+ * `this.selectedValues` is the array of selected option values.
  * `this.cursor` is the index into `filteredOptions`.
+ * `this.windowStart` tracks the scroll position for the sliding window.
  */
 export default class MultiSelectSearchPrompt extends Prompt {
 	options: SearchableOption[];
 	filteredOptions: SearchableOption[];
 	cursor = 0;
 	search = "";
+	windowStart = 0;
+
+	get selectedValues(): string[] {
+		return this.value as string[];
+	}
+
+	set selectedValues(v: string[]) {
+		this.value = v;
+	}
 
 	constructor(opts: MultiSelectSearchOptions) {
 		super(opts, false);
 
 		this.options = opts.options;
-		this.value = [...(opts.initialValues ?? [])];
+		this.selectedValues = [...(opts.initialValues ?? [])];
 		this.filteredOptions = [...this.options];
 		this.cursor = 0;
 
@@ -78,10 +93,9 @@ export default class MultiSelectSearchPrompt extends Prompt {
 				return;
 			}
 
-			if (char === "a" && this.search === "") {
-				// Toggle all only when not searching (consistent with base MultiSelectPrompt)
-				this.toggleAll();
-				this.rerender();
+			// Ignore vim navigation keys (h/j/k/l) — they are already handled
+			// by the "cursor" event and would otherwise be appended to search.
+			if (VIM_NAV_KEYS.has(char)) {
 				return;
 			}
 
@@ -101,30 +115,13 @@ export default class MultiSelectSearchPrompt extends Prompt {
 		}
 
 		const opt = this.filteredOptions[this.cursor];
-		const idx = (this.value as string[]).indexOf(opt.value);
+		const idx = this.selectedValues.indexOf(opt.value);
 
 		if (idx === -1) {
-			this.value = [...(this.value as string[]), opt.value];
+			this.selectedValues = [...this.selectedValues, opt.value];
 		} else {
-			this.value = (this.value as string[]).filter(
-				(v: string) => v !== opt.value
-			);
-		}
-	}
-
-	private toggleAll(): void {
-		const allValues = this.filteredOptions.map((o) => o.value);
-		const allSelected = allValues.every((v) =>
-			(this.value as string[]).includes(v)
-		);
-
-		if (allSelected) {
-			this.value = (this.value as string[]).filter(
-				(v: string) => !allValues.includes(v)
-			);
-		} else {
-			this.value = Array.from(
-				new Set([...(this.value as string[]), ...allValues])
+			this.selectedValues = this.selectedValues.filter(
+				(v) => v !== opt.value
 			);
 		}
 	}

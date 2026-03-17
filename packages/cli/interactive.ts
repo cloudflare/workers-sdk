@@ -533,8 +533,9 @@ const getMultiSelectSearchRenderers = (
 			return `${space(2)}${pointer}${indicator} ${text} ${sublabel}`;
 		};
 
-		// Sliding window: only scroll when cursor reaches the edge of the viewport
-		let windowStart = 0;
+		// Sliding window: persist scroll position on the prompt instance so it
+		// survives across renders. Only scroll when cursor reaches the edge.
+		let windowStart = searchPrompt.windowStart ?? 0;
 		if (filtered.length > maxItemsPerPage) {
 			// Keep the cursor visible within the window
 			if (cursor >= windowStart + maxItemsPerPage) {
@@ -548,7 +549,10 @@ const getMultiSelectSearchRenderers = (
 				0,
 				Math.min(windowStart, filtered.length - maxItemsPerPage)
 			);
+		} else {
+			windowStart = 0;
 		}
+		searchPrompt.windowStart = windowStart;
 		const windowEnd = Math.min(windowStart + maxItemsPerPage, filtered.length);
 		const windowedOptions = filtered.slice(windowStart, windowEnd);
 		const hasMoreAbove = windowStart > 0;
@@ -572,7 +576,7 @@ const getMultiSelectSearchRenderers = (
 					? windowedOptions
 							.map((opt, i) => renderOption(opt, windowStart + i))
 							.join(`\n`)
-					: `${space(2)}${dim("No matching versions")}`
+					: `${space(2)}${dim("No matching options")}`
 			}${hasMoreBelow ? `\n${space(2)}${dim("...")}` : ""}`,
 			``, // extra line for readability
 		];
