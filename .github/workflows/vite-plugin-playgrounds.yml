@@ -23,12 +23,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        vite: ["vite-7"]
+        vite: ["vite-8"]
         include:
           - os: ubuntu-latest
             vite: "vite-6"
           - os: ubuntu-latest
-            vite: vite-8
+            vite: "vite-7"
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -59,11 +59,11 @@ jobs:
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
-          pnpm update -r --no-save vite@6.4.1
-      - name: Upgrade to Vite 8
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-8'
+          pnpm update -r --no-save vite@^6.1.0
+      - name: Downgrade to Vite 7
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-7'
         run: |
-          pnpm update -r --no-save vite@^8.0.0
+          pnpm update -r --no-save vite@^7.0.0
       - name: Run dev playground tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
