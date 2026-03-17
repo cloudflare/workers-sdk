@@ -1,4 +1,4 @@
-import { Button, DropdownMenu } from "@cloudflare/kumo";
+import { Button, DropdownMenu, useKumoToastManager } from "@cloudflare/kumo";
 import { CopyIcon, TableIcon, TextTIcon } from "@phosphor-icons/react";
 import { useCallback } from "react";
 import type { IStudioDriver } from "../../../types/studio";
@@ -32,13 +32,19 @@ export function StudioTableActionsDropdown({
 	driver,
 	schemaName = "main",
 }: TableActionsDropdownProps): JSX.Element {
+	const toasts = useKumoToastManager();
+
 	const handleCopyTableName = useCallback(async (): Promise<void> => {
 		if (!currentTable) {
 			return;
 		}
 
 		await window.navigator.clipboard.writeText(currentTable);
-	}, [currentTable]);
+		toasts.add({
+			title: "Copied",
+			description: "Table name copied to clipboard",
+		});
+	}, [currentTable, toasts]);
 
 	const handleCopyTableSchema = useCallback(async (): Promise<void> => {
 		if (!currentTable) {
@@ -51,7 +57,11 @@ export function StudioTableActionsDropdown({
 		}
 
 		await window.navigator.clipboard.writeText(tableSchema.createScript);
-	}, [currentTable, driver, schemaName]);
+		toasts.add({
+			title: "Copied",
+			description: "Table schema copied to clipboard",
+		});
+	}, [currentTable, driver, schemaName, toasts]);
 
 	return (
 		<>
