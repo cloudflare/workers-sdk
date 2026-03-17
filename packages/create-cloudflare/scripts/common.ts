@@ -17,7 +17,7 @@ export type Worker = {
 const apiFetch = async (
 	path: string,
 	init = { method: "GET" },
-	queryParams = {},
+	queryParams = {}
 ) => {
 	const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
 	const queryString = queryParams

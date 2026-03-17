@@ -59,24 +59,24 @@ const updateNuxtConfig = () => {
 		b.objectExpression([
 			b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare_module"),
+				b.stringLiteral("cloudflare_module")
 			),
 			b.objectProperty(
 				b.identifier("cloudflare"),
 				b.objectExpression([
 					b.objectProperty(
 						b.identifier("deployConfig"),
-						b.booleanLiteral(true),
+						b.booleanLiteral(true)
 					),
 					b.objectProperty(b.identifier("nodeCompat"), b.booleanLiteral(true)),
-				]),
+				])
 			),
-		]),
+		])
 	);
 
 	const moduleDef = b.objectProperty(
 		b.identifier("modules"),
-		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")]),
+		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
 	);
 
 	transformFile(configFile, {
@@ -85,7 +85,7 @@ const updateNuxtConfig = () => {
 			if (callee.name === "defineNuxtConfig") {
 				mergeObjectProperties(
 					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-					[presetDef, moduleDef],
+					[presetDef, moduleDef]
 				);
 			}
 

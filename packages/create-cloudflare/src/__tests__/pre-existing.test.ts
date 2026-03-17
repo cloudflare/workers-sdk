@@ -35,7 +35,7 @@ describe("configure function", () => {
 
 		const configure = buildConfigure(params);
 		await expect(configure(ctx)).rejects.toThrow(
-			"Failed to login to Cloudflare",
+			"Failed to login to Cloudflare"
 		);
 		expect(params.chooseAccount).not.toHaveBeenCalled();
 		expect(params.copyFiles).not.toHaveBeenCalled();

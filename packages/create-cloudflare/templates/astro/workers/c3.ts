@@ -28,7 +28,7 @@ const configure = async () => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``,
+			`via \`${npx} astro add cloudflare\``
 		)}`,
 	});
 };

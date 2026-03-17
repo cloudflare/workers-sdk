@@ -34,7 +34,7 @@ const configure = async (ctx: C3Context) => {
 			const b = recast.types.builders;
 			const presetProp = b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare-module"),
+				b.stringLiteral("cloudflare-module")
 			);
 
 			if (n.node.arguments.length === 0) {
@@ -42,7 +42,7 @@ const configure = async (ctx: C3Context) => {
 			} else {
 				mergeObjectProperties(
 					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-					[presetProp],
+					[presetProp]
 				);
 			}
 
