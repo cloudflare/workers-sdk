@@ -50,7 +50,6 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 									rolldownOptions: {
 										plugins: [
 											// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
-											// @ts-expect-error: added in Vite 8
 											vite.esmExternalRequirePlugin({
 												external: [...nodeJsCompat.externals],
 												skipDuplicateCheck: true,
