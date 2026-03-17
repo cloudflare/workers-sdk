@@ -6,7 +6,7 @@
 	"trailingComma": "es5",
 	"sortImports": {
 		"groups": ["builtin", "external", "parent", "sibling", "index", "type"],
-		"newlinesBetween": false
+		"newlinesBetween": false,
 	},
 	"sortTailwindcss": {},
 	"sortPackageJson": {},
@@ -15,24 +15,24 @@
 			"files": ["packages/vite-plugin-cloudflare/README.md"],
 			"options": {
 				"useTabs": false,
-				"trailingComma": "all"
-			}
+				"trailingComma": "all",
+			},
 		},
 		{
 			"files": [".changeset/*.md"],
 			"options": {
-				"proseWrap": "never"
-			}
+				"proseWrap": "never",
+			},
 		},
 		{
 			"files": ["packages/local-explorer-ui/**/*.{js,jsx,ts,tsx}"],
 			"options": {
 				"sortTailwindcss": {
 					"stylesheet": "./packages/local-explorer-ui/src/styles/tailwind.css",
-					"functions": ["cn"]
-				}
-			}
-		}
+					"functions": ["cn"],
+				},
+			},
+		},
 	],
 	"ignorePatterns": [
 		"CHANGELOG.md",
@@ -58,6 +58,6 @@
 		"fixtures/interactive-dev-tests/src/startup-error.ts",
 		"packages/vite-plugin-cloudflare/playground/**/*.d.ts",
 		"packages/local-explorer-ui/src/routeTree.gen.ts",
-		"packages/local-explorer-ui/src/api/generated"
-	]
+		"packages/local-explorer-ui/src/api/generated",
+	],
 }
