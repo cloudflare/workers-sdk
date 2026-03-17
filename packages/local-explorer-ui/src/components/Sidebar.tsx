@@ -74,7 +74,7 @@ function SidebarItemGroup({
 						delay={100}
 						openOnHover={true}
 					>
-						<Icon className="h-4 w-4" />
+						<Icon className="h-5 w-5" />
 					</Popover.Trigger>
 
 					<Popover.Content
@@ -132,7 +132,7 @@ function SidebarItemGroup({
 		<Collapsible.Root open={isExpanded} onOpenChange={handleExpandedChange}>
 			<Collapsible.Trigger className="group mx-2 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-2 rounded-lg bg-transparent px-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text">
 				<span className="flex h-9 w-9 shrink-0 items-center justify-center">
-					<Icon className="h-4 w-4" />
+					<Icon className="h-5 w-5" />
 				</span>
 				<span className="flex-1 text-left">{title}</span>
 				<CaretDownIcon
