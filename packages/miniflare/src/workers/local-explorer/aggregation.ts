@@ -104,8 +104,9 @@ export async function aggregateListResults<T>(
 				};
 				if (Array.isArray(data.result)) {
 					return data.result;
-				} else if (resultKey) {
-					return data.result[resultKey];
+				}
+				if (resultKey) {
+					return data.result[resultKey] ?? [];
 				}
 				throw new Error("unreachable");
 			} catch {
