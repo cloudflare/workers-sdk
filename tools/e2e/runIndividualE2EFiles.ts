@@ -21,6 +21,16 @@ import type { ExecSyncOptionsWithBufferEncoding } from "node:child_process";
 // ```bash
 // pnpm test:e2e:wrangler -- -u
 // ```
+//
+// ## Sharding
+//
+// Set `E2E_SHARD` and `E2E_SHARD_COUNT` to split the test files across multiple
+// CI jobs. Each shard gets a subset of files, balanced by estimated test duration
+// using greedy bin-packing. For example:
+//
+//   E2E_SHARD=1 E2E_SHARD_COUNT=4 pnpm test:e2e:wrangler
+//
+// runs the first shard's files. When unset, all files run (no sharding).
 
 const RETRIES = 4;
 
@@ -41,6 +51,86 @@ let tests = Array.from(
 		posix: true,
 	})
 );
+
+// Apply sharding if E2E_SHARD and E2E_SHARD_COUNT are set.
+// Uses greedy bin-packing by estimated duration so shards are roughly balanced.
+// Files not in the duration map get a default estimate.
+const shardIndex = process.env.E2E_SHARD
+	? parseInt(process.env.E2E_SHARD, 10)
+	: undefined;
+const shardCount = process.env.E2E_SHARD_COUNT
+	? parseInt(process.env.E2E_SHARD_COUNT, 10)
+	: undefined;
+
+if (shardIndex !== undefined && shardCount !== undefined) {
+	assert(
+		shardIndex >= 1 && shardIndex <= shardCount,
+		`E2E_SHARD must be between 1 and E2E_SHARD_COUNT (${shardCount}), got ${shardIndex}`
+	);
+	assert(shardCount >= 1, `E2E_SHARD_COUNT must be >= 1, got ${shardCount}`);
+
+	// Estimated durations (seconds) from CI measurements. Used for load-balancing
+	// across shards. Doesn't need to be exact — just roughly right. Files not
+	// listed here get a default of 5s. Update periodically from CI timing data.
+	const estimatedDurations: Record<string, number> = {
+		"e2e/dev.test.ts": 102,
+		"e2e/unenv-preset/preset.test.ts": 80,
+		"e2e/assets-multiworker.test.ts": 57,
+		"e2e/types.test.ts": 37,
+		"e2e/pages-dev.test.ts": 31,
+		"e2e/dev-registry.test.ts": 30,
+		"e2e/containers.dev.test.ts": 30,
+		"e2e/c3-integration.test.ts": 27,
+		"e2e/get-platform-proxy.test.ts": 23,
+		"e2e/multiworker-dev.test.ts": 22,
+		"e2e/remote-binding/miniflare-remote-resources.test.ts": 20,
+		"e2e/startWorker.test.ts": 16,
+		"e2e/remote-binding/remote-bindings-api.test.ts": 15,
+		"e2e/remote-binding/start-worker-remote-bindings.test.ts": 13,
+		"e2e/start-worker-auth-opts.test.ts": 13,
+		"e2e/secrets-store.test.ts": 7,
+		"e2e/autoconfig/setup.test.ts": 3,
+	};
+	const DEFAULT_DURATION = 5;
+
+	const getDuration = (file: string) =>
+		estimatedDurations[file] ?? DEFAULT_DURATION;
+
+	// Greedy bin-packing: sort by duration desc, assign each file to the
+	// lightest shard. Produces near-optimal balance.
+	const sortedByDuration = [...tests].sort(
+		(a, b) => getDuration(b) - getDuration(a)
+	);
+	const shards: string[][] = Array.from({ length: shardCount }, () => []);
+	const shardTotals = new Float64Array(shardCount);
+
+	for (const file of sortedByDuration) {
+		// Find the shard with the lowest total duration
+		let minIdx = 0;
+		for (let i = 1; i < shardCount; i++) {
+			if (shardTotals[i] < shardTotals[minIdx]) {
+				minIdx = i;
+			}
+		}
+		shards[minIdx].push(file);
+		shardTotals[minIdx] += getDuration(file);
+	}
+
+	const totalFiles = tests.length;
+	tests = shards[shardIndex - 1];
+
+	console.log(
+		`Shard ${shardIndex}/${shardCount}: running ${tests.length}/${totalFiles} test files (~${Math.round(shardTotals[shardIndex - 1])}s estimated)` +
+			tests.map((file) => `\n  - ${file}`)
+	);
+
+	// Log all shard assignments for debugging
+	for (let i = 0; i < shardCount; i++) {
+		console.log(
+			`  Shard ${i + 1}: ${shards[i].length} files, ~${Math.round(shardTotals[i])}s`
+		);
+	}
+}
 
 const failedTest = new Set<string>();
 
