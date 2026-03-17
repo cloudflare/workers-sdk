@@ -1,12 +1,9 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import { BlobStore, SharedBindings } from "miniflare:shared";
 
-type BindingProps = {
-	binding: string;
-};
-
 interface Env {
 	STREAM_DB: D1Database;
+	STREAM_BINDING_NAME: string;
 	[SharedBindings.MAYBE_SERVICE_BLOBS]: Fetcher;
 }
 
@@ -115,30 +112,12 @@ CREATE TABLE IF NOT EXISTS watermarks (
 );
 `;
 
-const LOREM_IPSUM_VTT = `WEBVTT
-
-00:00:00.000 --> 00:00:03.000
-Lorem ipsum dolor sit amet.
-
-00:00:03.000 --> 00:00:06.000
-Consectetur adipiscing elit.
-`;
-
-const PLACEHOLDER_IMAGE = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#1f2937"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#f9fafb" font-family="sans-serif" font-size="32">Local Stream Preview</text></svg>`;
-
 function nowISOString() {
 	return new Date().toISOString();
 }
 
 function jsonParse<T>(value: string): T {
 	return JSON.parse(value) as T;
-}
-
-function getBindingProps(ctx: { props?: BindingProps } | undefined) {
-	if (!ctx?.props?.binding) {
-		throw new Error("Missing stream binding props");
-	}
-	return ctx.props;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -242,7 +221,7 @@ function toStreamWatermark(watermark: StoredWatermark): StreamWatermark {
 		scale: watermark.scale,
 		position: watermark.position,
 		url: watermark.url,
-	} as StreamWatermark;
+	} as unknown as StreamWatermark;
 }
 
 function toStreamCaption(caption: StoredCaption): StreamCaption {
@@ -280,26 +259,7 @@ function toStreamVideo(binding: string, video: StoredVideo): StreamVideo {
 			errorReasonText: video.status.errorReasonText,
 		},
 		watermark: video.watermark ? toStreamWatermark(video.watermark) : undefined,
-	} as StreamVideo;
-}
-
-function buildDownloadResponse(
-	binding: string,
-	videoId: string
-): StreamDownloadGetResponse {
-	const route = `${videoRoute(binding, videoId)}/downloads`;
-	return {
-		default: {
-			status: "ready",
-			percentComplete: 100,
-			url: `${route}/default`,
-		},
-		audio: {
-			status: "ready",
-			percentComplete: 100,
-			url: `${route}/audio`,
-		},
-	} as StreamDownloadGetResponse;
+	} as unknown as StreamVideo;
 }
 
 class StreamStore {
@@ -376,11 +336,6 @@ class StreamStore {
 		}
 	}
 
-	async uploadFile(file: File): Promise<StreamVideo> {
-		await this.ensureSchema();
-		return this.createVideoFromFile(file, {}, "file");
-	}
-
 	async uploadUrl(
 		url: string,
 		params?: StreamUrlUploadParams
@@ -407,18 +362,6 @@ class StreamStore {
 			.bind(videoId)
 			.first<{ record_json: string }>();
 		return row ? jsonParse<StoredVideo>(row.record_json) : null;
-	}
-
-	async getVideoBlob(
-		videoId: string
-	): Promise<ReadableStream<Uint8Array> | null> {
-		const video = await this.getVideoRecord(videoId);
-		if (!video) {
-			return null;
-		}
-		return this.#blob.get(
-			video.blobId
-		) as Promise<ReadableStream<Uint8Array> | null>;
 	}
 
 	async listVideos(params?: StreamVideosListParams): Promise<StreamVideo[]> {
@@ -554,40 +497,13 @@ class StreamStore {
 		return toStreamCaption(caption);
 	}
 
-	async generateCaption(videoId: string, language: string) {
-		await this.ensureSchema();
-		const existing = await this.env.STREAM_DB.prepare(
-			"SELECT blob_id FROM captions WHERE video_id = ?1 AND language = ?2"
-		)
-			.bind(videoId, language)
-			.first<{ blob_id: string | null }>();
-		const blobId = await this.#blob.put(new Blob([LOREM_IPSUM_VTT]).stream());
-		const now = nowISOString();
-		const caption: StoredCaption = {
-			videoId,
-			language,
-			label: language.toUpperCase(),
-			generated: true,
-			status: "ready",
-			blobId,
-			createdAt: now,
-			updatedAt: now,
-		};
-		try {
-			await this.env.STREAM_DB.prepare(
-				`INSERT OR REPLACE INTO captions (video_id, language, blob_id, record_json)
-				 VALUES (?1, ?2, ?3, ?4)`
-			)
-				.bind(videoId, language, blobId, JSON.stringify(caption))
-				.run();
-		} catch (error) {
-			await this.#blob.delete(blobId);
-			throw error;
-		}
-		if (existing?.blob_id && existing.blob_id !== blobId) {
-			await this.#blob.delete(existing.blob_id);
-		}
-		return toStreamCaption(caption);
+	async generateCaption(
+		videoId: string,
+		language: string
+	): Promise<StreamCaption> {
+		throw new Error(
+			`Caption generation is not implemented in local Stream mode: ${videoId}/${language}`
+		);
 	}
 
 	async listCaptions(videoId: string, language?: string) {
@@ -920,18 +836,24 @@ class StreamScopedDownloadsImpl
 		super();
 	}
 
-	async generate(_downloadType?: StreamDownloadType) {
-		await this.getStore().ensureSchema();
-		return buildDownloadResponse(this.binding, this.id);
+	async generate(
+		_downloadType?: StreamDownloadType
+	): Promise<StreamDownloadGetResponse> {
+		throw new Error(
+			`Downloads are not implemented in local Stream mode: ${this.binding}/${this.id}`
+		);
 	}
 
-	async get() {
-		await this.getStore().ensureSchema();
-		return buildDownloadResponse(this.binding, this.id);
+	async get(): Promise<StreamDownloadGetResponse> {
+		throw new Error(
+			`Downloads are not implemented in local Stream mode: ${this.binding}/${this.id}`
+		);
 	}
 
 	async delete(_downloadType?: StreamDownloadType): Promise<void> {
-		await this.getStore().ensureSchema();
+		throw new Error(
+			`Downloads are not implemented in local Stream mode: ${this.binding}/${this.id}`
+		);
 	}
 }
 
@@ -950,7 +872,7 @@ class StreamScopedCaptionsImpl
 		return this.getStore().uploadCaption(this.id, language, file);
 	}
 
-	async generate(language: string) {
+	async generate(language: string): Promise<StreamCaption> {
 		return this.getStore().generateCaption(this.id, language);
 	}
 
@@ -1031,11 +953,11 @@ class StreamWatermarksImpl extends RpcTarget implements StreamWatermarks {
 }
 
 export class StreamBindingEntrypoint
-	extends WorkerEntrypoint<Env, BindingProps>
+	extends WorkerEntrypoint<Env>
 	implements StreamBinding
 {
 	private getBindingName() {
-		return getBindingProps(this.ctx).binding;
+		return this.env.STREAM_BINDING_NAME;
 	}
 
 	private getStore = () => new StreamStore(this.env, this.getBindingName());
@@ -1055,8 +977,9 @@ export class StreamBindingEntrypoint
 	async upload(input: File | string, params?: StreamUrlUploadParams) {
 		if (typeof input === "string") {
 			return this.getStore().uploadUrl(input, params);
+		} else {
+			throw new Error("Not implemented");
 		}
-		return this.getStore().uploadFile(input);
 	}
 
 	async createDirectUpload(params: StreamDirectUploadCreateParams) {
@@ -1075,50 +998,6 @@ export class StreamBindingEntrypoint
 			);
 		}
 
-		const fileMatch = pathname.match(
-			/^\/videos\/([^/]+)\/(file|preview|thumbnail\.jpg)$/
-		);
-		if (fileMatch) {
-			const videoId = decodeURIComponent(fileMatch[1]);
-			if (fileMatch[2] !== "file") {
-				return new Response(PLACEHOLDER_IMAGE, {
-					headers: { "content-type": "image/svg+xml; charset=utf-8" },
-				});
-			}
-			const video = await store.getVideoRecord(videoId);
-			const body = await store.getVideoBlob(videoId);
-			if (!video || !body) {
-				return new Response("Not found", { status: 404 });
-			}
-			return new Response(body, {
-				headers: { "content-type": video.contentType },
-			});
-		}
-
-		const manifestMatch = pathname.match(
-			/^\/videos\/([^/]+)\/manifest\/(video\.m3u8|video\.mpd)$/
-		);
-		if (manifestMatch) {
-			const videoId = decodeURIComponent(manifestMatch[1]);
-			const route = videoRoute(this.getBindingName(), videoId);
-			if (manifestMatch[2] === "video.m3u8") {
-				return new Response(
-					`#EXTM3U\n#EXT-X-VERSION:3\n#EXTINF:1.0,\n${route}/file\n#EXT-X-ENDLIST\n`,
-					{
-						headers: {
-							"content-type": "application/vnd.apple.mpegurl",
-						},
-					}
-				);
-			}
-			return new Response(
-				`<?xml version="1.0" encoding="UTF-8"?><MPD><Period><AdaptationSet><Representation><BaseURL>${route}/file</BaseURL></Representation></AdaptationSet></Period></MPD>`,
-				{
-					headers: { "content-type": "application/dash+xml" },
-				}
-			);
-		}
-
 		const captionMatch = pathname.match(
 			/^\/videos\/([^/]+)\/captions\/([^/]+)\.vtt$/
 		);
@@ -1132,24 +1011,6 @@ export class StreamBindingEntrypoint
 			}
 			return new Response(body, {
 				headers: { "content-type": "text/vtt; charset=utf-8" },
-			});
-		}
-
-		const downloadMatch = pathname.match(
-			/^\/videos\/([^/]+)\/downloads\/(default|audio)$/
-		);
-		if (downloadMatch) {
-			const videoId = decodeURIComponent(downloadMatch[1]);
-			const video = await store.getVideoRecord(videoId);
-			const body = await store.getVideoBlob(videoId);
-			if (!video || !body) {
-				return new Response("Not found", { status: 404 });
-			}
-			return new Response(body, {
-				headers: {
-					"content-type": video.contentType,
-					"content-disposition": `attachment; filename="${video.filename}"`,
-				},
 			});
 		}
 
