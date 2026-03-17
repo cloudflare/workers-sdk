@@ -180,15 +180,11 @@ function ObjectView(): JSX.Element {
 					icon={DOIcon}
 					items={[
 						<Link
-							className="flex items-center gap-1.5"
 							key="class-name"
 							params={{ className: params.className }}
 							to="/do/$className"
 						>
 							{params.className}
-							{namespaceId !== params.className && (
-								<span className="text-text-secondary">({namespaceId})</span>
-							)}
 						</Link>,
 						<span
 							className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"
