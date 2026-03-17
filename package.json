@@ -44,7 +44,6 @@
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
 		"eslint-plugin-turbo": "^2.8.17",
-		"eslint-plugin-unused-imports": "^4.1.4",
 		"jsonc-parser": "catalog:default",
 		"oxlint": "^1.56.0",
 		"oxlint-tsgolint": "^0.17.0",

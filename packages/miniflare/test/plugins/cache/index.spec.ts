@@ -12,7 +12,7 @@ import {
 	RequestInit,
 	Response,
 } from "miniflare";
-import { beforeEach, onTestFinished, test } from "vitest";
+import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,

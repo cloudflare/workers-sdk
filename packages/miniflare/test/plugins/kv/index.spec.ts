@@ -10,7 +10,7 @@ import {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 } from "miniflare";
-import { beforeEach, test } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import {
 	createJunkStream,
 	FIXTURES_PATH,

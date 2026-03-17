@@ -48,8 +48,8 @@ describe("basic e2e tests", () => {
 
 					await vi.waitFor(
 						async () => {
-							const response = await fetch(url + "/aborted");
-							await expect(response.text()).resolves.toEqual("Request aborted");
+							const r = await fetch(url + "/aborted");
+							await expect(r.text()).resolves.toEqual("Request aborted");
 						},
 						{ timeout: 10000 }
 					);

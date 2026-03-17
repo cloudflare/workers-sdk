@@ -44,7 +44,7 @@ if (isWindows) {
 							)
 						).status !== 404
 					);
-				} catch (e) {
+				} catch {
 					runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
 				}
 				try {

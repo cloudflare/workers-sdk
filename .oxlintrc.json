@@ -45,15 +45,14 @@
 		"unicorn/prefer-node-protocol": "error",
 		"vitest/no-focused-tests": "error",
 		"turbo/no-undeclared-env-vars": "error",
-		"unused-imports/no-unused-imports": "error",
-		"workers-sdk/no-direct-recursive-rm": "error",
-		"workers-sdk/no-unsafe-command-execution": "error",
+
 		"no-unused-vars": [
 			"error",
 			{
 				"argsIgnorePattern": ".*",
 				"varsIgnorePattern": "^_",
-				"ignoreRestSiblings": true
+				"ignoreRestSiblings": true,
+				"fix": { "imports": "fix" }
 			}
 		],
 		"no-restricted-imports": [
@@ -84,43 +83,29 @@
 		"**/*.js",
 		"**/*.cjs",
 		"**/*.mjs",
-		"**/vitest.config.mts",
-		"**/vitest.config.ts",
-		"**/vite.config.ts",
-		"**/tsup.config.ts",
-		"**/tsdown.config.ts",
 		"fixtures/**",
-		"packages/containers-shared/src/client/**",
-		"packages/create-cloudflare/e2e/**/fixtures/**",
 		"packages/create-cloudflare/**/templates/**/*.*",
 		"!packages/create-cloudflare/**/templates*/**/c3.ts",
-		"packages/create-cloudflare/scripts/**",
+		// TODO: we really should be linting this folder
+		"packages/wrangler/templates/**",
+		// Ignore generated files
+		"packages/containers-shared/src/client/**",
 		"packages/local-explorer-ui/src/api/generated/**",
 		"packages/local-explorer-ui/src/routeTree.gen.ts",
 		"packages/miniflare/src/runtime/config/workerd.*",
-		"packages/miniflare/test/fixtures/**",
-		"packages/miniflare/scripts/**",
 		"packages/quick-edit-extension/vscode.d.ts",
-		"packages/quick-edit-extension/vscode.proposed.*.d.ts",
-		"packages/quick-edit-extension/scripts/**",
-		"packages/vite-plugin-cloudflare/scripts/**",
-		"packages/vite-plugin-cloudflare/src/__tests__/fixtures/**",
-		"packages/vite-plugin-cloudflare/playground/**",
-		"packages/vite-plugin-cloudflare/e2e/**",
-		"packages/wrangler/pages/functions/template-worker.ts",
-		"packages/wrangler/**/templates/**/*.*",
-		"packages/workers-utils/**/templates/**/*.*"
+		"packages/quick-edit-extension/vscode.proposed.*.d.ts"
 	],
 	"jsPlugins": [
 		"eslint-plugin-turbo",
-		"eslint-plugin-unused-imports",
 		{
 			"name": "workers-sdk",
 			"specifier": "./packages/eslint-config-shared/oxlint-plugin.mjs"
 		}
 	],
 	"overrides": [
-		// Published packages which all have their own "logger" class that should be used instead
+		// Published packages which all have their own "logger" class that should be used instead.
+		// Additionally, only apply workers-sdk/no-unsafe-command-execution & workers-sdk/no-direct-recursive-rm here to improve linting performance
 		{
 			"files": [
 				"packages/cli/**",
@@ -130,7 +115,9 @@
 				"packages/workers-utils/**"
 			],
 			"rules": {
-				"no-console": "error"
+				"no-console": "error",
+				"workers-sdk/no-unsafe-command-execution": "error",
+				"workers-sdk/no-direct-recursive-rm": "error"
 			}
 		},
 		// TODO: remove these overrides. This is a legacy of Miniflare's history, not intentional
@@ -152,7 +139,7 @@
 			}
 		},
 		{
-			"files": ["packages/wrangler/**", "packages/workers-utils/**"],
+			"files": ["packages/wrangler/src/**", "packages/workers-utils/src/**"],
 			"rules": {
 				"no-restricted-globals": [
 					"error",
@@ -178,13 +165,16 @@
 				"no-console": "off"
 			}
 		},
-		// Relax some rules for test files
+		// Relax some rules for test & script files
 		{
 			"files": [
 				"packages/wrangler/src/__tests__/**",
 				"packages/wrangler/e2e/**",
 				"packages/wrangler/scripts/**",
-				"packages/workers-utils/tests/**"
+				"packages/miniflare/scripts/**",
+				"packages/create-cloudflare/scripts/**",
+				"packages/workers-utils/tests/**",
+				"packages/vite-plugin-cloudflare/e2e/**"
 			],
 			"rules": {
 				"no-console": "off",
