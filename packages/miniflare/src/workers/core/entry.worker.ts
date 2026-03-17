@@ -507,45 +507,47 @@ export default <ExportedHandler<Env>>{
 			throw e;
 		}
 		const url = new URL(request.url);
+
+		// stream route handling
+		if (url.pathname.startsWith("/cdn-cgi/handler/stream/")) {
+			const match = url.pathname.match(
+				/^\/cdn-cgi\/handler\/stream\/([^/]+)(\/.*)?$/
+			);
+			if (!match) {
+				return new Response("Invalid Stream handler path", { status: 404 });
+			}
+
+			const bindingName = decodeURIComponent(match[1]);
+			if (!env[CoreBindings.JSON_STREAM_BINDINGS].includes(bindingName)) {
+				return new Response(
+					`Unknown Stream binding ${JSON.stringify(bindingName)}`,
+					{ status: 404 }
+				);
+			}
+			const binding = (env as Record<string, unknown>)[bindingName];
+			if (
+				!binding ||
+				typeof binding !== "object" ||
+				!("fetch" in binding) ||
+				typeof binding.fetch !== "function"
+			) {
+				return new Response(
+					`Unknown Stream binding ${JSON.stringify(bindingName)}`,
+					{ status: 404 }
+				);
+			}
+
+			const forwardURL = new URL(request.url);
+			forwardURL.pathname = match[2] ?? "/";
+			return await binding.fetch(new Request(forwardURL, request));
+		}
+
 		const service = getTargetService(request, url, env);
 		if (service === undefined) {
 			return new Response("No entrypoint worker found", { status: 404 });
 		}
 
 		try {
-			if (url.pathname.startsWith("/cdn-cgi/handler/stream/")) {
-				const match = url.pathname.match(
-					/^\/cdn-cgi\/handler\/stream\/([^/]+)(\/.*)?$/
-				);
-				if (!match) {
-					return new Response("Invalid Stream handler path", { status: 404 });
-				}
-
-				const bindingName = decodeURIComponent(match[1]);
-				if (!env[CoreBindings.JSON_STREAM_BINDINGS].includes(bindingName)) {
-					return new Response(
-						`Unknown Stream binding ${JSON.stringify(bindingName)}`,
-						{ status: 404 }
-					);
-				}
-				const binding = (env as Record<string, unknown>)[bindingName];
-				if (
-					!binding ||
-					typeof binding !== "object" ||
-					!("fetch" in binding) ||
-					typeof binding.fetch !== "function"
-				) {
-					return new Response(
-						`Unknown Stream binding ${JSON.stringify(bindingName)}`,
-						{ status: 404 }
-					);
-				}
-
-				const forwardURL = new URL(request.url);
-				forwardURL.pathname = match[2] ?? "/";
-				return await binding.fetch(new Request(forwardURL, request));
-			}
-
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
 				if (
 					url.pathname === LOCAL_EXPLORER_BASE_PATH ||
