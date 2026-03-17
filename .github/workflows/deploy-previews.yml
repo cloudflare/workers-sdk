@@ -55,7 +55,7 @@ jobs:
           output=$(pnpm --filter @cloudflare/chrome-devtools-patches run deploy:preview)
           echo "Command output: $output"
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | sed -nE "s/.*Version Preview URL: (\S+).*/\1/p")
+          url=$(echo "$output" | sed -nE "s/.*Version Preview URL: ([^[:space:]]+).*/\1/p")
           echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
