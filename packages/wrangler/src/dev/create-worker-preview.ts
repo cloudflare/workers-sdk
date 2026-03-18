@@ -223,7 +223,8 @@ export async function createPreviewSession(
 				complianceConfig,
 				account.accountId,
 				undefined,
-				apiToken
+				apiToken,
+				withTimeout(abortSignal)
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}
