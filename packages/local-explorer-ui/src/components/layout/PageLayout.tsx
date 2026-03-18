@@ -9,9 +9,10 @@ export interface PageLayoutProps {
 
 export function PageLayout({ children, header, noPadding }: PageLayoutProps) {
 	return (
-		<div className="flex flex-1 flex-col gap-3 overflow-hidden pt-4 pl-2">
-			{header && <header className="shrink-0 pr-4">{header}</header>}
-			<ContentCard noPadding={noPadding}>{children}</ContentCard>
+		<div className="flex flex-1 flex-col overflow-hidden pt-6 pl-2">
+			<ContentCard header={header} noPadding={noPadding}>
+				{children}
+			</ContentCard>
 		</div>
 	);
 }
