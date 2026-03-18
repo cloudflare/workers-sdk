@@ -539,7 +539,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	describe("bundling error messages", () => {
 		test("should recommend alias when a non-Node module cannot be resolved", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					import foo from 'some-nonexistent-module';
 					export default {
 						fetch(request, env, ctx) {
@@ -578,7 +578,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 
 		test("should NOT recommend alias for Node built-in modules", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					import fs from 'fs';
 					export default {
 						fetch(request, env, ctx) {
