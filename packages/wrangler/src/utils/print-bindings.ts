@@ -520,7 +520,11 @@ export function printBindings(
 				type: getBindingTypeFriendlyName("stream"),
 				value: undefined,
 				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
 				}),
 			}))
 		);
