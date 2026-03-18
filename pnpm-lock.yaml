@@ -1842,15 +1842,6 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
 
-  packages/eslint-config-shared:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../workers-tsconfig
-      eslint:
-        specifier: ^9.39.1
-        version: 9.39.1(jiti@2.6.1)
-
   packages/format-errors:
     devDependencies:
       '@cloudflare/workers-types':
@@ -1901,6 +1892,15 @@ importers:
       vitest:
         specifier: catalog:vitest-3
         version: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.4)(jiti@2.6.1)(lightningcss@1.32.0)(msw@2.12.4(@types/node@20.19.9)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.1)
+
+  packages/lint-config-shared:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
 
   packages/local-explorer-ui:
     dependencies:

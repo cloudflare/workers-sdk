@@ -1,4 +1,4 @@
-# @cloudflare/eslint-config-shared
+# @cloudflare/lint-config-shared
 
 ## 1.2.1
 

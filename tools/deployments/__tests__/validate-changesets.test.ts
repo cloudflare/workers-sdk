@@ -27,7 +27,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/containers-shared",
 				"@cloudflare/devprod-status-bot",
 				"@cloudflare/edge-preview-authenticated-proxy",
-				"@cloudflare/eslint-config-shared",
+				"@cloudflare/lint-config-shared",
 				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/local-explorer-ui",

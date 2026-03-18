@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/eslint-config-shared",
+	"name": "@cloudflare/lint-config-shared",
 	"version": "1.2.1",
 	"private": true,
 	"description": "Custom lint rules for workers-sdk (used by oxlint jsPlugins)",

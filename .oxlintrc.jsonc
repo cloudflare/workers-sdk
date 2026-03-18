@@ -103,7 +103,7 @@
 		"eslint-plugin-turbo",
 		{
 			"name": "workers-sdk",
-			"specifier": "./packages/eslint-config-shared/oxlint-plugin.mjs",
+			"specifier": "./packages/lint-config-shared/oxlint-plugin.mjs",
 		},
 	],
 	"overrides": [
