@@ -256,24 +256,6 @@ export function Sidebar({
 			<nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto py-2">
 				<SidebarItemGroup
 					collapsed={collapsed}
-					emptyLabel="No namespaces"
-					error={kvError}
-					icon={KVIcon}
-					items={kvNamespaces.map((ns) => ({
-						id: ns.id,
-						isActive: currentPath === `/kv/${ns.id}`,
-						label: ns.title,
-						link: {
-							params: { namespaceId: ns.id },
-							to: "/kv/$namespaceId",
-						},
-					}))}
-					storageKey="kv"
-					title="KV Namespaces"
-				/>
-
-				<SidebarItemGroup
-					collapsed={collapsed}
 					emptyLabel="No databases"
 					error={d1Error}
 					icon={D1Icon}
@@ -312,6 +294,24 @@ export function Sidebar({
 					})}
 					storageKey="do"
 					title="Durable Objects"
+				/>
+
+				<SidebarItemGroup
+					collapsed={collapsed}
+					emptyLabel="No namespaces"
+					error={kvError}
+					icon={KVIcon}
+					items={kvNamespaces.map((ns) => ({
+						id: ns.id,
+						isActive: currentPath === `/kv/${ns.id}`,
+						label: ns.title,
+						link: {
+							params: { namespaceId: ns.id },
+							to: "/kv/$namespaceId",
+						},
+					}))}
+					storageKey="kv"
+					title="KV Namespaces"
 				/>
 			</nav>
 
