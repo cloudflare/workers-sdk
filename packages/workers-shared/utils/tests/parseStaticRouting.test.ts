@@ -1,15 +1,14 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { parseStaticRouting } from "../configuration/parseStaticRouting";
 
 describe("parseStaticRouting", () => {
-	it("throws when given empty rules", () => {
+	it("throws when given empty rules", ({ expect }) => {
 		expect(() => parseStaticRouting([])).toThrowErrorMatchingInlineSnapshot(
 			`[Error: No \`run_worker_first\` rules were provided; must provide at least 1 rule.]`
 		);
 	});
 
-	it("throws when given only negative rules", () => {
+	it("throws when given only negative rules", ({ expect }) => {
 		expect(() =>
 			parseStaticRouting(["!/assets"])
 		).toThrowErrorMatchingInlineSnapshot(
@@ -17,7 +16,7 @@ describe("parseStaticRouting", () => {
 		);
 	});
 
-	it("throws when too many rules are provided", () => {
+	it("throws when too many rules are provided", ({ expect }) => {
 		const rules = Array.from({ length: 120 }, (_, i) => `/rule/${i}`);
 		expect(() => parseStaticRouting(rules)).toThrowErrorMatchingInlineSnapshot(
 			`[Error: Too many \`run_worker_first\` rules were provided; 120 rules provided exceeds max of 100.]`
@@ -32,7 +31,7 @@ describe("parseStaticRouting", () => {
 		);
 	});
 
-	it("throws when a rule is too long", () => {
+	it("throws when a rule is too long", ({ expect }) => {
 		const rule = `/api/${"a".repeat(130)}`;
 		expect(() => parseStaticRouting([rule])).toThrowErrorMatchingInlineSnapshot(
 			`
@@ -42,7 +41,7 @@ describe("parseStaticRouting", () => {
 		);
 	});
 
-	it("throws when rule doesn't begin with /", () => {
+	it("throws when rule doesn't begin with /", ({ expect }) => {
 		expect(() => parseStaticRouting(["api/*", "!asset"]))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid routes in \`run_worker_first\`:
@@ -51,7 +50,7 @@ describe("parseStaticRouting", () => {
 			`);
 	});
 
-	it("throws when given redundant rules", () => {
+	it("throws when given redundant rules", ({ expect }) => {
 		expect(() =>
 			parseStaticRouting([
 				"/api/*",
@@ -67,7 +66,7 @@ describe("parseStaticRouting", () => {
 		);
 	});
 
-	it("throws when given duplicate routes", () => {
+	it("throws when given duplicate routes", ({ expect }) => {
 		expect(() =>
 			parseStaticRouting([
 				"/api/some/route",
@@ -83,7 +82,7 @@ describe("parseStaticRouting", () => {
 		);
 	});
 
-	it("correctly parses valid rules", () => {
+	it("correctly parses valid rules", ({ expect }) => {
 		const parsed = parseStaticRouting([
 			"/api/*",
 			"/oauth/callback",

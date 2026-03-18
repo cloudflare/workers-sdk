@@ -1177,7 +1177,7 @@ describe("[Asset Worker] `canFetch`", () => {
 		}
 	});
 
-	describe('should always return "true" for 404s or SPAs when static routing is present', async () => {
+	describe('should always return "true" for 404s or SPAs when static routing is present', () => {
 		const exists = (pathname: string) => {
 			// only our special files are present
 			if (["/404.html", "/index.html"].includes(pathname)) {
@@ -1383,7 +1383,7 @@ describe("[Asset Worker] `canFetch`", () => {
 		).toBeTruthy();
 	});
 
-	describe("assets_navigation_prefers_asset_serving", async () => {
+	describe("assets_navigation_prefers_asset_serving", () => {
 		const exists = (pathname: string) => {
 			if (["/404.html", "/index.html", "/foo.html"].includes(pathname)) {
 				return "some-etag";

@@ -69,6 +69,7 @@ describe("Engine", () => {
 		).toHaveLength(1);
 	});
 
+	// eslint-disable-next-line jest/expect-expect
 	it("waitForEvent should receive events while active", async () => {
 		const engineStub = await runWorkflowDefer(
 			"MOCK-INSTANCE-ID",
@@ -99,6 +100,7 @@ describe("Engine", () => {
 		}, 500);
 	});
 
+	// eslint-disable-next-line jest/expect-expect
 	it("waitForEvent should receive events even if not active", async () => {
 		const engineStub = await runWorkflowDefer(
 			"MOCK-INSTANCE-ID",

@@ -60,7 +60,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 - Turbo (turborepo) orchestrates builds across packages
 - TypeScript compilation with shared configs in `packages/workers-tsconfig/`
-- Shared ESLint config in `packages/eslint-config-shared/`
+- Shared lint config in `packages/lint-config-shared/`
 - Dependency management via pnpm catalog system
 
 ## WHERE TO LOOK

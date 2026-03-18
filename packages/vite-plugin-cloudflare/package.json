@@ -4,37 +4,39 @@
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
-		"workers",
 		"cloudflare-workers",
 		"vite",
-		"vite-plugin"
+		"vite-plugin",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
-	"license": "MIT",
-	"sideEffects": false,
+	"files": [
+		"dist"
+	],
 	"type": "module",
+	"sideEffects": false,
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
 		}
 	},
-	"main": "./dist/index.mjs",
-	"types": "./dist/index.d.mts",
-	"files": [
-		"dist"
-	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "tsdown",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc --build",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
@@ -77,9 +79,6 @@
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
 		"wrangler": "workspace:^"
-	},
-	"publishConfig": {
-		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true

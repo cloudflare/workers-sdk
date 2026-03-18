@@ -1,9 +1,7 @@
 import { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 
 class WorkflowImpl implements Workflow {
-	constructor(private binding: WorkflowBinding) {
-		this.binding = binding;
-	}
+	constructor(private binding: WorkflowBinding) {}
 
 	async get(id: string): Promise<WorkflowInstance> {
 		const instanceHandle = new InstanceImpl(id, this.binding);

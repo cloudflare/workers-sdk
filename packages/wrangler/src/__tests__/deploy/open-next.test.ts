@@ -1,10 +1,8 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -157,7 +155,9 @@ describe("deploy", () => {
 			} as unknown as ServiceMetadataRes["default_environment"]);
 		}
 
-		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY", async () => {
+		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY", async ({
+			expect,
+		}) => {
 			vi.spyOn(process, "argv", "get").mockReturnValue([
 				"npx",
 				"wrangler",
@@ -202,7 +202,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY and pass the various CLI arguments", async () => {
+		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY and pass the various CLI arguments", async ({
+			expect,
+		}) => {
 			vi.spyOn(process, "argv", "get").mockReturnValue([
 				"npx",
 				"wrangler",
@@ -251,7 +253,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not delegate to open-next deploy when run in an open-next project and OPEN_NEXT_DEPLOY is set", async () => {
+		it("should not delegate to open-next deploy when run in an open-next project and OPEN_NEXT_DEPLOY is set", async ({
+			expect,
+		}) => {
 			vi.stubEnv("OPEN_NEXT_DEPLOY", "1");
 
 			const runCommandSpy = (await import("../../autoconfig/c3-vendor/command"))
@@ -282,7 +286,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not delegate to open-next deploy when --x-autoconfig=false is provided", async () => {
+		it("should not delegate to open-next deploy when --x-autoconfig=false is provided", async ({
+			expect,
+		}) => {
 			const runCommandSpy = (await import("../../autoconfig/c3-vendor/command"))
 				.runCommand;
 
@@ -311,7 +317,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not delegate to open-next deploy when the Next.js config file is missing (to avoid false positives)", async () => {
+		it("should not delegate to open-next deploy when the Next.js config file is missing (to avoid false positives)", async ({
+			expect,
+		}) => {
 			const runCommandSpy = (await import("../../autoconfig/c3-vendor/command"))
 				.runCommand;
 
@@ -343,7 +351,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not delegate to open-next deploy when the open-next config file is missing (to avoid false positives)", async () => {
+		it("should not delegate to open-next deploy when the open-next config file is missing (to avoid false positives)", async ({
+			expect,
+		}) => {
 			const runCommandSpy = (await import("../../autoconfig/c3-vendor/command"))
 				.runCommand;
 

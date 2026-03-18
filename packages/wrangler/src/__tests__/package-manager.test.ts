@@ -1,6 +1,5 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect -- helper functions with expect */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getPackageManager, getPackageManagerName } from "../package-manager";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";

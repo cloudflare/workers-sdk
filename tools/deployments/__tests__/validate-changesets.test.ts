@@ -8,7 +8,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
 	findPackages,
 	readChangesets,
@@ -17,7 +17,9 @@ import {
 import type { PackageJSON } from "../validate-changesets";
 
 describe("findPackageNames()", () => {
-	it("should return all the private packages which contain deploy scripts", () => {
+	it("should return all the private packages which contain deploy scripts", ({
+		expect,
+	}) => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
@@ -25,7 +27,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/containers-shared",
 				"@cloudflare/devprod-status-bot",
 				"@cloudflare/edge-preview-authenticated-proxy",
-				"@cloudflare/eslint-config-shared",
+				"@cloudflare/lint-config-shared",
 				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
 				"@cloudflare/local-explorer-ui",
@@ -60,11 +62,14 @@ describe("readChangesets()", () => {
 
 	afterEach(() => {
 		if (existsSync(tmpDir)) {
+			// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
 			rmSync(tmpDir, { recursive: true });
 		}
 	});
 
-	it("should load files from the changeset directory that look like changesets", () => {
+	it("should load files from the changeset directory that look like changesets", ({
+		expect,
+	}) => {
 		writeFileSync(resolve(tmpDir, "README.md"), "Some text");
 		writeFileSync(resolve(tmpDir, ".hidden.md"), "Some text");
 		writeFileSync(resolve(tmpDir, "change-set-one.md"), "Some text");
@@ -89,7 +94,7 @@ describe("readChangesets()", () => {
 });
 
 describe("validateChangesets()", () => {
-	it("should report errors for any invalid changesets", () => {
+	it("should report errors for any invalid changesets", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
 				["package-a", { name: "package-a" }],
@@ -163,7 +168,7 @@ describe("validateChangesets()", () => {
 		`);
 	});
 
-	it("should report errors for major bump changesets", () => {
+	it("should report errors for major bump changesets", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
 				["package-a", { name: "package-a" }],
@@ -177,7 +182,7 @@ describe("validateChangesets()", () => {
 						---
 						"package-a": patch
 						---
-		  				refactor: test`,
+	  				refactor: test`,
 				},
 				{
 					file: "minor-two.md",

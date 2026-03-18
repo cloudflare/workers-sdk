@@ -135,8 +135,8 @@ export function parseRedirects(
 		// We only want to run this on relative URLs.
 		const hasRelativePath = !urlHasHost(to);
 		const hasWildcardToIndex =
-			/\/\*$/.test(from) && /\/index(.html)?$/.test(to);
-		const hasRootToIndex = /\/$/.test(from) && /\/index(.html)?$/.test(to);
+			from.endsWith("/*") && /\/index(.html)?$/.test(to);
+		const hasRootToIndex = from.endsWith("/") && /\/index(.html)?$/.test(to);
 		const hasHTMLHandling = htmlHandling !== "none"; // HTML handling is enabled by default.
 		if (
 			hasRelativePath &&

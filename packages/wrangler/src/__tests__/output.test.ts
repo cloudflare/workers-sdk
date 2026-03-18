@@ -2,9 +2,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- uses custom matchers (expect.extend) */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { clearOutputFilePath, writeOutput } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

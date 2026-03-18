@@ -7,9 +7,8 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large test file with many patterns */
+// eslint-disable-next-line no-restricted-imports
 import { assert, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import WebSocket from "ws";
 import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";

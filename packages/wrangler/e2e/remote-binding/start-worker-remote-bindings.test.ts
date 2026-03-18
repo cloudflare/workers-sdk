@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importWrangler,
@@ -25,7 +25,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		return cleanup;
 	}, 35_000);
 
-	it("allows connecting to a remote worker", async () => {
+	it("allows connecting to a remote worker", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "remote-bindings-test",
@@ -58,7 +58,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		await worker.dispose();
 	});
 
-	it("handles code changes during development", async () => {
+	it("handles code changes during development", async ({ expect }) => {
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "remote-bindings-test",
@@ -125,7 +125,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 	});
 });
 
-it("doesn't connect to remote bindings when `remote` is set to `false`", async () => {
+it("doesn't connect to remote bindings when `remote` is set to `false`", async ({
+	expect,
+}) => {
 	const helper = new WranglerE2ETestHelper();
 	await helper.seed(resolve(__dirname, "./workers"));
 	await helper.seed({

@@ -1,5 +1,3 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import { Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
@@ -10,7 +8,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, test, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { printBundleSize } from "../../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../../output";
@@ -97,7 +95,9 @@ describe("deploy", () => {
 	});
 
 	describe("[define]", () => {
-		it("should be able to define values that will be substituted into top-level identifiers", async () => {
+		it("should be able to define values that will be substituted into top-level identifiers", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				define: {
@@ -137,7 +137,7 @@ describe("deploy", () => {
 			expect(outFile).toContain("console.log(foo);");
 		});
 
-		it("can be overriden in environments", async () => {
+		it("can be overriden in environments", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "index.js",
 				define: {
@@ -169,7 +169,7 @@ describe("deploy", () => {
 			expect(outFile).toContain("console.log(456);");
 		});
 
-		it("can be overridden with cli args", async () => {
+		it("can be overridden with cli args", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "index.js",
 				define: {
@@ -191,7 +191,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("can be overridden with cli args containing colons", async () => {
+		it("can be overridden with cli args containing colons", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				define: {
@@ -220,7 +222,7 @@ describe("deploy", () => {
 		beforeEach(() => {
 			vi.unstubAllGlobals();
 		});
-		it("should run a custom build before publishing", async () => {
+		it("should run a custom build before publishing", async ({ expect }) => {
 			writeWranglerConfig({
 				build: {
 					command: `node -e "4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
@@ -250,7 +252,9 @@ describe("deploy", () => {
 		});
 
 		if (process.platform !== "win32") {
-			it("should run a custom build of multiple steps combined by && before publishing", async () => {
+			it("should run a custom build of multiple steps combined by && before publishing", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					build: {
 						command: `echo "export default { fetch(){ return new Response(123) } }" > index.js`,
@@ -280,7 +284,9 @@ describe("deploy", () => {
 			});
 		}
 
-		it("should throw an error if the entry doesn't exist after the build finishes", async () => {
+		it("should throw an error if the entry doesn't exist after the build finishes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.js",
 				build: {
@@ -311,7 +317,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should throw an error if the entry is a directory after the build finishes", async () => {
+		it("should throw an error if the entry is a directory after the build finishes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./",
 				build: {
@@ -355,7 +363,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should minify the script when `--minify` is true (sw)", async () => {
+		it("should minify the script when `--minify` is true (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 			});
@@ -390,7 +400,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should minify the script when `minify` in config is true (esm)", async () => {
+		it("should minify the script when `minify` in config is true (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 				legacy_env: false,
@@ -434,7 +446,9 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should apply esbuild's keep-names functionality by default", async () => {
+		it("should apply esbuild's keep-names functionality by default", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 				legacy_env: false,
@@ -472,7 +486,9 @@ describe("deploy", () => {
 			await runWrangler("deploy -e testEnv index.js");
 		});
 
-		it("should apply esbuild's keep-names functionality unless keep_names is set to false", async () => {
+		it("should apply esbuild's keep-names functionality unless keep_names is set to false", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 				legacy_env: false,
@@ -513,7 +529,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("--node-compat", () => {
-		it("should error when using node compatibility mode", async () => {
+		it("should error when using node compatibility mode", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			await expect(
@@ -523,7 +541,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should recommend node compatibility flag when using node builtins and no node compat is enabled", async () => {
+		it("should recommend node compatibility flag when using node builtins and no node compat is enabled", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync("index.js", "import path from 'path';");
 
@@ -548,7 +568,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should recommend node compatibility flag when using node builtins and node compat is set only to nodejs_als", async () => {
+		it("should recommend node compatibility flag when using node builtins and node compat is set only to nodejs_als", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_flags: ["nodejs_als"],
 			});
@@ -575,7 +597,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should recommend updating the compatibility date when using node builtins and the `nodejs_compat` flag", async () => {
+		it("should recommend updating the compatibility date when using node builtins and the `nodejs_compat` flag", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2024-09-01", // older than Sept 23rd, 2024
 				compatibility_flags: ["nodejs_compat"],
@@ -603,7 +627,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should recommend updating the compatibility date flag when using no_nodejs_compat and non-prefixed node builtins", async () => {
+		it("should recommend updating the compatibility date flag when using no_nodejs_compat and non-prefixed node builtins", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2024-09-23",
 				compatibility_flags: ["nodejs_compat", "no_nodejs_compat_v2"],
@@ -632,7 +658,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("`nodejs_compat` compatibility flag", () => {
-		it('when absent, should warn on any "external" `node:*` imports', async () => {
+		it('when absent, should warn on any "external" `node:*` imports', async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -656,7 +684,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it('when present, should support "external" `node:*` imports', async () => {
+		it('when present, should support "external" `node:*` imports', async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -690,7 +720,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it(`when present, and compat date is on or after 2024-09-23, should support "external" non-prefixed node imports`, async () => {
+		it(`when present, and compat date is on or after 2024-09-23, should support "external" non-prefixed node imports`, async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_date: "2024-09-23",
 			});
@@ -727,7 +759,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("bundle reporter", () => {
-		it("should print the bundle size", async () => {
+		it("should print the bundle size", async ({ expect }) => {
 			fs.writeFileSync(
 				"./text.txt",
 				`${new Array(100)
@@ -782,7 +814,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should print the bundle size, with API errors", async () => {
+		it("should print the bundle size, with API errors", async ({ expect }) => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
@@ -854,7 +886,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		test("should check biggest dependencies when upload fails with script size error", async () => {
+		test("should check biggest dependencies when upload fails with script size error", async ({
+			expect,
+		}) => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override POST call to error out from previous helper functions
@@ -944,7 +978,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		test("should offer some helpful advice when upload fails with script startup error", async () => {
+		test("should offer some helpful advice when upload fails with script startup error", async ({
+			expect,
+		}) => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override POST call to error out from previous helper functions
@@ -1026,7 +1062,7 @@ describe("deploy", () => {
 			// keeping these as unit tests to try and keep them snappy, as they often deal with
 			// big files that would take a while to deal with in a full wrangler test
 
-			test("should print the bundle size", async () => {
+			test("should print the bundle size", async ({ expect }) => {
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
@@ -1049,7 +1085,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			test("should print the top biggest dependencies in the bundle when upload fails", () => {
+			test("should print the top biggest dependencies in the bundle when upload fails", ({
+				expect,
+			}) => {
 				const deps = {
 					"node_modules/a-mod/module.js": { bytesInOutput: 450 },
 					"node_modules/b-mod/module.js": { bytesInOutput: 10 },
@@ -1088,7 +1126,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("--no-bundle", () => {
-		it("(cli) should not transform the source code before publishing it", async () => {
+		it("(cli) should not transform the source code before publishing it", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			const scriptContent = `
       import X from '@cloudflare/no-such-package'; // let's add an import that doesn't exist
@@ -1099,7 +1139,9 @@ describe("deploy", () => {
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 
-		it("(config) should not transform the source code before publishing it", async () => {
+		it("(config) should not transform the source code before publishing it", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				no_bundle: true,
 			});
@@ -1113,7 +1155,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("--no-bundle --minify", () => {
-		it("should warn that no-bundle and minify can't be used together", async () => {
+		it("should warn that no-bundle and minify can't be used together", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			const scriptContent = `
 			const xyz = 123; // a statement that would otherwise be compiled out
@@ -1129,7 +1173,9 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should warn that no-bundle and minify can't be used together", async () => {
+		it("should warn that no-bundle and minify can't be used together", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				no_bundle: true,
 				minify: true,
@@ -1147,7 +1193,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("source maps", () => {
-		it("should include source map with bundle when upload_source_maps = true", async () => {
+		it("should include source map with bundle when upload_source_maps = true", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.ts",
 				upload_source_maps: true,
@@ -1184,7 +1232,9 @@ describe("deploy", () => {
 			await runWrangler("deploy");
 		});
 
-		it("should include source maps emitted by custom build when upload_source_maps = true", async () => {
+		it("should include source maps emitted by custom build when upload_source_maps = true", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				no_bundle: true,
 				main: "index.js",
@@ -1255,7 +1305,9 @@ describe("deploy", () => {
 
 			await runWrangler("deploy");
 		});
-		it("should correctly read sourcemaps with custom wrangler.toml location", async () => {
+		it("should correctly read sourcemaps with custom wrangler.toml location", async ({
+			expect,
+		}) => {
 			fs.mkdirSync("some/dir", { recursive: true });
 			writeWranglerConfig(
 				{

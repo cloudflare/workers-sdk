@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
-import { beforeEach, describe, expect, it, vitest } from "vitest";
+import { beforeEach, describe, it, vitest } from "vitest";
 import {
 	commitAndPush,
 	generateChangesetHeader,
@@ -27,7 +27,9 @@ beforeEach(() => {
 });
 
 describe("getPackageJsonDiff()", () => {
-	it("should call spawnSync to the appropriate git diff command", () => {
+	it("should call spawnSync to the appropriate git diff command", ({
+		expect,
+	}) => {
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		getPackageJsonDiff("/path/to/package.json");
 		expect(spawnSync).toHaveBeenCalledOnce();
@@ -46,7 +48,7 @@ describe("getPackageJsonDiff()", () => {
 		`);
 	});
 
-	it("should split the output into lines", () => {
+	it("should split the output into lines", ({ expect }) => {
 		(spawnSync as Mock).mockReturnValue({
 			output: ["line 1", "line 2\nline 3", "line 4"],
 		});
@@ -63,7 +65,9 @@ describe("getPackageJsonDiff()", () => {
 });
 
 describe("parseDiffForChanges()", () => {
-	it("should return a map containing the changes for each package", () => {
+	it("should return a map containing the changes for each package", ({
+		expect,
+	}) => {
 		const changes = parseDiffForChanges([
 			`-               "package": "^0.0.1"`,
 			`+               "package": "^0.0.2",`,
@@ -78,14 +82,16 @@ describe("parseDiffForChanges()", () => {
 		);
 	});
 
-	it("should ignore lines that do not match a change", () => {
+	it("should ignore lines that do not match a change", ({ expect }) => {
 		const changes = parseDiffForChanges(["", undefined, "random text"]);
 		expect(changes.size).toBe(0);
 	});
 });
 
 describe("generateChangesetHeader()", () => {
-	it("should return a header with a single package and 'patch' version bump", () => {
+	it("should return a header with a single package and 'patch' version bump", ({
+		expect,
+	}) => {
 		const header = generateChangesetHeader(["package-name"]);
 		expect(header).toMatchInlineSnapshot(`
 			"---
@@ -94,7 +100,9 @@ describe("generateChangesetHeader()", () => {
 		`);
 	});
 
-	it("should return a header with multiple packages and 'patch' version bump", () => {
+	it("should return a header with multiple packages and 'patch' version bump", ({
+		expect,
+	}) => {
 		const header = generateChangesetHeader(["package-name", "another-package"]);
 		expect(header).toMatchInlineSnapshot(`
 			"---
@@ -106,7 +114,9 @@ describe("generateChangesetHeader()", () => {
 });
 
 describe("generateCommitMessage()", () => {
-	it("should return a commit message about a single changed package", () => {
+	it("should return a commit message about a single changed package", ({
+		expect,
+	}) => {
 		const message = generateCommitMessage(["@namespace/package"], new Map());
 		expect(message).toMatchInlineSnapshot(`
 			"Update dependencies of "@namespace/package"
@@ -118,7 +128,7 @@ describe("generateCommitMessage()", () => {
 		`);
 	});
 
-	it("should return a commit message about multiple packages", () => {
+	it("should return a commit message about multiple packages", ({ expect }) => {
 		const message = generateCommitMessage(
 			["@namespace/package", "another-package"],
 			new Map()
@@ -133,7 +143,9 @@ describe("generateCommitMessage()", () => {
 		`);
 	});
 
-	it("should return a commit message containing a row for each change", () => {
+	it("should return a commit message containing a row for each change", ({
+		expect,
+	}) => {
 		const message = generateCommitMessage(
 			["package-name"],
 			new Map([
@@ -156,7 +168,9 @@ describe("generateCommitMessage()", () => {
 });
 
 describe("writeChangeSet()", () => {
-	it("should call writeFileSync with appropriate changeset path and body", () => {
+	it("should call writeFileSync with appropriate changeset path and body", ({
+		expect,
+	}) => {
 		const header = dedent`
 			---
 			"package-name": patch
@@ -193,7 +207,7 @@ describe("writeChangeSet()", () => {
 });
 
 describe("commitAndPush()", () => {
-	it("should call spawnSync with appropriate git commands", () => {
+	it("should call spawnSync with appropriate git commands", ({ expect }) => {
 		(spawnSync as Mock).mockClear();
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		const commitMessage = dedent`
@@ -250,7 +264,7 @@ describe("commitAndPush()", () => {
 		`);
 	});
 
-	it("should call error if any git command fails", () => {
+	it("should call error if any git command fails", ({ expect }) => {
 		(spawnSync as Mock).mockImplementation((git, args) => {
 			const error =
 				args[0] === "push" ? new Error("Failed to push") : undefined;

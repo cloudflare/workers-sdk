@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 
 interface CustomMatchers {

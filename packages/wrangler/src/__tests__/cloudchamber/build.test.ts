@@ -8,9 +8,8 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- tests use vi.mock patterns */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -330,6 +329,40 @@ describe("buildAndMaybePush", () => {
 			imageTag: `test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
+		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
+	});
+
+	it("should match digests for images with registry ports", async () => {
+		vi.mocked(runDockerCmd).mockResolvedValueOnce({
+			abort: () => {},
+			ready: Promise.resolve({ aborted: false }),
+		});
+		vi.mocked(dockerImageInspect).mockReset();
+		vi.mocked(dockerImageInspect)
+			.mockResolvedValueOnce('["localhost:5000/test-app@sha256:three"]')
+			.mockResolvedValueOnce("53387881 2");
+		vi.mocked(runDockerCmdWithOutput).mockReset();
+		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
+			return '{"Descriptor":{"digest":"sha256:three"}}';
+		});
+
+		await runWrangler(
+			"containers build ./container-context -t localhost:5000/test-app:tag -p"
+		);
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(runDockerCmdWithOutput).toHaveBeenCalledWith("docker", [
+			"manifest",
+			"inspect",
+			"-v",
+			"localhost:5000/test-app@sha256:three",
+		]);
+		expect(runDockerCmd).toHaveBeenCalledTimes(1);
+		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
+			"image",
+			"rm",
+			"localhost:5000/test-app:tag",
+		]);
 		expect(dockerLoginImageRegistry).toHaveBeenCalledOnce();
 	});
 

@@ -14,15 +14,15 @@
 		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && pnpm check:workflows && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
-		"check:format": "prettier . --check --ignore-unknown --cache",
-		"check:lint": "dotenv -- turbo check:lint",
+		"check:format": "oxfmt --check",
+		"check:lint": "oxlint --deny-warnings --type-aware",
 		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts",
 		"dev": "dotenv -- turbo dev",
-		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
-		"prettify": "prettier . --write --ignore-unknown --cache",
+		"fix": "oxlint --fix --type-aware && pnpm run prettify",
+		"prettify": "oxfmt",
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",
@@ -35,7 +35,6 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.29.7",
 		"@changesets/parse": "^0.4.1",
-		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
@@ -43,17 +42,17 @@
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
+		"eslint-plugin-turbo": "^2.8.17",
 		"jsonc-parser": "catalog:default",
-		"prettier": "^3.8.1",
-		"prettier-plugin-packagejson": "^2.2.18",
-		"prettier-plugin-tailwindcss": "^0.7.2",
+		"oxfmt": "^0.41.0",
+		"oxlint": "^1.56.0",
+		"oxlint-tsgolint": "^0.17.0",
 		"tree-kill": "^1.2.2",
 		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
-	"packageManager": "pnpm@9.12.0",
 	"engines": {
 		"node": ">=18.20.0",
 		"pnpm": "^9.12.0"
@@ -62,6 +61,7 @@
 		"node": "20.19.3",
 		"pnpm": "9.12.0"
 	},
+	"packageManager": "pnpm@9.12.0",
 	"pnpm": {
 		"peerDependencyRules": {
 			"allowedVersions": {

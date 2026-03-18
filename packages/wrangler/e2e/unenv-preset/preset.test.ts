@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { fetch } from "undici";
+// eslint-disable-next-line no-restricted-imports
 import { beforeAll, describe, expect, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
@@ -605,14 +606,18 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
-	// node:worker_threads (experimental - no default enable date)
+	// node:worker_threads
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
 		{
-			name: "worker_threads disabled by default",
+			name: "worker_threads enabled by date",
+			compatibilityDate: "2026-03-17",
+			expectRuntimeFlags: {
+				enable_nodejs_worker_threads_module: true,
+			},
+		},
+		{
+			name: "worker_threads disabled by date",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_worker_threads_module: false,
 			},
@@ -620,132 +625,180 @@ const localTestConfigs: TestConfig[] = [
 		{
 			name: "worker_threads enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: [
-				"enable_nodejs_worker_threads_module",
-				"experimental",
-			],
+			compatibilityFlags: ["enable_nodejs_worker_threads_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_worker_threads_module: true,
 			},
 		},
 		{
 			name: "worker_threads disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: [
-				"disable_nodejs_worker_threads_module",
-				"experimental",
-			],
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_worker_threads_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_worker_threads_module: false,
 			},
 		},
 	],
-	// node:repl (experimental, no default enable date)
+	// node:repl
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "repl enabled by date",
+			compatibilityDate: "2026-03-17",
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: true,
+			},
+		},
+		{
+			name: "repl disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: false,
+			},
+		},
 		{
 			name: "repl enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_repl_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_repl_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_repl_module: true,
 			},
 		},
 		{
 			name: "repl disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_repl_module", "experimental"],
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_repl_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_repl_module: false,
 			},
 		},
 	],
-	// node:v8 (experimental, no default enable date)
+	// node:v8
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "v8 enabled by date",
+			compatibilityDate: "2026-03-17",
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: true,
+			},
+		},
+		{
+			name: "v8 disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: false,
+			},
+		},
 		{
 			name: "v8 enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_v8_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_v8_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_v8_module: true,
 			},
 		},
 		{
 			name: "v8 disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_v8_module", "experimental"],
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_v8_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_v8_module: false,
 			},
 		},
 	],
-	// node:tty (experimental, no default enable date)
+	// node:tty
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "tty enabled by date",
+			compatibilityDate: "2026-03-17",
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: true,
+			},
+		},
+		{
+			name: "tty disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: false,
+			},
+		},
 		{
 			name: "tty enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_tty_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_tty_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_tty_module: true,
 			},
 		},
 		{
 			name: "tty disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_tty_module", "experimental"],
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_tty_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_tty_module: false,
 			},
 		},
 	],
-	// node:child_process (experimental, no default enable date)
+	// node:child_process
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "child_process enabled by date",
+			compatibilityDate: "2026-03-17",
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: true,
+			},
+		},
+		{
+			name: "child_process disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_child_process_module: false,
+			},
+		},
 		{
 			name: "child_process enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: [
-				"enable_nodejs_child_process_module",
-				"experimental",
-			],
+			compatibilityFlags: ["enable_nodejs_child_process_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_child_process_module: true,
 			},
 		},
 		{
 			name: "child_process disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: [
-				"disable_nodejs_child_process_module",
-				"experimental",
-			],
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_child_process_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_child_process_module: false,
 			},
 		},
 	],
-	// node:readline (experimental, no default enable date)
+	// node:readline
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "readline enabled by date",
+			compatibilityDate: "2026-03-17",
+			expectRuntimeFlags: {
+				enable_nodejs_readline_module: true,
+			},
+		},
+		{
+			name: "readline disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_readline_module: false,
+			},
+		},
 		{
 			name: "readline enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_readline_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_readline_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_readline_module: true,
 			},
 		},
 		{
 			name: "readline disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_readline_module", "experimental"],
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_readline_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_readline_module: false,
 			},
@@ -753,22 +806,32 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// node:perf_hooks
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
-
 		{
-			name: "perf_hooks enabled by flags",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_perf_hooks_module", "experimental"],
+			name: "perf_hooks enabled by date",
+			compatibilityDate: "2026-03-17",
 			expectRuntimeFlags: {
 				enable_nodejs_perf_hooks_module: true,
 			},
 		},
 		{
-			name: "perf_hooks disabled by flags",
-			// TODO: change the date passed the default enabled date (when defined)
+			name: "perf_hooks disabled by date",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_perf_hooks_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: false,
+			},
+		},
+		{
+			name: "perf_hooks enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_perf_hooks_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_perf_hooks_module: true,
+			},
+		},
+		{
+			name: "perf_hooks disabled by flag",
+			compatibilityDate: "2026-03-17",
+			compatibilityFlags: ["disable_nodejs_perf_hooks_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_perf_hooks_module: false,
 			},
@@ -822,7 +885,7 @@ describe.each(groupedLocalConfigs)(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName) => {
+			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await vi.waitFor(
@@ -880,7 +943,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName) => {
+			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await vi.waitFor(
@@ -939,7 +1002,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 		test.for(Object.keys(WorkerdTests))(
 			"%s",
 			{ timeout: 20_000 },
-			async (testName) => {
+			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
 				await vi.waitFor(

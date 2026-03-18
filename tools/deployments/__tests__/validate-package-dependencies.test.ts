@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	getAllDependencies,
 	getNonWorkspaceDependencies,
@@ -7,15 +7,15 @@ import {
 } from "../validate-package-dependencies";
 
 describe("getAllDependencies()", () => {
-	it("should return empty array for undefined", () => {
+	it("should return empty array for undefined", ({ expect }) => {
 		expect(getAllDependencies(undefined)).toEqual([]);
 	});
 
-	it("should return empty array for empty object", () => {
+	it("should return empty array for empty object", ({ expect }) => {
 		expect(getAllDependencies({})).toEqual([]);
 	});
 
-	it("should return all dependency names", () => {
+	it("should return all dependency names", ({ expect }) => {
 		expect(
 			getAllDependencies({
 				foo: "1.0.0",
@@ -27,15 +27,15 @@ describe("getAllDependencies()", () => {
 });
 
 describe("getNonWorkspaceDependencies()", () => {
-	it("should return empty array for undefined", () => {
+	it("should return empty array for undefined", ({ expect }) => {
 		expect(getNonWorkspaceDependencies(undefined)).toEqual([]);
 	});
 
-	it("should return empty array for empty object", () => {
+	it("should return empty array for empty object", ({ expect }) => {
 		expect(getNonWorkspaceDependencies({})).toEqual([]);
 	});
 
-	it("should filter out workspace dependencies", () => {
+	it("should filter out workspace dependencies", ({ expect }) => {
 		expect(
 			getNonWorkspaceDependencies({
 				foo: "1.0.0",
@@ -46,7 +46,7 @@ describe("getNonWorkspaceDependencies()", () => {
 		).toEqual(["foo", "qux"]);
 	});
 
-	it("should return all deps if none are workspace deps", () => {
+	it("should return all deps if none are workspace deps", ({ expect }) => {
 		expect(
 			getNonWorkspaceDependencies({
 				foo: "1.0.0",
@@ -57,7 +57,9 @@ describe("getNonWorkspaceDependencies()", () => {
 });
 
 describe("validatePackageDependencies()", () => {
-	it("should return no errors for package with no dependencies", () => {
+	it("should return no errors for package with no dependencies", ({
+		expect,
+	}) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -67,7 +69,9 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should return no errors for package with only workspace dependencies", () => {
+	it("should return no errors for package with only workspace dependencies", ({
+		expect,
+	}) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -83,7 +87,9 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should return error when package has non-workspace deps but no allowlist", () => {
+	it("should return error when package has non-workspace deps but no allowlist", ({
+		expect,
+	}) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -103,7 +109,7 @@ describe("validatePackageDependencies()", () => {
 		expect(errors[0]).toContain("lodash, zod");
 	});
 
-	it("should return no errors when all deps are in allowlist", () => {
+	it("should return no errors when all deps are in allowlist", ({ expect }) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -119,7 +125,7 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should return error for dependency not in allowlist", () => {
+	it("should return error for dependency not in allowlist", ({ expect }) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -139,7 +145,7 @@ describe("validatePackageDependencies()", () => {
 		expect(errors[0]).toContain("not listed in EXTERNAL_DEPENDENCIES");
 	});
 
-	it("should return error for stale allowlist entry", () => {
+	it("should return error for stale allowlist entry", ({ expect }) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -157,7 +163,9 @@ describe("validatePackageDependencies()", () => {
 		expect(errors[0]).toContain("not in dependencies or peerDependencies");
 	});
 
-	it("should allow workspace deps in EXTERNAL_DEPENDENCIES without error", () => {
+	it("should allow workspace deps in EXTERNAL_DEPENDENCIES without error", ({
+		expect,
+	}) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -173,7 +181,9 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should check peerDependencies for stale allowlist entries", () => {
+	it("should check peerDependencies for stale allowlist entries", ({
+		expect,
+	}) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -191,7 +201,7 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should return multiple errors for multiple issues", () => {
+	it("should return multiple errors for multiple issues", ({ expect }) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -209,7 +219,7 @@ describe("validatePackageDependencies()", () => {
 		expect(errors[1]).toContain('"stale-dep"');
 	});
 
-	it("should ignore devDependencies completely", () => {
+	it("should ignore devDependencies completely", ({ expect }) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -226,7 +236,9 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should ignore devDependencies when validating against allowlist", () => {
+	it("should ignore devDependencies when validating against allowlist", ({
+		expect,
+	}) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -247,7 +259,7 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should not require devDependencies to be in allowlist", () => {
+	it("should not require devDependencies to be in allowlist", ({ expect }) => {
 		const errors = validatePackageDependencies(
 			"test-package",
 			"test-package",
@@ -272,7 +284,9 @@ describe("validatePackageDependencies()", () => {
 		expect(errors).toEqual([]);
 	});
 
-	it("should not count devDependencies as stale allowlist entries", () => {
+	it("should not count devDependencies as stale allowlist entries", ({
+		expect,
+	}) => {
 		// If a package has something in devDependencies AND in the allowlist,
 		// it should be flagged as stale (since devDeps are bundled, not external)
 		const errors = validatePackageDependencies(
@@ -297,7 +311,7 @@ describe("validatePackageDependencies()", () => {
 });
 
 describe("getPublicPackages()", () => {
-	it("should return only non-private packages", async () => {
+	it("should return only non-private packages", async ({ expect }) => {
 		const packages = await getPublicPackages();
 
 		// All returned packages should be non-private
@@ -312,7 +326,7 @@ describe("getPublicPackages()", () => {
 		expect(packageNames).toContain("create-cloudflare");
 	});
 
-	it("should not include private packages", async () => {
+	it("should not include private packages", async ({ expect }) => {
 		const packages = await getPublicPackages();
 		const packageNames = packages.map((p) => p.packageJson.name);
 

@@ -16,7 +16,6 @@
 		"cookie": "^0.6.0"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

@@ -1,7 +1,5 @@
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -30,7 +28,7 @@ describe("pages deployment delete", () => {
 		clearDialogs();
 	});
 
-	it("should delete a deployment with the given ID", async () => {
+	it("should delete a deployment with the given ID", async ({ expect }) => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
@@ -65,7 +63,7 @@ describe("pages deployment delete", () => {
 		expect(std.out).toContain("Successfully deleted deployment abc123");
 	});
 
-	it("should error if no deployment ID is specified", async () => {
+	it("should error if no deployment ID is specified", async ({ expect }) => {
 		await expect(
 			runWrangler("pages deployment delete --project-name=my-project")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -73,7 +71,7 @@ describe("pages deployment delete", () => {
 		);
 	});
 
-	it("should not delete if confirmation refused", async () => {
+	it("should not delete if confirmation refused", async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete deployment "abc123" in project "my-project"? This action cannot be undone.`,
 			result: false,
@@ -86,7 +84,9 @@ describe("pages deployment delete", () => {
 		expect(std.out).not.toContain("Successfully deleted");
 	});
 
-	it("should delete without asking if --force is provided", async () => {
+	it("should delete without asking if --force is provided", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
@@ -115,7 +115,7 @@ describe("pages deployment delete", () => {
 		expect(std.out).toContain("Successfully deleted deployment abc123");
 	});
 
-	it("should support -f alias for --force", async () => {
+	it("should support -f alias for --force", async ({ expect }) => {
 		msw.use(
 			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId",
