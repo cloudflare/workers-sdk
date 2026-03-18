@@ -99,6 +99,7 @@ export function printBindings(
 	const text_blobs = extractBindingsOfType("text_blob", bindings);
 	const browser = extractBindingsOfType("browser", bindings);
 	const images = extractBindingsOfType("images", bindings);
+	const stream = extractBindingsOfType("stream", bindings);
 	const ai = extractBindingsOfType("ai", bindings);
 	const version_metadata = extractBindingsOfType("version_metadata", bindings);
 	// Extract all vars (plain_text, json, secret_text) together to preserve insertion order
@@ -504,6 +505,19 @@ export function printBindings(
 			...images.map(({ binding, remote }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("images"),
+				value: undefined,
+				mode: getMode({
+					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+				}),
+			}))
+		);
+	}
+
+	if (stream.length > 0) {
+		output.push(
+			...stream.map(({ binding, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("stream"),
 				value: undefined,
 				mode: getMode({
 					isSimulatedLocally: context.remoteBindingsDisabled || !remote,

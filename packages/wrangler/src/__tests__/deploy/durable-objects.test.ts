@@ -886,6 +886,40 @@ describe("deploy", () => {
 			`);
 		});
 	});
+	describe("stream", () => {
+		it("should upload stream bindings", async () => {
+			writeWranglerConfig({
+				stream: { binding: "STREAM_BIND" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "stream",
+						name: "STREAM_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                 Resource
+				env.STREAM_BIND         Stream
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
 	describe("python", () => {
 		it("should upload python module defined in wrangler.toml", async () => {
 			writeWranglerConfig({
