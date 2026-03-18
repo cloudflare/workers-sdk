@@ -1,0 +1,65 @@
+{
+	"name": "@cloudflare/remote-bindings",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Remote bindings support for Cloudflare Workers local development",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/remote-bindings#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/remote-bindings"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.cjs"
+		}
+	},
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsdown",
+		"check:lint": "eslint . --max-warnings=0 --cache",
+		"check:type": "tsc -p ./tsconfig.json",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"get-port": "^7.0.0",
+		"undici": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"@types/node": "catalog:default",
+		"capnweb": "catalog:default",
+		"esbuild": "catalog:default",
+		"eslint": "catalog:default",
+		"tsdown": "0.16.3",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"miniflare": "workspace:*"
+	},
+	"engines": {
+		"node": ">20.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

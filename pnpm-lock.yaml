@@ -2615,6 +2615,49 @@ importers:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
 
+  packages/remote-bindings:
+    dependencies:
+      get-port:
+        specifier: ^7.0.0
+        version: 7.1.0
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      undici:
+        specifier: catalog:default
+        version: 7.24.4
+    devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../eslint-config-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      '@types/node':
+        specifier: ^20.19.9
+        version: 20.19.9
+      capnweb:
+        specifier: catalog:default
+        version: 0.5.0
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.3
+      eslint:
+        specifier: catalog:default
+        version: 9.39.1(jiti@2.6.1)
+      tsdown:
+        specifier: 0.16.3
+        version: 0.16.3(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@20.19.9)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@20.19.9)(typescript@5.8.3))(vite@8.0.0(@types/node@20.19.9)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+
   packages/solarflare-theme: {}
 
   packages/turbo-r2-archive:
@@ -4252,6 +4295,9 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
@@ -19818,7 +19864,7 @@ snapshots:
 
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.49':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.0.7
+      '@napi-rs/wasm-runtime': 1.1.1
     optional: true
 
   '@rolldown/binding-wasm32-wasi@1.0.0-rc.9':

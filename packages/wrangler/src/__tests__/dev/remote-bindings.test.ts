@@ -12,7 +12,13 @@ import {
 	vi,
 } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
-import { Binding, StartRemoteProxySessionOptions } from "../../api";
+import {
+	Binding,
+	maybeStartOrUpdateRemoteProxySession,
+	startRemoteProxySession,
+	StartRemoteProxySessionOptions,
+} from "../../api";
+import { logger } from "../../logger";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -53,10 +59,10 @@ const remoteProxyConnectionString = new URL(
 ) as RemoteProxyConnectionString;
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
-vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
+vi.mock("@cloudflare/remote-bindings", async () => {
 	const actual = await vi.importActual<
-		typeof import("../../api/remoteBindings/start-remote-proxy-session")
-	>("../../api/remoteBindings/start-remote-proxy-session");
+		typeof import("@cloudflare/remote-bindings")
+	>("@cloudflare/remote-bindings");
 	return {
 		...actual,
 		async startRemoteProxySession(
@@ -714,15 +720,25 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: 5_000,
 		});
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "some-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
+		expect(sessionOptions).toEqual(
+			expect.objectContaining({
+				auth: expect.any(Function),
+				complianceRegion: undefined,
+				logger,
+				workerName: "worker",
+			})
+		);
+
+		const auth = sessionOptions?.auth;
+		if (typeof auth !== "function") {
+			throw new Error("Expected auth hook to be a function");
+		}
+
+		await expect(auth({ account_id: undefined })).resolves.toEqual({
+			accountId: "some-account-id",
+			apiToken: {
+				apiToken: "some-api-token",
 			},
-			complianceRegion: undefined,
-			workerName: "worker",
 		});
 		await stopWrangler();
 		await wranglerStopped;
@@ -756,19 +772,114 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			timeout: 5_000,
 		});
 
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "mock-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
+		expect(sessionOptions).toEqual(
+			expect.objectContaining({
+				auth: expect.any(Function),
+				complianceRegion: undefined,
+				logger,
+				workerName: "worker",
+			})
+		);
+
+		const auth = sessionOptions?.auth;
+		if (typeof auth !== "function") {
+			throw new Error("Expected auth hook to be a function");
+		}
+
+		await expect(auth({ account_id: "mock-account-id" })).resolves.toEqual({
+			accountId: "mock-account-id",
+			apiToken: {
+				apiToken: "some-api-token",
 			},
-			complianceRegion: undefined,
-			workerName: "worker",
 		});
 
 		await stopWrangler();
 
 		await wranglerStopped;
+	});
+
+	it("supports the historical startRemoteProxySession API without options", async () => {
+		const session = await startRemoteProxySession({
+			REMOTE_WORKER: {
+				type: "service",
+				service: "remote-service-binding-worker",
+			},
+		});
+
+		expect(proxyWorkerBindings).toEqual({
+			REMOTE_WORKER: {
+				type: "service",
+				service: "remote-service-binding-worker",
+			},
+		});
+		expect(sessionOptions).toBeDefined();
+		expect(sessionOptions).toEqual(
+			expect.objectContaining({
+				auth: expect.any(Function),
+				workerName: undefined,
+				complianceRegion: undefined,
+			})
+		);
+
+		const auth = sessionOptions?.auth;
+		if (typeof auth !== "function") {
+			throw new Error("Expected auth hook to be a function");
+		}
+
+		await expect(auth({ account_id: undefined })).resolves.toEqual({
+			accountId: "some-account-id",
+			apiToken: {
+				apiToken: "some-api-token",
+			},
+		});
+
+		await session.dispose();
+	});
+
+	it("returns null for local-only bindings even when auth is provided", async () => {
+		const dispose = vi.fn(async () => {});
+
+		const sessionData = await maybeStartOrUpdateRemoteProxySession(
+			{
+				bindings: {
+					LOCAL_KV: {
+						type: "kv_namespace",
+						id: "mock-kv-namespace",
+					},
+				},
+			},
+			{
+				session: {
+					ready: Promise.resolve(),
+					dispose,
+					updateBindings: async () => {},
+					remoteProxyConnectionString,
+				},
+				remoteBindings: {
+					REMOTE_WORKER: {
+						type: "service",
+						service: "remote-service-binding-worker",
+						remote: true,
+					},
+				},
+				auth: {
+					accountId: "previous-account-id",
+					apiToken: {
+						apiToken: "previous-api-token",
+					},
+				},
+			},
+			{
+				accountId: "some-account-id",
+				apiToken: {
+					apiToken: "some-api-token",
+				},
+			}
+		);
+
+		expect(sessionData).toBeNull();
+		expect(dispose).toHaveBeenCalledTimes(1);
+		expect(proxyWorkerBindings).toBeUndefined();
+		expect(sessionOptions).toBeUndefined();
 	});
 });

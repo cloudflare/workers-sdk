@@ -1,39 +1,27 @@
 import assert from "node:assert";
+import {
+	pickRemoteBindings,
+	startRemoteProxySession as startRemoteProxySessionInternal,
+} from "@cloudflare/remote-bindings";
 import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
+import { logger } from "../../logger";
 import { requireApiToken, requireAuth } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
-import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { CfAccount } from "../../dev/create-worker-preview";
-import type {
-	AsyncHook,
-	Binding,
-	StartDevWorkerInput,
-} from "../startDevWorker/types";
-import type { RemoteProxySession } from "./start-remote-proxy-session";
+import type { Binding, StartDevWorkerInput } from "../startDevWorker/types";
+import type { RemoteProxySession } from "@cloudflare/remote-bindings";
 import type { Config } from "@cloudflare/workers-utils";
 
-export * from "./start-remote-proxy-session";
+export { pickRemoteBindings };
+export type { RemoteProxySession } from "@cloudflare/remote-bindings";
 
-export function pickRemoteBindings(
-	bindings: Record<string, Binding>
-): Record<string, Binding> {
-	return Object.fromEntries(
-		Object.entries(bindings ?? {}).filter(([, binding]) => {
-			if (binding.type === "ai" || binding.type === "media") {
-				// AI and 'media' bindings are always remote
-				return true;
-			}
-
-			if (binding.type === "vpc_service") {
-				// VPC Service is always remote
-				return true;
-			}
-
-			return "remote" in binding && binding["remote"];
-		})
-	);
-}
+export type StartRemoteProxySessionOptions = {
+	workerName?: string;
+	auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+	/** If running in a non-public compliance region, set this here. */
+	complianceRegion?: Config["compliance_region"];
+};
 
 type WranglerConfigObject = {
 	/** The path to the wrangler config file */
@@ -53,8 +41,35 @@ type WorkerConfigObject = {
 	account_id?: Config["account_id"];
 };
 
+type WranglerAuth = NonNullable<StartDevWorkerInput["dev"]>["auth"];
+
+/**
+ * Start a remote proxy session using Wrangler's historical auth behavior.
+ *
+ * This keeps the previous programmatic API compatible for callers that omit
+ * the options object or rely on Wrangler to resolve auth on their behalf.
+ */
+export async function startRemoteProxySession(
+	bindings: StartDevWorkerInput["bindings"],
+	options?: StartRemoteProxySessionOptions
+): Promise<RemoteProxySession> {
+	return startRemoteProxySessionInternal(bindings ?? {}, {
+		workerName: options?.workerName,
+		complianceRegion: options?.complianceRegion,
+		auth: resolveAuthHook(options?.auth, undefined),
+		logger,
+	});
+}
+
 /**
  * Utility for potentially starting or updating a remote proxy session.
+ *
+ * This is the wrangler-specific wrapper that handles:
+ * - Reading wrangler config files (config path → bindings conversion)
+ * - Resolving auth via requireAuth/requireApiToken
+ * - Session lifecycle (create/update/reuse)
+ *
+ * Then delegates to @cloudflare/remote-bindings for the actual session management.
  *
  * @param wranglerOrWorkerConfigObject either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
@@ -102,6 +117,13 @@ export async function maybeStartOrUpdateRemoteProxySession(
 
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
+	if (Object.keys(remoteBindings).length === 0) {
+		if (remoteProxySession) {
+			await remoteProxySession.dispose();
+		}
+		return null;
+	}
+
 	if (!authSameAsBefore) {
 		// The auth values have changed so we do need to restart a new remote proxy session
 
@@ -109,18 +131,12 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			await preExistingRemoteProxySessionData.session.dispose();
 		}
 
-		remoteProxySession = await startRemoteProxySession(remoteBindings, {
-			workerName: workerConfigObject.name,
-			complianceRegion: workerConfigObject.complianceRegion,
-			auth: getAuthHook(
-				auth,
-				workerConfigObject.account_id
-					? {
-							account_id: workerConfigObject.account_id,
-						}
-					: config
-			),
-		});
+		remoteProxySession = await startRemoteProxySessionWithAuth(
+			remoteBindings,
+			workerConfigObject,
+			auth,
+			config
+		);
 	} else {
 		// The auth values haven't changed so we can reuse the pre-existing session
 
@@ -133,18 +149,12 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		if (!remoteBindingsAreSameAsBefore) {
 			if (!remoteProxySession) {
 				if (Object.keys(remoteBindings).length > 0) {
-					remoteProxySession = await startRemoteProxySession(remoteBindings, {
-						workerName: workerConfigObject.name,
-						complianceRegion: workerConfigObject.complianceRegion,
-						auth: getAuthHook(
-							auth,
-							workerConfigObject.account_id
-								? {
-										account_id: workerConfigObject.account_id,
-									}
-								: config
-						),
-					});
+					remoteProxySession = await startRemoteProxySessionWithAuth(
+						remoteBindings,
+						workerConfigObject,
+						auth,
+						config
+					);
 				}
 			} else {
 				// Note: we always call updateBindings even when there are zero remote bindings, in these
@@ -166,20 +176,43 @@ export async function maybeStartOrUpdateRemoteProxySession(
 }
 
 /**
- * Gets the auth hook to use for the remote proxy session, this is either the user provided auth
- * hook if there is one, or an ad-hoc hook created using the account_id from the user's wrangler
- * config file otherwise.
- *
- * @param auth the auth hook provided by the user if any
- * @param config the user's wrangler config if any
- * @returns the auth hook to pass to the startRemoteProxy session function if any
+ * Start a remote proxy session, resolving auth from wrangler's auth system
+ * and delegating to @cloudflare/remote-bindings.
  */
-function getAuthHook(
+async function startRemoteProxySessionWithAuth(
+	bindings: Record<string, Binding>,
+	workerConfig: WorkerConfigObject,
 	auth: CfAccount | undefined,
+	config: Config | undefined
+): Promise<RemoteProxySession> {
+	return startRemoteProxySessionInternal(bindings, {
+		workerName: workerConfig.name,
+		complianceRegion: workerConfig.complianceRegion,
+		auth: resolveAuthHook(
+			auth,
+			workerConfig.account_id ? { account_id: workerConfig.account_id } : config
+		),
+		logger,
+	});
+}
+
+/**
+ * Create an auth callback that resolves credentials from either a pre-provided
+ * CfAccount or from wrangler's auth system (requireAuth/requireApiToken).
+ */
+function resolveAuthHook(
+	auth: WranglerAuth | undefined,
 	config: Pick<Config, "account_id"> | undefined
-): AsyncHook<CfAccount, [Pick<Config, "account_id">]> | undefined {
+): () => Promise<{
+	accountId: string;
+	apiToken: { apiToken: string } | { authKey: string; authEmail: string };
+}> {
 	if (auth) {
-		return auth;
+		if (typeof auth === "function") {
+			return async () => auth(config ?? { account_id: undefined });
+		}
+
+		return async () => auth;
 	}
 
 	if (config?.account_id) {
@@ -191,7 +224,13 @@ function getAuthHook(
 		};
 	}
 
-	return undefined;
+	// Fallback: try to resolve auth without an account_id hint
+	return async () => {
+		return {
+			accountId: await requireAuth({}),
+			apiToken: requireApiToken(),
+		};
+	};
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {

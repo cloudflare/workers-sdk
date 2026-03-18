@@ -104,9 +104,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							},
 						}
 					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
-				);
+				).rejects.toThrow("Failed to create remote preview session");
 			});
 		});
 
@@ -161,9 +159,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							},
 						}
 					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
-				);
+				).rejects.toThrow("Failed to create remote preview session");
 			});
 		});
 	}

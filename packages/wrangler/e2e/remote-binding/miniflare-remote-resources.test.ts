@@ -8,7 +8,7 @@ import {
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
-import type { StartDevWorkerInput } from "../../src/api";
+import type { Binding, StartDevWorkerInput } from "../../src/api";
 import type { StartRemoteProxySessionOptions } from "../../src/cli";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type {
@@ -540,6 +540,10 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper(onTeardown);
 			await helper.seed(path.resolve(__dirname, "./workers"));
+			const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+			if (apiToken === undefined) {
+				throw new Error("CLOUDFLARE_API_TOKEN is required for this test");
+			}
 			const testConfigs: TestConfig[] = [];
 			for (const testCase of activeTestCases) {
 				testConfigs.push(await testCase.setup(helper));
@@ -550,9 +554,16 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					...testConfigs.map(
 						(config) => config.remoteProxySessionConfig.bindings
 					)
-				),
+				) as Record<string, Binding>,
 				Object.assign(
-					{},
+					{
+						auth: {
+							accountId: CLOUDFLARE_ACCOUNT_ID,
+							apiToken: {
+								apiToken,
+							},
+						},
+					},
 					...testConfigs.map(
 						(config) => config.remoteProxySessionConfig.options
 					)
@@ -602,6 +613,10 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			name: "mTLS",
 			scriptPath: "mtls.js",
 			setup: async (helper) => {
+				const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+				if (apiToken === undefined) {
+					throw new Error("CLOUDFLARE_API_TOKEN is required for this test");
+				}
 				const certificateId = await helper.cert();
 				// We need to override the standard Wrangler remote proxy worker with one that has the mTLS configured.
 				const workerName = generateResourceName();
@@ -644,6 +659,12 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 						// This worker needs to have mTLS certificates configured.
 						options: {
 							workerName,
+							auth: {
+								accountId: CLOUDFLARE_ACCOUNT_ID,
+								apiToken: {
+									apiToken,
+								},
+							},
 						},
 					},
 					miniflareConfig: (connection) => ({
@@ -667,6 +688,8 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(path.resolve(__dirname, "./workers"));
 			const testConfig = await mtlsTestCase.setup(helper);
+			assert(testConfig.remoteProxySessionConfig.bindings);
+			assert(testConfig.remoteProxySessionConfig.options);
 			const remoteProxySession = await startRemoteProxySession(
 				testConfig.remoteProxySessionConfig.bindings,
 				testConfig.remoteProxySessionConfig.options
