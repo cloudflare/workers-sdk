@@ -1,9 +1,9 @@
 import { relative } from "node:path";
 import {
 	HEADERS_VERSION,
-	PLACEHOLDER_REGEX,
+	REDIRECT_PLACEHOLDER_REGEX,
+	REDIRECT_SPLAT_REGEX,
 	REDIRECTS_VERSION,
-	SPLAT_REGEX,
 } from "./constants";
 import type {
 	AssetConfig,
@@ -65,7 +65,10 @@ export function constructRedirects({
 	const dynamicRedirects: MetadataRedirects = {};
 	let canCreateStaticRule = true;
 	for (const rule of redirects.rules) {
-		if (!rule.from.match(SPLAT_REGEX) && !rule.from.match(PLACEHOLDER_REGEX)) {
+		if (
+			!rule.from.match(REDIRECT_SPLAT_REGEX) &&
+			!rule.from.match(REDIRECT_PLACEHOLDER_REGEX)
+		) {
 			if (canCreateStaticRule) {
 				staticRedirects[rule.from] = {
 					status: rule.status,

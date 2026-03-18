@@ -1,5 +1,6 @@
 // eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { expect, test } from "vitest";
+import { MAX_HEADER_LINE_LENGTH } from "../configuration/constants";
 import { parseHeaders } from "../configuration/parseHeaders";
 
 test("parseHeaders should reject malformed initial lines", () => {
@@ -66,33 +67,45 @@ test("parseHeaders should reject invalid headers", () => {
 	});
 });
 
-test("parseHeaders should reject lines longer than 2000 chars", () => {
-	const huge_line = `${Array(1001).fill("a").join("")}: ${Array(1001)
-		.fill("b")
-		.join("")}`;
+test(`parseHeaders should reject lines longer than ${MAX_HEADER_LINE_LENGTH} chars`, () => {
+	const huge_line = `${"a".repeat(MAX_HEADER_LINE_LENGTH / 2)}: ${"b".repeat(MAX_HEADER_LINE_LENGTH / 2 + 5)}`;
 	const input = `
     # Valid entry
     /a
       Name: Value
     # Jumbo comment line OK, ignored as normal
-    ${Array(1001).fill("#").join("")}
+    ${"#".repeat(MAX_HEADER_LINE_LENGTH + 10)}
     # Huge path names rejected
     /b
       Name: Value
       ${huge_line}
   `;
 	const result = parseHeaders(input);
-	expect(result).toEqual({
-		rules: [
-			{ path: "/a", headers: { name: "Value" }, unsetHeaders: [] },
-			{ path: "/b", headers: { name: "Value" }, unsetHeaders: [] },
-		],
-		invalid: [
-			{
-				message: `Ignoring line 10 as it exceeds the maximum allowed length of 2000.`,
-			},
-		],
-	});
+	expect(result).toMatchInlineSnapshot(`
+		{
+		  "invalid": [
+		    {
+		      "message": "Ignoring line 10 as it exceeds the maximum allowed length of 2000.",
+		    },
+		  ],
+		  "rules": [
+		    {
+		      "headers": {
+		        "name": "Value",
+		      },
+		      "path": "/a",
+		      "unsetHeaders": [],
+		    },
+		    {
+		      "headers": {
+		        "name": "Value",
+		      },
+		      "path": "/b",
+		      "unsetHeaders": [],
+		    },
+		  ],
+		}
+	`);
 });
 
 test("parseHeaders should reject any rules after the first 100", () => {
