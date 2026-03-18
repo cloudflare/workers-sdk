@@ -280,7 +280,7 @@ describe("containers list", () => {
 			expect(output[0].state).toBe("degraded");
 		});
 
-		it("should derive 'provisioning' when starting/scheduling > 0", async () => {
+		it("should derive 'provisioning' when starting > 0", async () => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			const app: DashApplication = {
@@ -292,6 +292,33 @@ describe("containers list", () => {
 						failed: 0,
 						starting: 1,
 						scheduling: 0,
+					},
+				},
+			};
+			msw.use(
+				http.get(
+					"*/dash/applications",
+					async () => HttpResponse.json(dashAppsResponse([app])),
+					{ once: true }
+				)
+			);
+			await runWrangler("containers list --json");
+			const output = JSON.parse(std.out);
+			expect(output[0].state).toBe("provisioning");
+		});
+
+		it("should derive 'provisioning' when scheduling > 0", async () => {
+			setIsTTY(false);
+			setWranglerConfig({});
+			const app: DashApplication = {
+				...MOCK_DASH_APPLICATIONS[0],
+				health: {
+					instances: {
+						active: 0,
+						healthy: 0,
+						failed: 0,
+						starting: 0,
+						scheduling: 1,
 					},
 				},
 			};
@@ -351,16 +378,17 @@ describe("containers list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			const output = JSON.parse(std.out);
 			expect(output).toHaveLength(4);
-			// Verify shape of each entry
 			for (const entry of output) {
-				expect(entry).toHaveProperty("id");
-				expect(entry).toHaveProperty("name");
-				expect(entry).toHaveProperty("state");
-				expect(entry).toHaveProperty("instances");
-				expect(entry).toHaveProperty("image");
-				expect(entry).toHaveProperty("version");
-				expect(entry).toHaveProperty("updated_at");
-				expect(entry).toHaveProperty("created_at");
+				expect(entry).toEqual({
+					id: expect.any(String),
+					name: expect.any(String),
+					state: expect.any(String),
+					instances: expect.any(Number),
+					image: expect.any(String),
+					version: expect.any(Number),
+					updated_at: expect.any(String),
+					created_at: expect.any(String),
+				});
 			}
 		});
 
