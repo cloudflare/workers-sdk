@@ -7,7 +7,7 @@ describe("Context", () => {
 	}) => {
 		let receivedAttempt: number | undefined;
 
-		await runWorkflow("MOCK-INSTANCE-ID", async (_event, step) => {
+		await runWorkflow("context-success", async (_event, step) => {
 			// TODO: remove after types are updated
 			// @ts-expect-error WorkflowStep types
 			const result = await step.do("a successful step", async (ctx) => {
@@ -23,7 +23,7 @@ describe("Context", () => {
 	it("should provide attempt count to callback", async ({ expect }) => {
 		const receivedAttempts: number[] = [];
 
-		await runWorkflow("MOCK-INSTANCE-ID", async (_event, step) => {
+		await runWorkflow("context-retry", async (_event, step) => {
 			const result = await step.do(
 				"retrying step",
 				{

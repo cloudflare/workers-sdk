@@ -39,13 +39,13 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"mime": "^3.0.0",
 		"tsup": "8.3.0",
-		"vitest": "catalog:vitest-3"
+		"vitest": "catalog:default"
 	},
 	"engines": {
 		"node": ">=18.0.0"

@@ -4,12 +4,16 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	plugins: [
 		cloudflareTest({
-			wrangler: {
-				configPath: "./asset-worker/wrangler.jsonc",
+			main: "src/index.ts",
+			miniflare: {
+				compatibilityDate: "2025-02-04",
+				durableObjects: {
+					ENGINE: {
+						className: "Engine",
+						useSQLite: true,
+					},
+				},
 			},
 		}),
 	],
-	test: {
-		globals: true,
-	},
 });

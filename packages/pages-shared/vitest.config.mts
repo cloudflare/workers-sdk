@@ -1,15 +1,12 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersProject({
-	test: {
-		poolOptions: {
-			workers: {
-				isolatedStorage: false,
-				singleWorker: true,
-				miniflare: {
-					compatibilityDate: "2025-01-01",
-				},
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			miniflare: {
+				compatibilityDate: "2025-01-01",
 			},
-		},
-	},
+		}),
+	],
 });

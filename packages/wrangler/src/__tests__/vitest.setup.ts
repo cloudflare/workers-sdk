@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
+import { Console } from "node:console";
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
@@ -7,6 +8,13 @@ import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
+
+// Vitest 4 replaces `globalThis.console` with a custom Console instance that
+// lacks the `Console` constructor property. Libraries like `patch-console` rely
+// on `console.Console` being available. Restore it from the `node:console` module.
+if (!console.Console) {
+	(console as unknown as Record<string, unknown>).Console = Console;
+}
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
@@ -245,7 +253,22 @@ vi.mock("execa", async (importOriginal) => {
 	};
 });
 
+// Workaround for Vitest 4 bug: vi.stubEnv() writes to process.env via a Proxy
+// `set` handler, but vi.unstubAllEnvs() uses `delete` on the proxy which lacks a
+// `deleteProperty` handler. This means env vars that didn't exist before stubbing
+// are never removed from process.env, causing cross-test leakage.
+// Track process.env keys before each test so we can clean up any that were added.
+let _envKeysBefore: Set<string>;
+beforeEach(() => {
+	_envKeysBefore = new Set(Object.keys(process.env));
+});
 afterEach(() => {
+	// Remove any env vars that were added during the test but not properly cleaned up
+	for (const key of Object.keys(process.env)) {
+		if (!_envKeysBefore.has(key)) {
+			delete process.env[key];
+		}
+	}
 	// It is important that we clear mocks between tests to avoid leakage.
 	vi.clearAllMocks();
 });

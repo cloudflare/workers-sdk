@@ -89,7 +89,7 @@ export function resetServerLogs() {
 	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
-beforeAll(async (s) => {
+beforeAll(async (_fixtures, s) => {
 	let server: ViteDevServer | PreviewServer | undefined;
 	let postServe: (() => Promise<void>) | undefined;
 
@@ -226,7 +226,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 		for (const extension of ["js", "ts", "mjs", "cjs", "mts", "cts"]) {
 			const configVariantPath = path.resolve(
 				rootDir,
-				`vite.config.${variantName}.${extension}`
+				`vite.config.${variantName}.${extension}`,
 			);
 			if (fs.existsSync(configVariantPath)) {
 				const res = await loadConfigFromFile(configEnv, configVariantPath);
@@ -272,7 +272,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 			serverLogs.info,
 			serverLogs.warns,
 			serverLogs.errors,
-			config?.logLevel
+			config?.logLevel,
 		),
 	};
 	return mergeConfig(options, config || {});
@@ -312,7 +312,7 @@ export async function startDefaultServe(): Promise<
 			}),
 			{
 				plugins: [resolvedPlugin()],
-			}
+			},
 		);
 		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
@@ -351,7 +351,7 @@ export async function startDefaultServe(): Promise<
  * Send the rebuild complete message in build watch
  */
 export async function notifyRebuildComplete(
-	rollupWatcher: Rollup.RollupWatcher
+	rollupWatcher: Rollup.RollupWatcher,
 ): Promise<Rollup.RollupWatcher> {
 	let resolveFn: undefined | (() => void);
 	const callback = (event: Rollup.RollupWatcherEvent): void => {
@@ -378,7 +378,7 @@ export function createInMemoryLogger(
 	info: string[],
 	warns: string[],
 	errors: string[],
-	logLevel: LogLevel = "info"
+	logLevel: LogLevel = "info",
 ): Logger {
 	const thresholdLogLevel = logLevels[logLevel];
 

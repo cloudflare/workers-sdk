@@ -13,12 +13,13 @@ import {
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { runC3 } from "../../helpers/run-c3";
+import type { RunnerTestSuite } from "vitest";
 
 const { name: pm } = detectPackageManager();
 
 describe("Create Cloudflare CLI", () => {
-	beforeAll((ctx) => {
-		recreateLogFolder(ctx);
+	beforeAll((_fixtures, ctx) => {
+		recreateLogFolder(ctx as RunnerTestSuite);
 	});
 
 	describe.skipIf(isExperimental)("E2E: Basic C3 functionality ", () => {
@@ -76,7 +77,7 @@ describe("Create Cloudflare CLI", () => {
 							input: [keys.enter],
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(project.path).toExist();
@@ -84,7 +85,7 @@ describe("Create Cloudflare CLI", () => {
 				expect(output).toContain(`type SSR / full-stack app`);
 				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no deploy`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -123,14 +124,14 @@ describe("Create Cloudflare CLI", () => {
 							input: ["n"],
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(project.path).toExist();
 				expect(output).toContain(`type Scheduled Worker (Cron Trigger)`);
 				expect(output).toContain(`lang JavaScript`);
 				expect(output).toContain(`no deploy`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -140,7 +141,7 @@ describe("Create Cloudflare CLI", () => {
 				const existingProjectName = Array.from(projectName).reverse().join("");
 				const existingProjectPath = project.path.replace(
 					projectName,
-					existingProjectName
+					existingProjectName,
 				);
 				const existingFilePath = `${existingProjectPath}/example.json`;
 
@@ -179,7 +180,7 @@ describe("Create Cloudflare CLI", () => {
 								input: ["n"],
 							},
 						],
-						logStream
+						logStream,
 					);
 
 					expect(project.path).toExist();
@@ -195,7 +196,7 @@ describe("Create Cloudflare CLI", () => {
 						retryDelay: 100,
 					});
 				}
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -210,17 +211,17 @@ describe("Create Cloudflare CLI", () => {
 						"--no-agents",
 					],
 					[],
-					logStream
+					logStream,
 				);
 
 				expect(output).toContain(
-					`repository https://github.com/cloudflare/workers-graphql-server`
+					`repository https://github.com/cloudflare/workers-graphql-server`,
 				);
 				expect(output).toContain(
-					`Cloning template from: https://github.com/cloudflare/workers-graphql-server`
+					`Cloning template from: https://github.com/cloudflare/workers-graphql-server`,
 				);
 				expect(output).toContain(`template cloned and validated`);
-			}
+			},
 		);
 
 		// Skipping this on npm because the template that we are downloading has a package-lock file that
@@ -243,14 +244,14 @@ describe("Create Cloudflare CLI", () => {
 						"--no-agents",
 					],
 					[],
-					logStream
+					logStream,
 				);
 
 				expect(output).toContain(
-					`repository cloudflare/templates/multiplayer-globe-template`
+					`repository cloudflare/templates/multiplayer-globe-template`,
 				);
 				expect(output).toContain(
-					`Cloning template from: cloudflare/templates/multiplayer-globe-template`
+					`Cloning template from: cloudflare/templates/multiplayer-globe-template`,
 				);
 				expect(output).toContain(`template cloned and validated`);
 				// the template fails between these two assertions. however, the
@@ -265,7 +266,7 @@ describe("Create Cloudflare CLI", () => {
 						}
 					}"
 				`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -281,14 +282,14 @@ describe("Create Cloudflare CLI", () => {
 						"--no-agents",
 					],
 					[],
-					logStream
+					logStream,
 				);
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
 				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang Python`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -304,14 +305,14 @@ describe("Create Cloudflare CLI", () => {
 						"--no-agents",
 					],
 					[],
-					logStream
+					logStream,
 				);
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
 				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang Python`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -326,13 +327,13 @@ describe("Create Cloudflare CLI", () => {
 						"--git=false",
 					],
 					[],
-					logStream
+					logStream,
 				);
 
 				expect(errors).toContain(
-					`No templates available for language "python" in the "demo" category`
+					`No templates available for language "python" in the "demo" category`,
 				);
-			}
+			},
 		);
 
 		/*
@@ -369,13 +370,13 @@ describe("Create Cloudflare CLI", () => {
 							},
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Application Starter`);
 				expect(output).toContain(`type API starter (OpenAPI compliant)`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows)(
@@ -479,13 +480,13 @@ describe("Create Cloudflare CLI", () => {
 							},
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(project.path).toExist();
 				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang JavaScript`);
-			}
+			},
 		);
 
 		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
@@ -497,7 +498,7 @@ describe("Create Cloudflare CLI", () => {
 					if (
 						(
 							await fetch(
-								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/"
+								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/",
 							)
 						).status === 404
 					) {
@@ -506,11 +507,11 @@ describe("Create Cloudflare CLI", () => {
 				} catch {
 					// eslint-disable-next-line no-console
 					console.log(
-						"Redeploying the existing-script-test-do-not-delete worker"
+						"Redeploying the existing-script-test-do-not-delete worker",
 					);
 					const workerPath = resolve(
 						__dirname,
-						"fixtures/existing-script-test-do-not-delete"
+						"fixtures/existing-script-test-do-not-delete",
 					);
 					execSync("pnpx wrangler@latest deploy", { cwd: workerPath });
 				}
@@ -524,7 +525,7 @@ describe("Create Cloudflare CLI", () => {
 						"--no-agents",
 					],
 					[],
-					logStream
+					logStream,
 				);
 				expect(output).toContain("Pre-existing Worker (from Dashboard)");
 				expect(output).toContain("Application created successfully!");
@@ -533,10 +534,10 @@ describe("Create Cloudflare CLI", () => {
 				expect(fs.existsSync(join(project.path, "wrangler.toml"))).toBe(false);
 				expect(
 					JSON.parse(
-						fs.readFileSync(join(project.path, "wrangler.jsonc"), "utf8")
-					)
+						fs.readFileSync(join(project.path, "wrangler.jsonc"), "utf8"),
+					),
 				).toMatchObject({ vars: { FOO: "bar" } });
-			}
+			},
 		);
 	});
 
@@ -546,7 +547,7 @@ describe("Create Cloudflare CLI", () => {
 				const { output } = await runC3(
 					["--help", "--experimental"],
 					[],
-					logStream
+					logStream,
 				);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
@@ -743,12 +744,12 @@ describe("Create Cloudflare CLI", () => {
 				const { errors } = await runC3(
 					["--platform=pages", `--framework=${framework}`, "my-app"],
 					[],
-					logStream
+					logStream,
 				);
 				expect(errors).toMatch(
-					/Error: The .*? framework doesn't support the "pages" platform/
+					/Error: The .*? framework doesn't support the "pages" platform/,
 				);
-			})
+			}),
 		);
 
 		test("error when using invalid --variant for React framework", async ({
@@ -765,10 +766,10 @@ describe("Create Cloudflare CLI", () => {
 					"--git=false",
 				],
 				[],
-				logStream
+				logStream,
 			);
 			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
 			);
 		});
 
@@ -786,10 +787,10 @@ describe("Create Cloudflare CLI", () => {
 					"--git=false",
 				],
 				[],
-				logStream
+				logStream,
 			);
 			expect(errors).toContain(
-				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc'
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
 			);
 		});
 
@@ -807,7 +808,7 @@ describe("Create Cloudflare CLI", () => {
 					"--git=false",
 				],
 				[],
-				logStream
+				logStream,
 			);
 			expect(output).toContain("--template react-ts");
 			expect(output).not.toContain("Select a variant");

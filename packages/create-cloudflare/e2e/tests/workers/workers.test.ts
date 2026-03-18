@@ -18,14 +18,15 @@ import {
 	verifyTestScript,
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
+import type { RunnerTestSuite } from "vitest";
 
 const workerTests = getWorkerTests();
 
 describe
 	.skipIf(workerTests.length === 0 || isWindows)
 	.concurrent(`E2E: Workers templates`, () => {
-		beforeAll((ctx) => {
-			recreateLogFolder(ctx);
+		beforeAll((_fixtures, ctx) => {
+			recreateLogFolder(ctx as RunnerTestSuite);
 
 			if (workerTemplateToTest) {
 				debuglog("Running worker tests with filter:", workerTemplateToTest);
@@ -45,7 +46,7 @@ describe
 						const deployedUrl = await runC3ForWorkerTest(
 							testConfig,
 							project.path,
-							logStream
+							logStream,
 						);
 
 						// Relevant project files should have been created
@@ -72,7 +73,7 @@ describe
 							}
 						} else {
 							expect.fail(
-								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`
+								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
 							);
 						}
 
@@ -91,7 +92,7 @@ describe
 					} finally {
 						await deleteWorker(project.name);
 					}
-				}
+				},
 			);
 		});
 	});

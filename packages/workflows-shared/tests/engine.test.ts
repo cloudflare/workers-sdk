@@ -2,6 +2,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, it, vi } from "vitest";
+import workerdUnsafe from "workerd:unsafe";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
 import { runWorkflow, runWorkflowDefer, setWorkflowEntrypoint } from "./utils";
 import type {
@@ -16,7 +17,7 @@ describe("Engine", () => {
 		expect,
 	}) => {
 		const engineStub = await runWorkflow(
-			"MOCK-INSTANCE-ID",
+			"engine-non-retryable",
 			async (event, step) => {
 				await step.do("should only have one retry", async () => {
 					throw new NonRetryableError("Should only retry once");
@@ -38,7 +39,7 @@ describe("Engine", () => {
 		expect,
 	}) => {
 		const engineStub = await runWorkflow(
-			"MOCK-INSTANCE-ID",
+			"engine-try-catch",
 			async (event, step) => {
 				try {
 					await step.do(
@@ -72,7 +73,7 @@ describe("Engine", () => {
 	// eslint-disable-next-line jest/expect-expect
 	it("waitForEvent should receive events while active", async () => {
 		const engineStub = await runWorkflowDefer(
-			"MOCK-INSTANCE-ID",
+			"engine-wait-active",
 			async (_, step) => {
 				return await step.waitForEvent("i'm a event!", {
 					type: "event-type-1",
@@ -103,7 +104,7 @@ describe("Engine", () => {
 	// eslint-disable-next-line jest/expect-expect
 	it("waitForEvent should receive events even if not active", async () => {
 		const engineStub = await runWorkflowDefer(
-			"MOCK-INSTANCE-ID",
+			"engine-wait-inactive",
 			async (_, step) => {
 				return await step.waitForEvent("i'm a event!", {
 					type: "event-type-1",
@@ -117,16 +118,12 @@ describe("Engine", () => {
 			return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
 		}, 500);
 
-		try {
-			await runInDurableObject(engineStub, async (_, state) => {
-				state.abort("kabooom");
-			});
-		} catch {
-			// supposed to error out
-		}
+		await workerdUnsafe.abortAllDurableObjects();
 
-		// Get a new stub since we've just aborted the durable object
-		const newStub = env.ENGINE.get(env.ENGINE.idFromName("MOCK-INSTANCE-ID"));
+		// Get a new stub since we've aborted all durable objects
+		const newStub = env.ENGINE.get(
+			env.ENGINE.idFromName("engine-wait-inactive")
+		);
 
 		await newStub.receiveEvent({
 			type: "event-type-1",

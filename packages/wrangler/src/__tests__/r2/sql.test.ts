@@ -54,8 +54,10 @@ describe("r2 sql", () => {
 		});
 
 		it("should require WRANGLER_R2_SQL_AUTH_TOKEN environment variable", async () => {
-			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", undefined);
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+			// Use delete directly because vi.stubEnv(name, undefined) doesn't
+			// propagate through Vitest 4's env proxy deleteProperty handler.
+			delete process.env.WRANGLER_R2_SQL_AUTH_TOKEN;
+			delete process.env.CLOUDFLARE_API_TOKEN;
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)

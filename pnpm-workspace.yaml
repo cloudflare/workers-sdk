@@ -17,7 +17,7 @@ packages:
 
 catalog:
   "@hey-api/openapi-ts": "^0.94.0"
-  "@types/node": "^20.19.9"
+  "@types/node": "^22.10.1"
 
   "@vitest/runner": 4.1.0
   "@vitest/snapshot": 4.1.0
@@ -28,7 +28,7 @@ catalog:
   # version of Undici
   undici-types: "7.24.4"
   vitest: "4.1.0"
-  vite: "^7.3.1"
+  vite: "^8.0.0"
   "ws": "8.18.0"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
@@ -41,18 +41,7 @@ catalog:
   "capnp-es": "^0.0.14"
   "capnweb": "^0.5.0"
   "ci-info": "^4.4.0"
-
-catalogs:
-  vite-plugin:
-    "vite": "^8.0.0"
-    "@types/node": "^22.10.1"
-  vitest-4:
-    "vite": "^8.0.0"
-  vitest-3:
-    "vitest": 3.2.4
-    "@vitest/ui": 3.2.4
-    "vite": "^5.4.14"
-    # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
-    # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
-    # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
-    "@cloudflare/vitest-pool-workers": "^0.10.0"
+  # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this monorepo should use workspace:* instead of this catalog version
+  # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
+  # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
+  "@cloudflare/vitest-pool-workers": "^0.13.0"
