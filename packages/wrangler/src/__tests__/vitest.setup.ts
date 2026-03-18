@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { Console } from "node:console";
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
@@ -8,13 +7,6 @@ import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
-
-// Vitest 4 replaces `globalThis.console` with a custom Console instance that
-// lacks the `Console` constructor property. Libraries like `patch-console` rely
-// on `console.Console` being available. Restore it from the `node:console` module.
-if (!console.Console) {
-	(console as unknown as Record<string, unknown>).Console = Console;
-}
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
@@ -216,8 +208,9 @@ vi.mock("../user/generate-random-state", () => {
 });
 
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
-	const realModule =
-		await importOriginal<typeof import("../metrics/metrics-config")>();
+	const realModule = await importOriginal<
+		typeof import("../metrics/metrics-config")
+	>();
 	vi.spyOn(realModule, "getMetricsConfig").mockImplementation(() => {
 		return {
 			enabled: false,

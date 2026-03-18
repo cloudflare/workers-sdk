@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as user from "../../user";
@@ -93,7 +92,6 @@ describe("containers instances", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 

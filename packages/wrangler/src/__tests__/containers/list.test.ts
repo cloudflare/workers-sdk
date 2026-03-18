@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
@@ -19,7 +18,6 @@ describe("containers list", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
