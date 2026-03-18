@@ -92,3 +92,7 @@ export type { CompatDate } from "./compatibility-date";
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { getAccessToken, domainUsesAccess } from "./access";
+export { createWorkerUploadForm } from "./create-worker-upload-form";
+export { handleUnsafeCapnp } from "./capnp";
