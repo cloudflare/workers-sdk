@@ -1,9 +1,9 @@
 import {
+	getAccessToken,
 	getCloudflareApiEnvironmentFromEnv,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
-import { getAccessToken } from "./access";
 
 /**
  * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
@@ -117,5 +117,5 @@ export const getCloudflareAccessToken = async () => {
 		return env;
 	}
 
-	return getAccessToken(getAuthDomainFromEnv());
+	return getAccessToken(getAuthDomainFromEnv(), logger);
 };

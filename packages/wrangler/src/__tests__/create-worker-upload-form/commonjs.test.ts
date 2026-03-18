@@ -1,5 +1,5 @@
+import { createWorkerUploadForm } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
-import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { createCjsWorker, createEsmWorker, getBindings } from "./helpers";
 
 describe("createWorkerUploadForm — commonjs service-worker format", () => {

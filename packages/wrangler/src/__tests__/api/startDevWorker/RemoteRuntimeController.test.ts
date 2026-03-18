@@ -1,4 +1,5 @@
 /* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
+import { getAccessToken } from "@cloudflare/workers-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
@@ -12,7 +13,6 @@ import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
 } from "../../../dev/remote";
-import { getAccessToken } from "../../../user/access";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";

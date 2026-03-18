@@ -7,6 +7,7 @@ import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	configFileName,
+	createWorkerUploadForm,
 	experimental_patchConfig,
 	formatCompatibilityDate,
 	formatConfigSnippet,
@@ -25,7 +26,6 @@ import { isAuthenticationError } from "../core/handle-errors";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {
 	createModuleCollector,

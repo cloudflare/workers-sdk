@@ -93,6 +93,15 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
-export { getAccessToken, domainUsesAccess } from "./access";
-export { createWorkerUploadForm } from "./create-worker-upload-form";
+export { getAccessToken, domainUsesAccess, type AccessLogger } from "./access";
+export {
+	createWorkerUploadForm,
+	moduleTypeMimeType,
+	fromMimeType,
+} from "./create-worker-upload-form";
 export { handleUnsafeCapnp } from "./capnp";
+export {
+	extractBindingsOfType,
+	isUnsafeBindingType,
+	type FlatBinding,
+} from "./binding-helpers";

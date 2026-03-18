@@ -1,4 +1,4 @@
-import { MissingConfigError } from "@cloudflare/workers-utils";
+import { getAccessToken, MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
 import { WebSocket } from "ws";
@@ -16,7 +16,6 @@ import {
 import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
-import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { unwrapHook } from "./utils";
@@ -294,7 +293,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		const accessToken = await getAccessToken(token.host);
+		const accessToken = await getAccessToken(token.host, logger);
 
 		this.emitReloadCompleteEvent({
 			type: "reloadComplete",

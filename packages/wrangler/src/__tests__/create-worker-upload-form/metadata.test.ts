@@ -1,5 +1,5 @@
+import { createWorkerUploadForm } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
-import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { createCjsWorker, createEsmWorker, getMetadata } from "./helpers";
 import type { CfWorkerInit } from "./helpers";
 

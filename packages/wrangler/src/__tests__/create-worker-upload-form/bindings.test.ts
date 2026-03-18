@@ -1,6 +1,8 @@
-import { INHERIT_SYMBOL } from "@cloudflare/workers-utils";
+import {
+	createWorkerUploadForm,
+	INHERIT_SYMBOL,
+} from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
-import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { createEsmWorker, getBindings } from "./helpers";
 import type { StartDevWorkerInput } from "./helpers";
 

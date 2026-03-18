@@ -1,6 +1,9 @@
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	domainUsesAccess,
+	getAccessToken,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { beforeEach, describe, it } from "vitest";
-import { domainUsesAccess, getAccessToken } from "../user/access";
 import { msw, mswAccessHandlers } from "./helpers/msw";
 
 describe("access", () => {

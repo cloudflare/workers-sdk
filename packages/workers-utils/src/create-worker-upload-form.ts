@@ -1,23 +1,23 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import {
-	extractBindingsOfType,
-	isUnsafeBindingType,
-} from "../api/startDevWorker/utils";
+import { extractBindingsOfType, isUnsafeBindingType } from "./binding-helpers";
 import { handleUnsafeCapnp } from "./capnp";
-import type { StartDevWorkerInput } from "../api/startDevWorker/types";
+import { INHERIT_SYMBOL } from "./constants";
+import { UserError } from "./errors";
 import type {
 	AssetConfigMetadata,
+	Binding,
+	WorkerMetadata,
+	WorkerMetadataBinding,
+} from "./types";
+import type {
 	CfCapnp,
 	CfModuleType,
 	CfSendEmailBindings,
 	CfWorkerInit,
-	WorkerMetadata,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
+} from "./worker";
 
 export const moduleTypeMimeType: {
 	[type in CfModuleType]: string | undefined;
@@ -56,7 +56,7 @@ export function fromMimeType(mimeType: string): CfModuleType {
  */
 export function createWorkerUploadForm(
 	worker: Omit<CfWorkerInit, "bindings" | "rawBindings">,
-	bindings: StartDevWorkerInput["bindings"],
+	bindings: Record<string, Binding> | undefined,
 	options?: {
 		dryRun?: true;
 		unsafe?: { metadata?: Record<string, unknown>; capnp?: CfCapnp };

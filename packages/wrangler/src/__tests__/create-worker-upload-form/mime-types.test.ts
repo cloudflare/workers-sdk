@@ -1,8 +1,5 @@
+import { fromMimeType, moduleTypeMimeType } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
-import {
-	fromMimeType,
-	moduleTypeMimeType,
-} from "../../deployment-bundle/create-worker-upload-form";
 
 describe("moduleTypeMimeType", () => {
 	it.for([

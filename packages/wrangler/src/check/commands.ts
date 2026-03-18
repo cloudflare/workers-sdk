@@ -4,13 +4,12 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { log } from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
-import { UserError } from "@cloudflare/workers-utils";
+import { moduleTypeMimeType, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { createCLIParser } from "..";
 import { createCommand, createNamespace } from "../core/create-command";
-import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import {
 	flipObject,
 	ModuleTypeToRuleType,

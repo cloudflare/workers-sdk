@@ -214,6 +214,7 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	domainUsesAccess,
 	getCloudflareApiEnvironmentFromEnv,
 	getCloudflareComplianceRegion,
 	getGlobalWranglerConfigPath,
@@ -234,7 +235,6 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { domainUsesAccess } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
@@ -1397,7 +1397,7 @@ async function fetchAuthToken(body: URLSearchParams) {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
 	logger.debug("fetching auth token", body.toString());
-	if (await domainUsesAccess(getAuthDomainFromEnv())) {
+	if (await domainUsesAccess(getAuthDomainFromEnv(), logger)) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);

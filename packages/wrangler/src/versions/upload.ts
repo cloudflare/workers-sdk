@@ -6,6 +6,7 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
 import {
 	configFileName,
+	createWorkerUploadForm,
 	formatCompatibilityDate,
 	formatConfigSnippet,
 	getCIGeneratePreviewAlias,
@@ -25,7 +26,6 @@ import { createCommand } from "../core/create-command";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import {

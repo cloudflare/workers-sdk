@@ -1,22 +1,31 @@
 import { spawnSync } from "node:child_process";
-import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import { logger } from "../logger";
+import { UserError } from "./errors";
+
+/**
+ * Minimal logger interface for debug output.
+ * Pass wrangler's `logger`, `console`, or omit for silent operation.
+ */
+export interface AccessLogger {
+	debug(...args: unknown[]): void;
+}
+
+const noopLogger: AccessLogger = { debug() {} };
 
 const cache: Record<string, string> = {};
 
-const usesAccessCache = new Map();
+const usesAccessCache = new Map<string, boolean>();
 
-export async function domainUsesAccess(domain: string): Promise<boolean> {
+export async function domainUsesAccess(
+	domain: string,
+	logger: AccessLogger = noopLogger
+): Promise<boolean> {
 	logger.debug("Checking if domain has Access enabled:", domain);
 
 	if (usesAccessCache.has(domain)) {
-		logger.debug(
-			"Using cached Access switch for:",
-			domain,
-			usesAccessCache.get(domain)
-		);
-		return usesAccessCache.get(domain);
+		const cached = usesAccessCache.get(domain);
+		logger.debug("Using cached Access switch for:", domain, cached);
+		return cached ?? false;
 	}
 	logger.debug("Access switch not cached for:", domain);
 	try {
@@ -44,9 +53,10 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 	}
 }
 export async function getAccessToken(
-	domain: string
+	domain: string,
+	logger: AccessLogger = noopLogger
 ): Promise<string | undefined> {
-	if (!(await domainUsesAccess(domain))) {
+	if (!(await domainUsesAccess(domain, logger))) {
 		return undefined;
 	}
 	logger.debug("Fetching Access token for domain:", domain);
@@ -57,7 +67,6 @@ export async function getAccessToken(
 	logger.debug("Spawning cloudflared to get Access token for domain:");
 	const output = spawnSync("cloudflared", ["access", "login", domain]);
 	if (output.error) {
-		// The cloudflared binary is not installed
 		throw new UserError(
 			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
 		);
@@ -65,7 +74,7 @@ export async function getAccessToken(
 	const stringOutput = output.stdout.toString();
 	logger.debug("cloudflared output:", stringOutput);
 	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
-	if (matches && matches.length >= 2) {
+	if (matches && matches[1] !== undefined) {
 		cache[domain] = matches[1];
 		logger.debug("Caching Access token for domain:", matches[1]);
 		return matches[1];
