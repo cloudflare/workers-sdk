@@ -86,38 +86,38 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`"REMOTE<WORKER>: Hello from a remote worker"`,
+				`"REMOTE<WORKER>: Hello from a remote worker"`
 			);
 
 			const indexContent = await readFile(
 				`${helper.tmpPath}/simple-service-binding.js`,
-				"utf8",
+				"utf8"
 			);
 			await writeFile(
 				`${helper.tmpPath}/simple-service-binding.js`,
 				indexContent.replace(
 					"REMOTE<WORKER>:",
-					"The remote worker responded with:",
+					"The remote worker responded with:"
 				),
-				"utf8",
+				"utf8"
 			);
 
 			await setTimeout(500);
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`"The remote worker responded with: Hello from a remote worker"`,
+				`"The remote worker responded with: Hello from a remote worker"`
 			);
 
 			await writeFile(
 				`${helper.tmpPath}/simple-service-binding.js`,
 				indexContent,
-				"utf8",
+				"utf8"
 			);
 
 			await setTimeout(500);
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`"REMOTE<WORKER>: Hello from a remote worker"`,
+				`"REMOTE<WORKER>: Hello from a remote worker"`
 			);
 		});
 
@@ -170,7 +170,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(url)).resolves.toContain(
-				"This is a response from Workers AI.",
+				"This is a response from Workers AI."
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
@@ -183,7 +183,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					⎔ Starting local server...
 					[wrangler:info] Ready on http://<HOST>:<PORT>
 					[wrangler:info] GET / 200 OK (TIMINGS)
-				`),
+				`)
 			);
 		});
 
@@ -210,8 +210,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				await waitFor(() =>
 					expect(worker.currentOutput).toContain(
-						"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found.",
-					),
+						"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found."
+					)
 				);
 			});
 
@@ -237,8 +237,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				await waitFor(() =>
 					expect(worker.currentOutput).toContain(
-						"KV namespace 'non-existent-kv' is not valid.",
-					),
+						"KV namespace 'non-existent-kv' is not valid."
+					)
 				);
 			});
 		});
@@ -291,7 +291,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				});
 
 				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.json -c ${localTest}/wrangler.json`,
+					`wrangler dev -c wrangler.json -c ${localTest}/wrangler.json`
 				);
 
 				const { url } = await worker.waitForReady();
@@ -303,7 +303,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			`);
 			});
 		});
-	},
+	}
 );
 
 async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
@@ -325,7 +325,7 @@ async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
 		// Note: we use a random port here otherwise for some reason in CI windows
 		//       allows the default port to be overridden by other processes
 		`wrangler dev --port ${await getPort()}`,
-		{ cwd: local },
+		{ cwd: local }
 	);
 	await localWorker.waitForReady();
 }

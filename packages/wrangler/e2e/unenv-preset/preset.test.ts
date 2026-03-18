@@ -1,6 +1,7 @@
+import assert from "node:assert";
 import { join } from "node:path";
 import { fetch } from "undici";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
@@ -868,15 +869,23 @@ describe.each(groupedLocalConfigs)(
 			// Wait for the Worker to be actually responding.
 			const readyResp = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(`${url}/ping`),
+				async () => await fetch(`${url}/ping`)
 			);
-			await expect(readyResp.text()).resolves.toEqual("pong");
+			const responseText = await readyResp.text();
+			assert(
+				responseText === "pong",
+				`Expected "pong" but got "${responseText}"`
+			);
 
 			// Assert runtime flag values
 			for await (const [flag, value] of Object.entries(expectRuntimeFlags)) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
-				expect(flagResp.ok).toEqual(true);
-				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(value);
+				assert(flagResp.ok, `Expected flag response to be ok for "${flag}"`);
+				const flagValue = await flagResp.json();
+				assert(
+					flagValue === value,
+					`Expected flag "${flag}" to be ${value} but got ${flagValue}`
+				);
 			}
 
 			return async () => await wrangler.stop();
@@ -894,11 +903,11 @@ describe.each(groupedLocalConfigs)(
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000 },
+					{ timeout: 19_000 }
 				);
-			},
+			}
 		);
-	},
+	}
 );
 
 // Run the remote tests only if the user is logged in (e.g. not for a PR from a forked repo)
@@ -926,15 +935,23 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			// Wait for the Worker to be actually responding.
 			const readyResp = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(`${url}/ping`),
+				async () => await fetch(`${url}/ping`)
 			);
-			await expect(readyResp.text()).resolves.toEqual("pong");
+			const responseText = await readyResp.text();
+			assert(
+				responseText === "pong",
+				`Expected "pong" but got "${responseText}"`
+			);
 
 			// Assert runtime flag values
 			for await (const flag of collectEnabledFlags(localTestConfigs)) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
-				expect(flagResp.ok).toEqual(true);
-				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(false);
+				assert(flagResp.ok, `Expected flag response to be ok for "${flag}"`);
+				const flagValue = await flagResp.json();
+				assert(
+					flagValue === false,
+					`Expected flag "${flag}" to be false but got ${flagValue}`
+				);
 			}
 
 			return async () => await wrangler.stop();
@@ -952,11 +969,11 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000 },
+					{ timeout: 19_000 }
 				);
-			},
+			}
 		);
-	},
+	}
 );
 
 // Run the remote tests only if the user is logged in (e.g. not for a PR from a forked repo)
@@ -985,15 +1002,23 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			// Wait for the Worker to be actually responding.
 			const readyResp = await retry(
 				(resp) => !resp.ok,
-				async () => await fetch(`${url}/ping`),
+				async () => await fetch(`${url}/ping`)
 			);
-			await expect(readyResp.text()).resolves.toEqual("pong");
+			const responseText = await readyResp.text();
+			assert(
+				responseText === "pong",
+				`Expected "pong" but got "${responseText}"`
+			);
 
 			// Assert runtime flag values
 			for await (const flag of flags) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
-				expect(flagResp.ok).toEqual(true);
-				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(true);
+				assert(flagResp.ok, `Expected flag response to be ok for "${flag}"`);
+				const flagValue = await flagResp.json();
+				assert(
+					flagValue === true,
+					`Expected flag "${flag}" to be true but got ${flagValue}`
+				);
 			}
 
 			return async () => await wrangler.stop();
@@ -1011,11 +1036,11 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000 },
+					{ timeout: 19_000 }
 				);
-			},
+			}
 		);
-	},
+	}
 );
 
 type ConfigGroup = {
@@ -1045,7 +1070,7 @@ function groupByWranglerConfig(configs: TestConfig[]): ConfigGroup[] {
 		if (existing) {
 			existing.name += `, ${config.name}`;
 			for (const [flag, value] of Object.entries(
-				config.expectRuntimeFlags ?? {},
+				config.expectRuntimeFlags ?? {}
 			)) {
 				if (
 					flag in existing.expectRuntimeFlags &&
@@ -1053,7 +1078,7 @@ function groupByWranglerConfig(configs: TestConfig[]): ConfigGroup[] {
 				) {
 					throw new Error(
 						`Conflicting expectRuntimeFlags for "${flag}" in group "${existing.name}": ` +
-							`existing=${existing.expectRuntimeFlags[flag]}, new=${value} (from "${config.name}")`,
+							`existing=${existing.expectRuntimeFlags[flag]}, new=${value} (from "${config.name}")`
 					);
 				}
 				existing.expectRuntimeFlags[flag] = value;
@@ -1107,7 +1132,7 @@ function collectEnabledFlags(configs: TestConfig[]): string[] {
 				enableFlags.add(flag);
 			} else if (!flag.startsWith("disable_")) {
 				throw new Error(
-					`Only enable_... and disable_... flags are handled, got "${flag}"`,
+					`Only enable_... and disable_... flags are handled, got "${flag}"`
 				);
 			}
 		}

@@ -13,7 +13,7 @@ async function startWorkersDevRegistry(
 	helper: WranglerE2ETestHelper,
 	assetWorker: string,
 	regularWorker: string,
-	regularWorkerFirst = true,
+	regularWorkerFirst = true
 ) {
 	const workerA = helper.runLongLived(wranglerDev, {
 		cwd: regularWorkerFirst ? assetWorker : regularWorker,
@@ -33,11 +33,11 @@ async function startWorkersMultiworker(
 	helper: WranglerE2ETestHelper,
 	assetWorker: string,
 	regularWorker: string,
-	regularWorkerFirst = true,
+	regularWorkerFirst = true
 ) {
 	const worker = helper.runLongLived(
 		`${wranglerDev} -c wrangler.toml -c ${regularWorkerFirst ? assetWorker : regularWorker}/wrangler.toml`,
-		{ cwd: regularWorkerFirst ? regularWorker : assetWorker },
+		{ cwd: regularWorkerFirst ? regularWorker : assetWorker }
 	);
 	const { url } = await worker.waitForReady(5_000);
 	return url;
@@ -69,7 +69,7 @@ describe.each(
 		style: MultiworkerStyle;
 		start: typeof startWorkersDevRegistry | typeof startWorkersMultiworker;
 		wranglerDev: string;
-	}[],
+	}[]
 )(
 	"workers with assets ($style, $wranglerDev) ",
 	async ({ start, style, wranglerDev }) => {
@@ -208,17 +208,17 @@ describe.each(
 					helper,
 					assetWorker,
 					regularWorker,
-					false,
+					false
 				);
 
 				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>",
+					"<p>have an asset directly</p>"
 				);
 				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>",
+					"<p>have an asset via a binding</p>"
 				);
 				await expect(
-					fetch(`${url}/worker`).then((r) => r.text()),
+					fetch(`${url}/worker`).then((r) => r.text())
 				).resolves.toBe("hello world from a worker with assets");
 			});
 
@@ -230,17 +230,17 @@ describe.each(
 					helper,
 					assetWorker,
 					regularWorker,
-					false,
+					false
 				);
 
 				await waitForLong(() =>
 					expect(
-						fetch(`${url}/hello-from-dee`).then((r) => r.text()),
-					).resolves.toBe("hello world from dee"),
+						fetch(`${url}/hello-from-dee`).then((r) => r.text())
+					).resolves.toBe("hello world from dee")
 				);
 
 				await waitForLong(() =>
-					expect(fetchText(`${url}/count`)).resolves.toBe("6"),
+					expect(fetchText(`${url}/count`)).resolves.toBe("6")
 				);
 			});
 
@@ -252,22 +252,22 @@ describe.each(
 						helper,
 						assetWorker,
 						regularWorker,
-						false,
+						false
 					);
 
 					await waitForLong(() =>
 						expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
-							"Hello through DO RPC",
-						),
+							"Hello through DO RPC"
+						)
 					);
 					await expect(
 						fetchJson(`${url}/do`, {
 							headers: {
 								"X-Reset-Count": "true",
 							},
-						}),
+						})
 					).resolves.toMatchObject({ count: 1 });
-				},
+				}
 			);
 		});
 
@@ -309,12 +309,12 @@ describe.each(
 					wranglerDev,
 					helper,
 					assetWorker,
-					regularWorker,
+					regularWorker
 				);
 				await waitForLong(() =>
 					expect(fetchText(`${url}/asset`)).resolves.toBe(
-						"<p>have an asset directly</p>",
-					),
+						"<p>have an asset directly</p>"
+					)
 				);
 			});
 
@@ -323,12 +323,12 @@ describe.each(
 					wranglerDev,
 					helper,
 					assetWorker,
-					regularWorker,
+					regularWorker
 				);
 				await waitForLong(() =>
 					expect(fetch(`${url}/not-an-asset`)).resolves.toMatchObject({
 						status: 404,
-					}),
+					})
 				);
 			});
 
@@ -337,13 +337,13 @@ describe.each(
 					wranglerDev,
 					helper,
 					assetWorker,
-					regularWorker,
+					regularWorker
 				);
 				await waitForLong(() =>
 					expect(fetchText(`${url}/rpc`)).resolves.toContain(
 						// Cannot call RPC methods on assets-only workers
-						"The RPC receiver does not implement the method",
-					),
+						"The RPC receiver does not implement the method"
+					)
 				);
 			});
 		});
@@ -433,12 +433,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/asset`)).resolves.toBe(
-							"<p>have an asset directly</p>",
-						),
+							"<p>have an asset directly</p>"
+						)
 					);
 				});
 
@@ -447,12 +447,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
-							"hello world from a worker with assets",
-						),
+							"hello world from a worker with assets"
+						)
 					);
 				});
 
@@ -461,12 +461,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-							"<p>have an asset via a binding</p>",
-						),
+							"<p>have an asset via a binding</p>"
+						)
 					);
 				});
 
@@ -475,10 +475,10 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
-						expect(fetchText(`${url}/rpc`)).resolves.toBe("2"),
+						expect(fetchText(`${url}/rpc`)).resolves.toBe("2")
 					);
 				});
 			});
@@ -507,12 +507,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/asset`)).resolves.toBe(
-							"<p>have an asset directly</p>",
-						),
+							"<p>have an asset directly</p>"
+						)
 					);
 				});
 
@@ -521,12 +521,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
-							"hello world from a worker with assets",
-						),
+							"hello world from a worker with assets"
+						)
 					);
 				});
 
@@ -535,12 +535,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-							"<p>have an asset via a binding</p>",
-						),
+							"<p>have an asset via a binding</p>"
+						)
 					);
 				});
 
@@ -549,10 +549,10 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
-						expect(fetchText(`${url}/rpc`)).resolves.toBe("2"),
+						expect(fetchText(`${url}/rpc`)).resolves.toBe("2")
 					);
 				});
 			});
@@ -595,12 +595,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/asset`)).resolves.toBe(
-							"hello world from a worker with assets",
-						),
+							"hello world from a worker with assets"
+						)
 					);
 				});
 
@@ -609,12 +609,12 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
 						expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-							"<p>have an asset via a binding</p>",
-						),
+							"<p>have an asset via a binding</p>"
+						)
 					);
 				});
 
@@ -623,13 +623,13 @@ describe.each(
 						wranglerDev,
 						helper,
 						assetWorker,
-						regularWorker,
+						regularWorker
 					);
 					await waitForLong(() =>
-						expect(fetchText(`${url}/rpc`)).resolves.toBe("2"),
+						expect(fetchText(`${url}/rpc`)).resolves.toBe("2")
 					);
 				});
 			});
 		});
-	},
+	}
 );

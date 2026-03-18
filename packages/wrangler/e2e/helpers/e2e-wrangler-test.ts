@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { expect, onTestFinished } from "vitest";
+import { onTestFinished } from "vitest";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -40,8 +40,8 @@ export class WranglerE2ETestHelper {
 		/** Provide an alternative to `onTestFinished` to handle tearing down resources. */
 		public readonly onTeardown: (
 			fn: () => Awaitable<void>,
-			timeoutMs?: number,
-		) => void = onTestFinished,
+			timeoutMs?: number
+		) => void = onTestFinished
 	) {}
 
 	/** A temporary directory where files will be seeded and commands will be run. */
@@ -51,7 +51,7 @@ export class WranglerE2ETestHelper {
 	async seed(files: Record<string, string | Uint8Array>): Promise<void>;
 	async seed(sourceDir: string): Promise<void>;
 	async seed(
-		filesOrSourceDir: Record<string, string | Uint8Array> | string,
+		filesOrSourceDir: Record<string, string | Uint8Array> | string
 	): Promise<void> {
 		if (typeof filesOrSourceDir === "string") {
 			await cp(filesOrSourceDir, this.tmpPath, { recursive: true });
@@ -72,7 +72,7 @@ export class WranglerE2ETestHelper {
 			cwd = this.tmpPath,
 			stopOnTestFinished = true,
 			...options
-		}: WranglerCommandOptions & { stopOnTestFinished?: boolean } = {},
+		}: WranglerCommandOptions & { stopOnTestFinished?: boolean } = {}
 	): WranglerLongLivedCommand {
 		const wrangler = new WranglerLongLivedCommand(wranglerCommand, {
 			cwd,
@@ -89,7 +89,7 @@ export class WranglerE2ETestHelper {
 	/** Run a Wrangler command that will execute and exit, such as `wrangler whoami` */
 	async run(
 		wranglerCommand: string,
-		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {},
+		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
 	) {
 		return runWrangler(wranglerCommand, { cwd, ...options });
 	}
@@ -103,14 +103,14 @@ export class WranglerE2ETestHelper {
 	 */
 	async bestEffortRun(
 		wranglerCommand: string,
-		{ timeout = 5_000, ...options }: WranglerCommandOptions = {},
+		{ timeout = 5_000, ...options }: WranglerCommandOptions = {}
 	) {
 		try {
 			return await this.run(wranglerCommand, { timeout, ...options });
 		} catch (e) {
 			console.warn(
 				`Best-effort cleanup "${wranglerCommand}" failed:`,
-				e instanceof Error ? e.message : e,
+				e instanceof Error ? e.message : e
 			);
 			return undefined;
 		}
@@ -139,7 +139,7 @@ export class WranglerE2ETestHelper {
 		const name = generateResourceName("dispatch");
 		if (isLocal) {
 			throw new Error(
-				"Dispatch namespaces are not supported in local mode (yet)",
+				"Dispatch namespaces are not supported in local mode (yet)"
 			);
 		}
 		await this.run(`wrangler dispatch-namespace create ${name}`);
@@ -192,7 +192,7 @@ export class WranglerE2ETestHelper {
 		const name = resourceName ?? generateResourceName("vectorize");
 		if (!resourceName) {
 			await this.run(
-				`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`,
+				`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
 			);
 		}
 		this.onTeardown(async () => {
@@ -207,7 +207,7 @@ export class WranglerE2ETestHelper {
 	/** Create a Hyperdrive connection and clean it up during tear-down. */
 	async hyperdrive(
 		isLocal: boolean,
-		scheme: "postgresql" | "mysql" = "postgresql",
+		scheme: "postgresql" | "mysql" = "postgresql"
 	): Promise<{ id: string; name: string }> {
 		const name = generateResourceName("hyperdrive");
 
@@ -223,11 +223,11 @@ export class WranglerE2ETestHelper {
 
 		assert(
 			connectionString,
-			`${envVar} must be set in order to create a Hyperdrive resource for this test`,
+			`${envVar} must be set in order to create a Hyperdrive resource for this test`
 		);
 
 		const result = await this.run(
-			`wrangler hyperdrive create ${name} --connection-string="${connectionString}"`,
+			`wrangler hyperdrive create ${name} --connection-string="${connectionString}"`
 		);
 		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
 		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
@@ -255,7 +255,7 @@ export class WranglerE2ETestHelper {
 
 		const name = generateMtlsCertName();
 		const output = await this.run(
-			`wrangler cert upload mtls-certificate --name ${name} --cert "mtls_client_cert_file.pem" --key "mtls_client_private_key_file.pem"`,
+			`wrangler cert upload mtls-certificate --name ${name} --cert "mtls_client_cert_file.pem" --key "mtls_client_private_key_file.pem"`
 		);
 		const match = output.stdout.match(/ID:\s+(?<certId>.*)$/m);
 		const certificateId = match?.groups?.certId;
@@ -302,7 +302,10 @@ export class WranglerE2ETestHelper {
 		);
 		await waitForLong(async () => {
 			const response = await fetch(deployedUrl);
-			expect(response.status).toBe(200);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
 		});
 	}
 
@@ -350,11 +353,11 @@ export class WranglerE2ETestHelper {
 		const configOption = configPath ? `-c ${configPath}` : "";
 		const workerNameOption = `--name ${workerName}`;
 		const { stdout } = await this.run(
-			`wrangler deploy ${entryPoint} ${workerNameOption} ${configOption} --compatibility-date 2025-01-01 ${extraFlags.join(" ")}`,
+			`wrangler deploy ${entryPoint} ${workerNameOption} ${configOption} --compatibility-date 2025-01-01 ${extraFlags.join(" ")}`
 		);
 
 		const urlMatcher = new RegExp(
-			`(?<url>https:\\/\\/${workerName}\\..+?\\.workers\\.dev)`,
+			`(?<url>https:\\/\\/${workerName}\\..+?\\.workers\\.dev)`
 		);
 
 		const deployedUrl = stdout.match(urlMatcher)?.groups?.url;
@@ -367,7 +370,10 @@ export class WranglerE2ETestHelper {
 		// Wait for the worker to become available
 		await waitForLong(async () => {
 			const response = await fetch(deployedUrl);
-			expect(response.status).toBe(200);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
 		});
 
 		const cleanup = async () => {
@@ -380,7 +386,7 @@ export class WranglerE2ETestHelper {
 			} catch (e) {
 				throw new Error(
 					"Failed to register cleanup for worker.\nPerhaps you called this outside an `it` block?\nIf so, pass `cleanOnTestFinished: false` and then use the returned `cleanup` helper yourself",
-					{ cause: e },
+					{ cause: e }
 				);
 			}
 			return { deployedUrl, stdout };

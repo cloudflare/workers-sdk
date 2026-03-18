@@ -172,13 +172,13 @@ describe.each([
 							`,
 		});
 		const worker = helper.runLongLived(
-			`${cmd} --show-interactive-dev-session=false`,
+			`${cmd} --show-interactive-dev-session=false`
 		);
 
 		const { url } = await worker.waitForReady();
 
 		await waitForLong(() =>
-			expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot(),
+			expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot()
 		);
 
 		expect(worker.currentOutput).not.toContain("[b] open a browser");
@@ -214,7 +214,7 @@ describe.each([
 			const { url } = await worker.waitForReady();
 
 			await expect(
-				fetch(`${url}/__scheduled`).then((r) => r.text()),
+				fetch(`${url}/__scheduled`).then((r) => r.text())
 			).resolves.toMatchSnapshot();
 
 			await worker.readUntil(/Event triggered/);
@@ -247,7 +247,7 @@ describe.each([
 			const { url } = await worker.waitForReady();
 
 			await expect(
-				fetch(`${url}/__scheduled`).then((r) => r.text()),
+				fetch(`${url}/__scheduled`).then((r) => r.text())
 			).resolves.toMatchSnapshot();
 
 			await worker.readUntil(/Event triggered/);
@@ -293,10 +293,10 @@ describe.each([
 			// The warning should contain the actual port, not "undefined"
 			await waitFor(() => {
 				expect(worker.currentOutput).toContain(
-					"Scheduled Workers are not automatically triggered",
+					"Scheduled Workers are not automatically triggered"
 				);
 				expect(worker.currentOutput).toContain(
-					`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`,
+					`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
 				);
 				expect(worker.currentOutput).not.toContain("undefined");
 			});
@@ -338,7 +338,7 @@ describe.each([
 
 			// The warning should NOT appear when testScheduled is enabled
 			expect(worker.currentOutput).not.toContain(
-				"Scheduled Workers are not automatically triggered",
+				"Scheduled Workers are not automatically triggered"
 			);
 		});
 	});
@@ -504,7 +504,7 @@ it.runIf(process.platform !== "win32")(
 
 		expect(beginProcesses.length).toBe(0);
 		expect(endProcesses.length).toBe(0);
-	},
+	}
 );
 
 // Skipping remote python tests because they consistently flake with timeouts
@@ -560,7 +560,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 				async () => {
 					const r = await fetch(url);
 					return { text: await r.text(), status: r.status };
-				},
+				}
 			);
 
 			expect(text).toBe("Updated Python Worker value");
@@ -612,7 +612,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 				async () => {
 					const r = await fetch(url);
 					return { text: await r.text(), status: r.status };
-				},
+				}
 			);
 
 			expect(text).toBe("py hello world 5");
@@ -746,7 +746,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 			await worker.readUntil(/excluded_module not found/);
 			await worker.readUntil(/end/);
 		});
-	},
+	}
 );
 
 describe.each(HYPERDRIVE_DATABASES)(
@@ -992,7 +992,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 
 				const { url } = await worker.waitForReady();
 				await fetch(`${url}/connect`);
-			},
+			}
 		);
 
 		afterEach(() => {
@@ -1000,7 +1000,7 @@ describe.each(HYPERDRIVE_DATABASES)(
 				server.close();
 			}
 		});
-	},
+	}
 );
 
 describe("queue dev tests", () => {
@@ -1067,7 +1067,7 @@ describe("writes debug logs to hidden file", () => {
 		const worker = helper.runLongLived("wrangler dev --log-level debug");
 
 		const match = await worker.readUntil(
-			/🪵 {2}Writing logs to "(?<filepath>.+\.log)"/,
+			/🪵 {2}Writing logs to "(?<filepath>.+\.log)"/
 		);
 
 		const filepath = match.groups?.filepath;
@@ -1156,7 +1156,7 @@ describe("analytics engine", () => {
 
 					const text = await fetchText(url);
 					expect(text).toContain(
-						`successfully wrote datapoint from module worker`,
+						`successfully wrote datapoint from module worker`
 					);
 				});
 			});
@@ -1199,11 +1199,11 @@ describe("analytics engine", () => {
 					const worker = helper.runLongLived(cmd);
 
 					await worker.readUntil(
-						/Analytics Engine is not supported locally when using the service-worker format/,
+						/Analytics Engine is not supported locally when using the service-worker format/
 					);
 				});
 			});
-		},
+		}
 	);
 });
 
@@ -1273,7 +1273,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 			const text = await fetchText(url);
 
 			expect(text).toMatchInlineSnapshot(
-				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`,
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
 			);
 		});
 
@@ -1311,7 +1311,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 			const text = await fetchText(url);
 
 			expect(text).toMatchInlineSnapshot(
-				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`,
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
 			);
 		});
 
@@ -1350,7 +1350,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 			await fetchText(url);
 			await worker.readUntil(/ERROR/);
 		});
-	},
+	}
 );
 
 describe("custom builds", () => {
@@ -1431,7 +1431,7 @@ describe("custom builds", () => {
 		// assert no more custom builds happen
 		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
 		await expect(
-			worker.readUntil(/\[custom build\] Running/, 5_000),
+			worker.readUntil(/\[custom build\] Running/, 5_000)
 		).rejects.toThrowError();
 
 		// now check assets are still fetchable, even after updates
@@ -1448,7 +1448,7 @@ describe("custom builds", () => {
 			async () => {
 				const res2 = await fetch(url);
 				return res2.text();
-			},
+			}
 		);
 		await expect(resText).toBe("world");
 	});
@@ -1501,11 +1501,11 @@ describe("watch mode", () => {
 					(s) => s != "Hello from user Worker B!",
 					async () => {
 						return await fetchText(url);
-					},
+					}
 				);
 				expect(text).toBe("Hello from user Worker B!");
 			});
-		},
+		}
 	);
 
 	describe.each([{ cmd: "wrangler dev" }])(
@@ -1532,7 +1532,7 @@ describe("watch mode", () => {
 
 				let { response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					{},
+					{}
 				);
 				const originalETag = response.headers.get("etag");
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
@@ -1547,10 +1547,10 @@ describe("watch mode", () => {
 					(s) => s.response.status !== 200,
 					async () => {
 						return await fetchWithETag(`${url}/index.html`, cachedETags);
-					},
+					}
 				));
 				expect(await response.text()).toBe(
-					"<h1>Hello Updated Workers + Assets</h1>",
+					"<h1>Hello Updated Workers + Assets</h1>"
 				);
 				// expect a new eTag back because the content for this path has changed
 				expect(response.headers.get("etag")).not.toBe(originalETag);
@@ -1576,7 +1576,7 @@ describe("watch mode", () => {
 				const { url } = await worker.waitForReady();
 				let { response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					{},
+					{}
 				);
 
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
@@ -1594,20 +1594,20 @@ describe("watch mode", () => {
 					(s) => s.response.status !== 200,
 					async () => {
 						return await fetchWithETag(`${url}/about.html`, cachedETags);
-					},
+					}
 				));
 				expect(await response.text()).toBe("About Workers + Assets");
 
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/workers/index.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(await response.text()).toBe("Cloudflare Workers!");
 
 				// expect 304 for the original asset as the content has not changed
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(response.status).toBe(304);
 			});
@@ -1634,18 +1634,18 @@ describe("watch mode", () => {
 				const { url } = await worker.waitForReady();
 				let { response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					{},
+					{}
 				);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/about.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(await response.text()).toBe("About Workers + Assets");
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/workers/index.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(await response.text()).toBe("Cloudflare Workers!");
 
@@ -1659,7 +1659,7 @@ describe("watch mode", () => {
 					(s) => s.response.status !== 404,
 					async () => {
 						return await fetchWithETag(`${url}/index.html`, cachedETags);
-					},
+					}
 				));
 				expect(response.status).toBe(404);
 			});
@@ -1709,7 +1709,7 @@ describe("watch mode", () => {
 					(r) => r.status !== 302,
 					async () => {
 						return await fetch(`${url}/foo`, { redirect: "manual" });
-					},
+					}
 				);
 				expect(response.status).toBe(302);
 				expect(response.headers.get("Location")).toBe("/bar");
@@ -1744,7 +1744,7 @@ describe("watch mode", () => {
 
 				let { response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					{},
+					{}
 				);
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
@@ -1764,15 +1764,15 @@ describe("watch mode", () => {
 					(s) => s.response.status !== 200,
 					async () => {
 						return await fetchWithETag(`${url}/index.html`, cachedETags);
-					},
+					}
 				));
 				expect(await response.text()).toBe("<h1>Hola Workers + Assets</h1>");
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/about/index.html`,
-					{},
+					{}
 				));
 				expect(await response.text()).toBe(
-					"<h1>Read more about Workers + Assets</h1>",
+					"<h1>Read more about Workers + Assets</h1>"
 				);
 			});
 
@@ -1828,7 +1828,7 @@ describe("watch mode", () => {
 							status: fetchResponse.status,
 							text: await fetchResponse.text(),
 						};
-					},
+					}
 				);
 				expect(status).toBe(200);
 				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
@@ -1895,7 +1895,7 @@ describe("watch mode", () => {
 							status: fetchResponse.status,
 							text: await fetchResponse.text(),
 						};
-					},
+					}
 				);
 				expect(status).toBe(200);
 				expect(text).toBe("<h1>Hello Workers + Assets</h1>");
@@ -2108,10 +2108,10 @@ describe("watch mode", () => {
 						`,
 				});
 				await worker.readUntil(
-					/Warning: The following routes will attempt to serve Assets on a configured path:/,
+					/Warning: The following routes will attempt to serve Assets on a configured path:/
 				);
 			});
-		},
+		}
 	);
 
 	describe.each([{ cmd: "wrangler dev --assets=dist" }])(
@@ -2135,17 +2135,17 @@ describe("watch mode", () => {
 
 				let { response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					{},
+					{}
 				);
 				const originalETag = response.headers.get("etag");
 				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
 
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/about.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(await response.text()).toBe(
-					"<h1>Read more about Workers + Assets</h1>",
+					"<h1>Read more about Workers + Assets</h1>"
 				);
 
 				// change + add
@@ -2164,23 +2164,23 @@ describe("watch mode", () => {
 					(s) => s.response.status !== 200,
 					async () => {
 						return await fetchWithETag(`${url}/hello.html`, cachedETags);
-					},
+					}
 				));
 				expect(await response.text()).toBe("<h1>Hya Workers!</h1>");
 
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/index.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(await response.text()).toBe(
-					"<h1>Hello Updated Workers + Assets</h1>",
+					"<h1>Hello Updated Workers + Assets</h1>"
 				);
 				expect(response.headers.get("etag")).not.toBe(originalETag);
 
 				// unchanged -> expect 304
 				({ response, cachedETags } = await fetchWithETag(
 					`${url}/about.html`,
-					cachedETags,
+					cachedETags
 				));
 				expect(response.status).toBe(304);
 
@@ -2195,7 +2195,7 @@ describe("watch mode", () => {
 					(s) => s.response.status !== 404,
 					async () => {
 						return await fetchWithETag(`${url}/about.html`, cachedETags);
-					},
+					}
 				));
 				expect(response.status).toBe(404);
 			});
@@ -2330,10 +2330,10 @@ describe("watch mode", () => {
 						`,
 				});
 				await worker.readUntil(
-					/Warning: The following routes will attempt to serve Assets on a configured path:/,
+					/Warning: The following routes will attempt to serve Assets on a configured path:/
 				);
 			});
-		},
+		}
 	);
 });
 
@@ -2387,24 +2387,24 @@ This is a random email body.
 				This is a random email body.
 			`,
 				method: "POST",
-			},
+			}
 		);
 
 		expect(response.status).toBe(200);
 
 		await waitFor(() => {
 			expect(worker.currentOutput).toContain(
-				"Email handler replied to sender with the following message:",
+				"Email handler replied to sender with the following message:"
 			);
 		});
 
 		const pathRegexp = new RegExp(
-			"Email handler replied to sender with the following message:\\s*(\\S*)",
+			"Email handler replied to sender with the following message:\\s*(\\S*)"
 		);
 
 		const maybeReplyPath = await vi.waitUntil(
 			() => pathRegexp.exec(worker.currentOutput)?.[1],
-			{ interval: 100, timeout: 5000 },
+			{ interval: 100, timeout: 5000 }
 		);
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
@@ -2455,11 +2455,11 @@ Content-Type: text/plain
 This is a random email body.
 `,
 				method: "POST",
-			},
+			}
 		);
 
 		expect(await response.text()).toMatchInlineSnapshot(
-			`"Worker rejected email with the following reason: I dont like this email"`,
+			`"Worker rejected email with the following reason: I dont like this email"`
 		);
 
 		expect(response.status).toBe(400);
@@ -2499,14 +2499,14 @@ Content-Type: text/plain
 This is a random email body.
 `,
 				method: "POST",
-			},
+			}
 		);
 
 		expect(response.status).toBe(200);
 
 		await waitFor(() => {
 			expect(worker.currentOutput).toContain(
-				`Email handler forwarded message with`,
+				`Email handler forwarded message with`
 			);
 			expect(worker.currentOutput).toContain(`rcptTo: mark.s@example.com`);
 		});
@@ -2555,24 +2555,24 @@ Content-Type: text/plain
 This is a random email body.
 `,
 				method: "POST",
-			},
+			}
 		);
 
 		expect(response.status).toBe(200);
 
 		await waitFor(() =>
 			expect(worker.currentOutput).toContain(
-				"send_email binding called with the following message",
-			),
+				"send_email binding called with the following message"
+			)
 		);
 
 		const pathRegexp = new RegExp(
-			"send_email binding called with the following message:\\s*(\\S*)",
+			"send_email binding called with the following message:\\s*(\\S*)"
 		);
 
 		const maybeReplyPath = await vi.waitUntil(
 			() => pathRegexp.exec(worker.currentOutput)?.[1],
-			{ interval: 100, timeout: 5000 },
+			{ interval: 100, timeout: 5000 }
 		);
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
@@ -2865,13 +2865,13 @@ describe(".env support in local dev", () => {
 		// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
 		// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
 		expect(await (await fetch(url)).text()).contains(
-			'"CLOUDFLARE_INCLUDE_PROCESS_ENV": "true"',
+			'"CLOUDFLARE_INCLUDE_PROCESS_ENV": "true"'
 		);
 		expect(await (await fetch(url)).text()).contains(
-			'"WRANGLER_ENV_VAR_0": "default-0"',
+			'"WRANGLER_ENV_VAR_0": "default-0"'
 		);
 		expect(await (await fetch(url)).text()).contains(
-			'"WRANGLER_ENV_VAR_1": "env-1"',
+			'"WRANGLER_ENV_VAR_1": "env-1"'
 		);
 	});
 
@@ -2906,7 +2906,7 @@ describe(".env support in local dev", () => {
 		});
 
 		const worker = helper.runLongLived(
-			"wrangler dev --env-file=other/.env --env-file=other/.env.local",
+			"wrangler dev --env-file=other/.env --env-file=other/.env.local"
 		);
 		const { url } = await worker.waitForReady();
 		expect(await (await fetch(url)).text()).toMatchInlineSnapshot(`
