@@ -141,39 +141,41 @@ function SidebarItemGroup({
 				/>
 			</Collapsible.Trigger>
 
-			<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0">
-				<ul className="mt-0.5 list-none space-y-0.5 px-2">
-					{error ? (
-						<li className="px-2.5 py-2 text-sm text-danger">{error}</li>
-					) : null}
+			<Collapsible.Panel className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-300 ease-in-out data-ending-style:grid-rows-[0fr] data-ending-style:opacity-0 data-starting-style:grid-rows-[0fr] data-starting-style:opacity-0">
+				<div className="overflow-hidden">
+					<ul className="mt-0.5 list-none space-y-0.5 px-2">
+						{error ? (
+							<li className="px-2.5 py-2 text-sm text-danger">{error}</li>
+						) : null}
 
-					{!error
-						? items.map((item) => (
-								<li key={item.id}>
-									<Link
-										className={cn(
-											"group flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm font-medium no-underline transition-colors",
-											item.isActive
-												? "bg-primary/10 text-primary hover:bg-primary/15"
-												: "text-text hover:bg-surface-tertiary",
-											"mx-2" // Indent to align with title text
-										)}
-										params={item.link.params}
-										search={item.link.search}
-										to={item.link.to}
-									>
-										{item.label}
-									</Link>
-								</li>
-							))
-						: null}
+						{!error
+							? items.map((item) => (
+									<li key={item.id}>
+										<Link
+											className={cn(
+												"group flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm font-medium no-underline transition-colors",
+												item.isActive
+													? "bg-primary/10 text-primary hover:bg-primary/15"
+													: "text-text hover:bg-surface-tertiary",
+												"mx-2" // Indent to align with title text
+											)}
+											params={item.link.params}
+											search={item.link.search}
+											to={item.link.to}
+										>
+											{item.label}
+										</Link>
+									</li>
+								))
+							: null}
 
-					{!error && items.length === 0 && (
-						<li className="ml-11 px-2.5 py-2 text-sm text-text-secondary italic">
-							{emptyLabel}
-						</li>
-					)}
-				</ul>
+						{!error && items.length === 0 && (
+							<li className="ml-11 px-2.5 py-2 text-sm text-text-secondary italic">
+								{emptyLabel}
+							</li>
+						)}
+					</ul>
+				</div>
 			</Collapsible.Panel>
 		</Collapsible.Root>
 	);
