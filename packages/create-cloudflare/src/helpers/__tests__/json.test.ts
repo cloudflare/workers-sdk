@@ -44,9 +44,8 @@ describe("json helpers", () => {
 				})
 			);
 
-			const result = readJSONWithComments(
-				"/path/to/file.json",
-				(_key, value) => (value === "<REPLACE_ME>" ? "REPLACED" : value)
+			const result = readJSONWithComments("/path/to/file.json", (_key, value) =>
+				value === "<REPLACE_ME>" ? "REPLACED" : value
 			);
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
 			expect(result).toEqual({

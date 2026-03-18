@@ -7,6 +7,7 @@ import { resolve } from "node:path";
  */
 export function clean(paths: string[]): void {
 	for (const p of paths) {
+		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- clean tool intentionally removes build artifacts
 		rmSync(resolve(p), { recursive: true, force: true });
 	}
 }

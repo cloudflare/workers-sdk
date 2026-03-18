@@ -1,4 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./account-id";
 

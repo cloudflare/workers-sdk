@@ -221,6 +221,7 @@ class ProxyClientBridge {
 			// the proxy target needs to be a function so that the consumer of the proxy
 			// can simply call it (if we didn't do this consumers would get a
 			// `x is not a function` type error)
+			// eslint-disable-next-line @typescript-eslint/no-implied-eval -- intentional: creates callable proxy target
 			proxyTarget = new Function();
 		} else {
 			proxyTarget = {};

@@ -1,8 +1,8 @@
-import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 import {
 	getAssetFromKV,
 	mapRequestToAsset,
 } from "@cloudflare/kv-asset-handler";
+import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 
 const assetManifest = JSON.parse(manifestJSON);
 

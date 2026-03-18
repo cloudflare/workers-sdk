@@ -2,9 +2,8 @@ import {
 	defaultWranglerConfig,
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- complex validation logic */
+// eslint-disable-next-line no-restricted-imports
 import { describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import type { Config } from "@cloudflare/workers-utils";
 
 // TODO: Move these tests to the workers-utils package

@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -24,7 +23,7 @@ describe("pages project list", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should make request to list projects", async () => {
+	it("should make request to list projects", async ({ expect }) => {
 		const projects: Project[] = [
 			{
 				name: "dogs",
@@ -57,7 +56,9 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
-	it("should make multiple requests for paginated results", async () => {
+	it("should make multiple requests for paginated results", async ({
+		expect,
+	}) => {
 		const projects: Project[] = [];
 		for (let i = 0; i < 15; i++) {
 			projects.push({
@@ -79,7 +80,9 @@ describe("pages project list", () => {
 		expect(requests.count).toEqual(2);
 	});
 
-	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async () => {
+	it("should override cached accountId with CLOUDFLARE_ACCOUNT_ID environmental variable if provided", async ({
+		expect,
+	}) => {
 		vi.mock("getConfigCache", () => {
 			return {
 				account_id: "original-account-id",
@@ -92,7 +95,9 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
-	it("should return JSON output when --json flag is provided", async () => {
+	it("should return JSON output when --json flag is provided", async ({
+		expect,
+	}) => {
 		const projects: Project[] = [
 			{
 				name: "dogs",

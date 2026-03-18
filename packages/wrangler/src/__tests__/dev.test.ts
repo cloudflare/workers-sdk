@@ -9,7 +9,7 @@ import ci from "ci-info";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines with .each */
+/* eslint-disable no-restricted-imports */
 import {
 	afterEach,
 	assert,
@@ -19,7 +19,7 @@ import {
 	it,
 	vi,
 } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+/* eslint-enable no-restricted-imports */
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";

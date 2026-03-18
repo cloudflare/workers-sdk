@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import { createFetchResult, msw } from "../../helpers/msw";
 import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";

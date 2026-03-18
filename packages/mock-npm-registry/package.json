@@ -3,22 +3,19 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js"
 	},
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
 	"scripts": {
 		"build": "tsc",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:types": "tsc"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"@verdaccio/types": "^10.8.0",
-		"eslint": "catalog:default",
 		"get-port": "^7.0.0",
 		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",

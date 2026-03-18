@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -16,7 +16,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		});
 	const helper = new WranglerE2ETestHelper();
 
-	it("create bucket", async () => {
+	it("create bucket", async ({ expect }) => {
 		const output = await helper.run(`wrangler r2 bucket create ${bucketName}`);
 
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
@@ -34,7 +34,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		`);
 	});
 
-	it("create object", async () => {
+	it("create object", async ({ expect }) => {
 		await helper.seed({
 			"test-r2.txt": fileContents,
 		});
@@ -48,7 +48,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		`);
 	});
 
-	it("batch create objects", async () => {
+	it("batch create objects", async ({ expect }) => {
 		await helper.seed({
 			"file1.txt": fileContents,
 			"file2.txt": fileContents,
@@ -67,7 +67,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		`);
 	});
 
-	it("download object", async () => {
+	it("download object", async ({ expect }) => {
 		const output = await helper.run(
 			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
 		);
@@ -83,7 +83,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		expect(file).toBe(fileContents);
 	});
 
-	it("delete object", async () => {
+	it("delete object", async ({ expect }) => {
 		await helper.run(`wrangler r2 object delete ${bucketName}/file1 --remote`);
 		await helper.run(`wrangler r2 object delete ${bucketName}/file2 --remote`);
 		const output = await helper.run(
@@ -96,14 +96,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		`);
 	});
 
-	it("check object deleted", async () => {
+	it("check object deleted", async ({ expect }) => {
 		const output = await helper.run(
 			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
 		);
 		expect(output.stderr).toContain("The specified key does not exist");
 	});
 
-	it("delete bucket", async () => {
+	it("delete bucket", async ({ expect }) => {
 		const output = await helper.run(`wrangler r2 bucket delete ${bucketName}`);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(
 			`
@@ -113,7 +113,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		);
 	});
 
-	it("check bucket deleted", async () => {
+	it("check bucket deleted", async ({ expect }) => {
 		await helper.seed({
 			"test-r2.txt": fileContents,
 		});

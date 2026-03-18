@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import { getNextMiniflareVersion } from "../../../.github/changeset-version";
 
 // prettier-ignore
@@ -14,19 +14,20 @@ const miniflareVersionTestCases = [
 	["1.20231008.0", "3.20231001.0", /* major */ "4.0.0",        "4.20231008.0"],
 ];
 
-it.each(miniflareVersionTestCases)(
-	"changeset version",
-	(
-		workerdVersion,
-		previousMiniflareVersion,
-		miniflareVersion,
-		correctMiniflareVersion
-	) => {
+for (const [
+	workerdVersion,
+	previousMiniflareVersion,
+	miniflareVersion,
+	correctMiniflareVersion,
+] of miniflareVersionTestCases) {
+	it(`changeset version ${workerdVersion} ${previousMiniflareVersion} -> ${miniflareVersion} = ${correctMiniflareVersion}`, ({
+		expect,
+	}) => {
 		const actual = getNextMiniflareVersion(
 			workerdVersion,
 			previousMiniflareVersion,
 			miniflareVersion
 		);
 		expect(actual).toEqual(correctMiniflareVersion);
-	}
-);
+	});
+}

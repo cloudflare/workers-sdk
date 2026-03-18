@@ -1,8 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- MSW handlers use expect at module scope */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import {
 	__testSkipCredentialValidation,
 	__testSkipDelays,

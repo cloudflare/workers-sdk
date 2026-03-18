@@ -3,9 +3,8 @@ import { readFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { supportedCompatibilityDate } from "miniflare";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+// eslint-disable-next-line no-restricted-imports
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -342,7 +341,7 @@ describe("pages download config", () => {
 		clearDialogs();
 	});
 
-	it("should download full config correctly", async () => {
+	it("should download full config correctly", async ({ expect }) => {
 		await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -483,7 +482,9 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should generate preview override if preview has limits and production does not", async () => {
+	it("should generate preview override if preview has limits and production does not", async ({
+		expect,
+	}) => {
 		await runWrangler(`pages download config NO_PROD_LIMITS`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -701,7 +702,9 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should not duplicate inheritable properties if they're equal", async () => {
+	it("should not duplicate inheritable properties if they're equal", async ({
+		expect,
+	}) => {
 		await runWrangler(`pages download config INHERIT`);
 
 		await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -831,14 +834,14 @@ describe("pages download config", () => {
 			"
 		`);
 	});
-	it("should fail if not given a project name", async () => {
+	it("should fail if not given a project name", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Must specify a project name.]`
 		);
 	});
-	it("should fail if project does not exist", async () => {
+	it("should fail if project does not exist", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config NOT_REAL`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -868,7 +871,7 @@ describe("pages download config", () => {
 		`);
 	});
 	describe("overwrite existing file", () => {
-		it("should overwrite existing file w/ --force", async () => {
+		it("should overwrite existing file w/ --force", async ({ expect }) => {
 			await writeWranglerConfig({ name: "some-project" });
 			await runWrangler(`pages download config ${MOCK_PROJECT_NAME} --force`);
 
@@ -1010,7 +1013,9 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should not overwrite existing file w/o --force (non-interactive)", async () => {
+		it("should not overwrite existing file w/o --force (non-interactive)", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			await writeWranglerConfig({ name: "some-project" });
 			await expect(
@@ -1034,7 +1039,7 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should overwrite existing file w/ prompt", async () => {
+		it("should overwrite existing file w/ prompt", async ({ expect }) => {
 			await writeWranglerConfig({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing Wrangler configuration file will be overwritten. Continue?",
@@ -1180,7 +1185,7 @@ describe("pages download config", () => {
 				"
 			`);
 		});
-		it("should not overwrite existing file w/ prompt", async () => {
+		it("should not overwrite existing file w/ prompt", async ({ expect }) => {
 			await writeWranglerConfig({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",

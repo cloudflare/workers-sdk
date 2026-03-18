@@ -4,31 +4,30 @@
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
-		"workers",
 		"cloudflare workers",
 		"serverless",
-		"serverless application"
+		"serverless application",
+		"workers"
 	],
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/create-cloudflare"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
-	"exports": {
-		".": "./dist/cli.js"
-	},
-	"main": "./dist/cli.js",
 	"bin": "./dist/cli.js",
 	"files": [
 		"dist",
 		"templates",
 		"templates-experimental"
 	],
+	"main": "./dist/cli.js",
+	"exports": {
+		".": "./dist/cli.js"
+	},
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"dev": "node -r esbuild-register scripts/build.ts --watch",
 		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
@@ -42,7 +41,6 @@
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
 		"@cloudflare/cli": "workspace:*",
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
@@ -66,7 +64,6 @@
 		"dns2": "^2.1.0",
 		"dotenv": "^16.0.0",
 		"esbuild": "catalog:default",
-		"eslint": "catalog:default",
 		"execa": "^7.1.1",
 		"exit-hook": "2.2.1",
 		"get-port": "^7.1.0",

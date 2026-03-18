@@ -1,9 +1,7 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -95,7 +93,7 @@ describe("deploy", () => {
 	describe("queues", () => {
 		const queueId = "queue-id";
 		const queueName = "queue1";
-		it("should upload producer bindings", async () => {
+		it("should upload producer bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [{ binding: "QUEUE_ONE", queue: "queue1" }],
@@ -143,7 +141,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update queue producers on deploy", async () => {
+		it("should update queue producers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [
@@ -189,7 +187,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post worker queue consumers on deploy", async () => {
+		it("should post worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -244,7 +242,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post worker queue consumers on deploy, using command line script name arg", async () => {
+		it("should post worker queue consumers on deploy, using command line script name arg", async ({
+			expect,
+		}) => {
 			const expectedScriptName = "command-line-arg-script-name";
 			writeWranglerConfig({
 				queues: {
@@ -300,7 +300,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update worker queue consumers on deploy", async () => {
+		it("should update worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -363,7 +363,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update worker (service) queue consumers with default environment on deploy", async () => {
+		it("should update worker (service) queue consumers with default environment on deploy", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -431,7 +433,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post queue http consumers on deploy", async () => {
+		it("should post queue http consumers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -486,7 +488,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update queue http consumers when one already exists for queue", async () => {
+		it("should update queue http consumers when one already exists for queue", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -549,7 +553,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should support queue consumer concurrency with a max concurrency specified", async () => {
+		it("should support queue consumer concurrency with a max concurrency specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -612,7 +618,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should support queue consumer concurrency with a null max concurrency", async () => {
+		it("should support queue consumer concurrency with a null max concurrency", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -676,7 +684,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should support queue consumer with max_batch_timeout of 0", async () => {
+		it("should support queue consumer with max_batch_timeout of 0", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -740,7 +750,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("consumer should error when a queue doesn't exist", async () => {
+		it("consumer should error when a queue doesn't exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [],
@@ -767,7 +779,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("producer should error when a queue doesn't exist", async () => {
+		it("producer should error when a queue doesn't exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [{ queue: queueName, binding: "QUEUE_ONE" }],

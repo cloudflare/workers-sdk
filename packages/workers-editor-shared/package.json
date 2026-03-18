@@ -4,26 +4,25 @@
 	"description": "Utilities for the Cloudflare Workers online editing experience",
 	"keywords": [
 		"cloudflare",
-		"workers",
 		"cloudflare workers",
-		"editor"
+		"editor",
+		"workers"
 	],
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/workers-editor-shared"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "workers-devprod@cloudflare.com",
-	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
 	"files": [
 		"dist"
 	],
+	"type": "module",
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
 	"scripts": {
 		"build": "tsc && vite build",
-		"check:lint": "eslint lib --max-warnings=0 --cache",
 		"check:type": "tsc && tsc -p tsconfig.node.json --noEmit",
 		"dev": "vite"
 	},
@@ -31,13 +30,11 @@
 		"react-split-pane": "^0.1.92"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/style-const": "^5.7.2",
 		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/react": "^18.3.3",
 		"@vitejs/plugin-react": "^4.3.3",
-		"eslint": "catalog:default",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"typescript": "catalog:default",

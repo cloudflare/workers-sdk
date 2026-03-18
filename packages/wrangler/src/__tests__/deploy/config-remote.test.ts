@@ -1,5 +1,3 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { APIError } from "@cloudflare/workers-utils";
 import {
@@ -7,7 +5,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -132,7 +130,9 @@ describe("deploy", () => {
 	}
 
 	describe("config remote differences", () => {
-		it("should present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config", async () => {
+		it("should present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			mockGetServiceByName("test-name", "production", "dash");
 			writeWranglerConfig(
@@ -198,7 +198,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config in dry-run mode", async () => {
+		it("should not present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config in dry-run mode", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			writeWranglerConfig(
 				{
@@ -224,7 +226,9 @@ describe("deploy", () => {
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should present a diff warning to the user when there are differences between the local config (toml) and the dash config", async () => {
+		it("should present a diff warning to the user when there are differences between the local config (toml) and the dash config", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			mockGetServiceByName("test-name", "production", "dash");
 			writeWranglerConfig(
@@ -293,7 +297,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("in non-intractive (and non-strict) mode, should present a diff when there are differences between the local config and the dash config, and proceed with the deployment", async () => {
+		it("in non-intractive (and non-strict) mode, should present a diff when there are differences between the local config and the dash config, and proceed with the deployment", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			fs.mkdirSync("./public");
@@ -393,7 +399,9 @@ describe("deploy", () => {
 		});
 
 		describe("with strict mode enabled", () => {
-			it("should error if there are remote config difference in non-interactive mode", async () => {
+			it("should error if there are remote config difference in non-interactive mode", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				writeWorkerSource();
@@ -461,7 +469,9 @@ describe("deploy", () => {
 				expect(process.exitCode).not.toBe(0);
 			});
 
-			it("should error when worker was last deployed from api", async () => {
+			it("should error when worker was last deployed from api", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				msw.use(...mswSuccessDeploymentScriptAPI);
@@ -490,7 +500,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should warn the user when the deployment would (likely unintentionally) override remote secrets", async () => {
+		it("should warn the user when the deployment would (likely unintentionally) override remote secrets", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			mockGetServiceByName("test-name", "production", "dash");
 			writeWranglerConfig(
@@ -546,7 +558,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should handle the remote secrets fetching check for new workers", async () => {
+		it("should handle the remote secrets fetching check for new workers", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			writeWranglerConfig(
 				{
@@ -601,7 +615,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not fetch remote secrets in dry-run mode", async () => {
+		it("should not fetch remote secrets in dry-run mode", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			writeWranglerConfig(
 				{
@@ -630,7 +646,9 @@ describe("deploy", () => {
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should abort the deployment when it would (likely unintentionally) override remote secrets in non-interactive strict mode", async () => {
+		it("should abort the deployment when it would (likely unintentionally) override remote secrets in non-interactive strict mode", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWorkerSource();

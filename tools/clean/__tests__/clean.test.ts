@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { clean } from "../clean";
 
 describe("clean()", () => {
@@ -21,11 +21,12 @@ describe("clean()", () => {
 
 	afterEach(() => {
 		if (existsSync(tmpDir)) {
+			// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
 			rmSync(tmpDir, { recursive: true });
 		}
 	});
 
-	it("should remove a single directory", () => {
+	it("should remove a single directory", ({ expect }) => {
 		const dir = join(tmpDir, "to-remove");
 		mkdirSync(dir);
 		writeFileSync(join(dir, "file.txt"), "content");
@@ -35,7 +36,7 @@ describe("clean()", () => {
 		expect(existsSync(dir)).toBe(false);
 	});
 
-	it("should remove multiple directories", () => {
+	it("should remove multiple directories", ({ expect }) => {
 		const dir1 = join(tmpDir, "dir1");
 		const dir2 = join(tmpDir, "dir2");
 		mkdirSync(dir1);
@@ -47,13 +48,13 @@ describe("clean()", () => {
 		expect(existsSync(dir2)).toBe(false);
 	});
 
-	it("should silently handle non-existent paths", () => {
+	it("should silently handle non-existent paths", ({ expect }) => {
 		const nonExistent = join(tmpDir, "does-not-exist");
 
 		expect(() => clean([nonExistent])).not.toThrow();
 	});
 
-	it("should remove nested directories recursively", () => {
+	it("should remove nested directories recursively", ({ expect }) => {
 		const nested = join(tmpDir, "a", "b", "c");
 		mkdirSync(nested, { recursive: true });
 		writeFileSync(join(nested, "deep.txt"), "deep content");
@@ -63,7 +64,7 @@ describe("clean()", () => {
 		expect(existsSync(join(tmpDir, "a"))).toBe(false);
 	});
 
-	it("should remove a single file", () => {
+	it("should remove a single file", ({ expect }) => {
 		const file = join(tmpDir, "file.txt");
 		writeFileSync(file, "content");
 
@@ -72,7 +73,7 @@ describe("clean()", () => {
 		expect(existsSync(file)).toBe(false);
 	});
 
-	it("should handle empty paths array", () => {
+	it("should handle empty paths array", ({ expect }) => {
 		expect(() => clean([])).not.toThrow();
 	});
 });

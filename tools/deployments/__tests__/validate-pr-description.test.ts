@@ -1,14 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {
-	it("should skip validation with the `skip-pr-description-validation` label", () => {
+	it("should skip validation with the `skip-pr-description-validation` label", ({
+		expect,
+	}) => {
 		expect(
 			validateDescription("", "", '["skip-pr-description-validation"]', "[]")
 		).toHaveLength(0);
 	});
 
-	it("should show errors with default template + TODOs checked", () => {
+	it("should show errors with default template + TODOs checked", ({
+		expect,
+	}) => {
 		expect(
 			validateDescription(
 				"",
@@ -48,7 +52,7 @@ In particular, for non-trivial changes, please always engage on the issue or cre
 		`);
 	});
 
-	it("should bypass changesets check with label", () => {
+	it("should bypass changesets check with label", ({ expect }) => {
 		expect(
 			validateDescription(
 				"",
@@ -81,7 +85,7 @@ In particular, for non-trivial changes, please always engage on the issue or cre
 		).toMatchInlineSnapshot(`[]`);
 	});
 
-	it("should accept everything included", () => {
+	it("should accept everything included", ({ expect }) => {
 		expect(
 			validateDescription(
 				"",
@@ -115,7 +119,7 @@ In particular, for non-trivial changes, please always engage on the issue or cre
 		).toHaveLength(0);
 	});
 
-	it("should accept a docs link", () => {
+	it("should accept a docs link", ({ expect }) => {
 		expect(
 			validateDescription(
 				"",

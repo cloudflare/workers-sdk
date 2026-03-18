@@ -1,5 +1,6 @@
 import path from "node:path";
 import dedent from "ts-dedent";
+// eslint-disable-next-line no-restricted-imports
 import { afterAll, assert, beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
@@ -584,7 +585,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		}, activeTestCases.length * 15_000);
 
 		for (const testCase of activeTestCases) {
-			it("should work for " + testCase.name, async () => {
+			it("should work for " + testCase.name, async ({ expect }) => {
 				const resp = await mf.dispatchFetch("http://example.com/", {
 					headers: { "x-test-module": testCase.scriptPath },
 				});
@@ -663,7 +664,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			],
 		};
 
-		it("should work for mTLS bindings", async () => {
+		it("should work for mTLS bindings", async ({ expect }) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(path.resolve(__dirname, "./workers"));
 			const testConfig = await mtlsTestCase.setup(helper);
@@ -735,7 +736,7 @@ describe("Remote bindings (remote proxy session disabled)", () => {
 	}, activeTestCases.length * 15_000);
 
 	for (const testCase of activeTestCases) {
-		it("should work for " + testCase.name, async () => {
+		it("should work for " + testCase.name, async ({ expect }) => {
 			const resp = await mf.dispatchFetch("http://example.com/", {
 				headers: { "x-test-module": testCase.scriptPath },
 			});

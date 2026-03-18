@@ -96,8 +96,8 @@ const channel = Channel<ToQuickEditMessage, FromQuickEditMessage>(
 );
 
 editor.addEventListener("load", () => {
-	editor.contentWindow.postMessage("PORT", "*", [channel.remote])
-})
+	editor.contentWindow.postMessage("PORT", "*", [channel.remote]);
+});
 
 // When you have the initial contents of the Worker (loaded from an API, perhaps)
 channel.postMessage({
@@ -105,11 +105,10 @@ channel.postMessage({
 	body: {
 		// Refer to the WorkerLoaded type for details
 	},
-})
+});
 
-channel.onMessage(message => {
+channel.onMessage((message) => {
 	// message is of type SetEntryPoint, UpdateFile, CreateFile, or DeleteFile
 	// Refer to @cloudflare/workers-editor-shared for details
-})
-
+});
 ```

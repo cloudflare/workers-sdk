@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { buildSQLiteSchemaDiffStatement } from "../../../drivers/sqlite/generate";
 import type {
 	IStudioDriver,
@@ -30,7 +30,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 	const driver = createMockDriver();
 
 	describe("CREATE TABLE", () => {
-		test("creates table with basic columns", () => {
+		test("creates table with basic columns", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "users" },
 				columns: [
@@ -63,7 +63,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"name" TEXT');
 		});
 
-		test("creates table with `PRIMARY KEY` column", () => {
+		test("creates table with `PRIMARY KEY` column", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "users" },
 				columns: [
@@ -89,7 +89,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("AUTOINCREMENT");
 		});
 
-		test("creates table with `NOT NULL` and `DEFAULT`", () => {
+		test("creates table with `NOT NULL` and `DEFAULT`", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "users" },
 				columns: [
@@ -115,7 +115,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("DEFAULT 'unknown'");
 		});
 
-		test("creates table with `UNIQUE` constraint", () => {
+		test("creates table with `UNIQUE` constraint", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "users" },
 				columns: [
@@ -139,7 +139,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("UNIQUE");
 		});
 
-		test("creates table with `CHECK` constraint", () => {
+		test("creates table with `CHECK` constraint", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "users" },
 				columns: [
@@ -163,7 +163,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("CHECK (age > 0)");
 		});
 
-		test("creates table with `DEFAULT` expression", () => {
+		test("creates table with `DEFAULT` expression", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "events" },
 				columns: [
@@ -187,7 +187,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("DEFAULT (current_timestamp)");
 		});
 
-		test("creates table with `GENERATED ALWAYS AS`", () => {
+		test("creates table with `GENERATED ALWAYS AS`", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				columns: [
@@ -213,7 +213,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("STORED");
 		});
 
-		test("creates table with `REFERENCES` (foreign key)", () => {
+		test("creates table with `REFERENCES` (foreign key)", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "orders" },
 				columns: [
@@ -240,7 +240,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('REFERENCES "users"("id")');
 		});
 
-		test("creates table with table-level constraints", () => {
+		test("creates table with table-level constraints", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				columns: [
@@ -272,7 +272,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('PRIMARY KEY ("a", "b")');
 		});
 
-		test("creates table with `UNIQUE` table-level constraint", () => {
+		test("creates table with `UNIQUE` table-level constraint", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				columns: [
@@ -302,7 +302,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('UNIQUE ("a")');
 		});
 
-		test("creates table with `CHECK` table-level constraint", () => {
+		test("creates table with `CHECK` table-level constraint", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				columns: [
@@ -331,7 +331,9 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain("CHECK (val > 0)");
 		});
 
-		test("creates table with `FOREIGN KEY` table-level constraint", () => {
+		test("creates table with `FOREIGN KEY` table-level constraint", ({
+			expect,
+		}) => {
 			const change = {
 				name: { old: null, new: "orders" },
 				columns: [
@@ -365,7 +367,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('REFERENCES "users"');
 		});
 
-		test("uses default schema name when not provided", () => {
+		test("uses default schema name when not provided", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				columns: [
@@ -383,7 +385,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"main"."t"');
 		});
 
-		test("uses custom schema name when provided", () => {
+		test("uses custom schema name when provided", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				schemaName: "temp",
@@ -405,7 +407,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"temp"."t"');
 		});
 
-		test("creates table with ON CONFLICT for PRIMARY KEY", () => {
+		test("creates table with ON CONFLICT for PRIMARY KEY", ({ expect }) => {
 			const change = {
 				name: { old: null, new: "t" },
 				columns: [
@@ -432,7 +434,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 	});
 
 	describe("ALTER TABLE", () => {
-		test("adds a column", () => {
+		test("adds a column", ({ expect }) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [
@@ -456,7 +458,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"email" TEXT');
 		});
 
-		test("drops a column", () => {
+		test("drops a column", ({ expect }) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [
@@ -479,7 +481,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"email"');
 		});
 
-		test("renames a column", () => {
+		test("renames a column", ({ expect }) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [
@@ -506,7 +508,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"full_name"');
 		});
 
-		test("changes column type generates `ALTER COLUMN`", () => {
+		test("changes column type generates `ALTER COLUMN`", ({ expect }) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [
@@ -530,7 +532,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result.some((s) => s.includes("ALTER COLUMN"))).toBe(true);
 		});
 
-		test("renames table", () => {
+		test("renames table", ({ expect }) => {
 			const change = {
 				name: { old: "users", new: "people" },
 				columns: [],
@@ -544,7 +546,9 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result[0]).toContain('"people"');
 		});
 
-		test("rename + add column produces multiple `ALTER` statements", () => {
+		test("rename + add column produces multiple `ALTER` statements", ({
+			expect,
+		}) => {
 			const change = {
 				name: { old: "users", new: "people" },
 				columns: [
@@ -567,7 +571,7 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result.some((s) => s.includes("RENAME TO"))).toBe(true);
 		});
 
-		test("no changes produces empty array", () => {
+		test("no changes produces empty array", ({ expect }) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [],
@@ -579,7 +583,9 @@ describe("buildSQLiteSchemaDiffStatement", () => {
 			expect(result).toEqual([]);
 		});
 
-		test("unchanged column (same name and type) produces no statements", () => {
+		test("unchanged column (same name and type) produces no statements", ({
+			expect,
+		}) => {
 			const change = {
 				name: { old: "users", new: "users" },
 				columns: [

@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { assert, beforeAll, describe, expect, test } from "vitest";
+import { assert, beforeAll, describe, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -15,10 +15,8 @@ import type {
 } from "miniflare";
 
 const { Miniflare } = await importMiniflare();
-const {
-	startRemoteProxySession: startRemoteProxySession,
-	maybeStartOrUpdateRemoteProxySession: maybeStartOrUpdateRemoteProxySession,
-} = await importWrangler();
+const { startRemoteProxySession, maybeStartOrUpdateRemoteProxySession } =
+	await importWrangler();
 
 // Note: the tests in this file are simple ones that check basic functionalities of the remote bindings programmatic APIs
 //       various other aspects of these APIs (e.g. different bindings, reloading capabilities) are indirectly tested when
@@ -62,7 +60,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		}
 
 		describe("startRemoteProxySession", () => {
-			test("base usage", async () => {
+			test("base usage", async ({ expect }) => {
 				const remoteProxySession = await startRemoteProxySession({
 					MY_SERVICE: {
 						type: "service",
@@ -86,7 +84,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await remoteProxySession.dispose();
 			});
 
-			test("user provided incorrect auth data", async () => {
+			test("user provided incorrect auth data", async ({ expect }) => {
 				await expect(
 					startRemoteProxySession(
 						{
@@ -111,7 +109,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		});
 
 		describe("maybeStartOrUpdateRemoteProxySession", () => {
-			test("base usage", async () => {
+			test("base usage", async ({ expect }) => {
 				const proxySessionData = await maybeStartOrUpdateRemoteProxySession({
 					bindings: {
 						MY_SERVICE: {
@@ -141,7 +139,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await proxySessionData.session.dispose();
 			});
 
-			test("user provided incorrect auth data", async () => {
+			test("user provided incorrect auth data", async ({ expect }) => {
 				await expect(
 					maybeStartOrUpdateRemoteProxySession(
 						{

@@ -2,9 +2,8 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in helper function at module scope */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
 import { Static } from "../../autoconfig/frameworks/static";

@@ -2,9 +2,8 @@ import * as fs from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { startWorker } from "../api/startDevWorker";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

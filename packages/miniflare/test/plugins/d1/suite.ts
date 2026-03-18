@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
 import { Miniflare, MiniflareOptions } from "miniflare";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import { useDispose, useTmp, utf8Encode } from "../../test-shared";
 import { binding, ctx, getDatabase, opts } from "./test";
@@ -63,7 +63,7 @@ function throwCause<T>(promise: Promise<T>): Promise<T> {
 	});
 }
 
-test("D1Database: batch", async () => {
+test("D1Database: batch", async ({ expect }) => {
 	const { db, tableColours } = ctx;
 
 	const insert = db.prepare(
@@ -103,10 +103,11 @@ test("D1Database: batch", async () => {
 		.all<Pick<ColourRow, "name">>();
 	expect(result.results).toEqual(expectedResults);
 });
-test("D1Database: exec", async () => {
+test("D1Database: exec", async ({ expect }) => {
 	const { db, tableColours } = ctx;
 
 	// Check with single statement
+	// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- D1 database exec, not child_process
 	let execResult = await db.exec(
 		`UPDATE ${tableColours} SET name = 'Red' WHERE name = 'red'`
 	);
@@ -133,7 +134,7 @@ test("D1Database: exec", async () => {
 	]);
 });
 
-test("D1PreparedStatement: bind", async () => {
+test("D1PreparedStatement: bind", async ({ expect }) => {
 	const { db, tableColours, tableKitchenSink } = ctx;
 
 	// Check with all parameter types
@@ -188,7 +189,7 @@ test("D1PreparedStatement: bind", async () => {
 
 // Lots of strange edge cases here...
 
-test("D1PreparedStatement: first", async () => {
+test("D1PreparedStatement: first", async ({ expect }) => {
 	const { db, tableColours } = ctx;
 
 	// Check with read statement
@@ -234,7 +235,7 @@ test("D1PreparedStatement: first", async () => {
 		.first("id");
 	expect(id).toBe(4);
 });
-test("D1PreparedStatement: run", async () => {
+test("D1PreparedStatement: run", async ({ expect }) => {
 	const { db, tableColours, tableKitchenSink } = ctx;
 
 	// Check with read statement
@@ -341,7 +342,7 @@ test("D1PreparedStatement: run", async () => {
 		},
 	});
 });
-test("D1PreparedStatement: all", async () => {
+test("D1PreparedStatement: all", async ({ expect }) => {
 	const { db, tableColours } = ctx;
 
 	// Check with read statement
@@ -435,7 +436,7 @@ test("D1PreparedStatement: all", async () => {
 	expect(result.meta.last_row_id).toBe(5);
 	expect(result.meta.changes).toBe(1);
 });
-test("D1PreparedStatement: raw", async () => {
+test("D1PreparedStatement: raw", async ({ expect }) => {
 	const { db, tableColours } = ctx;
 
 	// Check with read statement
@@ -501,7 +502,7 @@ test("D1PreparedStatement: raw", async () => {
 	}
 });
 
-test("operations persist D1 data", async () => {
+test("operations persist D1 data", async ({ expect }) => {
 	const { tableColours, tableKitchenSink, tablePalettes } = ctx;
 
 	// Create new temporary file-system persistence directory
@@ -538,7 +539,7 @@ test("operations persist D1 data", async () => {
 	expect(result).toEqual({ name: "purple" });
 });
 
-test("operations permit strange database names", async () => {
+test("operations permit strange database names", async ({ expect }) => {
 	const { tableColours, tableKitchenSink, tablePalettes } = ctx;
 
 	// Set option, then reset after test
@@ -562,7 +563,9 @@ test("operations permit strange database names", async () => {
 	expect(result).toEqual({ name: "pink" });
 });
 
-test("it properly handles ROWS_AND_COLUMNS results format", async () => {
+test("it properly handles ROWS_AND_COLUMNS results format", async ({
+	expect,
+}) => {
 	const { tableColours, tablePalettes } = ctx;
 	const db = await getDatabase(ctx.mf);
 
@@ -589,7 +592,9 @@ test("it properly handles ROWS_AND_COLUMNS results format", async () => {
  * It then executes the dump in a new D1 database and checks if both databases
  * are equal in terms of schema and data.
  */
-test("dumpSql exports and imports complete database structure and content correctly", async () => {
+test("dumpSql exports and imports complete database structure and content correctly", async ({
+	expect,
+}) => {
 	// Create a new Miniflare instance with D1 database
 	const originalMF = new Miniflare({
 		...opts,
