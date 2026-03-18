@@ -408,6 +408,7 @@ type WorkerOptionsBindings = Pick<
 	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "images"
+	| "stream"
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
@@ -498,6 +499,7 @@ export function buildMiniflareBindingOptions(
 	];
 	const aiBindings = extractBindingsOfType("ai", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
+	const streamBindings = extractBindingsOfType("stream", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
 	const versionMetadataBindings = extractBindingsOfType(
@@ -763,6 +765,16 @@ export function buildMiniflareBindingOptions(
 						binding: imagesBindings[0].binding,
 						remoteProxyConnectionString:
 							imagesBindings[0].remote && remoteProxyConnectionString
+								? remoteProxyConnectionString
+								: undefined,
+					}
+				: undefined,
+		stream:
+			streamBindings.length > 0
+				? {
+						binding: streamBindings[0].binding,
+						remoteProxyConnectionString:
+							streamBindings[0].remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
 					}

@@ -1845,7 +1845,7 @@ test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
 
 	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/foo");
 	expect(await res.text()).toBe(
-		`"/cdn-cgi/handler/foo" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`
+		`"/cdn-cgi/handler/foo" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled", "/cdn-cgi/handler/email", or "/cdn-cgi/handler/stream/:binding/..."?`
 	);
 	expect(res.status).toBe(404);
 });
