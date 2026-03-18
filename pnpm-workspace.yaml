@@ -24,17 +24,17 @@ catalog:
   "@vitest/snapshot": 4.1.0
   "@vitest/ui": 4.1.0
   typescript: "~5.8.3"
-  undici: "7.18.2"
+  undici: "7.24.4"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
-  undici-types: "7.18.2"
+  undici-types: "7.24.4"
   vitest: "4.1.0"
   vite: "^7.3.1"
   "ws": "8.18.0"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260312.1"
-  workerd: "1.20260312.1"
+  "@cloudflare/workers-types": "^4.20260317.1"
+  workerd: "1.20260317.1"
   eslint: "^9.39.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
@@ -46,10 +46,10 @@ catalog:
 
 catalogs:
   vite-plugin:
-    # This the latest version of Vite that can be used when building the plugin in order to remain compatible with earlier versions of Vite
-    # This is because a breaking change to the module runner was introduced in https://github.com/vitejs/vite/pull/20924 and released in v7.2.0
-    "vite": "7.1.12"
+    "vite": "^8.0.0"
     "@types/node": "^22.10.1"
+  vitest-4:
+    "vite": "^8.0.0"
   vitest-3:
     "vitest": 3.2.4
     "@vitest/ui": 3.2.4

@@ -27,6 +27,7 @@ export const MAIN_ENTRY_NAME = "index";
 
 interface WebSocketContainer {
 	webSocket?: WebSocket;
+	messageBuffers?: string[];
 }
 
 const webSocketUndefinedError = "The WebSocket is undefined";
@@ -57,9 +58,15 @@ function createHotChannel(
 	return {
 		send(payload) {
 			const webSocket = webSocketContainer.webSocket;
-			assert(webSocket, webSocketUndefinedError);
+			const message = JSON.stringify(payload);
 
-			webSocket.send(JSON.stringify(payload));
+			if (!webSocket) {
+				webSocketContainer.messageBuffers ??= [];
+				webSocketContainer.messageBuffers.push(message);
+				return;
+			}
+
+			webSocket.send(message);
 		},
 		on(event: string, listener: vite.HotChannelListener) {
 			const listeners = listenersMap.get(event) ?? new Set();
@@ -86,11 +93,11 @@ function createHotChannel(
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
-	#webSocketContainer: { webSocket?: WebSocket };
+	#webSocketContainer: WebSocketContainer;
 
 	constructor(name: string, config: vite.ResolvedConfig) {
 		// It would be good if we could avoid passing this object around and mutating it
-		const webSocketContainer = {};
+		const webSocketContainer: WebSocketContainer = {};
 		super(name, config, {
 			hot: true,
 			transport: createHotChannel(webSocketContainer),
@@ -124,6 +131,14 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
 		this.#webSocketContainer.webSocket = webSocket;
+
+		if (this.#webSocketContainer.messageBuffers) {
+			for (const bufferedMessage of this.#webSocketContainer.messageBuffers) {
+				webSocket.send(bufferedMessage);
+			}
+
+			delete this.#webSocketContainer.messageBuffers;
+		}
 	}
 
 	async fetchWorkerExportTypes(
@@ -276,7 +291,6 @@ export function createCloudflareEnvironmentOptions({
 			noDiscovery: false,
 			// Workaround for https://github.com/vitejs/vite/issues/20867
 			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
-			// @ts-expect-error - option added in Vite 7.3.1
 			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
@@ -301,7 +315,6 @@ export function createCloudflareEnvironmentOptions({
 							},
 							plugins: [
 								// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
-								// @ts-expect-error: added in Vite 8
 								vite.esmExternalRequirePlugin({
 									external: [nodeBuiltinsRE],
 									skipDuplicateCheck: true,

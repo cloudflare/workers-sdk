@@ -96,8 +96,8 @@ export async function setupTokens(
 ): Promise<RealishPreviewConfig> {
 	const previewSession = await initialiseSubdomainPreview(accountId, apiToken);
 	const uploadConfigToken = previewSession.exchange_url
-		? (await tryExpandToken(previewSession.exchange_url)) ??
-			previewSession.token
+		? ((await tryExpandToken(previewSession.exchange_url)) ??
+			previewSession.token)
 		: previewSession.token;
 
 	return {

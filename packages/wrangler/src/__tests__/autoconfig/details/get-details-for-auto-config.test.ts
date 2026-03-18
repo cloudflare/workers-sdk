@@ -118,8 +118,44 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: The Wrangler application detection logic has been run in the root of a workspace, this is not supported. Change your working directory to one of the applications in the workspace and try again.]`
+			`[Error: The Wrangler application detection logic has been run in the root of a workspace instead of targeting a specific project. Change your working directory to one of the applications in the workspace and try again.]`
 		);
+	});
+
+	it("should not bail when run in the root of a workspace if the root is included as a workspace package", async ({
+		expect,
+	}) => {
+		await seed({
+			"pnpm-workspace.yaml": "packages:\n  - 'packages/*'\n  - '.'\n",
+			"package.json": JSON.stringify({
+				name: "my-workspace",
+				workspaces: ["packages/*", "."],
+			}),
+			"index.html": "<h1>Hello World</h1>",
+			"packages/my-app/package.json": JSON.stringify({ name: "my-app" }),
+			"packages/my-app/index.html": "<h1>Hello World</h1>",
+		});
+
+		const result = await details.getDetailsForAutoConfig();
+
+		expect(result.isWorkspaceRoot).toBe(true);
+		expect(result.framework?.id).toBe("static");
+	});
+
+	it("should set isWorkspaceRoot to false for non-workspace projects", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				name: "my-app",
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			"index.html": "<h1>Hello World</h1>",
+		});
+
+		const result = await details.getDetailsForAutoConfig();
+
+		expect(result.isWorkspaceRoot).toBe(false);
 	});
 
 	it("should warn when no lock file is detected (project may be inside a workspace)", async ({

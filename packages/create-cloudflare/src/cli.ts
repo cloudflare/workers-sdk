@@ -166,7 +166,7 @@ const create = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	startSection(
 		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
-		"Step 2 of 3",
+		"Step 2 of 3"
 	);
 
 	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway

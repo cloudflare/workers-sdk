@@ -515,7 +515,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		containerEngine: useContainers
-			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
+			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
 
 		...bindingOptions,

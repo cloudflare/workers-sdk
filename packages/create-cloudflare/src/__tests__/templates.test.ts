@@ -47,7 +47,7 @@ describe("addWranglerToGitIgnore", () => {
 				isDirectory() {
 					return path.endsWith(".git");
 				},
-			}),
+			})
 		);
 	});
 
@@ -58,7 +58,7 @@ describe("addWranglerToGitIgnore", () => {
 			"my-project/.gitignore",
 			`
       node_modules
-      .vscode`,
+      .vscode`
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -94,7 +94,7 @@ describe("addWranglerToGitIgnore", () => {
 			!.env.example
       .vscode
       .wrangler
-    `,
+    `
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -116,7 +116,7 @@ describe("addWranglerToGitIgnore", () => {
 			.env* # even more
 			!.env.example # and a final one
       .vscode
-    `,
+    `
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -133,7 +133,7 @@ describe("addWranglerToGitIgnore", () => {
 			`
       node_modules
       .dev.vars*
-      .vscode`,
+      .vscode`
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -165,7 +165,7 @@ describe("addWranglerToGitIgnore", () => {
       node_modules
 			.wrangler
       .dev.vars*
-      .vscode`,
+      .vscode`
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -197,7 +197,7 @@ describe("addWranglerToGitIgnore", () => {
 			!.dev.vars.example
 			.env*
 			!.env.example
-      .vscode`,
+      .vscode`
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -229,7 +229,7 @@ describe("addWranglerToGitIgnore", () => {
 			!.env.example
       .vscode
 
-    `,
+    `
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -314,7 +314,7 @@ describe("addWranglerToGitIgnore", () => {
       node_modules
 			.dev.vars
       .vscode
-			`,
+			`
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -346,7 +346,7 @@ describe("addWranglerToGitIgnore", () => {
 			.env
 			.env.*
 			!.env.example
-			`,
+			`
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -376,7 +376,7 @@ describe("addWranglerToGitIgnore", () => {
       node_modules
       .wrangler/ # This is for wrangler
       .vscode
-    `,
+    `
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -399,10 +399,10 @@ describe("addWranglerToGitIgnore", () => {
 
 	function mockGitIgnore(path: string, content: string) {
 		vi.mocked(existsSync).mockImplementation(
-			(filePath: PathLike) => filePath === path,
+			(filePath: PathLike) => filePath === path
 		);
 		vi.mocked(readFile).mockImplementation((filePath: string) =>
-			filePath === path ? content.replace(/\n\s*/g, "\n") : "",
+			filePath === path ? content.replace(/\n\s*/g, "\n") : ""
 		);
 	}
 });
@@ -469,12 +469,12 @@ describe("downloadRemoteTemplate", () => {
 		expect,
 	}) => {
 		await downloadRemoteTemplate(
-			"https://github.com/cloudflare/workers-graphql-server",
+			"https://github.com/cloudflare/workers-graphql-server"
 		);
 
 		expect(degit).toHaveBeenCalledWith(
 			"github:cloudflare/workers-graphql-server",
-			expect.anything(),
+			expect.anything()
 		);
 	});
 
@@ -485,7 +485,7 @@ describe("downloadRemoteTemplate", () => {
 
 		expect(degit).toHaveBeenCalledWith(
 			"github:cloudflare/workers-sdk",
-			expect.anything(),
+			expect.anything()
 		);
 	});
 
@@ -493,12 +493,12 @@ describe("downloadRemoteTemplate", () => {
 		expect,
 	}) => {
 		await downloadRemoteTemplate(
-			"https://github.com/cloudflare/workers-sdk/templates/worker-r2",
+			"https://github.com/cloudflare/workers-sdk/templates/worker-r2"
 		);
 
 		expect(degit).toHaveBeenCalledWith(
 			"github:cloudflare/workers-sdk/templates/worker-r2",
-			expect.anything(),
+			expect.anything()
 		);
 	});
 
@@ -506,12 +506,12 @@ describe("downloadRemoteTemplate", () => {
 		expect,
 	}) => {
 		await downloadRemoteTemplate(
-			"https://github.com/cloudflare/workers-sdk/tree/main",
+			"https://github.com/cloudflare/workers-sdk/tree/main"
 		);
 
 		expect(degit).toHaveBeenCalledWith(
 			"github:cloudflare/workers-sdk#main",
-			expect.anything(),
+			expect.anything()
 		);
 	});
 
@@ -519,12 +519,12 @@ describe("downloadRemoteTemplate", () => {
 		expect,
 	}) => {
 		await downloadRemoteTemplate(
-			"https://github.com/cloudflare/workers-sdk/tree/main/templates",
+			"https://github.com/cloudflare/workers-sdk/tree/main/templates"
 		);
 
 		expect(degit).toHaveBeenCalledWith(
 			"github:cloudflare/workers-sdk/templates#main",
-			expect.anything(),
+			expect.anything()
 		);
 	});
 
@@ -533,10 +533,10 @@ describe("downloadRemoteTemplate", () => {
 	}) => {
 		await expect(
 			downloadRemoteTemplate(
-				"https://github.com/cloudflare/workers-sdk/tree/dev",
-			),
+				"https://github.com/cloudflare/workers-sdk/tree/dev"
+			)
 		).rejects.toThrow(
-			"Failed to clone remote template: https://github.com/cloudflare/workers-sdk/tree/dev\nUse the format \"github:<owner>/<repo>/sub/directory[#<branch>]\" to clone a specific branch other than 'main'",
+			"Failed to clone remote template: https://github.com/cloudflare/workers-sdk/tree/dev\nUse the format \"github:<owner>/<repo>/sub/directory[#<branch>]\" to clone a specific branch other than 'main'"
 		);
 	});
 });
@@ -572,15 +572,15 @@ describe("deriveCorrelatedArgs", () => {
 		expect(() =>
 			deriveCorrelatedArgs({
 				lang: "ts",
-			}),
+			})
 		).not.toThrow();
 		expect(() =>
 			deriveCorrelatedArgs({
 				ts: true,
 				lang: "ts",
-			}),
+			})
 		).toThrow(
-			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
+			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument"
 		);
 	});
 });
@@ -615,7 +615,7 @@ describe("updatePackageName", () => {
 
 		expect(writeJSONMock).toHaveBeenCalledWith(
 			expect.stringContaining("package.json"),
-			expect.objectContaining({ name: "my-project" }),
+			expect.objectContaining({ name: "my-project" })
 		);
 	});
 
@@ -646,12 +646,12 @@ version = "0.1.0"`;
 
 		expect(writeJSONMock).toHaveBeenCalledWith(
 			expect.stringContaining("package.json"),
-			expect.objectContaining({ name: "my-project" }),
+			expect.objectContaining({ name: "my-project" })
 		);
 
 		expect(writeFileMock).toHaveBeenCalledWith(
 			expect.stringContaining("pyproject.toml"),
-			expect.stringContaining(`name = "my-project"`),
+			expect.stringContaining(`name = "my-project"`)
 		);
 	});
 });
@@ -671,7 +671,7 @@ describe("writeAgentsMd", () => {
 
 		expect(writeFileMock).toHaveBeenCalledWith(
 			join(projectPath, "AGENTS.md"),
-			getAgentsMd(),
+			getAgentsMd()
 		);
 	});
 

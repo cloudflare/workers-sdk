@@ -29,7 +29,7 @@ export const pagesProjectListCommand = createCommand({
 	args: {
 		json: {
 			type: "boolean",
-			description: "Return output as clean JSON",
+			description: "Return output as JSON",
 			default: false,
 		},
 	},

@@ -11,6 +11,7 @@ type InstallConfig = {
 	doneText?: string;
 	dev?: boolean;
 	force?: boolean;
+	isWorkspaceRoot?: boolean;
 };
 
 /**
@@ -30,6 +31,7 @@ export const installPackages = async (
 ) => {
 	const { type } = packageManager;
 	const { force, dev, startText, doneText } = config;
+	const isWorkspaceRoot = config.isWorkspaceRoot ?? false;
 
 	if (packages.length === 0) {
 		let cmd;
@@ -50,8 +52,10 @@ export const installPackages = async (
 				...packages,
 				...(type === "pnpm" ? ["--no-frozen-lockfile"] : []),
 				...(force === true ? ["--force"] : []),
+				...getWorkspaceInstallRootFlag(type, isWorkspaceRoot),
 			],
 			{
+				cwd: process.cwd(),
 				startText,
 				doneText,
 				silent: true,
@@ -74,7 +78,6 @@ export const installPackages = async (
 			saveFlag = dev ? "--save-dev" : "";
 			break;
 	}
-
 	await runCommand(
 		[
 			type,
@@ -82,6 +85,7 @@ export const installPackages = async (
 			...(saveFlag ? [saveFlag] : []),
 			...packages,
 			...(force === true ? ["--force"] : []),
+			...getWorkspaceInstallRootFlag(type, isWorkspaceRoot),
 		],
 		{
 			startText,
@@ -114,14 +118,46 @@ export const installPackages = async (
 };
 
 /**
+ * Returns the potential flag(/s) that need to be added to a package manager's install command when it is
+ * run at the root of a workspace.
+ *
+ * @param packageManagerType The type of package manager
+ * @param isWorkspaceRoot Flag indicating whether the install command is being run at the root of a workspace
+ * @returns an array containing the flag(/s) to use, or an empty array if not supported or not running in the workspace root.
+ */
+const getWorkspaceInstallRootFlag = (
+	packageManagerType: PackageManager["type"],
+	isWorkspaceRoot: boolean
+): string[] => {
+	if (!isWorkspaceRoot) {
+		return [];
+	}
+
+	switch (packageManagerType) {
+		case "pnpm":
+			return ["--workspace-root"];
+		case "yarn":
+			return ["-W"];
+		case "npm":
+		case "bun":
+			// npm and bun don't have the workspace check
+			return [];
+	}
+};
+
+/**
  *  Installs the latest version of wrangler in the project directory if it isn't already.
  */
-export const installWrangler = async (packageManager: PackageManager) => {
+export const installWrangler = async (
+	packageManager: PackageManager,
+	isWorkspaceRoot: boolean
+) => {
 	const { type } = packageManager;
 
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
 	await installPackages(packageManager, [`wrangler@latest`], {
 		dev: true,
+		isWorkspaceRoot,
 		startText: `Installing wrangler ${dim(
 			"A command line tool for building Cloudflare Workers"
 		)}`,

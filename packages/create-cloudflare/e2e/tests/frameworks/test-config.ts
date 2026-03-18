@@ -67,6 +67,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "astro:workers",
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
@@ -647,7 +648,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
  * Gets the list of experimental framework test configurations.
  */
 function getExperimentalFrameworkTestConfig(
-	pm: string,
+	pm: string
 ): NamedFrameworkTestConfig[] {
 	return [
 		{

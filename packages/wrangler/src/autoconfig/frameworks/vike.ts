@@ -18,6 +18,7 @@ export class Vike extends Framework {
 		projectPath,
 		dryRun,
 		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const vikeServerIsInstalled = isPackageInstalled(
 			"vike-server",
@@ -41,10 +42,12 @@ export class Vike extends Framework {
 				{
 					startText: "Installing vike-photon and @photonjs/cloudflare",
 					doneText: `${brandColor(`installed`)} photon packages`,
+					isWorkspaceRoot,
 				}
 			);
 			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
 				dev: true,
+				isWorkspaceRoot,
 			});
 
 			addVikePhotonToConfigFile(projectPath);

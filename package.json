@@ -44,7 +44,7 @@
 		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
 		"jsonc-parser": "catalog:default",
-		"prettier": "^3.2.5",
+		"prettier": "^3.8.1",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"tree-kill": "^1.2.2",
@@ -78,8 +78,8 @@
 			"@cloudflare/elements>@types/react": "^18",
 			"@types/node": "$@types/node",
 			"@types/node>undici-types": "catalog:default",
-			"vitest@4>vite": "catalog:vite-plugin",
-			"vitest@3>vite": "^5.0.0"
+			"vitest@4>vite": "catalog:vitest-4",
+			"vitest@3>vite": "catalog:vitest-3"
 		},
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",

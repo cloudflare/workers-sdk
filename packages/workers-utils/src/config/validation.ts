@@ -699,7 +699,7 @@ function normalizeAndValidateDev(
 		inspector_ip,
 		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
-		upstream_protocol = upstreamProtocolArg ?? remoteArg
+		upstream_protocol = (upstreamProtocolArg ?? remoteArg)
 			? "https"
 			: local_protocol,
 		host,

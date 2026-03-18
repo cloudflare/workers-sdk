@@ -214,8 +214,9 @@ export class PluginContext {
 	}
 }
 
-interface NarrowedPluginContext<T extends ResolvedPluginConfig>
-	extends PluginContext {
+interface NarrowedPluginContext<
+	T extends ResolvedPluginConfig,
+> extends PluginContext {
 	readonly resolvedPluginConfig: T;
 }
 

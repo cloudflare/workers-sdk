@@ -1,5 +1,21 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.13.2
+
+### Patch Changes
+
+- Updated dependencies [[`c9b3184`](https://github.com/cloudflare/workers-sdk/commit/c9b31840631585418b8926e8228db486b619b4c7), [`13df6c7`](https://github.com/cloudflare/workers-sdk/commit/13df6c75be49ac32fc1c57e2e24523e86ced2115), [`df0d112`](https://github.com/cloudflare/workers-sdk/commit/df0d1120a856bd65553bf92b4bc6380c15e81cc7), [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a), [`c600ce0`](https://github.com/cloudflare/workers-sdk/commit/c600ce0a45ad334a5a961cf7774758860581d9d2), [`f509d13`](https://github.com/cloudflare/workers-sdk/commit/f509d13b97a832a28ed6bc568c7bcf6fc7d4a4ff), [`3b81fc6`](https://github.com/cloudflare/workers-sdk/commit/3b81fc6a75857d5c158824f17d9316adc55878fc), [`0a7fef9`](https://github.com/cloudflare/workers-sdk/commit/0a7fef9ee924b6d0817a69be9d893dc8a40c9a19)]:
+  - wrangler@4.75.0
+  - miniflare@4.20260317.0
+
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68), [`65f1092`](https://github.com/cloudflare/workers-sdk/commit/65f1092281866333118e5e8ebf0f5234bf695baf), [`7b0d8f5`](https://github.com/cloudflare/workers-sdk/commit/7b0d8f5830e9b317c69abdcd452a79d88811f000), [`351e1e1`](https://github.com/cloudflare/workers-sdk/commit/351e1e1efa808a19b84b5888d747cd4aa4566921), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68)]:
+  - miniflare@4.20260312.1
+  - wrangler@4.74.0
+
 ## 0.13.0
 
 ### Minor Changes
@@ -200,7 +216,6 @@
 - [#12056](https://github.com/cloudflare/workers-sdk/pull/12056) [`6d5f69f`](https://github.com/cloudflare/workers-sdk/commit/6d5f69fa0c86eed05875603ac31a9f32a4a2bfbd) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: allow Vite query parameters like `?raw` on `.sql` file imports
 
   Importing `.sql` files with Vite query parameters (e.g., `import sql from "./query.sql?raw"`) would fail with "No such module" errors in vitest-pool-workers 0.12.x. Both import styles now work:
-
   - `import sql from "./query.sql?raw"` (Vite handles the `?raw` transform)
   - `import sql from "./query.sql"` (loaded as Text module)
 
@@ -216,7 +231,6 @@
   into miniflare and @cloudflare/vitest-pool-workers.
 
   Other dependencies remain external for technical reasons:
-
   - `sharp`: Native binary with platform-specific builds
   - `undici`: Dynamically required at runtime in worker threads
   - `ws`: Has optional native bindings for performance
@@ -265,7 +279,6 @@
   reducing the number of external dependencies users need to trust.
 
   Bundled dependencies:
-
   - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
   - **kv-asset-handler**: `mime`
   - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
@@ -303,7 +316,6 @@
 ### Minor Changes
 
 - [#11648](https://github.com/cloudflare/workers-sdk/pull/11648) [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows test handlers in vitest-pool-workers to get the Workflow instance output and error:
-
   - `getOutput()`: Returns the output of the successfully completed Workflow instance.
   - `getError()`: Returns the error information of the errored Workflow instance.
 
@@ -348,7 +360,6 @@
 - [#11533](https://github.com/cloudflare/workers-sdk/pull/11533) [`8d9003e`](https://github.com/cloudflare/workers-sdk/commit/8d9003e144156f32aef03aba71b18c7e5c5b202d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for ctx.exports
 
   It is now possible to access `ctx.exports` properties for the `main` (`SELF`) worker.
-
   - Integration tests: in the `SELF` worker the `ctx.exports` object now contains the expected stubs to the exported entry-points.
   - Unit tests: the object returned from `createExecutionContext()` has `exports` property that exposes the exports of the `SELF` worker.
 
@@ -616,7 +627,6 @@
 - [#10494](https://github.com/cloudflare/workers-sdk/pull/10494) [`e2b838f`](https://github.com/cloudflare/workers-sdk/commit/e2b838ff56572d581661143d56f2485d7bcf1e0e) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows test support to the `cloudflare:test` module.
 
   The `cloudflare:test` module has two new APIs:
-
   - `introspectWorkflowInstance`
   - `introspectWorkflow`
     which allow changing the behavior of one or multiple Workflow instances created during tests.
@@ -1249,7 +1259,6 @@
 - [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@threepointone](https://github.com/threepointone)! - chore: update esbuild
 
   This patch updates esbuild from 0.17.19 to 0.24.2. That's a big bump! Lots has gone into esbuild since May '23. All the details are available at https://github.com/evanw/esbuild/blob/main/CHANGELOG.md / https://github.com/evanw/esbuild/blob/main/CHANGELOG-2023.md.
-
   - We now support all modern JavasScript/TypeScript features suported by esbuild (as of December 2024). New additions include standard decorators, auto-accessors, and the `using` syntax.
   - 0.18 introduced wider support for configuration specified via `tsconfig.json` https://github.com/evanw/esbuild/issues/3019. After observing the (lack of) any actual broken code over the last year for this release, we feel comfortable releasing this without considering it a breaking change.
   - 0.19.3 introduced support for import attributes
@@ -1261,7 +1270,6 @@
     While we don't currently expose the esbuild configuration for developers to add their own plugins to customise how modules with import attributes are bundled, we may introduce new "types" ourselves in the future.
 
   - 0.19.0 introduced support for wildcard imports. Specifics here (https://github.com/evanw/esbuild/blob/main/CHANGELOG-2023.md#0190). tl;dr -
-
     - These 2 patterns will bundle all files that match the glob pattern into a single file.
 
       ```js
@@ -1318,7 +1326,6 @@
     ```
 
     Before this update:
-
     1. A request to anything but `http://localhost:8787/` would error. For example, a request to `http://localhost:8787/one.js` would error with _No such module "one.js"._
     2. Let's configure `wrangler.toml` to include all `.js` files in the `src` folder:
 
@@ -1343,7 +1350,6 @@
     Then, a request to `http://localhost:8787/hidden/secret.js` will return the contents of `src/hidden/secret.js`.
 
     After this update:
-
     - Let's put the wrangler.toml back to its original configuration:
 
     ```toml
@@ -1352,7 +1358,6 @@
     ```
 
     - Now, a request to `http://localhost:8787/one.js` will return the contents of `src/one.js`, but a request to `http://localhost:8787/hidden/secret.js` will ALSO return the contents of `src/hidden/secret.js`. THIS MAY NOT BE WHAT YOU WANT. You can "fix" this in 2 ways:
-
       1. Remove the inline wildcard import:
 
       ```js
@@ -1368,7 +1373,6 @@
       ```
 
       Now, no extra modules are included in the bundle, and a request to `http://localhost:8787/hidden/secret.js` will throw an error. You can use the `find_additional_modules` feature to include it again.
-
       2. Don't use the wildcard import pattern:
 
       ```js

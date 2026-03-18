@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.64.7",
+	"version": "2.64.9",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -28,17 +28,16 @@
 	],
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
-		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
 		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
+		"dev": "node -r esbuild-register scripts/build.ts --watch",
+		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
+		"test:ci": "vitest run --config ./vitest.config.mts",
 		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",
 		"test:unit": "vitest run --config ./vitest.config.mts",
-		"test:unit:watch": "vitest --config ./vitest.config.mts",
-		"dev": "node -r esbuild-register scripts/build.ts --watch",
-		"test:ci": "vitest run --config ./vitest.config.mts"
+		"test:unit:watch": "vitest --config ./vitest.config.mts"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-utils": "workspace:*",
 		"@babel/parser": "^7.21.3",
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
@@ -48,6 +47,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
 		"@types/deepmerge": "^2.2.0",
@@ -94,11 +94,11 @@
 	"engines": {
 		"node": ">=18.14.1"
 	},
+	"volta": {
+		"extends": "../../package.json"
+	},
 	"workers-sdk": {
 		"prerelease": true,
 		"type": "cli"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

@@ -23,6 +23,7 @@ export class Waku extends Framework {
 		dryRun,
 		projectPath,
 		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		validateMinimumWakuVersion(projectPath);
 
@@ -34,6 +35,7 @@ export class Waku extends Framework {
 					dev: true,
 					startText: "Installing additional dependencies",
 					doneText: `${brandColor("installed")}`,
+					isWorkspaceRoot,
 				}
 			);
 

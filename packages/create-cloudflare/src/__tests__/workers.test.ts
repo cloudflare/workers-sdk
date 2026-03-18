@@ -31,7 +31,7 @@ describe("updateTsConfig", () => {
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`,
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
 		);
 	});
 
@@ -43,7 +43,7 @@ describe("updateTsConfig", () => {
 		expect(writeFile).toHaveBeenCalled();
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`"@cloudflare/workers-types/${mockCompatDate}"`,
+			`"@cloudflare/workers-types/${mockCompatDate}"`
 		);
 	});
 
@@ -66,12 +66,12 @@ describe("updateTsConfig", () => {
 		ctx.template.workersTypes = "installed";
 		vi.mocked(readFile).mockImplementation(
 			() =>
-				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`,
+				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`
 		);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`"@cloudflare/workers-types/2021-03-20"`,
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 
@@ -87,7 +87,7 @@ describe("updateTsConfig", () => {
 		});
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).not.toContain(
-			`"@cloudflare/workers-types/2021-03-20"`,
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 
@@ -104,14 +104,14 @@ describe("updateTsConfig", () => {
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`"@cloudflare/workers-types/2021-03-20"`,
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 
 	test("will add generated types file", async ({ expect }) => {
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`./worker-configuration.d.ts`,
+			`./worker-configuration.d.ts`
 		);
 	});
 
@@ -125,7 +125,7 @@ describe("updateTsConfig", () => {
 					{ "path": "./tsconfig.app.json" },
 					{ "path": "./tsconfig.node.json" }
 				]
-			}`,
+			}`
 		);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(writeFile).not.toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe("updateTsConfig", () => {
 			() => `{
 				"compilerOptions": { "types": [] },
 				"references": []
-			}`,
+			}`
 		);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(writeFile).toHaveBeenCalled();

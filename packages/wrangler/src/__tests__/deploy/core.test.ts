@@ -1020,7 +1020,7 @@ describe("deploy", () => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
-				dedent/* javascript */ `
+				dedent /* javascript */ `
 					export default {
 						fetch() {
 							return
