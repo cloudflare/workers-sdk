@@ -17,7 +17,7 @@ Wrangler will now suggest:
 ```
 To fix this, you can add an entry to "alias" in your Wrangler configuration
 to substitute "some-missing-module" with an alternative implementation.
-See https://developers.cloudflare.com/workers/wrangler/configuration/#for-bundling-issues
+See https://developers.cloudflare.com/workers/wrangler/configuration/#bundling-issues
 ```
 
 This provides actionable guidance for resolving import errors.
