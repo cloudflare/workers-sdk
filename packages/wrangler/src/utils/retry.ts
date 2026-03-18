@@ -26,6 +26,10 @@ export async function retryOnAPIFailure<T>(
 			if (!err.isRetryable()) {
 				throw err;
 			}
+		} else if (err instanceof DOMException && err.name === "TimeoutError") {
+			// Per-request timeouts (from AbortSignal.timeout()) are transient
+			// and should be retried, but user-initiated aborts (AbortError)
+			// should not.
 		} else if (!(err instanceof TypeError)) {
 			throw err;
 		}

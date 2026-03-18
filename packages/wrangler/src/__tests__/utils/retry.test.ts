@@ -151,6 +151,27 @@ describe("retryOnAPIFailure", () => {
 		expect(attempts).toBe(1);
 	});
 
+	it("should retry TimeoutError from AbortSignal.timeout()", async ({
+		expect,
+	}) => {
+		let attempts = 0;
+
+		await expect(() =>
+			retryOnAPIFailure(() => {
+				attempts++;
+				throw new DOMException("The operation was aborted.", "TimeoutError");
+			})
+		).rejects.toThrow("The operation was aborted.");
+		expect(attempts).toBe(3);
+		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`
+			[
+			  "Retrying API call after error...",
+			  "Retrying API call after error...",
+			  "Retrying API call after error...",
+			]
+		`);
+	});
+
 	it("should retry custom APIError implementation with non-5xx error", async ({
 		expect,
 	}) => {
