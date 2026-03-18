@@ -145,32 +145,50 @@ function SidebarItemGroup({
 				<div className="overflow-hidden">
 					<ul className="mt-0.5 list-none space-y-0.5 px-2">
 						{error ? (
-							<li className="px-2.5 py-2 text-sm text-danger">{error}</li>
+							<li className="ml-8.5 px-2.5 py-2 text-sm text-danger">
+								{error}
+							</li>
 						) : null}
 
 						{!error
-							? items.map((item) => (
-									<li key={item.id}>
-										<Link
-											className={cn(
-												"group flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm font-medium no-underline transition-colors",
-												item.isActive
-													? "bg-primary/10 text-primary hover:bg-primary/15"
-													: "text-text hover:bg-surface-tertiary",
-												"mx-2" // Indent to align with title text
+							? items.map((item, index) => {
+									const isLast = index === items.length - 1;
+									return (
+										<li key={item.id} className="relative">
+											{/* Tree connector lines */}
+											{isLast ? (
+												/* Last item: rounded corner (└) using border */
+												<span className="absolute top-0 left-6.5 h-1/2 w-2 rounded-bl-md border-b border-l border-text-secondary" />
+											) : (
+												<>
+													{/* Vertical line - extends past bottom to cover gap */}
+													<span className="absolute top-0 left-6.5 h-[calc(100%+2px)] w-px bg-text-secondary" />
+													{/* Horizontal branch */}
+													<span className="absolute top-1/2 left-6.5 h-px w-2 -translate-y-px bg-text-secondary" />
+												</>
 											)}
-											params={item.link.params}
-											search={item.link.search}
-											to={item.link.to}
-										>
-											{item.label}
-										</Link>
-									</li>
-								))
+
+											<Link
+												className={cn(
+													"group flex cursor-pointer items-center gap-2.5 rounded-lg p-2 text-sm font-medium no-underline transition-colors",
+													item.isActive
+														? "bg-primary/10 text-primary hover:bg-primary/15"
+														: "text-text hover:bg-surface-tertiary",
+													"ml-9.5" // Indent for tree lines + gap
+												)}
+												params={item.link.params}
+												search={item.link.search}
+												to={item.link.to}
+											>
+												{item.label}
+											</Link>
+										</li>
+									);
+								})
 							: null}
 
 						{!error && items.length === 0 && (
-							<li className="ml-11 px-2.5 py-2 text-sm text-text-secondary italic">
+							<li className="ml-8.5 px-2.5 py-2 text-sm text-text-secondary italic">
 								{emptyLabel}
 							</li>
 						)}
