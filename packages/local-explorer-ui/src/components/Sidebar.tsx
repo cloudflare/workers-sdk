@@ -136,7 +136,7 @@ function SidebarItemGroup({
 				</span>
 				<span className="flex-1 text-left">{title}</span>
 				<CaretDownIcon
-					className="h-3 w-3 rotate-90 transition-transform duration-300 group-data-panel-open:rotate-0"
+					className="h-3 w-3 -rotate-90 transition-transform duration-300 group-data-panel-open:rotate-0"
 					weight="bold"
 				/>
 			</Collapsible.Trigger>
