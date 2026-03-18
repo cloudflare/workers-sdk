@@ -121,7 +121,7 @@ function switchHost(
 	zonePreview: boolean
 ): URL {
 	const url = new URL(originalUrl);
-	url.hostname = zonePreview ? host ?? url.hostname : url.hostname;
+	url.hostname = zonePreview ? (host ?? url.hostname) : url.hostname;
 	return url;
 }
 
@@ -212,8 +212,8 @@ export async function createPreviewSession(
 	);
 
 	const previewSessionToken = exchange_url
-		? (await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
-			token
+		? ((await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
+			token)
 		: token;
 
 	try {
