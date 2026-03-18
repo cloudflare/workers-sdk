@@ -267,9 +267,8 @@ async function createModuleRunner(
 			},
 			async runExternalModule(filepath) {
 				if (filepath === "cloudflare:workers") {
-					const originalCloudflareWorkersModule = await import(
-						"cloudflare:workers"
-					);
+					const originalCloudflareWorkersModule =
+						await import("cloudflare:workers");
 
 					return Object.seal({
 						...originalCloudflareWorkersModule,

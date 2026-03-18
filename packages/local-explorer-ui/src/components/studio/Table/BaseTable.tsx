@@ -147,8 +147,9 @@ export function StudioBaseTable<HeaderMetadata = unknown>({
 	);
 }
 
-export interface StudioTableHeaderProps<MetadataType = unknown>
-	extends StudioTableHeaderInput<MetadataType> {
+export interface StudioTableHeaderProps<
+	MetadataType = unknown,
+> extends StudioTableHeaderInput<MetadataType> {
 	index: number;
 	sticky: boolean;
 }
@@ -185,15 +186,17 @@ interface TableCellListCommonProps<MetadataType = unknown> {
 	state: StudioTableState<MetadataType>;
 }
 
-export interface StudioTableProps<HeaderMetadata = unknown>
-	extends TableCellListCommonProps<HeaderMetadata> {
+export interface StudioTableProps<
+	HeaderMetadata = unknown,
+> extends TableCellListCommonProps<HeaderMetadata> {
 	arrangeHeaderIndex: number[];
 	renderAhead: number;
 	stickyHeaderIndex?: number;
 }
 
-interface RenderCellListProps<HeaderMetadata = unknown>
-	extends TableCellListCommonProps<HeaderMetadata> {
+interface RenderCellListProps<
+	HeaderMetadata = unknown,
+> extends TableCellListCommonProps<HeaderMetadata> {
 	colEnd: number;
 	colStart: number;
 	customStyles?: React.CSSProperties;

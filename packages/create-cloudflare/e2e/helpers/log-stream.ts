@@ -59,13 +59,13 @@ function getLogPath(suite: RunnerTestSuite) {
 
 	return nodePath.join(
 		getLogFolder(isExperimental, testPackageManager),
-		suiteFilename,
+		suiteFilename
 	);
 }
 
 export function getLogFolder(experimental: boolean, packageManager: string) {
 	return nodePath.join(
 		"./.e2e-logs" + (experimental ? "-experimental" : ""),
-		packageManager,
+		packageManager
 	);
 }

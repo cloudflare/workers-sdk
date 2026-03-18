@@ -37,7 +37,7 @@ describe("getPlatformProxy()", () => {
 						[ai]
 						binding = "AI"
 				`,
-				"index.mjs": dedent/*javascript*/ `
+				"index.mjs": dedent /*javascript*/ `
 						import { getPlatformProxy } from "${WRANGLER_IMPORT}"
 
 						const { env } = await getPlatformProxy();
@@ -114,7 +114,7 @@ describe("getPlatformProxy()", () => {
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
 					`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(req, env) {
 								return new Response("Hello from Worker!")
@@ -139,7 +139,7 @@ describe("getPlatformProxy()", () => {
 			await w.waitForReady();
 
 			await seed(app, {
-				"index.mjs": dedent/*javascript*/ `
+				"index.mjs": dedent /*javascript*/ `
 						import { getPlatformProxy } from "${WRANGLER_IMPORT}"
 
 						const { env } = await getPlatformProxy();
@@ -181,7 +181,7 @@ describe("getPlatformProxy()", () => {
 				`,
 			});
 			await seed(worker, {
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					import { DurableObject } from "cloudflare:workers";
 					export default {
 						async fetch(): Promise<Response> {
@@ -220,7 +220,7 @@ describe("getPlatformProxy()", () => {
 		describe("provides rpc service bindings to external local workers", () => {
 			beforeEach(async () => {
 				await seed(worker, {
-					"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent /* javascript */ `
 							import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
 							export default {
@@ -481,7 +481,7 @@ describe("getPlatformProxy()", () => {
 							id = "hyperdrive_id"
 							localConnectionString = "${scheme}://user:%21pass@127.0.0.1:${port}/some_db"
 					`,
-					"index.mjs": dedent/*javascript*/ `
+					"index.mjs": dedent /*javascript*/ `
 							// Windows socket cleanup error handler
 							if (process.platform === 'win32') {
 								process.on('uncaughtException', (err) => {
@@ -538,7 +538,7 @@ describe("getPlatformProxy()", () => {
 							id = "hyperdrive_id"
 							localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=prefer"
 					`,
-						"index.mjs": dedent/*javascript*/ `
+						"index.mjs": dedent /*javascript*/ `
 							// Windows socket cleanup error handler
 							if (process.platform === 'win32') {
 								process.on('uncaughtException', (err) => {
@@ -594,7 +594,7 @@ describe("getPlatformProxy()", () => {
 						id = "hyperdrive_id"
 						localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=require"
 					`,
-						"index.mjs": dedent/*javascript*/ `
+						"index.mjs": dedent /*javascript*/ `
 						// Windows socket cleanup error handler
 						if (process.platform === 'win32') {
 							process.on('uncaughtException', (err) => {

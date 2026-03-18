@@ -267,7 +267,7 @@ export function resolveDockerHost(dockerPath: string): string {
 export const getDockerHostFromEnv = (): string => {
 	const fromEnv = process.env.WRANGLER_DOCKER_HOST ?? process.env.DOCKER_HOST;
 
-	return fromEnv ?? process.platform === "win32"
+	return (fromEnv ?? process.platform === "win32")
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 };

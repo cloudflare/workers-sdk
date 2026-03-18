@@ -1034,7 +1034,7 @@ describe("writes debug logs to hidden file", () => {
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
 				`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(req, env) {
 							return new Response('A' + req.url);
@@ -1071,7 +1071,7 @@ describe("writes debug logs to hidden file", () => {
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(req, env) {
 						return new Response('A' + req.url);

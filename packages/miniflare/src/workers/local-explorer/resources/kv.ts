@@ -183,7 +183,7 @@ async function executeListKeys(
 	options: { cursor?: string; limit?: number; prefix?: string }
 ) {
 	const listResult = await kv.list(options);
-	const resultCursor = "cursor" in listResult ? listResult.cursor ?? "" : "";
+	const resultCursor = "cursor" in listResult ? (listResult.cursor ?? "") : "";
 
 	return c.json({
 		...wrapResponse(

@@ -24,7 +24,7 @@ export const chooseAccount = async (ctx: C3Context) => {
 	const numAccounts = Object.keys(accounts).length;
 	if (numAccounts === 0) {
 		throw new Error(
-			"Unable to find any accounts to deploy to! Please ensure you're logged in as a user that can deploy Workers.",
+			"Unable to find any accounts to deploy to! Please ensure you're logged in as a user that can deploy Workers."
 		);
 	} else if (numAccounts === 1) {
 		const accountName = Object.keys(accounts)[0];
@@ -32,13 +32,13 @@ export const chooseAccount = async (ctx: C3Context) => {
 		s.stop(`${brandColor("account")} ${dim(accountName)}`);
 	} else {
 		s.stop(
-			`${brandColor("account")} ${dim("more than one account available")}`,
+			`${brandColor("account")} ${dim("more than one account available")}`
 		);
 		const accountOptions = Object.entries(accounts).map(
 			([accountName, id]) => ({
 				label: accountName,
 				value: id,
-			}),
+			})
 		);
 
 		accountId = await inputPrompt({
@@ -50,7 +50,7 @@ export const chooseAccount = async (ctx: C3Context) => {
 		});
 	}
 	const accountName = Object.keys(accounts).find(
-		(account) => accounts[account] == accountId,
+		(account) => accounts[account] == accountId
 	) as string;
 
 	ctx.account = { id: accountId, name: accountName };
@@ -67,7 +67,7 @@ export const wranglerLogin = async (ctx: C3Context) => {
 
 			const s = spinner();
 			s.start(
-				`Logging into Cloudflare ${dim("checking authentication status")}`,
+				`Logging into Cloudflare ${dim("checking authentication status")}`
 			);
 			const isAlreadyLoggedIn = await isLoggedIn();
 			s.stop(brandColor(isAlreadyLoggedIn ? "logged in" : "not logged in"));
@@ -79,7 +79,7 @@ export const wranglerLogin = async (ctx: C3Context) => {
 			}
 
 			s.start(
-				`Logging into Cloudflare ${dim("This will open a browser window")}`,
+				`Logging into Cloudflare ${dim("This will open a browser window")}`
 			);
 
 			// We're using a custom spinner since this is a little complicated.

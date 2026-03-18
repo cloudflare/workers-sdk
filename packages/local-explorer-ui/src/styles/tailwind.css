@@ -211,7 +211,7 @@
 	body {
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
 			Ubuntu, sans-serif;
-		@apply bg-app-bg text-text text-sm leading-normal;
+		@apply text-text bg-bg-secondary text-sm leading-normal;
 	}
 }
 

@@ -123,7 +123,8 @@ export const getNormalizedContainerOptions = async (
 			rollout_step_percentage:
 				args?.containersRollout === "immediate"
 					? 100
-					: container.rollout_step_percentage ?? rolloutStepPercentageFallback,
+					: (container.rollout_step_percentage ??
+						rolloutStepPercentageFallback),
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {
