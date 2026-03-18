@@ -129,6 +129,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compliance_region: undefined,
 			images: undefined,
 			media: undefined,
+			stream: undefined,
 		} satisfies Config);
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -2290,6 +2291,69 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - The field "media" should be an object but got null."
+				`);
+			});
+		});
+
+		// Stream
+		describe("[stream]", () => {
+			it("should error if stream is an array", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: [] } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got []."
+				`);
+			});
+
+			it("should error if stream is a string", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got "BAD"."
+				`);
+			});
+
+			it("should error if stream is a number", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got 999."
+				`);
+			});
+
+			it("should error if stream is null", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ stream: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "stream" should be an object but got null."
 				`);
 			});
 		});

@@ -94,6 +94,13 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "stream":
+						{
+							configObj.stream = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "media":
 						{
 							configObj.media = {
