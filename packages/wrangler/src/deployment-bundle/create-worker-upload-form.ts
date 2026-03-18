@@ -492,7 +492,6 @@ export function createWorkerUploadForm(
 		metadataBindings.push({
 			name: stream.binding,
 			type: "stream",
-			raw: stream.raw,
 		});
 	}
 

@@ -63,7 +63,7 @@ export type WorkerMetadataBinding =
 	| { type: "browser"; name: string; raw?: boolean }
 	| { type: "ai"; name: string; staging?: boolean; raw?: boolean }
 	| { type: "images"; name: string; raw?: boolean }
-	| { type: "stream"; name: string; raw?: boolean }
+	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
