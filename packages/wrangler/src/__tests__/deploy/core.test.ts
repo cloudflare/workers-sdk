@@ -409,9 +409,13 @@ describe("deploy", () => {
 		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
 
 		await runWrangler("deploy ./my-worker/index.js");
+		// Check that essential metadata fields are present in the debug output
+		expect(std.debug).toContain(`"main_module":"index.js"`);
 		expect(std.debug).toContain(
-			`{"main_module":"index.js","bindings":[{"name":"xyz","type":"json","json":123}],"compatibility_date":"2022-01-12","compatibility_flags":[]}`
+			`"bindings":[{"name":"xyz","type":"json","json":123}]`
 		);
+		expect(std.debug).toContain(`"compatibility_date":"2022-01-12"`);
+		expect(std.debug).toContain(`"compatibility_flags":[]`);
 	});
 
 	it("should support wrangler.jsonc", async () => {

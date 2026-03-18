@@ -76,6 +76,7 @@ import { getZoneForRoute } from "../zones";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { checkWorkflowConflicts } from "./check-workflow-conflicts";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
+import { collectDeploymentMetadata } from "./deployment-metadata";
 import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
@@ -990,6 +991,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 			}
 
+			// Collect deployment metadata to send with the worker upload
+			const projectPath = props.projectRoot ?? process.cwd();
+			const deploymentMetadata = await collectDeploymentMetadata(projectPath);
+
 			workerBundle = createWorkerUploadForm(
 				worker,
 				addWorkersSitesBindings(
@@ -999,7 +1004,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					format
 				),
 				{
-					unsafe: config.unsafe,
+					unsafe: {
+						...config.unsafe,
+						metadata: {
+							...config.unsafe?.metadata,
+							deployment_metadata: deploymentMetadata,
+						},
+					},
 				}
 			);
 

@@ -954,6 +954,8 @@ export default{
 						"------formdata-undici-0.test"
 					)
 					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+					// Remove deployment_metadata which varies based on environment
+					.replace(/,"deployment_metadata":\{[^}]+\}/g, "")
 			).toMatchInlineSnapshot(`
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name="metadata"
@@ -1049,6 +1051,8 @@ export default{
 						"------formdata-undici-0.test"
 					)
 					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+					// Remove deployment_metadata which varies based on environment
+					.replace(/,"deployment_metadata":\{[^}]+\}/g, "")
 			).toMatchInlineSnapshot(`
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name="metadata"
