@@ -267,6 +267,46 @@ export class WranglerE2ETestHelper {
 	}
 
 	/**
+	 * Ensure a worker with a well-known `preserve-e2e-*` name is deployed.
+	 *
+	 * Checks whether the worker is already live by fetching its
+	 * `devprod-testing7928.workers.dev` URL. If it responds with a non-404
+	 * status the deploy is skipped; otherwise `wrangler deploy` is run and
+	 * the helper waits for the worker to become available.
+	 *
+	 * No cleanup is registered — the worker is expected to persist across
+	 * test runs and is excluded from the periodic e2e cleanup job by its
+	 * `preserve-e2e-` prefix.
+	 */
+	async ensureWorkerDeployed({
+		workerName,
+		entryPoint = "",
+		configPath,
+	}: {
+		workerName: string;
+		entryPoint?: string;
+		configPath?: string;
+	}): Promise<void> {
+		const deployedUrl = `https://${workerName}.devprod-testing7928.workers.dev/`;
+		try {
+			const response = await fetch(deployedUrl);
+			if (response.status !== 404) {
+				return; // Worker already exists
+			}
+		} catch {
+			// Worker doesn't exist or is not reachable — fall through to deploy
+		}
+		const configOption = configPath ? `-c ${configPath}` : "";
+		await this.run(
+			`wrangler deploy ${entryPoint} --name ${workerName} ${configOption} --compatibility-date 2025-01-01`
+		);
+		await waitForLong(async () => {
+			const response = await fetch(deployedUrl);
+			expect(response.status).toBe(200);
+		});
+	}
+
+	/**
 	 * Create a worker for the test and attempt to delete it after the test has finished.
 	 *
 	 * If this is called inside a beforeXxx hook the helper cannot call onTestFinished,
