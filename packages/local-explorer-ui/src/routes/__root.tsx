@@ -10,6 +10,7 @@ import {
 	workersKvNamespaceListNamespaces,
 } from "../api";
 import { AppShell } from "../components/layout";
+import { NotFound } from "../components/NotFound";
 import { Sidebar } from "../components/Sidebar";
 import { useTheme } from "../hooks/useTheme";
 import type {
@@ -20,6 +21,7 @@ import type {
 
 export const Route = createRootRoute({
 	component: RootLayout,
+	notFoundComponent: NotFound,
 	loader: async () => {
 		const [kvResponse, d1Response, doResponse] = await Promise.allSettled([
 			workersKvNamespaceListNamespaces(),

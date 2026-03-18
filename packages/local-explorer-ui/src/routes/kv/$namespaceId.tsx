@@ -17,11 +17,13 @@ import { AddKVDialog } from "../../components/AddKVForm";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { KVTable } from "../../components/KVTable";
 import { PageLayout } from "../../components/layout";
+import { RouteError } from "../../components/RouteError";
 import { SearchForm } from "../../components/SearchForm";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
+	errorComponent: RouteError,
 	validateSearch: (search) => ({
 		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
 	}),

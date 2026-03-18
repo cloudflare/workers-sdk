@@ -15,6 +15,7 @@ import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { PageLayout } from "../../../components/layout";
+import { RouteError } from "../../../components/RouteError";
 import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../../components/studio/Table/ActionsDropdown";
@@ -25,6 +26,7 @@ import type { StudioResource } from "../../../types/studio";
 
 export const Route = createFileRoute("/do/$className/$objectId")({
 	component: ObjectView,
+	errorComponent: RouteError,
 	loader: async ({ params }) => {
 		// Resolve className to a namespace ID
 		const response = await durableObjectsNamespaceListNamespaces();
