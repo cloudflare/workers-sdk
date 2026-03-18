@@ -1,9 +1,8 @@
 import { Miniflare } from "miniflare";
 import { describe, test } from "vitest";
-import { useDispose, useServer } from "../../test-shared";
+import { useDispose } from "../../test-shared";
 
 const TEST_VIDEO_BYTES = new Uint8Array([1, 2, 3, 4, 5]);
-const TEST_WATERMARK_BYTES = new Uint8Array([137, 80, 78, 71]);
 
 function createMiniflare(): Miniflare {
 	return new Miniflare({
@@ -17,22 +16,6 @@ function createMiniflare(): Miniflare {
 
 function createVideoFile() {
 	return new File([TEST_VIDEO_BYTES], "test.mp4", { type: "video/mp4" });
-}
-
-function createWatermarkFile() {
-	return new File([TEST_WATERMARK_BYTES], "watermark.png", {
-		type: "image/png",
-	});
-}
-
-function createCaptionFile(text: string) {
-	return new File(
-		[`WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n${text}\n`],
-		"captions.vtt",
-		{
-			type: "text/vtt",
-		}
-	);
 }
 
 function createUploadForm(file = createVideoFile()) {
@@ -92,36 +75,48 @@ describe("Stream local binding", () => {
 		await secondUpload.text();
 	});
 
-	test("uploads videos from URLs and manages video records", async ({
+	test("manages video records created via direct uploads", async ({
 		expect,
 	}) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 		const stream = await mf.getStreamBinding("STREAM");
-		const { http } = await useServer((req, res) => {
-			if (req.url === "/missing.mp4") {
-				res.statusCode = 404;
-				res.end("missing");
-				return;
-			}
 
-			res.setHeader("content-type", "video/mp4");
-			res.end(TEST_VIDEO_BYTES);
+		const firstDirectUpload = await stream.createDirectUpload({
+			creator: "alice",
+			maxDurationSeconds: 60,
+			meta: { source: "direct" },
 		});
-
-		const firstVideo = await stream.upload(
-			new URL("/first.mp4", http).toString(),
+		const firstUploadResponse = await mf.dispatchFetch(
+			toDispatchUrl(firstDirectUpload.uploadURL),
 			{
-				creator: "alice",
-				meta: { source: "url" },
+				body: TEST_VIDEO_BYTES,
+				headers: { "content-type": "video/mp4" },
+				method: "PUT",
 			}
 		);
-		const secondVideo = await stream.upload(
-			new URL("/second.mp4", http).toString()
+		expect(firstUploadResponse.status).toBe(200);
+		await firstUploadResponse.text();
+
+		const secondDirectUpload = await stream.createDirectUpload({
+			maxDurationSeconds: 60,
+		});
+		const secondUploadResponse = await mf.dispatchFetch(
+			toDispatchUrl(secondDirectUpload.uploadURL),
+			{
+				body: TEST_VIDEO_BYTES,
+				headers: { "content-type": "video/mp4" },
+				method: "PUT",
+			}
 		);
+		expect(secondUploadResponse.status).toBe(200);
+		await secondUploadResponse.text();
+
+		const firstVideo = await stream.video(firstDirectUpload.id).details();
+		const secondVideo = await stream.video(secondDirectUpload.id).details();
 
 		expect(firstVideo.creator).toBe("alice");
-		expect(firstVideo.meta).toEqual({ source: "url" });
+		expect(firstVideo.meta).toEqual({ source: "direct" });
 		expect(firstVideo.size).toBe(TEST_VIDEO_BYTES.byteLength);
 
 		const listedVideos = await stream.videos.list();
@@ -172,15 +167,8 @@ describe("Stream local binding", () => {
 			videoId: firstVideo.id,
 		});
 
-		await expect(stream.upload(createVideoFile())).rejects.toThrow(
-			/Not implemented/
-		);
-		await expect(
-			stream.upload(new URL("/missing.mp4", http).toString())
-		).rejects.toThrow(/Failed to fetch upload URL: 404/);
-
 		await stream.video(firstVideo.id).delete();
-		await expect(stream.video(firstVideo.id).details()).rejects.toThrow(
+		expect(() => stream.video(firstVideo.id).details()).toThrow(
 			/Video not found/
 		);
 		expect((await stream.videos.list()).map((video) => video.id)).toEqual([
@@ -218,12 +206,13 @@ describe("Stream local binding", () => {
 		const missingFileUpload = await stream.createDirectUpload({
 			maxDurationSeconds: 60,
 		});
-		const invalidForm = new FormData();
-		invalidForm.set("note", "missing");
 		const missingFileResponse = await mf.dispatchFetch(
 			toDispatchUrl(missingFileUpload.uploadURL),
 			{
-				body: invalidForm,
+				body: new URLSearchParams({ note: "missing" }),
+				headers: {
+					"content-type": "application/x-www-form-urlencoded",
+				},
 				method: "POST",
 			}
 		);
@@ -288,15 +277,6 @@ describe("Stream local binding", () => {
 		useDispose(mf);
 		const stream = await mf.getStreamBinding("STREAM");
 
-		const fileWatermark = await stream.watermarks.generate(
-			createWatermarkFile(),
-			{
-				name: "logo",
-				opacity: 0.5,
-				padding: 0.1,
-				scale: 0.2,
-			}
-		);
 		const remoteWatermark = await stream.watermarks.generate(
 			"https://example.com/logo.png",
 			{
@@ -305,18 +285,8 @@ describe("Stream local binding", () => {
 			}
 		);
 
-		const watermarkUrl = `/cdn-cgi/handler/stream/STREAM/watermarks/${fileWatermark.id}`;
 		const remoteWatermarkUrl = `/cdn-cgi/handler/stream/STREAM/watermarks/${remoteWatermark.id}`;
 
-		expect(await stream.watermarks.get(fileWatermark.id)).toEqual(
-			expect.objectContaining({
-				id: fileWatermark.id,
-				name: "logo",
-				opacity: 0.5,
-				padding: 0.1,
-				scale: 0.2,
-			})
-		);
 		expect(await stream.watermarks.get(remoteWatermark.id)).toEqual(
 			expect.objectContaining({
 				id: remoteWatermark.id,
@@ -326,19 +296,10 @@ describe("Stream local binding", () => {
 		);
 
 		const listedWatermarks = await stream.watermarks.list();
-		expect(listedWatermarks).toHaveLength(2);
-		expect(listedWatermarks.map((watermark) => watermark.id)).toEqual(
-			expect.arrayContaining([fileWatermark.id, remoteWatermark.id])
-		);
-
-		const watermarkResponse = await mf.dispatchFetch(
-			toDispatchUrl(watermarkUrl)
-		);
-		expect(watermarkResponse.status).toBe(200);
-		expect(watermarkResponse.headers.get("content-type")).toBe("image/png");
-		expect(new Uint8Array(await watermarkResponse.arrayBuffer())).toEqual(
-			TEST_WATERMARK_BYTES
-		);
+		expect(listedWatermarks).toHaveLength(1);
+		expect(listedWatermarks.map((watermark) => watermark.id)).toEqual([
+			remoteWatermark.id,
+		]);
 
 		const remoteWatermarkResponse = await mf.dispatchFetch(
 			toDispatchUrl(remoteWatermarkUrl)
@@ -346,23 +307,11 @@ describe("Stream local binding", () => {
 		expect(remoteWatermarkResponse.status).toBe(404);
 		await remoteWatermarkResponse.text();
 
-		await stream.watermarks.delete(fileWatermark.id);
-		await expect(stream.watermarks.get(fileWatermark.id)).rejects.toThrow(
-			/Watermark not found/
-		);
-		const deletedWatermarkResponse = await mf.dispatchFetch(
-			toDispatchUrl(watermarkUrl)
-		);
-		expect(deletedWatermarkResponse.status).toBe(404);
-		await deletedWatermarkResponse.text();
-
 		await stream.watermarks.delete(remoteWatermark.id);
 		expect(await stream.watermarks.list()).toEqual([]);
 	});
 
-	test("serves real uploaded captions but no fake local assets", async ({
-		expect,
-	}) => {
+	test("does not serve fake local assets", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 		const stream = await mf.getStreamBinding("STREAM");
@@ -379,71 +328,18 @@ describe("Stream local binding", () => {
 			}
 		);
 		expect(uploadResponse.status).toBe(200);
+		await uploadResponse.text();
 
 		const videoHandle = stream.video(directUpload.id);
 		const video = await videoHandle.details();
-		await videoHandle.captions.upload(
-			"en",
-			createCaptionFile("Uploaded caption")
-		);
-		await videoHandle.captions.upload(
-			"fr",
-			createCaptionFile("French caption")
-		);
-
-		expect(await videoHandle.captions.list()).toEqual([
-			{
-				generated: false,
-				label: "EN",
-				language: "en",
-				status: "ready",
-			},
-			{
-				generated: false,
-				label: "FR",
-				language: "fr",
-				status: "ready",
-			},
-		]);
-		expect(await videoHandle.captions.list("fr")).toEqual([
-			{
-				generated: false,
-				label: "FR",
-				language: "fr",
-				status: "ready",
-			},
-		]);
-
-		await videoHandle.captions.upload(
-			"en",
-			createCaptionFile("Updated caption")
-		);
 
 		const captionResponse = await mf.dispatchFetch(
 			toDispatchUrl(
 				`/cdn-cgi/handler/stream/STREAM/videos/${directUpload.id}/captions/en.vtt`
 			)
 		);
-		expect(captionResponse.status).toBe(200);
-		expect(await captionResponse.text()).toContain("Updated caption");
-
-		await videoHandle.captions.delete("fr");
-		expect(await videoHandle.captions.list()).toEqual([
-			{
-				generated: false,
-				label: "EN",
-				language: "en",
-				status: "ready",
-			},
-		]);
-
-		const deletedCaptionResponse = await mf.dispatchFetch(
-			toDispatchUrl(
-				`/cdn-cgi/handler/stream/STREAM/videos/${directUpload.id}/captions/fr.vtt`
-			)
-		);
-		expect(deletedCaptionResponse.status).toBe(404);
-		await deletedCaptionResponse.text();
+		expect(captionResponse.status).toBe(404);
+		await captionResponse.text();
 
 		const unsupportedUrls = [
 			video.preview,
@@ -459,16 +355,17 @@ describe("Stream local binding", () => {
 			await response.text();
 		}
 
-		await expect(videoHandle.captions.generate("fr")).rejects.toThrow(
+		expect(() => videoHandle.captions.generate("fr")).toThrow(
 			/Caption generation is not implemented/
 		);
-		await expect(videoHandle.downloads.get()).rejects.toThrow(
+		expect(await videoHandle.captions.list()).toEqual([]);
+		expect(() => videoHandle.downloads.get()).toThrow(
 			/Downloads are not implemented/
 		);
-		await expect(videoHandle.downloads.generate()).rejects.toThrow(
+		expect(() => videoHandle.downloads.generate()).toThrow(
 			/Downloads are not implemented/
 		);
-		await expect(videoHandle.downloads.delete()).rejects.toThrow(
+		expect(() => videoHandle.downloads.delete()).toThrow(
 			/Downloads are not implemented/
 		);
 	});

@@ -2308,7 +2308,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field \"stream\" should be an object but got []."
+					  - The field "stream" should be an object but got []."
 				`);
 			});
 
@@ -2323,7 +2323,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field \"stream\" should be an object but got \"BAD\"."
+					  - The field "stream" should be an object but got "BAD"."
 				`);
 			});
 
@@ -2338,7 +2338,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field \"stream\" should be an object but got 999."
+					  - The field "stream" should be an object but got 999."
 				`);
 			});
 
@@ -2353,7 +2353,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - The field \"stream\" should be an object but got null."
+					  - The field "stream" should be an object but got null."
 				`);
 			});
 		});

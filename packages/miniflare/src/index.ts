@@ -2751,11 +2751,74 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<ImagesBinding>> {
 		return this.#getProxy(IMAGES_PLUGIN_NAME, bindingName, workerName);
 	}
+	#resolveStreamNamespace<T>(
+		target: Record<string, unknown>,
+		methodName: string,
+		propertyName: string
+	): T {
+		const maybeMethod = target[methodName];
+		if (typeof maybeMethod === "function") {
+			return (maybeMethod as () => T)();
+		}
+		return target[propertyName] as T;
+	}
+	#wrapStreamVideoHandle(videoHandle: object): object {
+		return new Proxy(videoHandle, {
+			get: (target, key, receiver) => {
+				if (key === "captions") {
+					return this.#resolveStreamNamespace(
+						target as Record<string, unknown>,
+						"__miniflareCaptions",
+						"captions"
+					);
+				}
+				if (key === "downloads") {
+					return this.#resolveStreamNamespace(
+						target as Record<string, unknown>,
+						"__miniflareDownloads",
+						"downloads"
+					);
+				}
+				return Reflect.get(target, key, receiver);
+			},
+		});
+	}
 	getStreamBinding(
 		bindingName: string,
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<StreamBinding>> {
-		return this.#getProxy(STREAM_PLUGIN_NAME, bindingName, workerName);
+		return this.#getProxy(STREAM_PLUGIN_NAME, bindingName, workerName).then(
+			(streamBinding) => {
+				return new Proxy(streamBinding as object, {
+					get: (target, key, receiver) => {
+						if (key === "videos") {
+							return this.#resolveStreamNamespace(
+								target as Record<string, unknown>,
+								"__miniflareVideos",
+								"videos"
+							);
+						}
+						if (key === "watermarks") {
+							return this.#resolveStreamNamespace(
+								target as Record<string, unknown>,
+								"__miniflareWatermarks",
+								"watermarks"
+							);
+						}
+						if (key === "video") {
+							const videoFactory = Reflect.get(target, key, receiver);
+							if (typeof videoFactory !== "function") {
+								return videoFactory;
+							}
+							return (...args: unknown[]) => {
+								return this.#wrapStreamVideoHandle(videoFactory(...args));
+							};
+						}
+						return Reflect.get(target, key, receiver);
+					},
+				}) as ReplaceWorkersTypes<StreamBinding>;
+			}
+		);
 	}
 	getHelloWorldBinding(
 		bindingName: string,

@@ -650,25 +650,36 @@ class StreamStore {
 		let blobId: string | undefined;
 
 		try {
-			const contentType = request.headers.get("content-type") ?? "";
 			let file: File;
-			if (contentType.includes("multipart/form-data")) {
-				const form = await request.formData();
-				const formFile = form.get("file");
-				if (!(formFile instanceof File)) {
-					await this.env.STREAM_DB.prepare(
-						`UPDATE direct_uploads
-						 SET used_at = NULL, record_json = ?2
-						 WHERE token = ?1`
-					)
-						.bind(token, JSON.stringify(directUpload))
-						.run();
-					return new Response('Expected multipart field "file"', {
-						status: 400,
+			if (request.method === "POST") {
+				const contentType = request.headers.get("content-type") ?? "";
+				const isFormContentType =
+					contentType.includes("multipart/form-data") ||
+					contentType.includes("application/x-www-form-urlencoded");
+				const form = isFormContentType ? await request.formData() : undefined;
+
+				if (form !== undefined) {
+					const formFile = form.get("file");
+					if (!(formFile instanceof File)) {
+						await this.env.STREAM_DB.prepare(
+							`UPDATE direct_uploads
+							 SET used_at = NULL, record_json = ?2
+							 WHERE token = ?1`
+						)
+							.bind(token, JSON.stringify(directUpload))
+							.run();
+						return new Response('Expected multipart field "file"', {
+							status: 400,
+						});
+					}
+					file = formFile;
+				} else {
+					file = new File([await request.arrayBuffer()], "direct-upload.bin", {
+						type: contentType || "application/octet-stream",
 					});
 				}
-				file = formFile;
 			} else {
+				const contentType = request.headers.get("content-type") ?? "";
 				file = new File([await request.arrayBuffer()], "direct-upload.bin", {
 					type: contentType || "application/octet-stream",
 				});
@@ -888,8 +899,8 @@ class StreamScopedCaptionsImpl
 }
 
 class StreamVideoHandleImpl extends RpcTarget implements StreamVideoHandle {
-	readonly downloads: StreamScopedDownloads;
-	readonly captions: StreamScopedCaptions;
+	private readonly _downloads: StreamScopedDownloads;
+	private readonly _captions: StreamScopedCaptions;
 
 	constructor(
 		readonly id: string,
@@ -897,8 +908,24 @@ class StreamVideoHandleImpl extends RpcTarget implements StreamVideoHandle {
 		private readonly getStore: StoreFactory
 	) {
 		super();
-		this.downloads = new StreamScopedDownloadsImpl(binding, id, getStore);
-		this.captions = new StreamScopedCaptionsImpl(id, getStore);
+		this._downloads = new StreamScopedDownloadsImpl(binding, id, getStore);
+		this._captions = new StreamScopedCaptionsImpl(id, getStore);
+	}
+
+	get downloads(): StreamScopedDownloads {
+		return this._downloads;
+	}
+
+	get captions(): StreamScopedCaptions {
+		return this._captions;
+	}
+
+	__miniflareDownloads(): StreamScopedDownloads {
+		return this._downloads;
+	}
+
+	__miniflareCaptions(): StreamScopedCaptions {
+		return this._captions;
 	}
 
 	async details() {
@@ -964,8 +991,24 @@ export class StreamBindingEntrypoint
 
 	private getStore = () => new StreamStore(this.env, this.getBindingName());
 
-	readonly videos = new StreamVideosImpl(this.getStore);
-	readonly watermarks = new StreamWatermarksImpl(this.getStore);
+	private readonly _videos = new StreamVideosImpl(this.getStore);
+	private readonly _watermarks = new StreamWatermarksImpl(this.getStore);
+
+	get videos(): StreamVideos {
+		return this._videos;
+	}
+
+	get watermarks(): StreamWatermarks {
+		return this._watermarks;
+	}
+
+	__miniflareVideos(): StreamVideos {
+		return this._videos;
+	}
+
+	__miniflareWatermarks(): StreamWatermarks {
+		return this._watermarks;
+	}
 
 	video(id: string): StreamVideoHandle {
 		return new StreamVideoHandleImpl(id, this.getBindingName(), this.getStore);

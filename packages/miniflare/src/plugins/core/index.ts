@@ -1011,10 +1011,26 @@ export function getGlobalServices({
 	const workerNames = [...allWorkerRoutes.keys()];
 	const routes = parseRoutes(allWorkerRoutes);
 	const streamBindings = proxyBindings.flatMap((binding) => {
-		if ("service" in binding && binding.service?.name?.startsWith("stream:")) {
-			return [binding.name];
+		if (
+			!("service" in binding) ||
+			!binding.service?.name?.startsWith("stream:")
+		) {
+			return [];
 		}
-		return [];
+		assert(binding.name !== undefined);
+
+		const nameParts = binding.name.split(":");
+		const publicBindingName = nameParts[nameParts.length - 1];
+		if (!publicBindingName) {
+			return [];
+		}
+
+		return [
+			{
+				publicBindingName,
+				serviceName: binding.service.name,
+			},
+		];
 	});
 
 	// Define core/shared services.
@@ -1033,8 +1049,14 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
 			name: CoreBindings.JSON_STREAM_BINDINGS,
-			json: JSON.stringify(streamBindings),
+			json: JSON.stringify(
+				streamBindings.map(({ publicBindingName }) => publicBindingName)
+			),
 		},
+		...streamBindings.map(({ publicBindingName, serviceName }) => ({
+			name: publicBindingName,
+			service: { name: serviceName },
+		})),
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: fallbackWorkerName },
