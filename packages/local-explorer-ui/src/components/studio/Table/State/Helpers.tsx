@@ -338,19 +338,28 @@ function pipeColumnIcon(
 		const iconStack = (
 			<div className="mr-1 flex shrink-0 items-center gap-1">
 				{hasPrimaryKey && (
-					<KeyIcon weight="duotone" className="size-3.5 text-primary" />
+					<KeyIcon
+						weight="duotone"
+						className="size-3.5 text-green-600 dark:text-green-400"
+					/>
 				)}
 				{hasUniqueIndex && (
-					<KeyIcon weight="duotone" className="size-3.5 text-primary" />
+					<KeyIcon
+						weight="duotone"
+						className="size-3.5 text-orange-600 dark:text-orange-400"
+					/>
 				)}
 				{hasKeyIndex && (
-					<KeyIcon weight="duotone" className="size-3.5 text-primary" />
+					<KeyIcon
+						weight="duotone"
+						className="size-3.5 text-blue-600 dark:text-blue-400"
+					/>
 				)}
 				{header.metadata.referenceTo && (
-					<FlowArrowIcon className="size-3.5 shrink-0 text-primary" />
+					<FlowArrowIcon className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
 				)}
 				{header.metadata.columnSchema?.constraint?.generatedExpression && (
-					<SigmaIcon className="size-3.5 shrink-0 text-primary" />
+					<SigmaIcon className="size-3.5 shrink-0 text-purple-600 dark:text-purple-400" />
 				)}
 			</div>
 		);

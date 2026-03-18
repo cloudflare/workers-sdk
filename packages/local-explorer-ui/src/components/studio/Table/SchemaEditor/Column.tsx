@@ -192,7 +192,7 @@ export function StudioColumnSchemaEditor({
 				onClick={!readOnlyExistingColumns ? onPrimaryKeyClicked : undefined}
 			>
 				{isPrimaryKey ? (
-					<KeyIcon weight="bold" className="text-primary" />
+					<KeyIcon weight="bold" className="text-blue-500" />
 				) : (
 					!readOnlyExistingColumns && (
 						<KeyIcon className="opacity-25 hover:opacity-100" />
