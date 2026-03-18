@@ -38,11 +38,6 @@ export async function retryOnAPIFailure<T>(
 		}
 
 		await setTimeout(backoff, undefined, { signal: abortSignal });
-		return retryOnAPIFailure(
-			action,
-			backoff + (MAX_ATTEMPTS - attempts) * 1000,
-			attempts - 1,
-			abortSignal
-		);
+		return retryOnAPIFailure(action, backoff + 1000, attempts - 1, abortSignal);
 	}
 }
