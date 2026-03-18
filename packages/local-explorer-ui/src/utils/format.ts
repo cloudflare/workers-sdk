@@ -17,7 +17,7 @@ export function formatSize(bytes: number | undefined): string {
  *
  * @param dateString - An ISO date string to format
  *
- * @returns A formatted string like "13 May 2025 01:11:37 GMT" or "-" for invalid/undefined values
+ * @returns A formatted string like "13 May 2025, 01:11:37 UTC" or "-" for invalid/undefined values
  */
 export function formatDate(dateString: string | undefined): string {
 	if (!dateString) {
@@ -31,22 +31,16 @@ export function formatDate(dateString: string | undefined): string {
 			return "-";
 		}
 
-		// Format: "13 May 2025 01:11:37 GMT"
-		const day = date.getUTCDate();
-		const month = date.toLocaleString("en-US", {
+		return new Intl.DateTimeFormat("en-GB", {
+			day: "numeric",
 			month: "short",
-			timeZone: "UTC",
-		});
-		const year = date.getUTCFullYear();
-		const time = date.toLocaleString("en-US", {
+			year: "numeric",
 			hour: "2-digit",
-			hourCycle: "h23",
 			minute: "2-digit",
 			second: "2-digit",
 			timeZone: "UTC",
-		});
-
-		return `${day} ${month} ${year} ${time} GMT`;
+			timeZoneName: "short",
+		}).format(date);
 	} catch {
 		return "-";
 	}
