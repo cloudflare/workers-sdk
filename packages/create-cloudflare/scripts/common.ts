@@ -1,7 +1,7 @@
 import { fetch } from "undici";
 
 type ApiSuccessBody = {
-	result: any[];
+	result: unknown[];
 };
 
 export type Project = {

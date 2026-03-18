@@ -5,9 +5,8 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";

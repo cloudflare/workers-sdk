@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import {
 	generateRulesMatcher,
 	generateStaticRoutingRuleMatcher,
@@ -7,7 +6,7 @@ import {
 } from "../src/utils/rules-engine";
 
 describe("rules engine", () => {
-	test("it should match simple pathname hosts", () => {
+	test("it should match simple pathname hosts", ({ expect }) => {
 		const matcher = generateRulesMatcher({ "/test": 1, "/some%20page": 2 });
 		expect(
 			matcher({ request: new Request("https://example.com/test") })
@@ -17,7 +16,7 @@ describe("rules engine", () => {
 		).toEqual([2]);
 	});
 
-	test("it should match cross-host requests", () => {
+	test("it should match cross-host requests", ({ expect }) => {
 		const matcher = generateRulesMatcher({
 			"/test": 1,
 			"/anotherpage": 2,
@@ -40,7 +39,7 @@ describe("rules engine", () => {
 		).toEqual([1, 3]);
 	});
 
-	test("it should escape funky rules", () => {
+	test("it should escape funky rules", ({ expect }) => {
 		const matcher = generateRulesMatcher({
 			"/$~.%20/!+-/[bo|%7Bo%7D]...()": 1,
 		});
@@ -51,7 +50,7 @@ describe("rules engine", () => {
 		).toEqual([1]);
 	});
 
-	test("it should support splats and placeholders", () => {
+	test("it should support splats and placeholders", ({ expect }) => {
 		const matcher = generateRulesMatcher(
 			{
 				"/foo/test/*": "1/:splat",
@@ -79,7 +78,9 @@ describe("rules engine", () => {
 			matcher({ request: new Request("https://example.com/foo") })
 		).toEqual([]);
 		expect(
-			matcher({ request: new Request("https://example.com/blog/123/tricycle") })
+			matcher({
+				request: new Request("https://example.com/blog/123/tricycle"),
+			})
 		).toEqual(["3/tricycle/123", "4/123/tricycle"]);
 		expect(
 			matcher({ request: new Request("https://my.pages.dev/magic") })
@@ -91,25 +92,25 @@ describe("rules engine", () => {
 });
 
 describe("replacer", () => {
-	test("should replace splats", () => {
+	test("should replace splats", ({ expect }) => {
 		expect(replacer("/blog/:splat", { splat: "look/a/value" })).toEqual(
 			"/blog/look/a/value"
 		);
 	});
 
-	test("should replace placeholders", () => {
+	test("should replace placeholders", ({ expect }) => {
 		expect(
 			replacer("/:code/:name.jpg", { name: "tricycle", code: "123" })
 		).toEqual("/123/tricycle.jpg");
 	});
 
-	test("should replace splats and placeholders", () => {
+	test("should replace splats and placeholders", ({ expect }) => {
 		expect(
 			replacer("/:code/:splat", { splat: "tricycle/images", code: "123" })
 		).toEqual("/123/tricycle/images");
 	});
 
-	test("should replace all instances of placeholders", () => {
+	test("should replace all instances of placeholders", ({ expect }) => {
 		expect(
 			replacer(
 				"Link: </assets/:value/main.js>; rel=preload; as=script, </assets/:value/lang.js>; rel=preload; as=script",
@@ -122,7 +123,7 @@ describe("replacer", () => {
 });
 
 describe("static routing rules", () => {
-	test("should return true for a request that matches", () => {
+	test("should return true for a request that matches", ({ expect }) => {
 		expect(
 			generateStaticRoutingRuleMatcher(["/some/path"])({
 				request: new Request("https://site.com/some/path"),
@@ -142,7 +143,9 @@ describe("static routing rules", () => {
 		).toEqual(true);
 	});
 
-	test("should return false for a request that does not match", () => {
+	test("should return false for a request that does not match", ({
+		expect,
+	}) => {
 		expect(
 			generateStaticRoutingRuleMatcher(["/some/path"])({
 				request: new Request("https://site.com"),
@@ -168,7 +171,7 @@ describe("static routing rules", () => {
 		).toEqual(false);
 	});
 
-	test("should ignore regex characters other than a glob", () => {
+	test("should ignore regex characters other than a glob", ({ expect }) => {
 		{
 			const matcher = generateStaticRoutingRuleMatcher(["/"]);
 			expect(matcher({ request: new Request("http://example.com/") })).toEqual(

@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { cp } from "node:fs/promises";
 import { join } from "node:path";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
-import { beforeAll, describe, expect } from "vitest";
+import { beforeAll, describe } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
 import {
 	frameworkToTestFilter,
@@ -56,7 +55,7 @@ describe
 					retry: testRetries,
 					timeout: testConfig.timeout || TEST_TIMEOUT,
 				},
-				async ({ logStream, project }) => {
+				async ({ expect, logStream, project }) => {
 					if (!testConfig.verifyDeploy) {
 						expect(
 							true,

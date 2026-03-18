@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+// eslint-disable-next-line no-restricted-imports
 import { expect } from "vitest";
 import { msw } from "./msw";
 import type { Settings } from "../../deployment-bundle/bindings";

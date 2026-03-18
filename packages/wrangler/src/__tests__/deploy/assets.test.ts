@@ -1,9 +1,7 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -93,7 +91,9 @@ describe("deploy", () => {
 	});
 
 	describe("assets", () => {
-		it("should use the directory specified in the CLI over wrangler.toml", async () => {
+		it("should use the directory specified in the CLI over wrangler.toml", async ({
+			expect,
+		}) => {
 			const cliAssets = [
 				{ filePath: "cliAsset.txt", content: "Content of file-1" },
 			];
@@ -127,7 +127,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should use the directory specified in the CLI and allow the directory to be missing in the configuration", async () => {
+		it("should use the directory specified in the CLI and allow the directory to be missing in the configuration", async ({
+			expect,
+		}) => {
 			const cliAssets = [
 				{ filePath: "cliAsset.txt", content: "Content of file-1" },
 			];
@@ -157,7 +159,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should error if config.site and config.assets are used together", async () => {
+		it("should error if config.site and config.assets are used together", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 				assets: { directory: "abd" },
@@ -174,7 +178,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error if --assets and config.site are used together", async () => {
+		it("should error if --assets and config.site are used together", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "./index.js",
 				site: {
@@ -190,7 +196,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error if directory specified by flag --assets does not exist in non-interactive mode", async () => {
+		it("should error if directory specified by flag --assets does not exist in non-interactive mode", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			await expect(runWrangler("deploy --assets abc")).rejects.toThrow(
 				new RegExp(
@@ -199,7 +207,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error if the directory path specified by the assets config is undefined", async () => {
+		it("should error if the directory path specified by the assets config is undefined", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				assets: {},
 			});
@@ -210,7 +220,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error if the directory path specified by the assets config is an empty string", async () => {
+		it("should error if the directory path specified by the assets config is an empty string", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				assets: { directory: "" },
 			});
@@ -221,7 +233,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error if directory specified by config assets does not exist", async () => {
+		it("should error if directory specified by config assets does not exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				assets: { directory: "abc" },
 			});
@@ -232,7 +246,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("should error if an ASSET binding is provided without a user Worker", async () => {
+		it("should error if an ASSET binding is provided without a user Worker", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				assets: {
 					directory: "xyz",
@@ -246,7 +262,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should warn when using smart placement with Worker first", async () => {
+		it("should warn when using smart placement with Worker first", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -295,7 +313,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should warn if run_worker_first=true but no binding is provided", async () => {
+		it("should warn if run_worker_first=true but no binding is provided", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -341,7 +361,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if run_worker_first is true and no user Worker is provided", async () => {
+		it("should error if run_worker_first is true and no user Worker is provided", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -365,7 +387,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should attach an 'application/null' content-type header when uploading files with an unknown extension", async () => {
+		it("should attach an 'application/null' content-type header when uploading files with an unknown extension", async ({
+			expect,
+		}) => {
 			const assets = [{ filePath: "foobar.greg", content: "something-binary" }];
 			writeAssets(assets);
 			writeWranglerConfig({
@@ -414,7 +438,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should be able to upload files with special characters in filepaths", async () => {
+		it("should be able to upload files with special characters in filepaths", async ({
+			expect,
+		}) => {
 			// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -496,7 +522,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
+		it("should resolve assets directory relative to wrangler.toml if using config", async ({
+			expect,
+		}) => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
 			writeWranglerConfig(
@@ -527,7 +555,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
+		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async ({
+			expect,
+		}) => {
 			const redirectsContent = "/foo /bar";
 			const headersContent = "/some-path\nX-Header: Custom-Value";
 			const assets = [
@@ -578,7 +608,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if it is going to upload a _worker.js file as an asset", async () => {
+		it("should error if it is going to upload a _worker.js file as an asset", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "_worker.js", content: "// some secret server-side code." },
 			];
@@ -608,7 +640,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error if it is going to upload a _worker.js directory as an asset", async () => {
+		it("should error if it is going to upload a _worker.js directory as an asset", async ({
+			expect,
+		}) => {
 			const assets = [
 				{
 					filePath: "_worker.js/index.js",
@@ -645,7 +679,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not error if it is going to upload a _worker.js file as an asset and there is an .assetsignore file", async () => {
+		it("should not error if it is going to upload a _worker.js file as an asset and there is an .assetsignore file", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "" },
 				{ filePath: "_worker.js", content: "// some secret server-side code." },
@@ -682,7 +718,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not error if it is going to upload a _worker.js file that is not at the root of the asset directory", async () => {
+		it("should not error if it is going to upload a _worker.js file that is not at the root of the asset directory", async ({
+			expect,
+		}) => {
 			const assets = [
 				{
 					filePath: "foo/_worker.js",
@@ -721,7 +759,7 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload _redirects and _headers", async () => {
+		it("should upload _redirects and _headers", async ({ expect }) => {
 			const redirectsContent = "/foo /bar";
 			const headersContent = "/some-path\nX-Header: Custom-Value";
 			const assets = [
@@ -760,7 +798,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should resolve assets directory relative to cwd if using cli", async () => {
+		it("should resolve assets directory relative to cwd if using cli", async ({
+			expect,
+		}) => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets, "some/path/assets");
 			const bodies: AssetManifest[] = [];
@@ -788,7 +828,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should upload an asset manifest of the files in the directory specified by --assets", async () => {
+		it("should upload an asset manifest of the files in the directory specified by --assets", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -823,7 +865,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should upload an asset manifest of the files in the directory specified by [assets] config", async () => {
+		it("should upload an asset manifest of the files in the directory specified by [assets] config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -859,7 +903,7 @@ describe("deploy", () => {
 			});
 		});
 
-		it("should upload assets in the requested buckets", async () => {
+		it("should upload assets in the requested buckets", async ({ expect }) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -1196,7 +1240,9 @@ describe("deploy", () => {
 			await runWrangler("deploy --dispatch-namespace my-namespace");
 		});
 
-		it("should error when assets upload session response is null", async () => {
+		it("should error when assets upload session response is null", async ({
+			expect,
+		}) => {
 			const assets = [{ filePath: "file-1.txt", content: "Content of file-1" }];
 			writeAssets(assets);
 			writeWranglerConfig({

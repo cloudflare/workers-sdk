@@ -286,10 +286,7 @@ export const dev = createCommand({
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		if (devInstance.teardownRegistryPromise) {
-			const teardownRegistry = await devInstance.teardownRegistryPromise;
-			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-		}
+
 		devInstance.unregisterHotKeys?.();
 	},
 });

@@ -1,5 +1,6 @@
 import path from "node:path";
 import dedent from "ts-dedent";
+/* eslint-disable no-restricted-imports */
 import {
 	afterEach,
 	assert,
@@ -9,6 +10,7 @@ import {
 	test,
 	vi,
 } from "vitest";
+/* eslint-enable no-restricted-imports */
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	importWrangler,
@@ -58,7 +60,9 @@ describe("startWorker - auth options", { sequential: true }, () => {
 
 		afterEach(() => worker?.dispose());
 
-		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async () => {
+		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async ({
+			expect,
+		}) => {
 			const validAuth = vi.fn(() => {
 				assert(process.env.CLOUDFLARE_API_TOKEN);
 
@@ -113,7 +117,9 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			expect(incorrectAuth).toHaveBeenCalledOnce();
 		});
 
-		test("starting a worker with startWorker with invalid auth information and updating it with valid auth information", async () => {
+		test("starting a worker with startWorker with invalid auth information and updating it with valid auth information", async ({
+			expect,
+		}) => {
 			const incorrectAuth = vi.fn(() => {
 				return {
 					accountId: CLOUDFLARE_ACCOUNT_ID,
@@ -203,7 +209,9 @@ describe("startWorker - auth options", { sequential: true }, () => {
 	});
 
 	describe("without remote bindings (no auth is needed)", () => {
-		test("starting a worker via startWorker without any remote bindings (doesn't cause wrangler to try to get the auth information)", async () => {
+		test("starting a worker via startWorker without any remote bindings (doesn't cause wrangler to try to get the auth information)", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 
 			const simpleWorkerScript = dedent`

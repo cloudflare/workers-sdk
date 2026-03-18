@@ -4,16 +4,13 @@
 	"private": true,
 	"scripts": {
 		"build": "wrangler build",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"eslint": "catalog:default",
 		"mustache": "^4.2.0",
 		"promjs": "^0.4.2",
 		"toucan-js": "4.0.0",

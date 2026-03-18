@@ -1,5 +1,5 @@
 {
-	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.defaultFormatter": "oxc.oxc-vscode",
 	"cSpell.words": [
 		"Abortable",
 		"assetsignore",
@@ -82,12 +82,7 @@
 		"*.template": "javascript",
 		"wrangler.json": "jsonc"
 	},
-	"[html]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	},
-	"[typescript]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	},
+
 	"[ignore]": {
 		"editor.defaultFormatter": "foxundermoon.shell-format"
 	},

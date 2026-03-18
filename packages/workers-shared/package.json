@@ -5,22 +5,21 @@
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
-		"workers",
-		"cloudflare workers"
+		"cloudflare workers",
+		"workers"
 	],
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-shared#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/workers-shared"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
 		"deploy": "pnpm run generate-sourcemaps && pnpm run deploy:router-worker && pnpm run deploy:asset-worker && pnpm run upload-sourcemaps",
@@ -42,14 +41,12 @@
 		"upload-sourcemaps:router-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker router-worker --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@sentry/cli": "^2.37.0",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
-		"eslint": "catalog:default",
 		"ignore": "^5.2.0",
 		"mime": "^4.0.7",
 		"toucan-js": "4.0.0",

@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { parseRedirects } from "../configuration/parseRedirects";
 
 // Snapshot values
@@ -7,7 +6,7 @@ const maxDynamicRedirectRules = 100;
 const maxLineLength = 2000;
 const maxStaticRedirectRules = 2000;
 
-test("parseRedirects should reject malformed lines", () => {
+test("parseRedirects should reject malformed lines", ({ expect }) => {
 	const input = `
     # Single token
     /c
@@ -32,7 +31,7 @@ test("parseRedirects should reject malformed lines", () => {
 	});
 });
 
-test("parseRedirects should reject invalid status codes", () => {
+test("parseRedirects should reject invalid status codes", ({ expect }) => {
 	const input = `
     # Valid token sails through
     /a /b 301
@@ -53,7 +52,7 @@ test("parseRedirects should reject invalid status codes", () => {
 	});
 });
 
-test(`parseRedirects should reject duplicate 'from' paths`, () => {
+test(`parseRedirects should reject duplicate 'from' paths`, ({ expect }) => {
 	const input = `
     # Valid entry
     /a /b
@@ -78,7 +77,9 @@ test(`parseRedirects should reject duplicate 'from' paths`, () => {
 	});
 });
 
-test(`parseRedirects should reject lines longer than ${maxLineLength} chars`, () => {
+test(`parseRedirects should reject lines longer than ${maxLineLength} chars`, ({
+	expect,
+}) => {
 	const huge_line = `/${Array(maxLineLength).fill("a").join("")} /${Array(
 		maxLineLength
 	)
@@ -105,7 +106,9 @@ test(`parseRedirects should reject lines longer than ${maxLineLength} chars`, ()
 	});
 });
 
-test("parseRedirects should reject any dynamic rules after the first 100", () => {
+test("parseRedirects should reject any dynamic rules after the first 100", ({
+	expect,
+}) => {
 	const input = `
     # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
     ${Array(150)
@@ -132,7 +135,9 @@ test("parseRedirects should reject any dynamic rules after the first 100", () =>
 	});
 });
 
-test(`parseRedirects should reject any static rules after the first ${maxStaticRedirectRules}`, () => {
+test(`parseRedirects should reject any static rules after the first ${maxStaticRedirectRules}`, ({
+	expect,
+}) => {
 	const input = `
     # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
     ${Array(maxStaticRedirectRules + 50)
@@ -159,7 +164,9 @@ test(`parseRedirects should reject any static rules after the first ${maxStaticR
 	});
 });
 
-test("parseRedirects should reject a combination of lots of static and dynamic rules", () => {
+test("parseRedirects should reject a combination of lots of static and dynamic rules", ({
+	expect,
+}) => {
 	const input = `
     # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
     ${Array(maxStaticRedirectRules + 50)
@@ -205,7 +212,7 @@ test("parseRedirects should reject a combination of lots of static and dynamic r
 	});
 });
 
-test("parseRedirects should reject malformed URLs", () => {
+test("parseRedirects should reject malformed URLs", ({ expect }) => {
 	const input = `
   # Spaces rejected on token length
   /some page /somewhere else
@@ -258,7 +265,9 @@ test("parseRedirects should reject malformed URLs", () => {
 	});
 });
 
-test("parseRedirects should reject non-relative URLs for proxying (200) redirects", () => {
+test("parseRedirects should reject non-relative URLs for proxying (200) redirects", ({
+	expect,
+}) => {
 	const input = `
 	/a https://example.com/b 200
 `;
@@ -276,7 +285,9 @@ test("parseRedirects should reject non-relative URLs for proxying (200) redirect
 	});
 });
 
-test("parseRedirects should reject wildcard patterns to index", () => {
+test("parseRedirects should reject wildcard patterns to index", ({
+	expect,
+}) => {
 	const input = `
 /* /index.html 200
 /* /index 200
@@ -313,7 +324,9 @@ test("parseRedirects should reject wildcard patterns to index", () => {
 	});
 });
 
-test("parseRedirects should allow root patterns to index when HTML handling disabled", () => {
+test("parseRedirects should allow root patterns to index when HTML handling disabled", ({
+	expect,
+}) => {
 	// This test documents the fix for https://github.com/cloudflare/workers-sdk/issues/11824
 	// Exact path matches like "/ /index.html" are valid when html_handling is "none"
 	// because there's no automatic index.html serving, so no infinite loop occurs.

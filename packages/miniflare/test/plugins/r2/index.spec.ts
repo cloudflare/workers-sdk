@@ -12,7 +12,7 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 } from "miniflare";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
 	FIXTURES_PATH,
@@ -108,11 +108,11 @@ async function testValidatesKey(opts: {
 	);
 }
 
-test("head: returns null for non-existent keys", async () => {
+test("head: returns null for non-existent keys", async ({ expect }) => {
 	const { r2 } = ctx;
 	expect(await r2.head("key")).toBe(null);
 });
-test("head: returns metadata for existing keys", async () => {
+test("head: returns metadata for existing keys", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	const start = Date.now();
 	await r2.put("key", "value", {
@@ -155,15 +155,15 @@ test("head: returns metadata for existing keys", async () => {
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
 });
-test("head: validates key", async () => {
+test("head: validates key", async ({ expect }) => {
 	await testValidatesKey({ method: "head", f: (r2, key) => r2.head(key) });
 });
 
-test("get: returns null for non-existent keys", async () => {
+test("get: returns null for non-existent keys", async ({ expect }) => {
 	const { r2 } = ctx;
 	expect(await r2.get("key")).toBe(null);
 });
-test("get: returns metadata and body for existing keys", async () => {
+test("get: returns metadata and body for existing keys", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	const start = Date.now();
 	await r2.put("key", "value", {
@@ -206,10 +206,10 @@ test("get: returns metadata and body for existing keys", async () => {
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
 });
-test("get: validates key", async () => {
+test("get: validates key", async ({ expect }) => {
 	await testValidatesKey({ method: "get", f: (r2, key) => r2.get(key) });
 });
-test("get: range using object", async () => {
+test("get: range using object", async ({ expect }) => {
 	const { r2 } = ctx;
 	await r2.put("key", "value");
 
@@ -261,7 +261,7 @@ test("get: range using object", async () => {
 	// offset or length:
 	// https://github.com/cloudflare/workerd/blob/4290f9717bc94647d9c8afd29602cdac97fdff1b/src/workerd/api/r2-bucket.c%2B%2B#L239-L265
 });
-test('get: range using "Range" header', async () => {
+test('get: range using "Range" header', async ({ expect }) => {
 	const { r2 } = ctx;
 	const value = "abcdefghijklmnopqrstuvwxyz";
 	await r2.put("key", value);
@@ -301,7 +301,7 @@ test('get: range using "Range" header', async () => {
 	expect(await body.text()).toBe(value);
 	expect(body.range).toEqual({ offset: 0, length: 26 });
 });
-test("get: returns body only if passes onlyIf", async () => {
+test("get: returns body only if passes onlyIf", async ({ expect }) => {
 	const { r2 } = ctx;
 	const pastDate = new Date(Date.now() - 60_000);
 	await r2.put("key", "value");
@@ -340,7 +340,7 @@ test("get: returns body only if passes onlyIf", async () => {
 	await pass({ uploadedAfter: pastDate });
 });
 
-test("put: returns metadata for created object", async () => {
+test("put: returns metadata for created object", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	const start = Date.now();
 	// `workerd` will handle extracting `httpMetadata`s from `Header`s:
@@ -377,7 +377,7 @@ test("put: returns metadata for created object", async () => {
 	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
 	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 });
-test("put: puts empty value", async () => {
+test("put: puts empty value", async ({ expect }) => {
 	const { r2 } = ctx;
 	const object = await r2.put("key", "");
 	assert(object !== null);
@@ -385,7 +385,7 @@ test("put: puts empty value", async () => {
 	const objectBody = await r2.get("key");
 	expect(await objectBody?.text()).toBe("");
 });
-test("put: overrides existing keys", async () => {
+test("put: overrides existing keys", async ({ expect }) => {
 	const { r2, ns, object } = ctx;
 	await r2.put("key", "value1");
 	const stmts = sqlStmts(object);
@@ -401,13 +401,13 @@ test("put: overrides existing keys", async () => {
 	await object.waitForFakeTasks();
 	expect(await object.getBlob(objectRow.blob_id)).toBe(null);
 });
-test("put: validates key", async () => {
+test("put: validates key", async ({ expect }) => {
 	await testValidatesKey({
 		method: "put",
 		f: (r2, key) => r2.put(key, "v"),
 	});
 });
-test("put: validates checksums", async () => {
+test("put: validates checksums", async ({ expect }) => {
 	const { r2 } = ctx;
 	const checksumError = (name: string, provided: string, expected: string) =>
 		new Error(
@@ -470,7 +470,7 @@ test("put: validates checksums", async () => {
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha512 });
 });
-test("put: stores only if passes onlyIf", async () => {
+test("put: stores only if passes onlyIf", async ({ expect }) => {
 	const { r2 } = ctx;
 	const pastDate = new Date(Date.now() - 60_000);
 	const futureDate = new Date(Date.now() + 300_000);
@@ -513,7 +513,7 @@ test("put: stores only if passes onlyIf", async () => {
 	const object = await r2.put("no-key", "2", { onlyIf: { etagMatches: etag } });
 	expect(object as R2Object | null).toBe(null);
 });
-test("put: validates metadata size", async () => {
+test("put: validates metadata size", async ({ expect }) => {
 	const { r2 } = ctx;
 
 	const metadataError = new Error(
@@ -538,7 +538,7 @@ test("put: validates metadata size", async () => {
 		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(512) } })
 	).rejects.toThrow(metadataError);
 });
-test("put: can copy values", async () => {
+test("put: can copy values", async ({ expect }) => {
 	const mf = new Miniflare({
 		r2Buckets: ["BUCKET"],
 		modules: true,
@@ -583,7 +583,7 @@ test("put: can copy values", async () => {
 	});
 });
 
-test("delete: deletes existing keys", async () => {
+test("delete: deletes existing keys", async ({ expect }) => {
 	const { r2, ns, object } = ctx;
 
 	// Check does nothing with non-existent key
@@ -610,13 +610,13 @@ test("delete: deletes existing keys", async () => {
 	expect(await r2.head("key2")).not.toBe(null);
 	expect(await r2.head("key3")).toBe(null);
 });
-test("delete: validates key", async () => {
+test("delete: validates key", async ({ expect }) => {
 	await testValidatesKey({
 		method: "delete",
 		f: (r2, key) => r2.delete(key),
 	});
 });
-test("delete: validates keys", async () => {
+test("delete: validates keys", async ({ expect }) => {
 	await testValidatesKey({
 		method: "delete",
 		f: (r2, key) => r2.delete(["valid key", key]),
@@ -664,68 +664,78 @@ async function testList(opts: {
 		lastCursor = cursor;
 	}
 }
-test("list: lists keys in sorted order", async () => {
+test("list: lists keys in sorted order", async ({ expect }) => {
 	await testList({
 		keys: ["key3", "key1", "key2", ", ", "!"],
 		pages: [["!", ", ", "key1", "key2", "key3"]],
 	});
 });
-test("list: lists keys matching prefix", async () => {
+test("list: lists keys matching prefix", async ({ expect }) => {
 	await testList({
 		keys: ["section1key1", "section1key2", "section2key1"],
 		options: { prefix: "section1" },
 		pages: [["section1key1", "section1key2"]],
 	});
 });
-test("list: returns an empty list with no keys", async () => {
+test("list: returns an empty list with no keys", async ({ expect }) => {
 	await testList({
 		keys: [],
 		pages: [[]],
 	});
 });
-test("list: returns an empty list with no matching keys", async () => {
+test("list: returns an empty list with no matching keys", async ({
+	expect,
+}) => {
 	await testList({
 		keys: ["key1", "key2", "key3"],
 		options: { prefix: "none" },
 		pages: [[]],
 	});
 });
-test("list: returns an empty list with an invalid cursor", async () => {
+test("list: returns an empty list with an invalid cursor", async ({
+	expect,
+}) => {
 	await testList({
 		keys: ["key1", "key2", "key3"],
 		options: { cursor: "bad" },
 		pages: [[]],
 	});
 });
-test("list: paginates keys", async () => {
+test("list: paginates keys", async ({ expect }) => {
 	await testList({
 		keys: ["key1", "key2", "key3"],
 		options: { limit: 2 },
 		pages: [["key1", "key2"], ["key3"]],
 	});
 });
-test("list: paginates keys matching prefix", async () => {
+test("list: paginates keys matching prefix", async ({ expect }) => {
 	await testList({
 		keys: ["section1key1", "section1key2", "section1key3", "section2key1"],
 		options: { prefix: "section1", limit: 2 },
 		pages: [["section1key1", "section1key2"], ["section1key3"]],
 	});
 });
-test("list: lists keys starting from startAfter exclusive", async () => {
+test("list: lists keys starting from startAfter exclusive", async ({
+	expect,
+}) => {
 	await testList({
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key2" },
 		pages: [["key3", "key4"]],
 	});
 });
-test("list: lists keys with startAfter and limit (where startAfter matches key)", async () => {
+test("list: lists keys with startAfter and limit (where startAfter matches key)", async ({
+	expect,
+}) => {
 	await testList({
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key1", limit: 2 },
 		pages: [["key2", "key3"], ["key4"]],
 	});
 });
-test("list: lists keys with startAfter and limit (where startAfter doesn't match key)", async () => {
+test("list: lists keys with startAfter and limit (where startAfter doesn't match key)", async ({
+	expect,
+}) => {
 	await testList({
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key", limit: 2 },
@@ -735,7 +745,7 @@ test("list: lists keys with startAfter and limit (where startAfter doesn't match
 		],
 	});
 });
-test("list: accepts long prefix", async () => {
+test("list: accepts long prefix", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	// Max key length, minus padding for `context.ns`
 	const longKey = "x".repeat(1024 - ns.length);
@@ -744,7 +754,7 @@ test("list: accepts long prefix", async () => {
 	expect(objects.length).toBe(1);
 	expect(objects[0].key).toBe(ns + longKey);
 });
-test("list: returns metadata with objects", async () => {
+test("list: returns metadata with objects", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	const start = Date.now();
 	await r2.put("key", "value");
@@ -765,7 +775,7 @@ test("list: returns metadata with objects", async () => {
 	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
 	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 });
-test("list: paginates with variable limit", async () => {
+test("list: paginates with variable limit", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	await r2.put("key1", "value1");
 	await r2.put("key2", "value2");
@@ -784,7 +794,7 @@ test("list: paginates with variable limit", async () => {
 	expect(result.objects[1].key).toBe(`${ns}key3`);
 	expect(result.truncated && result.cursor === undefined).toBe(false);
 });
-test("list: returns keys inserted whilst paginating", async () => {
+test("list: returns keys inserted whilst paginating", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	await r2.put("key1", "value1");
 	await r2.put("key3", "value3");
@@ -808,7 +818,7 @@ test("list: returns keys inserted whilst paginating", async () => {
 	expect(result.objects[1].key).toBe(`${ns}key5`);
 	expect(result.truncated && result.cursor === undefined).toBe(false);
 });
-test("list: validates limit", async () => {
+test("list: validates limit", async ({ expect }) => {
 	const { r2 } = ctx;
 	// R2 actually accepts 0 and -1 as valid limits, but this is probably a bug
 	await expect(r2.list({ limit: 0 })).rejects.toThrow(
@@ -818,7 +828,9 @@ test("list: validates limit", async () => {
 		new Error("list: MaxKeys params must be positive integer <= 1000. (10022)")
 	);
 });
-test("list: includes httpMetadata and customMetadata if specified", async () => {
+test("list: includes httpMetadata and customMetadata if specified", async ({
+	expect,
+}) => {
 	const { r2, ns } = ctx;
 	await r2.put("key1", "value1", {
 		httpMetadata: { contentEncoding: "gzip" },
@@ -879,7 +891,9 @@ test("list: includes httpMetadata and customMetadata if specified", async () => 
 	// `workerd` will validate the `include` array:
 	// https://github.com/cloudflare/workerd/blob/44907df95f231a2411d4e9767400951e55c6eb4c/src/workerd/api/r2-bucket.c%2B%2B#L737
 });
-test("list: returns correct delimitedPrefixes for delimiter and prefix", async () => {
+test("list: returns correct delimitedPrefixes for delimiter and prefix", async ({
+	expect,
+}) => {
 	const { r2, ns } = ctx;
 	const values: Record<string, string> = {
 		// In lexicographic key order, so `allKeys` is sorted
@@ -952,7 +966,7 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 	expect(delimitedPrefixes(result)).toEqual(["dir0/sub0/", "dir0/sub1/"]);
 });
 
-test("operations permit empty key", async () => {
+test("operations permit empty key", async ({ expect }) => {
 	const { r2 } = ctx;
 	// Explicitly testing empty string key, so cannot prefix with namespace
 	r2.ns = "";
@@ -976,7 +990,7 @@ test("operations permit empty key", async () => {
 	expect(await r2.head("")).toBe(null);
 });
 
-test("operations persist stored data", async () => {
+test("operations persist stored data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = {
 		modules: true,
@@ -1029,7 +1043,7 @@ test("operations persist stored data", async () => {
 	expect(object).not.toBe(null);
 });
 
-test("operations permit strange bucket names", async () => {
+test("operations permit strange bucket names", async ({ expect }) => {
 	const { mf, ns } = ctx;
 
 	// Set option, then reset after test
@@ -1047,7 +1061,7 @@ test("operations permit strange bucket names", async () => {
 // Multipart tests
 const PART_SIZE = 50;
 
-test("createMultipartUpload", async () => {
+test("createMultipartUpload", async ({ expect }) => {
 	const { r2, ns } = ctx;
 
 	// Check creates upload
@@ -1071,7 +1085,7 @@ test("createMultipartUpload", async () => {
 		)
 	);
 });
-test("uploadPart", async () => {
+test("uploadPart", async ({ expect }) => {
 	const { r2, object } = ctx;
 
 	// Check uploads parts
@@ -1125,7 +1139,7 @@ test("uploadPart", async () => {
 		new Error(`uploadPart: The specified object name is not valid. (10020)`)
 	);
 });
-test("abortMultipartUpload", async () => {
+test("abortMultipartUpload", async ({ expect }) => {
 	const { r2, object } = ctx;
 
 	// Check deletes upload and all parts for corresponding upload
@@ -1182,7 +1196,7 @@ test("abortMultipartUpload", async () => {
 		)
 	);
 });
-test("completeMultipartUpload", async () => {
+test("completeMultipartUpload", async ({ expect }) => {
 	const { r2, ns, object: objectStub } = ctx;
 
 	// Check creates regular key with correct metadata, and returns object
@@ -1394,7 +1408,7 @@ test("completeMultipartUpload", async () => {
 	).rejects.toThrow(notFoundError);
 });
 // Check regular operations on buckets with existing multipart keys
-test("head: is multipart aware", async () => {
+test("head: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;
 
 	// Check returns nothing for in-progress multipart upload
@@ -1420,7 +1434,7 @@ test("head: is multipart aware", async () => {
 	expect(object?.customMetadata).toEqual({ key: "value" });
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
 });
-test("get: is multipart aware", async () => {
+test("get: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;
 
 	// Check returns nothing for in-progress multipart upload
@@ -1478,7 +1492,7 @@ test("get: is multipart aware", async () => {
 		`${"b".repeat(quarterPartSize)}${"c".repeat(PART_SIZE)}`
 	);
 });
-test("put: is multipart aware", async () => {
+test("put: is multipart aware", async ({ expect }) => {
 	const { r2, object: objectStub } = ctx;
 
 	// Check doesn't overwrite parts for in-progress multipart upload
@@ -1504,7 +1518,7 @@ test("put: is multipart aware", async () => {
 	for (const part of parts)
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
 });
-test("delete: is multipart aware", async () => {
+test("delete: is multipart aware", async ({ expect }) => {
 	const { r2, object: objectStub } = ctx;
 
 	// Check doesn't remove parts for in-progress multipart upload
@@ -1527,7 +1541,9 @@ test("delete: is multipart aware", async () => {
 	for (const part of parts)
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
 });
-test("delete: waits for in-progress multipart gets before deleting part blobs", async () => {
+test("delete: waits for in-progress multipart gets before deleting part blobs", async ({
+	expect,
+}) => {
 	const { r2, object: objectStub } = ctx;
 
 	const upload = await r2.createMultipartUpload("key");
@@ -1553,7 +1569,7 @@ test("delete: waits for in-progress multipart gets before deleting part blobs", 
 	for (const part of parts)
 		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
 });
-test("list: is multipart aware", async () => {
+test("list: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;
 
 	// Check returns nothing for in-progress multipart upload
@@ -1589,7 +1605,7 @@ test("list: is multipart aware", async () => {
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });
 });
 
-test("migrates database to new location", async () => {
+test("migrates database to new location", async ({ expect }) => {
 	// Copy legacy data to temporary directory
 	const tmp = await useTmp();
 	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");

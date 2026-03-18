@@ -1,6 +1,5 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior

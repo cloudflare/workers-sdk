@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"module": "esnext",
+		"module": "node16",
 		"target": "esnext",
 		"lib": ["esnext"],
 		"strict": true,

@@ -1,5 +1,5 @@
 import dedent from "ts-dedent";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -47,7 +47,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 			await helper.bestEffortRun(`wrangler delete`);
 		});
 
-		it("omit subdomain warnings on 1st deploy", async () => {
+		it("omit subdomain warnings on 1st deploy", async ({ expect }) => {
 			const deploy = await helper.run("wrangler deploy");
 			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -59,7 +59,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 			expect(normalize(deploy.stderr)).toMatchInlineSnapshot(`""`);
 		});
 
-		it("show subdomain warnings on 2nd deploy, workers_dev", async () => {
+		it("show subdomain warnings on 2nd deploy, workers_dev", async ({
+			expect,
+		}) => {
 			// Set remote state using `wrangler triggers deploy`.
 			await helper.seed({
 				"wrangler.toml": dedent`
@@ -95,7 +97,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("deploy", { timeout: TIMEOUT }, () => {
 			`);
 		});
 
-		it("show subdomain warnings on 3rd deploy, preview_urls", async () => {
+		it("show subdomain warnings on 3rd deploy, preview_urls", async ({
+			expect,
+		}) => {
 			// Set remote state using `wrangler triggers deploy`.
 			await helper.seed({
 				"wrangler.toml": dedent`

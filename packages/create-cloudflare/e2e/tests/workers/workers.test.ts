@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readJSON, readToml } from "helpers/files";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
-import { beforeAll, describe, expect } from "vitest";
+import { beforeAll, describe } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
 import {
 	isWindows,
@@ -41,7 +40,7 @@ describe
 			test(
 				name,
 				{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
-				async ({ project, logStream }) => {
+				async ({ expect, project, logStream }) => {
 					try {
 						const deployedUrl = await runC3ForWorkerTest(
 							testConfig,

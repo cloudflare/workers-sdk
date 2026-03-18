@@ -2,15 +2,14 @@ import { mkdtempSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { createAssetsIgnoreFunction, getContentType } from "../helpers";
 
 describe("assets", () => {
 	const tmpDir = mkdtempSync(join(tmpdir(), "wrangler-tests"));
 
 	describe(".assetsignore", () => {
-		it("should ignore metafiles by default", async () => {
+		it("should ignore metafiles by default", async ({ expect }) => {
 			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(tmpDir);
 
 			expect(assetsIgnoreFunction(".assetsignore")).toBeTruthy();
@@ -23,7 +22,7 @@ describe("assets", () => {
 			expect(assetsIgnoreFunction(join("child", "_headers"))).toBeFalsy();
 		});
 
-		it("should allow users to force opt-in metafiles", async () => {
+		it("should allow users to force opt-in metafiles", async ({ expect }) => {
 			await writeFile(
 				join(tmpDir, "./.assetsignore"),
 				"!.assetsignore\n!_redirects\n!_headers"
@@ -35,7 +34,7 @@ describe("assets", () => {
 			expect(assetsIgnoreFunction("_headers")).toBeFalsy();
 		});
 
-		it("should allow users to ignore files", async () => {
+		it("should allow users to ignore files", async ({ expect }) => {
 			await writeFile(
 				join(tmpDir, "./.assetsignore"),
 				"logo.png\nchild/**/*.svg\n!child/nope.svg\n/*.js"
@@ -57,7 +56,7 @@ describe("assets", () => {
 });
 
 describe("getContentType", () => {
-	it("should return 'text/javascript", () => {
+	it("should return 'text/javascript", ({ expect }) => {
 		const contentType = getContentType("/_astro/sponsors.CIiPz7eJ.js");
 		expect(contentType).toBe("text/javascript; charset=utf-8");
 	});

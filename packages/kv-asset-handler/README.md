@@ -225,13 +225,13 @@ return getAssetFromKV(
 	{
 		request,
 		waitUntil(promise) {
-			return ctx.waitUntil(promise)
+			return ctx.waitUntil(promise);
 		},
 	},
 	{
 		ASSET_NAMESPACE: env.__STATIC_CONTENT,
-	},
-)
+	}
+);
 ```
 
 ##### Service Worker
@@ -253,22 +253,22 @@ In ES Modules format, this argument is required, and can be imported.
 ##### ES Module
 
 ```js
-import manifestJSON from '__STATIC_CONTENT_MANIFEST'
-let manifest = JSON.parse(manifestJSON)
-manifest['index.html'] = 'index.special.html'
+import manifestJSON from "__STATIC_CONTENT_MANIFEST";
+let manifest = JSON.parse(manifestJSON);
+manifest["index.html"] = "index.special.html";
 
 return getAssetFromKV(
 	{
 		request,
 		waitUntil(promise) {
-			return ctx.waitUntil(promise)
+			return ctx.waitUntil(promise);
 		},
 	},
 	{
 		ASSET_MANIFEST: manifest,
 		// ...
-	},
-)
+	}
+);
 ```
 
 ##### Service Worker

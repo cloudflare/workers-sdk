@@ -236,12 +236,12 @@ You must manually define your modules when constructing Miniflare:
     ...,
     modules: [
       { type: "ESModule", path: "index-dynamic.mjs" },
-      { type: "CommonJS", path: "index.cjs" },
-      { type: "CommonJS", path: "index.node.cjs" },
       { type: "ESModule", path: "blobs-indirect.mjs" },
       { type: "ESModule", path: "blobs.mjs" },
       { type: "Text", path: "blobs/text.txt" },
       { type: "Data", path: "blobs/data.bin" },
+      { type: "CommonJS", path: "index.cjs" },
+      { type: "CommonJS", path: "index.node.cjs" },
       { type: "CompiledWasm", path: "add.wasm" },
       ...
     ]

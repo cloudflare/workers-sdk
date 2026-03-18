@@ -1,8 +1,7 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { parseRedirects } from "../configuration/parseRedirects";
 
-test("parseRedirects should handle a single rule", () => {
+test("parseRedirects should handle a single rule", ({ expect }) => {
 	const input = `/a /b 301`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -11,7 +10,7 @@ test("parseRedirects should handle a single rule", () => {
 	});
 });
 
-test("parseRedirects should ignore blank lines", () => {
+test("parseRedirects should ignore blank lines", ({ expect }) => {
 	const input = `
 /a /b 301
 `;
@@ -22,7 +21,7 @@ test("parseRedirects should ignore blank lines", () => {
 	});
 });
 
-test("parseRedirects should trim whitespace", () => {
+test("parseRedirects should trim whitespace", ({ expect }) => {
 	const input = `
   /a /b 301
 `;
@@ -33,7 +32,7 @@ test("parseRedirects should trim whitespace", () => {
 	});
 });
 
-test("parseRedirects should ignore comments", () => {
+test("parseRedirects should ignore comments", ({ expect }) => {
 	const input = `
   # This is a comment
   /a /b 301
@@ -46,7 +45,9 @@ test("parseRedirects should ignore comments", () => {
 	});
 });
 
-test("parseRedirects should handle a single comment-only line", () => {
+test("parseRedirects should handle a single comment-only line", ({
+	expect,
+}) => {
 	const input = `# This is just a comment`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -55,7 +56,9 @@ test("parseRedirects should handle a single comment-only line", () => {
 	});
 });
 
-test("parseRedirects should handle an indented comment-only line", () => {
+test("parseRedirects should handle an indented comment-only line", ({
+	expect,
+}) => {
 	const input = `  # indented comment`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -64,7 +67,9 @@ test("parseRedirects should handle an indented comment-only line", () => {
 	});
 });
 
-test("parseRedirects should handle multiple consecutive comment lines", () => {
+test("parseRedirects should handle multiple consecutive comment lines", ({
+	expect,
+}) => {
 	const input = `
 # First comment
 # Second comment
@@ -85,7 +90,7 @@ test("parseRedirects should handle multiple consecutive comment lines", () => {
 	});
 });
 
-test("parseRedirects should handle a file with only comments", () => {
+test("parseRedirects should handle a file with only comments", ({ expect }) => {
 	const input = `
 # This file has no redirects
 # Just comments
@@ -99,7 +104,7 @@ test("parseRedirects should handle a file with only comments", () => {
 	});
 });
 
-test("parseRedirects should default to 302", () => {
+test("parseRedirects should default to 302", ({ expect }) => {
 	const input = `
   /a /b 302
   /c /d
@@ -114,7 +119,7 @@ test("parseRedirects should default to 302", () => {
 	});
 });
 
-test("parseRedirects should preserve querystrings on to", () => {
+test("parseRedirects should preserve querystrings on to", ({ expect }) => {
 	const input = `
   /a /b?query=string 302
   /c?this=rejected /d 301
@@ -136,7 +141,7 @@ test("parseRedirects should preserve querystrings on to", () => {
 	});
 });
 
-test("parseRedirects should preserve fragments", () => {
+test("parseRedirects should preserve fragments", ({ expect }) => {
 	const input = `
   /a /b#blah 302
 `;
@@ -147,7 +152,9 @@ test("parseRedirects should preserve fragments", () => {
 	});
 });
 
-test("parseRedirects should preserve fragments which contain a hash sign", () => {
+test("parseRedirects should preserve fragments which contain a hash sign", ({
+	expect,
+}) => {
 	const input = `
   /a /b##blah-1 302
 `;
@@ -158,7 +165,9 @@ test("parseRedirects should preserve fragments which contain a hash sign", () =>
 	});
 });
 
-test("parseRedirects should preserve fragments which contain a hash sign and are full URLs", () => {
+test("parseRedirects should preserve fragments which contain a hash sign and are full URLs", ({
+	expect,
+}) => {
 	const input = `
   /a https://example.com/b##blah-1 302
 `;
@@ -176,7 +185,7 @@ test("parseRedirects should preserve fragments which contain a hash sign and are
 	});
 });
 
-test("parseRedirects should accept 200 (proxying) redirects", () => {
+test("parseRedirects should accept 200 (proxying) redirects", ({ expect }) => {
 	const input = `
 	/a /b 200
 `;
@@ -194,7 +203,9 @@ test("parseRedirects should accept 200 (proxying) redirects", () => {
 	});
 });
 
-test("parseRedirects should accept absolute URLs that end with index.html", () => {
+test("parseRedirects should accept absolute URLs that end with index.html", ({
+	expect,
+}) => {
 	const input = `
 	/foo https://bar.com/index.html 302
 `;
@@ -212,7 +223,9 @@ test("parseRedirects should accept absolute URLs that end with index.html", () =
 	});
 });
 
-test("parseRedirects should accept going to absolute URLs with ports", () => {
+test("parseRedirects should accept going to absolute URLs with ports", ({
+	expect,
+}) => {
 	const input = `
 	/foo https://bar.com:123/index.html 302
 	/cat https://cat.com:12345 302
@@ -244,7 +257,9 @@ test("parseRedirects should accept going to absolute URLs with ports", () => {
 	});
 });
 
-test("parseRedirects should accept relative URLs that don't point to .html files", () => {
+test("parseRedirects should accept relative URLs that don't point to .html files", ({
+	expect,
+}) => {
 	const input = `
 	/* /foo 200
 `;
@@ -262,7 +277,7 @@ test("parseRedirects should accept relative URLs that don't point to .html files
 	});
 });
 
-test("parseRedirects should support inline comments", () => {
+test("parseRedirects should support inline comments", ({ expect }) => {
 	const input = `/a /b 301 # redirect a to b`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -271,7 +286,9 @@ test("parseRedirects should support inline comments", () => {
 	});
 });
 
-test("parseRedirects should support inline comments without status code", () => {
+test("parseRedirects should support inline comments without status code", ({
+	expect,
+}) => {
 	const input = `/a /b # redirect with default status`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -280,7 +297,9 @@ test("parseRedirects should support inline comments without status code", () => 
 	});
 });
 
-test("parseRedirects should support inline comments after URL fragments", () => {
+test("parseRedirects should support inline comments after URL fragments", ({
+	expect,
+}) => {
 	const input = `/a /b#section 301 # redirect to section`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -289,7 +308,9 @@ test("parseRedirects should support inline comments after URL fragments", () => 
 	});
 });
 
-test("parseRedirects should support inline comments without space after hash", () => {
+test("parseRedirects should support inline comments without space after hash", ({
+	expect,
+}) => {
 	const input = `/a /b 301 #no space comment`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -298,7 +319,9 @@ test("parseRedirects should support inline comments without space after hash", (
 	});
 });
 
-test("parseRedirects should support multiple rules with inline comments", () => {
+test("parseRedirects should support multiple rules with inline comments", ({
+	expect,
+}) => {
 	const input = `
     /a /b 301 # first rule
     /c /d # second rule with default status
@@ -316,7 +339,9 @@ test("parseRedirects should support multiple rules with inline comments", () => 
 	});
 });
 
-test("parseRedirects should support inline comments with absolute URLs containing fragments", () => {
+test("parseRedirects should support inline comments with absolute URLs containing fragments", ({
+	expect,
+}) => {
 	const input = `/a https://x.com/b#c # comment`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -327,7 +352,9 @@ test("parseRedirects should support inline comments with absolute URLs containin
 	});
 });
 
-test("parseRedirects should support empty inline comments (just hash)", () => {
+test("parseRedirects should support empty inline comments (just hash)", ({
+	expect,
+}) => {
 	const input = `/a /b #`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -336,7 +363,9 @@ test("parseRedirects should support empty inline comments (just hash)", () => {
 	});
 });
 
-test("parseRedirects should support inline comments with multiple hashes in URL fragment", () => {
+test("parseRedirects should support inline comments with multiple hashes in URL fragment", ({
+	expect,
+}) => {
 	const input = `/a /b##anchor # comment`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
@@ -345,7 +374,7 @@ test("parseRedirects should support inline comments with multiple hashes in URL 
 	});
 });
 
-test("parseRedirects should support custom limits", () => {
+test("parseRedirects should support custom limits", ({ expect }) => {
 	const aaa = Array(1001).fill("a").join("");
 	const bbb = Array(1001).fill("b").join("");
 	const huge_line = `/${aaa} /${bbb} 301`;

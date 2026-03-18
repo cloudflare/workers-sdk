@@ -8,7 +8,9 @@ export default {
 
 function testProcessBehaviour() {
 	try {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		assert(process.env.FOO === "foo value", "process.env.FOO not populated");
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		assert(process.env.BAR === "bar secret", "process.env.BAR not populated");
 
 		const processEnvKeys = Object.keys(process.env).sort();

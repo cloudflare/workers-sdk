@@ -24,18 +24,12 @@ import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
 import type { Config } from "@cloudflare/workers-utils";
-import type { watch } from "chokidar";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
  */
 export async function startDev(args: StartDevOptions) {
-	let configFileWatcher: ReturnType<typeof watch> | undefined;
-	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let devEnv: DevEnv | DevEnv[] | undefined;
-	let teardownRegistryPromise:
-		| Promise<(name?: string) => Promise<void>>
-		| undefined;
 
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
@@ -161,21 +155,13 @@ export async function startDev(args: StartDevOptions) {
 			devEnv: primaryDevEnv,
 			secondary,
 			unregisterHotKeys,
-			teardownRegistryPromise,
 		};
 	} catch (e) {
 		await Promise.allSettled([
-			configFileWatcher?.close(),
-			assetsWatcher?.close(),
 			...(Array.isArray(devEnv)
 				? devEnv.map((d) => d.teardown())
 				: [devEnv?.teardown()]),
 			(async () => {
-				if (teardownRegistryPromise) {
-					assert(devEnv === undefined || !Array.isArray(devEnv));
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv?.config.latestConfig?.name);
-				}
 				unregisterHotKeys?.();
 			})(),
 		]);

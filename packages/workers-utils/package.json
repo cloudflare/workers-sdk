@@ -7,13 +7,16 @@
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/worker-utils"
 	},
-	"license": "MIT OR Apache-2.0",
-	"author": "workers-devprod@cloudflare.com",
+	"files": [
+		"dist"
+	],
 	"exports": {
 		".": {
 			"browser": "./dist/browser.mjs",
@@ -25,12 +28,8 @@
 			"types": "./dist/test-helpers/index.d.mts"
 		}
 	},
-	"files": [
-		"dist"
-	],
 	"scripts": {
 		"build": "tsup",
-		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
@@ -39,7 +38,6 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
@@ -48,7 +46,6 @@
 		"cloudflare": "^5.2.0",
 		"concurrently": "^8.2.2",
 		"empathic": "^2.0.0",
-		"eslint": "catalog:default",
 		"jsonc-parser": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
