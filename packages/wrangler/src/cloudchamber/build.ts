@@ -33,14 +33,6 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
-function stripImageTag(image: string): string {
-	const [name] = image.split("@");
-	const lastColon = name.lastIndexOf(":");
-	const lastSlash = name.lastIndexOf("/");
-
-	return lastColon > lastSlash ? name.slice(0, lastColon) : name;
-}
-
 export function buildYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("PATH", {
@@ -172,10 +164,10 @@ export async function buildAndMaybePush(
 					);
 				}
 
-				const repositoryOnly = stripImageTag(
-					resolveImageName(account.external_account_id, imageTag)
+				const imageUrl = new URL(
+					`http://${resolveImageName(account.external_account_id, imageTag)}`
 				);
-
+				const repositoryOnly = `${imageUrl.host}${imageUrl.pathname.split(":")[0]}`;
 				logger.debug("respositoryOnly:", repositoryOnly);
 
 				// make sure the repository + name provided in wrangler config

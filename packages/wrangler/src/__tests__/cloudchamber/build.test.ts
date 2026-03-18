@@ -340,9 +340,7 @@ describe("buildAndMaybePush", () => {
 		});
 		vi.mocked(dockerImageInspect).mockReset();
 		vi.mocked(dockerImageInspect)
-			.mockResolvedValueOnce(
-				'["localhost:5000/test-app@sha256:three"]'
-			)
+			.mockResolvedValueOnce('["localhost:5000/test-app@sha256:three"]')
 			.mockResolvedValueOnce("53387881 2");
 		vi.mocked(runDockerCmdWithOutput).mockReset();
 		vi.mocked(runDockerCmdWithOutput).mockImplementationOnce(() => {
