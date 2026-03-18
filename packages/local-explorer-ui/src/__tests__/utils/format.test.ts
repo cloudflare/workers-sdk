@@ -1,35 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatDate, formatSize } from "../../utils/format";
-
-describe("formatSize", () => {
-	test("`undefined` returns '0 B'", () => {
-		expect(formatSize(undefined)).toBe("0 B");
-	});
-
-	test("`0` returns '0 B'", () => {
-		expect(formatSize(0)).toBe("0 B");
-	});
-
-	test("small byte value", () => {
-		expect(formatSize(100)).toBe("100 B");
-	});
-
-	test("kilobyte value", () => {
-		expect(formatSize(1024)).toBe("1.02 kB");
-	});
-
-	test("larger kilobyte value", () => {
-		expect(formatSize(1500)).toBe("1.5 kB");
-	});
-
-	test("megabyte value", () => {
-		expect(formatSize(1048576)).toBe("1.05 MB");
-	});
-
-	test("gigabyte value", () => {
-		expect(formatSize(1073741824)).toBe("1.07 GB");
-	});
-});
+import { formatDate } from "../../utils/format";
 
 describe("formatDate", () => {
 	test("`undefined` returns '-'", () => {

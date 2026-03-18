@@ -6,14 +6,10 @@ import prettyBytes from "pretty-bytes";
  *
  * @param bytes - The number of bytes to format
  *
- * @returns A formatted string like "1.34 kB" or "0 B" for undefined/zero values
+ * @returns A formatted string like "1.34 kB" or "0 B" for undefined values
  */
 export function formatSize(bytes: number | undefined): string {
-	if (bytes === undefined || bytes === 0) {
-		return "0 B";
-	}
-
-	return prettyBytes(bytes);
+	return prettyBytes(bytes ?? 0);
 }
 
 /**
