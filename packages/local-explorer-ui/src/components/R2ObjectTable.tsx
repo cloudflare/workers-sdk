@@ -197,7 +197,7 @@ export function R2ObjectTable({
 
 	// Get selected file keys (excluding directories) for download
 	const selectedFileKeys = Array.from(selectedKeys).filter(
-		(key) => !key.endsWith("/")
+		(key) => !delimitedPrefixes.includes(key)
 	);
 
 	const allItemsSelected =
