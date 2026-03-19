@@ -21,7 +21,6 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 ## CONVENTIONS
 
 - No named imports from `"wrangler"` — must use `import * as wrangler from "wrangler"` (namespace import only, enforced by eslint)
-- Uses separate pnpm catalog (`catalogs.vite-plugin`) with different Vite version (7.x) than rest of repo (5.x)
 - Top-level `await` in entry — only possible because ESM-only
 - Playground directory `worker-♫/` has unicode in name (intentional)
 
