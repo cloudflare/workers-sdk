@@ -103,8 +103,7 @@ function RootLayout() {
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 	const workerFromUrl = useMemo(
-		() =>
-			new URLSearchParams(routerState.location.searchStr).get("worker"),
+		() => new URLSearchParams(routerState.location.searchStr).get("worker"),
 		[routerState.location.searchStr]
 	);
 	const router = useRouter();
@@ -139,9 +138,7 @@ function RootLayout() {
 		(workerName: string) => {
 			// Preserve existing search params (e.g. ?table=) and update worker.
 			// Use router.history.push so TanStack Router is aware of the navigation.
-			const currentSearch = new URLSearchParams(
-				routerState.location.searchStr
-			);
+			const currentSearch = new URLSearchParams(routerState.location.searchStr);
 			currentSearch.set("worker", workerName);
 			router.history.push(
 				`${routerState.location.pathname}?${currentSearch.toString()}`

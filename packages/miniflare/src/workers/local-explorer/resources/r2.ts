@@ -13,7 +13,10 @@ import {
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
-import type { R2Bucket as R2BucketType, R2ListBucketsResponse } from "../generated";
+import type {
+	R2Bucket as R2BucketType,
+	R2ListBucketsResponse,
+} from "../generated";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)
