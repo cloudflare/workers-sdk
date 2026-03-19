@@ -164,6 +164,9 @@
 	/* Studio highlight colors */
 	--color-highlight-bg: oklch(35% 0.1 85); /* yellow highlight background */
 	--color-highlight-text: oklch(97% 0 0); /* light text on highlight */
+
+	/* Custom Kumo styles */
+	--color-kumo-overlay: black;
 }
 
 @layer base {
