@@ -30,6 +30,7 @@ type ValidKeys = Exclude<
 	| "durable_objects"
 	| "version_metadata"
 	| "images"
+	| "stream"
 	| "media"
 	| "unsafe"
 	| "ratelimits"
