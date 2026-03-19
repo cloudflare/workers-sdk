@@ -146,14 +146,17 @@ describe("Cross-process aggregation", () => {
 				    {
 				      "id": "kv-a-1",
 				      "title": "KV_A_1",
+				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-a-2",
 				      "title": "KV_A_2",
+				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-b-1",
 				      "title": "KV_B_1",
+				      "workerName": "worker-b",
 				    },
 				  ],
 				  "result_info": {
@@ -177,14 +180,17 @@ describe("Cross-process aggregation", () => {
 				    {
 				      "id": "kv-a-1",
 				      "title": "KV_A_1",
+				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-a-2",
 				      "title": "KV_A_2",
+				      "workerName": "worker-a",
 				    },
 				    {
 				      "id": "kv-b-1",
 				      "title": "KV_B_1",
+				      "workerName": "worker-b",
 				    },
 				  ],
 				  "result_info": {
@@ -302,11 +308,13 @@ describe("Cross-process aggregation", () => {
 				      "name": "DB_A",
 				      "uuid": "db-a",
 				      "version": "production",
+				      "workerName": "worker-a",
 				    },
 				    {
 				      "name": "DB_B",
 				      "uuid": "db-b",
 				      "version": "production",
+				      "workerName": "worker-b",
 				    },
 				  ],
 				  "result_info": {
@@ -399,9 +407,11 @@ describe("Cross-process aggregation", () => {
 				  "buckets": [
 				    {
 				      "name": "bucket-a",
+				      "workerName": "worker-a",
 				    },
 				    {
 				      "name": "bucket-b",
+				      "workerName": "worker-b",
 				    },
 				  ],
 				}
@@ -501,14 +511,17 @@ describe("Multi-worker peer deduplication", () => {
 			    {
 			      "id": "kv-a",
 			      "title": "KV_A",
+			      "workerName": "worker-a",
 			    },
 			    {
 			      "id": "kv-b1",
 			      "title": "KV_B1",
+			      "workerName": "worker-b1",
 			    },
 			    {
 			      "id": "kv-b2",
 			      "title": "KV_B2",
+			      "workerName": "worker-b2",
 			    },
 			  ],
 			  "result_info": {
