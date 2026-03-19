@@ -849,7 +849,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// they are part of the upload and don't need to be inherited.
 		if (config.secrets?.required?.length) {
 			const inheritedSecrets = config.secrets.required.filter(
-				(name) => !(name in bindings)
+				(secretName) => !(secretName in bindings)
 			);
 
 			if (inheritedSecrets.length > 0) {
@@ -1212,7 +1212,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						)
 						.filter((match): match is RegExpMatchArray => match !== null)
 						.map((match) => match[1])
-						.filter((name) => config.secrets?.required?.includes(name));
+						.filter((secretName) =>
+							config.secrets?.required?.includes(secretName)
+						);
 
 					if (missingSecretNames.length > 0) {
 						err.preventReport();
