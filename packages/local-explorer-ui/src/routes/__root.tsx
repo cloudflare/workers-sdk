@@ -1,3 +1,4 @@
+import { Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
@@ -6,11 +7,13 @@ import {
 import {
 	d1ListDatabases,
 	durableObjectsNamespaceListNamespaces,
+	r2ListBuckets,
 	workersKvNamespaceListNamespaces,
 } from "../api";
 import { Sidebar } from "../components/Sidebar";
 import type {
 	D1DatabaseResponse,
+	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
@@ -18,11 +21,13 @@ import type {
 export const Route = createRootRoute({
 	component: RootLayout,
 	loader: async () => {
-		const [kvResponse, d1Response, doResponse] = await Promise.allSettled([
-			workersKvNamespaceListNamespaces(),
-			d1ListDatabases(),
-			durableObjectsNamespaceListNamespaces(),
-		]);
+		const [kvResponse, d1Response, doResponse, r2Response] =
+			await Promise.allSettled([
+				workersKvNamespaceListNamespaces(),
+				d1ListDatabases(),
+				durableObjectsNamespaceListNamespaces(),
+				r2ListBuckets(),
+			]);
 
 		let kvNamespaces = new Array<WorkersKvNamespace>();
 		let kvError: string | null = null;
@@ -50,6 +55,14 @@ export const Route = createRootRoute({
 			doError = `DO Error: ${doResponse.reason instanceof Error ? doResponse.reason.message : JSON.stringify(doResponse.reason)}`;
 		}
 
+		let r2Buckets = new Array<R2Bucket>();
+		let r2Error: string | null = null;
+		if (r2Response.status === "fulfilled") {
+			r2Buckets = r2Response.value.data?.result?.buckets ?? [];
+		} else {
+			r2Error = `R2 Error: ${r2Response.reason instanceof Error ? r2Response.reason.message : JSON.stringify(r2Response.reason)}`;
+		}
+
 		return {
 			d1Error,
 			databases,
@@ -57,6 +70,8 @@ export const Route = createRootRoute({
 			doNamespaces,
 			kvError,
 			kvNamespaces,
+			r2Buckets,
+			r2Error,
 		};
 	},
 });
@@ -67,19 +82,23 @@ function RootLayout() {
 	const currentPath = routerState.location.pathname;
 
 	return (
-		<div className="flex min-h-screen">
-			<Sidebar
-				currentPath={currentPath}
-				d1Error={loaderData.d1Error}
-				databases={loaderData.databases}
-				doError={loaderData.doError}
-				doNamespaces={loaderData.doNamespaces}
-				kvError={loaderData.kvError}
-				kvNamespaces={loaderData.kvNamespaces}
-			/>
-			<main className="flex flex-1 flex-col overflow-y-auto">
-				<Outlet />
-			</main>
-		</div>
+		<Toasty>
+			<div className="flex min-h-screen">
+				<Sidebar
+					currentPath={currentPath}
+					d1Error={loaderData.d1Error}
+					databases={loaderData.databases}
+					doError={loaderData.doError}
+					doNamespaces={loaderData.doNamespaces}
+					kvError={loaderData.kvError}
+					kvNamespaces={loaderData.kvNamespaces}
+					r2Buckets={loaderData.r2Buckets}
+					r2Error={loaderData.r2Error}
+				/>
+				<main className="flex flex-1 flex-col overflow-y-auto">
+					<Outlet />
+				</main>
+			</div>
+		</Toasty>
 	);
 }

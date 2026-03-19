@@ -8,6 +8,7 @@ export type BindingIdMap = {
 	d1: Record<string, string>; // databaseId -> bindingName
 	kv: Record<string, string>; // namespaceId -> bindingName
 	do: Record<string, DONamespaceInfo & { binding: string }>; // uniqueKey -> namespace info
+	r2: Record<string, string>; // bucketName -> bindingName
 };
 
 type DONamespaceInfo = {

@@ -5,8 +5,10 @@ import { Link } from "@tanstack/react-router";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
+import R2Icon from "../assets/icons/r2.svg?react";
 import type {
 	D1DatabaseResponse,
+	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
@@ -93,6 +95,8 @@ interface SidebarProps {
 	doNamespaces: WorkersNamespace[];
 	kvError: string | null;
 	kvNamespaces: WorkersKvNamespace[];
+	r2Buckets: R2Bucket[];
+	r2Error: string | null;
 }
 
 export function Sidebar({
@@ -103,6 +107,8 @@ export function Sidebar({
 	doNamespaces,
 	kvError,
 	kvNamespaces,
+	r2Buckets,
+	r2Error,
 }: SidebarProps) {
 	return (
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
@@ -173,6 +179,27 @@ export function Sidebar({
 					};
 				})}
 				title="Durable Objects"
+			/>
+
+			<SidebarItemGroup
+				emptyLabel="No buckets"
+				error={r2Error}
+				icon={R2Icon}
+				items={r2Buckets.map((bucket) => {
+					const bucketName = bucket.name ?? "Unknown";
+					return {
+						id: bucketName,
+						isActive:
+							currentPath === `/r2/${bucketName}` ||
+							currentPath.startsWith(`/r2/${bucketName}/`),
+						label: bucketName,
+						link: {
+							params: { bucketName },
+							to: "/r2/$bucketName",
+						},
+					};
+				})}
+				title="R2 Buckets"
 			/>
 		</aside>
 	);
