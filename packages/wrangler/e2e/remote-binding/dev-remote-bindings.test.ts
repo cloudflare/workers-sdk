@@ -1,7 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
@@ -294,7 +293,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`wrangler dev -c wrangler.json -c ${localTest}/wrangler.json`
 				);
 
-				const { url } = await worker.waitForReady();
+				// Multi-worker with remote bindings on both workers requires two
+				// serialised remote proxy sessions (API calls) before "Ready on"
+				// can appear, so give it more time than the default 15s.
+				const { url } = await worker.waitForReady(30_000);
 
 				await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
 				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker
@@ -321,11 +323,6 @@ async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
 							}
 						}`,
 	});
-	const localWorker = helper.runLongLived(
-		// Note: we use a random port here otherwise for some reason in CI windows
-		//       allows the default port to be overridden by other processes
-		`wrangler dev --port ${await getPort()}`,
-		{ cwd: local }
-	);
+	const localWorker = helper.runLongLived("wrangler dev", { cwd: local });
 	await localWorker.waitForReady();
 }

@@ -1,4 +1,3 @@
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, it } from "vitest";
@@ -409,9 +408,8 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		});
 
 		it("can fetch a (pages project)", async ({ expect }) => {
-			const port = await getPort();
 			const worker = helper.runLongLived(
-				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
+				`${cmd.replace("wrangler dev", "wrangler pages dev")}`,
 				{ cwd: a }
 			);
 
@@ -427,9 +425,8 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			// We don't need b's URL, but ensure that b starts up before a
 			await workerB.waitForReady(5_000);
 
-			const port = await getPort();
 			const workerA = helper.runLongLived(
-				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
+				`${cmd.replace("wrangler dev", "wrangler pages dev")}`,
 				{ cwd: a }
 			);
 			const { url } = await workerA.waitForReady(5_000);
@@ -446,9 +443,8 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		});
 
 		it("can fetch b through a (start a, start b)", async ({ expect }) => {
-			const port = await getPort();
 			const workerA = helper.runLongLived(
-				`${cmd.replace("wrangler dev", "wrangler pages dev")} --port ${port}`,
+				`${cmd.replace("wrangler dev", "wrangler pages dev")}`,
 				{ cwd: a }
 			);
 			const { url } = await workerA.waitForReady(5_000);
@@ -468,9 +464,8 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				"wrangler.toml": dedent`
 				`,
 			});
-			const port = await getPort();
 			const workerA = helper.runLongLived(
-				`${cmd.replace("wrangler dev", "wrangler pages dev")} dist --service BEE=${workerName2} --port ${port}`,
+				`${cmd.replace("wrangler dev", "wrangler pages dev")} dist --service BEE=${workerName2}`,
 				{ cwd: a }
 			);
 			const { url } = await workerA.waitForReady(5_000);
