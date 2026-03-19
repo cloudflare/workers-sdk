@@ -10,6 +10,7 @@ chalk.level = 0;
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
+// eslint-disable-next-line turbo/no-undeclared-env-vars
 process.env.WRANGLER_CI_DISABLE_CONFIG_WATCHING = "true";
 
 /**
@@ -208,9 +209,8 @@ vi.mock("../user/generate-random-state", () => {
 });
 
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
-	const realModule = await importOriginal<
-		typeof import("../metrics/metrics-config")
-	>();
+	const realModule =
+		await importOriginal<typeof import("../metrics/metrics-config")>();
 	vi.spyOn(realModule, "getMetricsConfig").mockImplementation(() => {
 		return {
 			enabled: false,
@@ -245,7 +245,6 @@ vi.mock("execa", async (importOriginal) => {
 		}),
 	};
 });
-
 
 // Vitest 4's vi.unstubAllEnvs() does not reliably clean up process.env
 // Track env keys before each test and remove additions afterward.

@@ -20,7 +20,7 @@ function loadCatalogDeps(): Set<string> {
 	let inCatalog = false;
 
 	for (const line of content.split("\n")) {
-		if (/^catalog:/.test(line)) {
+		if (line.startsWith("catalog:")) {
 			inCatalog = true;
 			continue;
 		}
