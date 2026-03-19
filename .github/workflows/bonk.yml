@@ -42,7 +42,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run Bonk
-        uses: ask-bonk/ask-bonk/github@c39e982defd0114385df54e72012a3fc4333c4d4 # main
+        uses: ask-bonk/ask-bonk/github@main # main
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
           CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
