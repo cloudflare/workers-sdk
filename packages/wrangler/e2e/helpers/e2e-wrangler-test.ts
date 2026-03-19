@@ -4,6 +4,7 @@ import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { onTestFinished } from "vitest";
+import { E2E_ACCOUNT_WORKERS_DEV_DOMAIN } from "./account-id";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -269,10 +270,10 @@ export class WranglerE2ETestHelper {
 	/**
 	 * Ensure a worker with a well-known `preserve-e2e-*` name is deployed.
 	 *
-	 * Checks whether the worker is already live by fetching its
-	 * `devprod-testing7928.workers.dev` URL. If it responds with a non-404
-	 * status the deploy is skipped; otherwise `wrangler deploy` is run and
-	 * the helper waits for the worker to become available.
+	 * Checks whether the worker is already live by fetching its workers.dev
+	 * URL (controlled by `E2E_ACCOUNT_WORKERS_DEV_DOMAIN`). If it responds
+	 * with a non-404 status the deploy is skipped; otherwise `wrangler deploy`
+	 * is run and the helper waits for the worker to become available.
 	 *
 	 * No cleanup is registered — the worker is expected to persist across
 	 * test runs and is excluded from the periodic e2e cleanup job by its
@@ -287,7 +288,7 @@ export class WranglerE2ETestHelper {
 		entryPoint?: string;
 		configPath?: string;
 	}): Promise<void> {
-		const deployedUrl = `https://${workerName}.devprod-testing7928.workers.dev/`;
+		const deployedUrl = `https://${workerName}.${E2E_ACCOUNT_WORKERS_DEV_DOMAIN}/`;
 		try {
 			const response = await fetch(deployedUrl);
 			if (response.status !== 404) {

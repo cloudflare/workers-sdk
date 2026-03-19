@@ -6,7 +6,10 @@ import { setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import {
+	CLOUDFLARE_ACCOUNT_ID,
+	E2E_ACCOUNT_WORKERS_DEV_DOMAIN,
+} from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
@@ -1238,7 +1241,7 @@ describe.skipIf(CLOUDFLARE_ACCOUNT_ID !== "8d783f274e1f82dc46744c297b015a2f")(
 
 			const text = await fetchText(url);
 
-			expect(text).toContain(`devprod-testing7928.workers.dev`);
+			expect(text).toContain(E2E_ACCOUNT_WORKERS_DEV_DOMAIN);
 		});
 
 		it("respects dev.host setting", async ({ expect }) => {
