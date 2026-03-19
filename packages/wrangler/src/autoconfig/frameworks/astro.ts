@@ -170,7 +170,10 @@ function updateAstroConfig(
 					hasCloudflareImport = true;
 					// Find the default import specifier and capture its local name
 					for (const specifier of node.specifiers ?? []) {
-						if (specifier.type === "ImportDefaultSpecifier" && specifier.local) {
+						if (
+							specifier.type === "ImportDefaultSpecifier" &&
+							specifier.local
+						) {
 							// specifier.local is an Identifier node with a `name` property
 							const local = specifier.local as { name: string };
 							adapterIdentifier = local.name;
