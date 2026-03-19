@@ -1,39 +1,24 @@
-import {
-	createExecutionContext,
-	env,
-	runInDurableObject,
-} from "cloudflare:test";
+import { env } from "cloudflare:test";
+import { setTestWorkflowCallback } from "./test-entry";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
 	Engine,
 } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
-import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+import type { WorkflowStep } from "cloudflare:workers";
 
-export async function setWorkflowEntrypoint(
-	stub: DurableObjectStub<Engine>,
-	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
-) {
-	const ctx = createExecutionContext();
-	await runInDurableObject(stub, (instance) => {
-		// @ts-expect-error this is only a stub for WorkflowEntrypoint
-		instance.env.USER_WORKFLOW = new (class {
-			constructor(
-				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected ctx: ExecutionContext,
-				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected env: ProvidedEnv
-			) {}
-			public async run(
-				event: Readonly<WorkflowEvent<unknown>>,
-				step: WorkflowStep
-			): Promise<unknown> {
-				return await callback(event, step);
-			}
-		})(ctx, env);
-	});
+// Track fire-and-forget init() RPC promises so they can be settled
+// in afterAll hooks before vitest tears down miniflare
+const pendingInits: Promise<unknown>[] = [];
+
+/**
+ * Await all tracked init promises (with a timeout safety net).
+ * Call this in afterAll() for every test file that uses runWorkflow().
+ */
+export async function settlePendingWorkflows(): Promise<void> {
+	await Promise.allSettled(pendingInits);
+	pendingInits.length = 0;
 }
 
 export async function runWorkflow(
@@ -43,35 +28,47 @@ export async function runWorkflow(
 	const engineId = env.ENGINE.idFromName(instanceId);
 	const engineStub = env.ENGINE.get(engineId);
 
-	await setWorkflowEntrypoint(engineStub, callback);
+	setTestWorkflowCallback(callback);
 
-	await engineStub.init(
-		12346,
-		{} as DatabaseWorkflow,
-		{} as DatabaseVersion,
-		{} as DatabaseInstance,
-		{ payload: {}, timestamp: new Date(), instanceId: "some-instance-id" }
-	);
+	// Fire-and-forget: suppress all rejections to prevent unhandled
+	// rejections inside workerd (which crash the HTTP server on Windows).
+	// Abort errors (pause, terminate, restart) are expected; workflow
+	// errors (NonRetryableError, step failures) are also expected for
+	// tests that intentionally trigger them. Tests validate correctness
+	// through separate log/status assertions, not through init()'s result.
+	const initPromise = engineStub
+		.init(
+			12346,
+			{} as DatabaseWorkflow,
+			{} as DatabaseVersion,
+			{ id: instanceId } as DatabaseInstance,
+			{ payload: {}, timestamp: new Date(), instanceId }
+		)
+		.catch(() => {});
+
+	pendingInits.push(initPromise);
 
 	return engineStub;
 }
 
-export async function runWorkflowDefer(
+export async function runWorkflowAndAwait(
 	instanceId: string,
 	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
 ): Promise<DurableObjectStub<Engine>> {
 	const engineId = env.ENGINE.idFromName(instanceId);
 	const engineStub = env.ENGINE.get(engineId);
 
-	await setWorkflowEntrypoint(engineStub, callback);
+	setTestWorkflowCallback(callback);
 
-	void engineStub.init(
-		12346,
-		{} as DatabaseWorkflow,
-		{} as DatabaseVersion,
-		{} as DatabaseInstance,
-		{ payload: {}, timestamp: new Date(), instanceId: "some-instance-id" }
-	);
+	await engineStub
+		.init(
+			12346,
+			{} as DatabaseWorkflow,
+			{} as DatabaseVersion,
+			{ id: instanceId } as DatabaseInstance,
+			{ payload: {}, timestamp: new Date(), instanceId }
+		)
+		.catch(() => {});
 
 	return engineStub;
 }

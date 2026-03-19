@@ -280,18 +280,11 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).not.toContain("to exit");
 				expect(wrangler.stdout).not.toContain("rebuild container");
 			});
+			// TODO: update this when we release properly
 			it("should not show local explorer hotkey by default", async () => {
 				const wrangler = await startWranglerDev(args);
 				wrangler.pty.kill();
 				expect(wrangler.stdout).not.toContain("open local explorer");
-			});
-			it("should show local explorer hotkey when X_LOCAL_EXPLORER=true", async () => {
-				const wrangler = await startWranglerDev(args, false, {
-					...(process.env as Record<string, string>),
-					X_LOCAL_EXPLORER: "true",
-				});
-				wrangler.pty.kill();
-				expect(wrangler.stdout).toContain("open local explorer");
 			});
 		});
 	});

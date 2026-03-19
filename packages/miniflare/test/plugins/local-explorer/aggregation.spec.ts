@@ -84,6 +84,9 @@ describe("Cross-process aggregation", () => {
 			durableObjects: {
 				MY_DO: "MyDO",
 			},
+			r2Buckets: {
+				BUCKET_A: "bucket-a",
+			},
 		});
 
 		instanceB = new Miniflare({
@@ -108,6 +111,9 @@ describe("Cross-process aggregation", () => {
 			},
 			durableObjects: {
 				OTHER_DO: "OtherDO",
+			},
+			r2Buckets: {
+				BUCKET_B: "bucket-b",
 			},
 		});
 		await instanceA.ready;
@@ -380,6 +386,35 @@ describe("Cross-process aggregation", () => {
 				  "count": 2,
 				}
 			`);
+		});
+	});
+
+	describe("r2 bucket aggregation", () => {
+		test("lists r2 buckets from both instances", async ({ expect }) => {
+			const response = await instanceA.dispatchFetch(`${BASE_URL}/r2/buckets`);
+			const data = (await response.json()) as ListResponse;
+
+			expect(data.result).toMatchInlineSnapshot(`
+				{
+				  "buckets": [
+				    {
+				      "name": "bucket-a",
+				    },
+				    {
+				      "name": "bucket-b",
+				    },
+				  ],
+				}
+			`);
+			expect(data.result_info).toMatchInlineSnapshot(`
+				{
+				  "count": 2,
+				}
+			`);
+
+			const responseB = await instanceB.dispatchFetch(`${BASE_URL}/r2/buckets`);
+			const dataB = (await responseB.json()) as ListResponse;
+			expect(dataB).toEqual(data);
 		});
 	});
 });
