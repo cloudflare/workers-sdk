@@ -62,6 +62,7 @@ import {
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
+import { INVALID_INHERIT_BINDING_CODE } from "../utils/error-codes";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
@@ -1197,6 +1198,29 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 				if (message !== null) {
 					logger.error(message);
+				}
+
+				// Reformat strict inherit binding errors as user-friendly missing secret errors.
+				// The API returns all missing inherit bindings as separate errors in response.errors, which map to individual err.notes entries.
+				if (
+					err instanceof APIError &&
+					err.code === INVALID_INHERIT_BINDING_CODE
+				) {
+					const missingSecretNames = err.notes
+						.map((note) =>
+							note.text.match(/^inherit binding '(.+?)' is invalid/)
+						)
+						.filter((match): match is RegExpMatchArray => match !== null)
+						.map((match) => match[1])
+						.filter((name) => config.secrets?.required?.includes(name));
+
+					if (missingSecretNames.length > 0) {
+						err.preventReport();
+						throw new UserError(
+							`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
+								`Use \`wrangler secret put <NAME>\` to set secrets before deploying.`
+						);
+					}
 				}
 
 				// Apply source mapping to validation startup errors if possible

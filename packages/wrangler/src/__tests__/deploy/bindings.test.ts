@@ -2470,13 +2470,13 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 			});
 
-			it("should error when a required secret is missing from the deployed Worker", async () => {
+			it("should error when required secrets are missing from the deployed Worker", async ({ expect }) => {
 				writeWranglerConfig({
 					secrets: { required: ["API_KEY", "DB_PASSWORD"] },
 				});
 				writeWorkerSource();
 
-				// Mock the versions API to return an inherit binding error
+				// Mock the versions API to return inherit binding errors for all missing secrets
 				msw.use(
 					http.post(
 						"*/accounts/:accountId/workers/scripts/:scriptName/versions",
@@ -2488,6 +2488,11 @@ describe("deploy", () => {
 										message:
 											"inherit binding 'API_KEY' is invalid: previous version does not have binding named 'API_KEY'",
 									},
+									{
+										code: INVALID_INHERIT_BINDING_CODE,
+										message:
+											"inherit binding 'DB_PASSWORD' is invalid: previous version does not have binding named 'DB_PASSWORD'",
+									},
 								])
 							);
 						},
@@ -2497,10 +2502,15 @@ describe("deploy", () => {
 
 				mockSubDomainRequest();
 
-				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
+				await expect(
+					runWrangler("deploy index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
+Use \`wrangler secret put <NAME>\` to set secrets before deploying.]`
+				);
 			});
 
-			it("should error before uploading when the Worker does not exist", async () => {
+			it("should error before uploading when the Worker does not exist", async ({ expect }) => {
 				writeWranglerConfig({
 					secrets: { required: ["API_KEY", "DB_PASSWORD"] },
 				});
