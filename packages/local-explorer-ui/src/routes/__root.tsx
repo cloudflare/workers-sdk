@@ -150,12 +150,13 @@ function RootLayout() {
 	// Filter resources based on selected worker
 	const filteredData = useMemo(() => {
 		if (!selectedWorker) {
-			// No worker selected (shouldn't happen, but handle gracefully)
+			// No worker selected — no dev registry or single-worker case.
+			// Return all resources unfiltered to preserve backward compatibility.
 			return {
-				kvNamespaces: [],
-				databases: [],
-				doNamespaces: [],
-				r2Buckets: [],
+				kvNamespaces: loaderData.kvNamespaces,
+				databases: loaderData.databases,
+				doNamespaces: loaderData.doNamespaces,
+				r2Buckets: loaderData.r2Buckets,
 			};
 		}
 

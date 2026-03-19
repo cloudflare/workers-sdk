@@ -117,7 +117,7 @@ export function Sidebar({
 	selectedWorker,
 	onWorkerChange,
 }: SidebarProps) {
-	const showWorkerSelector = workers.length > 0;
+	const showWorkerSelector = workers.length > 1;
 
 	// Only include the worker search param when there are multiple workers.
 	// This keeps URLs clean in the common single-worker case.
