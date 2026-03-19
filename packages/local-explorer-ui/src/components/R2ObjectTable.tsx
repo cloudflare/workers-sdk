@@ -252,6 +252,7 @@ export function R2ObjectTable({
 							<Checkbox
 								aria-label="Select all"
 								checked={allItemsSelected}
+								className="hover:cursor-pointer"
 								disabled={selectableKeys.length === 0}
 								indeterminate={someItemsSelected && !allItemsSelected}
 								onCheckedChange={handleSelectAll}
@@ -283,6 +284,7 @@ export function R2ObjectTable({
 										<Checkbox
 											aria-label={`Select ${displayName}`}
 											checked={selectedKeys.has(item.prefix)}
+											className="hover:cursor-pointer"
 											onCheckedChange={() => handleSelectItem(item.prefix)}
 										/>
 									</Table.Cell>
@@ -324,6 +326,7 @@ export function R2ObjectTable({
 									<Checkbox
 										aria-label={`Select ${displayName}`}
 										checked={selectedKeys.has(key)}
+										className="hover:cursor-pointer"
 										onCheckedChange={() => handleSelectItem(key)}
 									/>
 								</Table.Cell>
