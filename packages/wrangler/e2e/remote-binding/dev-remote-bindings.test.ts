@@ -8,7 +8,7 @@ import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";
 import { normalizeOutput } from "../helpers/normalize";
 import { makeRoot, seed } from "../helpers/setup";
-import { waitFor } from "../helpers/wait-for";
+import { waitFor, waitForLong } from "../helpers/wait-for";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings",
@@ -207,7 +207,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await waitFor(() =>
+				// The error appears only after the remote proxy session validates
+				// the binding against the Cloudflare API, so use the longer timeout.
+				await waitForLong(() =>
 					expect(worker.currentOutput).toContain(
 						"Service binding 'REMOTE_WORKER' references Worker 'non-existent-service-binding' which was not found."
 					)
@@ -234,7 +236,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await waitFor(() =>
+				// The error appears only after the remote proxy session validates
+				// the binding against the Cloudflare API, so use the longer timeout.
+				await waitForLong(() =>
 					expect(worker.currentOutput).toContain(
 						"KV namespace 'non-existent-kv' is not valid."
 					)
