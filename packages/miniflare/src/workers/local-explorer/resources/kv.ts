@@ -63,14 +63,27 @@ async function findKVNamespaceOwner(
 
 /**
  * Get local KV namespaces from the binding map.
+ * Each namespace is tagged with the worker name it belongs to.
  */
-function getLocalKVNamespaces(env: Env): Array<{ id: string; title: string }> {
+function getLocalKVNamespaces(env: Env): Array<{
+	id: string;
+	title: string;
+	workerName: string;
+}> {
 	const kvBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
-	return Object.entries(kvBindingMap).map(([id, bindingName]) => ({
-		id: id,
-		// this is not technically correct, but the title doesn't exist locally
-		title: bindingName.split(":").pop() || bindingName,
-	}));
+
+	return Object.entries(kvBindingMap).map(([id, bindingName]) => {
+		// Binding names follow the pattern "MINIFLARE_PROXY:kv:workerName:BINDING"
+		const parts = bindingName.split(":");
+		const workerName = parts.length >= 3 ? parts[2] : "unknown";
+		const title = parts.pop() || bindingName;
+
+		return {
+			id,
+			title,
+			workerName,
+		};
+	});
 }
 
 // ============================================================================
@@ -161,7 +174,9 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 		if (limit !== undefined) params.set("limit", String(limit));
 		if (prefix) params.set("prefix", prefix);
 		const queryString = params.toString();
-		const path = `/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/keys${queryString ? `?${queryString}` : ""}`;
+		const path = `/storage/kv/namespaces/${encodeURIComponent(
+			namespace_id
+		)}/keys${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
 		if (response) return response;
@@ -227,7 +242,9 @@ export async function getKVValue(
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespaceId)}/values/${encodeURIComponent(keyName)}`
+			`/storage/kv/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/values/${encodeURIComponent(keyName)}`
 		);
 		if (response) return response;
 	}
@@ -262,7 +279,9 @@ export async function putKVValue(
 		const body = await c.req.arrayBuffer();
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespaceId)}/values/${encodeURIComponent(keyName)}`,
+			`/storage/kv/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/values/${encodeURIComponent(keyName)}`,
 			{
 				method: "PUT",
 				headers: {
@@ -361,7 +380,9 @@ export async function deleteKVValue(
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespaceId)}/values/${encodeURIComponent(keyName)}`,
+			`/storage/kv/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/values/${encodeURIComponent(keyName)}`,
 			{ method: "DELETE" }
 		);
 		if (response) return response;

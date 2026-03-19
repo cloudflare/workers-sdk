@@ -53,6 +53,7 @@ function getDOBinding(
 
 /**
  * Get local DO namespaces from the binding map.
+ * Each namespace is tagged with the worker name it belongs to.
  */
 function getLocalDONamespaces(env: Env): {
 	id: string;
@@ -60,6 +61,7 @@ function getLocalDONamespaces(env: Env): {
 	script: string;
 	class: string;
 	use_sqlite: boolean;
+	workerName: string;
 }[] {
 	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
 	return Object.entries(doBindingMap).map(([id, info]) => ({
@@ -68,6 +70,7 @@ function getLocalDONamespaces(env: Env): {
 		script: info.scriptName,
 		class: info.className,
 		use_sqlite: info.useSQLite,
+		workerName: info.scriptName,
 	}));
 }
 
@@ -159,7 +162,9 @@ export async function listDOObjects(
 		if (cursor) params.set("cursor", cursor);
 		if (limit !== undefined) params.set("limit", String(limit));
 		const queryString = params.toString();
-		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
+		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(
+			namespaceId
+		)}/objects${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
 		if (response) return response;
@@ -298,7 +303,9 @@ export async function queryDOSqlite(
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
+			`/workers/durable_objects/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/query`,
 			{
 				method: "POST",
 				headers: { "Content-Type": "application/json" },

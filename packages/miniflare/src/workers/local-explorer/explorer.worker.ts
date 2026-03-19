@@ -38,6 +38,7 @@ import {
 	putR2Object,
 } from "./resources/r2";
 import type { BindingIdMap } from "../../plugins/core/types";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
 
 export type Env = {
 	[key: string]: unknown;
@@ -250,5 +251,33 @@ app.delete(
 	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
 	(c) => deleteR2Objects(c, c.req.param("bucket_name"), c.req.valid("json"))
 );
+
+// ============================================================================
+// Workers Registry Endpoint
+// ============================================================================
+
+app.get("/api/workers", async (c) => {
+	const loopback = c.env.MINIFLARE_LOOPBACK;
+	const selfWorkerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
+	const selfSet = new Set(selfWorkerNames);
+
+	const response = await loopback.fetch("http://localhost/core/dev-registry");
+	const registry = await response.json<WorkerRegistry>();
+
+	const workers = Object.entries(registry).map(([name, def]) => ({
+		host: def.host,
+		isSelf: selfSet.has(name),
+		name,
+		port: def.port,
+		protocol: def.protocol,
+	}));
+
+	return c.json({
+		success: true,
+		errors: [],
+		messages: [],
+		result: workers,
+	});
+});
 
 export default app;

@@ -1236,6 +1236,51 @@
 				"summary": "Query Durable Object SQLite",
 				"tags": ["Durable Objects Namespace"]
 			}
+		},
+		"/workers": {
+			"get": {
+				"description": "Returns the list of workers from the dev registry.",
+				"operationId": "local-explorer-list-workers",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/local-explorer_worker"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Workers response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List Workers response failure."
+					}
+				},
+				"summary": "List Workers",
+				"tags": ["Local Explorer"]
+			}
 		}
 	},
 	"components": {
@@ -1323,6 +1368,10 @@
 					},
 					"name": {
 						"$ref": "#/components/schemas/r2_bucket_name"
+					},
+					"workerName": {
+						"description": "The name of the worker this bucket belongs to.",
+						"type": "string"
 					}
 				},
 				"type": "object"
@@ -1458,6 +1507,10 @@
 					},
 					"use_sqlite": {
 						"type": "boolean"
+					},
+					"workerName": {
+						"description": "The name of the worker this namespace belongs to.",
+						"type": "string"
 					}
 				},
 				"type": "object"
@@ -1722,6 +1775,10 @@
 					},
 					"version": {
 						"$ref": "#/components/schemas/d1_database-version"
+					},
+					"workerName": {
+						"description": "The name of the worker this database belongs to.",
+						"type": "string"
 					}
 				},
 				"type": "object"
@@ -2067,6 +2124,10 @@
 					},
 					"title": {
 						"$ref": "#/components/schemas/workers-kv_namespace_title"
+					},
+					"workerName": {
+						"description": "The name of the worker this namespace belongs to.",
+						"type": "string"
 					}
 				},
 				"required": ["id", "title"],
@@ -2298,6 +2359,34 @@
 								"description": "Number of rows written during query execution"
 							}
 						}
+					}
+				}
+			},
+			"local-explorer_worker": {
+				"type": "object",
+				"description": "A worker registered in the local dev registry.",
+				"required": ["name", "protocol", "host", "port", "isSelf"],
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "The name of the worker."
+					},
+					"protocol": {
+						"type": "string",
+						"enum": ["http", "https"],
+						"description": "The protocol the worker is accessible on."
+					},
+					"host": {
+						"type": "string",
+						"description": "The host the worker is accessible on."
+					},
+					"port": {
+						"type": "integer",
+						"description": "The port the worker is accessible on."
+					},
+					"isSelf": {
+						"type": "boolean",
+						"description": "Whether this worker belongs to the current Miniflare instance."
 					}
 				}
 			}

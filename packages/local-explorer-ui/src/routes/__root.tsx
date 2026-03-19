@@ -4,61 +4,81 @@ import {
 	Outlet,
 	useRouterState,
 } from "@tanstack/react-router";
+import { useCallback, useMemo } from "react";
 import {
 	d1ListDatabases,
 	durableObjectsNamespaceListNamespaces,
+	localExplorerListWorkers,
 	r2ListBuckets,
 	workersKvNamespaceListNamespaces,
 } from "../api";
 import { Sidebar } from "../components/Sidebar";
+import { filterVisibleWorkers } from "../components/WorkerSelector";
 import type {
 	D1DatabaseResponse,
+	LocalExplorerWorker,
 	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
 
+// Extended types with workerName for filtering
+type KvNamespaceWithWorker = WorkersKvNamespace & { workerName?: string };
+type D1DatabaseWithWorker = D1DatabaseResponse & { workerName?: string };
+type DoNamespaceWithWorker = WorkersNamespace & { workerName?: string };
+type R2BucketWithWorker = R2Bucket & { workerName?: string };
+
 export const Route = createRootRoute({
 	component: RootLayout,
 	loader: async () => {
-		const [kvResponse, d1Response, doResponse, r2Response] =
+		const [workersResponse, kvResponse, d1Response, doResponse, r2Response] =
 			await Promise.allSettled([
+				localExplorerListWorkers(),
 				workersKvNamespaceListNamespaces(),
 				d1ListDatabases(),
 				durableObjectsNamespaceListNamespaces(),
 				r2ListBuckets(),
 			]);
 
-		let kvNamespaces = new Array<WorkersKvNamespace>();
+		let workers = new Array<LocalExplorerWorker>();
+		if (workersResponse.status === "fulfilled") {
+			workers = workersResponse.value.data?.result ?? [];
+		}
+
+		let kvNamespaces = new Array<KvNamespaceWithWorker>();
 		let kvError: string | null = null;
 		if (kvResponse.status === "fulfilled") {
-			kvNamespaces = kvResponse.value.data?.result ?? [];
+			kvNamespaces = (kvResponse.value.data?.result ??
+				[]) as KvNamespaceWithWorker[];
 		} else {
 			kvError = `KV Error: ${kvResponse.reason instanceof Error ? kvResponse.reason.message : JSON.stringify(kvResponse.reason)}`;
 		}
 
-		let databases = new Array<D1DatabaseResponse>();
+		let databases = new Array<D1DatabaseWithWorker>();
 		let d1Error: string | null = null;
 		if (d1Response.status === "fulfilled") {
-			databases = d1Response.value.data?.result ?? [];
+			databases = (d1Response.value.data?.result ??
+				[]) as D1DatabaseWithWorker[];
 		} else {
 			d1Error = `D1 Error: ${d1Response.reason instanceof Error ? d1Response.reason.message : JSON.stringify(d1Response.reason)}`;
 		}
 
-		let doNamespaces = new Array<WorkersNamespace>();
+		let doNamespaces = new Array<DoNamespaceWithWorker>();
 		let doError: string | null = null;
 		if (doResponse.status === "fulfilled") {
 			// Only show namespaces that use SQLite storage
-			const allDoNamespaces = doResponse.value.data?.result ?? [];
+			const allDoNamespaces = (doResponse.value.data?.result ??
+				[]) as DoNamespaceWithWorker[];
 			doNamespaces = allDoNamespaces.filter((ns) => ns.use_sqlite === true);
 		} else {
 			doError = `DO Error: ${doResponse.reason instanceof Error ? doResponse.reason.message : JSON.stringify(doResponse.reason)}`;
 		}
 
-		let r2Buckets = new Array<R2Bucket>();
+		let r2Buckets = new Array<R2BucketWithWorker>();
 		let r2Error: string | null = null;
 		if (r2Response.status === "fulfilled") {
-			r2Buckets = r2Response.value.data?.result?.buckets ?? [];
+			r2Buckets = (r2Response.value.data?.result?.buckets ??
+				[]) as R2BucketWithWorker[];
 		} else {
 			r2Error = `R2 Error: ${r2Response.reason instanceof Error ? r2Response.reason.message : JSON.stringify(r2Response.reason)}`;
 		}
@@ -72,6 +92,7 @@ export const Route = createRootRoute({
 			kvNamespaces,
 			r2Buckets,
 			r2Error,
+			workers,
 		};
 	},
 });
@@ -81,19 +102,99 @@ function RootLayout() {
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
 
+	// Filter out internal workers (like __asset-worker__, __router-worker__, etc.)
+	const visibleWorkers = useMemo(
+		() => filterVisibleWorkers(loaderData.workers),
+		[loaderData.workers]
+	);
+
+	// Read worker filter from URL search params directly
+	const urlSearchParams = new URLSearchParams(window.location.search);
+	const workerFromUrl = urlSearchParams.get("worker");
+
+	// Determine the default worker (self worker or first visible worker)
+	const defaultWorker = useMemo(() => {
+		const selfWorker = visibleWorkers.find((w) => w.isSelf);
+		if (selfWorker) {
+			return selfWorker.name;
+		}
+		return visibleWorkers[0]?.name ?? "";
+	}, [visibleWorkers]);
+
+	// The selected worker is either from URL or the default
+	// We don't update the URL if using the default - only when user explicitly selects
+	const selectedWorker = useMemo(() => {
+		// If URL specifies a valid worker, use it
+		if (workerFromUrl && visibleWorkers.some((w) => w.name === workerFromUrl)) {
+			return workerFromUrl;
+		}
+		// Otherwise use the default
+		return defaultWorker;
+	}, [workerFromUrl, visibleWorkers, defaultWorker]);
+
+	const handleWorkerChange = useCallback((workerName: string) => {
+		// Update the URL with the new worker, preserving other search params
+		const newSearchParams = new URLSearchParams(window.location.search);
+		newSearchParams.set("worker", workerName);
+		const newSearch = newSearchParams.toString();
+		const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`;
+		// Update URL and force a re-render
+		window.history.pushState({}, "", newUrl);
+		// Dispatch a popstate event to trigger React to re-render
+		window.dispatchEvent(new PopStateEvent("popstate"));
+	}, []);
+
+	// Filter resources based on selected worker
+	const filteredData = useMemo(() => {
+		if (!selectedWorker) {
+			// No worker selected (shouldn't happen, but handle gracefully)
+			return {
+				kvNamespaces: [],
+				databases: [],
+				doNamespaces: [],
+				r2Buckets: [],
+			};
+		}
+
+		// Filter each resource type by workerName
+		return {
+			kvNamespaces: loaderData.kvNamespaces.filter(
+				(ns) => ns.workerName === selectedWorker
+			),
+			databases: loaderData.databases.filter(
+				(db) => db.workerName === selectedWorker
+			),
+			doNamespaces: loaderData.doNamespaces.filter(
+				(ns) => ns.workerName === selectedWorker
+			),
+			r2Buckets: loaderData.r2Buckets.filter(
+				(bucket) => bucket.workerName === selectedWorker
+			),
+		};
+	}, [
+		selectedWorker,
+		loaderData.kvNamespaces,
+		loaderData.databases,
+		loaderData.doNamespaces,
+		loaderData.r2Buckets,
+	]);
+
 	return (
 		<Toasty>
 			<div className="flex min-h-screen">
 				<Sidebar
 					currentPath={currentPath}
 					d1Error={loaderData.d1Error}
-					databases={loaderData.databases}
+					databases={filteredData.databases}
 					doError={loaderData.doError}
-					doNamespaces={loaderData.doNamespaces}
+					doNamespaces={filteredData.doNamespaces}
 					kvError={loaderData.kvError}
-					kvNamespaces={loaderData.kvNamespaces}
-					r2Buckets={loaderData.r2Buckets}
+					kvNamespaces={filteredData.kvNamespaces}
+					r2Buckets={filteredData.r2Buckets}
 					r2Error={loaderData.r2Error}
+					workers={visibleWorkers}
+					selectedWorker={selectedWorker}
+					onWorkerChange={handleWorkerChange}
 				/>
 				<main className="flex flex-1 flex-col overflow-y-auto">
 					<Outlet />

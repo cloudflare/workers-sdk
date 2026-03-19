@@ -1,18 +1,17 @@
 import { CloudflareLogo, cn } from "@cloudflare/kumo";
 import { Collapsible } from "@cloudflare/kumo/primitives/collapsible";
 import { CaretRightIcon } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
+import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
 	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
-import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
 
 interface SidebarItemGroupProps {
@@ -23,11 +22,7 @@ interface SidebarItemGroupProps {
 		id: string;
 		isActive: boolean;
 		label: string;
-		link: {
-			params: object;
-			search?: object;
-			to: FileRouteTypes["to"];
-		};
+		href: string;
 	}>;
 	title: string;
 }
@@ -59,19 +54,17 @@ function SidebarItemGroup({
 					{!error
 						? items.map((item) => (
 								<li key={item.id}>
-									<Link
+									<a
 										className={cn(
 											"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-text no-underline transition-colors hover:bg-surface-tertiary",
 											{
 												"bg-primary/10 font-medium text-primary": item.isActive,
 											}
 										)}
-										params={item.link.params}
-										search={item.link.search}
-										to={item.link.to}
+										href={item.href}
 									>
 										{item.label}
-									</Link>
+									</a>
 								</li>
 							))
 						: null}
@@ -97,6 +90,9 @@ interface SidebarProps {
 	kvNamespaces: WorkersKvNamespace[];
 	r2Buckets: R2Bucket[];
 	r2Error: string | null;
+	workers: LocalExplorerWorker[];
+	selectedWorker: string;
+	onWorkerChange: (workerName: string) => void;
 }
 
 export function Sidebar({
@@ -109,7 +105,22 @@ export function Sidebar({
 	kvNamespaces,
 	r2Buckets,
 	r2Error,
+	workers,
+	selectedWorker,
+	onWorkerChange,
 }: SidebarProps) {
+	// Always show the worker selector when there are workers
+	const showWorkerSelector = workers.length > 0;
+
+	// Helper to build href with base path and worker param
+	const buildHref = (path: string): string => {
+		const basePath = `/cdn-cgi/explorer${path}`;
+		if (workers.length > 0) {
+			return `${basePath}?worker=${encodeURIComponent(selectedWorker)}`;
+		}
+		return basePath;
+	};
+
 	return (
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
 			<a
@@ -127,6 +138,14 @@ export function Sidebar({
 				</div>
 			</a>
 
+			{showWorkerSelector && (
+				<WorkerSelector
+					workers={workers}
+					selectedWorker={selectedWorker}
+					onWorkerChange={onWorkerChange}
+				/>
+			)}
+
 			<SidebarItemGroup
 				emptyLabel="No namespaces"
 				error={kvError}
@@ -135,10 +154,7 @@ export function Sidebar({
 					id: ns.id,
 					isActive: currentPath === `/kv/${ns.id}`,
 					label: ns.title,
-					link: {
-						params: { namespaceId: ns.id },
-						to: "/kv/$namespaceId",
-					},
+					href: buildHref(`/kv/${ns.id}`),
 				}))}
 				title="KV Namespaces"
 			/>
@@ -151,11 +167,7 @@ export function Sidebar({
 					id: db.uuid as string,
 					isActive: currentPath === `/d1/${db.uuid}`,
 					label: db.name as string,
-					link: {
-						params: { databaseId: db.uuid },
-						search: { table: undefined },
-						to: "/d1/$databaseId",
-					},
+					href: buildHref(`/d1/${db.uuid}`),
 				}))}
 				title="D1 Databases"
 			/>
@@ -172,10 +184,7 @@ export function Sidebar({
 							currentPath === `/do/${className}` ||
 							currentPath.startsWith(`/do/${className}/`),
 						label: className,
-						link: {
-							params: { className },
-							to: "/do/$className",
-						},
+						href: buildHref(`/do/${className}`),
 					};
 				})}
 				title="Durable Objects"
@@ -193,10 +202,7 @@ export function Sidebar({
 							currentPath === `/r2/${bucketName}` ||
 							currentPath.startsWith(`/r2/${bucketName}/`),
 						label: bucketName,
-						link: {
-							params: { bucketName },
-							to: "/r2/$bucketName",
-						},
+						href: buildHref(`/r2/${bucketName}`),
 					};
 				})}
 				title="R2 Buckets"
