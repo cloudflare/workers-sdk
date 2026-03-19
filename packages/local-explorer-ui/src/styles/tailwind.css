@@ -46,7 +46,8 @@
 
 	/* Card styling */
 	--radius-card: 0.5rem;
-	--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+	--shadow-card:
+		0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
 
 	/* Tooltip colors */
 	--color-tooltip-bg: oklch(20.5% 0 0); /* neutral-900 */
@@ -209,8 +210,9 @@
 
 @layer base {
 	body {
-		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-			Ubuntu, sans-serif;
+		font-family:
+			-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+			sans-serif;
 		@apply text-text bg-bg-secondary text-sm leading-normal;
 	}
 }
