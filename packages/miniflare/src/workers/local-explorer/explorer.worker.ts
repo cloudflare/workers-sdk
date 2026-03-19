@@ -76,7 +76,8 @@ app.use("/api/*", async (c, next) => {
 			headers: {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers": "Content-Type, cf-metadata-only, cf-r2-custom-metadata",
+				"Access-Control-Allow-Headers":
+					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
 				"Access-Control-Max-Age": "86400",
 			},
 		});
