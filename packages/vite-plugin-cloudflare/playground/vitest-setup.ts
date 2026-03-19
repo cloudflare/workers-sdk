@@ -89,7 +89,8 @@ export function resetServerLogs() {
 	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
-beforeAll(async (_fixtures, s) => {
+// eslint-disable-next-line no-empty-pattern
+beforeAll(async ({}, s) => {
 	let server: ViteDevServer | PreviewServer | undefined;
 	let postServe: (() => Promise<void>) | undefined;
 

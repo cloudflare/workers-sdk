@@ -32,7 +32,8 @@ const frameworkTests = getFrameworksTests();
 describe
 	.skipIf(frameworkTests.length === 0)
 	.concurrent(`E2E: Web frameworks`, () => {
-		beforeAll((_fixtures, ctx) => {
+		// eslint-disable-next-line no-empty-pattern
+		beforeAll(({}, ctx) => {
 			if (frameworkToTestFilter) {
 				debuglog("Running framework tests with filter:", frameworkToTestFilter);
 				frameworkTests.forEach((testConfig) => {

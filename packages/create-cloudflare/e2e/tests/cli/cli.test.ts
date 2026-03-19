@@ -18,7 +18,8 @@ import type { RunnerTestSuite } from "vitest";
 const { name: pm } = detectPackageManager();
 
 describe("Create Cloudflare CLI", () => {
-	beforeAll((_fixtures, ctx) => {
+	// eslint-disable-next-line no-empty-pattern
+	beforeAll(({}, ctx) => {
 		recreateLogFolder(ctx as RunnerTestSuite);
 	});
 
