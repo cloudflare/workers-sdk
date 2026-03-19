@@ -39,13 +39,13 @@
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
+		"@cloudflare/vitest-pool-workers": "^0.13.1",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"esbuild": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:vitest-3"
+		"vitest": "catalog:default"
 	},
 	"engines": {
 		"node": ">=18.0.0"
