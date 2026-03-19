@@ -261,8 +261,17 @@ function updateTsConfig(projectPath: string) {
 			unknown
 		>;
 
-		tsconfig.include = (tsconfig.include as string[]) || [];
 		const includeEntry = "./worker-configuration.d.ts";
+
+		if (!tsconfig.include) {
+			// If `include` is not defined, the tsconfig likely inherits it from a parent config (e.g., "extends": "astro/tsconfigs/base").
+			// Adding an `include` field here would override the parent's includes, breaking type-checking.
+			// Instead, warn the user to add it manually.
+			logger.warn(
+				`Could not find an existing \`include\` field in tsconfig.json. You may need to manually add ${JSON.stringify(includeEntry)} to your tsconfig.json \`include\` array.`
+			);
+			return;
+		}
 
 		if (!(tsconfig.include as string[]).includes(includeEntry)) {
 			(tsconfig.include as string[]).push(includeEntry);
