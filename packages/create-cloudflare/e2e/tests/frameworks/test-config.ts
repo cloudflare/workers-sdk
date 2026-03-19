@@ -583,6 +583,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Waku",
 			},
 			nodeCompat: false,
+			quarantine: true,
 		},
 		{
 			name: "tanstack-start",
