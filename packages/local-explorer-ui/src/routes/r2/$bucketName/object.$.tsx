@@ -47,10 +47,10 @@ function ObjectDetailsCard({ object }: ObjectDetailsCardProps): JSX.Element {
 	const contentType =
 		object.http_metadata?.contentType ?? "application/octet-stream";
 	const formattedDate = formatDate(object.last_modified);
-	const [datePart, timePart] = formattedDate.includes("GMT")
+	const [datePart, timePart] = formattedDate.includes("UTC")
 		? [
-				formattedDate.replace(/ \d{2}:\d{2}:\d{2} GMT$/, ""),
-				formattedDate.match(/\d{2}:\d{2}:\d{2} GMT$/)?.[0] || "",
+				formattedDate.replace(/ \d{2}:\d{2}:\d{2} UTC$/, ""),
+				formattedDate.match(/\d{2}:\d{2}:\d{2} UTC$/)?.[0] || "",
 			]
 		: [formattedDate, ""];
 
