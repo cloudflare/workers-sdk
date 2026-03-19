@@ -12,8 +12,10 @@ import { useState } from "react";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
+import R2Icon from "../assets/icons/r2.svg?react";
 import type {
 	D1DatabaseResponse,
+	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
@@ -210,6 +212,8 @@ interface SidebarProps {
 	kvNamespaces: WorkersKvNamespace[];
 	onThemeToggle: () => void;
 	onToggle: () => void;
+	r2Buckets: R2Bucket[];
+	r2Error: string | null;
 	resolvedTheme: ResolvedTheme;
 	themePreference: ThemePreference;
 }
@@ -225,6 +229,8 @@ export function Sidebar({
 	kvNamespaces,
 	onThemeToggle,
 	onToggle,
+	r2Buckets,
+	r2Error,
 	resolvedTheme,
 	themePreference,
 }: SidebarProps) {
@@ -330,6 +336,29 @@ export function Sidebar({
 					}))}
 					storageKey="kv"
 					title="KV Namespaces"
+				/>
+
+				<SidebarItemGroup
+					collapsed={collapsed}
+					emptyLabel="No buckets"
+					error={r2Error}
+					icon={R2Icon}
+					items={r2Buckets.map((bucket) => {
+						const bucketName = bucket.name ?? "Unknown";
+						return {
+							id: bucketName,
+							isActive:
+								currentPath === `/r2/${bucketName}` ||
+								currentPath.startsWith(`/r2/${bucketName}/`),
+							label: bucketName,
+							link: {
+								params: { bucketName },
+								to: "/r2/$bucketName",
+							},
+						};
+					})}
+					storageKey="r2"
+					title="R2 Buckets"
 				/>
 			</nav>
 

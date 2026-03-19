@@ -36,6 +36,7 @@
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-router": "^1.158.0",
 		"immer": "^11.1.4",
+		"pretty-bytes": "^7.1.0",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
 		"tailwindcss": "^4.0.15"

@@ -10,15 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
 import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
 import { Route as DoClassNameRouteImport } from './routes/do/$className'
 import { Route as D1DatabaseIdRouteImport } from './routes/d1/$databaseId'
+import { Route as R2BucketNameIndexRouteImport } from './routes/r2/$bucketName/index'
 import { Route as DoClassNameIndexRouteImport } from './routes/do/$className/index'
 import { Route as DoClassNameObjectIdRouteImport } from './routes/do/$className/$objectId'
+import { Route as R2BucketNameObjectSplatRouteImport } from './routes/r2/$bucketName/object.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const R2BucketNameRoute = R2BucketNameRouteImport.update({
+  id: '/r2/$bucketName',
+  path: '/r2/$bucketName',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
@@ -36,6 +44,11 @@ const D1DatabaseIdRoute = D1DatabaseIdRouteImport.update({
   path: '/d1/$databaseId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const R2BucketNameIndexRoute = R2BucketNameIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => R2BucketNameRoute,
+} as any)
 const DoClassNameIndexRoute = DoClassNameIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -46,14 +59,22 @@ const DoClassNameObjectIdRoute = DoClassNameObjectIdRouteImport.update({
   path: '/$objectId',
   getParentRoute: () => DoClassNameRoute,
 } as any)
+const R2BucketNameObjectSplatRoute = R2BucketNameObjectSplatRouteImport.update({
+  id: '/object/$',
+  path: '/object/$',
+  getParentRoute: () => R2BucketNameRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/do/$className/': typeof DoClassNameIndexRoute
+  '/r2/$bucketName/': typeof R2BucketNameIndexRoute
+  '/r2/$bucketName/object/$': typeof R2BucketNameObjectSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,6 +82,8 @@ export interface FileRoutesByTo {
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/do/$className': typeof DoClassNameIndexRoute
+  '/r2/$bucketName': typeof R2BucketNameIndexRoute
+  '/r2/$bucketName/object/$': typeof R2BucketNameObjectSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,8 +91,11 @@ export interface FileRoutesById {
   '/d1/$databaseId': typeof D1DatabaseIdRoute
   '/do/$className': typeof DoClassNameRouteWithChildren
   '/kv/$namespaceId': typeof KvNamespaceIdRoute
+  '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
   '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
   '/do/$className/': typeof DoClassNameIndexRoute
+  '/r2/$bucketName/': typeof R2BucketNameIndexRoute
+  '/r2/$bucketName/object/$': typeof R2BucketNameObjectSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -78,8 +104,11 @@ export interface FileRouteTypes {
     | '/d1/$databaseId'
     | '/do/$className'
     | '/kv/$namespaceId'
+    | '/r2/$bucketName'
     | '/do/$className/$objectId'
     | '/do/$className/'
+    | '/r2/$bucketName/'
+    | '/r2/$bucketName/object/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -87,14 +116,19 @@ export interface FileRouteTypes {
     | '/kv/$namespaceId'
     | '/do/$className/$objectId'
     | '/do/$className'
+    | '/r2/$bucketName'
+    | '/r2/$bucketName/object/$'
   id:
     | '__root__'
     | '/'
     | '/d1/$databaseId'
     | '/do/$className'
     | '/kv/$namespaceId'
+    | '/r2/$bucketName'
     | '/do/$className/$objectId'
     | '/do/$className/'
+    | '/r2/$bucketName/'
+    | '/r2/$bucketName/object/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -102,6 +136,7 @@ export interface RootRouteChildren {
   D1DatabaseIdRoute: typeof D1DatabaseIdRoute
   DoClassNameRoute: typeof DoClassNameRouteWithChildren
   KvNamespaceIdRoute: typeof KvNamespaceIdRoute
+  R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -111,6 +146,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r2/$bucketName': {
+      id: '/r2/$bucketName'
+      path: '/r2/$bucketName'
+      fullPath: '/r2/$bucketName'
+      preLoaderRoute: typeof R2BucketNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kv/$namespaceId': {
@@ -134,6 +176,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof D1DatabaseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/r2/$bucketName/': {
+      id: '/r2/$bucketName/'
+      path: '/'
+      fullPath: '/r2/$bucketName/'
+      preLoaderRoute: typeof R2BucketNameIndexRouteImport
+      parentRoute: typeof R2BucketNameRoute
+    }
     '/do/$className/': {
       id: '/do/$className/'
       path: '/'
@@ -147,6 +196,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/do/$className/$objectId'
       preLoaderRoute: typeof DoClassNameObjectIdRouteImport
       parentRoute: typeof DoClassNameRoute
+    }
+    '/r2/$bucketName/object/$': {
+      id: '/r2/$bucketName/object/$'
+      path: '/object/$'
+      fullPath: '/r2/$bucketName/object/$'
+      preLoaderRoute: typeof R2BucketNameObjectSplatRouteImport
+      parentRoute: typeof R2BucketNameRoute
     }
   }
 }
@@ -165,11 +221,26 @@ const DoClassNameRouteWithChildren = DoClassNameRoute._addFileChildren(
   DoClassNameRouteChildren,
 )
 
+interface R2BucketNameRouteChildren {
+  R2BucketNameIndexRoute: typeof R2BucketNameIndexRoute
+  R2BucketNameObjectSplatRoute: typeof R2BucketNameObjectSplatRoute
+}
+
+const R2BucketNameRouteChildren: R2BucketNameRouteChildren = {
+  R2BucketNameIndexRoute: R2BucketNameIndexRoute,
+  R2BucketNameObjectSplatRoute: R2BucketNameObjectSplatRoute,
+}
+
+const R2BucketNameRouteWithChildren = R2BucketNameRoute._addFileChildren(
+  R2BucketNameRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   D1DatabaseIdRoute: D1DatabaseIdRoute,
   DoClassNameRoute: DoClassNameRouteWithChildren,
   KvNamespaceIdRoute: KvNamespaceIdRoute,
+  R2BucketNameRoute: R2BucketNameRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
