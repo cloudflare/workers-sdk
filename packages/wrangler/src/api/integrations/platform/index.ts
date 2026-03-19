@@ -4,7 +4,7 @@ import {
 	getRegistryPath,
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
-import { kCurrentWorker, Miniflare } from "miniflare";
+import { Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -435,68 +435,6 @@ export function unstable_getMiniflareWorkerOptions(
 		},
 		options?.remoteProxyConnectionString
 	);
-
-	// This function is currently only exported for the Workers Vitest pool.
-	// In tests, we don't want to rely on the dev registry, as we can't guarantee
-	// which sessions will be running. Instead, we rewrite `serviceBindings` and
-	// `durableObjects` to use more traditional Miniflare config expecting the
-	// user to define workers with the required names in the `workers` array.
-	// These will run the same `workerd` processes as tests.
-	const serviceBindings = extractBindingsOfType("service", bindings);
-	if (serviceBindings.length > 0) {
-		bindingOptions.serviceBindings = Object.fromEntries(
-			serviceBindings.map((binding) => {
-				const name =
-					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.remoteProxyConnectionString && binding.remote) {
-					return [
-						binding.binding,
-						{
-							name,
-							entrypoint: binding.entrypoint,
-							remoteProxyConnectionString: options.remoteProxyConnectionString,
-						},
-					];
-				}
-				return [binding.binding, { name, entrypoint: binding.entrypoint }];
-			})
-		);
-	}
-	const durableObjectBindings = extractBindingsOfType(
-		"durable_object_namespace",
-		bindings
-	);
-	if (durableObjectBindings.length > 0) {
-		type DurableObjectDefinition = NonNullable<
-			typeof bindingOptions.durableObjects
-		>[string];
-
-		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
-			config.migrations
-		);
-
-		bindingOptions.durableObjects = Object.fromEntries(
-			durableObjectBindings.map((binding) => {
-				const useSQLite = classNameToUseSQLite.get(binding.class_name);
-				return [
-					binding.name,
-					{
-						className: binding.class_name,
-						scriptName: binding.script_name,
-						useSQLite,
-						container:
-							enableContainers && config.containers?.length
-								? getImageNameFromDOClassName({
-										doClassName: binding.class_name,
-										containerDOClassNames,
-										containerBuildId: options?.containerBuildId,
-									})
-								: undefined,
-					} satisfies DurableObjectDefinition,
-				];
-			})
-		);
-	}
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
