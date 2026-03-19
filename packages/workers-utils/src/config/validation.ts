@@ -88,6 +88,7 @@ export type ConfigBindingFieldName =
 	| "browser"
 	| "ai"
 	| "images"
+	| "stream"
 	| "media"
 	| "version_metadata"
 	| "unsafe"
@@ -124,6 +125,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	browser: "Browser",
 	ai: "AI",
 	images: "Images",
+	stream: "Stream",
 	media: "Media",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
@@ -157,6 +159,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	browser: "Browser",
 	ai: "AI",
 	images: "Images",
+	stream: "Stream",
 	version_metadata: "Worker Version Metadata",
 	data_blob: "Data Blob",
 	durable_object_namespace: "Durable Object",
@@ -1802,6 +1805,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		stream: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"stream",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		media: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2917,6 +2930,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"stream",
 			"media",
 		];
 

@@ -149,6 +149,14 @@ export interface CfMediaBinding {
 }
 
 /**
+ * A binding to Cloudflare Stream
+ */
+export interface CfStreamBinding {
+	binding: string;
+	remote?: boolean;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
