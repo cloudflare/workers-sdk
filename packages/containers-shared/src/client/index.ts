@@ -57,6 +57,7 @@ export type { CreateImageRegistryRequestBody } from "./models/CreateImageRegistr
 export type { CreateSSHPublicKeyError } from "./models/CreateSSHPublicKeyError";
 export type { CreateSSHPublicKeyRequestBody } from "./models/CreateSSHPublicKeyRequestBody";
 export type { CustomerImageRegistry } from "./models/CustomerImageRegistry";
+export type { DashApplication } from "./models/DashApplication";
 export type { DashApplicationDurableObjectInstance } from "./models/DashApplicationDurableObjectInstance";
 export type { DashApplicationInstance } from "./models/DashApplicationInstance";
 export type { DashApplicationInstances } from "./models/DashApplicationInstances";
