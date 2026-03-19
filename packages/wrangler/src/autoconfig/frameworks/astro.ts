@@ -124,7 +124,7 @@ function validateMinimumAstroVersion(astroVersion: string) {
  * @throws Error if no config file is found
  */
 function findAstroConfigFile(projectPath: string): string {
-	const extensions = ["mjs", "ts", "js"];
+	const extensions = ["mjs", "mts", "ts", "js"];
 	for (const ext of extensions) {
 		const configPath = join(projectPath, `astro.config.${ext}`);
 		if (existsSync(configPath)) {
