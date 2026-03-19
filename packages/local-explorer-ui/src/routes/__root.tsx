@@ -2,6 +2,7 @@ import { Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
+	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
@@ -101,16 +102,18 @@ function RootLayout() {
 	const loaderData = Route.useLoaderData();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
+	const workerFromUrl = useMemo(
+		() =>
+			new URLSearchParams(routerState.location.searchStr).get("worker"),
+		[routerState.location.searchStr]
+	);
+	const router = useRouter();
 
 	// Filter out internal workers (like __asset-worker__, __router-worker__, etc.)
 	const visibleWorkers = useMemo(
 		() => filterVisibleWorkers(loaderData.workers),
 		[loaderData.workers]
 	);
-
-	// Read worker filter from URL search params directly
-	const urlSearchParams = new URLSearchParams(window.location.search);
-	const workerFromUrl = urlSearchParams.get("worker");
 
 	// Determine the default worker (self worker or first visible worker)
 	const defaultWorker = useMemo(() => {
@@ -132,17 +135,20 @@ function RootLayout() {
 		return defaultWorker;
 	}, [workerFromUrl, visibleWorkers, defaultWorker]);
 
-	const handleWorkerChange = useCallback((workerName: string) => {
-		// Update the URL with the new worker, preserving other search params
-		const newSearchParams = new URLSearchParams(window.location.search);
-		newSearchParams.set("worker", workerName);
-		const newSearch = newSearchParams.toString();
-		const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`;
-		// Update URL and force a re-render
-		window.history.pushState({}, "", newUrl);
-		// Dispatch a popstate event to trigger React to re-render
-		window.dispatchEvent(new PopStateEvent("popstate"));
-	}, []);
+	const handleWorkerChange = useCallback(
+		(workerName: string) => {
+			// Preserve existing search params (e.g. ?table=) and update worker.
+			// Use router.history.push so TanStack Router is aware of the navigation.
+			const currentSearch = new URLSearchParams(
+				routerState.location.searchStr
+			);
+			currentSearch.set("worker", workerName);
+			router.history.push(
+				`${routerState.location.pathname}?${currentSearch.toString()}`
+			);
+		},
+		[router, routerState.location.pathname, routerState.location.searchStr]
+	);
 
 	// Filter resources based on selected worker
 	const filteredData = useMemo(() => {

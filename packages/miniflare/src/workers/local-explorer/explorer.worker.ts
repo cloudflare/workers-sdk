@@ -263,20 +263,26 @@ app.get("/api/workers", async (c) => {
 	const selfWorkerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
 	const selfSet = new Set(selfWorkerNames);
 
-	const response = await loopback.fetch("http://localhost/core/dev-registry");
-	const registry = await response.json<WorkerRegistry>();
+	try {
+		const response = await loopback.fetch("http://localhost/core/dev-registry");
+		const registry = await response.json<WorkerRegistry>();
 
-	const workers: LocalExplorerWorker[] = Object.entries(registry).map(
-		([name, def]) => ({
-			host: def.host,
-			isSelf: selfSet.has(name),
-			name,
-			port: def.port,
-			protocol: def.protocol,
-		})
-	);
+		const workers: LocalExplorerWorker[] = Object.entries(registry).map(
+			([name, def]) => ({
+				host: def.host,
+				isSelf: selfSet.has(name),
+				name,
+				port: def.port,
+				protocol: def.protocol,
+			})
+		);
 
-	return c.json(wrapResponse(workers));
+		return c.json(wrapResponse(workers));
+	} catch (err) {
+		const message =
+			err instanceof Error ? err.message : "Failed to fetch dev registry";
+		return errorResponse(500, 10000, message);
+	}
 });
 
 export default app;

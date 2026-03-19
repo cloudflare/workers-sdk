@@ -1,6 +1,7 @@
 import { CloudflareLogo, cn } from "@cloudflare/kumo";
 import { Collapsible } from "@cloudflare/kumo/primitives/collapsible";
 import { CaretRightIcon } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
@@ -12,6 +13,7 @@ import type {
 	WorkersKvNamespace,
 	WorkersNamespace,
 } from "../api";
+import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
 
 interface SidebarItemGroupProps {
@@ -22,7 +24,11 @@ interface SidebarItemGroupProps {
 		id: string;
 		isActive: boolean;
 		label: string;
-		href: string;
+		link: {
+			params: object;
+			search?: object;
+			to: FileRouteTypes["to"];
+		};
 	}>;
 	title: string;
 }
@@ -54,17 +60,19 @@ function SidebarItemGroup({
 					{!error
 						? items.map((item) => (
 								<li key={item.id}>
-									<a
+									<Link
 										className={cn(
 											"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-text no-underline transition-colors hover:bg-surface-tertiary",
 											{
 												"bg-primary/10 font-medium text-primary": item.isActive,
 											}
 										)}
-										href={item.href}
+										params={item.link.params}
+										search={item.link.search}
+										to={item.link.to}
 									>
 										{item.label}
-									</a>
+									</Link>
 								</li>
 							))
 						: null}
@@ -109,17 +117,11 @@ export function Sidebar({
 	selectedWorker,
 	onWorkerChange,
 }: SidebarProps) {
-	// Always show the worker selector when there are workers
 	const showWorkerSelector = workers.length > 0;
 
-	// Helper to build href with base path and worker param
-	const buildHref = (path: string): string => {
-		const basePath = `/cdn-cgi/explorer${path}`;
-		if (workers.length > 0) {
-			return `${basePath}?worker=${encodeURIComponent(selectedWorker)}`;
-		}
-		return basePath;
-	};
+	// Only include the worker search param when there are multiple workers.
+	// This keeps URLs clean in the common single-worker case.
+	const workerSearch = workers.length > 0 ? { worker: selectedWorker } : {};
 
 	return (
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
@@ -154,7 +156,11 @@ export function Sidebar({
 					id: ns.id,
 					isActive: currentPath === `/kv/${ns.id}`,
 					label: ns.title,
-					href: buildHref(`/kv/${ns.id}`),
+					link: {
+						params: { namespaceId: ns.id },
+						search: workerSearch,
+						to: "/kv/$namespaceId",
+					},
 				}))}
 				title="KV Namespaces"
 			/>
@@ -167,7 +173,11 @@ export function Sidebar({
 					id: db.uuid as string,
 					isActive: currentPath === `/d1/${db.uuid}`,
 					label: db.name as string,
-					href: buildHref(`/d1/${db.uuid}`),
+					link: {
+						params: { databaseId: db.uuid },
+						search: { table: undefined, ...workerSearch },
+						to: "/d1/$databaseId",
+					},
 				}))}
 				title="D1 Databases"
 			/>
@@ -184,7 +194,11 @@ export function Sidebar({
 							currentPath === `/do/${className}` ||
 							currentPath.startsWith(`/do/${className}/`),
 						label: className,
-						href: buildHref(`/do/${className}`),
+						link: {
+							params: { className },
+							search: workerSearch,
+							to: "/do/$className",
+						},
 					};
 				})}
 				title="Durable Objects"
@@ -202,7 +216,11 @@ export function Sidebar({
 							currentPath === `/r2/${bucketName}` ||
 							currentPath.startsWith(`/r2/${bucketName}/`),
 						label: bucketName,
-						href: buildHref(`/r2/${bucketName}`),
+						link: {
+							params: { bucketName },
+							search: workerSearch,
+							to: "/r2/$bucketName",
+						},
 					};
 				})}
 				title="R2 Buckets"
