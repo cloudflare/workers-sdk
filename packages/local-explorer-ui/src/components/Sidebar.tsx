@@ -121,7 +121,7 @@ export function Sidebar({
 
 	// Only include the worker search param when there are multiple workers.
 	// This keeps URLs clean in the common single-worker case.
-	const workerSearch = workers.length > 0 ? { worker: selectedWorker } : {};
+	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
 
 	return (
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
