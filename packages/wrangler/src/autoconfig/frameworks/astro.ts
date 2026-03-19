@@ -151,8 +151,8 @@ function updateAstroConfig(
 
 	updateStatus(`Updating configuration in ${blue(configPath)}`);
 
-	// Track if we need to add the import
-	let hasCloudflareImport = false;
+	// Track the adapter identifier name (either from existing import or the one we add)
+	let adapterIdentifier = "cloudflare";
 
 	transformFile(configPath, {
 		// First pass: check for existing cloudflare import and add if missing
@@ -160,13 +160,23 @@ function updateAstroConfig(
 			const body = path.node.body;
 			const b = recast.types.builders;
 
-			// Check if cloudflare import already exists
+			// Check if cloudflare import already exists and capture the local identifier
+			let hasCloudflareImport = false;
 			for (const node of body) {
 				if (
 					node.type === "ImportDeclaration" &&
 					node.source.value === "@astrojs/cloudflare"
 				) {
 					hasCloudflareImport = true;
+					// Find the default import specifier and capture its local name
+					for (const specifier of node.specifiers ?? []) {
+						if (specifier.type === "ImportDefaultSpecifier" && specifier.local) {
+							// specifier.local is an Identifier node with a `name` property
+							const local = specifier.local as { name: string };
+							adapterIdentifier = local.name;
+							break;
+						}
+					}
 					break;
 				}
 			}
@@ -208,10 +218,10 @@ function updateAstroConfig(
 
 			const b = recast.types.builders;
 
-			// Create the adapter property: `adapter: cloudflare()`
+			// Create the adapter property using the captured identifier name
 			const adapterProp = b.objectProperty(
 				b.identifier("adapter"),
-				b.callExpression(b.identifier("cloudflare"), [])
+				b.callExpression(b.identifier(adapterIdentifier), [])
 			);
 
 			const propsToAdd: recast.types.namedTypes.ObjectProperty[] = [];
