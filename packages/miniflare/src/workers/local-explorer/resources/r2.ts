@@ -5,7 +5,6 @@ import {
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import { R2ListBucketsResponse } from "../generated";
 import {
 	zR2BucketDeleteObjectsData,
 	zR2BucketGetObjectData,
@@ -14,6 +13,7 @@ import {
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+import type { R2Bucket as R2BucketType, R2ListBucketsResponse } from "../generated";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)
@@ -62,13 +62,19 @@ async function findR2BucketOwner(
 }
 
 /**
+ * R2 bucket response extended with worker name for filtering in the UI.
+ * We require `name` since we always have it locally.
+ */
+type R2BucketWithWorker = Required<Pick<R2BucketType, "name">> &
+	Omit<R2BucketType, "name"> & {
+		workerName: string;
+	};
+
+/**
  * Get local R2 buckets from the binding map.
  * Each bucket is tagged with the worker name it belongs to.
  */
-function getLocalR2Buckets(env: Env): Array<{
-	name: string;
-	workerName: string;
-}> {
+function getLocalR2Buckets(env: Env): R2BucketWithWorker[] {
 	const r2BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.r2;
 
 	return Object.entries(r2BindingMap).map(([bucketName, bindingName]) => {

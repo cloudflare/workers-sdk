@@ -12,6 +12,7 @@ import {
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+import type { WorkersKvNamespace } from "../generated";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)
@@ -62,14 +63,17 @@ async function findKVNamespaceOwner(
 }
 
 /**
+ * KV namespace response extended with worker name for filtering in the UI.
+ */
+type KVNamespaceWithWorker = WorkersKvNamespace & {
+	workerName: string;
+};
+
+/**
  * Get local KV namespaces from the binding map.
  * Each namespace is tagged with the worker name it belongs to.
  */
-function getLocalKVNamespaces(env: Env): Array<{
-	id: string;
-	title: string;
-	workerName: string;
-}> {
+function getLocalKVNamespaces(env: Env): KVNamespaceWithWorker[] {
 	const kvBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
 
 	return Object.entries(kvBindingMap).map(([id, bindingName]) => {

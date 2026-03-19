@@ -12,6 +12,7 @@ import {
 import type { IntrospectSqliteMethod } from "../../../plugins/core/constants";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+import type { WorkersNamespace } from "../generated";
 import type { z } from "zod";
 
 // ============================================================================
@@ -52,17 +53,18 @@ function getDOBinding(
 }
 
 /**
+ * DO namespace response extended with worker name for filtering in the UI.
+ * We require `id`, `name`, `script`, `class`, and `use_sqlite` since we always have them locally.
+ */
+type DONamespaceWithWorker = Required<WorkersNamespace> & {
+	workerName: string;
+};
+
+/**
  * Get local DO namespaces from the binding map.
  * Each namespace is tagged with the worker name it belongs to.
  */
-function getLocalDONamespaces(env: Env): {
-	id: string;
-	name: string;
-	script: string;
-	class: string;
-	use_sqlite: boolean;
-	workerName: string;
-}[] {
+function getLocalDONamespaces(env: Env): DONamespaceWithWorker[] {
 	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
 	return Object.entries(doBindingMap).map(([id, info]) => ({
 		id, // This is the unsafeUniqueKey - ${scriptName}-${className}

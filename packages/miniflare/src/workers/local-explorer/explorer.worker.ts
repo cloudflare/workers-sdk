@@ -20,6 +20,7 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
+import { wrapResponse } from "./common";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
@@ -39,6 +40,7 @@ import {
 } from "./resources/r2";
 import type { BindingIdMap } from "../../plugins/core/types";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
 	[key: string]: unknown;
@@ -264,20 +266,17 @@ app.get("/api/workers", async (c) => {
 	const response = await loopback.fetch("http://localhost/core/dev-registry");
 	const registry = await response.json<WorkerRegistry>();
 
-	const workers = Object.entries(registry).map(([name, def]) => ({
-		host: def.host,
-		isSelf: selfSet.has(name),
-		name,
-		port: def.port,
-		protocol: def.protocol,
-	}));
+	const workers: LocalExplorerWorker[] = Object.entries(registry).map(
+		([name, def]) => ({
+			host: def.host,
+			isSelf: selfSet.has(name),
+			name,
+			port: def.port,
+			protocol: def.protocol,
+		})
+	);
 
-	return c.json({
-		success: true,
-		errors: [],
-		messages: [],
-		result: workers,
-	});
+	return c.json(wrapResponse(workers));
 });
 
 export default app;
