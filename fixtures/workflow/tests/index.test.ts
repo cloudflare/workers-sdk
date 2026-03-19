@@ -265,6 +265,138 @@ describe("Workflows", () => {
 		);
 	});
 
+	describe("instance lifecycle methods", () => {
+		test("pause and resume a workflow", async ({ expect }) => {
+			const name = randomUUID();
+
+			await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=${name}`);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.__LOCAL_DEV_STEP_OUTPUTS).toContainEqual({
+						output: "First step result",
+					});
+				},
+				{ timeout: 1500 }
+			);
+
+			// Pause the instance
+			await fetchJson(`http://${ip}:${port}/pause?workflowName=${name}`);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.status).toBe("paused");
+				},
+				{ timeout: 1500 }
+			);
+
+			// Resume the instance
+			await fetchJson(`http://${ip}:${port}/resume?workflowName=${name}`);
+
+			await fetchJson(
+				`http://${ip}:${port}/sendEvent?workflowName=${name}`,
+				{ event: true },
+				"POST"
+			);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.status).toBe("complete");
+				},
+				{ timeout: 5000 }
+			);
+		});
+
+		test("terminate a running workflow", async ({ expect }) => {
+			const name = randomUUID();
+
+			await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=${name}`);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.__LOCAL_DEV_STEP_OUTPUTS).toContainEqual({
+						output: "First step result",
+					});
+				},
+				{ timeout: 1500 }
+			);
+
+			// Terminate the instance
+			await fetchJson(`http://${ip}:${port}/terminate?workflowName=${name}`);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.status).toBe("terminated");
+				},
+				{ timeout: 1500 }
+			);
+		});
+
+		test("restart a running workflow", async ({ expect }) => {
+			const name = randomUUID();
+
+			await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=${name}`);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.__LOCAL_DEV_STEP_OUTPUTS).toContainEqual({
+						output: "First step result",
+					});
+				},
+				{ timeout: 5000 }
+			);
+
+			// Restart the instance
+			await fetchJson(`http://${ip}:${port}/restart?workflowName=${name}`);
+
+			// After restart, wait for it to be running again
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.status).toBe("running");
+				},
+				{ timeout: 1500 }
+			);
+
+			// Send event to complete the restarted workflow
+			await fetchJson(
+				`http://${ip}:${port}/sendEvent?workflowName=${name}`,
+				{ event: true },
+				"POST"
+			);
+
+			await vi.waitFor(
+				async () => {
+					const result = await fetchJson(
+						`http://${ip}:${port}/get2?workflowName=${name}`
+					);
+					expect(result.status).toBe("complete");
+				},
+				{ timeout: 5000 }
+			);
+		});
+	});
+
 	it("should create an instance after immediate redirect", async ({
 		expect,
 	}) => {

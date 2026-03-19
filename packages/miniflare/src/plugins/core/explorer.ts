@@ -109,6 +109,7 @@ export function constructExplorerBindingMap(
 		d1: {},
 		kv: {},
 		do: {},
+		r2: {},
 	};
 
 	for (const binding of proxyBindings) {
@@ -139,6 +140,19 @@ export function constructExplorerBindingMap(
 			// Extract ID from service name "kv:ns:ID"
 			const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
 			IDToBindingName.kv[namespaceId] = binding.name;
+		}
+
+		// R2 bindings: name = "MINIFLARE_PROXY:r2:worker:BINDING", r2Bucket.name = "r2:bucket:ID"
+		if (
+			binding.name?.startsWith(
+				`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:r2:`
+			) &&
+			"r2Bucket" in binding &&
+			binding.r2Bucket?.name?.startsWith("r2:bucket:")
+		) {
+			// Extract bucket name from service name "r2:bucket:BUCKET_NAME"
+			const bucketName = binding.r2Bucket.name.replace(/^r2:bucket:/, "");
+			IDToBindingName.r2[bucketName] = binding.name;
 		}
 	}
 
