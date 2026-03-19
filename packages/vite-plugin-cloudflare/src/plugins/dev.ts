@@ -23,7 +23,7 @@ import {
 	createPlugin,
 	createRequestHandler,
 	debuglog,
-	satisfiesViteVersion,
+	satisfiesMinimumViteVersion,
 } from "../utils";
 import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
@@ -251,7 +251,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 				// after the host check middleware by re-inserting it before
 				// viteCachedTransformMiddleware. In Vite 7+, it's already in the
 				// correct position so no action is needed.
-				if (!satisfiesViteVersion("7.0.0")) {
+				if (!satisfiesMinimumViteVersion("7.0.0")) {
 					const middlewareStack = viteDevServer.middlewares.stack;
 					const preMiddlewareIndex = middlewareStack.findIndex(
 						(middleware) =>

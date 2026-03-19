@@ -2,14 +2,14 @@ import { getDefaultDevRegistryPath, getWorkerRegistry } from "miniflare";
 import colors from "picocolors";
 import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, satisfiesViteVersion } from "../utils";
+import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import type { PluginContext } from "../context";
 import type * as vite from "vite";
 
 export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 	// This requires Vite 7.2.7 which fixes custom CLI shortcuts support
 	// @see https://github.com/vitejs/vite/pull/21103
-	const isCustomShortcutsSupported = satisfiesViteVersion("7.2.7");
+	const isCustomShortcutsSupported = satisfiesMinimumViteVersion("7.2.7");
 
 	return {
 		async configureServer(viteDevServer) {
