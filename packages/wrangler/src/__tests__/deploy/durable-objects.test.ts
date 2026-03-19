@@ -905,7 +905,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("stream", () => {
-		it("should upload stream bindings", async () => {
+		it("should upload stream bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				stream: { binding: "STREAM_BIND" },
 			});
