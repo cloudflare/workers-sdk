@@ -27,7 +27,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (!github.event.issue.pull_request &&
       github.event.issue.user.type != 'Bot')
-    timeout-minutes: 15
+    timeout-minutes: 60
     steps:
       - name: Resolve issue number
         id: issue
