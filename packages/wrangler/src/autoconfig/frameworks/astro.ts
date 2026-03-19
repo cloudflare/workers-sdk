@@ -132,7 +132,7 @@ function findAstroConfigFile(projectPath: string): string {
 		}
 	}
 	throw new Error(
-		"Could not find Astro config file (astro.config.mjs, astro.config.ts, or astro.config.js)"
+		"Could not find Astro config file (astro.config.mjs, astro.config.mts, astro.config.ts, or astro.config.js)"
 	);
 }
 
