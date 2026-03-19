@@ -1,5 +1,4 @@
 import path from "node:path";
-import getPort from "get-port";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
 import { logger } from "../../logger";
@@ -43,7 +42,7 @@ export async function startRemoteProxySession(
 			remote: "minimal",
 			auth: options?.auth,
 			server: {
-				port: await getPort(),
+				port: 0,
 			},
 			inspector: false,
 			logLevel: getStartWorkerLogLevel(logger.loggerLevel),
