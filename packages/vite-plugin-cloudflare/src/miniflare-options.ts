@@ -29,7 +29,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
-import { satisfiesViteVersion, withTrailingSlash } from "./utils";
+import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
 import type {
@@ -363,7 +363,7 @@ export async function getDevMiniflareOptions(
 											contents: fs.readFileSync(
 												fileURLToPath(
 													new URL(
-														satisfiesViteVersion("7.2.0")
+														satisfiesMinimumViteVersion("7.2.0")
 															? MODULE_RUNNER_PATH
 															: MODULE_RUNNER_LEGACY_PATH,
 														import.meta.url

@@ -217,9 +217,16 @@ async function executeListDOObjects(
 	const files = (await response.json()) as DirectoryEntry[];
 
 	// Each DO object gets a sqlite file named <objectId>.sqlite,
-	// so filter for those and use that to extract object IDs
+	// so filter for those and use that to extract object IDs.
+	// Exclude metadata.sqlite which is used by workerd for per-namespace
+	// metadata (e.g. alarm storage) and is not a DO object.
 	let objectIds = files
-		.filter((entry) => entry.type === "file" && entry.name.endsWith(".sqlite"))
+		.filter(
+			(entry) =>
+				entry.type === "file" &&
+				entry.name.endsWith(".sqlite") &&
+				entry.name !== "metadata.sqlite"
+		)
 		.map((entry) => entry.name.replace(/\.sqlite$/, ""));
 
 	// Sort for consistent ordering (required for cursor pagination)

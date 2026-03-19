@@ -326,6 +326,7 @@ describe("createWorkerUploadForm — bindings", () => {
 			{ bindingName: "BROWSER", type: "browser" as const },
 			{ bindingName: "AI", type: "ai" as const },
 			{ bindingName: "IMAGES", type: "images" as const },
+			{ bindingName: "STREAM", type: "stream" as const },
 			{ bindingName: "MEDIA", type: "media" as const },
 			{ bindingName: "VERSION", type: "version_metadata" as const },
 			{ bindingName: "ASSETS", type: "assets" as const },

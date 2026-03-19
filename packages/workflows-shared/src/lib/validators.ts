@@ -1,3 +1,6 @@
+import { ms } from "itty-time";
+import { z } from "zod";
+
 export const MAX_WORKFLOW_NAME_LENGTH = 64;
 
 export const MAX_WORKFLOW_INSTANCE_ID_LENGTH = 100;
@@ -42,4 +45,42 @@ export function isValidStepName(name: string): boolean {
 	}
 
 	return !CONTROL_CHAR_REGEX.test(name);
+}
+
+const STEP_CONFIG_SCHEMA = z
+	.object({
+		retries: z
+			.object({
+				delay: z.number().gte(0).or(z.string()),
+				limit: z.number().gte(0),
+				backoff: z.enum(["constant", "linear", "exponential"]).optional(),
+			})
+			.strict()
+			.optional(),
+		timeout: z.number().gte(0).or(z.string()).optional(),
+	})
+	.strict();
+
+export function isValidStepConfig(stepConfig: unknown): boolean {
+	const config = STEP_CONFIG_SCHEMA.safeParse(stepConfig);
+
+	if (!config.success) {
+		return false;
+	}
+
+	if (
+		config.data.retries !== undefined &&
+		Number.isNaN(ms(config.data.retries.delay))
+	) {
+		return false;
+	}
+
+	if (config.data.timeout !== undefined) {
+		const timeout = config.data.timeout;
+		if (timeout == 0 || Number.isNaN(ms(config.data.timeout))) {
+			return false;
+		}
+	}
+
+	return true;
 }
