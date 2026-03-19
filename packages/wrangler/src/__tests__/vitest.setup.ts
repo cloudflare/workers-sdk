@@ -10,7 +10,7 @@ chalk.level = 0;
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
-vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "true");
+process.env.WRANGLER_CI_DISABLE_CONFIG_WATCHING = "true";
 
 /**
  * The relative path between the bundled code and the Wrangler package.
@@ -246,23 +246,19 @@ vi.mock("execa", async (importOriginal) => {
 	};
 });
 
-// Workaround for Vitest 4 bug: vi.stubEnv() writes to process.env via a Proxy
-// `set` handler, but vi.unstubAllEnvs() uses `delete` on the proxy which lacks a
-// `deleteProperty` handler. This means env vars that didn't exist before stubbing
-// are never removed from process.env, causing cross-test leakage.
-// Track process.env keys before each test so we can clean up any that were added.
-let _envKeysBefore: Set<string>;
+
+// Vitest 4's vi.unstubAllEnvs() does not reliably clean up process.env
+// Track env keys before each test and remove additions afterward.
+let envKeysBefore: Set<string>;
 beforeEach(() => {
-	_envKeysBefore = new Set(Object.keys(process.env));
+	envKeysBefore = new Set(Object.keys(process.env));
 });
 afterEach(() => {
-	// Remove any env vars that were added during the test but not properly cleaned up
 	for (const key of Object.keys(process.env)) {
-		if (!_envKeysBefore.has(key)) {
+		if (!envKeysBefore.has(key)) {
 			delete process.env[key];
 		}
 	}
-	// It is important that we clear mocks between tests to avoid leakage.
 	vi.clearAllMocks();
 });
 
