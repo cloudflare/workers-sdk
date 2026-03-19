@@ -207,13 +207,14 @@ export function R2ObjectTable({
 	const someItemsSelected = selectableKeys.some((key) => selectedKeys.has(key));
 
 	function handleSelectAll(): void {
+		// Deselect all
 		if (allItemsSelected) {
-			// Deselect all
 			onSelectionChange(new Set());
-		} else {
-			// Select all items
-			onSelectionChange(new Set(selectableKeys));
+			return;
 		}
+
+		// Select all items
+		onSelectionChange(new Set(selectableKeys));
 	}
 
 	function handleSelectItem(key: string): void {
@@ -223,6 +224,7 @@ export function R2ObjectTable({
 		} else {
 			newSelection.add(key);
 		}
+
 		onSelectionChange(newSelection);
 	}
 

@@ -34,7 +34,7 @@ const MIME_TYPES = {
 	webp: "image/webp",
 	xml: "application/xml",
 	zip: "application/zip",
-} as Record<string, string>;
+} as const;
 
 function getMimeType(file: File): string {
 	if (file.type) {
@@ -42,7 +42,8 @@ function getMimeType(file: File): string {
 	}
 
 	const ext = file.name.split(".").pop()?.toLowerCase();
-	return MIME_TYPES[ext ?? ""] ?? "application/octet-stream";
+	const mimeType = MIME_TYPES[ext as keyof typeof MIME_TYPES];
+	return mimeType ?? "application/octet-stream";
 }
 
 export function R2UploadDialog({
