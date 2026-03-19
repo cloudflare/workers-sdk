@@ -1239,7 +1239,7 @@
 		},
 		"/workers": {
 			"get": {
-				"description": "Returns the list of workers from the dev registry.",
+				"description": "List all workers in the local dev registry.",
 				"operationId": "local-explorer-list-workers",
 				"responses": {
 					"200": {
@@ -1265,7 +1265,7 @@
 								}
 							}
 						},
-						"description": "List Workers response."
+						"description": "List workers response."
 					},
 					"4XX": {
 						"content": {
@@ -1275,10 +1275,10 @@
 								}
 							}
 						},
-						"description": "List Workers response failure."
+						"description": "List workers failure."
 					}
 				},
-				"summary": "List Workers",
+				"summary": "List Workers in Dev Registry",
 				"tags": ["Local Explorer"]
 			}
 		}
@@ -1368,10 +1368,6 @@
 					},
 					"name": {
 						"$ref": "#/components/schemas/r2_bucket_name"
-					},
-					"workerName": {
-						"description": "The name of the worker this bucket belongs to.",
-						"type": "string"
 					}
 				},
 				"type": "object"
@@ -1507,10 +1503,6 @@
 					},
 					"use_sqlite": {
 						"type": "boolean"
-					},
-					"workerName": {
-						"description": "The name of the worker this namespace belongs to.",
-						"type": "string"
 					}
 				},
 				"type": "object"
@@ -1542,6 +1534,11 @@
 									"total_count": {
 										"description": "Total results available without any search parameters.",
 										"example": 2000,
+										"type": "number"
+									},
+									"total_pages": {
+										"description": "The number of total pages in the entire result set.",
+										"example": 100,
 										"type": "number"
 									}
 								},
@@ -1767,6 +1764,9 @@
 			},
 			"d1_database-response": {
 				"properties": {
+					"jurisdiction": {
+						"$ref": "#/components/schemas/d1_jurisdiction-nullable"
+					},
 					"name": {
 						"$ref": "#/components/schemas/d1_database-name"
 					},
@@ -1775,10 +1775,6 @@
 					},
 					"version": {
 						"$ref": "#/components/schemas/d1_database-version"
-					},
-					"workerName": {
-						"description": "The name of the worker this database belongs to.",
-						"type": "string"
 					}
 				},
 				"type": "object"
@@ -1792,6 +1788,13 @@
 				"description": "D1 database name.",
 				"example": "my-database",
 				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+				"type": "string"
+			},
+			"d1_jurisdiction-nullable": {
+				"description": "Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.",
+				"enum": ["eu", "fedramp"],
+				"example": "eu",
+				"nullable": true,
 				"type": "string"
 			},
 			"d1_api-response-common": {
@@ -2124,10 +2127,6 @@
 					},
 					"title": {
 						"$ref": "#/components/schemas/workers-kv_namespace_title"
-					},
-					"workerName": {
-						"description": "The name of the worker this namespace belongs to.",
-						"type": "string"
 					}
 				},
 				"required": ["id", "title"],
@@ -2364,29 +2363,27 @@
 			},
 			"local-explorer_worker": {
 				"type": "object",
-				"description": "A worker registered in the local dev registry.",
-				"required": ["name", "protocol", "host", "port", "isSelf"],
+				"required": ["host", "isSelf", "name", "port", "protocol"],
 				"properties": {
-					"name": {
-						"type": "string",
-						"description": "The name of the worker."
-					},
-					"protocol": {
-						"type": "string",
-						"enum": ["http", "https"],
-						"description": "The protocol the worker is accessible on."
-					},
 					"host": {
 						"type": "string",
-						"description": "The host the worker is accessible on."
-					},
-					"port": {
-						"type": "integer",
-						"description": "The port the worker is accessible on."
+						"description": "Hostname the worker is running on"
 					},
 					"isSelf": {
 						"type": "boolean",
-						"description": "Whether this worker belongs to the current Miniflare instance."
+						"description": "Whether this worker is the one hosting the explorer"
+					},
+					"name": {
+						"type": "string",
+						"description": "Worker name from the dev registry"
+					},
+					"port": {
+						"type": "integer",
+						"description": "Port the worker is running on"
+					},
+					"protocol": {
+						"type": "string",
+						"description": "Protocol (http or https)"
 					}
 				}
 			}
