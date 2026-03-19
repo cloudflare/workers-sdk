@@ -284,12 +284,13 @@ export async function startDefaultServe(): Promise<
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
+	// Vitest 4 sets NODE_ENV=test — override so Vite uses the correct mode
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
+	process.env.NODE_ENV = isBuild ? "production" : "development";
+
 	if (!isBuild) {
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.VITE_INLINE = "inline-serve";
-		// Vitest 4 sets NODE_ENV=test — override for the dev server
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.NODE_ENV = "development";
 		const config = await loadConfig({ command: "serve", mode: "development" });
 		viteServer = await (await createServer(config)).listen();
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
