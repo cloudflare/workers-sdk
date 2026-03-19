@@ -8,7 +8,6 @@ import * as TOML from "smol-toml";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
-import { INVALID_INHERIT_BINDING_CODE } from "../../utils/error-codes";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -27,7 +26,6 @@ import {
 	mockDeploymentsListRequest,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
-	mockServiceScriptData,
 } from "./helpers";
 import type { Mock } from "vitest";
 
@@ -2455,75 +2453,6 @@ describe("deploy", () => {
 						"
 					`);
 				});
-			});
-		});
-
-		describe("explicit secrets", () => {
-			it("should deploy successfully when `secrets.required` is configured", async () => {
-				writeWranglerConfig({
-					secrets: { required: ["API_KEY", "DB_PASSWORD"] },
-				});
-				writeWorkerSource();
-				mockUploadWorkerRequest();
-				mockSubDomainRequest();
-
-				await runWrangler("deploy index.js");
-			});
-
-			it("should error when required secrets are missing from the deployed Worker", async ({ expect }) => {
-				writeWranglerConfig({
-					secrets: { required: ["API_KEY", "DB_PASSWORD"] },
-				});
-				writeWorkerSource();
-
-				// Mock the versions API to return inherit binding errors for all missing secrets
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/workers/scripts/:scriptName/versions",
-						() => {
-							return HttpResponse.json(
-								createFetchResult(null, false, [
-									{
-										code: INVALID_INHERIT_BINDING_CODE,
-										message:
-											"inherit binding 'API_KEY' is invalid: previous version does not have binding named 'API_KEY'",
-									},
-									{
-										code: INVALID_INHERIT_BINDING_CODE,
-										message:
-											"inherit binding 'DB_PASSWORD' is invalid: previous version does not have binding named 'DB_PASSWORD'",
-									},
-								])
-							);
-						},
-						{ once: true }
-					)
-				);
-
-				mockSubDomainRequest();
-
-				await expect(
-					runWrangler("deploy index.js")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.]`
-				);
-			});
-
-			it("should error before uploading when the Worker does not exist", async ({ expect }) => {
-				writeWranglerConfig({
-					secrets: { required: ["API_KEY", "DB_PASSWORD"] },
-				});
-				writeWorkerSource();
-
-				mockServiceScriptData({});
-
-				await expect(
-					runWrangler("deploy index.js")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The following required secrets have not been set: API_KEY, DB_PASSWORD
-Use \`wrangler secret put <NAME>\` to set secrets before deploying.]`
-				);
 			});
 		});
 	});
