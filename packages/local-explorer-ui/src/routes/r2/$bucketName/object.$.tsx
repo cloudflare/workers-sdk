@@ -6,11 +6,14 @@ import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CopyButton } from "../../../components/CopyButton";
+import { PageLayout } from "../../../components/layout";
+import { RouteError } from "../../../components/RouteError";
 import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
 
 export const Route = createFileRoute("/r2/$bucketName/object/$")({
 	component: ObjectDetailView,
+	errorComponent: RouteError,
 	loader: async ({ params }) => {
 		const objectKey = params._splat;
 		if (!objectKey) {
@@ -189,48 +192,52 @@ function ObjectDetailView(): JSX.Element {
 	];
 
 	return (
-		<>
-			<Breadcrumbs icon={R2Icon} title="R2" items={breadcrumbItems} />
-
-			<div className="px-6 py-6">
+		<PageLayout
+			header={<Breadcrumbs icon={R2Icon} items={breadcrumbItems} title="R2" />}
+			noPadding={true}
+		>
+			<div className="flex h-full flex-col overflow-hidden">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mx-4 mt-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
 						{error}
 					</div>
 				)}
 
-				<div className="mb-6 flex items-center justify-between">
-					<div className="flex min-w-0 items-center gap-2">
-						<h1
-							className="truncate text-base text-text"
-							title={search.objectKey}
-						>
-							{search.objectKey}
-						</h1>
-						<CopyButton text={search.objectKey} />
+				<div className="px-6 py-6">
+					<div className="mb-6 flex items-center justify-between">
+						<div className="flex min-w-0 items-center gap-2">
+							<h1
+								className="truncate text-base text-text"
+								title={search.objectKey}
+							>
+								{search.objectKey}
+							</h1>
+							<CopyButton text={search.objectKey} />
+						</div>
+
+						<div className="flex shrink-0 items-center gap-2">
+							<Button
+								icon={DownloadIcon}
+								onClick={handleDownload}
+								variant="secondary"
+							>
+								Download
+							</Button>
+
+							<Button
+								icon={TrashIcon}
+								onClick={() => setDeleteDialogOpen(true)}
+								variant="secondary-destructive"
+							>
+								Delete
+							</Button>
+						</div>
 					</div>
 
-					<div className="flex shrink-0 items-center gap-2">
-						<Button
-							icon={DownloadIcon}
-							onClick={handleDownload}
-							variant="secondary"
-						>
-							Download
-						</Button>
-						<Button
-							icon={TrashIcon}
-							onClick={() => setDeleteDialogOpen(true)}
-							variant="secondary-destructive"
-						>
-							Delete
-						</Button>
+					<div className="space-y-6">
+						<ObjectDetailsCard object={search.object} />
+						<CustomMetadataCard metadata={search.object.custom_metadata} />
 					</div>
-				</div>
-
-				<div className="space-y-6">
-					<ObjectDetailsCard object={search.object} />
-					<CustomMetadataCard metadata={search.object.custom_metadata} />
 				</div>
 
 				{/* Delete Confirmation Dialog */}
@@ -270,6 +277,6 @@ function ObjectDetailView(): JSX.Element {
 					</Dialog>
 				</Dialog.Root>
 			</div>
-		</>
+		</PageLayout>
 	);
 }

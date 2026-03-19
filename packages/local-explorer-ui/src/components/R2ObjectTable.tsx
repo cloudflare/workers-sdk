@@ -230,7 +230,7 @@ export function R2ObjectTable({
 
 	if (items.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+			<div className="flex flex-1 flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
 				<h2 className="text-2xl font-medium">
 					{currentPrefix
 						? "No objects in this directory"
@@ -244,122 +244,120 @@ export function R2ObjectTable({
 	}
 
 	return (
-		<div className="overflow-hidden rounded-lg border border-border">
-			<Table>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head className="w-12">
-							<Checkbox
-								aria-label="Select all"
-								checked={allItemsSelected}
-								className="hover:cursor-pointer"
-								disabled={selectableKeys.length === 0}
-								indeterminate={someItemsSelected && !allItemsSelected}
-								onCheckedChange={handleSelectAll}
-							/>
-						</Table.Head>
-						<Table.Head>Objects</Table.Head>
-						<Table.Head>Type</Table.Head>
-						<Table.Head>Size</Table.Head>
-						<Table.Head>Modified</Table.Head>
-						<Table.Head className="w-12">
-							<BulkActionMenu
-								disabled={selectedKeys.size === 0}
-								onDelete={() => onDelete(Array.from(selectedKeys))}
-								onDownload={() => onDownload(selectedFileKeys)}
-								selectedFileCount={selectedFileKeys.length}
-								selectedTotalCount={selectedKeys.size}
-							/>
-						</Table.Head>
-					</Table.Row>
-				</Table.Header>
+		<Table>
+			<Table.Header className="sticky top-0 bg-card-bg">
+				<Table.Row>
+					<Table.Head className="w-12">
+						<Checkbox
+							aria-label="Select all"
+							checked={allItemsSelected}
+							className="hover:cursor-pointer"
+							disabled={selectableKeys.length === 0}
+							indeterminate={someItemsSelected && !allItemsSelected}
+							onCheckedChange={handleSelectAll}
+						/>
+					</Table.Head>
+					<Table.Head>Objects</Table.Head>
+					<Table.Head>Type</Table.Head>
+					<Table.Head>Size</Table.Head>
+					<Table.Head>Modified</Table.Head>
+					<Table.Head className="w-12">
+						<BulkActionMenu
+							disabled={selectedKeys.size === 0}
+							onDelete={() => onDelete(Array.from(selectedKeys))}
+							onDownload={() => onDownload(selectedFileKeys)}
+							selectedFileCount={selectedFileKeys.length}
+							selectedTotalCount={selectedKeys.size}
+						/>
+					</Table.Head>
+				</Table.Row>
+			</Table.Header>
 
-				<Table.Body>
-					{items.map((item) => {
-						if (item.type === "directory") {
-							const displayName = getDisplayName(item.prefix, currentPrefix);
-							return (
-								<Table.Row key={item.prefix} className="group">
-									<Table.Cell>
-										<Checkbox
-											aria-label={`Select ${displayName}`}
-											checked={selectedKeys.has(item.prefix)}
-											className="hover:cursor-pointer"
-											onCheckedChange={() => handleSelectItem(item.prefix)}
-										/>
-									</Table.Cell>
-									<Table.Cell>
-										<button
-											className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
-											onClick={() => onNavigateToPrefix(item.prefix)}
-										>
-											<FolderIcon
-												size={16}
-												className="text-orange-600 dark:text-orange-400"
-											/>
-											<span className="font-medium">{displayName}</span>
-										</button>
-									</Table.Cell>
-									<Table.Cell className="text-text-secondary">
-										Directory
-									</Table.Cell>
-									<Table.Cell className="text-text-secondary">-</Table.Cell>
-									<Table.Cell className="text-text-secondary">-</Table.Cell>
-									<Table.Cell className="text-right whitespace-nowrap">
-										<ActionMenu
-											isDirectory
-											onDelete={() => onDelete([item.prefix])}
-										/>
-									</Table.Cell>
-								</Table.Row>
-							);
-						}
-
-						const obj = item.object;
-						const key = obj.key ?? "";
-						const displayName = getDisplayName(key, currentPrefix);
-						const contentType = getContentType(obj);
-
+			<Table.Body>
+				{items.map((item) => {
+					if (item.type === "directory") {
+						const displayName = getDisplayName(item.prefix, currentPrefix);
 						return (
-							<Table.Row key={key} className="group">
+							<Table.Row key={item.prefix} className="group">
 								<Table.Cell>
 									<Checkbox
 										aria-label={`Select ${displayName}`}
-										checked={selectedKeys.has(key)}
+										checked={selectedKeys.has(item.prefix)}
 										className="hover:cursor-pointer"
-										onCheckedChange={() => handleSelectItem(key)}
+										onCheckedChange={() => handleSelectItem(item.prefix)}
 									/>
 								</Table.Cell>
 								<Table.Cell>
-									<Link
-										to="/r2/$bucketName/object/$"
-										params={{ bucketName, _splat: key }}
-										className="flex items-center gap-2 text-text no-underline hover:text-primary"
+									<button
+										className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
+										onClick={() => onNavigateToPrefix(item.prefix)}
 									>
-										<FileIcon size={16} className="text-muted" />
+										<FolderIcon
+											className="text-orange-600 dark:text-orange-400"
+											size={16}
+										/>
 										<span className="font-medium">{displayName}</span>
-									</Link>
-								</Table.Cell>
-								<Table.Cell className="font-mono text-xs text-text-secondary">
-									{contentType}
+									</button>
 								</Table.Cell>
 								<Table.Cell className="text-text-secondary">
-									{formatSize(obj.size)}
+									Directory
 								</Table.Cell>
-								<Table.Cell className="text-text-secondary">
-									{formatDate(obj.last_modified)}
-								</Table.Cell>
+								<Table.Cell className="text-text-secondary">-</Table.Cell>
+								<Table.Cell className="text-text-secondary">-</Table.Cell>
 								<Table.Cell className="text-right whitespace-nowrap">
 									<ActionMenu
-										onDownload={() => onDownload([key])}
-										onDelete={() => onDelete([key])}
+										isDirectory
+										onDelete={() => onDelete([item.prefix])}
 									/>
 								</Table.Cell>
 							</Table.Row>
 						);
-					})}
-				</Table.Body>
-			</Table>
-		</div>
+					}
+
+					const obj = item.object;
+					const key = obj.key ?? "";
+					const displayName = getDisplayName(key, currentPrefix);
+					const contentType = getContentType(obj);
+
+					return (
+						<Table.Row key={key} className="group">
+							<Table.Cell>
+								<Checkbox
+									aria-label={`Select ${displayName}`}
+									checked={selectedKeys.has(key)}
+									className="hover:cursor-pointer"
+									onCheckedChange={() => handleSelectItem(key)}
+								/>
+							</Table.Cell>
+							<Table.Cell>
+								<Link
+									className="flex items-center gap-2 text-text no-underline hover:text-primary"
+									params={{ bucketName, _splat: key }}
+									to="/r2/$bucketName/object/$"
+								>
+									<FileIcon className="text-muted" size={16} />
+									<span className="font-medium">{displayName}</span>
+								</Link>
+							</Table.Cell>
+							<Table.Cell className="font-mono text-xs text-text-secondary">
+								{contentType}
+							</Table.Cell>
+							<Table.Cell className="text-text-secondary">
+								{formatSize(obj.size)}
+							</Table.Cell>
+							<Table.Cell className="text-text-secondary">
+								{formatDate(obj.last_modified)}
+							</Table.Cell>
+							<Table.Cell className="text-right whitespace-nowrap">
+								<ActionMenu
+									onDelete={() => onDelete([key])}
+									onDownload={() => onDownload([key])}
+								/>
+							</Table.Cell>
+						</Table.Row>
+					);
+				})}
+			</Table.Body>
+		</Table>
 	);
 }

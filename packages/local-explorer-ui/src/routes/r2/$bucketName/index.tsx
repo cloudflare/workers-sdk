@@ -22,8 +22,10 @@ import {
 } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { PageLayout } from "../../../components/layout";
 import { R2ObjectTable } from "../../../components/R2ObjectTable";
 import { R2UploadDialog } from "../../../components/R2UploadDialog";
+import { RouteError } from "../../../components/RouteError";
 import { withMinimumDelay } from "../../../utils/async";
 import type { R2Object } from "../../../api";
 
@@ -34,6 +36,7 @@ export interface R2BucketSearch {
 
 export const Route = createFileRoute("/r2/$bucketName/")({
 	component: BucketView,
+	errorComponent: RouteError,
 	validateSearch: (search: Record<string, unknown>): R2BucketSearch => ({
 		prefix: typeof search.prefix === "string" ? search.prefix : undefined,
 		delimiter: search.delimiter === false ? false : true,
@@ -328,93 +331,100 @@ function BucketView(): JSX.Element {
 	];
 
 	return (
-		<>
-			<Breadcrumbs icon={R2Icon} title="R2" items={breadcrumbItems}>
-				<DropdownMenu>
-					<DropdownMenu.Trigger
-						render={
-							<Button variant="secondary">
-								{directoryView ? (
-									<FoldersIcon size={16} />
-								) : (
-									<ListIcon size={16} />
-								)}
+		<PageLayout
+			header={
+				<Breadcrumbs icon={R2Icon} items={breadcrumbItems} title="R2">
+					<DropdownMenu>
+						<DropdownMenu.Trigger
+							render={
+								<Button variant="secondary">
+									{directoryView ? (
+										<FoldersIcon size={16} />
+									) : (
+										<ListIcon size={16} />
+									)}
 
-								{directoryView ? "Grouped" : "Ungrouped"}
+									{directoryView ? "Grouped" : "Ungrouped"}
 
-								<CaretDownIcon size={14} />
-							</Button>
-						}
-					/>
-					<DropdownMenu.Content align="end" sideOffset={4}>
-						<DropdownMenu.Item
-							className="flex items-center gap-2"
-							icon={FoldersIcon}
-							onClick={() => handleDirectoryViewChange(true)}
-						>
-							<span>Grouped</span>
-							{directoryView && <CheckIcon className="ml-auto" size={14} />}
-						</DropdownMenu.Item>
+									<CaretDownIcon size={14} />
+								</Button>
+							}
+						/>
+						<DropdownMenu.Content align="end" sideOffset={4}>
+							<DropdownMenu.Item
+								className="flex items-center gap-2"
+								icon={FoldersIcon}
+								onClick={() => handleDirectoryViewChange(true)}
+							>
+								<span>Grouped</span>
+								{directoryView && <CheckIcon className="ml-auto" size={14} />}
+							</DropdownMenu.Item>
 
-						<DropdownMenu.Item
-							className="flex items-center gap-2"
-							icon={ListIcon}
-							onClick={() => handleDirectoryViewChange(false)}
-						>
-							<span>Ungrouped</span>
-							{!directoryView && <CheckIcon className="ml-auto" size={14} />}
-						</DropdownMenu.Item>
-					</DropdownMenu.Content>
-				</DropdownMenu>
+							<DropdownMenu.Item
+								className="flex items-center gap-2"
+								icon={ListIcon}
+								onClick={() => handleDirectoryViewChange(false)}
+							>
+								<span>Ungrouped</span>
+								{!directoryView && <CheckIcon className="ml-auto" size={14} />}
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu>
 
-				<Button
-					icon={UploadIcon}
-					onClick={() => setUploadDialogOpen(true)}
-					variant="secondary"
-				>
-					Upload
-				</Button>
-				<Button
-					icon={FolderPlusIcon}
-					onClick={() => setAddDirectoryOpen(true)}
-					variant="secondary"
-				>
-					Add directory
-				</Button>
-				<Button
-					aria-label="Refresh"
-					icon={ArrowClockwiseIcon}
-					loading={loading}
-					onClick={handleRefresh}
-					shape="square"
-					variant="secondary"
-				></Button>
-			</Breadcrumbs>
-
-			<div className="px-6 py-6">
-				<R2ObjectTable
-					bucketName={params.bucketName}
-					currentPrefix={search.prefix || ""}
-					delimitedPrefixes={delimitedPrefixes}
-					objects={objects}
-					onDelete={handleDelete}
-					onDownload={handleDownload}
-					onNavigateToPrefix={handleNavigateToPrefix}
-					onSelectionChange={setSelectedKeys}
-					selectedKeys={selectedKeys}
-				/>
-				{isTruncated && cursor && (
-					<div className="p-4 text-center">
-						<Button
-							disabled={loadingMore}
-							loading={loadingMore}
-							onClick={handleLoadMore}
-							variant="secondary"
-						>
-							{loadingMore ? "Loading..." : "Load More"}
-						</Button>
+					<Button
+						icon={UploadIcon}
+						onClick={() => setUploadDialogOpen(true)}
+						variant="secondary"
+					>
+						Upload
+					</Button>
+					<Button
+						icon={FolderPlusIcon}
+						onClick={() => setAddDirectoryOpen(true)}
+						variant="secondary"
+					>
+						Add directory
+					</Button>
+					<Button
+						aria-label="Refresh"
+						icon={ArrowClockwiseIcon}
+						loading={loading}
+						onClick={handleRefresh}
+						shape="square"
+						variant="secondary"
+					></Button>
+				</Breadcrumbs>
+			}
+			noPadding
+		>
+			<div className="flex h-full flex-col overflow-hidden">
+				<div className="flex flex-1 flex-col overflow-hidden">
+					<div className="flex-1 overflow-auto">
+						<R2ObjectTable
+							bucketName={params.bucketName}
+							currentPrefix={search.prefix || ""}
+							delimitedPrefixes={delimitedPrefixes}
+							objects={objects}
+							onDelete={handleDelete}
+							onDownload={handleDownload}
+							onNavigateToPrefix={handleNavigateToPrefix}
+							onSelectionChange={setSelectedKeys}
+							selectedKeys={selectedKeys}
+						/>
 					</div>
-				)}
+					{isTruncated && cursor && (
+						<div className="flex shrink-0 justify-center border-t border-border p-4 text-center">
+							<Button
+								disabled={loadingMore}
+								loading={loadingMore}
+								onClick={handleLoadMore}
+								variant="secondary"
+							>
+								{loadingMore ? "Loading..." : "Load More"}
+							</Button>
+						</div>
+					)}
+				</div>
 
 				{/* Delete Confirmation Dialog */}
 				<Dialog.Root
@@ -488,12 +498,12 @@ function BucketView(): JSX.Element {
 								Directory name
 							</label>
 							<input
-								type="text"
+								autoFocus
 								className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
-								value={newDirectoryName}
 								onChange={(e) => setNewDirectoryName(e.target.value)}
 								placeholder="my-directory"
-								autoFocus
+								type="text"
+								value={newDirectoryName}
 							/>
 							{search.prefix && (
 								<p className="mt-1 text-xs text-text-secondary">
@@ -536,6 +546,6 @@ function BucketView(): JSX.Element {
 					open={uploadDialogOpen}
 				/>
 			</div>
-		</>
+		</PageLayout>
 	);
 }
