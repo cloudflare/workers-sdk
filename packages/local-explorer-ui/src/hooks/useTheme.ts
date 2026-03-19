@@ -30,10 +30,12 @@ function applyTheme(theme: ResolvedTheme): void {
 
 	if (theme === "dark") {
 		document.documentElement.classList.add("dark");
+		document.documentElement.setAttribute("data-mode", "dark");
 		return;
 	}
 
 	document.documentElement.classList.remove("dark");
+	document.documentElement.removeAttribute("data-mode");
 }
 
 function getStoredPreference(): ThemePreference {

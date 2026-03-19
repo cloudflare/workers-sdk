@@ -90,44 +90,6 @@
 	--color-highlight-text: oklch(21% 0.006 285.885); /* dark text on highlight */
 }
 
-/*
- * Map @cloudflare/kumo component tokens to our brand theme.
- * Kumo's DropdownMenu, Button, Input, Tooltip, etc. reference --color-kumo-*
- * and --text-color-kumo-* variables internally. Without these mappings,
- * backgrounds and text colors resolve to transparent/invisible.
- */
-:root {
-	/* Background tokens */
-	--color-kumo-base: var(--color-background);
-	--color-kumo-control: var(--color-surface);
-	--color-kumo-elevated: var(--color-surface-secondary);
-	--color-kumo-overlay: var(--color-accent);
-	--color-kumo-recessed: var(--color-surface-tertiary);
-	--color-kumo-tint: var(--color-surface-secondary);
-
-	/* Interactive / brand tokens */
-	--color-kumo-brand: var(--color-primary);
-	--color-kumo-brand-hover: var(--color-primary-hover);
-	--color-kumo-interact: var(--color-surface-tertiary);
-	--color-kumo-danger: var(--color-danger);
-
-	/* Border / line tokens */
-	--color-kumo-fill: var(--color-border);
-	--color-kumo-line: var(--color-border);
-	--color-kumo-ring: var(--color-muted);
-
-	/* Tooltip tokens */
-	--color-kumo-tip-shadow: rgba(0, 0, 0, 0.08);
-	--color-kumo-tip-stroke: transparent;
-
-	/* Text color tokens */
-	--text-color-kumo-default: var(--color-text);
-	--text-color-kumo-subtle: var(--color-muted);
-	--text-color-kumo-inactive: var(--color-muted);
-	--text-color-kumo-danger: var(--color-danger);
-	--text-color-kumo-link: var(--color-primary);
-}
-
 /* Dark mode color overrides */
 :root.dark {
 	/* App shell backgrounds */
@@ -183,10 +145,6 @@
 	/* Focus ring shadows */
 	--shadow-focus-primary: 0 0 0 3px rgba(255, 154, 71, 0.25);
 	--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
-
-	/* Kumo tooltip overrides for dark mode */
-	--color-kumo-tip-shadow: transparent;
-	--color-kumo-tip-stroke: var(--color-border);
 
 	/* Studio table state colors - dark mode */
 	--color-state-new: oklch(22% 0.05 145); /* subtle green for new rows */
