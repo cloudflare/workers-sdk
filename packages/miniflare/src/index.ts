@@ -2293,12 +2293,14 @@ export class Miniflare {
 		const debugPortAddress = `127.0.0.1:${debugPort}`;
 
 		assert(
-			this.#loopbackServer !== undefined && this.#loopbackHost !== undefined,
-			"Loopback server must be running before registering workers"
+			this.#runtimeEntryURL !== undefined,
+			"Runtime entry URL must be set before registering workers"
 		);
-		const loopbackAddress = `${this.#loopbackHost}:${getServerPort(
-			this.#loopbackServer
-		)}`;
+		// The loopback address is the workerd entry URL (host:port), used by the
+		// local explorer for cross-instance HTTP aggregation.
+		const loopbackAddress = `${this.#runtimeEntryURL.hostname}:${
+			this.#runtimeEntryURL.port
+		}`;
 
 		const allWorkerNames = this.#workerOpts.map(
 			(workerOpt) => workerOpt.core.name
