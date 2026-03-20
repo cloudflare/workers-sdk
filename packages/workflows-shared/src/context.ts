@@ -861,7 +861,7 @@ export class Context extends RpcTarget {
 				}
 			}
 			const callbacks = this.#engine.waiters.get(options.type) ?? [];
-			callbacks.push(resolve);
+			callbacks.push([cacheKey, resolve]);
 
 			this.#engine.waiters.set(options.type, callbacks);
 		});
@@ -886,6 +886,14 @@ export class Context extends RpcTarget {
 				: timeoutPromise(ms(options.timeout), true),
 			pausePromise,
 		]).catch(async (error) => {
+			const callbacks = this.#engine.waiters.get(options.type);
+			if (callbacks) {
+				const idx = callbacks.findIndex(([key]) => key === cacheKey);
+				if (idx !== -1) {
+					callbacks.splice(idx, 1);
+				}
+			}
+
 			this.#engine.writeLog(
 				InstanceEvent.WAIT_TIMED_OUT,
 				cacheKey,
