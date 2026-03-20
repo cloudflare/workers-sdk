@@ -8,6 +8,8 @@ for CI and automation.
 
 Usage example:
 
+```
 wrangler d1 migrations apply <db> --remote --force
+```
 
 Fixes #5017
