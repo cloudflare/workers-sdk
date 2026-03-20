@@ -101,8 +101,12 @@ export class Engine extends DurableObject<Env> {
 	engineAbortController: AbortController = new AbortController();
 	pauseController: AbortController = new AbortController();
 
-	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
-		new Map();
+	waiters: Map<
+		string,
+		Array<
+			[cacheKey: string, resolve: (event: Event | PromiseLike<Event>) => void]
+		>
+	> = new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
 
 	constructor(state: DurableObjectState, env: Env) {
@@ -506,9 +510,10 @@ export class Engine extends DurableObject<Env> {
 			// Attempt to get the callback and run it
 			const callbacks = this.waiters.get(event.type);
 			if (callbacks) {
-				const callback = callbacks[0];
-				if (callback) {
-					callback(event);
+				const entry = callbacks[0];
+				if (entry) {
+					const [, resolve] = entry;
+					resolve(event);
 					// Remove it from the list of callbacks
 					callbacks.shift();
 					this.waiters.set(event.type, callbacks);

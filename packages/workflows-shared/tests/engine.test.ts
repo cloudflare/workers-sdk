@@ -182,6 +182,109 @@ describe("Engine", () => {
 		}, 500);
 	});
 
+	it("waitForEvent should not deliver events to timed-out events with the same type", async ({
+		expect,
+	}) => {
+		const instanceId = "WAIT-FOR-EVENT-STALE-WAITER";
+		const engineStub = await runWorkflow(instanceId, async (_, step) => {
+			const results: Array<{
+				iteration: number;
+				received: boolean;
+			}> = [];
+
+			for (let i = 1; i <= 3; i++) {
+				try {
+					await step.waitForEvent(`my-event-waiter-${i}`, {
+						type: "my-event",
+						timeout: 500,
+					});
+					results.push({ iteration: i, received: true });
+				} catch {
+					results.push({ iteration: i, received: false });
+				}
+			}
+
+			return { results };
+		});
+
+		// 1st waitForEvent iteration - should receive event
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return (
+					logs.logs.filter((val) => val.event === InstanceEvent.WAIT_START)
+						.length >= 1
+				);
+			},
+			{ timeout: 500 }
+		);
+
+		await engineStub.receiveEvent({
+			type: "my-event",
+			timestamp: new Date(),
+			payload: { iteration: 1 },
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return (
+					logs.logs.filter((val) => val.event === InstanceEvent.WAIT_START)
+						.length >= 2
+				);
+			},
+			{ timeout: 500 }
+		);
+
+		// 2nd waitForEvent iteration - should timeout (500ms)
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WAIT_TIMED_OUT
+				);
+			},
+			{ timeout: 1000 }
+		);
+
+		// 3rd waitForEvent iteration - should receive event
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return (
+					logs.logs.filter((val) => val.event === InstanceEvent.WAIT_START)
+						.length >= 3
+				);
+			},
+			{ timeout: 500 }
+		);
+
+		await engineStub.receiveEvent({
+			type: "my-event",
+			timestamp: new Date(),
+			payload: { iteration: 3 },
+		});
+
+		await vi.waitUntil(
+			async () => {
+				const logs = (await engineStub.readLogs()) as EngineLogs;
+				return logs.logs.some(
+					(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+				);
+			},
+			{ timeout: 1000 }
+		);
+
+		const logs = (await engineStub.readLogs()) as EngineLogs;
+		// Iterations 1 and 3 received events; iteration 2 timed out
+		expect(
+			logs.logs.filter((val) => val.event === InstanceEvent.WAIT_COMPLETE)
+		).toHaveLength(2);
+		expect(
+			logs.logs.filter((val) => val.event === InstanceEvent.WAIT_TIMED_OUT)
+		).toHaveLength(1);
+	});
+
 	it("should restore state from storage when accountId is undefined", async ({
 		expect,
 	}) => {
