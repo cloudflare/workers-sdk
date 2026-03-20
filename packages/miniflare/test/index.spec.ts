@@ -172,6 +172,18 @@ test("Miniflare: accepts mixed d1Databases record", () => {
 	});
 	useDispose(mf);
 });
+
+test("Miniflare: accepts mixed pipelines record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		pipelines: {
+			LOCAL_PIPELINE: "local-pipeline",
+			REMOTE_PIPELINE: { pipeline: "remote-pipeline" },
+		},
+	});
+	useDispose(mf);
+});
 test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 	const mf = new Miniflare({
 		port: 0,
