@@ -307,7 +307,7 @@ act on it (won't fix, user error, wrong repo, spam, stale with no info, duplicat
 
 > <The exact comment to post on the issue. Follow the templates above for the
 > matching closure category. Key principles:
-> - Always offer an escape hatch ("feel free to open a new issue" / "feel free to comment")
+> - Always offer an escape hatch ("feel free to open a new issue")
 > - Link to specific PRs, releases, or docs when available
 > - Be concise for straightforward closures, detailed for design decisions
 > - Never be dismissive or snarky, even for spam (just close silently) or user error
