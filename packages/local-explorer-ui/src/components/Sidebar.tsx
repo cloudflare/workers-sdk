@@ -6,6 +6,7 @@ import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
+import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
 	R2Bucket,
@@ -97,6 +98,9 @@ interface SidebarProps {
 	kvNamespaces: WorkersKvNamespace[];
 	r2Buckets: R2Bucket[];
 	r2Error: string | null;
+	workers: LocalExplorerWorker[];
+	selectedWorker: string;
+	onWorkerChange: (workerName: string) => void;
 }
 
 export function Sidebar({
@@ -109,7 +113,16 @@ export function Sidebar({
 	kvNamespaces,
 	r2Buckets,
 	r2Error,
+	workers,
+	selectedWorker,
+	onWorkerChange,
 }: SidebarProps) {
+	const showWorkerSelector = workers.length > 1;
+
+	// Only include the worker search param when there are multiple workers.
+	// This keeps URLs clean in the common single-worker case.
+	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
+
 	return (
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
 			<a
@@ -127,6 +140,14 @@ export function Sidebar({
 				</div>
 			</a>
 
+			{showWorkerSelector && (
+				<WorkerSelector
+					workers={workers}
+					selectedWorker={selectedWorker}
+					onWorkerChange={onWorkerChange}
+				/>
+			)}
+
 			<SidebarItemGroup
 				emptyLabel="No namespaces"
 				error={kvError}
@@ -137,6 +158,7 @@ export function Sidebar({
 					label: ns.title,
 					link: {
 						params: { namespaceId: ns.id },
+						search: workerSearch,
 						to: "/kv/$namespaceId",
 					},
 				}))}
@@ -153,7 +175,7 @@ export function Sidebar({
 					label: db.name as string,
 					link: {
 						params: { databaseId: db.uuid },
-						search: { table: undefined },
+						search: { table: undefined, ...workerSearch },
 						to: "/d1/$databaseId",
 					},
 				}))}
@@ -174,6 +196,7 @@ export function Sidebar({
 						label: className,
 						link: {
 							params: { className },
+							search: workerSearch,
 							to: "/do/$className",
 						},
 					};
@@ -195,6 +218,7 @@ export function Sidebar({
 						label: bucketName,
 						link: {
 							params: { bucketName },
+							search: workerSearch,
 							to: "/r2/$bucketName",
 						},
 					};

@@ -12,6 +12,9 @@ import {
 
 const commands = ["dev", "buildAndPreview"] as const;
 const isWindows = process.platform === "win32";
+const workersDomain =
+	process.env.E2E_ACCOUNT_WORKERS_DEV_DOMAIN ??
+	"devprod-testing7928.workers.dev";
 
 // Remote bindings tests are skipped on Windows due to slow/unreliable remote proxy
 // session initialization times in CI, which causes intermittent timeout failures.
@@ -38,11 +41,8 @@ if (isWindows) {
 		beforeAll(async () => {
 			try {
 				assert(
-					(
-						await fetch(
-							"https://preserve-e2e-vite-remote.devprod-testing7928.workers.dev/"
-						)
-					).status !== 404
+					(await fetch(`https://preserve-e2e-vite-remote.${workersDomain}/`))
+						.status !== 404
 				);
 			} catch {
 				runCommand(`npx wrangler deploy`, `${projectPath}/remote-worker`);
@@ -51,7 +51,7 @@ if (isWindows) {
 				assert(
 					(
 						await fetch(
-							"https://preserve-e2e-vite-remote-alt.devprod-testing7928.workers.dev/"
+							`https://preserve-e2e-vite-remote-alt.${workersDomain}/`
 						)
 					).status !== 404
 				);

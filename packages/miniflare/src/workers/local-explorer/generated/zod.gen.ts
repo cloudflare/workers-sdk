@@ -107,6 +107,7 @@ export const zWorkersApiResponseCollection = zWorkersApiResponseCommon.and(
 				page: z.number().optional(),
 				per_page: z.number().optional(),
 				total_count: z.number().optional(),
+				total_pages: z.number().optional(),
 			})
 			.optional(),
 	})
@@ -195,7 +196,13 @@ export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
  */
 export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
 
+/**
+ * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
+ */
+export const zD1JurisdictionNullable = z.enum(["eu", "fedramp"]);
+
 export const zD1DatabaseResponse = z.object({
+	jurisdiction: zD1JurisdictionNullable.optional(),
 	name: zD1DatabaseName.optional(),
 	uuid: zD1DatabaseIdentifier.optional(),
 	version: zD1DatabaseVersion.optional(),
@@ -394,6 +401,14 @@ export const zDoRawQueryResult = z.object({
 		.optional(),
 });
 
+export const zLocalExplorerWorker = z.object({
+	host: z.string(),
+	isSelf: z.boolean(),
+	name: z.string(),
+	port: z.number().int(),
+	protocol: z.string(),
+});
+
 export const zR2ResultInfoWritable = z.record(z.unknown());
 
 export const zWorkersNamespaceWritable = z.object({
@@ -404,6 +419,7 @@ export const zWorkersNamespaceWritable = z.object({
 });
 
 export const zD1DatabaseResponseWritable = z.object({
+	jurisdiction: zD1JurisdictionNullable.optional(),
 	name: zD1DatabaseName.optional(),
 	version: zD1DatabaseVersion.optional(),
 });
@@ -777,3 +793,18 @@ export const zDurableObjectsNamespaceQuerySqliteResponse =
 			result: z.array(zDoRawQueryResult).optional(),
 		})
 	);
+
+export const zLocalExplorerListWorkersData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List workers response.
+ */
+export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zLocalExplorerWorker).optional(),
+	})
+);

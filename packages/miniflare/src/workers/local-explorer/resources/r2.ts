@@ -5,7 +5,6 @@ import {
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import { R2ListBucketsResponse } from "../generated";
 import {
 	zR2BucketDeleteObjectsData,
 	zR2BucketGetObjectData,
@@ -14,6 +13,10 @@ import {
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+import type {
+	R2Bucket as R2BucketType,
+	R2ListBucketsResponse,
+} from "../generated";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)
@@ -62,13 +65,31 @@ async function findR2BucketOwner(
 }
 
 /**
- * Get local R2 buckets from the binding map.
+ * R2 bucket response extended with worker name for filtering in the UI.
+ * We require `name` since we always have it locally.
  */
-function getLocalR2Buckets(env: Env): Array<{ name: string }> {
+type R2BucketWithWorker = Required<Pick<R2BucketType, "name">> &
+	Omit<R2BucketType, "name"> & {
+		workerName: string;
+	};
+
+/**
+ * Get local R2 buckets from the binding map.
+ * Each bucket is tagged with the worker name it belongs to.
+ */
+function getLocalR2Buckets(env: Env): R2BucketWithWorker[] {
 	const r2BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.r2;
-	return Object.entries(r2BindingMap).map(([bucketName]) => ({
-		name: bucketName,
-	}));
+
+	return Object.entries(r2BindingMap).map(([bucketName, bindingName]) => {
+		// Binding names follow the pattern "MINIFLARE_PROXY:r2:workerName:BINDING"
+		const parts = bindingName.split(":");
+		const workerName = parts.length >= 3 ? parts[2] : "unknown";
+
+		return {
+			name: bucketName,
+			workerName,
+		};
+	});
 }
 
 // ============================================================================
@@ -85,12 +106,10 @@ function getLocalR2Buckets(env: Env): Array<{ name: string }> {
  */
 export async function listR2Buckets(c: AppContext) {
 	const localBuckets = getLocalR2Buckets(c.env);
-	const aggregatedBuckets = await aggregateListResults<{ name: string }>(
-		c,
-		localBuckets,
-		"/r2/buckets",
-		"buckets"
-	);
+	const aggregatedBuckets = await aggregateListResults<{
+		name: string;
+		workerName: string;
+	}>(c, localBuckets, "/r2/buckets", "buckets");
 
 	// Deduplicate by name
 	const localNames = new Set(localBuckets.map((b) => b.name));
@@ -148,7 +167,9 @@ export async function listR2Objects(
 		if (cursor) params.set("cursor", cursor);
 		if (limit !== undefined) params.set("per_page", String(limit));
 		const queryString = params.toString();
-		const path = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects${queryString ? `?${queryString}` : ""}`;
+		const path = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects${
+			queryString ? `?${queryString}` : ""
+		}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
 		if (response) return response;
@@ -286,7 +307,9 @@ export async function getR2Object(
 
 	const ownerMiniflare = await findR2BucketOwner(c, bucket_name);
 	if (ownerMiniflare) {
-		const route = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects/${encodeURIComponent(object_key)}`;
+		const route = `/r2/buckets/${encodeURIComponent(
+			bucket_name
+		)}/objects/${encodeURIComponent(object_key)}`;
 		const response = await fetchFromPeer(ownerMiniflare, route, {
 			headers: metadataOnly ? { "cf-metadata-only": "true" } : undefined,
 		});
@@ -360,7 +383,9 @@ export async function putR2Object(
 		if (headers["cf-r2-custom-metadata"]) {
 			fetchHeaders["cf-r2-custom-metadata"] = headers["cf-r2-custom-metadata"];
 		}
-		const path = `/r2/buckets/${encodeURIComponent(bucket_name)}/objects/${encodeURIComponent(object_key)}`;
+		const path = `/r2/buckets/${encodeURIComponent(
+			bucket_name
+		)}/objects/${encodeURIComponent(object_key)}`;
 		const response = await fetchFromPeer(ownerMiniflare, path, {
 			method: "PUT",
 			headers: fetchHeaders,

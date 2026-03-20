@@ -1,5 +1,12 @@
 # @cloudflare/pages-shared
 
+## 0.13.117
+
+### Patch Changes
+
+- Updated dependencies [[`3c988e2`](https://github.com/cloudflare/workers-sdk/commit/3c988e204ac0d6117ace9cc8fa5fd2479868811c), [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22), [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb), [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb), [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787)]:
+  - miniflare@4.20260317.1
+
 ## 0.13.116
 
 ### Patch Changes
@@ -445,6 +452,7 @@
 ### Patch Changes
 
 - [#9817](https://github.com/cloudflare/workers-sdk/pull/9817) [`6a0d990`](https://github.com/cloudflare/workers-sdk/commit/6a0d99066ef0633fb28d8ab3989ce943a02ec514) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add `x-cf-pages-analytics` header when Web Analytics token is injected
+
   - Emit `x-cf-pages-analytics: 1` header when analytics script is added to HTML responses
   - Add comprehensive tests covering HTML with/without body, non-HTML responses, and missing analytics config
   - Header indicates when analytics injection is attempted regardless of HTMLRewriter success

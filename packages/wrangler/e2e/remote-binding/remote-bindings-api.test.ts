@@ -6,7 +6,6 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
-import { generateResourceName } from "../helpers/generate-resource-name";
 import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
@@ -25,17 +24,15 @@ const { startRemoteProxySession, maybeStartOrUpdateRemoteProxySession } =
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	"wrangler dev - remote bindings - programmatic API",
 	async () => {
-		const remoteWorkerName = generateResourceName();
+		const remoteWorkerName = "preserve-e2e-wrangler-remote-worker";
 		const helper = new WranglerE2ETestHelper();
 
 		beforeAll(async () => {
 			await helper.seed(resolve(__dirname, "./workers"));
-			const { cleanup } = await helper.worker({
+			await helper.ensureWorkerDeployed({
 				workerName: remoteWorkerName,
 				entryPoint: "remote-worker.js",
-				cleanOnTestFinished: false,
 			});
-			return cleanup;
 		}, 35_000);
 
 		function getMfOptions(

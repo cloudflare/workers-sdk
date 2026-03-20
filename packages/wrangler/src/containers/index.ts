@@ -12,11 +12,8 @@ export const containersNamespace = createNamespace({
 });
 
 // --- Re-export commands from their respective files ---
-export {
-	containersListCommand,
-	containersInfoCommand,
-	containersDeleteCommand,
-} from "./containers";
+export { containersListCommand } from "./list";
+export { containersInfoCommand, containersDeleteCommand } from "./containers";
 
 export { containersInstancesCommand } from "./instances";
 export { containersSshCommand } from "./ssh";

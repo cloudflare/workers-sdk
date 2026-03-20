@@ -10,6 +10,7 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import { waitFor, waitForLong } from "./helpers/wait-for";
 import type { DevToolsEvent } from "../src/api";
 
 const OPTIONS = [
@@ -29,9 +30,6 @@ function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
 		});
 	});
 }
-
-const waitFor: typeof vi.waitFor = (cb) =>
-	vi.waitFor(cb, { interval: 200, timeout: 5000 });
 
 function collectMessagesContaining<T>(
 	ws: WebSocket,
@@ -89,7 +87,7 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script.replace("body:1", "body:2"),
 			});
 
-			await waitFor(async () => {
+			await waitForLong(async () => {
 				res = await worker.fetch("http://dummy");
 				expect(await res.text()).toBe("body:2");
 			});
@@ -400,7 +398,9 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			await waitFor(async () => {
+			// In remote mode the edge needs time to propagate the new bundle,
+			// so use the longer polling timeout.
+			await waitForLong(async () => {
 				// test liveReload does nothing when the response Content-Type is not html
 				res = await worker.fetch("http://dummy");
 				resText = await res.text();
@@ -425,7 +425,7 @@ describe("DevEnv", { sequential: true }, () => {
 				},
 			});
 
-			await waitFor(async () => {
+			await waitForLong(async () => {
 				// test liveReload: false does nothing even when the response Content-Type is html
 				res = await worker.fetch("http://dummy");
 				resText = await res.text();

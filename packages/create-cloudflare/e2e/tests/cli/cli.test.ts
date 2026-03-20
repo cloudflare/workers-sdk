@@ -16,6 +16,9 @@ import { runC3 } from "../../helpers/run-c3";
 import type { RunnerTestSuite } from "vitest";
 
 const { name: pm } = detectPackageManager();
+const workersDomain =
+	process.env.E2E_ACCOUNT_WORKERS_DEV_DOMAIN ??
+	"devprod-testing7928.workers.dev";
 
 describe("Create Cloudflare CLI", () => {
 	// eslint-disable-next-line no-empty-pattern
@@ -499,7 +502,7 @@ describe("Create Cloudflare CLI", () => {
 					if (
 						(
 							await fetch(
-								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/"
+								`https://existing-script-test-do-not-delete.${workersDomain}/`
 							)
 						).status === 404
 					) {

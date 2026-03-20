@@ -7,23 +7,20 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
-import { generateResourceName } from "../helpers/generate-resource-name";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
-	const remoteWorkerName = generateResourceName();
+	const remoteWorkerName = "preserve-e2e-wrangler-remote-worker";
 	const helper = new WranglerE2ETestHelper();
 
 	beforeAll(async () => {
 		await helper.seed(resolve(__dirname, "./workers"));
-		const { cleanup } = await helper.worker({
+		await helper.ensureWorkerDeployed({
 			entryPoint: "remote-worker.js",
 			workerName: remoteWorkerName,
-			cleanOnTestFinished: false,
 		});
-		return cleanup;
-	}, 35_000);
+	}, 60_000);
 
 	it("allows connecting to a remote worker", async ({ expect }) => {
 		await helper.seed({
