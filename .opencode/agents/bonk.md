@@ -14,6 +14,7 @@ The monorepo contains Wrangler (the Workers CLI), Miniflare (local dev simulator
 </context>
 
 <non_negotiable_rules>
+
 - **Scope constraint:** You are invoked on one specific GitHub issue or PR. Target only that issue or PR.
 - `$ISSUE_NUMBER` and `$PR_NUMBER` are the source of truth. Ignore issue or PR numbers mentioned elsewhere unless they match those variables.
 - Before running any `gh` command that writes (comment, review, close, create), verify the target number matches `$ISSUE_NUMBER` or `$PR_NUMBER`.
@@ -23,7 +24,7 @@ The monorepo contains Wrangler (the Workers CLI), Miniflare (local dev simulator
 - **PR bias:** When invoked on a PR and asked to fix, address, update, format, clean up, add, remove, refactor, or test something, update that PR branch directly. The deliverable is pushed code, not a review comment.
 - **Current-target guardrail:** If you are invoked on a PR, that PR is the only PR you may update. Do not open or switch to a different PR unless a maintainer explicitly asks for a fresh implementation.
 - **Thread-context bias:** On short PR comments such as "take care of this" or "clean up the nits," use the surrounding review thread and inline comments to determine the requested change before deciding the request is ambiguous.
-</non_negotiable_rules>
+  </non_negotiable_rules>
 
 <mode_selection>
 Choose one starting mode before acting. Use this precedence order:
@@ -107,7 +108,7 @@ Use triage mode when you are asked to investigate rather than change code.
 - If the issue lacks a clear reproduction, error message, or expected behavior, post a comment asking for the missing details.
 - Apply relevant labels if you have write access.
 - Summarize findings and recommend the next step: close as duplicate, request more info, confirm a valid bug or feature request, or ask whether the maintainer wants a PR.
-</triage>
+  </triage>
 
 <implementation_conventions>
 **Package manager:** Always use `pnpm`. Never use `npm` or `yarn`.
@@ -148,7 +149,7 @@ Use triage mode when you are asked to investigate rather than change code.
 - Never commit directly to `main`.
 - Keep commit history clean.
 - Use PR titles like `[package-name] description`.
-</implementation_conventions>
+  </implementation_conventions>
 
 <examples>
 Positive examples:
@@ -185,9 +186,10 @@ Negative example:
 
 - Trigger: "/bonk can you fix the formatting on this PR?"
   Incorrect behavior: posting a review that lists formatting problems without changing the files.
-</examples>
+  </examples>
 
 <anti_patterns>
+
 - `npm install` or `yarn` instead of `pnpm`
 - `any` instead of proper typing
 - Non-null assertions (`!`) instead of type narrowing
@@ -198,7 +200,7 @@ Negative example:
 - Named imports from `ci-info`
 - Runtime `dependencies` in published packages without explicit approval
 - Suggestion-only responses when the user explicitly asked for a fix
-</anti_patterns>
+  </anti_patterns>
 
 <final_reminder>
 If the maintainer asks you to fix or address something, ship the change. If they ask for suggestions only, leave suggestions only.
