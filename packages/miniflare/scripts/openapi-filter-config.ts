@@ -572,6 +572,51 @@ const config = {
 					tags: ["Durable Objects Namespace"],
 				},
 			},
+			"/workers": {
+				get: {
+					description: "List all workers in the local dev registry.",
+					operationId: "local-explorer-list-workers",
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														items: {
+															$ref: "#/components/schemas/local-explorer_worker",
+														},
+														type: "array",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List workers response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List workers failure.",
+						},
+					},
+					summary: "List Workers in Dev Registry",
+					tags: ["Local Explorer"],
+				},
+			},
 		},
 		schemas: {
 			// R2 schemas - matches stratus dashboard API shapes
@@ -752,6 +797,33 @@ const config = {
 								description: "Number of rows written during query execution",
 							},
 						},
+					},
+				},
+			},
+			// Local Explorer worker schema (from dev registry)
+			"local-explorer_worker": {
+				type: "object",
+				required: ["host", "isSelf", "name", "port", "protocol"],
+				properties: {
+					host: {
+						type: "string",
+						description: "Hostname the worker is running on",
+					},
+					isSelf: {
+						type: "boolean",
+						description: "Whether this worker is the one hosting the explorer",
+					},
+					name: {
+						type: "string",
+						description: "Worker name from the dev registry",
+					},
+					port: {
+						type: "integer",
+						description: "Port the worker is running on",
+					},
+					protocol: {
+						type: "string",
+						description: "Protocol (http or https)",
 					},
 				},
 			},

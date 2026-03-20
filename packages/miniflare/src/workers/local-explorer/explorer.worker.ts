@@ -9,6 +9,7 @@ import {
 } from "../../plugins/core/constants";
 import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
+import { wrapResponse } from "./common";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
@@ -38,6 +39,8 @@ import {
 	putR2Object,
 } from "./resources/r2";
 import type { BindingIdMap } from "../../plugins/core/types";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
 	[key: string]: unknown;
@@ -250,5 +253,36 @@ app.delete(
 	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
 	(c) => deleteR2Objects(c, c.req.param("bucket_name"), c.req.valid("json"))
 );
+
+// ============================================================================
+// Workers Registry Endpoint
+// ============================================================================
+
+app.get("/api/workers", async (c) => {
+	const loopback = c.env.MINIFLARE_LOOPBACK;
+	const selfWorkerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
+	const selfSet = new Set(selfWorkerNames);
+
+	try {
+		const response = await loopback.fetch("http://localhost/core/dev-registry");
+		const registry = await response.json<WorkerRegistry>();
+
+		const workers: LocalExplorerWorker[] = Object.entries(registry).map(
+			([name, def]) => ({
+				host: def.host,
+				isSelf: selfSet.has(name),
+				name,
+				port: def.port,
+				protocol: def.protocol,
+			})
+		);
+
+		return c.json(wrapResponse(workers));
+	} catch (err) {
+		const message =
+			err instanceof Error ? err.message : "Failed to fetch dev registry";
+		return errorResponse(500, 10000, message);
+	}
+});
 
 export default app;

@@ -123,6 +123,10 @@ export type WorkersApiResponseCollection = WorkersApiResponseCommon & {
 		 * Total results available without any search parameters.
 		 */
 		total_count?: number;
+		/**
+		 * The number of total pages in the entire result set.
+		 */
+		total_pages?: number;
 	};
 };
 
@@ -239,6 +243,7 @@ export type D1Messages = Array<{
 }>;
 
 export type D1DatabaseResponse = {
+	jurisdiction?: D1JurisdictionNullable;
 	name?: D1DatabaseName;
 	uuid?: D1DatabaseIdentifier;
 	version?: D1DatabaseVersion;
@@ -250,6 +255,11 @@ export type D1DatabaseVersion = string;
  * D1 database name.
  */
 export type D1DatabaseName = string;
+
+/**
+ * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
+ */
+export type D1JurisdictionNullable = "eu" | "fedramp";
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -557,6 +567,29 @@ export type DoRawQueryResult = {
 	};
 };
 
+export type LocalExplorerWorker = {
+	/**
+	 * Hostname the worker is running on
+	 */
+	host: string;
+	/**
+	 * Whether this worker is the one hosting the explorer
+	 */
+	isSelf: boolean;
+	/**
+	 * Worker name from the dev registry
+	 */
+	name: string;
+	/**
+	 * Port the worker is running on
+	 */
+	port: number;
+	/**
+	 * Protocol (http or https)
+	 */
+	protocol: string;
+};
+
 export type R2ResultInfoWritable = {
 	[key: string]: unknown;
 };
@@ -569,6 +602,7 @@ export type WorkersNamespaceWritable = {
 };
 
 export type D1DatabaseResponseWritable = {
+	jurisdiction?: D1JurisdictionNullable;
 	name?: D1DatabaseName;
 	version?: D1DatabaseVersion;
 };
@@ -1214,3 +1248,32 @@ export type DurableObjectsNamespaceQuerySqliteResponses = {
 
 export type DurableObjectsNamespaceQuerySqliteResponse =
 	DurableObjectsNamespaceQuerySqliteResponses[keyof DurableObjectsNamespaceQuerySqliteResponses];
+
+export type LocalExplorerListWorkersData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/workers";
+};
+
+export type LocalExplorerListWorkersErrors = {
+	/**
+	 * List workers failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type LocalExplorerListWorkersError =
+	LocalExplorerListWorkersErrors[keyof LocalExplorerListWorkersErrors];
+
+export type LocalExplorerListWorkersResponses = {
+	/**
+	 * List workers response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<LocalExplorerWorker>;
+	};
+};
+
+export type LocalExplorerListWorkersResponse =
+	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];

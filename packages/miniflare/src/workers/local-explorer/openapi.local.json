@@ -1236,6 +1236,51 @@
 				"summary": "Query Durable Object SQLite",
 				"tags": ["Durable Objects Namespace"]
 			}
+		},
+		"/workers": {
+			"get": {
+				"description": "List all workers in the local dev registry.",
+				"operationId": "local-explorer-list-workers",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/local-explorer_worker"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List workers response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List workers failure."
+					}
+				},
+				"summary": "List Workers in Dev Registry",
+				"tags": ["Local Explorer"]
+			}
 		}
 	},
 	"components": {
@@ -1490,6 +1535,11 @@
 										"description": "Total results available without any search parameters.",
 										"example": 2000,
 										"type": "number"
+									},
+									"total_pages": {
+										"description": "The number of total pages in the entire result set.",
+										"example": 100,
+										"type": "number"
 									}
 								},
 								"type": "object"
@@ -1714,6 +1764,9 @@
 			},
 			"d1_database-response": {
 				"properties": {
+					"jurisdiction": {
+						"$ref": "#/components/schemas/d1_jurisdiction-nullable"
+					},
 					"name": {
 						"$ref": "#/components/schemas/d1_database-name"
 					},
@@ -1735,6 +1788,13 @@
 				"description": "D1 database name.",
 				"example": "my-database",
 				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+				"type": "string"
+			},
+			"d1_jurisdiction-nullable": {
+				"description": "Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.",
+				"enum": ["eu", "fedramp"],
+				"example": "eu",
+				"nullable": true,
 				"type": "string"
 			},
 			"d1_api-response-common": {
@@ -2298,6 +2358,32 @@
 								"description": "Number of rows written during query execution"
 							}
 						}
+					}
+				}
+			},
+			"local-explorer_worker": {
+				"type": "object",
+				"required": ["host", "isSelf", "name", "port", "protocol"],
+				"properties": {
+					"host": {
+						"type": "string",
+						"description": "Hostname the worker is running on"
+					},
+					"isSelf": {
+						"type": "boolean",
+						"description": "Whether this worker is the one hosting the explorer"
+					},
+					"name": {
+						"type": "string",
+						"description": "Worker name from the dev registry"
+					},
+					"port": {
+						"type": "integer",
+						"description": "Port the worker is running on"
+					},
+					"protocol": {
+						"type": "string",
+						"description": "Protocol (http or https)"
 					}
 				}
 			}
