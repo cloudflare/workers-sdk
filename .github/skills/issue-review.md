@@ -102,7 +102,7 @@ For framework issues:
 > It looks like this issue is coming from <framework>, rather than from workers-sdk. I'd recommend opening an issue on that project's repo: <link>. If it turns out to be a workers-sdk issue after all, feel free to open a new issue here with more details.
 
 For runtime issues:
-> This looks like a Workers runtime issue rather than a tooling issue. The right place to track this is [cloudflare/workerd](https://github.com/cloudflare/workerd). I've flagged it internally as well.
+> This looks like a Workers runtime issue rather than a tooling issue. The right place to track this is [cloudflare/workerd](https://github.com/cloudflare/workerd) so I've moved the issue there.
 
 For account/support issues:
 > Unfortunately, we're unable to provide support for account-level issues via GitHub. Please contact Cloudflare Support at https://dash.cloudflare.com/?to=/:account/support or the email address mentioned in the error message.
@@ -160,10 +160,10 @@ Recommend **CLOSE** (state_reason: `not_planned`) if:
 **Templates:**
 
 For breaking changes:
-> Changing this behavior at this stage would be a breaking change, and so it will have to stay as-is for the duration of the current major version's release cycle. We may revisit this in a future major version.
+> Changing this behavior at this stage would be a breaking change, and so it will have to stay as-is for the duration of the current major version's release cycle. We have added the `breaking change` label to track this and will reconsider ahead of a future major version.
 
 For design decisions:
-> This is intentional behavior — <brief explanation>. I don't think we're likely to change this in the near future, but I appreciate the feedback.
+> This is intentional behavior — <brief explanation>. I don't think we're likely to change this in the near future, but we appreciate the feedback.
 
 For feature requests that won't happen:
 > Thanks for the suggestion. We don't intend to implement this right now, but it may be revisited in future. <Optional: brief explanation of why, or pointer to an alternative approach.>
@@ -273,7 +273,7 @@ Write the full report to `./data/<issue_number>/report.md`:
 
 ## Closure Category
 
-<One of: Spam | Already Fixed | Duplicate | Wrong Repo | Stale | Transient Issue | User Error | Won't Fix | Superseded | Needs More Info | Keep Open>
+<One of: Spam | Resolved by Reporter | Already Fixed | Duplicate | Wrong Repo | Stale | Transient Issue | User Error | Won't Fix | Superseded | Needs More Info | Keep Open>
 
 ## Findings
 
