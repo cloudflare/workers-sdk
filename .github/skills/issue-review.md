@@ -278,8 +278,6 @@ Write the full report to `./data/<issue_number>/report.md`:
 ## Findings
 
 - **Created:** <date>
-- **Last Activity:** <date of most recent comment or event>
-- **Age:** <human-readable age, e.g. "2 years 3 months">
 - **Author:** <username>
 - **Version:** <reported version, or "not specified">
 - **Labels:** <labels, or "none">
