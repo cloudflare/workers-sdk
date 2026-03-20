@@ -8,6 +8,11 @@ declare module '*.html' {
   export default html
 }
 
+declare module '#html' {
+	const html: string;
+	export default html;
+}
+
 declare module '*.sql' {
 	const sql: string
   export default sql
