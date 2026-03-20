@@ -291,7 +291,7 @@ duplicate candidates. Only include what's relevant.>
 
 ## Recommendation
 
-**Action:** <CLOSE | KEEP OPEN | NEEDS MORE INFO | NEEDS VERIFICATION>
+**Status:** <CLOSE | KEEP OPEN | NEEDS MORE INFO | NEEDS VERIFICATION>
 
 **Reasoning:** <2-3 sentences explaining why>
 
