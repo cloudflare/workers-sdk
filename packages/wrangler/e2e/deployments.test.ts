@@ -388,7 +388,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("Workers + Assets deployment", () => {
 			// note that with a user worker, the request must be passed back to the asset worker via the ASSET binding
 			// in order to return the 404 page
 			const { text } = await retry(
-				(s) => s.status !== 404,
+				// Retry while the status isn't 404 OR the content hasn't propagated yet.
+				// Before assets are live the platform may return its own 404 page (status 200)
+				// instead of the user's 404.html asset.
+				(s) => s.status !== 404 || !s.text.includes("<h1>404.html</h1>"),
 				async () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
@@ -771,7 +774,10 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			// the asset worker via the ASSET binding in order to return the 404
 			// page
 			const { text } = await retry(
-				(s) => s.status !== 404,
+				// Retry while the status isn't 404 OR the content hasn't propagated yet.
+				// Before assets are live the platform may return its own 404 page (status 200)
+				// instead of the user's 404.html asset.
+				(s) => s.status !== 404 || !s.text.includes("<h1>404.html</h1>"),
 				async () => {
 					const r = await fetch(new URL("/try-404", deployedUrl));
 					const temp = { text: await r.text(), status: r.status };
@@ -959,7 +965,7 @@ describe.skipIf(skipContainersTest)("containers", () => {
 			`wrangler containers delete ${applicationId}`
 		);
 		await Promise.allSettled([deleteWorker, deleteContainer]);
-	});
+	}, 30_000);
 
 	it(
 		"won't rebuild unchanged containers",
