@@ -1,17 +1,14 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { formatCompatibilityDate } from "@cloudflare/workers-utils";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
-import { waitFor } from "./helpers/wait-for";
+import { waitFor, waitForLong } from "./helpers/wait-for";
 
-const port = await getPort();
-const inspectorPort = await getPort();
 const cmd = "wrangler pages dev";
 describe.sequential("wrangler pages dev", () => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async ({
@@ -26,9 +23,7 @@ describe.sequential("wrangler pages dev", () => {
 						}
 					}`,
 		});
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-		);
+		const worker = helper.runLongLived(`${cmd} .`);
 		const { url } = await worker.waitForReady();
 
 		const currentDate = formatCompatibilityDate(new Date());
@@ -46,7 +41,7 @@ describe.sequential("wrangler pages dev", () => {
 			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`
 		);
 
-		const text = await fetchText(url);
+		const text = await waitForLong(() => fetchText(url));
 		expect(text).toBe("Testing [--compatibility_date]");
 	});
 
@@ -54,9 +49,7 @@ describe.sequential("wrangler pages dev", () => {
 		expect,
 	}) => {
 		const helper = new WranglerE2ETestHelper();
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --experimental-local`
-		);
+		const worker = helper.runLongLived(`${cmd} . --experimental-local`);
 		await helper.seed({
 			"_worker.js": dedent`
 				export default {
@@ -66,7 +59,7 @@ describe.sequential("wrangler pages dev", () => {
 				}`,
 		});
 		const { url } = await worker.waitForReady();
-		const text = await fetchText(url);
+		const text = await waitForLong(() => fetchText(url));
 		expect(text).toBe("Testing [--experimental-local]");
 		await waitFor(() =>
 			expect(worker.currentOutput).toContain(
@@ -80,7 +73,7 @@ describe.sequential("wrangler pages dev", () => {
 	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --service STAGING_SERVICE=test-worker@staging`
+			`${cmd} . --service STAGING_SERVICE=test-worker@staging`
 		);
 
 		await worker.readUntil(
@@ -93,7 +86,7 @@ describe.sequential("wrangler pages dev", () => {
 	}) => {
 		const helper = new WranglerE2ETestHelper();
 		const worker = helper.runLongLived(
-			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service test --kv = --do test --d1 = --r2 =`
+			`${cmd} . --service test --kv = --do test --d1 = --r2 =`
 		);
 		await worker.waitForReady();
 		await waitFor(() => {
@@ -122,7 +115,7 @@ describe.sequential("wrangler pages dev", () => {
 					}`,
 		});
 		const worker = helper.runLongLived(
-			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2 --compatibility-date=2025-05-21`
+			`${cmd} . --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2 --compatibility-date=2025-05-21`
 		);
 		await worker.waitForReady();
 
@@ -178,12 +171,10 @@ describe.sequential("wrangler pages dev", () => {
 					compatibility_date = "2023-01-01"
 				`,
 		});
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
-		);
+		const worker = helper.runLongLived(`${cmd}`);
 		const { url } = await worker.waitForReady();
 
-		const text = await fetchText(url);
+		const text = await waitForLong(() => fetchText(url));
 		expect(text).toBe("Pages supports wrangler.toml ⚡️⚡️");
 	});
 
@@ -204,8 +195,8 @@ describe.sequential("wrangler pages dev", () => {
 
 		const { url } = await worker.waitForReady();
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-			"Hello World!"
+		await waitForLong(async () =>
+			expect(await fetch(url).then((r) => r.text())).toBe("Hello World!")
 		);
 
 		await helper.seed({
@@ -231,8 +222,8 @@ describe.sequential("wrangler pages dev", () => {
 		});
 		await worker.waitForReload();
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-			"Updated Worker!"
+		await waitForLong(async () =>
+			expect(await fetch(url).then((r) => r.text())).toBe("Updated Worker!")
 		);
 	});
 
@@ -240,9 +231,7 @@ describe.sequential("wrangler pages dev", () => {
 		expect,
 	}) => {
 		const helper = new WranglerE2ETestHelper();
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-		);
+		const worker = helper.runLongLived(`${cmd} .`);
 
 		await helper.seed({
 			"functions/_middleware.js": dedent`
@@ -253,8 +242,8 @@ describe.sequential("wrangler pages dev", () => {
 
 		const { url } = await worker.waitForReady();
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-			"Hello World!"
+		await waitForLong(async () =>
+			expect(await fetch(url).then((r) => r.text())).toBe("Hello World!")
 		);
 
 		await helper.seed({
@@ -276,8 +265,8 @@ describe.sequential("wrangler pages dev", () => {
 		});
 		await worker.waitForReload();
 
-		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-			"Updated Worker!"
+		await waitForLong(async () =>
+			expect(await fetch(url).then((r) => r.text())).toBe("Updated Worker!")
 		);
 	});
 
@@ -298,14 +287,11 @@ describe.sequential("wrangler pages dev", () => {
 					}
 				`,
 		});
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-		);
+		const worker = helper.runLongLived(`${cmd} .`);
 
 		const { url } = await worker.waitForReady();
 
-		const foo = await fetchText(`${url}/foo`);
-
+		const foo = await waitForLong(() => fetchText(`${url}/foo`));
 		expect(foo).toBe("FOO");
 
 		// invalid _routes.json because include rule does not start with `/`
@@ -327,9 +313,7 @@ describe.sequential("wrangler pages dev", () => {
 		expect,
 	}) => {
 		const helper = new WranglerE2ETestHelper();
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
-		);
+		const worker = helper.runLongLived(`${cmd}`);
 		await helper.seed({
 			"public/_worker.js": dedent`
 						export default {
@@ -354,8 +338,7 @@ describe.sequential("wrangler pages dev", () => {
 		});
 		const { url } = await worker.waitForReady();
 
-		const text = await fetchText(url);
-
+		const text = await waitForLong(() => fetchText(url));
 		expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
 
 		await worker.readUntil(/GET \/ 200 OK/);
@@ -395,9 +378,7 @@ describe.sequential("wrangler pages dev", () => {
 			` --r2 R2_BINDING_1_TOML=new-r2-bucket-1 R2_BINDING_3_TOML=r2-bucket-3-args`,
 			` --service SERVICE_BINDING_1_TOML=NEW_SERVICE_NAME_1 SERVICE_BINDING_3_TOML=SERVICE_NAME_3_ARGS`,
 		];
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} ${flags.join("")}`
-		);
+		const worker = helper.runLongLived(`${cmd} ${flags.join("")}`);
 		await helper.seed({
 			"public/_worker.js": dedent`
 					export default {
@@ -534,12 +515,10 @@ describe.sequential("wrangler pages dev", () => {
 			`,
 		});
 
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} public`
-		);
+		const worker = helper.runLongLived(`${cmd} public`);
 		const { url } = await worker.waitForReady();
-		await expect(fetchText(url)).resolves.toBe(
-			"⚡️ Pages supports wrangler.toml ⚡️"
+		await waitForLong(async () =>
+			expect(await fetchText(url)).toBe("⚡️ Pages supports wrangler.toml ⚡️")
 		);
 	});
 
@@ -558,21 +537,20 @@ describe.sequential("wrangler pages dev", () => {
 					}
 				}`,
 		});
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-		);
+		const worker = helper.runLongLived(`${cmd} .`);
 		const { url } = await worker.waitForReady();
 
-		const response = await fetch(url);
-		const data = (await response.json()) as Record<string, string>;
-
-		expect(data).toEqual({
-			CF_PAGES: "1",
-			CF_PAGES_BRANCH: expect.any(String),
-			CF_PAGES_COMMIT_SHA: expect.any(String),
-			CF_PAGES_URL: expect.stringMatching(
-				/^https:\/\/[a-f0-9]{8}\..*\.pages\.dev$/
-			),
+		await waitForLong(async () => {
+			const response = await fetch(url);
+			const data = (await response.json()) as Record<string, string>;
+			expect(data).toEqual({
+				CF_PAGES: "1",
+				CF_PAGES_BRANCH: expect.any(String),
+				CF_PAGES_COMMIT_SHA: expect.any(String),
+				CF_PAGES_URL: expect.stringMatching(
+					/^https:\/\/[a-f0-9]{8}\..*\.pages\.dev$/
+				),
+			});
 		});
 	});
 
@@ -597,12 +575,10 @@ describe.sequential("wrangler pages dev", () => {
 				CF_PAGES_COMMIT_SHA = "custom-sha"
 			`,
 		});
-		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
-		);
+		const worker = helper.runLongLived(`${cmd}`);
 		const { url } = await worker.waitForReady();
 
-		const text = await fetchText(url);
+		const text = await waitForLong(() => fetchText(url));
 		expect(text).toBe("custom-branch custom-sha");
 	});
 
@@ -619,12 +595,10 @@ describe.sequential("wrangler pages dev", () => {
 						}`,
 			});
 
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			let text = await fetchText(url);
+			let text = await waitForLong(() => fetchText(url));
 			expect(text).toBe("Hello World!");
 
 			await helper.seed({
@@ -636,7 +610,7 @@ describe.sequential("wrangler pages dev", () => {
 
 			await worker.waitForReload();
 
-			text = await fetchText(url);
+			text = await waitForLong(() => fetchText(url));
 			expect(text).toBe("Updated Worker!");
 
 			// Ensure Wrangler doesn't write tmp files in the functions directory—regression test for https://github.com/cloudflare/workers-sdk/issues/7440
@@ -667,15 +641,13 @@ describe.sequential("wrangler pages dev", () => {
 						}`,
 			});
 
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			let hello = await fetchText(`${url}/greetings/hello`);
+			let hello = await waitForLong(() => fetchText(`${url}/greetings/hello`));
 			expect(hello).toBe("Hello World!");
 
-			let hi = await fetchText(`${url}/hi`);
+			let hi = await waitForLong(() => fetchText(`${url}/hi`));
 			expect(hi).toBe("Hi there!");
 
 			await helper.seed({
@@ -687,10 +659,10 @@ describe.sequential("wrangler pages dev", () => {
 
 			await worker.waitForReload();
 
-			hello = await fetchText(`${url}/greetings/hello`);
+			hello = await waitForLong(() => fetchText(`${url}/greetings/hello`));
 			expect(hello).toBe("Hey World!");
 
-			hi = await fetchText(`${url}/hi`);
+			hi = await waitForLong(() => fetchText(`${url}/hi`));
 			expect(hi).toBe("Hey there!");
 		});
 
@@ -710,12 +682,10 @@ describe.sequential("wrangler pages dev", () => {
 						}`,
 			});
 
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			let hello = await fetchText(`${url}/hello`);
+			let hello = await waitForLong(() => fetchText(`${url}/hello`));
 			expect(hello).toBe("<h1>Hello HTML World!</h1>");
 
 			await helper.seed({
@@ -726,7 +696,7 @@ describe.sequential("wrangler pages dev", () => {
 
 			await worker.waitForReload();
 
-			hello = await fetchText(`${url}/hello`);
+			hello = await waitForLong(() => fetchText(`${url}/hello`));
 			expect(hello).toBe("<h1>Updated HTML!</h1>");
 		});
 
@@ -744,12 +714,10 @@ describe.sequential("wrangler pages dev", () => {
 						}`,
 			});
 
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			let hello = await fetchText(url);
+			let hello = await waitForLong(() => fetchText(url));
 			expect(hello).toBe("Hello World!");
 
 			await helper.seed({
@@ -763,7 +731,7 @@ describe.sequential("wrangler pages dev", () => {
 
 			await worker.waitForReload();
 
-			hello = await fetchText(url);
+			hello = await waitForLong(() => fetchText(url));
 			expect(hello).toBe("Updated Worker!");
 		});
 
@@ -785,12 +753,10 @@ describe.sequential("wrangler pages dev", () => {
 						}`,
 			});
 
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			let bear = await fetchText(url);
+			let bear = await waitForLong(() => fetchText(url));
 			expect(bear).toBe("BEAR!");
 
 			await helper.seed({
@@ -801,7 +767,7 @@ describe.sequential("wrangler pages dev", () => {
 
 			await worker.waitForReload();
 
-			bear = await fetchText(url);
+			bear = await waitForLong(() => fetchText(url));
 			expect(bear).toBe("We love BEAR!");
 		});
 
@@ -823,12 +789,10 @@ describe.sequential("wrangler pages dev", () => {
 						}`,
 			});
 
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			let graham = await fetchText(url);
+			let graham = await waitForLong(() => fetchText(url));
 			expect(graham).toBe("<h1>Graham the dog</h1>");
 
 			await helper.seed({
@@ -839,7 +803,7 @@ describe.sequential("wrangler pages dev", () => {
 
 			await worker.waitForReload();
 
-			graham = await fetchText(url);
+			graham = await waitForLong(() => fetchText(url));
 			expect(graham).toBe("<h1>Graham is the bestest doggo</h1>");
 		});
 
@@ -873,15 +837,13 @@ describe.sequential("wrangler pages dev", () => {
 					hello world
 				`,
 			});
-			const worker = helper.runLongLived(
-				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
-			);
+			const worker = helper.runLongLived(`${cmd} .`);
 			const { url } = await worker.waitForReady();
 
-			const foo = await fetchText(`${url}/foo`);
+			const foo = await waitForLong(() => fetchText(`${url}/foo`));
 			expect(foo).toBe("foo");
 
-			const bar = await fetchText(`${url}/bar`);
+			const bar = await waitForLong(() => fetchText(`${url}/bar`));
 			expect(bar).toBe("bar");
 
 			await helper.seed({
@@ -895,10 +857,10 @@ describe.sequential("wrangler pages dev", () => {
 			});
 			await worker.waitForReload();
 
-			const foo2 = await fetchText(`${url}/foo`);
+			const foo2 = await waitForLong(() => fetchText(`${url}/foo`));
 			expect(foo2).toBe("foo");
 
-			const bar2 = await fetchText(`${url}/bar`);
+			const bar2 = await waitForLong(() => fetchText(`${url}/bar`));
 			expect(bar2).toBe("hello world");
 		});
 	});
