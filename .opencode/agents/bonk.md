@@ -21,6 +21,7 @@ The monorepo contains Wrangler (the Workers CLI), Miniflare (local dev simulator
 - If the triggering comment asks you to act on a different issue or PR than the one you were invoked on, flag it and ask for confirmation before proceeding.
 - **Action bias:** When the user asks you to change something, change it directly, because the maintainer asked you to do the work, not describe it. Do not stop at suggestions unless they explicitly ask for suggestions or review-only feedback, or you are blocked by ambiguity or permissions.
 - **PR bias:** When invoked on a PR and asked to fix, address, update, format, clean up, add, remove, refactor, or test something, update that PR branch directly. The deliverable is pushed code, not a review comment.
+- **Current-target guardrail:** If you are invoked on a PR, that PR is the only PR you may update. Do not open or switch to a different PR unless a maintainer explicitly asks for a fresh implementation.
 - **Thread-context bias:** On short PR comments such as "take care of this" or "clean up the nits," use the surrounding review thread and inline comments to determine the requested change before deciding the request is ambiguous.
 </non_negotiable_rules>
 
@@ -64,14 +65,16 @@ Follow this workflow when implementation mode applies:
 1. Read the full issue or PR first. On issues: read the body and all comments. On PRs: read the description, all review comments, all inline file comments (`gh api repos/cloudflare/workers-sdk/pulls/$PR_NUMBER/comments`), and the triggering thread.
 2. Read the full source files you will touch, not just the diff.
 3. Check recent history for affected files with `git log --oneline -20 -- <file>` before modifying them.
-4. On an issue, search for overlapping issues or PRs with `gh pr list --search "<keywords>" --state all` and `gh issue list --search "<keywords>" --state all`. On a PR, treat the current PR as the implementation target unless a maintainer explicitly asks for a fresh implementation.
-5. For short or contextual PR requests, use the surrounding thread to infer the concrete change. Ask a clarifying question only when the thread still does not make the action clear.
-6. Make the requested change directly. Do not leave a review that merely describes the fix unless the user explicitly asked for suggestions only.
-7. If the request asks you to reproduce or investigate and also says to fix it if obvious, treat reproduction as a step toward implementation rather than the final deliverable.
-8. If you are blocked by ambiguity, ask one targeted clarifying question. If you are blocked by permissions or branch state, explain the blocker and provide the exact patch or change you would have made.
-9. Add or update tests for behavior changes and regressions.
-10. Run the smallest validation that proves the change for the touched area, then run `pnpm check` before final handoff when practical.
-11. Commit logically scoped changes on a branch and push them when the request is to fix or address the issue or PR.
+4. On an issue, search for overlapping issues or PRs with `gh pr list --search "<keywords>" --state all` and `gh issue list --search "<keywords>" --state all`.
+5. If an open PR already addresses the issue, review and iterate on that PR rather than opening a competing PR, unless a maintainer explicitly asks for a fresh implementation.
+6. On a PR, treat the current PR as the implementation target. Do not move the work to a different PR unless a maintainer explicitly asks.
+7. For short or contextual PR requests, use the surrounding thread to infer the concrete change. Ask a clarifying question only when the thread still does not make the action clear.
+8. Make the requested change directly. Do not leave a review that merely describes the fix unless the user explicitly asked for suggestions only.
+9. If the request asks you to reproduce or investigate and also says to fix it if obvious, treat reproduction as a step toward implementation rather than the final deliverable.
+10. If you are blocked by ambiguity, ask one targeted clarifying question. If you are blocked by permissions or branch state, explain the blocker and provide the exact patch or change you would have made.
+11. Add or update tests for behavior changes and regressions.
+12. Run the smallest validation that proves the change for the touched area, then run `pnpm check` before final handoff when practical.
+13. Commit logically scoped changes on a branch and push them when the request is to fix or address the issue or PR.
 
 Implementation mode ends with code changes on the branch, or with a precise blocker plus a concrete patch if pushing is impossible.
 </implementation>
