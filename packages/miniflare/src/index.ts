@@ -224,7 +224,7 @@ function validateOptions(
 	// Initialise return values
 	const pluginSharedOpts = {} as PluginSharedOptions;
 	const pluginWorkerOpts = Array.from(Array(workerOpts.length)).map(
-		() => ({} as PluginWorkerOptions)
+		() => ({}) as PluginWorkerOptions
 	);
 
 	// If we haven't defined multiple workers, shared options and worker options
@@ -1891,11 +1891,11 @@ export class Miniflare {
 					workerOpts.assets.assets && entrypoint === "default"
 						? {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
-						  }
+							}
 						: {
 								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
-						  };
+							};
 
 				sockets.push({
 					name,
