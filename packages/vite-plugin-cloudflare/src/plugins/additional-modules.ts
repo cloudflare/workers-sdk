@@ -32,7 +32,7 @@ export const additionalModulesPlugin = createPlugin(
 					const additionalModuleType = matchAdditionalModule(resolved.id);
 
 					if (!additionalModuleType) {
-						return;
+						return resolved;
 					}
 
 					// Strip query params from the resolved path
