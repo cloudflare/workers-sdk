@@ -71,6 +71,7 @@ import {
 	SERVICE_ENTRY,
 	SharedOptions,
 	SOCKET_DEBUG_PORT,
+	SOCKET_DEV_REGISTRY,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	WorkerOptions,
@@ -1029,7 +1030,7 @@ export class Miniflare {
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.core.unsafeDevRegistryPath,
 			(registry) => {
-				void this.#pushRegistryUpdate(registry);
+				void this.#pushRegistryUpdate();
 				this.#sharedOpts.core.unsafeHandleDevRegistryUpdate?.(registry);
 			},
 			this.#log
@@ -1104,19 +1105,22 @@ export class Miniflare {
 	 * This updates the in-memory registry Map without restarting workerd.
 	 * Called when the dev registry detects changes to external services.
 	 */
-	async #pushRegistryUpdate(
-		registry: WorkerRegistry,
-		retries = 3
-	): Promise<void> {
-		if (!this.#runtimeEntryURL || !this.#runtimeDispatcher) {
+	#devRegistryDispatcher?: Dispatcher;
+
+	async #pushRegistryUpdate(retries = 3): Promise<void> {
+		if (this.#disposeController.signal.aborted) return;
+		if (!this.#devRegistryDispatcher) {
 			return;
 		}
-		const url = new URL("/cdn-cgi/dev-registry/update", this.#runtimeEntryURL);
+		// Always read the latest registry state rather than capturing a snapshot at
+		// call-time: if the registry changes between the initial call and a retry,
+		// the retry should push the most-recent state, not a stale one.
+		const registry = this.#devRegistry.getRegistry();
 
 		try {
-			const response = await this.#runtimeDispatcher.request({
-				origin: this.#runtimeEntryURL,
-				path: url.pathname,
+			const response = await this.#devRegistryDispatcher.request({
+				origin: "http://127.0.0.1",
+				path: "/",
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(registry),
@@ -1128,7 +1132,7 @@ export class Miniflare {
 				this.#log.debug(`Registry push failed with ${response.statusCode}`);
 				if (retries > 0) {
 					await new Promise((r) => setTimeout(r, 500));
-					return this.#pushRegistryUpdate(registry, retries - 1);
+					return this.#pushRegistryUpdate(retries - 1);
 				}
 			}
 		} catch (e: unknown) {
@@ -1139,7 +1143,7 @@ export class Miniflare {
 			);
 			if (retries > 0) {
 				await new Promise((r) => setTimeout(r, 500));
-				return this.#pushRegistryUpdate(registry, retries - 1);
+				return this.#pushRegistryUpdate(retries - 1);
 			}
 		}
 	}
@@ -1985,6 +1989,17 @@ export class Miniflare {
 						),
 				},
 			});
+
+			// Give the dev-registry-proxy service its own HTTP socket so
+			// #pushRegistryUpdate can POST directly to it, bypassing the entry
+			// worker.  On Windows the internal Cap'n Proto service-to-service
+			// forwarding from the entry worker can break (WSARecv error 64).
+			sockets.push({
+				name: SOCKET_DEV_REGISTRY,
+				address: "127.0.0.1:0",
+				service: { name: SERVICE_DEV_REGISTRY_PROXY },
+				http: {},
+			});
 		}
 
 		const globalServices = getGlobalServices({
@@ -2008,9 +2023,6 @@ export class Miniflare {
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
-			devRegistryProxyServiceName: services.has(SERVICE_DEV_REGISTRY_PROXY)
-				? SERVICE_DEV_REGISTRY_PROXY
-				: undefined,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2080,6 +2092,10 @@ export class Miniflare {
 		}
 		if (this.#devRegistry.isEnabled()) {
 			requiredSockets.push(SOCKET_DEBUG_PORT);
+			// SOCKET_DEV_REGISTRY is already in config.sockets (and therefore
+			// requiredSockets) when external services are configured. Don't add
+			// it unconditionally — if no external services exist, the socket
+			// isn't defined and waiting for it would hang.
 		}
 
 		// Reload runtime
@@ -2183,6 +2199,15 @@ export class Miniflare {
 				connect: { rejectUnauthorized: false },
 			});
 		}
+
+		// Set up a direct dispatcher to the dev-registry-proxy socket so we can
+		// push registry updates without routing through the entry worker.
+		const devRegistryPort = maybeSocketPorts.get(SOCKET_DEV_REGISTRY);
+		if (devRegistryPort !== undefined) {
+			this.#devRegistryDispatcher = new Pool(
+				new URL(`http://127.0.0.1:${devRegistryPort}`)
+			);
+		}
 		if (this.#proxyClient === undefined) {
 			this.#proxyClient = new ProxyClient(
 				this.#runtimeEntryURL,
@@ -2198,7 +2223,7 @@ export class Miniflare {
 
 		// Catch any registry updates that occurred while workerd was booting.
 		if (this.#devRegistry.isEnabled()) {
-			await this.#pushRegistryUpdate(this.#devRegistry.getRegistry());
+			await this.#pushRegistryUpdate();
 		}
 
 		if (!this.#runtimeMutex.hasWaiting) {
@@ -2462,7 +2487,7 @@ export class Miniflare {
 		await this.#devRegistry.updateRegistryPath(
 			sharedOpts.core.unsafeDevRegistryPath,
 			(registry) => {
-				void this.#pushRegistryUpdate(registry);
+				void this.#pushRegistryUpdate();
 				newExternalOnUpdate?.(registry);
 			}
 		);

@@ -11,6 +11,7 @@ import { RemoteProxyConnectionString } from ".";
 export const SOCKET_ENTRY = "entry";
 export const SOCKET_ENTRY_LOCAL = "entry:local";
 export const SOCKET_DEBUG_PORT = "debug-port";
+export const SOCKET_DEV_REGISTRY = "dev-registry";
 const SOCKET_DIRECT_PREFIX = "direct";
 
 export function getDirectSocketName(workerIndex: number, entrypoint: string) {
