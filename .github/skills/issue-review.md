@@ -299,7 +299,7 @@ Use `completed` when the issue was addressed (fixed in a prior release, resolved
 a new feature, transient issue that's passed). Use `not_planned` when the team won't
 act on it (won't fix, user error, wrong repo, spam, stale with no info, duplicate).
 
-**Reasoning:** <2-3 sentences explaining why>
+**Action:** <What a maintainer should do next>
 
 **Suggested Labels:** <labels to add, if any. Use existing repo labels only.>
 
