@@ -136,8 +136,7 @@ export const previewSecretNamespace = createNamespace({
 
 export const previewSecretPutCommand = createCommand({
 	metadata: {
-		description:
-			"Create or update a secret for Previews settings (or a specific Preview if --name is provided)",
+		description: "Create or update a secret in the Worker's Previews settings",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
@@ -148,12 +147,6 @@ export const previewSecretPutCommand = createCommand({
 			describe: "The secret name to be accessible in the Worker",
 			type: "string",
 			demandOption: true,
-		},
-		name: {
-			describe:
-				"Name of a specific preview to add the secret to. If not provided, the secret is added to Previews settings.",
-			type: "string",
-			requiresArg: true,
 		},
 		"worker-name": {
 			describe:
@@ -167,8 +160,7 @@ export const previewSecretPutCommand = createCommand({
 
 export const previewSecretDeleteCommand = createCommand({
 	metadata: {
-		description:
-			"Delete a secret from Previews settings (or a specific Preview if --name is provided)",
+		description: "Delete a secret from the Worker's Previews settings",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
@@ -179,12 +171,6 @@ export const previewSecretDeleteCommand = createCommand({
 			describe: "The secret name to delete",
 			type: "string",
 			demandOption: true,
-		},
-		name: {
-			describe:
-				"Name of a specific preview to delete the secret from. If not provided, the secret is deleted from Previews settings.",
-			type: "string",
-			requiresArg: true,
 		},
 		"skip-confirmation": {
 			describe: "Skip the confirmation prompt",
@@ -204,19 +190,12 @@ export const previewSecretDeleteCommand = createCommand({
 
 export const previewSecretListCommand = createCommand({
 	metadata: {
-		description:
-			"List all secrets from Previews settings (or a specific Preview if --name is provided)",
+		description: "List all secrets in the Worker's Previews settings",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
 	},
 	args: {
-		name: {
-			describe:
-				"Name of a specific preview to list secrets from. If not provided, lists secrets from Previews settings.",
-			type: "string",
-			requiresArg: true,
-		},
 		format: {
 			describe: "Output format",
 			type: "string",
@@ -238,8 +217,7 @@ export const previewSecretListCommand = createCommand({
 
 export const previewSecretBulkCommand = createCommand({
 	metadata: {
-		description:
-			"Upload multiple secrets to Previews settings (or a specific Preview if --name is provided)",
+		description: "Upload multiple secrets to the Worker's Previews settings",
 		owner: "Workers: Deploy and Config",
 		category: "Compute & AI",
 		status: "private beta",
@@ -249,12 +227,6 @@ export const previewSecretBulkCommand = createCommand({
 		file: {
 			describe: "The file of key-value pairs to upload, as JSON or .env format",
 			type: "string",
-		},
-		name: {
-			describe:
-				"Name of a specific preview to add secrets to. If not provided, secrets are added to Previews settings.",
-			type: "string",
-			requiresArg: true,
 		},
 		"worker-name": {
 			describe:

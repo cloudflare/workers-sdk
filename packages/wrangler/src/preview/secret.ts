@@ -3,13 +3,8 @@ import { logger } from "../logger";
 import { parseBulkInputToObject } from "../secret";
 import { requireAuth } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import {
-	createPreviewDeployment,
-	editWorkerPreviewDefaults,
-	getLatestPreviewDeployment,
-	getWorkerPreviewDefaults,
-} from "./api";
-import { nameToSlug, resolveWorkerName } from "./shared";
+import { editWorkerPreviewDefaults, getWorkerPreviewDefaults } from "./api";
+import { resolveWorkerName } from "./shared";
 import type { Binding, EnvBindings } from "./api";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -61,7 +56,6 @@ function extractSecretSummaries(env: EnvBindings | undefined): SecretSummary[] {
 export async function handlePreviewSecretPutCommand(
 	args: {
 		key: string;
-		name?: string;
 		workerName?: string;
 		"worker-name"?: string;
 	},
@@ -74,26 +68,6 @@ export async function handlePreviewSecretPutCommand(
 			? await prompt("Enter a secret value:", { isSecret: true })
 			: await readFromStdin()
 	);
-
-	if (args.name) {
-		const previewSlug = nameToSlug(args.name);
-		const latestDeployment = await getLatestPreviewDeployment(
-			config,
-			accountId,
-			workerName,
-			previewSlug
-		);
-		const updatedBindings = upsertSecretBinding(
-			latestDeployment.env ?? {},
-			args.key,
-			secretValue
-		);
-		await createPreviewDeployment(config, accountId, workerName, previewSlug, {
-			env: updatedBindings,
-		});
-		logger.log(`\n✨ Secret "${args.key}" added to preview "${args.name}".`);
-		return;
-	}
 
 	const previewDefaults = await getWorkerPreviewDefaults(
 		config,
@@ -117,7 +91,6 @@ export async function handlePreviewSecretPutCommand(
 export async function handlePreviewSecretDeleteCommand(
 	args: {
 		key: string;
-		name?: string;
 		skipConfirmation?: boolean;
 		workerName?: string;
 		"worker-name"?: string;
@@ -126,37 +99,6 @@ export async function handlePreviewSecretDeleteCommand(
 ) {
 	const workerName = resolveWorkerName(args, config);
 	const accountId = await requireAuth(config);
-
-	if (args.name) {
-		const previewSlug = nameToSlug(args.name);
-		if (!args.skipConfirmation) {
-			const confirmed = await confirm(
-				`Are you sure you want to delete the secret "${args.key}" from preview "${args.name}"?`
-			);
-			if (!confirmed) {
-				logger.log("Aborted.");
-				return;
-			}
-		}
-
-		const latestDeployment = await getLatestPreviewDeployment(
-			config,
-			accountId,
-			workerName,
-			previewSlug
-		);
-		const updatedBindings = removeSecretBinding(
-			latestDeployment.env ?? {},
-			args.key
-		);
-		await createPreviewDeployment(config, accountId, workerName, previewSlug, {
-			env: updatedBindings,
-		});
-		logger.log(
-			`\n✨ Secret "${args.key}" deleted from preview "${args.name}".`
-		);
-		return;
-	}
 
 	if (!args.skipConfirmation) {
 		const confirmed = await confirm(
@@ -186,7 +128,6 @@ export async function handlePreviewSecretDeleteCommand(
 
 export async function handlePreviewSecretListCommand(
 	args: {
-		name?: string;
 		format?: string;
 		workerName?: string;
 		"worker-name"?: string;
@@ -195,35 +136,20 @@ export async function handlePreviewSecretListCommand(
 ) {
 	const workerName = resolveWorkerName(args, config);
 	const accountId = await requireAuth(config);
-	let secrets: SecretSummary[];
 
-	if (args.name) {
-		const latestDeployment = await getLatestPreviewDeployment(
-			config,
-			accountId,
-			workerName,
-			nameToSlug(args.name)
-		);
-		secrets = extractSecretSummaries(latestDeployment.env);
-	} else {
-		const previewDefaults = await getWorkerPreviewDefaults(
-			config,
-			accountId,
-			workerName
-		);
-		secrets = extractSecretSummaries(previewDefaults.env);
-	}
+	const previewDefaults = await getWorkerPreviewDefaults(
+		config,
+		accountId,
+		workerName
+	);
+	const secrets = extractSecretSummaries(previewDefaults.env);
 
 	if (args.format === "json") {
 		logger.log(JSON.stringify(secrets, null, 2));
 		return;
 	}
 
-	logger.log(
-		args.name
-			? `Secrets for preview "${args.name}":`
-			: "Previews settings Secrets:"
-	);
+	logger.log("Previews settings Secrets:");
 	logger.log("─────────────────────────────────────────────────────");
 	for (const secret of secrets) {
 		logger.log(`  - ${secret.name}`);
@@ -234,7 +160,6 @@ export async function handlePreviewSecretListCommand(
 export async function handlePreviewSecretBulkCommand(
 	args: {
 		file?: string;
-		name?: string;
 		workerName?: string;
 		"worker-name"?: string;
 	},
@@ -252,27 +177,6 @@ export async function handlePreviewSecretBulkCommand(
 	const { content } = result;
 	const secretCount = Object.keys(content).length;
 	const source = args.file ? `file "${args.file}"` : "stdin";
-
-	if (args.name) {
-		const previewSlug = nameToSlug(args.name);
-		const latestDeployment = await getLatestPreviewDeployment(
-			config,
-			accountId,
-			workerName,
-			previewSlug
-		);
-		const updatedBindings = upsertManySecretBindings(
-			latestDeployment.env ?? {},
-			content
-		);
-		await createPreviewDeployment(config, accountId, workerName, previewSlug, {
-			env: updatedBindings,
-		});
-		logger.log(
-			`\n✨ Uploaded ${secretCount} secrets from ${source} to preview "${args.name}".`
-		);
-		return;
-	}
 
 	const previewDefaults = await getWorkerPreviewDefaults(
 		config,
