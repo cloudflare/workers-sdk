@@ -137,14 +137,15 @@ function RootLayout() {
 	const handleWorkerChange = useCallback(
 		(workerName: string) => {
 			// Preserve existing search params (e.g. ?table=) and update worker.
-			// Use router.history.push so TanStack Router is aware of the navigation.
+			// Use window.location.pathname (full path including basepath) so that
+			// router.history.push navigates within /cdn-cgi/explorer/... not /.
 			const currentSearch = new URLSearchParams(routerState.location.searchStr);
 			currentSearch.set("worker", workerName);
 			router.history.push(
-				`${routerState.location.pathname}?${currentSearch.toString()}`
+				`${window.location.pathname}?${currentSearch.toString()}`
 			);
 		},
-		[router, routerState.location.pathname, routerState.location.searchStr]
+		[router, routerState.location.searchStr]
 	);
 
 	// Filter resources based on selected worker
