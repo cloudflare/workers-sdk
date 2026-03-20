@@ -1,5 +1,31 @@
 # @cloudflare/local-explorer-ui
 
+## 0.9.0
+
+### Minor Changes
+
+- [#12972](https://github.com/cloudflare/workers-sdk/pull/12972) [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22) Thanks [@NuroDev](https://github.com/NuroDev)! - Add worker filtering to the local explorer UI
+
+  When multiple workers share a dev registry, all their bindings were previously shown together in a single flat list. The explorer now shows a worker selector dropdown, letting you inspect each worker's bindings independently.
+
+  The selected worker is reflected in the URL as a `?worker=` search param, so deep links work correctly. By default the explorer selects the worker that is hosting the dashboard itself.
+
+- [#12888](https://github.com/cloudflare/workers-sdk/pull/12888) [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb) Thanks [@emily-shen](https://github.com/emily-shen)! - Add R2 support to the local explorer.
+
+  The local explorer now supports the following:
+
+  - Viewing, modifying & deleting objects
+  - Uploading files
+  - Creating directories / prefixes
+
+  Note: The local explorer is an experimental WIP feature that is now enabled by default. This can still be opt-ed out of by using `X_LOCAL_EXPLORER=false` to disable it.
+
+### Patch Changes
+
+- [#12918](https://github.com/cloudflare/workers-sdk/pull/12918) [`3de3ce5`](https://github.com/cloudflare/workers-sdk/commit/3de3ce519383b634bd1315eb94d789ec8def0670) Thanks [@NuroDev](https://github.com/NuroDev)! - Fixed listing internal Cloudflare Durable Object tables.
+
+  The internal `_cf_KV` table that is used when using Durable Objects KV storage is now hidden from the table list dropdown in the local explorer as it is not accessible.
+
 ## 0.8.2
 
 ### Patch Changes
