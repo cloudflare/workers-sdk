@@ -39,6 +39,8 @@ Extract and note:
 
 Check each of the following categories in order. **STOP at the first match** and skip to Output.
 
+> **Note:** The `state_reason` values in this section (`completed`, `not_planned`) are informational — they indicate the appropriate GitHub close reason for maintainer reference. They are not captured as a field in the output report.
+
 #### 2a: Spam or Junk
 
 Recommend **CLOSE** (state_reason: `not_planned`, no comment needed) if:
@@ -58,11 +60,11 @@ Recommend **CLOSE** (state_reason: `completed`) if:
 
 #### 2c: Already Fixed in a Prior Release
 
-Recommend **CLOSE** (state_reason: `completed`) if:
+Recommend **CLOSE** (state_reason: `completed`) if, based on references within the issue comments or linked PRs:
 
 - A comment references a PR or release that addresses this issue
 - The issue describes a bug that was fixed in a version newer than the reporter's version
-- The issue's symptoms match a known fix in the changelog
+- The issue's symptoms match a fix described in a linked PR or comment
 
 When closing, cite the specific PR number and release version if known.
 
@@ -74,10 +76,7 @@ Or for older issues where the fix can't be pinpointed:
 
 #### 2d: Duplicate
 
-Recommend **CLOSE** (state_reason: `not_planned`) if:
-
-- The issue describes the same problem as an existing open or recently closed issue
-- The error message, reproduction steps, or symptoms are identical to another issue
+Recommend **CLOSE** (state_reason: `not_planned`) if a comment or linked reference in the issue identifies it as a duplicate of another issue — for example, a maintainer has already commented pointing to a canonical issue, or the reporter themselves links to an existing report.
 
 When closing, link to the canonical issue.
 
@@ -103,6 +102,8 @@ For framework issues:
 
 For runtime issues:
 > This looks like a Workers runtime issue rather than a tooling issue. The right place to track this is [cloudflare/workerd](https://github.com/cloudflare/workerd) so I've moved the issue there.
+
+(Set Action field to: "Transfer to cloudflare/workerd, then post this comment.")
 
 For account/support issues:
 > Unfortunately, we're unable to provide support for account-level issues via GitHub. Please contact Cloudflare Support at https://dash.cloudflare.com/?to=/:account/support or the email address mentioned in the error message.
@@ -148,19 +149,30 @@ When closing, explain the correct approach and link to relevant documentation. B
 **Template:**
 > This isn't a bug — <brief explanation of the correct behavior>. You can find more details in the docs: <link>. I'm going to close this for now, but feel free to ask on our [Discord](https://discord.cloudflare.com) if you have more questions.
 
-#### 2i: Won't Fix / By Design / Breaking Change
+#### 2i: Breaking Change
+
+Recommend **KEEP OPEN** if:
+
+- The requested change would be a breaking change in the current major version
+
+The issue should remain open as a tracking item. Do not close it — the team hasn't decided against the change, it's deferred to a future major version.
+
+**Suggested labels:** `breaking change`
+
+**Template:**
+> Changing this behavior at this stage would be a breaking change, so it will need to wait for the next major version. I've added the `breaking change` label to track this.
+
+(Set Action field to: "Apply `breaking change` label, then post this comment.")
+
+#### 2j: Won't Fix / By Design
 
 Recommend **CLOSE** (state_reason: `not_planned`) if:
 
-- The requested change would be a breaking change in the current major version
 - The behavior is intentional and documented
 - The team has explicitly decided not to implement this feature
 - The cost/complexity of the change outweighs the benefit
 
 **Templates:**
-
-For breaking changes:
-> Changing this behavior at this stage would be a breaking change, and so it will have to stay as-is for the duration of the current major version's release cycle. We have added the `breaking change` label to track this and will reconsider ahead of a future major version.
 
 For design decisions:
 > This is intentional behavior — <brief explanation>. I don't think we're likely to change this in the near future, but we appreciate the feedback.
@@ -168,7 +180,7 @@ For design decisions:
 For feature requests that won't happen:
 > Thanks for the suggestion. We don't intend to implement this right now, but it may be revisited in future. <Optional: brief explanation of why, or pointer to an alternative approach.>
 
-#### 2j: Feature Superseded / Deprecated
+#### 2k: Feature Superseded / Deprecated
 
 Recommend **CLOSE** (state_reason: `completed`) if:
 
