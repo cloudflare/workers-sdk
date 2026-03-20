@@ -42,7 +42,9 @@ function formatBindings(env: Record<string, MergedBinding>): string[] {
 		const friendlyType = getBindingTypeFriendlyName(
 			binding.type as Parameters<typeof getBindingTypeFriendlyName>[0]
 		);
-		return `  ${chalk.cyan(padToVisibleWidth(name, nameWidth))}   ${chalk.dim(padToVisibleWidth(friendlyType, typeWidth))}   ${padToVisibleWidth(getBindingValue(binding), valueWidth)}`;
+		return `  ${chalk.cyan(padToVisibleWidth(name, nameWidth))}   ${chalk.dim(
+			padToVisibleWidth(friendlyType, typeWidth)
+		)}   ${padToVisibleWidth(getBindingValue(binding), valueWidth)}`;
 	});
 }
 
@@ -78,7 +80,9 @@ export function formatPreviewsSettings(
 			: "disabled";
 		const sampling =
 			typeof previewDefaults.observability.head_sampling_rate === "number"
-				? `, ${previewDefaults.observability.head_sampling_rate.toFixed(1)} sampling`
+				? `, ${previewDefaults.observability.head_sampling_rate.toFixed(
+						1
+					)} sampling`
 				: "";
 		settingsRows.push(["observability", `${enabledLabel}${sampling}`]);
 	}
@@ -140,6 +144,14 @@ export async function handlePreviewSettingsUpdateCommand(
 		resolvedConfigFileSettings
 	);
 
+	// Individual binding entries within env should be replaced wholesale,
+	// not deep-merged. Deep merging would leak stale properties when a
+	// binding changes type (e.g. kv_namespace -> d1).
+	requestPayloadPreviewDefaults.env = {
+		...currentPreviewDefaults.env,
+		...resolvedConfigFileSettings.env,
+	};
+
 	const diff = diffJsonObjects(
 		currentPreviewDefaults as Record<string, JsonLike>,
 		requestPayloadPreviewDefaults as Record<string, JsonLike>
@@ -147,7 +159,9 @@ export async function handlePreviewSettingsUpdateCommand(
 
 	if (!diff) {
 		logger.log(
-			`\n✨ Previews settings for Worker ${chalk.bold.cyan(workerName)} are already up to date.`
+			`\n✨ Previews settings for Worker ${chalk.bold.cyan(
+				workerName
+			)} are already up to date.`
 		);
 		return;
 	}
@@ -160,7 +174,9 @@ export async function handlePreviewSettingsUpdateCommand(
 
 	if (!args.skipConfirmation) {
 		const shouldProceed = await confirm(
-			`Apply these updates to the Previews settings of Worker ${chalk.bold.cyan(workerName)}?`
+			`Apply these updates to the Previews settings of Worker ${chalk.bold.cyan(
+				workerName
+			)}?`
 		);
 		if (!shouldProceed) {
 			logger.log("Aborted.");

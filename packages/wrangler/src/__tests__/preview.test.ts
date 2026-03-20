@@ -1259,6 +1259,75 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should replace binding entries wholesale when type changes", async ({
+			expect,
+		}) => {
+			// Remote has a kv_namespace binding; config redefines it as plain_text.
+			// After merge, the binding should be pure plain_text with no leftover namespace_id.
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						vars: {
+							MY_BINDING: "new-value",
+						},
+					},
+				})
+			);
+
+			let patchRequestBody:
+				| {
+						preview_defaults?: {
+							env?: Record<string, Record<string, unknown>>;
+						};
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+					return HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {
+								compatibility_date: "2025-01-01",
+								env: {
+									MY_BINDING: {
+										type: "kv_namespace",
+										namespace_id: "old-kv-id",
+									},
+								},
+							},
+						},
+					});
+				}),
+				http.patch(
+					`*/accounts/:accountId/workers/workers/:workerId`,
+					async ({ request }) => {
+						patchRequestBody = (await request.json()) as {
+							preview_defaults?: {
+								env?: Record<string, Record<string, unknown>>;
+							};
+						};
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview settings update --worker-name override-worker --skip-confirmation"
+			);
+
+			const binding = patchRequestBody?.preview_defaults?.env?.MY_BINDING;
+			expect(binding).toBeDefined();
+			expect(binding?.type).toBe("plain_text");
+			expect(binding?.text).toBe("new-value");
+			// Stale property from old kv_namespace binding must not leak through
+			expect(binding?.namespace_id).toBeUndefined();
+		});
+
 		test("should list preview secrets from the latest deployment", async ({
 			expect,
 		}) => {
