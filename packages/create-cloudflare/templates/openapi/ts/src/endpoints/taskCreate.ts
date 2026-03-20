@@ -1,4 +1,4 @@
-import { Bool, OpenAPIRoute } from "chanfana";
+import { OpenAPIRoute } from "chanfana";
 import { z } from "zod";
 import { type AppContext, Task } from "../types";
 
@@ -22,7 +22,7 @@ export class TaskCreate extends OpenAPIRoute {
 					"application/json": {
 						schema: z.object({
 							series: z.object({
-								success: Bool(),
+								success: z.boolean(),
 								result: z.object({
 									task: Task,
 								}),
