@@ -1,5 +1,21 @@
 # @cloudflare/containers-shared
 
+## 0.13.0
+
+### Minor Changes
+
+- [#12943](https://github.com/cloudflare/workers-sdk/pull/12943) [`0f10583`](https://github.com/cloudflare/workers-sdk/commit/0f10583f53d050df06413e1f65fb147a4aea9976) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Upgrade proxy-everything to cloudflare/proxy-everything:3cb1195
+
+  This proxy-everything version adds support to filter DNS queries, necessary for interceptOutboundHttp constrained by domain.
+
+### Patch Changes
+
+- [#12893](https://github.com/cloudflare/workers-sdk/pull/12893) [`782df44`](https://github.com/cloudflare/workers-sdk/commit/782df4495f14f1366cf03e808ddddea0102eb011) Thanks [@gpanders](https://github.com/gpanders)! - Rewrite `wrangler containers list` to use the paginated Dash API endpoint
+
+  `wrangler containers list` now fetches from the `/dash/applications` endpoint instead of `/applications`, displaying results in a paginated table with columns for ID, Name, State, Live Instances, and Last Modified. Container state is derived from health instance counters (active, degraded, provisioning, ready).
+
+  The command supports `--per-page` (default 25) for interactive pagination with Enter to load more and q/Esc to quit, and `--json` for machine-readable output. Non-interactive environments load all results in a single request.
+
 ## 0.12.0
 
 ### Minor Changes

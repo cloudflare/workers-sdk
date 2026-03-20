@@ -1,5 +1,50 @@
 # miniflare
 
+## 4.20260317.1
+
+### Minor Changes
+
+- [#12972](https://github.com/cloudflare/workers-sdk/pull/12972) [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22) Thanks [@NuroDev](https://github.com/NuroDev)! - Add worker filtering to the local explorer UI
+
+  When multiple workers share a dev registry, all their bindings were previously shown together in a single flat list. The explorer now shows a worker selector dropdown, letting you inspect each worker's bindings independently.
+
+  The selected worker is reflected in the URL as a `?worker=` search param, so deep links work correctly. By default the explorer selects the worker that is hosting the dashboard itself.
+
+- [#12888](https://github.com/cloudflare/workers-sdk/pull/12888) [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb) Thanks [@emily-shen](https://github.com/emily-shen)! - Add R2 support to the local explorer.
+
+  The local explorer now supports the following:
+
+  - Viewing, modifying & deleting objects
+  - Uploading files
+  - Creating directories / prefixes
+
+  Note: The local explorer is an experimental WIP feature that is now enabled by default. This can still be opt-ed out of by using `X_LOCAL_EXPLORER=false` to disable it.
+
+- [#12848](https://github.com/cloudflare/workers-sdk/pull/12848) [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb) Thanks [@emily-shen](https://github.com/emily-shen)! - Enable local explorer by default
+
+  This ungates the local explorer, a UI that lets you inspect the state of D1, DO and KV resources locally by visiting `/cdn-cgi/explorer` during local development.
+
+  Note: this feature is still experimental, and can be disabled by setting the env var `X_LOCAL_EXPLORER=false`.
+
+- [#12881](https://github.com/cloudflare/workers-sdk/pull/12881) [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflow instances now support pause, resume, restart, and terminate in local dev.
+
+  ```js
+  const instance = await env.MY_WORKFLOW.create({
+    id: "my-instance",
+  });
+
+  await instance.pause(); // pauses after the current step completes
+  await instance.resume(); // resumes from where it left off
+  await instance.restart(); // restarts the workflow from the beginning
+  await instance.terminate(); // terminates the workflow immediately
+  ```
+
+### Patch Changes
+
+- [#12960](https://github.com/cloudflare/workers-sdk/pull/12960) [`3c988e2`](https://github.com/cloudflare/workers-sdk/commit/3c988e204ac0d6117ace9cc8fa5fd2479868811c) Thanks [@penalosa](https://github.com/penalosa)! - Exclude `metadata.sqlite` when listing Durable Object instances
+
+  An upcoming version of workerd stores per-namespace alarm metadata in a `metadata.sqlite` file alongside per-actor `.sqlite` files. The local explorer's DO object listing was treating this file as a Durable Object instance, inflating counts and breaking pagination. This file is now filtered out.
+
 ## 4.20260317.0
 
 ### Patch Changes
@@ -53,6 +98,7 @@
 - [#12864](https://github.com/cloudflare/workers-sdk/pull/12864) [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer route matching to be more precise
 
   Previously, the route matching used `startsWith("/cdn-cgi/explorer")` which would incorrectly match paths like `/cdn-cgi/explorerfoo` or `/cdn-cgi/explorereeeeee`, causing unexpected behavior. The route matching has been improved to only match:
+
   - `/cdn-cgi/explorer` (exact match)
   - `/cdn-cgi/explorer/` and any sub-paths (e.g., `/cdn-cgi/explorer/api/*`)
 
@@ -127,16 +173,16 @@
   ```jsonc
   // wrangler.jsonc
   {
-  	"workflows": [
-  		{
-  			"binding": "MY_WORKFLOW",
-  			"name": "my-workflow",
-  			"class_name": "MyWorkflow",
-  			"limits": {
-  				"steps": 5000,
-  			},
-  		},
-  	],
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "limits": {
+          "steps": 5000
+        }
+      }
+    ]
   }
   ```
 
@@ -213,7 +259,7 @@
 
   ```typescript
   const mf = new Miniflare({
-  	/* options */
+    /* options */
   });
 
   // Purge the default cache
@@ -290,6 +336,7 @@
 - [#12466](https://github.com/cloudflare/workers-sdk/pull/12466) [`caf9b11`](https://github.com/cloudflare/workers-sdk/commit/caf9b114391d7708b38e8d37bca6dae6f2b4927e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add `MINIFLARE_CACHE_DIR` environment variable and smart cache directory detection
 
   Miniflare now intelligently detects where to store its cf.json cache file:
+
   1. Use `MINIFLARE_CACHE_DIR` env var if set
   2. Use existing cache directory if found (`node_modules/.mf` or `.wrangler/cache`)
   3. Create cache in `node_modules/.mf` if `node_modules` exists
@@ -330,6 +377,7 @@
 - [#12469](https://github.com/cloudflare/workers-sdk/pull/12469) [`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add environment variables to control cf.json fetching behavior
 
   You can now use environment variables to control how Miniflare handles the `Request.cf` object caching:
+
   - `CLOUDFLARE_CF_FETCH_ENABLED` - Set to "false" to disable fetching entirely and use fallback data. No `node_modules/.mf/cf.json` file will be created. Defaults to "true".
   - `CLOUDFLARE_CF_FETCH_PATH` - Set to a custom path to use a different location for caching the cf.json file instead of the default `node_modules/.mf/cf.json`.
 
@@ -386,6 +434,7 @@
 - [#12267](https://github.com/cloudflare/workers-sdk/pull/12267) [`83adb2c`](https://github.com/cloudflare/workers-sdk/commit/83adb2cb7f909857d79208474b78cdb7ac4e0638) Thanks [@NuroDev](https://github.com/NuroDev)! - Implement local D1 API for experimental/WIP local resource explorer
 
   The following APIs have been implemented:
+
   - `GET /d1/database` - Returns a list of D1 databases.
   - `POST /d1/database/{database_id}/raw` - Returns the query result rows as arrays rather than objects.
 
@@ -491,9 +540,9 @@
   ```jsonc
   // wrangler.json
   {
-  	"dev": {
-  		"inspector_ip": "0.0.0.0",
-  	},
+    "dev": {
+      "inspector_ip": "0.0.0.0"
+    }
   }
   ```
 
@@ -537,6 +586,7 @@
   into miniflare and @cloudflare/vitest-pool-workers.
 
   Other dependencies remain external for technical reasons:
+
   - `sharp`: Native binary with platform-specific builds
   - `undici`: Dynamically required at runtime in worker threads
   - `ws`: Has optional native bindings for performance
@@ -568,19 +618,19 @@
 
   ```javascript
   await env.EMAIL.send({
-  	from: { name: "Alice", email: "alice@example.com" },
-  	to: ["bob@example.com"],
-  	subject: "Hello",
-  	text: "Plain text version",
-  	html: "<h1>HTML version</h1>",
-  	attachments: [
-  		{
-  			disposition: "attachment",
-  			filename: "report.pdf",
-  			type: "application/pdf",
-  			content: pdfData,
-  		},
-  	],
+    from: { name: "Alice", email: "alice@example.com" },
+    to: ["bob@example.com"],
+    subject: "Hello",
+    text: "Plain text version",
+    html: "<h1>HTML version</h1>",
+    attachments: [
+      {
+        disposition: "attachment",
+        filename: "report.pdf",
+        type: "application/pdf",
+        content: pdfData,
+      },
+    ],
   });
   ```
 
@@ -626,10 +676,10 @@
 
   ```js
   export default {
-  	async fetch(request) {
-  		const originalHostname = request.headers.get("MF-Original-Hostname");
-  		// originalHostname contains the hostname before it was rewritten
-  	},
+    async fetch(request) {
+      const originalHostname = request.headers.get("MF-Original-Hostname");
+      // originalHostname contains the hostname before it was rewritten
+    },
   };
   ```
 
@@ -650,6 +700,7 @@
   reducing the number of external dependencies users need to trust.
 
   Bundled dependencies:
+
   - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
   - **kv-asset-handler**: `mime`
   - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
@@ -708,6 +759,7 @@
 ### Minor Changes
 
 - [#11648](https://github.com/cloudflare/workers-sdk/pull/11648) [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows test handlers in vitest-pool-workers to get the Workflow instance output and error:
+
   - `getOutput()`: Returns the output of the successfully completed Workflow instance.
   - `getError()`: Returns the error information of the errored Workflow instance.
 
@@ -716,7 +768,7 @@
   ```ts
   // First wait for the workflow instance to complete:
   await expect(
-  	instance.waitForStatus({ status: "complete" })
+    instance.waitForStatus({ status: "complete" })
   ).resolves.not.toThrow();
 
   // Then, get its output
@@ -724,7 +776,7 @@
 
   // Or for errored workflow instances, get their error:
   await expect(
-  	instance.waitForStatus({ status: "errored" })
+    instance.waitForStatus({ status: "errored" })
   ).resolves.not.toThrow();
   const error = await instance.getError();
   ```
@@ -1301,11 +1353,11 @@
 
   ```typescript
   const mf = new Miniflare({
-  	// ... other options
-  	unsafeHandleDevRegistryUpdate(registry) {
-  		console.log("Dev registry updated:", registry);
-  		// Handle registry updates (e.g., reprint bindings, reload config)
-  	},
+    // ... other options
+    unsafeHandleDevRegistryUpdate(registry) {
+      console.log("Dev registry updated:", registry);
+      // Handle registry updates (e.g., reprint bindings, reload config)
+    },
   });
   ```
 
@@ -1635,6 +1687,7 @@
 - [#9313](https://github.com/cloudflare/workers-sdk/pull/9313) [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add Dev Registry support
 
   This change introduces two new options to support cross-process service bindings, durable objects and tail consumers via a file-system based registry, with backward compatibility to Wrangler’s implementation:
+
   - **`unsafeDevRegistryPath`** (`string`): Filesystem path to the Dev Registry directory.
   - **`unsafeDevRegistryDurableObjectProxy`** (`boolean`): When enabled, exposes internal Durable Objects to other local dev sessions and allows Workers to connect to external Durable Objects.
 
@@ -1644,10 +1697,10 @@
   import { Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	scriptPath: "./dist/worker.js",
-  	unsafeDevRegistryPath: "/registry",
-  	unsafeDevRegistryDurableObjectProxy: true,
-  	// ...other options
+    scriptPath: "./dist/worker.js",
+    unsafeDevRegistryPath: "/registry",
+    unsafeDevRegistryDurableObjectProxy: true,
+    // ...other options
   });
   ```
 
@@ -1656,6 +1709,7 @@
 - [#9440](https://github.com/cloudflare/workers-sdk/pull/9440) [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1) Thanks [@penalosa](https://github.com/penalosa)! - Preserve original error messages
 
 - [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
+
   - AI
   - Browser
   - Images
@@ -1674,13 +1728,13 @@
 
   ```js
   new Miniflare({
-  	serviceBindings: {
-  		CUSTOM: {
-  			node: (req, res) => {
-  				res.end(`Hello world`);
-  			},
-  		},
-  	},
+    serviceBindings: {
+      CUSTOM: {
+        node: (req, res) => {
+          res.end(`Hello world`);
+        },
+      },
+    },
   });
   ```
 
@@ -1704,19 +1758,19 @@
   ```js
   // Before this change / No `defaultPersistRoot`
   new Miniflare({
-  	kvPersist: undefined, // → "/(tmp)/kv"
-  	d1Persist: true, // → "$PWD/.mf/d1"
-  	r2Persist: false, // → "/(tmp)/r2"
-  	cachePersist: "/my-cache", // → "/my-cache"
+    kvPersist: undefined, // → "/(tmp)/kv"
+    d1Persist: true, // → "$PWD/.mf/d1"
+    r2Persist: false, // → "/(tmp)/r2"
+    cachePersist: "/my-cache", // → "/my-cache"
   });
 
   // With `defaultPersistRoot`
   new Miniflare({
-  	defaultPersistRoot: "/storage",
-  	kvPersist: undefined, // → "/storage/kv"
-  	d1Persist: true, // → "/storage/d1"
-  	r2Persist: false, // → "/(tmp)/r2"
-  	cachePersist: "/my-cache", // → "/my-cache"
+    defaultPersistRoot: "/storage",
+    kvPersist: undefined, // → "/storage/kv"
+    d1Persist: true, // → "/storage/d1"
+    r2Persist: false, // → "/(tmp)/r2"
+    cachePersist: "/my-cache", // → "/my-cache"
   });
   ```
 
@@ -1874,13 +1928,13 @@
 
   ```json
   {
-  	"services": [
-  		{
-  			"binding": "MY_SERVICE",
-  			"service": "some-worker",
-  			"props": { "foo": 123, "bar": "value" }
-  		}
-  	]
+    "services": [
+      {
+        "binding": "MY_SERVICE",
+        "service": "some-worker",
+        "props": { "foo": 123, "bar": "value" }
+      }
+    ]
   }
   ```
 
@@ -1890,9 +1944,9 @@
   import { WorkerEntrypoint } from "cloudflare:workers";
 
   export default class extends WorkerEntrypoint {
-  	fetch() {
-  		return new Response(JSON.stringify(this.ctx.props));
-  	}
+    fetch() {
+      return new Response(JSON.stringify(this.ctx.props));
+    }
   }
   ```
 
@@ -2114,27 +2168,27 @@
   import { Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	// the inspector proxy will be accessible through port 9229
-  	inspectorPort: 9229,
-  	workers: [
-  		{
-  			name: "worker-a",
-  			scriptPath: "./worker-a.js",
-  			// enable the inspector proxy for worker-a
-  			unsafeInspectorProxy: true,
-  		},
-  		{
-  			name: "worker-b",
-  			scriptPath: "./worker-b.js",
-  			// worker-b is not going to be proxied
-  		},
-  		{
-  			name: "worker-c",
-  			scriptPath: "./worker-c.js",
-  			// enable the inspector proxy for worker-c
-  			unsafeInspectorProxy: true,
-  		},
-  	],
+    // the inspector proxy will be accessible through port 9229
+    inspectorPort: 9229,
+    workers: [
+      {
+        name: "worker-a",
+        scriptPath: "./worker-a.js",
+        // enable the inspector proxy for worker-a
+        unsafeInspectorProxy: true,
+      },
+      {
+        name: "worker-b",
+        scriptPath: "./worker-b.js",
+        // worker-b is not going to be proxied
+      },
+      {
+        name: "worker-c",
+        scriptPath: "./worker-c.js",
+        // enable the inspector proxy for worker-c
+        unsafeInspectorProxy: true,
+      },
+    ],
   });
   ```
 
@@ -2672,6 +2726,7 @@
 - [#6058](https://github.com/cloudflare/workers-sdk/pull/6058) [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99) Thanks [@threepointone](https://github.com/threepointone)! - chore: Quieter builds
 
   This patch cleans up warnings we were seeing when doing a full build. Specifically:
+
   - fixtures/remix-pages-app had a bunch of warnings about impending features that it should be upgraded to, so I did that. (tbh this one needs a full upgrade of packages, but we'll get to that later when we're upgrading across the codebase)
   - updated `@microsoft/api-extractor` so it didn't complain that it didn't match the `typescript` version (that we'd recently upgraded)
   - it also silenced a bunch of warnings when exporting types from `wrangler`. We'll need to fix those, but we'll do that when we work on unstable_dev etc.
@@ -2805,20 +2860,20 @@
   import { Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	workers: [
-  		{
-  			wrappedBindings: {
-  				Greeter: {
-  					scriptName: "impl",
-  				},
-  			},
-  			modules: true,
-  			script: `export default { fetch(){ return new Response(''); } }`,
-  		},
-  		{
-  			modules: true,
-  			name: "impl",
-  			script: `
+    workers: [
+      {
+        wrappedBindings: {
+          Greeter: {
+            scriptName: "impl",
+          },
+        },
+        modules: true,
+        script: `export default { fetch(){ return new Response(''); } }`,
+      },
+      {
+        modules: true,
+        name: "impl",
+        script: `
   				class Greeter {
   					sayHello(name) {
   						return "Hello " + name;
@@ -2829,8 +2884,8 @@
   					return new Greeter();
   				}
   			`,
-  		},
-  	],
+      },
+    ],
   });
 
   const { Greeter } = await mf.getBindings();
@@ -2850,21 +2905,21 @@
   import { Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	workers: [
-  		{
-  			modules: true,
-  			script: `export default { fetch() { return new Response(''); } }`,
-  			serviceBindings: {
-  				SUM: {
-  					name: "sum-worker",
-  					entrypoint: "SumEntrypoint",
-  				},
-  			},
-  		},
-  		{
-  			modules: true,
-  			name: "sum-worker",
-  			script: `
+    workers: [
+      {
+        modules: true,
+        script: `export default { fetch() { return new Response(''); } }`,
+        serviceBindings: {
+          SUM: {
+            name: "sum-worker",
+            entrypoint: "SumEntrypoint",
+          },
+        },
+      },
+      {
+        modules: true,
+        name: "sum-worker",
+        script: `
   				import { WorkerEntrypoint } from 'cloudflare:workers';
   
   				export default { fetch() { return new Response(''); } }
@@ -2875,8 +2930,8 @@
   					}
   				}
   			`,
-  		},
-  	],
+      },
+    ],
   });
 
   const { SUM } = await mf.getBindings();
@@ -2942,17 +2997,17 @@
   import { kCurrentWorker, Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	workers: [
-  		{
-  			name: "a",
-  			serviceBindings: {
-  				A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
-  				A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
-  				B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
-  			},
-  			compatibilityFlags: ["rpc"],
-  			modules: true,
-  			script: `
+    workers: [
+      {
+        name: "a",
+        serviceBindings: {
+          A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
+          A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
+          B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
+        },
+        compatibilityFlags: ["rpc"],
+        modules: true,
+        script: `
   			import { WorkerEntrypoint } from "cloudflare:workers";
   
   			export class RpcEntrypoint extends WorkerEntrypoint {
@@ -2965,17 +3020,17 @@
   
   			...
   			`,
-  		},
-  		{
-  			name: "b",
-  			modules: true,
-  			script: `
+      },
+      {
+        name: "b",
+        modules: true,
+        script: `
   			export const anotherNamedEntrypoint = {
   				fetch(request, env, ctx) { return new Response("b:named:pong"); }
   			};
   			`,
-  		},
-  	],
+      },
+    ],
   });
   ```
 
@@ -3041,6 +3096,7 @@
 - [#5191](https://github.com/cloudflare/workers-sdk/pull/5191) [`27fb22b`](https://github.com/cloudflare/workers-sdk/commit/27fb22b7c6b224aecc852915d9fee600d9d86efc) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure redirect responses handled correctly with `dispatchFetch()`
 
   Previously, if your Worker returned a redirect response, calling `dispatchFetch(url)` would send another request to the original `url` rather than the redirect. This change ensures redirects are followed correctly.
+
   - If your Worker returns a relative redirect or an absolute redirect with the same origin as the original `url`, the request will be sent to the Worker.
   - If your Worker instead returns an absolute redirect with a different origin, the request will be sent to the Internet.
   - If a redirected request to a different origin returns an absolute redirect with the same origin as the original `url`, the request will also be sent to the Worker.
@@ -3092,12 +3148,12 @@
   import { Miniflare, Response } from "miniflare";
 
   const mf = new Miniflare({
-  	serviceBindings: {
-  		SERVICE(request, instance) {
-  			assert(instance === mf);
-  			return new Response();
-  		},
-  	},
+    serviceBindings: {
+      SERVICE(request, instance) {
+        assert(instance === mf);
+        return new Response();
+      },
+    },
   });
   ```
 
@@ -3117,27 +3173,27 @@
   import { Miniflare } from "miniflare";
 
   const mf1 = new Miniflare({
-  	scriptPath: "index.mjs",
+    scriptPath: "index.mjs",
   });
 
   const mf2 = new Miniflare({
-  	rootPath: "a/b",
-  	scriptPath: "c/index.mjs",
+    rootPath: "a/b",
+    scriptPath: "c/index.mjs",
   });
 
   const mf3 = new Miniflare({
-  	rootPath: "/a/b",
-  	workers: [
-  		{
-  			name: "1",
-  			rootPath: "c",
-  			scriptPath: "index.mjs",
-  		},
-  		{
-  			name: "2",
-  			scriptPath: "index.mjs",
-  		},
-  	],
+    rootPath: "/a/b",
+    workers: [
+      {
+        name: "1",
+        rootPath: "c",
+        scriptPath: "index.mjs",
+      },
+      {
+        name: "2",
+        scriptPath: "index.mjs",
+      },
+    ],
   });
   ```
 
@@ -3153,11 +3209,11 @@
   import { kCurrentWorker, Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-  	serviceBindings: {
-  		SELF: kCurrentWorker,
-  	},
-  	modules: true,
-  	script: `export default {
+    serviceBindings: {
+      SELF: kCurrentWorker,
+    },
+    modules: true,
+    script: `export default {
       fetch(request, env, ctx) {
         const { pathname } = new URL(request.url);
         if (pathname === "/recurse") {
@@ -3182,9 +3238,9 @@
 
   ```js
   const mf = new Miniflare({
-  	modules: true,
-  	modulesRoot: "..",
-  	scriptPath: "../worker.mjs",
+    modules: true,
+    modulesRoot: "..",
+    scriptPath: "../worker.mjs",
   });
   ```
 
@@ -3242,15 +3298,15 @@
 
   ```js
   const mf = new Miniflare({
-  	modules: [
-  		{
-  			type: "PythonModule",
-  			path: "index",
-  			contents:
-  				"from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
-  		},
-  	],
-  	compatibilityFlags: ["experimental"],
+    modules: [
+      {
+        type: "PythonModule",
+        path: "index",
+        contents:
+          "from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
+      },
+    ],
+    compatibilityFlags: ["experimental"],
   });
   ```
 
@@ -3387,9 +3443,9 @@
 
   ```ts
   const mf = new Miniflare({
-  	log,
-  	modules: true,
-  	script: `
+    log,
+    modules: true,
+    script: `
         export default {
             fetch(req, env, ctx) {
                 const two = env.UNSAFE_EVAL.eval('1+1');
@@ -3397,7 +3453,7 @@
             }
         }
     `,
-  	unsafeEvalBinding: "UNSAFE_EVAL",
+    unsafeEvalBinding: "UNSAFE_EVAL",
   });
   ```
 

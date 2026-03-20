@@ -1,5 +1,26 @@
 # @cloudflare/vite-plugin
 
+## 1.30.0
+
+### Minor Changes
+
+- [#12848](https://github.com/cloudflare/workers-sdk/pull/12848) [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb) Thanks [@emily-shen](https://github.com/emily-shen)! - Enable local explorer by default
+
+  This ungates the local explorer, a UI that lets you inspect the state of D1, DO and KV resources locally by visiting `/cdn-cgi/explorer` during local development.
+
+  Note: this feature is still experimental, and can be disabled by setting the env var `X_LOCAL_EXPLORER=false`.
+
+### Patch Changes
+
+- [#12942](https://github.com/cloudflare/workers-sdk/pull/12942) [`4f7fd79`](https://github.com/cloudflare/workers-sdk/commit/4f7fd79d83185df593167751ceca44d50d926aea) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Avoid splicing into the middleware stack for Vite versions other than v6
+
+  Previously, the plugin spliced its pre-middleware into the Vite middleware stack relative to `viteCachedTransformMiddleware`. In Vite 8, this middleware can be omitted in some scenarios, which would cause the splice to fail. The plugin now registers pre-middleware using `server.middlewares.use()` directly, which places it in the correct position for Vite 7+. For Vite 6, the middleware is moved to the correct position in a post hook.
+
+- Updated dependencies [[`782df44`](https://github.com/cloudflare/workers-sdk/commit/782df4495f14f1366cf03e808ddddea0102eb011), [`3c988e2`](https://github.com/cloudflare/workers-sdk/commit/3c988e204ac0d6117ace9cc8fa5fd2479868811c), [`62545c9`](https://github.com/cloudflare/workers-sdk/commit/62545c9e9146d5107df7bd3d75fa3c453fa7d96b), [`d028ffb`](https://github.com/cloudflare/workers-sdk/commit/d028ffb40c308e4ad7b2a98c6ae0577a2f4e8d8a), [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22), [`71ab981`](https://github.com/cloudflare/workers-sdk/commit/71ab9816dc80acba346073bc9d02bd45d1fb5b9a), [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb), [`7c3c6c6`](https://github.com/cloudflare/workers-sdk/commit/7c3c6c6e9c8b4b58e438a9ce8426241f58d8fe82), [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb), [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787)]:
+  - wrangler@4.76.0
+  - miniflare@4.20260317.1
+  - @cloudflare/unenv-preset@2.16.0
+
 ## 1.29.1
 
 ### Patch Changes
@@ -94,9 +115,9 @@
   ```jsonc
   // wrangler.jsonc
   {
-  	"secrets": {
-  		"required": ["API_KEY", "DB_PASSWORD"],
-  	},
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
   }
   ```
 
@@ -192,14 +213,14 @@
 
   ```ts
   export default defineConfig({
-  	environments: {
-  		my_worker: {
-  			build: {
-  				sourcemap: true,
-  			},
-  		},
-  	},
-  	plugins: [cloudflare()],
+    environments: {
+      my_worker: {
+        build: {
+          sourcemap: true,
+        },
+      },
+    },
+    plugins: [cloudflare()],
   });
   ```
 
@@ -312,14 +333,14 @@
 
   ```ts
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			viteEnvironment: {
-  				name: "rsc",
-  				childEnvironments: ["ssr"],
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        viteEnvironment: {
+          name: "rsc",
+          childEnvironments: ["ssr"],
+        },
+      }),
+    ],
   });
   ```
 
@@ -332,6 +353,7 @@
   reducing the number of external dependencies users need to trust.
 
   Bundled dependencies:
+
   - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
   - **kv-asset-handler**: `mime`
   - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
@@ -425,21 +447,21 @@
 
   ```ts
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			auxiliaryWorkers: [
-  				{
-  					config: (_, { entryWorkerConfig }) => ({
-  						name: "auxiliary-worker",
-  						main: "./src/auxiliary-worker.ts",
-  						// Inherit compatibility settings from entry Worker
-  						compatibility_date: entryWorkerConfig.compatibility_date,
-  						compatibility_flags: entryWorkerConfig.compatibility_flags,
-  					}),
-  				},
-  			],
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        auxiliaryWorkers: [
+          {
+            config: (_, { entryWorkerConfig }) => ({
+              name: "auxiliary-worker",
+              main: "./src/auxiliary-worker.ts",
+              // Inherit compatibility settings from entry Worker
+              compatibility_date: entryWorkerConfig.compatibility_date,
+              compatibility_flags: entryWorkerConfig.compatibility_flags,
+            }),
+          },
+        ],
+      }),
+    ],
   });
   ```
 
@@ -517,41 +539,41 @@
   // Define a partial config object
 
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			config: {
-  				compatibility_date: "2025-01-01",
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        config: {
+          compatibility_date: "2025-01-01",
+        },
+      }),
+    ],
   });
 
   // Return a partial config from a function, conditional on some logic
 
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			config: (workerConfig) => {
-  				if (workerConfig.name === "my-worker") {
-  					return {
-  						compatibility_flags: ["nodejs_compat"],
-  					};
-  				}
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        config: (workerConfig) => {
+          if (workerConfig.name === "my-worker") {
+            return {
+              compatibility_flags: ["nodejs_compat"],
+            };
+          }
+        },
+      }),
+    ],
   });
 
   // Modify the config in place
 
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			config: (workerConfig) => {
-  				workerConfig.compatibility_date = "2025-01-01";
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        config: (workerConfig) => {
+          workerConfig.compatibility_date = "2025-01-01";
+        },
+      }),
+    ],
   });
   ```
 
@@ -1035,6 +1057,7 @@
   Wrangler and Vite will continue to load `.env` files in order to configure themselves as a tool.
 
   Further details:
+
   - In `vite build` the local vars will be computed and stored in a `.dev.vars` file next to the compiled Worker code, so that `vite preview` can use them.
   - The `wrangler types` command will similarly read the `.env` files (if no `.dev.vars` files) in order to generate the `Env` interface.
   - If the `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV` environment variable is `"false"` then local dev variables will not be loaded from `.env` files.
@@ -1095,7 +1118,7 @@
 
   ```ts
   if (import.meta.hot) {
-  	import.meta.hot.accept();
+    import.meta.hot.accept();
   }
   ```
 
@@ -1246,13 +1269,13 @@
 
   ```jsonc
   {
-  	"assets": {
-  		"not_found_handling": "single-page-application",
-  		"run_worker_first": [
-  			"/api/*", // These routes go directly to the Worker
-  			"!/api/docs/*", // These routes are still treated as assets
-  		],
-  	},
+    "assets": {
+      "not_found_handling": "single-page-application",
+      "run_worker_first": [
+        "/api/*", // These routes go directly to the Worker
+        "!/api/docs/*" // These routes are still treated as assets
+      ]
+    }
   }
   ```
 
@@ -1287,6 +1310,7 @@
   Assets that are imported in the entry Worker are now automatically moved to the client build output. This enables importing assets in your Worker and accessing them via the [assets binding](https://developers.cloudflare.com/workers/static-assets/binding/#binding). See [Static Asset Handling](https://vite.dev/guide/assets) to find out about all the ways you can import assets in Vite.
 
   Additionally, a broader range of build scenarios are now supported. These are:
+
   - Assets only build with client entry/entries
   - Assets only build with no client entry/entries that includes `public` directory assets
   - Worker(s) + assets build with client entry/entries
@@ -1335,14 +1359,14 @@
   ```jsonc
   // ./worker-a/wrangler.jsonc
   {
-  	"name": "worker-a",
-  	"main": "./src/index.ts",
-  	"services": [
-  		{
-  			"binding": "SERVICE",
-  			"service": "worker-b",
-  		},
-  	],
+    "name": "worker-a",
+    "main": "./src/index.ts",
+    "services": [
+      {
+        "binding": "SERVICE",
+        "service": "worker-b"
+      }
+    ]
   }
   ```
 
@@ -1351,13 +1375,13 @@
   ```jsonc
   // ./worker-b/wrangler.jsonc
   {
-  	"name": "worker-b",
-  	"main": "./src/index.ts",
-  	"tail_consumers": [
-  		{
-  			"service": "worker-a",
-  		},
-  	],
+    "name": "worker-b",
+    "main": "./src/index.ts",
+    "tail_consumers": [
+      {
+        "service": "worker-a"
+      }
+    ]
   }
   ```
 
@@ -1398,12 +1422,12 @@
 
   ```js
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			// ...
-  			experimental: { mixedMode: true },
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        // ...
+        experimental: { mixedMode: true },
+      }),
+    ],
   });
   ```
 
