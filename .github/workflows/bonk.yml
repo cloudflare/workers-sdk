@@ -27,7 +27,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             /orgs/cloudflare/members/${{ github.event.comment.user.login }} \
-            --silent -i 2>/dev/null | head -1 | awk '{print $2}')
+            --silent -i 2>/dev/null | head -1 | awk '{print $2}') || true
           if [ "$STATUS" != "204" ]; then
             echo "User ${{ github.event.comment.user.login }} is not a member of the Cloudflare organization"
             exit 1
