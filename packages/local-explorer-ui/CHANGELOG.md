@@ -1,5 +1,61 @@
 # @cloudflare/local-explorer-ui
 
+## 0.9.0
+
+### Minor Changes
+
+- [#12972](https://github.com/cloudflare/workers-sdk/pull/12972) [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22) Thanks [@NuroDev](https://github.com/NuroDev)! - Add worker filtering to the local explorer UI
+
+  When multiple workers share a dev registry, all their bindings were previously shown together in a single flat list. The explorer now shows a worker selector dropdown, letting you inspect each worker's bindings independently.
+
+  The selected worker is reflected in the URL as a `?worker=` search param, so deep links work correctly. By default the explorer selects the worker that is hosting the dashboard itself.
+
+- [#12888](https://github.com/cloudflare/workers-sdk/pull/12888) [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb) Thanks [@emily-shen](https://github.com/emily-shen)! - Add R2 support to the local explorer.
+
+  The local explorer now supports the following:
+
+  - Viewing, modifying & deleting objects
+  - Uploading files
+  - Creating directories / prefixes
+
+  Note: The local explorer is an experimental WIP feature that is now enabled by default. This can still be opt-ed out of by using `X_LOCAL_EXPLORER=false` to disable it.
+
+### Patch Changes
+
+- [#12918](https://github.com/cloudflare/workers-sdk/pull/12918) [`3de3ce5`](https://github.com/cloudflare/workers-sdk/commit/3de3ce519383b634bd1315eb94d789ec8def0670) Thanks [@NuroDev](https://github.com/NuroDev)! - Fixed listing internal Cloudflare Durable Object tables.
+
+  The internal `_cf_KV` table that is used when using Durable Objects KV storage is now hidden from the table list dropdown in the local explorer as it is not accessible.
+
+## 0.8.2
+
+### Patch Changes
+
+- [#12877](https://github.com/cloudflare/workers-sdk/pull/12877) [`7dc3fb3`](https://github.com/cloudflare/workers-sdk/commit/7dc3fb36b1af4740f14409d8cdf9c50d8942a4df) Thanks [@NuroDev](https://github.com/NuroDev)! - Fixed table selection dropdown incorrect z-index.
+
+  Previously, the dropdown you used to select a table in the data studio had an incorrect or missing z-index, meanint it conflicted with the table row header & was partially cut off when you had too many tables. This change ensures that the dropdown is always "on top" and visible.
+
+## 0.8.1
+
+### Patch Changes
+
+- [#12864](https://github.com/cloudflare/workers-sdk/pull/12864) [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix local explorer's sidebar header link to point to the correct `/cdn-cgi/explorer/` path rather than `/`.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#12754](https://github.com/cloudflare/workers-sdk/pull/12754) [`e4d9510`](https://github.com/cloudflare/workers-sdk/commit/e4d9510c3439d313ba0e0f78bf00d0726d5f67e9) Thanks [@emily-shen](https://github.com/emily-shen)! - Add cross-process support to the local explorer
+
+  When running multiple miniflare processes, the local explorer will now be able to view and edit resources that are bound to workers in other miniflare instances.
+
+### Patch Changes
+
+- [#12828](https://github.com/cloudflare/workers-sdk/pull/12828) [`cb14820`](https://github.com/cloudflare/workers-sdk/commit/cb148200336ed57c56cb89028453ddd5fdef2e7b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Update `@hey-api/openapi-ts` to ^0.94.0
+
+- [#12779](https://github.com/cloudflare/workers-sdk/pull/12779) [`b2f8b47`](https://github.com/cloudflare/workers-sdk/commit/b2f8b47b19ef2a2235130a681da002206ef4c4e6) Thanks [@NuroDev](https://github.com/NuroDev)! - Refactors KV & sidebar to use route loaders.
+
+  This change improves the user experience of the Local Explorer dashboard by ensuring that the data used for the initial render is fetched server-side and passed down to the client. This avoids the initial flicker when loading in. Both D1 & Durable Object routes already incorporate this system.
+
 ## 0.7.0
 
 ### Minor Changes

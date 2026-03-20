@@ -17,7 +17,7 @@ const PADDING_RIGHT = 5;
 
 export const showHelp = (
 	args: Partial<C3Args> | null,
-	{ positionals, options, intro }: ArgumentsDefinition,
+	{ positionals, options, intro }: ArgumentsDefinition
 ) => {
 	const { name: pm } = detectPackageManager();
 
@@ -34,8 +34,8 @@ export const showHelp = (
 	if (args?.experimental) {
 		logRaw(
 			blue(
-				"You have selected experimental mode - the options below are filtered to those that support experimental mode.\n",
-			),
+				"You have selected experimental mode - the options below are filtered to those that support experimental mode.\n"
+			)
 		);
 	}
 
@@ -71,7 +71,7 @@ const renderPositionals = (positionals?: ArgDefinition[]) => {
 
 const renderOptions = (
 	args: Partial<C3Args> | null,
-	options?: OptionDefinition[],
+	options?: OptionDefinition[]
 ) => {
 	if (!options) {
 		return;

@@ -307,7 +307,9 @@ export async function fetchJson(url: string, info?: RequestInit) {
 export async function waitForReady(proc: Process) {
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
-		{ interval: 100, timeout: 20_000 }
+		// buildAndPreview does a full build before starting the server,
+		// so allow more time than the default.
+		{ interval: 100, timeout: 30_000 }
 	);
 	return match[1];
 }

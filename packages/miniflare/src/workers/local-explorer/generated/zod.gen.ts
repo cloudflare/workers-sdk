@@ -2,6 +2,54 @@
 
 import { z } from "zod";
 
+export const zR2Messages = z.array(z.string());
+
+export const zR2Errors = z.array(
+	z.object({
+		code: z.number().int().gte(1000),
+		message: z.string(),
+	})
+);
+
+export const zR2V4Response = z.object({
+	errors: zR2Errors,
+	messages: zR2Messages,
+	result: z.record(z.unknown()),
+	success: z.literal(true),
+});
+
+/**
+ * Name of the bucket.
+ */
+export const zR2BucketName = z
+	.string()
+	.min(3)
+	.max(64)
+	.regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]/);
+
+export const zR2V4ResponseFailure = z.object({
+	errors: zR2Errors,
+	messages: zR2Messages,
+	result: z.unknown().nullable(),
+	success: z.literal(false),
+});
+
+/**
+ * A single R2 bucket.
+ */
+export const zR2Bucket = z.object({
+	creation_date: z.string().optional(),
+	name: zR2BucketName.optional(),
+});
+
+export const zR2ResultInfo = z.record(z.unknown());
+
+export const zR2V4ResponseList = zR2V4Response.and(
+	z.object({
+		result_info: zR2ResultInfo.optional(),
+	})
+);
+
 /**
  * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
  */
@@ -33,7 +81,7 @@ export const zWorkersMessages = z.array(
 export const zWorkersApiResponseCommonFailure = z.object({
 	errors: zWorkersMessages,
 	messages: zWorkersMessages,
-	result: z.unknown(),
+	result: z.unknown().nullable(),
 	success: z.literal(false),
 });
 
@@ -59,6 +107,7 @@ export const zWorkersApiResponseCollection = zWorkersApiResponseCommon.and(
 				page: z.number().optional(),
 				per_page: z.number().optional(),
 				total_count: z.number().optional(),
+				total_pages: z.number().optional(),
 			})
 			.optional(),
 	})
@@ -136,7 +185,7 @@ export const zD1Messages = z.array(
 export const zD1ApiResponseCommonFailure = z.object({
 	errors: zD1Messages,
 	messages: zD1Messages,
-	result: z.unknown(),
+	result: z.unknown().nullable(),
 	success: z.literal(false),
 });
 
@@ -147,7 +196,13 @@ export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
  */
 export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
 
+/**
+ * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
+ */
+export const zD1JurisdictionNullable = z.enum(["eu", "fedramp"]);
+
 export const zD1DatabaseResponse = z.object({
+	jurisdiction: zD1JurisdictionNullable.optional(),
 	name: zD1DatabaseName.optional(),
 	uuid: zD1DatabaseIdentifier.optional(),
 	version: zD1DatabaseVersion.optional(),
@@ -159,14 +214,16 @@ export const zD1ApiResponseCommon = z.object({
 	success: z.literal(true),
 });
 
-export const zWorkersKvAny: z.ZodTypeAny = z.union([
-	z.string(),
-	z.number(),
-	z.number().int(),
-	z.boolean(),
-	z.union([z.record(z.unknown()), z.null()]),
-	z.array(z.lazy(() => zWorkersKvAny)),
-]);
+export const zWorkersKvAny: z.ZodTypeAny = z
+	.union([
+		z.string(),
+		z.number(),
+		z.number().int(),
+		z.boolean(),
+		z.record(z.unknown()),
+		z.array(z.lazy(() => zWorkersKvAny)),
+	])
+	.nullable();
 
 /**
  * Expires the key at a certain time, measured in number of seconds since the UNIX epoch.
@@ -176,14 +233,13 @@ export const zWorkersKvExpiration = z.number();
 export const zWorkersKvBulkGetResultWithMetadata = z.object({
 	values: z
 		.record(
-			z.union([
-				z.object({
+			z
+				.object({
 					expiration: zWorkersKvExpiration.optional(),
 					metadata: zWorkersKvAny.and(z.unknown()),
 					value: zWorkersKvAny.and(z.unknown()),
-				}),
-				z.null(),
-			])
+				})
+				.nullable()
 		)
 		.optional(),
 });
@@ -191,13 +247,9 @@ export const zWorkersKvBulkGetResultWithMetadata = z.object({
 export const zWorkersKvBulkGetResult = z.object({
 	values: z
 		.record(
-			z.union([
-				z.string(),
-				z.number(),
-				z.boolean(),
-				z.record(z.unknown()),
-				z.null(),
-			])
+			z
+				.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())])
+				.nullable()
 		)
 		.optional(),
 });
@@ -223,7 +275,7 @@ export const zWorkersKvApiResponseCommon = z.object({
 export const zWorkersKvApiResponseCommonNoResult =
 	zWorkersKvApiResponseCommon.and(
 		z.object({
-			result: z.union([z.record(z.unknown()), z.null()]).optional(),
+			result: z.record(z.unknown()).nullish(),
 		})
 	);
 
@@ -268,7 +320,7 @@ export const zWorkersKvNamespaceIdentifier = z.string().max(32).readonly();
 export const zWorkersKvApiResponseCommonFailure = z.object({
 	errors: zWorkersKvMessages,
 	messages: zWorkersKvMessages,
-	result: z.union([z.record(z.unknown()), z.null()]),
+	result: z.record(z.unknown()).nullable(),
 	success: z.literal(false),
 });
 
@@ -291,6 +343,37 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 		result_info: zWorkersKvResultInfo.optional(),
 	})
 );
+
+export const zR2Object = z.object({
+	key: z.string().optional(),
+	etag: z.string().optional(),
+	size: z.number().int().optional(),
+	last_modified: z.string().datetime().optional(),
+	http_metadata: z.record(z.string()).optional(),
+	custom_metadata: z.record(z.string()).optional(),
+});
+
+export const zR2ListObjectsResultInfo = z.object({
+	delimited: z.array(z.string()).optional(),
+	cursor: z.string().optional(),
+	is_truncated: z.string().optional(),
+});
+
+export const zR2HeadObjectResult = z.object({
+	key: z.string().optional(),
+	etag: z.string().optional(),
+	last_modified: z.string().optional(),
+	size: z.number().int().optional(),
+	http_metadata: z.record(z.string()).optional(),
+	custom_metadata: z.record(z.string()).optional(),
+});
+
+export const zR2PutObjectResult = z.object({
+	key: z.string().optional(),
+	etag: z.string().optional(),
+	size: z.number().int().optional(),
+	version: z.string().optional(),
+});
 
 export const zDoSqlWithParams = z.object({
 	sql: z.string().min(1),
@@ -318,6 +401,16 @@ export const zDoRawQueryResult = z.object({
 		.optional(),
 });
 
+export const zLocalExplorerWorker = z.object({
+	host: z.string(),
+	isSelf: z.boolean(),
+	name: z.string(),
+	port: z.number().int(),
+	protocol: z.string(),
+});
+
+export const zR2ResultInfoWritable = z.record(z.unknown());
+
 export const zWorkersNamespaceWritable = z.object({
 	class: z.string().optional(),
 	name: z.string().optional(),
@@ -326,18 +419,21 @@ export const zWorkersNamespaceWritable = z.object({
 });
 
 export const zD1DatabaseResponseWritable = z.object({
+	jurisdiction: zD1JurisdictionNullable.optional(),
 	name: zD1DatabaseName.optional(),
 	version: zD1DatabaseVersion.optional(),
 });
 
-export const zWorkersKvAnyWritable: z.ZodTypeAny = z.union([
-	z.string(),
-	z.number(),
-	z.number().int(),
-	z.boolean(),
-	z.union([z.record(z.unknown()), z.null()]),
-	z.array(z.lazy(() => zWorkersKvAnyWritable)),
-]);
+export const zWorkersKvAnyWritable: z.ZodTypeAny = z
+	.union([
+		z.string(),
+		z.number(),
+		z.number().int(),
+		z.boolean(),
+		z.record(z.unknown()),
+		z.array(z.lazy(() => zWorkersKvAnyWritable)),
+	])
+	.nullable();
 
 export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable.and(
 	z.unknown()
@@ -549,6 +645,137 @@ export const zDurableObjectsNamespaceListObjectsResponse =
 		})
 	);
 
+export const zR2ListBucketsData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List Buckets response.
+ */
+export const zR2ListBucketsResponse = zR2V4ResponseList.and(
+	z.object({
+		result: z
+			.object({
+				buckets: z.array(zR2Bucket).optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zR2GetBucketData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		bucket_name: zR2BucketName,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get Bucket response.
+ */
+export const zR2GetBucketResponse = zR2V4Response.and(
+	z.object({
+		result: zR2Bucket.optional(),
+	})
+);
+
+export const zR2BucketDeleteObjectsData = z.object({
+	body: z.array(z.string()),
+	path: z.object({
+		bucket_name: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete objects response.
+ */
+export const zR2BucketDeleteObjectsResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.array(
+				z.object({
+					key: z.string().optional(),
+				})
+			)
+			.optional(),
+	})
+);
+
+export const zR2BucketListObjectsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		bucket_name: z.string(),
+	}),
+	query: z
+		.object({
+			prefix: z.string().optional(),
+			delimiter: z.string().optional(),
+			cursor: z.string().optional(),
+			per_page: z.number().int().optional().default(1000),
+		})
+		.optional(),
+});
+
+/**
+ * List objects response.
+ */
+export const zR2BucketListObjectsResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zR2Object).optional(),
+		result_info: zR2ListObjectsResultInfo.optional(),
+	})
+);
+
+export const zR2BucketGetObjectData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		bucket_name: z.string(),
+		object_key: z.string(),
+	}),
+	query: z.never().optional(),
+	headers: z
+		.object({
+			"cf-metadata-only": z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Object content or metadata.
+ */
+export const zR2BucketGetObjectResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zR2HeadObjectResult.optional(),
+	})
+);
+
+export const zR2BucketPutObjectData = z.object({
+	body: z.string(),
+	path: z.object({
+		bucket_name: z.string(),
+		object_key: z.string(),
+	}),
+	query: z.never().optional(),
+	headers: z
+		.object({
+			"content-type": z.string().optional(),
+			"cf-r2-custom-metadata": z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Put object response.
+ */
+export const zR2BucketPutObjectResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: zR2PutObjectResult.optional(),
+	})
+);
+
 export const zDurableObjectsNamespaceQuerySqliteData = z.object({
 	body: z.union([zDoQueryById, zDoQueryByName]),
 	path: z.object({
@@ -566,3 +793,18 @@ export const zDurableObjectsNamespaceQuerySqliteResponse =
 			result: z.array(zDoRawQueryResult).optional(),
 		})
 	);
+
+export const zLocalExplorerListWorkersData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List workers response.
+ */
+export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zLocalExplorerWorker).optional(),
+	})
+);

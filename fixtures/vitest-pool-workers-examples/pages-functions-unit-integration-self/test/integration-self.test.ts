@@ -22,12 +22,6 @@ describe("functions", () => {
 		expect(response.status).toBe(200);
 		expect(await response.text()).toBe("VALUE");
 	});
-
-	it("uses isolated storage for each test", async ({ expect }) => {
-		// Check write in previous test undone
-		const response = await SELF.fetch("https://example.com/api/kv/key");
-		expect(response.status).toBe(204);
-	});
 });
 
 describe("assets", () => {

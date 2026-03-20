@@ -1,9 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in mockPostVersion callback */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, describe, expect, it, test, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
@@ -167,8 +166,8 @@ describe("versions secret bulk", () => {
 
 		await expect(
 			runWrangler(`versions secret bulk secrets.json --name script-name`)
-		).rejects.toThrowError(
-			`The contents of "secrets.json" is not valid JSON: "ParseError: InvalidSymbol"`
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The contents of "secrets.json" is not valid.]`
 		);
 	});
 

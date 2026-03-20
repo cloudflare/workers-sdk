@@ -1,5 +1,3 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -7,7 +5,7 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -94,7 +92,7 @@ describe("deploy", () => {
 	});
 
 	describe("bindings", () => {
-		it("should allow bindings with different names", async () => {
+		it("should allow bindings with different names", async ({ expect }) => {
 			writeWranglerConfig({
 				migrations: [
 					{
@@ -359,7 +357,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error when bindings of different types have the same name", async () => {
+		it("should error when bindings of different types have the same name", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -476,7 +476,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error when bindings of the same type have the same name", async () => {
+		it("should error when bindings of the same type have the same name", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -589,7 +591,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should error correctly when bindings of the same and different types use the same name", async () => {
+		it("should error correctly when bindings of the same and different types use the same name", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -751,7 +755,9 @@ describe("deploy", () => {
 		});
 
 		describe("[wasm_modules]", () => {
-			it("should be able to define wasm modules for service-worker format workers", async () => {
+			it("should be able to define wasm modules for service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					wasm_modules: {
 						TESTWASMNAME: "./path/to/test.wasm",
@@ -790,7 +796,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining wasm modules for modules format workers", async () => {
+			it("should error when defining wasm modules for modules format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					wasm_modules: {
 						TESTWASMNAME: "./path/to/test.wasm",
@@ -819,7 +827,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should resolve wasm modules relative to the wrangler.toml file", async () => {
+			it("should resolve wasm modules relative to the wrangler.toml file", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
 				fs.writeFileSync(
 					"./path/to/wrangler.toml",
@@ -869,7 +879,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should be able to import .wasm modules from service-worker format workers", async () => {
+			it("should be able to import .wasm modules from service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
 				fs.writeFileSync(
 					"./index.js",
@@ -910,7 +922,9 @@ describe("deploy", () => {
 		});
 
 		describe("[text_blobs]", () => {
-			it("should be able to define text blobs for service-worker format workers", async () => {
+			it("should be able to define text blobs for service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					text_blobs: {
 						TESTTEXTBLOBNAME: "./path/to/text.file",
@@ -952,7 +966,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining text blobs for modules format workers", async () => {
+			it("should error when defining text blobs for modules format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					text_blobs: {
 						TESTTEXTBLOBNAME: "./path/to/text.file",
@@ -981,7 +997,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should resolve text blobs relative to the wrangler.toml file", async () => {
+			it("should resolve text blobs relative to the wrangler.toml file", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
 				fs.writeFileSync(
 					"./path/to/wrangler.toml",
@@ -1037,7 +1055,9 @@ describe("deploy", () => {
 		});
 
 		describe("[data_blobs]", () => {
-			it("should be able to define data blobs for service-worker format workers", async () => {
+			it("should be able to define data blobs for service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					data_blobs: {
 						TESTDATABLOBNAME: "./path/to/data.bin",
@@ -1079,7 +1099,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining data blobs for modules format workers", async () => {
+			it("should error when defining data blobs for modules format workers", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					data_blobs: {
 						TESTDATABLOBNAME: "./path/to/data.bin",
@@ -1108,7 +1130,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should resolve data blobs relative to the wrangler.toml file", async () => {
+			it("should resolve data blobs relative to the wrangler.toml file", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
 				fs.writeFileSync(
 					"./path/to/wrangler.toml",
@@ -1164,7 +1188,7 @@ describe("deploy", () => {
 		});
 
 		describe("[vars]", () => {
-			it("should support json bindings", async () => {
+			it("should support json bindings", async ({ expect }) => {
 				writeWranglerConfig({
 					vars: {
 						text: "plain ol' string",
@@ -1208,7 +1232,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should render config vars literally and --var as hidden", async () => {
+			it("should render config vars literally and --var as hidden", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					vars: {
 						CONFIG_VAR: "visible value",
@@ -1236,7 +1262,7 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should read vars passed as cli arguments", async () => {
+			it("should read vars passed as cli arguments", async ({ expect }) => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1268,7 +1294,7 @@ describe("deploy", () => {
 		});
 
 		describe("[r2_buckets]", () => {
-			it("should support r2 bucket bindings", async () => {
+			it("should support r2 bucket bindings", async ({ expect }) => {
 				writeWranglerConfig({
 					r2_buckets: [{ binding: "FOO", bucket_name: "foo-bucket" }],
 				});
@@ -1302,7 +1328,7 @@ describe("deploy", () => {
 		});
 
 		describe("[logfwdr]", () => {
-			it("should support logfwdr bindings", async () => {
+			it("should support logfwdr bindings", async ({ expect }) => {
 				writeWranglerConfig({
 					logfwdr: {
 						bindings: [
@@ -1355,7 +1381,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when logfwdr schemas are specified", async () => {
+			it("should error when logfwdr schemas are specified", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					logfwdr: {
 						// @ts-expect-error this property been replaced with the unsafe.capnp section
@@ -1382,7 +1410,7 @@ describe("deploy", () => {
 		});
 
 		describe("[durable_objects]", () => {
-			it("should support durable object bindings", async () => {
+			it("should support durable object bindings", async ({ expect }) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -1432,7 +1460,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support durable object bindings to SQLite classes", async () => {
+			it("should support durable object bindings to SQLite classes", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -1484,7 +1514,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support service-workers binding to external durable objects", async () => {
+			it("should support service-workers binding to external durable objects", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -1531,7 +1563,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support module workers implementing durable objects", async () => {
+			it("should support module workers implementing durable objects", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -1582,7 +1616,7 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support durable objects and D1", async () => {
+			it("should support durable objects and D1", async ({ expect }) => {
 				writeWranglerConfig({
 					main: "index.js",
 					durable_objects: {
@@ -1643,7 +1677,7 @@ describe("deploy", () => {
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should support durable objects and D1", async () => {
+			it("should support durable objects and D1", async ({ expect }) => {
 				writeWranglerConfig({
 					main: "index.js",
 					durable_objects: {
@@ -1704,7 +1738,9 @@ describe("deploy", () => {
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should error when detecting a service-worker worker implementing durable objects", async () => {
+			it("should error when detecting a service-worker worker implementing durable objects", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -1730,7 +1766,7 @@ describe("deploy", () => {
 		});
 
 		describe("[services]", () => {
-			it("should support service bindings", async () => {
+			it("should support service bindings", async ({ expect }) => {
 				writeWranglerConfig({
 					services: [
 						{
@@ -1773,7 +1809,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support service bindings with entrypoints", async () => {
+			it("should support service bindings with entrypoints", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					services: [
 						{
@@ -1818,7 +1856,7 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support service bindings with props", async () => {
+			it("should support service bindings with props", async ({ expect }) => {
 				writeWranglerConfig({
 					services: [
 						{
@@ -1861,7 +1899,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support the internal and non-public facing cross_account_grant service binding field", async () => {
+			it("should support the internal and non-public facing cross_account_grant service binding field", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					services: [
 						{
@@ -1907,7 +1947,7 @@ describe("deploy", () => {
 		});
 
 		describe("[analytics_engine_datasets]", () => {
-			it("should support analytics engine bindings", async () => {
+			it("should support analytics engine bindings", async ({ expect }) => {
 				writeWranglerConfig({
 					analytics_engine_datasets: [
 						{ binding: "FOO", dataset: "foo-dataset" },
@@ -1943,7 +1983,9 @@ describe("deploy", () => {
 		});
 
 		describe("[dispatch_namespaces]", () => {
-			it("should support bindings to a dispatch namespace", async () => {
+			it("should support bindings to a dispatch namespace", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					dispatch_namespaces: [
 						{
@@ -1983,7 +2025,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support dispatch namespace bindings with an outbound worker", async () => {
+			it("should support dispatch namespace bindings with an outbound worker", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					dispatch_namespaces: [
 						{
@@ -2046,7 +2090,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support dispatch namespace bindings with parameterized outbounds", async () => {
+			it("should support dispatch namespace bindings with parameterized outbounds", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					dispatch_namespaces: [
 						{
@@ -2103,7 +2149,7 @@ describe("deploy", () => {
 
 		describe("[unsafe]", () => {
 			describe("[unsafe.bindings]", () => {
-				it("should stringify object in unsafe metadata", async () => {
+				it("should stringify object in unsafe metadata", async ({ expect }) => {
 					writeWranglerConfig({
 						unsafe: {
 							metadata: {
@@ -2150,7 +2196,7 @@ describe("deploy", () => {
 					`);
 				});
 
-				it("should warn if using unsafe bindings", async () => {
+				it("should warn if using unsafe bindings", async ({ expect }) => {
 					writeWranglerConfig({
 						unsafe: {
 							bindings: [
@@ -2201,7 +2247,9 @@ describe("deploy", () => {
 					`);
 				});
 
-				it("should warn if using unsafe bindings already handled by wrangler", async () => {
+				it("should warn if using unsafe bindings already handled by wrangler", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({
 						unsafe: {
 							bindings: [
@@ -2258,7 +2306,7 @@ describe("deploy", () => {
 				});
 			});
 			describe("[unsafe.capnp]", () => {
-				it("should accept a pre-compiled capnp schema", async () => {
+				it("should accept a pre-compiled capnp schema", async ({ expect }) => {
 					writeWranglerConfig({
 						unsafe: {
 							capnp: {
@@ -2294,7 +2342,9 @@ describe("deploy", () => {
 						"
 					`);
 				});
-				it("should error when both pre-compiled and uncompiled-capnp schemas are used", async () => {
+				it("should error when both pre-compiled and uncompiled-capnp schemas are used", async ({
+					expect,
+				}) => {
 					writeWranglerConfig({
 						unsafe: {
 							capnp: {
@@ -2312,7 +2362,7 @@ describe("deploy", () => {
 						  - The field "unsafe.capnp" cannot contain both "compiled_schema" and one of "base_path" or "source_schemas".]
 					`);
 				});
-				it("should error when no schemas are specified", async () => {
+				it("should error when no schemas are specified", async ({ expect }) => {
 					writeWranglerConfig({
 						unsafe: {
 							// @ts-expect-error This should error as the types expect something to be present
@@ -2328,7 +2378,9 @@ describe("deploy", () => {
 						  - Expected "unsafe.capnp.source_schemas" to be an array of strings but got undefined]
 					`);
 				});
-				it("should error when the capnp compiler is not present, but is required", async () => {
+				it("should error when the capnp compiler is not present, but is required", async ({
+					expect,
+				}) => {
 					(sync as Mock).mockReturnValue(false);
 					writeWranglerConfig({
 						unsafe: {
@@ -2346,7 +2398,7 @@ describe("deploy", () => {
 						`[Error: The capnp compiler is required to upload capnp schemas, but is not present.]`
 					);
 				});
-				it("should accept an uncompiled capnp schema", async () => {
+				it("should accept an uncompiled capnp schema", async ({ expect }) => {
 					(sync as Mock).mockReturnValue(true);
 					(spawnSync as Mock).mockImplementationOnce((cmd, args) => {
 						expect(cmd).toBe("capnp");

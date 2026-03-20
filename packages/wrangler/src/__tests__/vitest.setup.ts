@@ -10,7 +10,8 @@ chalk.level = 0;
 
 // In general we don't want the ConfigController to watch the config files
 // as this tends to make the tests flaky.
-vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "true");
+// eslint-disable-next-line turbo/no-undeclared-env-vars
+process.env.WRANGLER_CI_DISABLE_CONFIG_WATCHING = "true";
 
 /**
  * The relative path between the bundled code and the Wrangler package.
@@ -245,8 +246,18 @@ vi.mock("execa", async (importOriginal) => {
 	};
 });
 
+// Vitest 4's vi.unstubAllEnvs() does not reliably clean up process.env
+// Track env keys before each test and remove additions afterward.
+let envKeysBefore: Set<string>;
+beforeEach(() => {
+	envKeysBefore = new Set(Object.keys(process.env));
+});
 afterEach(() => {
-	// It is important that we clear mocks between tests to avoid leakage.
+	for (const key of Object.keys(process.env)) {
+		if (!envKeysBefore.has(key)) {
+			delete process.env[key];
+		}
+	}
 	vi.clearAllMocks();
 });
 

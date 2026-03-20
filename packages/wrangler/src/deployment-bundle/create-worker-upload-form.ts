@@ -154,6 +154,7 @@ export function createWorkerUploadForm(
 	const browser = extractBindingsOfType("browser", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
+	const stream = extractBindingsOfType("stream", bindings)[0];
 	const media = extractBindingsOfType("media", bindings)[0];
 	const version_metadata = extractBindingsOfType(
 		"version_metadata",
@@ -456,7 +457,7 @@ export function createWorkerUploadForm(
 						? source.contents
 						: readFileSync(source.path as string),
 				],
-				"path" in source ? source.path ?? name : name,
+				"path" in source ? (source.path ?? name) : name,
 				{ type: "application/wasm" }
 			)
 		);
@@ -484,6 +485,13 @@ export function createWorkerUploadForm(
 			name: images.binding,
 			type: "images",
 			raw: images.raw,
+		});
+	}
+
+	if (stream !== undefined) {
+		metadataBindings.push({
+			name: stream.binding,
+			type: "stream",
 		});
 	}
 
@@ -549,7 +557,7 @@ export function createWorkerUploadForm(
 						? source.contents
 						: readFileSync(source.path as string),
 				],
-				"path" in source ? source.path ?? name : name,
+				"path" in source ? (source.path ?? name) : name,
 				{ type: "application/octet-stream" }
 			)
 		);

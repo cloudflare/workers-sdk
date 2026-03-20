@@ -1,5 +1,37 @@
 # @cloudflare/containers-shared
 
+## 0.13.0
+
+### Minor Changes
+
+- [#12943](https://github.com/cloudflare/workers-sdk/pull/12943) [`0f10583`](https://github.com/cloudflare/workers-sdk/commit/0f10583f53d050df06413e1f65fb147a4aea9976) Thanks [@gabivlj](https://github.com/gabivlj)! - containers: Upgrade proxy-everything to cloudflare/proxy-everything:3cb1195
+
+  This proxy-everything version adds support to filter DNS queries, necessary for interceptOutboundHttp constrained by domain.
+
+### Patch Changes
+
+- [#12893](https://github.com/cloudflare/workers-sdk/pull/12893) [`782df44`](https://github.com/cloudflare/workers-sdk/commit/782df4495f14f1366cf03e808ddddea0102eb011) Thanks [@gpanders](https://github.com/gpanders)! - Rewrite `wrangler containers list` to use the paginated Dash API endpoint
+
+  `wrangler containers list` now fetches from the `/dash/applications` endpoint instead of `/applications`, displaying results in a paginated table with columns for ID, Name, State, Live Instances, and Last Modified. Container state is derived from health instance counters (active, degraded, provisioning, ready).
+
+  The command supports `--per-page` (default 25) for interactive pagination with Enter to load more and q/Esc to quit, and `--json` for machine-readable output. Non-interactive environments load all results in a single request.
+
+## 0.12.0
+
+### Minor Changes
+
+- [#12873](https://github.com/cloudflare/workers-sdk/pull/12873) [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68) Thanks [@gpanders](https://github.com/gpanders)! - Add `wrangler containers instances <application_id>` command to list container instances
+
+  Lists all container instances for a given application, matching the Dash instances view. Displays instance ID, state, location, version, and creation time. Supports pagination for applications with many instances. Also adds paginated request support to the containers-shared API client.
+
+## 0.11.0
+
+### Minor Changes
+
+- [#12857](https://github.com/cloudflare/workers-sdk/pull/12857) [`3f09bb2`](https://github.com/cloudflare/workers-sdk/commit/3f09bb2e22672c4a11dc5fcdaf9e6954d3e1973b) Thanks [@gabivlj](https://github.com/gabivlj)! - Update the `proxy-everything` image used for containers local dev
+
+  The egress interceptor image now supports HTTPS and ingress over HTTP CONNECT in workerd.
+
 ## 0.10.0
 
 ### Minor Changes

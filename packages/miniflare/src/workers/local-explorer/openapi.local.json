@@ -740,6 +740,431 @@
 				"tags": ["Durable Objects Namespace"]
 			}
 		},
+		"/r2/buckets": {
+			"get": {
+				"description": "Lists all R2 buckets on your account.",
+				"operationId": "r2-list-buckets",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/r2_v4_response_list"
+										},
+										{
+											"properties": {
+												"result": {
+													"properties": {
+														"buckets": {
+															"items": {
+																"$ref": "#/components/schemas/r2_bucket"
+															},
+															"type": "array"
+														}
+													},
+													"type": "object"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List Buckets response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/r2_v4_response_failure"
+								}
+							}
+						},
+						"description": "List Buckets response failure."
+					}
+				},
+				"summary": "List Buckets",
+				"tags": ["R2 Bucket"]
+			}
+		},
+		"/r2/buckets/{bucket_name}": {
+			"get": {
+				"description": "Gets properties of an existing R2 bucket.",
+				"operationId": "r2-get-bucket",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "bucket_name",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/r2_bucket_name"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/r2_v4_response"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/r2_bucket"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Get Bucket response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/r2_v4_response_failure"
+								}
+							}
+						},
+						"description": "Get Bucket response failure."
+					}
+				},
+				"summary": "Get Bucket",
+				"tags": ["R2 Bucket"]
+			}
+		},
+		"/r2/buckets/{bucket_name}/objects": {
+			"get": {
+				"description": "List objects in an R2 bucket with optional prefix and delimiter.",
+				"operationId": "r2-bucket-list-objects",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "bucket_name",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "prefix",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Filter objects by key prefix"
+					},
+					{
+						"in": "query",
+						"name": "delimiter",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Delimiter for directory-style listing (usually '/')"
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Pagination cursor from previous response"
+					},
+					{
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"type": "integer",
+							"default": 1000
+						},
+						"description": "Maximum number of objects to return"
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"type": "array",
+													"items": {
+														"$ref": "#/components/schemas/r2_object"
+													}
+												},
+												"result_info": {
+													"$ref": "#/components/schemas/r2_list-objects-result-info"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List objects response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List objects failure."
+					}
+				},
+				"summary": "List Objects in R2 Bucket",
+				"tags": ["R2 Bucket"]
+			},
+			"delete": {
+				"description": "Delete multiple objects from an R2 bucket.",
+				"operationId": "r2-bucket-delete-objects",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "bucket_name",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								},
+								"description": "Array of object keys to delete"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"key": {
+																"type": "string"
+															}
+														}
+													}
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Delete objects response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Delete objects failure."
+					}
+				},
+				"summary": "Delete Multiple Objects from R2 Bucket",
+				"tags": ["R2 Bucket"]
+			}
+		},
+		"/r2/buckets/{bucket_name}/objects/{object_key}": {
+			"get": {
+				"description": "Get an object from an R2 bucket. Use cf-metadata-only header for HEAD-like behavior.",
+				"operationId": "r2-bucket-get-object",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "bucket_name",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "object_key",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "cf-metadata-only",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Set to 'true' to return only metadata (HEAD-like behavior)"
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/r2_head-object-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							},
+							"application/octet-stream": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						},
+						"description": "Object content or metadata."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Get object failure."
+					}
+				},
+				"summary": "Get Object from R2 Bucket",
+				"tags": ["R2 Bucket"]
+			},
+			"put": {
+				"description": "Upload an object to an R2 bucket.",
+				"operationId": "r2-bucket-put-object",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "bucket_name",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "object_key",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "header",
+						"name": "content-type",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Content type of the object"
+					},
+					{
+						"in": "header",
+						"name": "cf-r2-custom-metadata",
+						"schema": {
+							"type": "string"
+						},
+						"description": "JSON-encoded custom metadata"
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/octet-stream": {
+							"schema": {
+								"type": "string",
+								"format": "binary"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"$ref": "#/components/schemas/r2_put-object-result"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "Put object response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Put object failure."
+					}
+				},
+				"summary": "Upload Object to R2 Bucket",
+				"tags": ["R2 Bucket"]
+			}
+		},
 		"/workers/durable_objects/namespaces/{namespace_id}/query": {
 			"post": {
 				"description": "Execute SQL queries against a Durable Object's SQLite storage.",
@@ -811,10 +1236,161 @@
 				"summary": "Query Durable Object SQLite",
 				"tags": ["Durable Objects Namespace"]
 			}
+		},
+		"/workers": {
+			"get": {
+				"description": "List all workers in the local dev registry.",
+				"operationId": "local-explorer-list-workers",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/workers_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/local-explorer_worker"
+													},
+													"type": "array"
+												}
+											},
+											"type": "object"
+										}
+									]
+								}
+							}
+						},
+						"description": "List workers response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List workers failure."
+					}
+				},
+				"summary": "List Workers in Dev Registry",
+				"tags": ["Local Explorer"]
+			}
 		}
 	},
 	"components": {
 		"schemas": {
+			"r2_v4_response": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/r2_errors"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/r2_messages"
+					},
+					"result": {
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [true],
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"r2_messages": {
+				"items": {
+					"type": "string"
+				},
+				"type": "array"
+			},
+			"r2_errors": {
+				"items": {
+					"properties": {
+						"code": {
+							"minimum": 1000,
+							"type": "integer"
+						},
+						"message": {
+							"type": "string"
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object",
+					"uniqueItems": true
+				},
+				"type": "array"
+			},
+			"r2_bucket_name": {
+				"description": "Name of the bucket.",
+				"example": "example-bucket",
+				"maxLength": 64,
+				"minLength": 3,
+				"pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]",
+				"type": "string"
+			},
+			"r2_v4_response_failure": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/r2_errors"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/r2_messages"
+					},
+					"result": {
+						"enum": [null],
+						"nullable": true,
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"enum": [false],
+						"example": false,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"r2_bucket": {
+				"description": "A single R2 bucket.",
+				"properties": {
+					"creation_date": {
+						"description": "Creation timestamp.",
+						"type": "string"
+					},
+					"name": {
+						"$ref": "#/components/schemas/r2_bucket_name"
+					}
+				},
+				"type": "object"
+			},
+			"r2_v4_response_list": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/r2_v4_response"
+					},
+					{
+						"properties": {
+							"result_info": {
+								"$ref": "#/components/schemas/r2_result_info"
+							}
+						},
+						"type": "object"
+					}
+				]
+			},
+			"r2_result_info": {
+				"properties": {},
+				"type": "object"
+			},
 			"workers_cursor": {
 				"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
 				"example": "AAAAANuhDN7SjacTnSVsDu3WW1Lvst6dxJGTjRY5BhxPXdf6L6uTcpd_NVtjhn11OUYRsVEykxoUwF-JQU4dn6QylZSKTOJuG0indrdn_MlHpMRtsxgXjs-RPdHYIVm3odE_uvEQ_dTQGFm8oikZMohns34DLBgrQpc",
@@ -958,6 +1534,11 @@
 									"total_count": {
 										"description": "Total results available without any search parameters.",
 										"example": 2000,
+										"type": "number"
+									},
+									"total_pages": {
+										"description": "The number of total pages in the entire result set.",
+										"example": 100,
 										"type": "number"
 									}
 								},
@@ -1183,6 +1764,9 @@
 			},
 			"d1_database-response": {
 				"properties": {
+					"jurisdiction": {
+						"$ref": "#/components/schemas/d1_jurisdiction-nullable"
+					},
 					"name": {
 						"$ref": "#/components/schemas/d1_database-name"
 					},
@@ -1204,6 +1788,13 @@
 				"description": "D1 database name.",
 				"example": "my-database",
 				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+				"type": "string"
+			},
+			"d1_jurisdiction-nullable": {
+				"description": "Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.",
+				"enum": ["eu", "fedramp"],
+				"example": "eu",
+				"nullable": true,
 				"type": "string"
 			},
 			"d1_api-response-common": {
@@ -1573,6 +2164,118 @@
 				},
 				"type": "object"
 			},
+			"r2_object": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "Object key (path)"
+					},
+					"etag": {
+						"type": "string",
+						"description": "Object ETag"
+					},
+					"size": {
+						"type": "integer",
+						"description": "Object size in bytes"
+					},
+					"last_modified": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Last modified timestamp"
+					},
+					"http_metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"description": "HTTP metadata for the object"
+					},
+					"custom_metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"description": "Custom user-defined metadata"
+					}
+				}
+			},
+			"r2_list-objects-result-info": {
+				"type": "object",
+				"properties": {
+					"delimited": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "Common prefixes when using delimiter (virtual directories)"
+					},
+					"cursor": {
+						"type": "string",
+						"description": "Cursor for fetching next page of results"
+					},
+					"is_truncated": {
+						"type": "string",
+						"description": "Whether there are more results to fetch"
+					}
+				}
+			},
+			"r2_head-object-result": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "Object key (path)"
+					},
+					"etag": {
+						"type": "string",
+						"description": "Object ETag"
+					},
+					"last_modified": {
+						"type": "string",
+						"description": "Last modified timestamp"
+					},
+					"size": {
+						"type": "integer",
+						"description": "Object size in bytes"
+					},
+					"http_metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"description": "HTTP metadata for the object"
+					},
+					"custom_metadata": {
+						"type": "object",
+						"additionalProperties": {
+							"type": "string"
+						},
+						"description": "Custom user-defined metadata"
+					}
+				}
+			},
+			"r2_put-object-result": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "Object key (path)"
+					},
+					"etag": {
+						"type": "string",
+						"description": "Object ETag"
+					},
+					"size": {
+						"type": "integer",
+						"description": "Object size in bytes"
+					},
+					"version": {
+						"type": "string",
+						"description": "Object version ID"
+					}
+				}
+			},
 			"do_sql-with-params": {
 				"type": "object",
 				"required": ["sql"],
@@ -1655,6 +2358,32 @@
 								"description": "Number of rows written during query execution"
 							}
 						}
+					}
+				}
+			},
+			"local-explorer_worker": {
+				"type": "object",
+				"required": ["host", "isSelf", "name", "port", "protocol"],
+				"properties": {
+					"host": {
+						"type": "string",
+						"description": "Hostname the worker is running on"
+					},
+					"isSelf": {
+						"type": "boolean",
+						"description": "Whether this worker is the one hosting the explorer"
+					},
+					"name": {
+						"type": "string",
+						"description": "Worker name from the dev registry"
+					},
+					"port": {
+						"type": "integer",
+						"description": "Port the worker is running on"
+					},
+					"protocol": {
+						"type": "string",
+						"description": "Protocol (http or https)"
 					}
 				}
 			}

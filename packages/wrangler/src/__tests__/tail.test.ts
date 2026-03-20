@@ -2,9 +2,8 @@ import { setTimeout } from "node:timers/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -917,10 +916,11 @@ describe("tail", () => {
 			await runWrangler("tail test-worker --format=json");
 			await api.ws.connected;
 			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
+			await vi.advanceTimersByTimeAsync(10000);
 			await expect(
 				vi.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Tail disconnected, exiting.]`
+				`[Error: "Tail disconnected, exiting."]`
 			);
 			await api.closeHelper();
 		});

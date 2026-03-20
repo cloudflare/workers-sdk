@@ -69,7 +69,7 @@ function BlobCellValue({ value, vector }: BlobCellValueProps): JSX.Element {
 
 	return (
 		<div className="flex w-full">
-			<span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-orange-600 dark:text-orange-400">
+			<span className="flex-1 truncate text-orange-600 dark:text-orange-400">
 				{prettifyBytes(bytes.subarray(0, 64))}
 			</span>
 			<div className="ml-2 flex-col items-center justify-center">
@@ -88,7 +88,6 @@ export const StudioTableDisplayCell = forwardRef<
 	HTMLDivElement,
 	TableCellProps
 >(({ align, header, onDoubleClick, value }, ref) => {
-	const className = cn("h-[35px] leading-[35px] font-mono flex", "pl-2 pr-2");
 	const isAlignRight = align === "right";
 
 	const textBaseStyle = cn(
@@ -116,14 +115,9 @@ export const StudioTableDisplayCell = forwardRef<
 			const firstLine = hasLineBreak ? value.slice(0, newlineIndex) : value;
 
 			return (
-				<span
-					className={cn(
-						"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-						"text-text"
-					)}
-				>
+				<span className={cn("flex-1 truncate", "text-text")}>
 					{firstLine}
-					{hasLineBreak && <span className="ml-1 text-muted font-sans">⏎</span>}
+					{hasLineBreak && <span className="ml-1 font-sans text-muted">⏎</span>}
 				</span>
 			);
 		}
@@ -132,7 +126,7 @@ export const StudioTableDisplayCell = forwardRef<
 			return (
 				<span
 					className={cn(
-						"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+						"flex-1 truncate",
 						"block grow text-right text-blue-700 dark:text-blue-300"
 					)}
 				>
@@ -161,7 +155,11 @@ export const StudioTableDisplayCell = forwardRef<
 	}, [value, textBaseStyle, header]);
 
 	return (
-		<div ref={ref} className={className} onDoubleClick={onDoubleClick}>
+		<div
+			ref={ref}
+			className={cn("flex h-8.75 font-mono leading-8.75", "pr-2 pl-2")}
+			onDoubleClick={onDoubleClick}
+		>
 			<div className="flex grow overflow-hidden">{content}</div>
 		</div>
 	);

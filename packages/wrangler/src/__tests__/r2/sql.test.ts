@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -55,8 +54,10 @@ describe("r2 sql", () => {
 		});
 
 		it("should require WRANGLER_R2_SQL_AUTH_TOKEN environment variable", async () => {
-			vi.stubEnv("WRANGLER_R2_SQL_AUTH_TOKEN", undefined);
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+			// Use delete directly because vi.stubEnv(name, undefined) doesn't
+			// propagate through Vitest 4's env proxy deleteProperty handler.
+			delete process.env.WRANGLER_R2_SQL_AUTH_TOKEN;
+			delete process.env.CLOUDFLARE_API_TOKEN;
 
 			await expect(
 				runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`)

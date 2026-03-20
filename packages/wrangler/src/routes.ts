@@ -17,7 +17,8 @@ export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	configPath: string | undefined,
-	apiToken?: ApiCredentials
+	apiToken?: ApiCredentials,
+	abortSignal?: AbortSignal
 ): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
@@ -26,7 +27,7 @@ export async function getWorkersDevSubdomain(
 			`/accounts/${accountId}/workers/subdomain`,
 			undefined,
 			undefined,
-			undefined,
+			abortSignal,
 			apiToken
 		);
 		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;

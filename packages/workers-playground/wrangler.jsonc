@@ -1,0 +1,14 @@
+// In production, this is an assets-only Worker.
+// The playground-preview-worker handles all routing and proxying.
+// Keep this in sync with `wrangler.dev.jsonc`.
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "workers-playground",
+	"compatibility_date": "2025-07-01",
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application",
+	},
+	"preview_urls": true,
+	"workers_dev": true,
+}

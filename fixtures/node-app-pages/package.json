@@ -14,7 +14,6 @@
 		"stripe": "^9.1.0"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"typescript": "catalog:default",

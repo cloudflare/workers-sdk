@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.16.0
+
+### Minor Changes
+
+- [#12763](https://github.com/cloudflare/workers-sdk/pull/12763) [`d028ffb`](https://github.com/cloudflare/workers-sdk/commit/d028ffb40c308e4ad7b2a98c6ae0577a2f4e8d8a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Graduate experimental Node.js module flags to date-gated flags
+
+  The following Node.js module compatibility flags are no longer experimental and are now automatically enabled for workers using `nodejs_compat` with a compatibility date of `2026-03-17` or later: `perf_hooks`, `v8`, `tty`, `child_process`, `worker_threads`, `readline`, and `repl`. Each flag can still be explicitly enabled or disabled via the corresponding `enable_`/`disable_` compatibility flags.
+
 ## 2.15.0
 
 ### Minor Changes
@@ -111,7 +119,7 @@
 
   ```jsonc
   {
-  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+    "compatibility_flags": ["experimental", "enable_nodejs_inspector_module"]
   }
   ```
 
@@ -131,7 +139,7 @@
 
   ```jsonc
   {
-  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+    "compatibility_flags": ["experimental", "enable_nodejs_inspector_module"]
   }
   ```
 

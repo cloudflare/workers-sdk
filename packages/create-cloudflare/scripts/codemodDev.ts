@@ -1,4 +1,4 @@
-import { join } from "path";
+import { join } from "node:path";
 import { parseFile, parseTs } from "helpers/codemod";
 import { writeFile } from "helpers/files";
 import * as recast from "recast";
@@ -21,7 +21,7 @@ import * as recast from "recast";
  */
 export const testTransform = (
 	filePath: string,
-	methods: recast.types.Visitor,
+	methods: recast.types.Visitor
 ) => {
 	const ast = parseFile(join(__dirname, filePath));
 
@@ -49,7 +49,7 @@ const testCodemod = () => {
 testCodemod();
 
 // This function can be used to inspect the AST of a particular snippet
-const printSnippet = () => {
+const _printSnippet = () => {
 	const snippet = `
     if(true) {
       console.log("potato");
@@ -59,4 +59,4 @@ const printSnippet = () => {
 	const program = parseTs(snippet).program;
 	console.log(program.body[0]);
 };
-// printSnippet();
+// _printSnippet();

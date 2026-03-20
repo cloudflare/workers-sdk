@@ -3,7 +3,7 @@ import { kCurrentWorker, ServiceDesignatorSchema } from "../plugins/core";
 import { RemoteProxyConnectionString } from "../plugins/shared";
 
 export function normaliseServiceDesignator(
-	service: z.infer<typeof ServiceDesignatorSchema>
+	service: z.infer<typeof ServiceDesignatorSchema>,
 ): {
 	serviceName: string | undefined;
 	entrypoint: string | undefined;
@@ -34,7 +34,7 @@ const unsafeVariableCharRegex = /[^0-9a-zA-Z_\$]/g;
 
 export function getOutboundDoProxyClassName(
 	scriptName: string,
-	className: string
+	className: string,
 ) {
 	return `${scriptName.replace(unsafeVariableCharRegex, "_")}_${className}`;
 }

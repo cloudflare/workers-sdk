@@ -286,10 +286,7 @@ export const dev = createCommand({
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		if (devInstance.teardownRegistryPromise) {
-			const teardownRegistry = await devInstance.teardownRegistryPromise;
-			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-		}
+
 		devInstance.unregisterHotKeys?.();
 	},
 });
@@ -327,6 +324,10 @@ export type AdditionalDevProps = {
 	ai?: {
 		binding: string;
 	};
+	stream?: {
+		binding: string;
+		remote?: boolean;
+	};
 	version_metadata?: {
 		binding: string;
 	};
@@ -356,6 +357,8 @@ export type StartDevOptions = DevArguments &
 		enableIpc?: boolean;
 		dockerPath?: string;
 		containerEngine?: string;
+		/** Set to `false` to disable persistence. When `true` or `undefined`, uses default persistence path. */
+		persist?: boolean;
 	};
 
 export async function getHostAndRoutes(

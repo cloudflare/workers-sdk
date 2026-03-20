@@ -35,13 +35,3 @@ it("increments count and allows direct access to instance/storage", async ({
 	expect(ids.length).toBe(1);
 	expect(ids[0].equals(id)).toBe(true);
 });
-
-it("uses isolated storage for each test", async ({ expect }) => {
-	// Check Durable Object from previous test removed
-	const ids = await listDurableObjectIds(env.COUNTER);
-	expect(ids.length).toBe(0);
-
-	// Check writes in previous test undone
-	const response = await SELF.fetch("https://example.com/path");
-	expect(await response.text()).toBe("1");
-});

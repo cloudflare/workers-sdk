@@ -12,14 +12,12 @@ export type WorkerResolvedConfig =
 	| AssetsOnlyWorkerResolvedConfig
 	| WorkerWithServerLogicResolvedConfig;
 
-export interface AssetsOnlyWorkerResolvedConfig
-	extends WorkerBaseResolvedConfig {
+export interface AssetsOnlyWorkerResolvedConfig extends WorkerBaseResolvedConfig {
 	type: "assets-only";
 	config: ResolvedAssetsOnlyConfig;
 }
 
-export interface WorkerWithServerLogicResolvedConfig
-	extends WorkerBaseResolvedConfig {
+export interface WorkerWithServerLogicResolvedConfig extends WorkerBaseResolvedConfig {
 	type: "worker";
 	config: ResolvedWorkerConfig;
 }
@@ -42,6 +40,12 @@ export type NonApplicableConfigMap = {
 		Extract<
 			keyof RawWorkerConfig,
 			NonApplicableWorkerConfigsInfo["notRelevant"][number]
+		>
+	>;
+	notSupportedOnAuxiliary: Set<
+		Extract<
+			keyof RawWorkerConfig,
+			NonApplicableWorkerConfigsInfo["notSupportedOnAuxiliary"][number]
 		>
 	>;
 };
@@ -93,6 +97,10 @@ export const nonApplicableWorkerConfigs = {
 		"site",
 		"tsconfig",
 	],
+	/**
+	 * Configs that are only supported on the entry worker and will be ignored on auxiliary workers
+	 */
+	notSupportedOnAuxiliary: ["assets"],
 } as const;
 
 /**
@@ -120,6 +128,7 @@ function readWorkerConfig(
 	const nonApplicable: NonApplicableConfigMap = {
 		replacedByVite: new Set(),
 		notRelevant: new Set(),
+		notSupportedOnAuxiliary: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
 		wrangler.unstable_readConfig(
@@ -209,7 +218,8 @@ export function getWarningForWorkersConfigs(
 	) => {
 		const nonApplicableLines = getWorkerNonApplicableWarnLines(
 			workerConfig,
-			`    - `
+			`    - `,
+			{ isAuxiliary: !isEntryWorker }
 		);
 
 		if (nonApplicableLines.length > 0) {
@@ -236,11 +246,13 @@ export function getWarningForWorkersConfigs(
 
 function getWorkerNonApplicableWarnLines(
 	workerConfig: WorkerResolvedConfig,
-	linePrefix: string
+	linePrefix: string,
+	options?: { isAuxiliary?: boolean }
 ): string[] {
 	const lines: string[] = [];
 
-	const { replacedByVite, notRelevant } = workerConfig.nonApplicable;
+	const { replacedByVite, notRelevant, notSupportedOnAuxiliary } =
+		workerConfig.nonApplicable;
 
 	for (const config of replacedByVite) {
 		lines.push(
@@ -251,6 +263,12 @@ function getWorkerNonApplicableWarnLines(
 	if (notRelevant.size > 0) {
 		lines.push(
 			`${linePrefix}${[...notRelevant].map((config) => `\`${config}\``).join(", ")} which ${notRelevant.size > 1 ? "are" : "is"} not relevant in the context of a Vite project`
+		);
+	}
+
+	if (options?.isAuxiliary && notSupportedOnAuxiliary.size > 0) {
+		lines.push(
+			`${linePrefix}${[...notSupportedOnAuxiliary].map((config) => `\`${config}\``).join(", ")} which ${notSupportedOnAuxiliary.size > 1 ? "are" : "is"} not supported for auxiliary workers`
 		);
 	}
 

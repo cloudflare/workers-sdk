@@ -245,4 +245,174 @@ describe("Local Explorer API validation", () => {
 		});
 		expect(status).toBe(403);
 	});
+
+	test("blocks subdomains of localhost hostnames", async ({ expect }) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "http://sub.localhost:8787" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
+	describe("routing", () => {
+		test("serves explorer UI at /cdn-cgi/explorer", async ({ expect }) => {
+			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer");
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("serves explorer UI at /cdn-cgi/explorer/", async ({ expect }) => {
+			const res = await mf.dispatchFetch("http://localhost/cdn-cgi/explorer/");
+			expect(res.status).toBe(200);
+			expect(res.headers.get("Content-Type")).toContain("text/html");
+
+			await res.arrayBuffer(); // Drain
+		});
+
+		test("does not match paths that start with /cdn-cgi/explorer but are not the explorer", async ({
+			expect,
+		}) => {
+			// This should fall through to the user worker, not match the explorer
+			const res = await mf.dispatchFetch(
+				"http://localhost/cdn-cgi/explorerfoo"
+			);
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("user worker");
+		});
+	});
+});
+
+describe("Local Explorer works with custom routes", () => {
+	let mf: Miniflare;
+
+	beforeAll(async () => {
+		mf = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("user worker"); } }`,
+			unsafeLocalExplorer: true,
+			kvNamespaces: {
+				TEST_KV: "test-kv-id",
+			},
+			// Configure a custom route that would trigger header rewriting
+			routes: ["my-custom-site.com/*"],
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	test("allows localhost requests even with custom routes configured", async ({
+		expect,
+	}) => {
+		// Request from localhost should be allowed
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "http://localhost:8787" },
+		});
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+	});
+
+	test("blocks external origin even with custom routes configured", async ({
+		expect,
+	}) => {
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://evil.com" },
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+
+	test("allows configured route hostname for same-origin requests", async ({
+		expect,
+	}) => {
+		const url = await mf.ready;
+		const status = await new Promise<number>((resolve, reject) => {
+			const req = http.get(
+				`${url.origin}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`,
+				{ setHost: false, headers: { Host: "my-custom-site.com" } },
+				(res) => {
+					res.resume();
+					resolve(res.statusCode ?? 0);
+				}
+			);
+			req.on("error", reject);
+		});
+		expect(status).toBe(200);
+	});
+
+	test("blocks non-configured external hostname (DNS rebinding)", async ({
+		expect,
+	}) => {
+		const url = await mf.ready;
+		const status = await new Promise<number>((resolve, reject) => {
+			const req = http.get(
+				`${url.origin}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`,
+				{ setHost: false, headers: { Host: "evil.com" } },
+				(res) => {
+					res.resume();
+					resolve(res.statusCode ?? 0);
+				}
+			);
+			req.on("error", reject);
+		});
+		expect(status).toBe(403);
+	});
+
+	test("blocks cross-origin request to configured route hostname", async ({
+		expect,
+	}) => {
+		// This simulates an attack where evil.com makes a request to the local server
+		// that's listening on a configured route hostname
+		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: {
+				Host: "my-custom-site.com",
+				Origin: "https://evil.com",
+			},
+		});
+		expect(res.status).toBe(403);
+		await res.arrayBuffer();
+	});
+});
+
+describe("Local Explorer works with wildcard routes", () => {
+	let mf: Miniflare;
+
+	beforeAll(async () => {
+		mf = new Miniflare({
+			inspectorPort: 0,
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: `export default { fetch() { return new Response("user worker"); } }`,
+			unsafeLocalExplorer: true,
+			kvNamespaces: {
+				TEST_KV: "test-kv-id",
+			},
+			routes: ["*.example.com/*"],
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	test("allows Origin matching wildcard route base domain", async ({
+		expect,
+	}) => {
+		let res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://example.com" },
+		});
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+
+		res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
+			headers: { Origin: "https://sub.example.com" },
+		});
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+	});
 });

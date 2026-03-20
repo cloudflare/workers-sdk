@@ -133,7 +133,7 @@ export function convertConfigToBindings(
 					output[binding] = {
 						type: "kv_namespace",
 						...x,
-						id: usePreviewIds ? x.preview_id ?? x.id : x.id,
+						id: usePreviewIds ? (x.preview_id ?? x.id) : x.id,
 					};
 				}
 				break;
@@ -215,7 +215,7 @@ export function convertConfigToBindings(
 						type: "r2_bucket",
 						...x,
 						bucket_name: usePreviewIds
-							? x.preview_bucket_name ?? x.bucket_name
+							? (x.preview_bucket_name ?? x.bucket_name)
 							: x.bucket_name,
 					};
 				}
@@ -227,7 +227,7 @@ export function convertConfigToBindings(
 						type: "d1",
 						...x,
 						database_id: usePreviewIds
-							? x.preview_database_id ?? x.database_id
+							? (x.preview_database_id ?? x.database_id)
 							: x.database_id,
 					};
 				}
@@ -277,6 +277,11 @@ export function convertConfigToBindings(
 			case "images": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "images", ...x };
+				break;
+			}
+			case "stream": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "stream", ...x };
 				break;
 			}
 			case "version_metadata": {
@@ -380,6 +385,7 @@ export type StartDevOptionsBindings = Pick<
 	| "services"
 	| "r2"
 	| "ai"
+	| "stream"
 	| "version_metadata"
 	| "d1Databases"
 >;
@@ -400,6 +406,7 @@ export function convertStartDevOptionsToBindings(
 		services: inputBindings.services,
 		r2_buckets: inputBindings.r2,
 		ai: inputBindings.ai,
+		stream: inputBindings.stream,
 		version_metadata: inputBindings.version_metadata,
 		d1_databases: inputBindings.d1Databases,
 	};
@@ -649,6 +656,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "browser":
 			case "ai":
 			case "images":
+			case "stream":
 			case "version_metadata":
 			case "media":
 			case "inherit": {

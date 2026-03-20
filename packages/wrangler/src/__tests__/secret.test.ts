@@ -4,9 +4,8 @@ import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,
@@ -1103,8 +1102,8 @@ describe("wrangler secret", () => {
 
 			await expect(
 				runWrangler("secret bulk ./secret.json --name script-name")
-			).rejects.toThrowError(
-				`The contents of "./secret.json" is not valid JSON`
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The contents of "./secret.json" is not valid.]`
 			);
 		});
 

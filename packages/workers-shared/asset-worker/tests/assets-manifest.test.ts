@@ -1,5 +1,4 @@
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	CONTENT_HASH_OFFSET,
 	ENTRY_SIZE,
@@ -59,7 +58,7 @@ const encode = async (
 };
 
 describe("encode()", () => {
-	it("works", async () => {
+	it("works", async ({ expect }) => {
 		const snapshotValue = new Uint8Array(AssetManifestFixture);
 
 		const computedValue = new Uint8Array(
@@ -128,9 +127,9 @@ const makeManifestOfLength = async (length: number) => {
 	return { entries, manifest: await encode(entries) };
 };
 
-describe("search methods", async () => {
+describe("search methods", () => {
 	describe("binary search", () => {
-		it("doesn't error for an empty manifest", async () => {
+		it("doesn't error for an empty manifest", async ({ expect }) => {
 			const { manifest } = await makeManifestOfLength(0);
 			const foundEntry = binarySearch(
 				new Uint8Array(manifest),
@@ -139,7 +138,7 @@ describe("search methods", async () => {
 			expect(foundEntry).toBe(false);
 		});
 
-		it("works for a single entry manifest", async () => {
+		it("works for a single entry manifest", async ({ expect }) => {
 			const { manifest, entries } = await makeManifestOfLength(1);
 			for (const searchEntry of entries) {
 				const path = await hashPath(searchEntry.path);
@@ -152,7 +151,7 @@ describe("search methods", async () => {
 			}
 		});
 
-		it("works for a two entry manifest", async () => {
+		it("works for a two entry manifest", async ({ expect }) => {
 			const { manifest, entries } = await makeManifestOfLength(2);
 			for (const searchEntry of entries) {
 				const path = await hashPath(searchEntry.path);
@@ -165,7 +164,7 @@ describe("search methods", async () => {
 			}
 		});
 
-		it("works for a three entry manifest", async () => {
+		it("works for a three entry manifest", async ({ expect }) => {
 			const { manifest, entries } = await makeManifestOfLength(3);
 			for (const searchEntry of entries) {
 				const path = await hashPath(searchEntry.path);
@@ -178,7 +177,7 @@ describe("search methods", async () => {
 			}
 		});
 
-		it("works for a 20,000 entry manifest", async () => {
+		it("works for a 20,000 entry manifest", async ({ expect }) => {
 			const { manifest, entries } = await makeManifestOfLength(20_000);
 			for (const searchEntry of entries) {
 				const path = await hashPath(searchEntry.path);
@@ -191,7 +190,7 @@ describe("search methods", async () => {
 			}
 		});
 
-		it("returns false for non-existent paths", async () => {
+		it("returns false for non-existent paths", async ({ expect }) => {
 			const { manifest } = await makeManifestOfLength(10);
 			for (const searchEntry of [
 				new Uint8Array(PATH_HASH_SIZE),
@@ -203,7 +202,9 @@ describe("search methods", async () => {
 			}
 		});
 
-		it("throws an error if the search value is longer than the current value", async () => {
+		it("throws an error if the search value is longer than the current value", async ({
+			expect,
+		}) => {
 			const { manifest } = await makeManifestOfLength(10);
 			expect(() => {
 				binarySearch(

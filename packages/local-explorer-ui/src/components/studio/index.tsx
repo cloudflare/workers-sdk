@@ -414,7 +414,7 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 		const tableMatch = selectedTab.identifier.match(
 			/^(?:table|edit-table)\/[^.]+\.(.+)$/
 		);
-		lastOpenedTable.current = tableMatch ? tableMatch[1] ?? null : null;
+		lastOpenedTable.current = tableMatch ? (tableMatch[1] ?? null) : null;
 		onTableChange(tableMatch?.[1]);
 	}, [initialTable, loadingSchema, onTableChange, selectedTabKey, tabs]);
 
@@ -524,7 +524,7 @@ export const Studio = forwardRef<StudioRef, StudioProps>(function Studio(
 		<ModalProvider>
 			<StudioContextMenuProvider>
 				<StudioContextProvider value={contextValues}>
-					<div className="relative w-full h-full overflow-hidden">
+					<div className="relative h-full w-full overflow-hidden">
 						<StudioWindowTabPane />
 					</div>
 				</StudioContextProvider>

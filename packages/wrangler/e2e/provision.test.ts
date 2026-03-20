@@ -1,6 +1,6 @@
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, assert, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, assert, beforeEach, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -26,7 +26,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 		let d1Id: string;
 		const helper = new WranglerE2ETestHelper();
 
-		it("can run dev without resource ids", async () => {
+		it("can run dev without resource ids", async ({ expect }) => {
 			const worker = helper.runLongLived("wrangler dev");
 
 			const { url } = await worker.waitForReady();
@@ -74,7 +74,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 		});
 
-		it("can provision resources and deploy worker", async () => {
+		it("can provision resources and deploy worker", async ({ expect }) => {
 			const worker = helper.runLongLived(`wrangler deploy`);
 			await worker.exitCode;
 			const output = await worker.output;
@@ -129,7 +129,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
-		it("can inherit bindings on re-deploy and won't re-provision", async () => {
+		it("can inherit bindings on re-deploy and won't re-provision", async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived(`wrangler deploy`);
 			await worker.exitCode;
 			const output = await worker.output;
@@ -153,7 +155,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
-		it("can inspect current bindings", async () => {
+		it("can inspect current bindings", async ({ expect }) => {
 			const versionsRaw = await helper.run(`wrangler versions list --json`);
 
 			const versions = JSON.parse(versionsRaw.stdout) as unknown[];
@@ -181,7 +183,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				env.R2_WITH_NAME (does-not-exist)                                              R2 Bucket"
 			`);
 		});
-		it("can inherit and provision resources on version upload", async () => {
+		it("can inherit and provision resources on version upload", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 						name = "${workerName}"

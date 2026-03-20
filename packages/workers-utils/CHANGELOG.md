@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.13.0
+
+### Minor Changes
+
+- [#12957](https://github.com/cloudflare/workers-sdk/pull/12957) [`62545c9`](https://github.com/cloudflare/workers-sdk/commit/62545c9e9146d5107df7bd3d75fa3c453fa7d96b) Thanks [@natewong1313](https://github.com/natewong1313)! - Add Stream binding support to Wrangler and workers-utils
+
+  Wrangler and workers-utils now recognize the `stream` binding in configuration, deployment metadata, and generated worker types. This enables projects to declare Stream bindings in `wrangler.json` and have the binding represented consistently across validation, metadata mapping, and type generation.
+
 ## 0.12.0
 
 ### Minor Changes
@@ -12,9 +20,9 @@
 
   ```jsonc
   {
-  	"cache": {
-  		"enabled": true,
-  	},
+    "cache": {
+      "enabled": true
+    }
   }
   ```
 
@@ -86,11 +94,11 @@
 
   ```json
   {
-  	"$schema": "./node_modules/wrangler/config-schema.json",
-  	"limits": {
-  		"cpu_ms": 1000,
-  		"subrequests": 150 // newly added field
-  	}
+    "$schema": "./node_modules/wrangler/config-schema.json",
+    "limits": {
+      "cpu_ms": 1000,
+      "subrequests": 150 // newly added field
+    }
   }
   ```
 
@@ -128,9 +136,9 @@
   ```jsonc
   // wrangler.json
   {
-  	"dev": {
-  		"inspector_ip": "0.0.0.0",
-  	},
+    "dev": {
+      "inspector_ip": "0.0.0.0"
+    }
   }
   ```
 
@@ -182,13 +190,13 @@
 
   ```json
   {
-  	"$schema": "node_modules/wrangler/config-schema.json",
-  	"name": "example",
-  	"main": "src/index.ts",
-  	"compatibility_date": "2025-12-12",
-  	"dev": {
-  		"generate_types": true
-  	}
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "example",
+    "main": "src/index.ts",
+    "compatibility_date": "2025-12-12",
+    "dev": {
+      "generate_types": true
+    }
   }
   ```
 

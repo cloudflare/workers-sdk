@@ -80,7 +80,7 @@ export interface ConfigBundle {
 	rules: Config["rules"];
 	inspectorPort: number | undefined;
 	inspectorHost: string | undefined;
-	localPersistencePath: string | null;
+	localPersistencePath: string | false;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
@@ -883,7 +883,7 @@ export function buildMiniflareBindingOptions(
 export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
 ): string | undefined {
-	if (localPersistencePath !== null) {
+	if (localPersistencePath !== false) {
 		const v3Path = path.join(localPersistencePath, "v3");
 		return v3Path;
 	}

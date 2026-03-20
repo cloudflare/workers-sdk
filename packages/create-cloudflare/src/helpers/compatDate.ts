@@ -19,8 +19,8 @@ export function getWorkerdCompatibilityDate(projectPath: string) {
 	if (source === "fallback") {
 		s.stop(
 			`${brandColor("compatibility date")} ${dim(
-				` Could not find workerd date, falling back to ${date}`,
-			)}`,
+				` Could not find workerd date, falling back to ${date}`
+			)}`
 		);
 	} else {
 		s.stop(`${brandColor("compatibility date")} ${dim(date)}`);
@@ -43,7 +43,7 @@ export function getLatestTypesEntrypoint(ctx: C3Context) {
 		ctx.project.path,
 		"node_modules",
 		"@cloudflare",
-		"workers-types",
+		"workers-types"
 	);
 
 	try {

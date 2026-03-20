@@ -99,6 +99,7 @@ export function printBindings(
 	const text_blobs = extractBindingsOfType("text_blob", bindings);
 	const browser = extractBindingsOfType("browser", bindings);
 	const images = extractBindingsOfType("images", bindings);
+	const stream = extractBindingsOfType("stream", bindings);
 	const ai = extractBindingsOfType("ai", bindings);
 	const version_metadata = extractBindingsOfType("version_metadata", bindings);
 	// Extract all vars (plain_text, json, secret_text) together to preserve insertion order
@@ -292,7 +293,7 @@ export function printBindings(
 					const value =
 						typeof database_id == "symbol"
 							? database_id
-							: preview_database_id ?? database_name ?? database_id;
+							: (preview_database_id ?? database_name ?? database_id);
 
 					return {
 						name: binding,
@@ -508,6 +509,23 @@ export function printBindings(
 		);
 	}
 
+	if (stream.length > 0) {
+		output.push(
+			...stream.map(({ binding, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("stream"),
+				value: undefined,
+				mode: getMode({
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
+				}),
+			}))
+		);
+	}
+
 	if (media.length > 0) {
 		output.push(
 			...media.map(({ binding, remote }) => ({
@@ -714,7 +732,9 @@ export function printBindings(
 
 		const maxValueLength = Math.max(
 			...output.map((b) =>
-				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
+				typeof b.value === "symbol"
+					? "inherited".length
+					: (b.value?.length ?? 0)
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
@@ -761,7 +781,7 @@ export function printBindings(
 			const bindingValue = dim(
 				typeof binding.value === "symbol"
 					? chalk.italic("inherited")
-					: binding.value ?? ""
+					: (binding.value ?? "")
 			);
 			const bindingString = padEndAnsi(
 				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,

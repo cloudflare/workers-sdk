@@ -16,13 +16,13 @@ vi.mock("helpers/files");
 const mockInsideGitRepo = (isInside = true) => {
 	if (isInside) {
 		vi.mocked(runCommand).mockResolvedValueOnce(
-			"On branch master\nnothing to commit, working tree clean",
+			"On branch master\nnothing to commit, working tree clean"
 		);
 	} else {
 		vi.mocked(runCommand).mockRejectedValueOnce(
 			new Error(
-				"fatal: not a git repository (or any of the parent directories): .git",
-			),
+				"fatal: not a git repository (or any of the parent directories): .git"
+			)
 		);
 	}
 };
@@ -37,7 +37,7 @@ describe("deploy helpers", async () => {
 			}
 
 			throw new Error(
-				"If you don't want to accept the default, you must mock this function.",
+				"If you don't want to accept the default, you must mock this function."
 			);
 		});
 	});
@@ -134,12 +134,12 @@ describe("deploy helpers", async () => {
 			mockInsideGitRepo(false);
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 			vi.mocked(readFile).mockImplementationOnce(
-				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`,
+				() => `{"type":"deploy", "targets":["${deployedUrl}"]}`
 			);
 			await runDeploy(ctx);
 			expect(runCommand).toHaveBeenCalledWith(
 				["npm", "run", "deploy", "--", "--commit-message", `"${commitMsg}"`],
-				expect.any(Object),
+				expect.any(Object)
 			);
 			expect(ctx.deployment.url).toBe(deployedUrl);
 		});
@@ -148,7 +148,7 @@ describe("deploy helpers", async () => {
 			const ctx = createTestContext();
 			ctx.account = undefined;
 			await expect(() => runDeploy(ctx)).rejects.toThrow(
-				"Failed to read Cloudflare account.",
+				"Failed to read Cloudflare account."
 			);
 		});
 
@@ -161,7 +161,7 @@ describe("deploy helpers", async () => {
 			vi.mocked(runCommand).mockResolvedValueOnce("");
 
 			await expect(() => runDeploy(ctx)).rejects.toThrow(
-				"Failed to find deployment url.",
+				"Failed to find deployment url."
 			);
 		});
 	});

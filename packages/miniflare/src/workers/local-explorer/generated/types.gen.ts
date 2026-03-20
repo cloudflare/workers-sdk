@@ -4,6 +4,59 @@ export type ClientOptions = {
 	baseUrl: `${string}://${string}/cdn-cgi/explorer/api` | (string & {});
 };
 
+export type R2V4Response = {
+	errors: R2Errors;
+	messages: R2Messages;
+	result: {
+		[key: string]: unknown;
+	};
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: true;
+};
+
+export type R2Messages = Array<string>;
+
+export type R2Errors = Array<{
+	code: number;
+	message: string;
+}>;
+
+/**
+ * Name of the bucket.
+ */
+export type R2BucketName = string;
+
+export type R2V4ResponseFailure = {
+	errors: R2Errors;
+	messages: R2Messages;
+	result: null;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: false;
+};
+
+/**
+ * A single R2 bucket.
+ */
+export type R2Bucket = {
+	/**
+	 * Creation timestamp.
+	 */
+	creation_date?: string;
+	name?: R2BucketName;
+};
+
+export type R2V4ResponseList = R2V4Response & {
+	result_info?: R2ResultInfo;
+};
+
+export type R2ResultInfo = {
+	[key: string]: unknown;
+};
+
 /**
  * Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
  */
@@ -70,6 +123,10 @@ export type WorkersApiResponseCollection = WorkersApiResponseCommon & {
 		 * Total results available without any search parameters.
 		 */
 		total_count?: number;
+		/**
+		 * The number of total pages in the entire result set.
+		 */
+		total_pages?: number;
 	};
 };
 
@@ -186,6 +243,7 @@ export type D1Messages = Array<{
 }>;
 
 export type D1DatabaseResponse = {
+	jurisdiction?: D1JurisdictionNullable;
 	name?: D1DatabaseName;
 	uuid?: D1DatabaseIdentifier;
 	version?: D1DatabaseVersion;
@@ -197,6 +255,11 @@ export type D1DatabaseVersion = string;
  * D1 database name.
  */
 export type D1DatabaseName = string;
+
+/**
+ * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
+ */
+export type D1JurisdictionNullable = "eu" | "fedramp";
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -354,6 +417,102 @@ export type WorkersKvResultInfo = {
 	count?: number;
 };
 
+export type R2Object = {
+	/**
+	 * Object key (path)
+	 */
+	key?: string;
+	/**
+	 * Object ETag
+	 */
+	etag?: string;
+	/**
+	 * Object size in bytes
+	 */
+	size?: number;
+	/**
+	 * Last modified timestamp
+	 */
+	last_modified?: string;
+	/**
+	 * HTTP metadata for the object
+	 */
+	http_metadata?: {
+		[key: string]: string;
+	};
+	/**
+	 * Custom user-defined metadata
+	 */
+	custom_metadata?: {
+		[key: string]: string;
+	};
+};
+
+export type R2ListObjectsResultInfo = {
+	/**
+	 * Common prefixes when using delimiter (virtual directories)
+	 */
+	delimited?: Array<string>;
+	/**
+	 * Cursor for fetching next page of results
+	 */
+	cursor?: string;
+	/**
+	 * Whether there are more results to fetch
+	 */
+	is_truncated?: string;
+};
+
+export type R2HeadObjectResult = {
+	/**
+	 * Object key (path)
+	 */
+	key?: string;
+	/**
+	 * Object ETag
+	 */
+	etag?: string;
+	/**
+	 * Last modified timestamp
+	 */
+	last_modified?: string;
+	/**
+	 * Object size in bytes
+	 */
+	size?: number;
+	/**
+	 * HTTP metadata for the object
+	 */
+	http_metadata?: {
+		[key: string]: string;
+	};
+	/**
+	 * Custom user-defined metadata
+	 */
+	custom_metadata?: {
+		[key: string]: string;
+	};
+};
+
+export type R2PutObjectResult = {
+	/**
+	 * Object key (path)
+	 */
+	key?: string;
+	/**
+	 * Object ETag
+	 */
+	etag?: string;
+	/**
+	 * Object size in bytes
+	 */
+	size?: number;
+	/**
+	 * Object version ID
+	 */
+	version?: string;
+};
+
 export type DoSqlWithParams = {
 	/**
 	 * SQL query to execute
@@ -408,6 +567,33 @@ export type DoRawQueryResult = {
 	};
 };
 
+export type LocalExplorerWorker = {
+	/**
+	 * Hostname the worker is running on
+	 */
+	host: string;
+	/**
+	 * Whether this worker is the one hosting the explorer
+	 */
+	isSelf: boolean;
+	/**
+	 * Worker name from the dev registry
+	 */
+	name: string;
+	/**
+	 * Port the worker is running on
+	 */
+	port: number;
+	/**
+	 * Protocol (http or https)
+	 */
+	protocol: string;
+};
+
+export type R2ResultInfoWritable = {
+	[key: string]: unknown;
+};
+
 export type WorkersNamespaceWritable = {
 	class?: string;
 	name?: string;
@@ -416,6 +602,7 @@ export type WorkersNamespaceWritable = {
 };
 
 export type D1DatabaseResponseWritable = {
+	jurisdiction?: D1JurisdictionNullable;
 	name?: D1DatabaseName;
 	version?: D1DatabaseVersion;
 };
@@ -806,6 +993,231 @@ export type DurableObjectsNamespaceListObjectsResponses = {
 export type DurableObjectsNamespaceListObjectsResponse =
 	DurableObjectsNamespaceListObjectsResponses[keyof DurableObjectsNamespaceListObjectsResponses];
 
+export type R2ListBucketsData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/r2/buckets";
+};
+
+export type R2ListBucketsErrors = {
+	/**
+	 * List Buckets response failure.
+	 */
+	"4XX": R2V4ResponseFailure;
+};
+
+export type R2ListBucketsError = R2ListBucketsErrors[keyof R2ListBucketsErrors];
+
+export type R2ListBucketsResponses = {
+	/**
+	 * List Buckets response.
+	 */
+	200: R2V4ResponseList & {
+		result?: {
+			buckets?: Array<R2Bucket>;
+		};
+	};
+};
+
+export type R2ListBucketsResponse =
+	R2ListBucketsResponses[keyof R2ListBucketsResponses];
+
+export type R2GetBucketData = {
+	body?: never;
+	path: {
+		bucket_name: R2BucketName;
+	};
+	query?: never;
+	url: "/r2/buckets/{bucket_name}";
+};
+
+export type R2GetBucketErrors = {
+	/**
+	 * Get Bucket response failure.
+	 */
+	"4XX": R2V4ResponseFailure;
+};
+
+export type R2GetBucketError = R2GetBucketErrors[keyof R2GetBucketErrors];
+
+export type R2GetBucketResponses = {
+	/**
+	 * Get Bucket response.
+	 */
+	200: R2V4Response & {
+		result?: R2Bucket;
+	};
+};
+
+export type R2GetBucketResponse =
+	R2GetBucketResponses[keyof R2GetBucketResponses];
+
+export type R2BucketDeleteObjectsData = {
+	/**
+	 * Array of object keys to delete
+	 */
+	body: Array<string>;
+	path: {
+		bucket_name: string;
+	};
+	query?: never;
+	url: "/r2/buckets/{bucket_name}/objects";
+};
+
+export type R2BucketDeleteObjectsErrors = {
+	/**
+	 * Delete objects failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type R2BucketDeleteObjectsError =
+	R2BucketDeleteObjectsErrors[keyof R2BucketDeleteObjectsErrors];
+
+export type R2BucketDeleteObjectsResponses = {
+	/**
+	 * Delete objects response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<{
+			key?: string;
+		}>;
+	};
+};
+
+export type R2BucketDeleteObjectsResponse =
+	R2BucketDeleteObjectsResponses[keyof R2BucketDeleteObjectsResponses];
+
+export type R2BucketListObjectsData = {
+	body?: never;
+	path: {
+		bucket_name: string;
+	};
+	query?: {
+		/**
+		 * Filter objects by key prefix
+		 */
+		prefix?: string;
+		/**
+		 * Delimiter for directory-style listing (usually '/')
+		 */
+		delimiter?: string;
+		/**
+		 * Pagination cursor from previous response
+		 */
+		cursor?: string;
+		/**
+		 * Maximum number of objects to return
+		 */
+		per_page?: number;
+	};
+	url: "/r2/buckets/{bucket_name}/objects";
+};
+
+export type R2BucketListObjectsErrors = {
+	/**
+	 * List objects failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type R2BucketListObjectsError =
+	R2BucketListObjectsErrors[keyof R2BucketListObjectsErrors];
+
+export type R2BucketListObjectsResponses = {
+	/**
+	 * List objects response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<R2Object>;
+		result_info?: R2ListObjectsResultInfo;
+	};
+};
+
+export type R2BucketListObjectsResponse =
+	R2BucketListObjectsResponses[keyof R2BucketListObjectsResponses];
+
+export type R2BucketGetObjectData = {
+	body?: never;
+	headers?: {
+		/**
+		 * Set to 'true' to return only metadata (HEAD-like behavior)
+		 */
+		"cf-metadata-only"?: string;
+	};
+	path: {
+		bucket_name: string;
+		object_key: string;
+	};
+	query?: never;
+	url: "/r2/buckets/{bucket_name}/objects/{object_key}";
+};
+
+export type R2BucketGetObjectErrors = {
+	/**
+	 * Get object failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type R2BucketGetObjectError =
+	R2BucketGetObjectErrors[keyof R2BucketGetObjectErrors];
+
+export type R2BucketGetObjectResponses = {
+	/**
+	 * Object content or metadata.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: R2HeadObjectResult;
+	};
+};
+
+export type R2BucketGetObjectResponse =
+	R2BucketGetObjectResponses[keyof R2BucketGetObjectResponses];
+
+export type R2BucketPutObjectData = {
+	body: Blob | File;
+	headers?: {
+		/**
+		 * Content type of the object
+		 */
+		"content-type"?: string;
+		/**
+		 * JSON-encoded custom metadata
+		 */
+		"cf-r2-custom-metadata"?: string;
+	};
+	path: {
+		bucket_name: string;
+		object_key: string;
+	};
+	query?: never;
+	url: "/r2/buckets/{bucket_name}/objects/{object_key}";
+};
+
+export type R2BucketPutObjectErrors = {
+	/**
+	 * Put object failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type R2BucketPutObjectError =
+	R2BucketPutObjectErrors[keyof R2BucketPutObjectErrors];
+
+export type R2BucketPutObjectResponses = {
+	/**
+	 * Put object response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: R2PutObjectResult;
+	};
+};
+
+export type R2BucketPutObjectResponse =
+	R2BucketPutObjectResponses[keyof R2BucketPutObjectResponses];
+
 export type DurableObjectsNamespaceQuerySqliteData = {
 	body: DoQueryById | DoQueryByName;
 	path: {
@@ -836,3 +1248,32 @@ export type DurableObjectsNamespaceQuerySqliteResponses = {
 
 export type DurableObjectsNamespaceQuerySqliteResponse =
 	DurableObjectsNamespaceQuerySqliteResponses[keyof DurableObjectsNamespaceQuerySqliteResponses];
+
+export type LocalExplorerListWorkersData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/workers";
+};
+
+export type LocalExplorerListWorkersErrors = {
+	/**
+	 * List workers failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type LocalExplorerListWorkersError =
+	LocalExplorerListWorkersErrors[keyof LocalExplorerListWorkersErrors];
+
+export type LocalExplorerListWorkersResponses = {
+	/**
+	 * List workers response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<LocalExplorerWorker>;
+	};
+};
+
+export type LocalExplorerListWorkersResponse =
+	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];

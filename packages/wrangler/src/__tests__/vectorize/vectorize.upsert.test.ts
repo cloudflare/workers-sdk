@@ -1,9 +1,8 @@
 import crypto from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+// eslint-disable-next-line no-restricted-imports
 import { describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
@@ -237,6 +236,78 @@ describe("dataset upsert", () => {
 			✨ Enqueued 2 vectors into index 'my-index' for upsertion. Mutation changeset identifier: 00000000-0000-0000-0000-000000000000
 			✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
 		`);
+	});
+
+	it("should output valid JSON for insert with --json flag", async () => {
+		writeFileSync(
+			"vectors.ndjson",
+			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
+		);
+
+		const mutationId = crypto.randomUUID();
+
+		msw.use(
+			http.post("*/vectorize/v2/indexes/:indexName/insert", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { mutationId: mutationId },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		await runWrangler(
+			`vectorize insert my-index --file vectors.ndjson --batch-size 10 --json`
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "count": 5,
+			  "index": "my-index",
+			}
+		`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+	});
+
+	it("should output valid JSON for upsert with --json flag", async () => {
+		writeFileSync(
+			"vectors.ndjson",
+			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
+		);
+
+		const mutationId = crypto.randomUUID();
+
+		msw.use(
+			http.post("*/vectorize/v2/indexes/:indexName/upsert", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { mutationId: mutationId },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		await runWrangler(
+			`vectorize upsert my-index --file vectors.ndjson --batch-size 10 --json`
+		);
+
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			{
+			  "count": 5,
+			  "index": "my-index",
+			}
+		`);
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
 	});
 
 	it("should reject an invalid file param", async () => {

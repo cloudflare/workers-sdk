@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { importPKCS8, SignJWT } from "jose";
 import { Request, Response } from "miniflare";
+import { defineConfig } from "vitest/config";
 
 // Generate RSA keypair for signing/verifying JWTs
 const authKeypair = crypto.generateKeyPairSync("rsa", {
@@ -56,64 +57,64 @@ async function handleAuthServiceOutbound(request: Request): Promise<Response> {
 	return new Response("Not Found", { status: 404 });
 }
 
-export default defineWorkersProject({
+export default defineConfig({
+	plugins: [
+		cloudflareTest({
+			// Configuration for the test runner and "API service" Worker
+			wrangler: {
+				configPath: "./api-service/wrangler.jsonc",
+			},
+			miniflare: {
+				bindings: {
+					TEST_AUTH_PUBLIC_KEY: authKeypair.publicKey,
+				},
+
+				workers: [
+					// Configuration for "auxiliary" Worker dependencies.
+					// Unfortunately, auxiliary Workers cannot load their configuration
+					// from `wrangler.toml` files, and must be configured with Miniflare
+					// `WorkerOptions`.
+					{
+						name: "auth-service",
+						modules: true,
+						scriptPath: "./auth-service/dist/index.js", // Built by `global-setup.ts`
+						compatibilityDate: "2024-01-01",
+						compatibilityFlags: ["nodejs_compat"],
+						bindings: { AUTH_PUBLIC_KEY: authKeypair.publicKey },
+						// Mock outbound `fetch()`es from the `auth-service`
+						outboundService: handleAuthServiceOutbound,
+					},
+					{
+						name: "database-service",
+						modules: true,
+						scriptPath: "./database-service/dist/index.js", // Built by `global-setup.ts`
+						compatibilityDate: "2024-01-01",
+						compatibilityFlags: ["nodejs_compat"],
+						kvNamespaces: ["KV_NAMESPACE"],
+					},
+					{
+						name: "tail-consumer",
+						modules: [
+							{
+								path: "index.js",
+								type: "ESModule",
+								contents: /* javascript */ `
+                                export default {
+                                    tail(event) {
+                                    console.log("tail event received")
+                                    }
+                                }
+                                `,
+							},
+						],
+						compatibilityDate: "2024-01-01",
+					},
+				],
+			},
+		}),
+	],
+
 	test: {
 		globalSetup: ["./global-setup.ts"],
-		poolOptions: {
-			workers: {
-				singleWorker: true,
-				// Configuration for the test runner and "API service" Worker
-				wrangler: {
-					configPath: "./api-service/wrangler.jsonc",
-				},
-				miniflare: {
-					bindings: {
-						TEST_AUTH_PUBLIC_KEY: authKeypair.publicKey,
-					},
-
-					workers: [
-						// Configuration for "auxiliary" Worker dependencies.
-						// Unfortunately, auxiliary Workers cannot load their configuration
-						// from `wrangler.toml` files, and must be configured with Miniflare
-						// `WorkerOptions`.
-						{
-							name: "auth-service",
-							modules: true,
-							scriptPath: "./auth-service/dist/index.js", // Built by `global-setup.ts`
-							compatibilityDate: "2024-01-01",
-							compatibilityFlags: ["nodejs_compat"],
-							bindings: { AUTH_PUBLIC_KEY: authKeypair.publicKey },
-							// Mock outbound `fetch()`es from the `auth-service`
-							outboundService: handleAuthServiceOutbound,
-						},
-						{
-							name: "database-service",
-							modules: true,
-							scriptPath: "./database-service/dist/index.js", // Built by `global-setup.ts`
-							compatibilityDate: "2024-01-01",
-							compatibilityFlags: ["nodejs_compat"],
-							kvNamespaces: ["KV_NAMESPACE"],
-						},
-						{
-							name: "tail-consumer",
-							modules: [
-								{
-									path: "index.js",
-									type: "ESModule",
-									contents: /* javascript */ `
-										export default {
-											tail(event) {
-											console.log("tail event received")
-											}
-										}
-										`,
-								},
-							],
-							compatibilityDate: "2024-01-01",
-						},
-					],
-				},
-			},
-		},
 	},
 });

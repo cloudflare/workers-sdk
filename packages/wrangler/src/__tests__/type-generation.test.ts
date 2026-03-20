@@ -453,6 +453,9 @@ const bindingsConfigMock: Omit<
 	images: {
 		binding: "IMAGES_BINDING",
 	},
+	stream: {
+		binding: "STREAM_BINDING",
+	},
 	media: {
 		binding: "MEDIA_BINDING",
 	},
@@ -759,6 +762,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					STREAM_BINDING: StreamBinding;
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
@@ -871,6 +875,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					STREAM_BINDING: StreamBinding;
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
@@ -1046,6 +1051,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
+					STREAM_BINDING: StreamBinding;
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;

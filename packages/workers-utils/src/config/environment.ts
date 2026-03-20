@@ -7,8 +7,7 @@ import type { Json } from "../types";
  * This could be the top-level default environment, or a specific named environment.
  */
 export interface Environment
-	extends EnvironmentInheritable,
-		EnvironmentNonInheritable {}
+	extends EnvironmentInheritable, EnvironmentNonInheritable {}
 
 type SimpleRoute = string;
 export type ZoneIdRoute = {
@@ -1110,6 +1109,23 @@ export interface EnvironmentNonInheritable {
 		| {
 				binding: string;
 				/** Whether the Media binding should be remote or not */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
+	 * Binding to Cloudflare Stream
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	stream:
+		| {
+				binding: string;
+				/** Whether the Stream binding should be remote or not in local development */
 				remote?: boolean;
 		  }
 		| undefined;

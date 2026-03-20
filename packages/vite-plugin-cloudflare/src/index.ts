@@ -2,6 +2,7 @@ import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
+import { cdnCgiPlugin } from "./plugins/cdn-cgi";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
@@ -14,7 +15,6 @@ import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
-import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
 	virtualClientFallbackPlugin,
 	virtualModulesPlugin,
@@ -81,7 +81,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
-		triggerHandlersPlugin(ctx),
+		cdnCgiPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
 		outputConfigPlugin(ctx),

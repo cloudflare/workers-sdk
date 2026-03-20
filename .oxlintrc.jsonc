@@ -1,0 +1,195 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["typescript", "import", "unicorn", "vitest", "react"],
+	"categories": {
+		"correctness": "error",
+	},
+	"rules": {
+		"@typescript-eslint/await-thenable": "off",
+		"@typescript-eslint/no-base-to-string": "off",
+		"@typescript-eslint/no-duplicate-type-constituents": "off",
+		"@typescript-eslint/no-for-in-array": "off",
+		"@typescript-eslint/no-misused-spread": "off",
+		"@typescript-eslint/no-redundant-type-constituents": "off",
+		"@typescript-eslint/restrict-template-expressions": "off",
+		"@typescript-eslint/unbound-method": "off",
+		"no-meaningless-void-operator": "off",
+		"require-array-sort-compare": "off",
+		"unicorn/no-new-array": "off",
+		"unicorn/no-thenable": "off",
+		"unicorn/no-useless-fallback-in-spread": "off",
+		"unicorn/no-useless-spread": "off",
+		"vitest/hoisted-apis-on-top": "off",
+		"vitest/warn-todo": "off",
+		"vitest/no-conditional-tests": "off",
+		"no-case-declarations": "error",
+		"no-fallthrough": "error",
+		"no-prototype-builtins": "error",
+		"no-array-constructor": "error",
+		"@typescript-eslint/ban-ts-comment": "error",
+		"@typescript-eslint/no-unsafe-function-type": "error",
+		"curly": ["error", "all"],
+		"prefer-const": "error",
+		"prefer-rest-params": "error",
+		"prefer-spread": "error",
+		"@typescript-eslint/consistent-type-imports": ["error"],
+		"no-var": "error",
+		"no-regex-spaces": "error",
+		"@typescript-eslint/no-empty-object-type": "error",
+		"@typescript-eslint/no-explicit-any": "error",
+		"@typescript-eslint/no-namespace": "error",
+		"@typescript-eslint/no-require-imports": "error",
+		"no-shadow": ["error", { "allow": ["expect"] }],
+		"no-unexpected-multiline": "error",
+		"@typescript-eslint/no-unnecessary-type-constraint": "error",
+		"unicorn/prefer-node-protocol": "error",
+		"vitest/no-focused-tests": "error",
+		"@typescript-eslint/no-non-null-assertion": "error",
+		"turbo/no-undeclared-env-vars": "error",
+		"workers-sdk/no-unsafe-command-execution": "error",
+		"workers-sdk/no-direct-recursive-rm": "error",
+
+		"no-unused-vars": [
+			"error",
+			{
+				"argsIgnorePattern": ".*",
+				"varsIgnorePattern": "^_",
+				"ignoreRestSiblings": true,
+				"fix": { "imports": "fix" },
+			},
+		],
+		"no-restricted-imports": [
+			"error",
+			{
+				"paths": [
+					{
+						"name": "ci-info",
+						"importNames": [
+							"isCI",
+							"CLOUDFLARE_PAGES",
+							"CLOUDFLARE_WORKERS",
+							"isPR",
+							"name",
+						],
+						"message": "Use default import (`import ci from \"ci-info\"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks.",
+					},
+					{
+						"name": "vitest",
+						"importNames": ["expect"],
+						"message": "Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
+					},
+				],
+			},
+		],
+	},
+	"ignorePatterns": [
+		"**/*.js",
+		"**/*.cjs",
+		"**/*.mjs",
+		"fixtures/**",
+		"packages/create-cloudflare/**/templates/**/*.*",
+		"!packages/create-cloudflare/**/templates*/**/c3.ts",
+		// TODO: we really should be linting this folder
+		"packages/wrangler/templates/**",
+		// Ignore generated files
+		"packages/containers-shared/src/client/**",
+		"packages/local-explorer-ui/src/api/generated/**",
+		"packages/local-explorer-ui/src/routeTree.gen.ts",
+		"packages/miniflare/src/runtime/config/workerd.*",
+		"packages/quick-edit-extension/vscode.d.ts",
+		"packages/quick-edit-extension/vscode.proposed.*.d.ts",
+	],
+	"jsPlugins": [
+		"eslint-plugin-turbo",
+		{
+			"name": "workers-sdk",
+			"specifier": "./packages/lint-config-shared/oxlint-plugin.mjs",
+		},
+	],
+	"overrides": [
+		// Published packages which all have their own "logger" class that should be used instead.
+		{
+			"files": [
+				"packages/cli/**",
+				"packages/create-cloudflare/**",
+				"packages/miniflare/**",
+				"packages/wrangler/**",
+				"packages/workers-utils/**",
+			],
+			"rules": {
+				"no-console": "error",
+			},
+		},
+		// TODO: remove these overrides. This is a legacy of Miniflare's history, not intentional
+		{
+			"files": ["packages/miniflare/**"],
+			"rules": {
+				"curly": "off",
+				"@typescript-eslint/no-explicit-any": "off",
+				"@typescript-eslint/ban-ts-comment": "off",
+				"@typescript-eslint/consistent-type-imports": "off",
+				"@typescript-eslint/no-floating-promises": "off",
+				"no-shadow": "off",
+				"no-useless-escape": "off",
+				"no-unsafe-optional-chaining": "off",
+				"no-control-regex": "off",
+				"no-case-declarations": "off",
+				"no-empty-pattern": "off",
+				"turbo/no-undeclared-env-vars": "off",
+			},
+		},
+		{
+			"files": ["packages/wrangler/src/**", "packages/workers-utils/src/**"],
+			"rules": {
+				"no-restricted-globals": [
+					"error",
+					{
+						"name": "__dirname",
+						"message": "Use `getBasePath()` instead.",
+					},
+					{
+						"name": "__filename",
+						"message": "Use `getBasePath()` instead.",
+					},
+					{
+						"name": "fetch",
+						"message": "Use undici's fetch instead",
+					},
+				],
+			},
+		},
+		// Although in _general_ Miniflare shouldn't use console.log(), it's Workers can and should
+		{
+			"files": ["packages/miniflare/src/workers/**/*.ts"],
+			"rules": {
+				"no-console": "off",
+			},
+		},
+		// Relax some rules for test & script files
+		{
+			"files": [
+				"packages/wrangler/src/__tests__/**",
+				"packages/wrangler/e2e/**",
+				"packages/wrangler/scripts/**",
+				"packages/miniflare/scripts/**",
+				"packages/cli/src/__tests__/**",
+				"packages/create-cloudflare/scripts/**",
+				"packages/create-cloudflare/src/__tests__/**",
+				"packages/workers-utils/tests/**",
+				"packages/vite-plugin-cloudflare/e2e/**",
+			],
+			"rules": {
+				"no-console": "off",
+				"no-restricted-globals": "off",
+				"workers-sdk/no-unsafe-command-execution": "off",
+			},
+		},
+		// Make sure Wrangler's version checking logic in vite-plugin-cloudflare can run properly
+		{
+			"files": ["packages/vite-plugin-cloudflare/**"],
+			"rules": {
+				"workers-sdk/no-wrangler-named-imports": "error",
+			},
+		},
+	],
+}

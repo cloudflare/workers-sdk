@@ -54,6 +54,7 @@ import {
 	containersImagesListCommand,
 	containersImagesNamespace,
 	containersInfoCommand,
+	containersInstancesCommand,
 	containersListCommand,
 	containersNamespace,
 	containersPushCommand,
@@ -330,6 +331,13 @@ import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
+import { tunnelCreateCommand } from "./tunnel/create";
+import { tunnelDeleteCommand } from "./tunnel/delete";
+import { tunnelNamespace } from "./tunnel/index";
+import { tunnelInfoCommand } from "./tunnel/info";
+import { tunnelListCommand } from "./tunnel/list";
+import { tunnelQuickStartCommand } from "./tunnel/quick-start";
+import { tunnelRunCommand } from "./tunnel/run";
 import { typesCommand } from "./type-generation";
 import {
 	authNamespace,
@@ -1299,6 +1307,30 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("hyperdrive");
 
+	// tunnel
+	registry.define([
+		{ command: "wrangler tunnel", definition: tunnelNamespace },
+		{
+			command: "wrangler tunnel create",
+			definition: tunnelCreateCommand,
+		},
+		{
+			command: "wrangler tunnel delete",
+			definition: tunnelDeleteCommand,
+		},
+		{ command: "wrangler tunnel info", definition: tunnelInfoCommand },
+		{ command: "wrangler tunnel list", definition: tunnelListCommand },
+		{
+			command: "wrangler tunnel run",
+			definition: tunnelRunCommand,
+		},
+		{
+			command: "wrangler tunnel quick-start",
+			definition: tunnelQuickStartCommand,
+		},
+	]);
+	registry.registerNamespace("tunnel");
+
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
 		{ command: "wrangler cert", definition: certNamespace },
@@ -1509,6 +1541,10 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler containers", definition: containersNamespace },
 		{ command: "wrangler containers list", definition: containersListCommand },
 		{ command: "wrangler containers info", definition: containersInfoCommand },
+		{
+			command: "wrangler containers instances",
+			definition: containersInstancesCommand,
+		},
 		{
 			command: "wrangler containers delete",
 			definition: containersDeleteCommand,

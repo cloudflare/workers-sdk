@@ -16,7 +16,7 @@ describe("nodejs_compat warnings - Node.js built-ins imported directly", () => {
 			'Unexpected Node.js imports for environment "worker". Do you need to enable the "nodejs_compat" compatibility flag? Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.'
 		);
 		expect(errorLogs).toContain('- "node:assert/strict" imported from');
-		expect(errorLogs).toContain('- "perf_hooks" imported from');
+		expect(errorLogs).toContain('- "node:perf_hooks" imported from');
 	});
 });
 

@@ -120,8 +120,7 @@ interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {
 	url: string | undefined;
 }
 
-interface OutputEntryPagesDeploymentDetailed
-	extends OutputEntryBase<"pages-deploy-detailed"> {
+interface OutputEntryPagesDeploymentDetailed extends OutputEntryBase<"pages-deploy-detailed"> {
 	version: 1;
 	/** The name of the Pages project. */
 	pages_project: string | null;
@@ -161,8 +160,7 @@ interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	wrangler_environment: string | undefined;
 }
 
-interface OutputEntryVersionDeployment
-	extends OutputEntryBase<"version-deploy"> {
+interface OutputEntryVersionDeployment extends OutputEntryBase<"version-deploy"> {
 	version: 1;
 	/** The name of the Worker. */
 	worker_name: string | null;

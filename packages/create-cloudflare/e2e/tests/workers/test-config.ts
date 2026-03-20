@@ -184,7 +184,7 @@ export function getWorkerTests(): WorkerTestConfig[] {
 							argv: (testConfig.argv ?? []).concat("--lang", variant),
 						} satisfies WorkerTestConfig;
 					})
-				: [{ ...testConfig, name: testConfig.name ?? testConfig.template }],
+				: [{ ...testConfig, name: testConfig.name ?? testConfig.template }]
 		)
 		.filter((testConfig) => {
 			if (!workerTemplateToTest) {

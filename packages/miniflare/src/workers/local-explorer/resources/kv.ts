@@ -12,6 +12,7 @@ import {
 } from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+import type { WorkersKvNamespace } from "../generated";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)
@@ -62,15 +63,31 @@ async function findKVNamespaceOwner(
 }
 
 /**
- * Get local KV namespaces from the binding map.
+ * KV namespace response extended with worker name for filtering in the UI.
  */
-function getLocalKVNamespaces(env: Env): Array<{ id: string; title: string }> {
+type KVNamespaceWithWorker = WorkersKvNamespace & {
+	workerName: string;
+};
+
+/**
+ * Get local KV namespaces from the binding map.
+ * Each namespace is tagged with the worker name it belongs to.
+ */
+function getLocalKVNamespaces(env: Env): KVNamespaceWithWorker[] {
 	const kvBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.kv;
-	return Object.entries(kvBindingMap).map(([id, bindingName]) => ({
-		id: id,
-		// this is not technically correct, but the title doesn't exist locally
-		title: bindingName.split(":").pop() || bindingName,
-	}));
+
+	return Object.entries(kvBindingMap).map(([id, bindingName]) => {
+		// Binding names follow the pattern "MINIFLARE_PROXY:kv:workerName:BINDING"
+		const parts = bindingName.split(":");
+		const workerName = parts.length >= 3 ? parts[2] : "unknown";
+		const title = parts.pop() || bindingName;
+
+		return {
+			id,
+			title,
+			workerName,
+		};
+	});
 }
 
 // ============================================================================
@@ -161,7 +178,9 @@ export async function listKVKeys(c: AppContext, query: ListKeysQuery) {
 		if (limit !== undefined) params.set("limit", String(limit));
 		if (prefix) params.set("prefix", prefix);
 		const queryString = params.toString();
-		const path = `/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/keys${queryString ? `?${queryString}` : ""}`;
+		const path = `/storage/kv/namespaces/${encodeURIComponent(
+			namespace_id
+		)}/keys${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
 		if (response) return response;
@@ -183,7 +202,7 @@ async function executeListKeys(
 	options: { cursor?: string; limit?: number; prefix?: string }
 ) {
 	const listResult = await kv.list(options);
-	const resultCursor = "cursor" in listResult ? listResult.cursor ?? "" : "";
+	const resultCursor = "cursor" in listResult ? (listResult.cursor ?? "") : "";
 
 	return c.json({
 		...wrapResponse(
@@ -207,17 +226,15 @@ async function executeListKeys(
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/get/
  */
-export async function getKVValue(c: AppContext) {
-	const namespace_id = c.req.param("namespace_id");
-	const key_name = c.req.param("key_name");
-	if (!namespace_id || !key_name) {
-		return errorResponse(400, 10000, "Missing required path parameters");
-	}
-
+export async function getKVValue(
+	c: AppContext,
+	namespaceId: string,
+	keyName: string
+) {
 	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
+	const kv = getKVBinding(c.env, namespaceId);
 	if (kv) {
-		const value = await kv.get(key_name, { type: "arrayBuffer" });
+		const value = await kv.get(keyName, { type: "arrayBuffer" });
 		if (value === null) {
 			return errorResponse(404, KV_ERROR_KEY_NOT_FOUND, "get: 'key not found'");
 		}
@@ -225,11 +242,13 @@ export async function getKVValue(c: AppContext) {
 		return new Response(value);
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`
+			`/storage/kv/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/values/${encodeURIComponent(keyName)}`
 		);
 		if (response) return response;
 	}
@@ -248,25 +267,25 @@ export async function getKVValue(c: AppContext) {
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/update/
  */
-export async function putKVValue(c: AppContext) {
-	const namespace_id = c.req.param("namespace_id");
-	const key_name = c.req.param("key_name");
-	if (!namespace_id || !key_name) {
-		return errorResponse(400, 10000, "Missing required path parameters");
-	}
-
+export async function putKVValue(
+	c: AppContext,
+	namespaceId: string,
+	keyName: string
+) {
 	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
+	const kv = getKVBinding(c.env, namespaceId);
 	if (kv) {
-		return executePutKVValue(c, kv, key_name);
+		return executePutKVValue(c, kv, keyName);
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const body = await c.req.arrayBuffer();
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+			`/storage/kv/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/values/${encodeURIComponent(keyName)}`,
 			{
 				method: "PUT",
 				headers: {
@@ -349,25 +368,25 @@ async function executePutKVValue(
  *
  * @see https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/values/methods/delete/
  */
-export async function deleteKVValue(c: AppContext) {
-	const namespace_id = c.req.param("namespace_id");
-	const key_name = c.req.param("key_name");
-	if (!namespace_id || !key_name) {
-		return errorResponse(400, 10000, "Missing required path parameters");
-	}
-
+export async function deleteKVValue(
+	c: AppContext,
+	namespaceId: string,
+	keyName: string
+) {
 	// Try local first
-	const kv = getKVBinding(c.env, namespace_id);
+	const kv = getKVBinding(c.env, namespaceId);
 	if (kv) {
-		await kv.delete(key_name);
+		await kv.delete(keyName);
 		return c.json(wrapResponse({}));
 	}
 
-	const ownerMiniflare = await findKVNamespaceOwner(c, namespace_id);
+	const ownerMiniflare = await findKVNamespaceOwner(c, namespaceId);
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/storage/kv/namespaces/${encodeURIComponent(namespace_id)}/values/${encodeURIComponent(key_name)}`,
+			`/storage/kv/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/values/${encodeURIComponent(keyName)}`,
 			{ method: "DELETE" }
 		);
 		if (response) return response;

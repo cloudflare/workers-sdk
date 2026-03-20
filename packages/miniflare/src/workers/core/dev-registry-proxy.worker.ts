@@ -13,6 +13,7 @@ export {
 
 const HANDLER_RESERVED_KEYS = new Set([
 	"alarm",
+	"connect",
 	"self",
 	"tail",
 	"tailStream",
@@ -59,7 +60,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		const target = resolveTarget(ctx.props.service);
 		if (target) {
 			const client = env.DEV_REGISTRY_DEBUG_PORT.connect(
-				target.debugPortAddress
+				target.debugPortAddress,
 			);
 			this._entryFetcher = client.getEntrypoint("core:entry");
 		}
@@ -75,7 +76,11 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 
 				if (!target._fetcher) {
 					throw new Error(
-						`Cannot access "${String(prop)}" as we couldn't find a local dev session for the "${ctx.props.entrypoint ?? "default"}" entrypoint of service "${ctx.props.service}" to proxy to.`
+						`Cannot access "${String(
+							prop,
+						)}" as we couldn't find a local dev session for the "${
+							ctx.props.entrypoint ?? "default"
+						}" entrypoint of service "${ctx.props.service}" to proxy to.`,
 					);
 				}
 				return Reflect.get(target._fetcher, prop);
@@ -86,8 +91,10 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	async fetch(request: Request): Promise<Response> {
 		if (!this._fetcher) {
 			return new Response(
-				`Couldn't find a local dev session for the "${this.ctx.props.entrypoint ?? "default"}" entrypoint of service "${this.ctx.props.service}" to proxy to`,
-				{ status: 503 }
+				`Couldn't find a local dev session for the "${
+					this.ctx.props.entrypoint ?? "default"
+				}" entrypoint of service "${this.ctx.props.service}" to proxy to`,
+				{ status: 503 },
 			);
 		}
 		return this._fetcher.fetch(request);
@@ -96,7 +103,9 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 	async scheduled(controller: ScheduledController) {
 		if (!this._entryFetcher) {
 			throw new Error(
-				`Couldn't find a local dev session for the "${this.ctx.props.entrypoint ?? "default"}" entrypoint of service "${this.ctx.props.service}" to proxy to`
+				`Couldn't find a local dev session for the "${
+					this.ctx.props.entrypoint ?? "default"
+				}" entrypoint of service "${this.ctx.props.service}" to proxy to`,
 			);
 		}
 		const params = new URLSearchParams();
@@ -109,12 +118,12 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		const response = await this._entryFetcher.fetch(
 			new Request(`http://localhost/cdn-cgi/handler/scheduled?${params}`, {
 				headers: { "MF-Route-Override": this.ctx.props.service },
-			})
+			}),
 		);
 		if (!response.ok) {
 			const body = await response.text();
 			throw new Error(
-				`Scheduled handler returned HTTP ${response.status}: ${body}`
+				`Scheduled handler returned HTTP ${response.status}: ${body}`,
 			);
 		}
 	}
@@ -125,7 +134,7 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 			return;
 		}
 		const filtered = events.filter(
-			(e) => (e.event as { rpcMethod?: string } | null)?.rpcMethod !== "tail"
+			(e) => (e.event as { rpcMethod?: string } | null)?.rpcMethod !== "tail",
 		);
 		if (filtered.length === 0) {
 			return;
@@ -133,13 +142,15 @@ export class ExternalServiceProxy extends WorkerEntrypoint<Env, Props> {
 		try {
 			const serializedEvents = JSON.parse(
 				JSON.stringify(filtered, tailEventsReplacer),
-				tailEventsReviver
+				tailEventsReviver,
 			);
 			// @ts-expect-error .tail is not in the `Fetcher` type but it's a valid RPC call
 			return this._fetcher.tail(serializedEvents);
 		} catch (e) {
 			console.warn(
-				`[dev-registry] Failed to forward tail events to "${this.ctx.props.service}": ${e instanceof Error ? e.message : String(e)}`
+				`[dev-registry] Failed to forward tail events to "${
+					this.ctx.props.service
+				}": ${e instanceof Error ? e.message : String(e)}`,
 			);
 		}
 	}

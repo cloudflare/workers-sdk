@@ -134,13 +134,17 @@
 		/* Kumo tooltip overrides for dark mode */
 		--color-kumo-tip-shadow: transparent;
 		--color-kumo-tip-stroke: var(--color-border);
+
+		/* Kumo overlay override for dark mode - darker backdrop for dialogs */
+		--color-kumo-overlay: var(--color-surface);
 	}
 }
 
 @layer base {
 	body {
-		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-			Ubuntu, sans-serif;
-		@apply text-sm leading-normal text-text bg-bg-secondary;
+		font-family:
+			-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+			sans-serif;
+		@apply text-text bg-bg-secondary text-sm leading-normal;
 	}
 }

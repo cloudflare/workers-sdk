@@ -1,5 +1,92 @@
 # @cloudflare/vite-plugin
 
+## 1.30.0
+
+### Minor Changes
+
+- [#12848](https://github.com/cloudflare/workers-sdk/pull/12848) [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb) Thanks [@emily-shen](https://github.com/emily-shen)! - Enable local explorer by default
+
+  This ungates the local explorer, a UI that lets you inspect the state of D1, DO and KV resources locally by visiting `/cdn-cgi/explorer` during local development.
+
+  Note: this feature is still experimental, and can be disabled by setting the env var `X_LOCAL_EXPLORER=false`.
+
+### Patch Changes
+
+- [#12942](https://github.com/cloudflare/workers-sdk/pull/12942) [`4f7fd79`](https://github.com/cloudflare/workers-sdk/commit/4f7fd79d83185df593167751ceca44d50d926aea) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Avoid splicing into the middleware stack for Vite versions other than v6
+
+  Previously, the plugin spliced its pre-middleware into the Vite middleware stack relative to `viteCachedTransformMiddleware`. In Vite 8, this middleware can be omitted in some scenarios, which would cause the splice to fail. The plugin now registers pre-middleware using `server.middlewares.use()` directly, which places it in the correct position for Vite 7+. For Vite 6, the middleware is moved to the correct position in a post hook.
+
+- Updated dependencies [[`782df44`](https://github.com/cloudflare/workers-sdk/commit/782df4495f14f1366cf03e808ddddea0102eb011), [`3c988e2`](https://github.com/cloudflare/workers-sdk/commit/3c988e204ac0d6117ace9cc8fa5fd2479868811c), [`62545c9`](https://github.com/cloudflare/workers-sdk/commit/62545c9e9146d5107df7bd3d75fa3c453fa7d96b), [`d028ffb`](https://github.com/cloudflare/workers-sdk/commit/d028ffb40c308e4ad7b2a98c6ae0577a2f4e8d8a), [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22), [`71ab981`](https://github.com/cloudflare/workers-sdk/commit/71ab9816dc80acba346073bc9d02bd45d1fb5b9a), [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb), [`7c3c6c6`](https://github.com/cloudflare/workers-sdk/commit/7c3c6c6e9c8b4b58e438a9ce8426241f58d8fe82), [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb), [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787)]:
+  - wrangler@4.76.0
+  - miniflare@4.20260317.1
+  - @cloudflare/unenv-preset@2.16.0
+
+## 1.29.1
+
+### Patch Changes
+
+- [#12936](https://github.com/cloudflare/workers-sdk/pull/12936) [`cff91ff`](https://github.com/cloudflare/workers-sdk/commit/cff91ff4bbbfcc2b59eb9b0d26b5ae8188823197) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Select the appropriate `vite/module-runner` implementation during dev based on the user's Vite version
+
+  The plugin now builds against Vite 8 and ships two bundled copies of `vite/module-runner`: one from Vite 8 and one from Vite 7.1.12 (the last version before a breaking change to the module runner in Vite 7.2.0). At dev server startup, the correct implementation is selected based on the user's installed Vite version. This is Vite 8's module runner for users on Vite >= 7.2.0, and the legacy module runner for users on older versions.
+
+- Updated dependencies [[`c9b3184`](https://github.com/cloudflare/workers-sdk/commit/c9b31840631585418b8926e8228db486b619b4c7), [`13df6c7`](https://github.com/cloudflare/workers-sdk/commit/13df6c75be49ac32fc1c57e2e24523e86ced2115), [`df0d112`](https://github.com/cloudflare/workers-sdk/commit/df0d1120a856bd65553bf92b4bc6380c15e81cc7), [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a), [`c600ce0`](https://github.com/cloudflare/workers-sdk/commit/c600ce0a45ad334a5a961cf7774758860581d9d2), [`f509d13`](https://github.com/cloudflare/workers-sdk/commit/f509d13b97a832a28ed6bc568c7bcf6fc7d4a4ff), [`3b81fc6`](https://github.com/cloudflare/workers-sdk/commit/3b81fc6a75857d5c158824f17d9316adc55878fc), [`0a7fef9`](https://github.com/cloudflare/workers-sdk/commit/0a7fef9ee924b6d0817a69be9d893dc8a40c9a19)]:
+  - wrangler@4.75.0
+  - miniflare@4.20260317.0
+
+## 1.29.0
+
+### Minor Changes
+
+- [#12885](https://github.com/cloudflare/workers-sdk/pull/12885) [`12505c9`](https://github.com/cloudflare/workers-sdk/commit/12505c97c280e3516ace4354fef0a8434f87cdf4) Thanks [@edmundhung](https://github.com/edmundhung)! - Add Vite 8 to the supported peer dependency range
+
+  The package now lists Vite 8 in its peer dependency range, so installs with Vite 8 no longer show a peer dependency warning.
+
+### Patch Changes
+
+- [#12859](https://github.com/cloudflare/workers-sdk/pull/12859) [`876108a`](https://github.com/cloudflare/workers-sdk/commit/876108a04b19f6577843f7cf9884639e17d37fb7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix crash when plugins send HMR events before runner initialization
+
+  Previously, if another Vite plugin (such as `vite-plugin-vue-devtools`) sent HMR events during `configureServer` before the Cloudflare plugin had initialized its runner, the dev server would crash with `AssertionError: The WebSocket is undefined`. The environment's WebSocket send operations are now deferred until the runner is fully initialized, allowing early HMR events to be handled gracefully.
+
+- Updated dependencies [[`ade0aed`](https://github.com/cloudflare/workers-sdk/commit/ade0aed5246a5d3379961d06e1d504c6ceb0b1a8), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68), [`65f1092`](https://github.com/cloudflare/workers-sdk/commit/65f1092281866333118e5e8ebf0f5234bf695baf), [`7b0d8f5`](https://github.com/cloudflare/workers-sdk/commit/7b0d8f5830e9b317c69abdcd452a79d88811f000), [`351e1e1`](https://github.com/cloudflare/workers-sdk/commit/351e1e1efa808a19b84b5888d747cd4aa4566921), [`2b9a186`](https://github.com/cloudflare/workers-sdk/commit/2b9a186dceebdae8fb57617c1c129971a9d20d68)]:
+  - miniflare@4.20260312.1
+  - wrangler@4.74.0
+
+## 1.28.0
+
+### Minor Changes
+
+- [#12855](https://github.com/cloudflare/workers-sdk/pull/12855) [`c2b76bc`](https://github.com/cloudflare/workers-sdk/commit/c2b76bc35bd038200b9919179f63b66e190e00eb) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support local explorer `/cdn-cgi/` routes
+
+  The local explorer UI can now be accessed at `/cdn-cgi/explorer`.
+
+### Patch Changes
+
+- [#12834](https://github.com/cloudflare/workers-sdk/pull/12834) [`64edac7`](https://github.com/cloudflare/workers-sdk/commit/64edac70799112a69e28202b9f2e9c1e3aada92c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Warn when the `assets` field is provided for auxiliary Workers
+
+  Auxiliary Workers do not support static assets. Previously, the `assets` field was silently ignored but we now warn if it is used.
+
+- [#12794](https://github.com/cloudflare/workers-sdk/pull/12794) [`b980af6`](https://github.com/cloudflare/workers-sdk/commit/b980af6603a08ae1d00020b3572dacfd6a0a541d) Thanks [@aron-cf](https://github.com/aron-cf)! - Fix Sandbox SDK preview URL WebSocket routing
+
+  When using Sandbox SDK preview URLs, WebSocket requests using the `vite-hmr` protocol could be dropped before they reached the worker, causing HMR to fail. The plugin now forwards Sandbox WebSocket traffic and preserves the original request origin/host so worker proxy logic receives the correct URL.
+
+- Updated dependencies [[`f7de0fd`](https://github.com/cloudflare/workers-sdk/commit/f7de0fdd6074089ba5a484df683647cb70fe06f6), [`ff543e3`](https://github.com/cloudflare/workers-sdk/commit/ff543e30d69694613ab9d2da4281488fd27fd1b9), [`8e89e85`](https://github.com/cloudflare/workers-sdk/commit/8e89e85cf4f75b483a2dce5aa6947f050e5f35cc), [`e63539d`](https://github.com/cloudflare/workers-sdk/commit/e63539de64308cd0706b8876a22e1b1ccabe0721), [`8d1e130`](https://github.com/cloudflare/workers-sdk/commit/8d1e130bba5fa4019edab855e817a17110b360d0), [`6ee18e1`](https://github.com/cloudflare/workers-sdk/commit/6ee18e1bda05ef3870dfe917510bd2a55310254b), [`ecc7f79`](https://github.com/cloudflare/workers-sdk/commit/ecc7f792f950fc786ff40fa140bd8907bd26ff31), [`1dda1c8`](https://github.com/cloudflare/workers-sdk/commit/1dda1c83cc286f5bc8bf7a13ed455265c50b0206), [`4bb61b9`](https://github.com/cloudflare/workers-sdk/commit/4bb61b9758bc4e4349ede7327a1075774178be64)]:
+  - miniflare@4.20260312.0
+  - wrangler@4.73.0
+
+## 1.27.0
+
+### Minor Changes
+
+- [#12826](https://github.com/cloudflare/workers-sdk/pull/12826) [`de65c58`](https://github.com/cloudflare/workers-sdk/commit/de65c58cbcf1c330a84c37fb351716780f2fd880) Thanks [@gabivlj](https://github.com/gabivlj)! - Enable container egress interception in local dev without the `experimental` compatibility flag
+
+  Container local development now always prepares the egress interceptor sidecar image needed for `interceptOutboundHttp()`. This makes container-to-Worker interception available by default in Wrangler, Miniflare, and the Cloudflare Vite plugin.
+
+### Patch Changes
+
+- Updated dependencies [[`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f), [`5451a7f`](https://github.com/cloudflare/workers-sdk/commit/5451a7fbf9e08cdc7731aaed43de1e0e241c944f), [`82cc2a8`](https://github.com/cloudflare/workers-sdk/commit/82cc2a8beba2b4a2c5765222858f7eb53c730a98), [`3c67c2a`](https://github.com/cloudflare/workers-sdk/commit/3c67c2a9de3681f59026fecdcf58ca5b816882c8), [`d645594`](https://github.com/cloudflare/workers-sdk/commit/d645594d3cd9ccf3eca08bca151d358396e2b31c), [`211d75d`](https://github.com/cloudflare/workers-sdk/commit/211d75d6f5e611f86ff9b62d4e280b8baaa842b7), [`6ed249b`](https://github.com/cloudflare/workers-sdk/commit/6ed249b77aa8d335dc7b20790892fe4dced9af4e), [`9f93b54`](https://github.com/cloudflare/workers-sdk/commit/9f93b54de2847ca3e3aeb5f45fa89fb8b7e89ed3), [`de65c58`](https://github.com/cloudflare/workers-sdk/commit/de65c58cbcf1c330a84c37fb351716780f2fd880), [`cb14820`](https://github.com/cloudflare/workers-sdk/commit/cb148200336ed57c56cb89028453ddd5fdef2e7b), [`a7c87d1`](https://github.com/cloudflare/workers-sdk/commit/a7c87d14a46850e38ae5a9a3ccde4b983e37a8cc), [`b8c33f5`](https://github.com/cloudflare/workers-sdk/commit/b8c33f5509a202cf4d4ebe5bd38c5705dffd9346), [`e4d9510`](https://github.com/cloudflare/workers-sdk/commit/e4d9510c3439d313ba0e0f78bf00d0726d5f67e9)]:
+  - miniflare@4.20260310.0
+  - wrangler@4.72.0
+
 ## 1.26.1
 
 ### Patch Changes
@@ -28,9 +115,9 @@
   ```jsonc
   // wrangler.jsonc
   {
-  	"secrets": {
-  		"required": ["API_KEY", "DB_PASSWORD"],
-  	},
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
   }
   ```
 
@@ -126,14 +213,14 @@
 
   ```ts
   export default defineConfig({
-  	environments: {
-  		my_worker: {
-  			build: {
-  				sourcemap: true,
-  			},
-  		},
-  	},
-  	plugins: [cloudflare()],
+    environments: {
+      my_worker: {
+        build: {
+          sourcemap: true,
+        },
+      },
+    },
+    plugins: [cloudflare()],
   });
   ```
 
@@ -246,14 +333,14 @@
 
   ```ts
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			viteEnvironment: {
-  				name: "rsc",
-  				childEnvironments: ["ssr"],
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        viteEnvironment: {
+          name: "rsc",
+          childEnvironments: ["ssr"],
+        },
+      }),
+    ],
   });
   ```
 
@@ -360,21 +447,21 @@
 
   ```ts
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			auxiliaryWorkers: [
-  				{
-  					config: (_, { entryWorkerConfig }) => ({
-  						name: "auxiliary-worker",
-  						main: "./src/auxiliary-worker.ts",
-  						// Inherit compatibility settings from entry Worker
-  						compatibility_date: entryWorkerConfig.compatibility_date,
-  						compatibility_flags: entryWorkerConfig.compatibility_flags,
-  					}),
-  				},
-  			],
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        auxiliaryWorkers: [
+          {
+            config: (_, { entryWorkerConfig }) => ({
+              name: "auxiliary-worker",
+              main: "./src/auxiliary-worker.ts",
+              // Inherit compatibility settings from entry Worker
+              compatibility_date: entryWorkerConfig.compatibility_date,
+              compatibility_flags: entryWorkerConfig.compatibility_flags,
+            }),
+          },
+        ],
+      }),
+    ],
   });
   ```
 
@@ -452,41 +539,41 @@
   // Define a partial config object
 
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			config: {
-  				compatibility_date: "2025-01-01",
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        config: {
+          compatibility_date: "2025-01-01",
+        },
+      }),
+    ],
   });
 
   // Return a partial config from a function, conditional on some logic
 
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			config: (workerConfig) => {
-  				if (workerConfig.name === "my-worker") {
-  					return {
-  						compatibility_flags: ["nodejs_compat"],
-  					};
-  				}
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        config: (workerConfig) => {
+          if (workerConfig.name === "my-worker") {
+            return {
+              compatibility_flags: ["nodejs_compat"],
+            };
+          }
+        },
+      }),
+    ],
   });
 
   // Modify the config in place
 
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			config: (workerConfig) => {
-  				workerConfig.compatibility_date = "2025-01-01";
-  			},
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        config: (workerConfig) => {
+          workerConfig.compatibility_date = "2025-01-01";
+        },
+      }),
+    ],
   });
   ```
 
@@ -1031,7 +1118,7 @@
 
   ```ts
   if (import.meta.hot) {
-  	import.meta.hot.accept();
+    import.meta.hot.accept();
   }
   ```
 
@@ -1182,13 +1269,13 @@
 
   ```jsonc
   {
-  	"assets": {
-  		"not_found_handling": "single-page-application",
-  		"run_worker_first": [
-  			"/api/*", // These routes go directly to the Worker
-  			"!/api/docs/*", // These routes are still treated as assets
-  		],
-  	},
+    "assets": {
+      "not_found_handling": "single-page-application",
+      "run_worker_first": [
+        "/api/*", // These routes go directly to the Worker
+        "!/api/docs/*" // These routes are still treated as assets
+      ]
+    }
   }
   ```
 
@@ -1272,14 +1359,14 @@
   ```jsonc
   // ./worker-a/wrangler.jsonc
   {
-  	"name": "worker-a",
-  	"main": "./src/index.ts",
-  	"services": [
-  		{
-  			"binding": "SERVICE",
-  			"service": "worker-b",
-  		},
-  	],
+    "name": "worker-a",
+    "main": "./src/index.ts",
+    "services": [
+      {
+        "binding": "SERVICE",
+        "service": "worker-b"
+      }
+    ]
   }
   ```
 
@@ -1288,13 +1375,13 @@
   ```jsonc
   // ./worker-b/wrangler.jsonc
   {
-  	"name": "worker-b",
-  	"main": "./src/index.ts",
-  	"tail_consumers": [
-  		{
-  			"service": "worker-a",
-  		},
-  	],
+    "name": "worker-b",
+    "main": "./src/index.ts",
+    "tail_consumers": [
+      {
+        "service": "worker-a"
+      }
+    ]
   }
   ```
 
@@ -1335,12 +1422,12 @@
 
   ```js
   export default defineConfig({
-  	plugins: [
-  		cloudflare({
-  			// ...
-  			experimental: { mixedMode: true },
-  		}),
-  	],
+    plugins: [
+      cloudflare({
+        // ...
+        experimental: { mixedMode: true },
+      }),
+    ],
   });
   ```
 

@@ -1,5 +1,5 @@
 import { env, introspectWorkflow, SELF } from "cloudflare:test";
-import { it } from "vitest";
+import { describe, it } from "vitest";
 
 const STATUS_COMPLETE = "complete";
 const STEP_NAME = "AI content scan";
@@ -69,4 +69,97 @@ it("workflow batch should be able to reach the end and be successful", async ({
 		// Also disposes all intercepted instances
 		await introspector.dispose();
 	}
+});
+
+describe("workflow instance lifecycle methods", () => {
+	it("should terminate a workflow instance", async ({ expect }) => {
+		// CONFIG:
+		await using introspector = await introspectWorkflow(env.MODERATOR);
+		await introspector.modifyAll(async (m) => {
+			await m.disableSleeps();
+			await m.mockStepResult({ name: STEP_NAME }, { violationScore: 50 });
+		});
+
+		const res = await SELF.fetch("https://mock-worker.local/moderate");
+		const data = (await res.json()) as { id: string; details: unknown };
+
+		const instances = introspector.get();
+		expect(instances.length).toBe(1);
+		const instance = instances[0];
+
+		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual({
+			violationScore: 50,
+		});
+
+		const handle = await env.MODERATOR.get(data.id);
+		await handle.terminate();
+
+		// ASSERTIONS:
+		await expect(instance.waitForStatus("terminated")).resolves.not.toThrow();
+
+		// DISPOSE: ensured by `await using`
+	});
+
+	it("should restart a workflow instance", async ({ expect }) => {
+		// CONFIG:
+		await using introspector = await introspectWorkflow(env.MODERATOR);
+		await introspector.modifyAll(async (m) => {
+			await m.disableSleeps();
+			await m.mockStepResult({ name: STEP_NAME }, { violationScore: 50 });
+			await m.mockEvent({
+				type: "moderation-decision",
+				payload: { moderatorAction: "approve" },
+			});
+		});
+
+		const res = await SELF.fetch("https://mock-worker.local/moderate");
+		const data = (await res.json()) as { id: string; details: unknown };
+
+		const instances = introspector.get();
+		expect(instances.length).toBe(1);
+		const instance = instances[0];
+
+		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual({
+			violationScore: 50,
+		});
+
+		const handle = await env.MODERATOR.get(data.id);
+		await handle.restart();
+
+		// Mocks survive instace restart, so the restarted workflow re-runs
+		// with the same config
+		await expect(
+			instance.waitForStatus(STATUS_COMPLETE)
+		).resolves.not.toThrow();
+
+		// DISPOSE: ensured by `await using`
+	});
+
+	it("should pause a workflow instance", async ({ expect }) => {
+		// CONFIG:
+		await using introspector = await introspectWorkflow(env.MODERATOR);
+		await introspector.modifyAll(async (m) => {
+			await m.disableSleeps();
+			await m.mockStepResult({ name: STEP_NAME }, { violationScore: 50 });
+		});
+
+		const res = await SELF.fetch("https://mock-worker.local/moderate");
+		const data = (await res.json()) as { id: string; details: unknown };
+
+		const instances = introspector.get();
+		expect(instances.length).toBe(1);
+		const instance = instances[0];
+
+		expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual({
+			violationScore: 50,
+		});
+
+		const handle = await env.MODERATOR.get(data.id);
+		await handle.pause();
+
+		// ASSERTIONS:
+		await expect(instance.waitForStatus("paused")).resolves.not.toThrow();
+
+		// DISPOSE: ensured by `await using`
+	});
 });

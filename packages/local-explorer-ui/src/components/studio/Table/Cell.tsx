@@ -68,7 +68,7 @@ export function StudioTableCell<HeaderMetadata = unknown>({
 	return (
 		<td
 			className={cn(
-				"overflow-hidden border-r border-b box-border hover:bg-accent border-border",
+				"box-border overflow-hidden border-r border-b border-border hover:bg-accent",
 				isSelected && "border-neutral-900 dark:border-neutral-100",
 				isBorderBottom &&
 					"border-b border-b-neutral-900 dark:border-b-neutral-100",
