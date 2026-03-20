@@ -1079,7 +1079,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -1223,7 +1224,8 @@ export default{
 				Content-Type: application/wasm
 
 				Hello wasm World!
-				------formdata-undici-0.test--"
+				------formdata-undici-0.test--
+				"
 			`);
 
 			expect(std).toMatchInlineSnapshot(`
