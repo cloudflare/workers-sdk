@@ -18,14 +18,16 @@ import {
 	verifyTestScript,
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
+import type { RunnerTestSuite } from "vitest";
 
 const workerTests = getWorkerTests();
 
 describe
 	.skipIf(workerTests.length === 0 || isWindows)
 	.concurrent(`E2E: Workers templates`, () => {
-		beforeAll((ctx) => {
-			recreateLogFolder(ctx);
+		// eslint-disable-next-line no-empty-pattern
+		beforeAll(({}, ctx) => {
+			recreateLogFolder(ctx as RunnerTestSuite);
 
 			if (workerTemplateToTest) {
 				debuglog("Running worker tests with filter:", workerTemplateToTest);

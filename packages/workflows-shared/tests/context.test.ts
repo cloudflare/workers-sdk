@@ -1,10 +1,11 @@
 import { afterEach, describe, it, vi } from "vitest";
+import workerdUnsafe from "workerd:unsafe";
 import { InstanceEvent } from "../src";
-import { runWorkflow, settlePendingWorkflows } from "./utils";
+import { runWorkflow } from "./utils";
 import type { EngineLogs } from "../src/engine";
 
 afterEach(async () => {
-	await settlePendingWorkflows();
+	await workerdUnsafe.abortAllDurableObjects();
 });
 
 describe("Context", () => {

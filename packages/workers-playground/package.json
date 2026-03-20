@@ -47,10 +47,10 @@
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.2.0",
 		"@types/uuid": "^9.0.2",
-		"@vitejs/plugin-react": "^4.3.3",
+		"@vitejs/plugin-react": "^5.2.0",
 		"react-use-websocket": "^4.13.0",
 		"undici": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:^"
 	},
 	"volta": {

@@ -20,6 +20,6 @@
 		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:vitest-3"
+		"vitest": "catalog:default"
 	}
 }

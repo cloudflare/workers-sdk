@@ -41,7 +41,7 @@
 		"upload-sourcemaps:router-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker router-worker --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@sentry/cli": "^2.37.0",
@@ -51,7 +51,7 @@
 		"mime": "^4.0.7",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:vitest-3",
+		"vitest": "catalog:default",
 		"zod": "^3.25.76"
 	},
 	"engines": {

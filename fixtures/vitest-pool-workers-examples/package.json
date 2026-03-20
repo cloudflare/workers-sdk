@@ -28,7 +28,7 @@
 		"stripe": "^20.0.0",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
-		"vite": "catalog:vitest-4",
+		"vite": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},

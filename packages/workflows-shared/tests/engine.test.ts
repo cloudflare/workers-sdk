@@ -2,14 +2,11 @@ import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { afterEach, describe, it, vi } from "vitest";
+import workerdUnsafe from "workerd:unsafe";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
 import { ABORT_REASONS, isAbortError } from "../src/lib/errors";
 import { setTestWorkflowCallback } from "./test-entry";
-import {
-	runWorkflow,
-	runWorkflowAndAwait,
-	settlePendingWorkflows,
-} from "./utils";
+import { runWorkflow, runWorkflowAndAwait } from "./utils";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -19,7 +16,7 @@ import type {
 import type { WorkflowStep } from "cloudflare:workers";
 
 afterEach(async () => {
-	await settlePendingWorkflows();
+	await workerdUnsafe.abortAllDurableObjects();
 });
 
 describe("Engine", () => {

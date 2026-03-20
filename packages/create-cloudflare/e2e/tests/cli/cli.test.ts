@@ -13,6 +13,7 @@ import {
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { runC3 } from "../../helpers/run-c3";
+import type { RunnerTestSuite } from "vitest";
 
 const { name: pm } = detectPackageManager();
 const workersDomain =
@@ -20,8 +21,9 @@ const workersDomain =
 	"devprod-testing7928.workers.dev";
 
 describe("Create Cloudflare CLI", () => {
-	beforeAll((ctx) => {
-		recreateLogFolder(ctx);
+	// eslint-disable-next-line no-empty-pattern
+	beforeAll(({}, ctx) => {
+		recreateLogFolder(ctx as RunnerTestSuite);
 	});
 
 	describe.skipIf(isExperimental)("E2E: Basic C3 functionality ", () => {

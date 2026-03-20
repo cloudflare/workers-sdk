@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -21,7 +20,6 @@ describe("cloudchamber delete", () => {
 	runInTempDir();
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
