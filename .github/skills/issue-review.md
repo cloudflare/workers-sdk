@@ -309,10 +309,10 @@ duplicate candidates. Only include what's relevant.>
 
 ### Output Step 2: Write Summary File
 
-Write a single tab-separated line to `./data/<issue_number>/summary.md` with these 8 fields:
+Write a single tab-separated line to `./data/<issue_number>/summary.md` with these 7 fields:
 
 ```
-[<issue_number>](https://github.com/<owner>/<repo>/issues/<issue_number>)	<title>	<CLOSE|KEEP OPEN|NEEDS MORE INFO|NEEDS VERIFICATION>	<completed|not_planned|n/a>	<Closure Category>	<brief reasoning>	<brief suggested action>	<Yes|No>
+[<issue_number>](https://github.com/<owner>/<repo>/issues/<issue_number>)	<title>	<CLOSE|KEEP OPEN|NEEDS MORE INFO|NEEDS VERIFICATION>	<easy|medium|hard|n/a>	<brief reasoning>	<brief suggested action>	<Yes|No>
 ```
 
 **Column definitions:**
