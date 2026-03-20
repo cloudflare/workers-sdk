@@ -150,6 +150,16 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Keep all checkboxes in the template (don't delete unchecked ones)
 - PR title format: `[package name] description` (e.g. `[wrangler] Fix bug in dev command`)
 - If the change doesn't require a changeset, add the `no-changeset-required` label
+- CI validates the PR description (see `tools/deployments/validate-pr-description.ts`). The description **must** include:
+  - A checked (`[x]`) test checkbox — either "Tests included/updated", or one of the justification checkboxes with a non-empty explanation
+  - A checked (`[x]`) documentation checkbox — either a Cloudflare docs PR/issue link, or "Documentation not necessary because:" with a non-empty explanation
+  - A changeset file (or the `no-changeset-required` label)
+
+**Pre-Submission Checklist:**
+
+- Run `pnpm check` (lint + type-check + format) locally before pushing — do not rely on CI to catch lint errors
+- When removing code, verify that all imports used only by the removed code are also removed (the linter enforces no unused imports)
+- Run `pnpm prettify` to ensure formatting is correct
 
 ## Key Locations
 
