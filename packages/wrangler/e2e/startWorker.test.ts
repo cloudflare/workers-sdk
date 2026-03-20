@@ -398,7 +398,9 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			await waitFor(async () => {
+			// In remote mode the edge needs time to propagate the new bundle,
+			// so use the longer polling timeout.
+			await waitForLong(async () => {
 				// test liveReload does nothing when the response Content-Type is not html
 				res = await worker.fetch("http://dummy");
 				resText = await res.text();
@@ -423,7 +425,7 @@ describe("DevEnv", { sequential: true }, () => {
 				},
 			});
 
-			await waitFor(async () => {
+			await waitForLong(async () => {
 				// test liveReload: false does nothing even when the response Content-Type is html
 				res = await worker.fetch("http://dummy");
 				resText = await res.text();
