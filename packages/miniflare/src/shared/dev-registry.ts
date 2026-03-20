@@ -13,6 +13,7 @@ import { FSWatcher, watch } from "chokidar";
 import { Log } from "./log";
 import { getGlobalWranglerConfigPath } from "./wrangler";
 import type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
+export type { WorkerDefinition, WorkerRegistry } from "./dev-registry-types";
 
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();

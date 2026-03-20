@@ -26,7 +26,7 @@ function getPeerUrls(
 	const selfSet = new Set(selfWorkerNames);
 	const urls = Object.entries(registry)
 		.filter(([name]) => !selfSet.has(name))
-		.map(([, def]) => `${def.protocol}://${def.host}:${def.port}`);
+		.map(([, def]) => `http://${def.loopbackAddress}`);
 	// A single Miniflare process with multiple workers registers multiple
 	// entries in the registry, all sharing the same host:port. We deduplicate
 	// to avoid fetching from the same peer multiple times.

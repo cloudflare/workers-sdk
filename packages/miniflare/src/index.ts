@@ -224,7 +224,7 @@ function validateOptions(
 	// Initialise return values
 	const pluginSharedOpts = {} as PluginSharedOptions;
 	const pluginWorkerOpts = Array.from(Array(workerOpts.length)).map(
-		() => ({}) as PluginWorkerOptions
+		() => ({} as PluginWorkerOptions)
 	);
 
 	// If we haven't defined multiple workers, shared options and worker options
@@ -1133,7 +1133,9 @@ export class Miniflare {
 			}
 		} catch (e: unknown) {
 			this.#log.debug(
-				`Failed to push registry update: ${e instanceof Error ? e.message : String(e)}`
+				`Failed to push registry update: ${
+					e instanceof Error ? e.message : String(e)
+				}`
 			);
 			if (retries > 0) {
 				await new Promise((r) => setTimeout(r, 500));
@@ -1889,11 +1891,11 @@ export class Miniflare {
 					workerOpts.assets.assets && entrypoint === "default"
 						? {
 								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
-							}
+						  }
 						: {
 								name: getUserServiceName(serviceName),
 								entrypoint: entrypoint === "default" ? undefined : entrypoint,
-							};
+						  };
 
 				sockets.push({
 					name,
@@ -1942,7 +1944,12 @@ export class Miniflare {
 				`};`,
 				...externalObjects.map(
 					([scriptName, className]) =>
-						`export const ${getOutboundDoProxyClassName(scriptName, className)} = createProxyDurableObjectClass({ scriptName: ${JSON.stringify(scriptName)}, className: ${JSON.stringify(className)} });`
+						`export const ${getOutboundDoProxyClassName(
+							scriptName,
+							className
+						)} = createProxyDurableObjectClass({ scriptName: ${JSON.stringify(
+							scriptName
+						)}, className: ${JSON.stringify(className)} });`
 				),
 			].join("\n");
 
@@ -2201,7 +2208,9 @@ export class Miniflare {
 			const urlSafeHost = getURLSafeHost(configuredHost);
 			if (this.#sharedOpts.core.logRequests) {
 				this.#log.logReady(
-					`${ready} on ${green(`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`)}`
+					`${ready} on ${green(
+						`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
+					)}`
 				);
 			}
 
@@ -2283,6 +2292,14 @@ export class Miniflare {
 		}
 		const debugPortAddress = `127.0.0.1:${debugPort}`;
 
+		assert(
+			this.#loopbackServer !== undefined && this.#loopbackHost !== undefined,
+			"Loopback server must be running before registering workers"
+		);
+		const loopbackAddress = `${this.#loopbackHost}:${getServerPort(
+			this.#loopbackServer
+		)}`;
+
 		const allWorkerNames = this.#workerOpts.map(
 			(workerOpt) => workerOpt.core.name
 		);
@@ -2332,6 +2349,7 @@ export class Miniflare {
 					debugPortAddress,
 					defaultEntrypointService,
 					userWorkerService: getUserServiceName(workerOpts.core.name),
+					loopbackAddress,
 					durableObjects: internalObjects,
 				},
 			]);

@@ -268,13 +268,19 @@ app.get("/api/workers", async (c) => {
 		const registry = await response.json<WorkerRegistry>();
 
 		const workers: LocalExplorerWorker[] = Object.entries(registry).map(
-			([name, def]) => ({
-				host: def.host,
-				isSelf: selfSet.has(name),
-				name,
-				port: def.port,
-				protocol: def.protocol,
-			})
+			([name, def]) => {
+				// loopbackAddress is "host:port" format; protocol is always http in local dev
+				const colonIdx = def.loopbackAddress.lastIndexOf(":");
+				const host = def.loopbackAddress.slice(0, colonIdx);
+				const port = parseInt(def.loopbackAddress.slice(colonIdx + 1), 10);
+				return {
+					host,
+					isSelf: selfSet.has(name),
+					name,
+					port,
+					protocol: "http",
+				};
+			}
 		);
 
 		return c.json(wrapResponse(workers));

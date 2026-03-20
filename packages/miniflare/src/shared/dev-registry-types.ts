@@ -13,5 +13,8 @@ export type WorkerDefinition = {
 	 * Used for named entrypoints and Durable Object access, which must bypass
 	 * any assets/vite proxy layer. */
 	userWorkerService: string;
+	/** HTTP loopback address for this miniflare instance (e.g. "127.0.0.1:8787").
+	 * Used by the local explorer for cross-instance aggregation. */
+	loopbackAddress: string;
 	durableObjects: { name: string; className: string }[];
 };
