@@ -158,7 +158,6 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 **Pre-Submission Checklist:**
 
 - Run `pnpm check` (lint + type-check + format) locally before pushing — do not rely on CI to catch lint errors
-- When removing code, verify that all imports used only by the removed code are also removed (the linter enforces no unused imports)
 - Run `pnpm prettify` to ensure formatting is correct
 
 ## Key Locations
