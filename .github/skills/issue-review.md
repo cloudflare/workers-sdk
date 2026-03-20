@@ -271,10 +271,6 @@ Write the full report to `./data/<issue_number>/report.md`:
 - **Has Reproduction:** <Yes (with link) | No | N/A>
 - **Quality:** <Complete | Partial | Incomplete>
 
-## Closure Category
-
-<One of: Spam | Resolved by Reporter | Already Fixed | Duplicate | Wrong Repo | Stale | Transient Issue | User Error | Won't Fix | Superseded | Needs More Info | Keep Open>
-
 ## Findings
 
 - **Created:** <date>
