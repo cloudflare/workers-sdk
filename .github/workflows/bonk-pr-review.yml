@@ -6,7 +6,7 @@ on:
 
 jobs:
   review:
-    if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name && contains(fromJSON('["MEMBER", "OWNER"]'), github.event.pull_request.author_association)
+    if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -18,6 +18,21 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Check if PR author is Cloudflare org member
+        run: |
+          STATUS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /orgs/cloudflare/members/${{ github.event.pull_request.user.login }} \
+            --silent -i 2>/dev/null | head -1 | awk '{print $2}') || true
+          if [ "$STATUS" != "204" ]; then
+            echo "User ${{ github.event.pull_request.user.login }} is not a member of the Cloudflare organization"
+            exit 1
+          fi
+          echo "User ${{ github.event.pull_request.user.login }} is a Cloudflare org member"
+        env:
+          GH_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
