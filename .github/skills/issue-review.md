@@ -321,7 +321,6 @@ Write a single tab-separated line to `./data/<issue_number>/summary.md` with the
 - **Title**: Issue title (remove any emoji prefixes like "Bug:" or template prefixes)
 - **Recommendation**: One of CLOSE, KEEP OPEN, NEEDS MORE INFO, NEEDS VERIFICATION
 - **Difficulty**: Estimated fix difficulty - `easy`, `medium`, `hard`, or `n/a` (for feature requests or closures)
-- **Closure Category**: One of: Spam, Already Fixed, Duplicate, Wrong Repo, Stale, Transient Issue, User Error, Won't Fix, Superseded, Needs More Info, Keep Open
 - **Reasoning**: Brief summary of why (1-2 sentences)
 - **Suggested Action**: Brief description of next steps
 - **Suggested Comment**: "Yes" if a comment template is provided, "No" otherwise
