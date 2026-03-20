@@ -16,6 +16,7 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
+import { waitForLong } from "./helpers/wait-for";
 import type { Worker } from "../src/api/startDevWorker";
 import type { MockInstance } from "vitest";
 
@@ -267,7 +268,7 @@ async function fetchTimedTextFromWorker(
 
 	try {
 		assert(worker, "Worker is not defined");
-		await vi.waitFor(
+		await waitForLong(
 			async () => {
 				responseText = await (
 					await worker.fetch("http://example.com", {
@@ -275,7 +276,7 @@ async function fetchTimedTextFromWorker(
 					})
 				).text();
 			},
-			{ timeout: 20_000, interval: 700 }
+			{ timeout: 20_000 }
 		);
 	} catch {
 		return null;

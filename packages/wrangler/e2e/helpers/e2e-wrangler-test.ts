@@ -3,8 +3,8 @@ import crypto from "node:crypto";
 import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { expect, onTestFinished, vi } from "vitest";
+import { onTestFinished } from "vitest";
+import { E2E_ACCOUNT_WORKERS_DEV_DOMAIN } from "./account-id";
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -12,6 +12,7 @@ import {
 } from "./cert";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
+import { waitForLong } from "./wait-for";
 import {
 	MINIFLARE_IMPORT,
 	runWrangler,
@@ -267,6 +268,49 @@ export class WranglerE2ETestHelper {
 	}
 
 	/**
+	 * Ensure a worker with a well-known `preserve-e2e-*` name is deployed.
+	 *
+	 * Checks whether the worker is already live by fetching its workers.dev
+	 * URL (controlled by `E2E_ACCOUNT_WORKERS_DEV_DOMAIN`). If it responds
+	 * with a non-404 status the deploy is skipped; otherwise `wrangler deploy`
+	 * is run and the helper waits for the worker to become available.
+	 *
+	 * No cleanup is registered — the worker is expected to persist across
+	 * test runs and is excluded from the periodic e2e cleanup job by its
+	 * `preserve-e2e-` prefix.
+	 */
+	async ensureWorkerDeployed({
+		workerName,
+		entryPoint = "",
+		configPath,
+	}: {
+		workerName: string;
+		entryPoint?: string;
+		configPath?: string;
+	}): Promise<void> {
+		const deployedUrl = `https://${workerName}.${E2E_ACCOUNT_WORKERS_DEV_DOMAIN}/`;
+		try {
+			const response = await fetch(deployedUrl);
+			if (response.status !== 404) {
+				return; // Worker already exists
+			}
+		} catch {
+			// Worker doesn't exist or is not reachable — fall through to deploy
+		}
+		const configOption = configPath ? `-c ${configPath}` : "";
+		await this.run(
+			`wrangler deploy ${entryPoint} --name ${workerName} ${configOption} --compatibility-date 2025-01-01`
+		);
+		await waitForLong(async () => {
+			const response = await fetch(deployedUrl);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
+		});
+	}
+
+	/**
 	 * Create a worker for the test and attempt to delete it after the test has finished.
 	 *
 	 * If this is called inside a beforeXxx hook the helper cannot call onTestFinished,
@@ -325,13 +369,13 @@ export class WranglerE2ETestHelper {
 		await setTimeout(2_000);
 
 		// Wait for the worker to become available
-		await vi.waitFor(
-			async () => {
-				const response = await fetch(deployedUrl);
-				expect(response.status).toBe(200);
-			},
-			{ timeout: 10_000, interval: 500 }
-		);
+		await waitForLong(async () => {
+			const response = await fetch(deployedUrl);
+			assert(
+				response.status === 200,
+				`Expected status 200 but got ${response.status}`
+			);
+		});
 
 		const cleanup = async () => {
 			await this.bestEffortRun(`wrangler delete --name ${workerName} --force`);

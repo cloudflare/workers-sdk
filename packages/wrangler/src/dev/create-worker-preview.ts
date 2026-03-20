@@ -16,6 +16,21 @@ import type {
 import type { HeadersInit } from "undici";
 
 /**
+ * Maximum time (ms) to wait for an individual preview API request before
+ * treating it as a timeout. Without this, a hung API response blocks the
+ * entire dev-session reload indefinitely.
+ */
+const PREVIEW_API_TIMEOUT_MS = 30_000;
+
+/**
+ * Combine the caller's abort signal with a per-request timeout so that a
+ * hung Cloudflare API response doesn't block forever.
+ */
+function withTimeout(signal: AbortSignal): AbortSignal {
+	return AbortSignal.any([signal, AbortSignal.timeout(PREVIEW_API_TIMEOUT_MS)]);
+}
+
+/**
  * A Cloudflare account.
  */
 
@@ -187,10 +202,18 @@ export async function createPreviewSession(
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
 		exchange_url?: string;
-	}>(complianceConfig, initUrl, undefined, undefined, abortSignal, apiToken);
+	}>(
+		complianceConfig,
+		initUrl,
+		undefined,
+		undefined,
+		withTimeout(abortSignal),
+		apiToken
+	);
 
 	const previewSessionToken = exchange_url
-		? ((await tryExpandToken(exchange_url, ctx, abortSignal)) ?? token)
+		? ((await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
+			token)
 		: token;
 
 	try {
@@ -200,7 +223,8 @@ export async function createPreviewSession(
 				complianceConfig,
 				account.accountId,
 				undefined,
-				apiToken
+				apiToken,
+				withTimeout(abortSignal)
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}
@@ -280,7 +304,7 @@ async function createPreviewToken(
 			},
 		},
 		undefined,
-		abortSignal
+		withTimeout(abortSignal)
 	);
 
 	return {
