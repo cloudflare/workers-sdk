@@ -26,19 +26,19 @@ export const previewCommand = createCommand({
 			requiresArg: true,
 		},
 		name: {
-			describe: "Name of the Preview (defaults to current git branch).",
+			describe: "Name of the Preview (defaults to current git branch)",
 			type: "string",
 			requiresArg: true,
 		},
 		"ignore-defaults": {
 			describe:
-				"Ignore Previews settings when creating the Preview and deployment. Only the Wrangler config values will be used.",
+				"Only use settings from your config file, ignoring any Previews settings configured in the Cloudflare dashboard",
 			type: "boolean",
 			default: false,
 		},
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -68,7 +68,7 @@ export const previewDeleteCommand = createCommand({
 		},
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -87,7 +87,7 @@ export const previewSettingsUpdateCommand = createCommand({
 	args: {
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -111,7 +111,7 @@ export const previewSettingsCommand = createCommand({
 	args: {
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -150,7 +150,7 @@ export const previewSecretPutCommand = createCommand({
 		},
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -180,7 +180,7 @@ export const previewSecretDeleteCommand = createCommand({
 		},
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -204,7 +204,7 @@ export const previewSecretListCommand = createCommand({
 		},
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
@@ -230,7 +230,7 @@ export const previewSecretBulkCommand = createCommand({
 		},
 		"worker-name": {
 			describe:
-				"Name of the Worker to target. Defaults to the name in your Wrangler config file.",
+				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
 		},
