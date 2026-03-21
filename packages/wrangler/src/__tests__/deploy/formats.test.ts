@@ -54,7 +54,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("@cloudflare/cli/command");
+vi.mock("../../autoconfig/c3-vendor/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -963,7 +963,9 @@ export default {
 
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
-			expect(fs.readFileSync("some-dir/index.js", "utf8")).toContain(
+			expect(
+				fs.readFileSync("some-dir/index.js", "utf8")
+			).toContain(
 				'import source hello from "./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm";'
 			);
 			expect(
@@ -1147,7 +1149,9 @@ export default {
 					import source hello from "./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm";
 				`
 			);
-			expect(fs.readFileSync("some-dir/worker.bundle", "utf8")).toContain(
+			expect(
+				fs.readFileSync("some-dir/worker.bundle", "utf8")
+			).toContain(
 				'Content-Disposition: form-data; name="./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"; filename="./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"'
 			);
 		});

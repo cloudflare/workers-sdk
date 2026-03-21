@@ -2,6 +2,6 @@
 "wrangler": patch
 ---
 
-Fix source phase imports in non-bundled Workers
+Fix source phase imports in bundled and non-bundled Workers
 
-Wrangler now preserves `import source` syntax when it runs esbuild in non-bundling paths such as module format detection. This fixes `--no-bundle` deployments for Workers that import WebAssembly using source phase imports.
+Wrangler now preserves `import source` syntax when it runs esbuild, including module format detection and bundled deploy output. This fixes both `--no-bundle` and bundled deployments for Workers that import WebAssembly using source phase imports.
