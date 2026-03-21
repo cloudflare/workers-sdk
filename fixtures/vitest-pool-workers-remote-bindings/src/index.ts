@@ -4,4 +4,4 @@ export default {
 		const remoteWorkerRespText = await remoteWorkerResp.text();
 		return new Response(`Response from remote worker: ${remoteWorkerRespText}`);
 	},
-};
+} satisfies ExportedHandler<Env>;

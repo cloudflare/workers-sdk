@@ -21,14 +21,18 @@ rmSync("./.tmp", { recursive: true, force: true });
 
 cpSync("./src", "./.tmp/src", { recursive: true });
 cpSync("./test", "./.tmp/test", { recursive: true });
-cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
+cpSync("./vitest.workers.config.mts", "./.tmp/vitest.workers.config.mts");
 cpSync(
-	"./vitest.workers.config.staging.ts",
-	"./.tmp/vitest.workers.config.staging.ts"
+	"./vitest.workers.config.staging.mts",
+	"./.tmp/vitest.workers.config.staging.mts"
 );
 
-const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
-const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${
+	randomUUID().split("-")[0]
+}`;
+const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${
+	randomUUID().split("-")[0]
+}`;
 
 const wranglerJson = JSON.parse(readFileSync("./wrangler.json", "utf8"));
 wranglerJson.services[0].service = remoteWorkerName;
@@ -128,7 +132,7 @@ try {
 	try {
 		try {
 			console.log("Running vitest-pool-workers remote bindings tests...");
-			execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.ts", {
+			execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.mts", {
 				env,
 				stdio: "inherit",
 			});
@@ -136,7 +140,7 @@ try {
 				"Running vitest-pool-workers remote bindings staging tests..."
 			);
 			execSync(
-				"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.ts",
+				"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.mts",
 				{
 					env,
 					stdio: "inherit",

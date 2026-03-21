@@ -2,7 +2,7 @@
 	"name": "@fixture/vitest-pool-workers-remote-bindings",
 	"private": true,
 	"scripts": {
-		"test": "vitest run --config vitest.workers.config.ts",
+		"test": "vitest run --config vitest.workers.config.mts",
 		"test:ci": "node run-tests.mjs",
 		"test:vitest": "vitest run"
 	},
