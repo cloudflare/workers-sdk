@@ -67,7 +67,30 @@ export function structuredSerializableParse(value: string): unknown {
 }
 
 // Log for informational pool messages
-const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
+let log = new Log(LogLevel.INFO, { prefix: "vpw" });
+
+function logLevelFromString(level: string): LogLevel {
+	switch (level) {
+		case "none":
+			return LogLevel.NONE;
+		case "error":
+			return LogLevel.ERROR;
+		case "warn":
+			return LogLevel.WARN;
+		case "info":
+			return LogLevel.INFO;
+		case "debug":
+			return LogLevel.DEBUG;
+		case "verbose":
+			return LogLevel.VERBOSE;
+		default:
+			return LogLevel.INFO;
+	}
+}
+
+export function setPoolLogLevel(level: string): void {
+	log = new Log(logLevelFromString(level), { prefix: "vpw" });
+}
 // Log for Miniflare instances, used for user code warnings/errors
 const mfLog = new Log(LogLevel.WARN);
 
