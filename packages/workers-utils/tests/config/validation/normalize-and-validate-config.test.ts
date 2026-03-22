@@ -47,6 +47,7 @@ describe("normalizeAndValidateConfig()", () => {
 				inspector_ip: undefined,
 				container_engine: undefined,
 				generate_types: false,
+				expose_entrypoints: false,
 			},
 			containers: undefined,
 			cloudchamber: {},
@@ -147,6 +148,7 @@ describe("normalizeAndValidateConfig()", () => {
 					upstream_protocol: "http",
 					enable_containers: false,
 					generate_types: false,
+					expose_entrypoints: false,
 				},
 			};
 
@@ -174,6 +176,7 @@ describe("normalizeAndValidateConfig()", () => {
 					upstream_protocol: "ws",
 					enable_containers: true,
 					generate_types: false,
+					expose_entrypoints: false,
 				},
 			};
 

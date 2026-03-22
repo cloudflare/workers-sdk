@@ -26,6 +26,7 @@ export type PersistState = boolean | { path: string };
 
 interface BaseWorkerConfig {
 	viteEnvironment?: { name?: string; childEnvironments?: string[] };
+	exposeEntrypoints?: boolean | Record<string, string | boolean>;
 }
 
 interface EntryWorkerConfig extends BaseWorkerConfig {
@@ -90,6 +91,7 @@ export interface ResolvedWorkerConfig extends ResolvedAssetsOnlyConfig {
 export interface Worker {
 	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
+	exposeEntrypoints?: boolean | Record<string, string | boolean>;
 }
 
 interface BaseResolvedConfig {
@@ -349,7 +351,10 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			prerenderWorkerEnvironmentName,
-			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
+			resolveWorker(
+				workerResolvedConfig.config as ResolvedWorkerConfig,
+				prerenderWorkerConfig.exposeEntrypoints
+			)
 		);
 
 		const prerenderWorkerChildEnvironments =
@@ -402,7 +407,10 @@ export function resolvePluginConfig(
 
 	environmentNameToWorkerMap.set(
 		entryWorkerEnvironmentName,
-		resolveWorker(entryWorkerResolvedConfig.config)
+		resolveWorker(
+			entryWorkerResolvedConfig.config,
+			pluginConfig.exposeEntrypoints
+		)
 	);
 
 	const entryWorkerChildEnvironments =
@@ -453,7 +461,10 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
+			resolveWorker(
+				workerResolvedConfig.config as ResolvedWorkerConfig,
+				auxiliaryWorker.exposeEntrypoints
+			)
 		);
 
 		const auxiliaryWorkerChildEnvironments =
@@ -510,11 +521,15 @@ function createEnvironmentNameValidator() {
 	};
 }
 
-function resolveWorker(workerConfig: ResolvedWorkerConfig): Worker {
+function resolveWorker(
+	workerConfig: ResolvedWorkerConfig,
+	exposeEntrypoints?: boolean | Record<string, string | boolean>
+): Worker {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)
 			? new NodeJsCompat(workerConfig)
 			: undefined,
+		exposeEntrypoints,
 	};
 }

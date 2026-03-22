@@ -189,6 +189,7 @@ describe("validatePagesConfig()", () => {
 						enable_containers: false,
 						container_engine: undefined,
 						generate_types: false,
+						expose_entrypoints: false,
 					},
 				},
 			};
