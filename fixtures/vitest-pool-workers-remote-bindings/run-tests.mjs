@@ -21,10 +21,10 @@ rmSync("./.tmp", { recursive: true, force: true });
 
 cpSync("./src", "./.tmp/src", { recursive: true });
 cpSync("./test", "./.tmp/test", { recursive: true });
-cpSync("./vitest.workers.config.mts", "./.tmp/vitest.workers.config.mts");
+cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
 cpSync(
-	"./vitest.workers.config.staging.mts",
-	"./.tmp/vitest.workers.config.staging.mts"
+	"./vitest.workers.config.staging.ts",
+	"./.tmp/vitest.workers.config.staging.ts"
 );
 
 const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${
@@ -132,7 +132,7 @@ try {
 	try {
 		try {
 			console.log("Running vitest-pool-workers remote bindings tests...");
-			execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.mts", {
+			execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.ts", {
 				env,
 				stdio: "inherit",
 			});
@@ -140,7 +140,7 @@ try {
 				"Running vitest-pool-workers remote bindings staging tests..."
 			);
 			execSync(
-				"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.mts",
+				"pnpm test:vitest --config ./.tmp/vitest.workers.config.staging.ts",
 				{
 					env,
 					stdio: "inherit",
