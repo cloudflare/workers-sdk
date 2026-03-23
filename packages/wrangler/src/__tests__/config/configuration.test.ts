@@ -1,25 +1,21 @@
 import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { readConfig } from "../../config";
 import { updateCheck } from "../../update-check";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
-import type { Mock } from "vitest";
 
 describe("readConfig() upgrade hint", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	beforeEach(() => {
-		(updateCheck as Mock).mockResolvedValue(undefined);
-	});
-
 	it("should not show an upgrade hint when unexpected fields are found but no update is available", async ({
 		expect,
 	}) => {
+		vi.mocked(updateCheck).mockResolvedValue(undefined);
 		writeWranglerConfig({
 			// @ts-expect-error intentional unknown field for test
 			unknown_field: "some_value",
@@ -33,7 +29,7 @@ describe("readConfig() upgrade hint", () => {
 	it("should show an upgrade hint when unexpected fields are found and an update is available", async ({
 		expect,
 	}) => {
-		(updateCheck as Mock).mockResolvedValue("9.9.9");
+		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
 		writeWranglerConfig({
 			// @ts-expect-error intentional unknown field for test
 			unknown_field: "some_value",
@@ -51,7 +47,7 @@ describe("readConfig() upgrade hint", () => {
 	it("should not show an upgrade hint when warnings are unrelated to unexpected fields", async ({
 		expect,
 	}) => {
-		(updateCheck as Mock).mockResolvedValue("9.9.9");
+		vi.mocked(updateCheck).mockResolvedValue("9.9.9");
 		// legacy_env: false produces a "Service environments are deprecated" warning
 		// but does NOT trigger validateAdditionalProperties, so no upgrade hint
 		writeWranglerConfig({ legacy_env: false });
