@@ -856,7 +856,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (!workerExists) {
 					throw new UserError(
 						`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
-							`Use \`wrangler secret put <NAME>\` to set secrets before deploying.`
+							`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
+							`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
 					);
 				}
 
@@ -1220,7 +1221,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						err.preventReport();
 						throw new UserError(
 							`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
-								`Use \`wrangler secret put <NAME>\` to set secrets before deploying.`
+								`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
+								`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
 						);
 					}
 				}
