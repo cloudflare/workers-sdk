@@ -758,6 +758,83 @@ describe("wrangler preview", () => {
 				],
 			});
 		});
+
+		test("should include deployment annotations from message and tag args", async ({
+			expect,
+		}) => {
+			let deploymentRequestBody:
+				| (Record<string, unknown> & {
+						annotations?: {
+							"workers/message"?: string;
+							"workers/tag"?: string;
+						};
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-annotations",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-annotations",
+									preview_id: "preview-id-annotations",
+									preview_name: "test-preview",
+									urls: ["https://annotations123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				'preview --name test-preview --tag v1.2.3 --message "preview note"'
+			);
+
+			expect(deploymentRequestBody?.annotations).toEqual({
+				"workers/message": "preview note",
+				"workers/tag": "v1.2.3",
+			});
+		});
 	});
 
 	describe("preview delete", () => {

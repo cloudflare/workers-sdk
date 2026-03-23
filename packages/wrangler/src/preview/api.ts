@@ -95,6 +95,10 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	annotations?: {
+		"workers/message"?: string;
+		"workers/tag"?: string;
+	};
 	migrations?: CfWorkerInit["migrations"];
 	limits?: Config["limits"];
 	placement?: { mode: string };

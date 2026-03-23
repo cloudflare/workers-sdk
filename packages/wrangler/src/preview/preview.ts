@@ -220,7 +220,8 @@ async function assemblePreviewDeploymentSettings(
 	config: Config,
 	scriptPath: string | undefined,
 	accountId: string,
-	workerName: string
+	workerName: string,
+	options: { message?: string; tag?: string }
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
 	const request: CreatePreviewDeploymentRequestParams = {};
@@ -257,6 +258,12 @@ async function assemblePreviewDeploymentSettings(
 	}
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
+	}
+	if (options.message || options.tag) {
+		request.annotations = {
+			...(options.message && { "workers/message": options.message }),
+			...(options.tag && { "workers/tag": options.tag }),
+		};
 	}
 	const migrations = await getMigrationsToUpload(workerName, {
 		accountId,
@@ -596,6 +603,8 @@ export async function handlePreviewCommand(
 	args: {
 		script?: string;
 		name?: string;
+		tag?: string;
+		message?: string;
 		ignoreDefaults: boolean;
 		workerName?: string;
 		"worker-name"?: string;
@@ -663,7 +672,8 @@ export async function handlePreviewCommand(
 		config,
 		args.script,
 		accountId,
-		workerName
+		workerName,
+		{ message: args.message, tag: args.tag }
 	);
 	const deployment = await createPreviewDeployment(
 		config,

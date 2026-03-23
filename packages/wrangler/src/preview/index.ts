@@ -30,6 +30,16 @@ export const previewCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		tag: {
+			describe: "A tag for this Preview deployment",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe: "A descriptive message for this Preview deployment",
+			type: "string",
+			requiresArg: true,
+		},
 		"ignore-defaults": {
 			describe:
 				"Only use settings from your config file, ignoring any Previews settings configured in the Cloudflare dashboard",
