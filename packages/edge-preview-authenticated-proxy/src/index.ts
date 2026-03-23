@@ -66,7 +66,10 @@ class RawHttpFailed extends HttpError {
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor(private tokenId: string, reportable: boolean) {
+	constructor(
+		private tokenId: string,
+		reportable: boolean
+	) {
 		super("Token and remote not found", 400, reportable);
 	}
 	get data(): { tokenId: string } {
