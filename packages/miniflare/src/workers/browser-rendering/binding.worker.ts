@@ -81,12 +81,21 @@ export class BrowserSession extends DurableObject<Env> {
 			// HACK: TODO: Figure out what the chunking mechanism is in @cloudflare/puppeteer and unchunk the messages here, rather than just naively slicing off the header. This Worker should probably have the increase_websocket_message_size compat flag added
 			ws.send(new TextDecoder().decode((m.data as ArrayBuffer).slice(4)));
 		});
-		server.addEventListener("close", ({ code, reason }) => {
-			ws.close(code, reason);
+		const forwardClose = (ws: WebSocket, e: CloseEvent) => {
+			// Reserved codes 1005 (No Status Received) and 1006 (Abnormal Closure) are
+			// valid in CloseEvent but throw InvalidAccessError when passed to .close().
+			if (e.code === 1005 || e.code === 1006) {
+				ws.close();
+			} else {
+				ws.close(e.code, e.reason);
+			}
+		};
+		server.addEventListener("close", (e) => {
+			forwardClose(ws, e);
 			this.ws = undefined;
 		});
-		ws.addEventListener("close", ({ code, reason }) => {
-			server.close(code, reason);
+		ws.addEventListener("close", (e) => {
+			forwardClose(server, e);
 			this.server = undefined;
 		});
 		this.ws = ws;
