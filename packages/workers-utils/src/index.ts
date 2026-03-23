@@ -54,6 +54,8 @@ export {
 
 export { validatePagesConfig } from "./config/validation-pages";
 
+export { Diagnostics } from "./config/diagnostics";
+
 export {
 	hasProperty,
 	isRequiredProperty,

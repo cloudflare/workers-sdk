@@ -16,6 +16,8 @@ import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { updateCheck } from "../update-check";
 import type {
 	Config,
+	ConfigBindingOptions,
+	Diagnostics,
 	NormalizeAndValidateConfigArgs,
 	RawConfig,
 	ResolveConfigPathOptions,
@@ -32,6 +34,33 @@ export type ReadConfigOptions = ResolveConfigPathOptions & {
 	// If set to `true`, the `main` field is not converted to an absolute path
 	preserveOriginalMain?: boolean;
 };
+
+export type { ConfigBindingOptions };
+
+/**
+ * Log config warnings. If any unexpected fields were found and a newer version
+ * of Wrangler is available, also log a contextual upgrade hint — the unexpected
+ * field may be supported in the newer version.
+ */
+async function logWarningsWithUpgradeHint(
+	diagnostics: Diagnostics,
+	hideWarnings: boolean | undefined
+): Promise<void> {
+	if (!diagnostics.hasWarnings() || hideWarnings) {
+		return;
+	}
+	logger.warn(diagnostics.renderWarnings());
+	if (diagnostics.hasUnexpectedFieldsInTree()) {
+		const latestVersion = await updateCheck();
+		if (latestVersion !== undefined) {
+			logger.log(
+				`There is a newer version of Wrangler available ` +
+					`(current: ${wranglerVersion}, latest: ${latestVersion}). ` +
+					`Try upgrading, as it might support this configuration option.`
+			);
+		}
+	}
+}
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
@@ -69,29 +98,12 @@ export function readConfig(
 		options.preserveOriginalMain
 	);
 
-	if (diagnostics.hasWarnings() && !options?.hideWarnings) {
-		logger.warn(diagnostics.renderWarnings());
-
-		// If there are unexpected field warnings and an update is available, suggest upgrading
-		if (diagnostics.renderWarnings().includes("Unexpected fields found")) {
-			void logUpdateHintIfAvailable();
-		}
-	}
+	void logWarningsWithUpgradeHint(diagnostics, options?.hideWarnings);
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
 	}
 
 	return config;
-}
-
-async function logUpdateHintIfAvailable() {
-	const latestVersion = await updateCheck();
-	if (latestVersion !== undefined) {
-		logger.log(
-			`If this is a new configuration option, consider updating Wrangler. ` +
-				`You are using ${wranglerVersion}, the latest is ${latestVersion}.`
-		);
-	}
 }
 
 export function readPagesConfig(
@@ -141,19 +153,14 @@ export function readPagesConfig(
 		args
 	);
 
-	if (diagnostics.hasWarnings() && !options.hideWarnings) {
-		logger.warn(diagnostics.renderWarnings());
-
-		// If there are unexpected field warnings and an update is available, suggest upgrading
-		if (diagnostics.renderWarnings().includes("Unexpected fields found")) {
-			void logUpdateHintIfAvailable();
-		}
-	}
+	void logWarningsWithUpgradeHint(diagnostics, options.hideWarnings);
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
 	}
 
-	logger.debug(`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`);
+	logger.debug(
+		`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
+	);
 
 	const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
 	const projectName = rawConfig?.name;
