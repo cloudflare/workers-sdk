@@ -97,11 +97,11 @@ function getExposedFetcher(request: Request, env: Env) {
  *  1. "raw" bindings, where this Worker has been configured to pass through the raw
  *     fetch from a local workerd instance to the relevant binding
  *  2. JSRPC bindings, where this Worker uses capnweb to proxy RPC
- *     communication in userland. This is always over a WebSocket connection
+ *     communication in userland over HTTP batch or WebSocket
  */
 function isJSRPCBinding(request: Request): boolean {
 	const url = new URL(request.url);
-	return request.headers.has("Upgrade") && url.searchParams.has("MF-Binding");
+	return url.searchParams.has("MF-Binding");
 }
 
 export default {

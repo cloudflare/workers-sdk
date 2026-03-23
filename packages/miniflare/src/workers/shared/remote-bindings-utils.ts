@@ -1,4 +1,4 @@
-import { newWebSocketRpcSession } from "capnweb";
+import { newHttpBatchRpcSession } from "capnweb";
 
 /**
  * Common environment type for remote binding workers.
@@ -62,7 +62,6 @@ export function makeRemoteProxyStub(
 	metadata?: ProxyMetadata
 ): Fetcher {
 	const url = new URL(remoteProxyConnectionString);
-	url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
 	url.searchParams.set("MF-Binding", bindingName);
 	if (metadata) {
 		for (const [key, value] of Object.entries(metadata)) {
@@ -76,7 +75,8 @@ export function makeRemoteProxyStub(
 		fetch: typeof fetch;
 		connect: never;
 	};
-	const stub = newWebSocketRpcSession(url.href) as unknown as ProxiedService;
+	// @ts-expect-error - Type instantiation is excessively deep and possibly infinite.
+	const stub = newHttpBatchRpcSession(url.href) as unknown as ProxiedService;
 
 	const headers = metadata
 		? new Headers(
