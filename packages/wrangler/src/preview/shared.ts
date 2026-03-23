@@ -12,22 +12,6 @@ export function getBranchName(): string | undefined {
 	}
 }
 
-export function nameToSlug(name: string): string {
-	const slug = name
-		.toLowerCase()
-		.replace(/[^a-z0-9-_]/g, "-")
-		.replace(/-+/g, "-")
-		.replace(/^-|-$/g, "")
-		.slice(0, 63);
-	if (!slug) {
-		throw new UserError(
-			`Preview name "${name}" cannot be converted to a valid slug. ` +
-				"Please use a name containing at least one alphanumeric character."
-		);
-	}
-	return slug;
-}
-
 export function resolveWorkerName(
 	args: { workerName?: string; "worker-name"?: string },
 	config: Config

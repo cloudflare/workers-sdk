@@ -41,7 +41,6 @@ import {
 	extractConfigBindings,
 	getBindingValue,
 	getBranchName,
-	nameToSlug,
 	resolveWorkerName,
 } from "./shared";
 import type {
@@ -624,7 +623,7 @@ export async function handlePreviewCommand(
 		}
 	}
 
-	const previewSlug = nameToSlug(previewName);
+	const previewIdentifier = previewName;
 	const ignoreDefaults = args.ignoreDefaults;
 	const accountId = await requireAuth(config);
 
@@ -634,7 +633,7 @@ export async function handlePreviewCommand(
 			config,
 			accountId,
 			workerName,
-			previewSlug
+			previewIdentifier
 		);
 	} catch (e) {
 		if (!(e instanceof Error && "code" in e && e.code === 10025)) {
@@ -659,7 +658,7 @@ export async function handlePreviewCommand(
 				config,
 				accountId,
 				workerName,
-				previewSlug,
+				previewIdentifier,
 				previewRequest,
 				{ ignoreDefaults }
 			);
@@ -679,7 +678,7 @@ export async function handlePreviewCommand(
 		config,
 		accountId,
 		workerName,
-		previewSlug,
+		previewIdentifier,
 		deploymentRequest,
 		{ ignoreDefaults }
 	);
@@ -727,6 +726,6 @@ export async function handlePreviewDeleteCommand(
 	}
 
 	const accountId = await requireAuth(config);
-	await deletePreview(config, accountId, workerName, nameToSlug(previewName));
+	await deletePreview(config, accountId, workerName, previewName);
 	logger.log(`\n✨ Preview "${previewName}" deleted successfully.`);
 }

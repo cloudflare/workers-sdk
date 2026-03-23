@@ -303,6 +303,78 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Deployment:");
 		});
 
+		test("should use the URL-encoded preview name as the Preview identifier in path params", async ({
+			expect,
+		}) => {
+			let lookupPreviewUrl: string | undefined;
+			let createDeploymentUrl: string | undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					({ request }) => {
+						lookupPreviewUrl = request.url;
+						return HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-direct-name",
+									name: "Feature Branch/One",
+									slug: "feature-branch-one",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					({ request }) => {
+						createDeploymentUrl = request.url;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-direct-name",
+									preview_id: "preview-id-direct-name",
+									preview_name: "Feature Branch/One",
+									urls: ["https://direct123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				'preview --name "Feature Branch/One" --worker-name test-worker'
+			);
+
+			expect(lookupPreviewUrl).toContain("/previews/Feature%20Branch%2FOne");
+			expect(createDeploymentUrl).toContain(
+				"/previews/Feature%20Branch%2FOne/deployments"
+			);
+		});
+
 		test("should work without preview_defaults", async ({ expect }) => {
 			msw.use(
 				http.get(
@@ -909,6 +981,25 @@ describe("wrangler preview", () => {
 				"preview delete --name test-branch -y --worker-name custom-worker"
 			);
 			expect(deleteUrl).toContain("/workers/workers/custom-worker/previews/");
+		});
+
+		test("should URL-encode the preview name when deleting", async ({
+			expect,
+		}) => {
+			let deleteUrl: string | undefined;
+			msw.use(
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					({ request }) => {
+						deleteUrl = request.url;
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+			await runWrangler(
+				'preview delete --name "Feature Branch/One" -y --worker-name test-worker'
+			);
+			expect(deleteUrl).toContain("/previews/Feature%20Branch%2FOne");
 		});
 	});
 

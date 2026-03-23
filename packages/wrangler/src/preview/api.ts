@@ -146,11 +146,13 @@ export async function getPreview(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewSlug: string
+	previewIdentifier: string
 ): Promise<PreviewResource> {
 	return fetchResult<PreviewResource>(
 		config,
-		`/accounts/${accountId}/workers/workers/${workerName}/previews/${previewSlug}`
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}`
 	);
 }
 
@@ -181,7 +183,7 @@ export async function editPreview(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewSlug: string,
+	previewIdentifier: string,
 	request: UpdatePreviewRequestParams,
 	options?: PreviewRequestOptions
 ): Promise<PreviewResource> {
@@ -191,7 +193,9 @@ export async function editPreview(
 
 	return fetchResult<PreviewResource>(
 		config,
-		`/accounts/${accountId}/workers/workers/${workerName}/previews/${previewSlug}`,
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}`,
 		{
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
@@ -205,11 +209,13 @@ export async function deletePreview(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewSlug: string
+	previewIdentifier: string
 ): Promise<void> {
 	await fetchResult(
 		config,
-		`/accounts/${accountId}/workers/workers/${workerName}/previews/${previewSlug}`,
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}`,
 		{
 			method: "DELETE",
 		}
@@ -220,11 +226,13 @@ export async function getLatestPreviewDeployment(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewSlug: string
+	previewIdentifier: string
 ): Promise<DeploymentResource> {
 	return fetchResult<DeploymentResource>(
 		config,
-		`/accounts/${accountId}/workers/workers/${workerName}/previews/${previewSlug}/deployments/latest`
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}/deployments/latest`
 	);
 }
 
@@ -232,7 +240,7 @@ export async function createPreviewDeployment(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewSlug: string,
+	previewIdentifier: string,
 	request: Partial<CreatePreviewDeploymentRequestParams>,
 	options?: PreviewRequestOptions
 ): Promise<DeploymentResource> {
@@ -242,7 +250,9 @@ export async function createPreviewDeployment(
 
 	return fetchResult<DeploymentResource>(
 		config,
-		`/accounts/${accountId}/workers/workers/${workerName}/previews/${previewSlug}/deployments`,
+		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
+			previewIdentifier
+		)}/deployments`,
 		{
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
