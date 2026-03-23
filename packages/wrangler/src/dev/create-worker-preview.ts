@@ -6,7 +6,7 @@ import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
 import { getWorkersDevSubdomain } from "../routes";
-import { getAccessToken } from "../user/access";
+import { getAccessHeaders } from "../user/access";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
@@ -138,12 +138,8 @@ async function tryExpandToken(
 	try {
 		const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
 
-		const headers: HeadersInit = {};
-		const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
-
-		if (accessToken) {
-			headers.cookie = `CF_Authorization=${accessToken}`;
-		}
+		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname);
+		const headers: HeadersInit = { ...accessHeaders };
 
 		logger.debugWithSanitization(
 			"-- START EXCHANGE API REQUEST:",
