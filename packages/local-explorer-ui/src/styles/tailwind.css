@@ -54,12 +54,12 @@
 /* Dark mode color overrides */
 @media (prefers-color-scheme: dark) {
 	:root {
-		--color-bg: #0a0a0a;
-		--color-bg-secondary: #000000;
-		--color-bg-tertiary: #171717;
-		--color-text: #f5f5f5;
-		--color-text-secondary: #f5f5f5b3;
-		--color-border: #262626;
+		--color-bg: #161616;
+		--color-bg-secondary: #0e0e0e;
+		--color-bg-tertiary: #1e1e1e;
+		--color-text: #e5e5e5;
+		--color-text-secondary: #e5e5e5b3;
+		--color-border: #2e2e2e;
 		--color-primary: oklch(0.5772 0.2324 260);
 		--color-primary-hover: oklch(0.488 0.243 264.376);
 		--color-danger: #f87171;
@@ -67,20 +67,20 @@
 		--color-success: #22c55e;
 
 		/* Surface colors — dark mode */
-		--color-surface: #000000;
-		--color-surface-secondary: #171717;
-		--color-surface-tertiary: #262626;
-		--color-muted: #a3a3a3;
-		--color-accent: #1c1c1c;
-		--color-background: #0a0a0a;
+		--color-surface: #0e0e0e;
+		--color-surface-secondary: #1e1e1e;
+		--color-surface-tertiary: #2e2e2e;
+		--color-muted: #9a9a9a;
+		--color-accent: #252525;
+		--color-background: #161616;
 		--color-border-active: oklch(0.5772 0.2324 260);
-		--color-tooltip-bg: #262626;
-		--color-tooltip-text: #f5f5f5;
-		--color-resizer: #262626;
+		--color-tooltip-bg: #2e2e2e;
+		--color-tooltip-text: #e5e5e5;
+		--color-resizer: #2e2e2e;
 
 		/* SQL editor chrome — dark mode */
-		--color-selection: rgba(245, 245, 245, 0.12);
-		--color-active-line: rgba(245, 245, 245, 0.05);
+		--color-selection: rgba(229, 229, 229, 0.12);
+		--color-active-line: rgba(229, 229, 229, 0.05);
 
 		/* SQL editor syntax highlighting — dark mode */
 		--color-syntax-keyword: #4078f2;
@@ -92,6 +92,58 @@
 
 		--shadow-focus-primary: 0 0 0 3px oklch(0.5772 0.2324 260 / 0.25);
 		--shadow-focus-danger: 0 0 0 3px rgba(248, 113, 113, 0.25);
+
+		/*
+		 * Kumo dark mode token overrides.
+		 * Kumo's theme-kumo.css uses light-dark() which requires color-scheme: dark
+		 * (set via data-mode="dark"). Since this app uses prefers-color-scheme
+		 * media queries instead, we must explicitly set the dark-side values here.
+		 * Values are taken directly from Kumo's theme-kumo.css defaults.
+		 */
+
+		/* Background tokens */
+		--color-kumo-base: oklch(0% 0 0); /* black */
+		--color-kumo-elevated: oklch(14.5% 0 0); /* neutral-950 */
+		--color-kumo-recessed: oklch(0.31 0 0); /* neutral-750 */
+		--color-kumo-overlay: oklch(26.9% 0 0); /* neutral-800 */
+		--color-kumo-contrast: oklch(97% 0 0); /* neutral-100 */
+		--color-kumo-control: oklch(21% 0.006 285.885); /* neutral-900 */
+		--color-kumo-tint: oklch(0.23 0 0); /* neutral-850 */
+		--color-kumo-interact: oklch(37.1% 0 0); /* neutral-700 */
+
+		/* Fill / border tokens */
+		--color-kumo-fill: oklch(26.9% 0 0); /* neutral-800 */
+		--color-kumo-fill-hover: oklch(37.1% 0 0); /* neutral-700 */
+		--color-kumo-line: oklch(26.9% 0 0); /* neutral-800 */
+		--color-kumo-ring: oklch(43.9% 0 0); /* neutral-600 */
+
+		/* Brand tokens */
+		--color-kumo-brand: oklch(0.5772 0.2324 260);
+		--color-kumo-brand-hover: oklch(48.8% 0.243 264.376); /* blue-700 */
+
+		/* Semantic tokens */
+		--color-kumo-danger: oklch(50.5% 0.213 27.518); /* red-700 */
+		--color-kumo-danger-tint: oklch(39.6% 0.141 25.723); /* red-900 */
+		--color-kumo-info: oklch(48.8% 0.243 264.376); /* blue-700 */
+		--color-kumo-info-tint: oklch(37.9% 0.146 265.522); /* blue-900 */
+		--color-kumo-warning: oklch(55.4% 0.135 66.442); /* yellow-700 */
+		--color-kumo-warning-tint: oklch(42.1% 0.095 57.708); /* yellow-900 */
+
+		/* Tooltip tokens */
+		--color-kumo-tip-shadow: transparent;
+		--color-kumo-tip-stroke: oklch(26.9% 0 0); /* neutral-800 */
+
+		/* Text tokens */
+		--text-color-kumo-default: oklch(97% 0 0); /* neutral-100 */
+		--text-color-kumo-inverse: oklch(20.5% 0 0); /* neutral-900 */
+		--text-color-kumo-strong: oklch(70.8% 0 0); /* neutral-400 */
+		--text-color-kumo-subtle: oklch(98.5% 0 0); /* neutral-50 */
+		--text-color-kumo-inactive: oklch(70.8% 0 0); /* neutral-400 */
+		--text-color-kumo-brand: #f6821f;
+		--text-color-kumo-link: oklch(70.7% 0.165 254.624); /* blue-400 */
+		--text-color-kumo-success: oklch(72.3% 0.219 149.579); /* green-500 */
+		--text-color-kumo-danger: oklch(70.4% 0.191 22.216); /* red-400 */
+		--text-color-kumo-warning: oklch(85.2% 0.199 91.936); /* yellow-400 */
 	}
 }
 
