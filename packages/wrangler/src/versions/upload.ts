@@ -34,6 +34,10 @@ import {
 } from "../deployment-bundle/module-collection";
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import {
+	addRequiredSecretsInheritBindings,
+	handleMissingSecretsError,
+} from "../deployment-bundle/secrets-validation";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -710,6 +714,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		}
 
+		addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
+
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -810,11 +816,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						metadata: {
 							has_preview: boolean;
 						};
-					}>(config, `${workerUrl}/versions`, {
-						method: "POST",
-						body: workerBundle,
-						headers: await getMetricsUsageHeaders(config.send_metrics),
-					})
+					}>(
+						config,
+						`${workerUrl}/versions`,
+						{
+							method: "POST",
+							body: workerBundle,
+							headers: await getMetricsUsageHeaders(config.send_metrics),
+						},
+						new URLSearchParams({ bindings_inherit: "strict" })
+					)
 				);
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
@@ -848,6 +859,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				if (message) {
 					logger.error(message);
 				}
+
+				handleMissingSecretsError(err, config, { type: "upload" });
 
 				// Apply source mapping to validation startup errors if possible
 				if (
