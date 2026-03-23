@@ -56,20 +56,24 @@ jobs:
           # Delete sticky OK comments (identified by embedded HTML marker)
           echo "$COMMENTS" | jq -r '.[] | select(.body | contains("<!-- changeset-review -->")) | .id' | while read -r COMMENT_ID; do
             echo "Deleting sticky OK comment ${COMMENT_ID}"
-            gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X DELETE
+            gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X DELETE || true
           done
 
-          # Find marker comments from prior issue-review runs, delete the associated review and the marker
+          # Find marker comments from prior issue-review runs, delete the associated review comments and the marker
           echo "$COMMENTS" | jq -c '.[] | select(.body | contains("<!-- changeset-review-marker"))' | while read -r ITEM; do
             COMMENT_ID=$(echo "$ITEM" | jq -r '.id')
             BODY=$(echo "$ITEM" | jq -r '.body')
             REVIEW_ID=$(echo "$BODY" | grep -oP '(?<=review-id:)\d+')
             if [ -n "$REVIEW_ID" ]; then
-              echo "Deleting prior review ${REVIEW_ID}"
-              gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews/${REVIEW_ID}" -X DELETE || true
+              echo "Deleting comments on prior review ${REVIEW_ID}"
+              # Submitted reviews cannot be deleted via the API; delete each review comment individually instead
+              gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews/${REVIEW_ID}/comments" \
+                | jq -r '.[].id' | while read -r RC_ID; do
+                  gh api "repos/${REPO}/pulls/comments/${RC_ID}" -X DELETE || true
+                done
             fi
             echo "Deleting marker comment ${COMMENT_ID}"
-            gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X DELETE
+            gh api "repos/${REPO}/issues/comments/${COMMENT_ID}" -X DELETE || true
           done
 
       - name: Review Changesets with OpenCode
@@ -132,16 +136,16 @@ jobs:
           SUMMARY=$(jq -r '.summary' changeset-review.json)
 
           if [ "$STATUS" = "issues" ]; then
-            # Build the comments array: one entry per file with issues, anchored to line 1
-            COMMENTS=$(jq '[.files[] | select(.status == "issues") | {path: .path, position: 1, body: .comment}]' changeset-review.json)
+            # Build the request body: file-level comments (subject_type: "file") for each problematic changeset
+            REQUEST_BODY=$(jq -n \
+              --arg commit_id "$HEAD_SHA" \
+              --argjson comments "$(jq '[.files[] | select(.status == "issues") | {path: .path, subject_type: "file", body: .comment}]' changeset-review.json)" \
+              '{commit_id: $commit_id, event: "COMMENT", body: "", comments: $comments}')
 
             # Post a pull request review with inline file-level comments
-            REVIEW_RESPONSE=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+            REVIEW_RESPONSE=$(echo "$REQUEST_BODY" | gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
               -X POST \
-              -f "commit_id=${HEAD_SHA}" \
-              -f "event=COMMENT" \
-              -f "body=" \
-              --field "comments=${COMMENTS}")
+              --input -)
 
             REVIEW_ID=$(echo "$REVIEW_RESPONSE" | jq -r '.id')
             echo "Posted review ${REVIEW_ID}"
