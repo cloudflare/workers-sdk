@@ -4,6 +4,7 @@ export type {
 	RawDevConfig,
 	ConfigFields,
 	RawEnvironment,
+	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
 export {
@@ -53,6 +54,8 @@ export {
 } from "./config/validation";
 
 export { validatePagesConfig } from "./config/validation-pages";
+
+export { Diagnostics } from "./config/diagnostics";
 
 export {
 	hasProperty,
