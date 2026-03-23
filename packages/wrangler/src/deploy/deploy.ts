@@ -62,6 +62,7 @@ import {
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
+import { INVALID_INHERIT_BINDING_CODE } from "../utils/error-codes";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
@@ -840,6 +841,32 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		}
 
+		// When `secrets.required` is defined, validate the secrets exist on the Worker.
+		// If the Worker doesn't exist yet, fail immediately.
+		// If the Worker exists, add explicit inherit bindings so the API validates
+		// each secret is present on the previous version.
+		// Secrets already provided via --secrets-file are excluded since
+		// they are part of the upload and don't need to be inherited.
+		if (config.secrets?.required?.length) {
+			const inheritedSecrets = config.secrets.required.filter(
+				(secretName) => !(secretName in bindings)
+			);
+
+			if (inheritedSecrets.length > 0) {
+				if (!workerExists) {
+					throw new UserError(
+						`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
+							`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
+							`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
+					);
+				}
+
+				for (const secretName of inheritedSecrets) {
+					bindings[secretName] = { type: "inherit" };
+				}
+			}
+		}
+
 		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
@@ -1028,7 +1055,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								method: "POST",
 								body: workerBundle,
 								headers: await getMetricsUsageHeaders(config.send_metrics),
-							}
+							},
+							new URLSearchParams({ bindings_inherit: "strict" })
 						)
 					);
 
@@ -1095,6 +1123,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 								// pass excludeScript so the whole body of the
 								// script doesn't get included in the response
 								excludeScript: "true",
+								bindings_inherit: "strict",
 							})
 						)
 					);
@@ -1170,6 +1199,32 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 				if (message !== null) {
 					logger.error(message);
+				}
+
+				// Reformat strict inherit binding errors as user-friendly missing secret errors.
+				// The API returns all missing inherit bindings as separate errors in response.errors, which map to individual err.notes entries.
+				if (
+					err instanceof APIError &&
+					err.code === INVALID_INHERIT_BINDING_CODE
+				) {
+					const missingSecretNames = err.notes
+						.map((note) =>
+							note.text.match(/^inherit binding '(.+?)' is invalid/)
+						)
+						.filter((match): match is RegExpMatchArray => match !== null)
+						.map((match) => match[1])
+						.filter((secretName) =>
+							config.secrets?.required?.includes(secretName)
+						);
+
+					if (missingSecretNames.length > 0) {
+						err.preventReport();
+						throw new UserError(
+							`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
+								`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
+								`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
+						);
+					}
 				}
 
 				// Apply source mapping to validation startup errors if possible

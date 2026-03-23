@@ -11,17 +11,23 @@ test.skipIf(
 	async ({ expect, seed, vitestRun }) => {
 		await seed({
 			"vitest.config.mts": dedent`
-				import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-				export default defineWorkersConfig({
-					test: {
-						reporters: ["hanging-process", "verbose"],
-						poolOptions: {
-							workers: {
+				import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+				import { defineConfig } from "vitest/config";
+
+				export default defineConfig(async () => {
+					return {
+						plugins: [
+							cloudflareTest({
 								wrangler: { configPath: "./wrangler.jsonc" },
-							},
+							}),
+						],
+						test: {
+							reporters: ["hanging-process", "verbose"],
+							teardownTimeout: 5000,
 						},
-					}
+					};
 				});
+
 			`,
 			"wrangler.jsonc": dedent`
 				{
@@ -54,6 +60,7 @@ test.skipIf(
 			flags: ["--reporter=hanging-process", "--reporter=verbose"],
 		});
 
+		expect(await result.exitCode).toBe(0);
 		expect(result.stderr).not.toContain(
 			"something prevents Vite server from exiting"
 		);

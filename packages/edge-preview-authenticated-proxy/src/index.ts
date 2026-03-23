@@ -1,5 +1,5 @@
+import { MetricsRegistry } from "@cloudflare/workers-utils/prometheus-metrics";
 import cookie from "cookie";
-import prom from "promjs";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
@@ -30,6 +30,26 @@ class HttpError extends Error {
 
 	get data(): Record<string, unknown> {
 		return {};
+	}
+}
+
+class NoExchangeUrl extends HttpError {
+	constructor() {
+		super("No exchange_url provided", 400, false);
+	}
+}
+
+class ExchangeFailed extends HttpError {
+	constructor(
+		readonly url: string,
+		readonly exchangeStatus: number,
+		readonly body: string
+	) {
+		super("Exchange failed", 400, true);
+	}
+
+	get data(): { url: string; status: number; body: string } {
+		return { url: this.url, status: this.exchangeStatus, body: this.body };
 	}
 }
 
@@ -81,6 +101,14 @@ function switchRemote(url: URL, remote: string) {
 	return workerUrl;
 }
 
+function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
+	return (
+		request.method === "POST" &&
+		url.hostname === env.PREVIEW &&
+		url.pathname === "/exchange"
+	);
+}
+
 function isPreviewUpdateRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "GET" &&
@@ -95,6 +123,10 @@ function isRawHttpRequest(url: URL, env: Env) {
 
 async function handleRequest(request: Request, env: Env) {
 	const url = new URL(request.url);
+
+	if (isTokenExchangeRequest(request, url, env)) {
+		return await handleTokenExchange(url);
+	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
 		return await updatePreviewToken(url, env);
@@ -168,7 +200,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	const token = requestHeaders.get("X-CF-Token");
 	const remote = requestHeaders.get("X-CF-Remote");
 
-	// Fallback to the request method for backward compatiblility
+	// Fallback to the request method for backward compatibility
 	const method = requestHeaders.get("X-CF-Http-Method") ?? request.method;
 
 	if (!token || !remote) {
@@ -294,6 +326,53 @@ async function updatePreviewToken(url: URL, env: Env) {
 	});
 }
 
+/**
+ * Request the preview session associated with a given exchange_url
+ * exchange_url comes from an authenticated core API call made in the client
+ */
+async function handleTokenExchange(url: URL) {
+	const exchangeUrl = url.searchParams.get("exchange_url");
+	if (!exchangeUrl) {
+		throw new NoExchangeUrl();
+	}
+	assertValidURL(exchangeUrl);
+	const exchangeRes = await fetch(exchangeUrl);
+	if (exchangeRes.status !== 200) {
+		const exchange = new URL(exchangeUrl);
+		// Clear sensitive token
+		exchange.search = "";
+
+		throw new ExchangeFailed(
+			exchange.href,
+			exchangeRes.status,
+			await exchangeRes.text()
+		);
+	}
+	const session = await exchangeRes.json<{
+		prewarm: string;
+		token: string;
+	}>();
+	if (
+		typeof session.token !== "string" ||
+		typeof session.prewarm !== "string"
+	) {
+		const exchange = new URL(exchangeUrl);
+		// Clear sensitive token
+		exchange.search = "";
+		throw new ExchangeFailed(
+			exchange.href,
+			exchangeRes.status,
+			JSON.stringify(session)
+		);
+	}
+	return Response.json(session, {
+		headers: {
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Methods": "POST",
+		},
+	});
+}
+
 // No ecosystem routers support hostname matching 😥
 export default {
 	async fetch(
@@ -301,9 +380,8 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const registry = prom();
-		const requestCounter = registry.create(
-			"counter",
+		const registry = new MetricsRegistry();
+		const requestCounter = registry.createCounter(
 			"devprod_edge_preview_authenticated_proxy_request_total",
 			"Request counter for DevProd's edge-preview-authenticated-proxy service"
 		);
@@ -344,8 +422,7 @@ export default {
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
-				const errorCounter = registry.create(
-					"counter",
+				const errorCounter = registry.createCounter(
 					"devprod_edge_preview_authenticated_proxy_error_total",
 					"Error counter for DevProd's edge-preview-authenticated-proxy service"
 				);

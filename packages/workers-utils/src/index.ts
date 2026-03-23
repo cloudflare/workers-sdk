@@ -4,6 +4,7 @@ export type {
 	RawDevConfig,
 	ConfigFields,
 	RawEnvironment,
+	ConfigBindingOptions,
 } from "./config";
 export * from "./config/environment";
 export {
@@ -54,6 +55,8 @@ export {
 
 export { validatePagesConfig } from "./config/validation-pages";
 
+export { Diagnostics } from "./config/diagnostics";
+
 export {
 	hasProperty,
 	isRequiredProperty,
@@ -92,3 +95,6 @@ export type { CompatDate } from "./compatibility-date";
 export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
+
+export { MetricsRegistry } from "./prometheus-metrics";
+export type { Counter } from "./prometheus-metrics";
