@@ -106,6 +106,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				source: "RemoteRuntimeController",
 				data: undefined,
 			});
+
+			throw err;
 		}
 	}
 
