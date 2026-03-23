@@ -6,6 +6,20 @@ import {
 	throwRemoteRequired,
 } from "./remote-bindings-utils";
 
+const HANDLER_RESERVED_KEYS = new Set([
+	"alarm",
+	"connect",
+	"scheduled",
+	"self",
+	"tail",
+	"tailStream",
+	"test",
+	"trace",
+	"webSocketClose",
+	"webSocketError",
+	"webSocketMessage",
+]);
+
 /** Generic remote proxy client for bindings. */
 export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 	fetch(request: Request): Promise<Response> {
@@ -26,6 +40,9 @@ export default class Client extends WorkerEntrypoint<RemoteBindingEnv> {
 			get: (target, prop) => {
 				if (Reflect.has(target, prop)) {
 					return Reflect.get(target, prop);
+				}
+				if (typeof prop === "string" && HANDLER_RESERVED_KEYS.has(prop)) {
+					return;
 				}
 				if (!stub) {
 					throwRemoteRequired(env.binding);

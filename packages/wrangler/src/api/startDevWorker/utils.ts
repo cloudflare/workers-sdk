@@ -16,6 +16,13 @@ import type {
 
 export function assertNever(_value: never) {}
 
+/**
+ * Preview tokens expire after 1 hour (hardcoded in the Workers control plane).
+ */
+export function getPreviewTokenRefreshInterval() {
+	return 50 * 60 * 1000;
+}
+
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
 	promise: Promise<T>;
