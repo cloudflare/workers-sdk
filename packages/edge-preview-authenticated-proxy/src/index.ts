@@ -33,6 +33,26 @@ class HttpError extends Error {
 	}
 }
 
+class NoExchangeUrl extends HttpError {
+	constructor() {
+		super("No exchange_url provided", 400, false);
+	}
+}
+
+class ExchangeFailed extends HttpError {
+	constructor(
+		readonly url: string,
+		readonly exchangeStatus: number,
+		readonly body: string
+	) {
+		super("Exchange failed", 400, true);
+	}
+
+	get data(): { url: string; status: number; body: string } {
+		return { url: this.url, status: this.exchangeStatus, body: this.body };
+	}
+}
+
 class TokenUpdateFailed extends HttpError {
 	constructor() {
 		super("Provide token and remote", 400, false);
@@ -46,10 +66,7 @@ class RawHttpFailed extends HttpError {
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor(
-		private tokenId: string,
-		reportable: boolean
-	) {
+	constructor(private tokenId: string, reportable: boolean) {
 		super("Token and remote not found", 400, reportable);
 	}
 	get data(): { tokenId: string } {
@@ -81,6 +98,14 @@ function switchRemote(url: URL, remote: string) {
 	return workerUrl;
 }
 
+function isTokenExchangeRequest(request: Request, url: URL, env: Env) {
+	return (
+		request.method === "POST" &&
+		url.hostname === env.PREVIEW &&
+		url.pathname === "/exchange"
+	);
+}
+
 function isPreviewUpdateRequest(request: Request, url: URL, env: Env) {
 	return (
 		request.method === "GET" &&
@@ -95,6 +120,10 @@ function isRawHttpRequest(url: URL, env: Env) {
 
 async function handleRequest(request: Request, env: Env) {
 	const url = new URL(request.url);
+
+	if (isTokenExchangeRequest(request, url, env)) {
+		return await handleTokenExchange(url);
+	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
 		return await updatePreviewToken(url, env);
@@ -290,6 +319,53 @@ async function updatePreviewToken(url: URL, env: Env) {
 				domain: url.hostname,
 				partitioned: true,
 			}),
+		},
+	});
+}
+
+/**
+ * Request the preview session associated with a given exchange_url
+ * exchange_url comes from an authenticated core API call made in the client
+ */
+async function handleTokenExchange(url: URL) {
+	const exchangeUrl = url.searchParams.get("exchange_url");
+	if (!exchangeUrl) {
+		throw new NoExchangeUrl();
+	}
+	assertValidURL(exchangeUrl);
+	const exchangeRes = await fetch(exchangeUrl);
+	if (exchangeRes.status !== 200) {
+		const exchange = new URL(exchangeUrl);
+		// Clear sensitive token
+		exchange.search = "";
+
+		throw new ExchangeFailed(
+			exchange.href,
+			exchangeRes.status,
+			await exchangeRes.text()
+		);
+	}
+	const session = await exchangeRes.json<{
+		prewarm: string;
+		token: string;
+	}>();
+	if (
+		typeof session.token !== "string" ||
+		typeof session.prewarm !== "string"
+	) {
+		const exchange = new URL(exchangeUrl);
+		// Clear sensitive token
+		exchange.search = "";
+		throw new ExchangeFailed(
+			exchange.href,
+			exchangeRes.status,
+			JSON.stringify(session)
+		);
+	}
+	return Response.json(session, {
+		headers: {
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Methods": "POST",
 		},
 	});
 }
