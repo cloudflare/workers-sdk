@@ -423,6 +423,7 @@ type WorkerOptionsBindings = Pick<
 	| "additionalUnboundDurableObjects"
 	| "media"
 	| "versionMetadata"
+	| "stream"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -504,6 +505,7 @@ export function buildMiniflareBindingOptions(
 		"version_metadata",
 		bindings
 	);
+	const streamBindings = extractBindingsOfType("stream", bindings);
 	const fetchers = extractBindingsOfType("fetcher", bindings);
 
 	// Setup blob and module bindings
@@ -780,6 +782,16 @@ export function buildMiniflareBindingOptions(
 						binding: browserBindings[0].binding,
 						remoteProxyConnectionString:
 							remoteProxyConnectionString && browserBindings[0].remote
+								? remoteProxyConnectionString
+								: undefined,
+					}
+				: undefined,
+		stream:
+			streamBindings.length > 0
+				? {
+						binding: streamBindings[0].binding,
+						remoteProxyConnectionString:
+							streamBindings[0].remote && remoteProxyConnectionString
 								? remoteProxyConnectionString
 								: undefined,
 					}

@@ -70,6 +70,7 @@ import {
 	SharedOptions,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
+	STREAM_PLUGIN_NAME,
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
@@ -150,6 +151,7 @@ import type {
 	KVNamespaceListKey,
 	Queue,
 	R2Bucket,
+	StreamBinding,
 } from "@cloudflare/workers-types/experimental";
 import type { Process } from "@puppeteer/browsers";
 
@@ -2167,7 +2169,9 @@ export class Miniflare {
 			const urlSafeHost = getURLSafeHost(configuredHost);
 			if (this.#sharedOpts.core.logRequests) {
 				this.#log.logReady(
-					`${ready} on ${green(`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`)}`
+					`${ready} on ${green(
+						`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
+					)}`
 				);
 			}
 
@@ -2762,6 +2766,12 @@ export class Miniflare {
 		set: (value: string) => Promise<void>;
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
+	}
+	getStreamBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<StreamBinding> {
+		return this.#getProxy(STREAM_PLUGIN_NAME, bindingName, workerName);
 	}
 
 	/** @internal */
