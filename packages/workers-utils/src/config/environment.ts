@@ -863,8 +863,8 @@ export interface EnvironmentNonInheritable {
 			/** The name of the queue from which this consumer should consume. */
 			queue: string;
 
-			/** The consumer type, e.g., worker, http-pull, r2-bucket, etc. Default is worker. */
-			type?: string;
+			/** The consumer type. Only "worker" is supported in wrangler config. Default is "worker". */
+			type?: "worker";
 
 			/** The maximum number of messages per batch */
 			max_batch_size?: number;
