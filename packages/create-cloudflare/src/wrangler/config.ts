@@ -68,8 +68,13 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
 		});
-		// Skip adding nodejs_compat for Python projects since it's not compatible with Python workers
+		// Skip adding upload_source_maps and nodejs_compat for Python projects
 		if (ctx.args.lang !== "python") {
+			wranglerJson = appendJSONProperty(
+				wranglerJson,
+				"upload_source_maps",
+				true
+			);
 			wranglerJson = addNodejsCompatFlag(wranglerJson);
 		}
 
@@ -91,8 +96,9 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ctx.project.path
 		);
 		wranglerToml.observability ??= { enabled: true };
-		// Skip adding nodejs_compat for Python projects since it's not compatible with Python workers
+		// Skip adding upload_source_maps and nodejs_compat for Python projects
 		if (ctx.args.lang !== "python") {
+			wranglerToml.upload_source_maps ??= true;
 			addNodejsCompatFlagToToml(wranglerToml);
 		}
 
