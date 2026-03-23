@@ -2143,6 +2143,10 @@ export class Miniflare {
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
+				// Disable timeouts for local dev — long-running responses (streaming,
+				// slow uploads, long-polling) should not be killed by undici defaults.
+				headersTimeout: 0,
+				bodyTimeout: 0,
 			});
 		}
 		if (this.#proxyClient === undefined) {
