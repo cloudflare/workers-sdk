@@ -660,6 +660,104 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody?.main_module).toBeDefined();
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
 		});
+
+		test("should include migrations in the deployment request", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					migrations: [
+						{ tag: "v1", new_classes: ["Counter"] },
+						{
+							tag: "v2",
+							renamed_classes: [{ from: "Counter", to: "CounterV2" }],
+						},
+					],
+				})
+			);
+
+			let deploymentRequestBody:
+				| (Record<string, unknown> & {
+						migrations?: {
+							new_tag?: string;
+							old_tag?: string;
+							steps?: unknown[];
+						};
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.get(`*/accounts/:accountId/workers/scripts`, () => {
+					return HttpResponse.json({ success: true, result: [] });
+				}),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-migrations",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-migrations",
+									preview_id: "preview-id-migrations",
+									preview_name: "test-preview",
+									urls: ["https://mig123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.migrations).toMatchObject({
+				new_tag: "v2",
+				steps: [
+					{ new_classes: ["Counter"] },
+					{ renamed_classes: [{ from: "Counter", to: "CounterV2" }] },
+				],
+			});
+		});
 	});
 
 	describe("preview delete", () => {

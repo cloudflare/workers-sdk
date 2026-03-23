@@ -12,6 +12,7 @@ import { bundleWorker } from "../deployment-bundle/bundle";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
+import { getMigrationsToUpload } from "../durable";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
@@ -257,6 +258,16 @@ async function assemblePreviewDeploymentSettings(
 	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
 		request.compatibility_flags = config.compatibility_flags;
 	}
+	const migrations = await getMigrationsToUpload(workerName, {
+		accountId,
+		config,
+		useServiceEnvironments: false,
+		env: undefined,
+		dispatchNamespace: undefined,
+	});
+	if (migrations) {
+		request.migrations = migrations;
+	}
 	if (previews?.limits !== undefined) {
 		request.limits = previews.limits;
 	} else if (config.limits !== undefined) {
@@ -385,7 +396,10 @@ function formatAlignedRows(
 	return rows.map(([label, value, fromConfig]) => {
 		const marker = fromConfig ? CONFIG_MARKER : " ";
 		const coloredLabel = chalk.cyan(padToVisibleWidth(label, labelWidth));
-		return `${indent}${coloredLabel}   ${padToVisibleWidth(value, valueWidth)}  ${marker}`;
+		return `${indent}${coloredLabel}   ${padToVisibleWidth(
+			value,
+			valueWidth
+		)}  ${marker}`;
 	});
 }
 
@@ -417,9 +431,15 @@ function formatBindings(
 		const dimType = chalk.dim(padToVisibleWidth(friendlyType, typeWidth));
 		if (showSourceMarker) {
 			const marker = binding.fromConfig ? CONFIG_MARKER : " ";
-			return `${indent}${coloredName}   ${dimType}   ${padToVisibleWidth(value, valueWidth)}  ${marker}`;
+			return `${indent}${coloredName}   ${dimType}   ${padToVisibleWidth(
+				value,
+				valueWidth
+			)}  ${marker}`;
 		}
-		return `${indent}${coloredName}   ${dimType}   ${padToVisibleWidth(value, valueWidth)}`;
+		return `${indent}${coloredName}   ${dimType}   ${padToVisibleWidth(
+			value,
+			valueWidth
+		)}`;
 	});
 }
 
@@ -434,7 +454,9 @@ function formatPreviewResource(
 	const obsRate = scriptLevel.observability?.head_sampling_rate;
 	const formattedRate = obsRate !== undefined ? obsRate.toFixed(1) : undefined;
 	const obsValue = obsEnabled
-		? `enabled${formattedRate !== undefined ? `, ${formattedRate} sampling` : ""}`
+		? `enabled${
+				formattedRate !== undefined ? `, ${formattedRate} sampling` : ""
+		  }`
 		: "disabled";
 
 	const lines: string[] = [

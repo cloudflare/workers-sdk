@@ -1,5 +1,9 @@
 import { fetchResult } from "../cfetch";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerInit,
+	Config,
+	PreviewsConfig,
+} from "@cloudflare/workers-utils";
 
 export interface Binding {
 	type: string;
@@ -91,6 +95,7 @@ export type CreatePreviewDeploymentRequestParams = {
 	};
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	migrations?: CfWorkerInit["migrations"];
 	limits?: Config["limits"];
 	placement?: { mode: string };
 	env?: EnvBindings;
