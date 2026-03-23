@@ -29,6 +29,12 @@ function createMockFetchImplementation() {
 			return new Response("BAD", { status: 500 });
 		}
 
+		if (url.pathname === "/exchange") {
+			return Response.json({
+				token: "TEST_TOKEN",
+				prewarm: "TEST_PREWARM",
+			});
+		}
 		if (url.pathname === "/redirect") {
 			// Use manual redirect to avoid trailing slash being added
 			return new Response(null, {
@@ -76,6 +82,36 @@ afterEach(() => {
 });
 
 describe("Preview Worker", () => {
+	it("should obtain token from exchange_url", async ({ expect }) => {
+		const resp = await SELF.fetch(
+			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
+				`${MOCK_REMOTE_URL}/exchange`
+			)}`,
+			{
+				method: "POST",
+			}
+		);
+		const text = await resp.json();
+		expect(text).toMatchInlineSnapshot(
+			`
+			{
+			  "prewarm": "TEST_PREWARM",
+			  "token": "TEST_TOKEN",
+			}
+		`
+		);
+	});
+	it("should reject invalid exchange_url", async ({ expect }) => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		const resp = await SELF.fetch(
+			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
+			{ method: "POST" }
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			`"{"error":"Error","message":"Invalid URL"}"`
+		);
+	});
 	it("should allow tokens > 4096 bytes", async ({ expect }) => {
 		// 4096 is the size limit for cookies
 		const token = randomBytes(4096).toString("hex");
