@@ -714,15 +714,20 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: 5_000,
 		});
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "some-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
-			},
+		expect(sessionOptions).toBeDefined();
+		const { auth: authHook1, ...rest1 } = sessionOptions ?? {};
+		expect(rest1).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
+		});
+		// auth is now an AsyncHook — resolve it before comparing
+		const resolvedAuth1 =
+			typeof authHook1 === "function"
+				? await (authHook1 as unknown as () => Promise<unknown>)()
+				: authHook1;
+		expect(resolvedAuth1).toEqual({
+			accountId: "some-account-id",
+			apiToken: { apiToken: "some-api-token" },
 		});
 		await stopWrangler();
 		await wranglerStopped;
@@ -756,15 +761,20 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 			timeout: 5_000,
 		});
 
-		expect(sessionOptions).toEqual({
-			auth: {
-				accountId: "mock-account-id",
-				apiToken: {
-					apiToken: "some-api-token",
-				},
-			},
+		expect(sessionOptions).toBeDefined();
+		const { auth: authHook2, ...rest2 } = sessionOptions ?? {};
+		expect(rest2).toEqual({
 			complianceRegion: undefined,
 			workerName: "worker",
+		});
+		// auth is now an AsyncHook — resolve it before comparing
+		const resolvedAuth2 =
+			typeof authHook2 === "function"
+				? await (authHook2 as unknown as () => Promise<unknown>)()
+				: authHook2;
+		expect(resolvedAuth2).toEqual({
+			accountId: "mock-account-id",
+			apiToken: { apiToken: "some-api-token" },
 		});
 
 		await stopWrangler();
