@@ -6,34 +6,34 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 @theme {
-	/* Cloudflare Workers brand colors - Light mode (default) */
-	--color-bg: #fffdfb;
-	--color-bg-secondary: #fef7ed;
-	--color-bg-tertiary: #fffbf5;
-	--color-text: #521000;
-	--color-text-secondary: #521000b3;
-	--color-border: #ebd5c1;
-	--color-primary: #ff4801;
-	--color-primary-hover: #ff7038;
-	--color-danger: #fb2c36;
+	/* Light mode (default) — neutral palette aligned with Kumo defaults */
+	--color-bg: #ffffff;
+	--color-bg-secondary: #f9fafb;
+	--color-bg-tertiary: #f3f4f6;
+	--color-text: #111827;
+	--color-text-secondary: #111827b3;
+	--color-border: #e5e7eb;
+	--color-primary: oklch(0.5772 0.2324 260);
+	--color-primary-hover: oklch(0.488 0.243 264.376);
+	--color-danger: #ef4444;
 	--color-danger-hover: #dc2626;
 	--color-success: #16a34a;
 
 	/* Surface colors */
-	--color-surface: #fef7ed;
-	--color-surface-secondary: #f5f0eb;
-	--color-surface-tertiary: #ebe3db;
-	--color-muted: #8a6e5c;
-	--color-accent: #f0e6dc;
-	--color-background: #fffdfb;
-	--color-border-active: #ff4801;
-	--color-tooltip-bg: #3d2e24;
-	--color-tooltip-text: #ffeee6;
-	--color-resizer: #d4c4b6;
+	--color-surface: #f9fafb;
+	--color-surface-secondary: #f3f4f6;
+	--color-surface-tertiary: #e5e7eb;
+	--color-muted: #6b7280;
+	--color-accent: #e5e7eb;
+	--color-background: #ffffff;
+	--color-border-active: oklch(0.5772 0.2324 260);
+	--color-tooltip-bg: #1f2937;
+	--color-tooltip-text: #f9fafb;
+	--color-resizer: #d1d5db;
 
 	/* SQL editor chrome */
-	--color-selection: rgba(82, 16, 0, 0.12);
-	--color-active-line: rgba(82, 16, 0, 0.05);
+	--color-selection: rgba(17, 24, 39, 0.1);
+	--color-active-line: rgba(17, 24, 39, 0.04);
 
 	/* SQL editor syntax highlighting */
 	--color-syntax-keyword: #0000ff;
@@ -44,81 +44,43 @@
 	--color-syntax-table: #e84393;
 
 	/* Focus ring shadows */
-	--shadow-focus-primary: 0 0 0 3px rgba(255, 72, 1, 0.15);
-	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
+	--shadow-focus-primary: 0 0 0 3px oklch(0.5772 0.2324 260 / 0.15);
+	--shadow-focus-danger: 0 0 0 3px rgba(239, 68, 68, 0.15);
 
 	/* Custom sizing */
 	--width-sidebar: 240px;
 }
 
-/*
- * Map @cloudflare/kumo component tokens to our brand theme.
- * Kumo's DropdownMenu, Button, Input, Tooltip, etc. reference --color-kumo-*
- * and --text-color-kumo-* variables internally. Without these mappings,
- * backgrounds and text colors resolve to transparent/invisible.
- */
-:root {
-	/* Background tokens */
-	--color-kumo-base: var(--color-background);
-	--color-kumo-control: var(--color-surface);
-	--color-kumo-elevated: var(--color-surface-secondary);
-	--color-kumo-overlay: var(--color-accent);
-	--color-kumo-recessed: var(--color-surface-tertiary);
-	--color-kumo-tint: var(--color-surface-secondary);
-
-	/* Interactive / brand tokens */
-	--color-kumo-brand: var(--color-primary);
-	--color-kumo-brand-hover: var(--color-primary-hover);
-	--color-kumo-interact: var(--color-surface-tertiary);
-	--color-kumo-danger: var(--color-danger);
-
-	/* Border / line tokens */
-	--color-kumo-fill: var(--color-border);
-	--color-kumo-line: var(--color-border);
-	--color-kumo-ring: var(--color-muted);
-
-	/* Tooltip tokens */
-	--color-kumo-tip-shadow: rgba(0, 0, 0, 0.08);
-	--color-kumo-tip-stroke: transparent;
-
-	/* Text color tokens */
-	--text-color-kumo-default: var(--color-text);
-	--text-color-kumo-subtle: var(--color-muted);
-	--text-color-kumo-inactive: var(--color-muted);
-	--text-color-kumo-danger: var(--color-danger);
-	--text-color-kumo-link: var(--color-primary);
-}
-
 /* Dark mode color overrides */
 @media (prefers-color-scheme: dark) {
 	:root {
-		--color-bg: #1a1412;
-		--color-bg-secondary: #0f0c0a;
-		--color-bg-tertiary: #231c18;
-		--color-text: #ffeee6;
-		--color-text-secondary: #ffeee6b3;
-		--color-border: #3d2e24;
-		--color-primary: #ff6b33;
-		--color-primary-hover: #ff8855;
-		--color-danger: #ff4d55;
+		--color-bg: #0a0a0a;
+		--color-bg-secondary: #000000;
+		--color-bg-tertiary: #171717;
+		--color-text: #f5f5f5;
+		--color-text-secondary: #f5f5f5b3;
+		--color-border: #262626;
+		--color-primary: oklch(0.5772 0.2324 260);
+		--color-primary-hover: oklch(0.488 0.243 264.376);
+		--color-danger: #f87171;
 		--color-danger-hover: #ef4444;
 		--color-success: #22c55e;
 
-		/* Studio surface colors — dark mode */
-		--color-surface: #0f0c0a;
-		--color-surface-secondary: #231c18;
-		--color-surface-tertiary: #3d2e24;
-		--color-muted: #a08678;
-		--color-accent: #2e221a;
-		--color-background: #1a1412;
-		--color-border-active: #ff6b33;
-		--color-tooltip-bg: #3d2e24;
-		--color-tooltip-text: #ffeee6;
-		--color-resizer: #3d2e24;
+		/* Surface colors — dark mode */
+		--color-surface: #000000;
+		--color-surface-secondary: #171717;
+		--color-surface-tertiary: #262626;
+		--color-muted: #a3a3a3;
+		--color-accent: #1c1c1c;
+		--color-background: #0a0a0a;
+		--color-border-active: oklch(0.5772 0.2324 260);
+		--color-tooltip-bg: #262626;
+		--color-tooltip-text: #f5f5f5;
+		--color-resizer: #262626;
 
 		/* SQL editor chrome — dark mode */
-		--color-selection: rgba(255, 238, 230, 0.15);
-		--color-active-line: rgba(255, 238, 230, 0.06);
+		--color-selection: rgba(245, 245, 245, 0.12);
+		--color-active-line: rgba(245, 245, 245, 0.05);
 
 		/* SQL editor syntax highlighting — dark mode */
 		--color-syntax-keyword: #4078f2;
@@ -128,15 +90,8 @@
 		--color-syntax-operator: #bfbfbf;
 		--color-syntax-table: #fd79a8;
 
-		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
-		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
-
-		/* Kumo tooltip overrides for dark mode */
-		--color-kumo-tip-shadow: transparent;
-		--color-kumo-tip-stroke: var(--color-border);
-
-		/* Kumo overlay override for dark mode - darker backdrop for dialogs */
-		--color-kumo-overlay: var(--color-surface);
+		--shadow-focus-primary: 0 0 0 3px oklch(0.5772 0.2324 260 / 0.25);
+		--shadow-focus-danger: 0 0 0 3px rgba(248, 113, 113, 0.25);
 	}
 }
 
