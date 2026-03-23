@@ -7,8 +7,6 @@ import { getPlaygroundWorker } from "./getPlaygroundWorker";
 import { matchFiles, parseRules, toMimeType } from "./module-collection";
 import type { TypeFromCodec } from "@cloudflare/util-en-garde";
 
-const decoder = new TextDecoder();
-const encoder = new TextEncoder();
 export const DeployPlaygroundWorkerResponse = eg.union([
 	eg.object({
 		preview: eg.string,
@@ -72,9 +70,6 @@ export function serialiseWorker(service: PartialWorker): FormData {
 
 	const typedModules = matchFiles(service.modules, parseRules([]));
 
-	const entrypointModule = typedModules.find(
-		(m) => m.name === service.entrypoint
-	);
 	for (const { name, content, type } of typedModules) {
 		formData.set(
 			name,
