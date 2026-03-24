@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, it, vi } from "vitest";
 import * as c3Packages from "../../../autoconfig/c3-vendor/packages";
 import { Angular } from "../../../autoconfig/frameworks/angular";
@@ -16,83 +15,6 @@ const BASE_OPTIONS = {
 	isWorkspaceRoot: false,
 };
 
-/** Minimal angular.json for a non-SSR (SPA) project — no `ssr` field */
-const NON_SSR_ANGULAR_JSON = {
-	projects: {
-		"my-angular-app": {
-			architect: {
-				build: {
-					options: {
-						browser: "src/main.ts",
-						tsConfig: "tsconfig.app.json",
-						assets: [{ glob: "**/*", input: "public" }],
-						styles: ["src/styles.css"],
-					},
-				},
-			},
-		},
-	},
-};
-
-/** angular.json for a project with SSR explicitly set to false */
-const SSR_FALSE_ANGULAR_JSON = {
-	projects: {
-		"my-angular-app": {
-			architect: {
-				build: {
-					options: {
-						browser: "src/main.ts",
-						tsConfig: "tsconfig.app.json",
-						assets: [],
-						styles: [],
-						ssr: false,
-					},
-				},
-			},
-		},
-	},
-};
-
-/** angular.json for a project with SSR enabled via the `true` boolean shorthand */
-const SSR_TRUE_ANGULAR_JSON = {
-	projects: {
-		"my-angular-app": {
-			architect: {
-				build: {
-					options: {
-						browser: "src/main.ts",
-						tsConfig: "tsconfig.app.json",
-						assets: [],
-						styles: [],
-						ssr: true,
-					},
-				},
-			},
-		},
-	},
-};
-
-/** angular.json for a project with SSR enabled (object value) */
-const SSR_ANGULAR_JSON = {
-	projects: {
-		"my-angular-app": {
-			architect: {
-				build: {
-					options: {
-						browser: "src/main.ts",
-						tsConfig: "tsconfig.app.json",
-						assets: [],
-						styles: [],
-						ssr: {
-							entry: "src/server.ts",
-						},
-					},
-				},
-			},
-		},
-	},
-};
-
 describe("Angular framework configure()", () => {
 	runInTempDir();
 
@@ -106,6 +28,24 @@ describe("Angular framework configure()", () => {
 
 	describe("non-SSR (SPA) project", () => {
 		beforeEach(async () => {
+			/** Minimal angular.json for a non-SSR (SPA) project — no `ssr` field */
+			const NON_SSR_ANGULAR_JSON = {
+				projects: {
+					"my-angular-app": {
+						architect: {
+							build: {
+								options: {
+									browser: "src/main.ts",
+									tsConfig: "tsconfig.app.json",
+									assets: [{ glob: "**/*", input: "public" }],
+									styles: ["src/styles.css"],
+								},
+							},
+						},
+					},
+				},
+			};
+
 			await writeFile(
 				resolve("angular.json"),
 				JSON.stringify(NON_SSR_ANGULAR_JSON, null, 2)
@@ -184,6 +124,25 @@ describe("Angular framework configure()", () => {
 
 	describe("project with ssr: false", () => {
 		beforeEach(async () => {
+			/** angular.json for a project with SSR explicitly set to false */
+			const SSR_FALSE_ANGULAR_JSON = {
+				projects: {
+					"my-angular-app": {
+						architect: {
+							build: {
+								options: {
+									browser: "src/main.ts",
+									tsConfig: "tsconfig.app.json",
+									assets: [],
+									styles: [],
+									ssr: false,
+								},
+							},
+						},
+					},
+				},
+			};
+
 			await writeFile(
 				resolve("angular.json"),
 				JSON.stringify(SSR_FALSE_ANGULAR_JSON, null, 2)
@@ -217,6 +176,25 @@ describe("Angular framework configure()", () => {
 
 	describe("project with ssr: true (boolean shorthand)", () => {
 		beforeEach(async () => {
+			/** angular.json for a project with SSR enabled via the `true` boolean shorthand */
+			const SSR_TRUE_ANGULAR_JSON = {
+				projects: {
+					"my-angular-app": {
+						architect: {
+							build: {
+								options: {
+									browser: "src/main.ts",
+									tsConfig: "tsconfig.app.json",
+									assets: [],
+									styles: [],
+									ssr: true,
+								},
+							},
+						},
+					},
+				},
+			};
+
 			await writeFile(
 				resolve("angular.json"),
 				JSON.stringify(SSR_TRUE_ANGULAR_JSON, null, 2)
@@ -257,6 +235,27 @@ describe("Angular framework configure()", () => {
 
 	describe("SSR project", () => {
 		beforeEach(async () => {
+			/** angular.json for a project with SSR enabled (object value) */
+			const SSR_ANGULAR_JSON = {
+				projects: {
+					"my-angular-app": {
+						architect: {
+							build: {
+								options: {
+									browser: "src/main.ts",
+									tsConfig: "tsconfig.app.json",
+									assets: [],
+									styles: [],
+									ssr: {
+										entry: "src/server.ts",
+									},
+								},
+							},
+						},
+					},
+				},
+			};
+
 			await writeFile(
 				resolve("angular.json"),
 				JSON.stringify(SSR_ANGULAR_JSON, null, 2)
