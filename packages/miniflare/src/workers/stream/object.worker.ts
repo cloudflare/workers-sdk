@@ -105,54 +105,50 @@ export class StreamObject extends DurableObject<Env> {
 	}
 
 	async listVideos(params?: StreamVideosListParams): Promise<VideoRow[]> {
-		const db = this.#db;
-		const conditions: string[] = [];
-		const values: (string | number | null)[] = [];
-
-		const compToSql = (comp: string) => {
-			const ops: Record<string, string> = {
-				eq: "=",
-				gt: ">",
-				gte: ">=",
-				lt: "<",
-				lte: "<=",
-			};
-			const op = ops[comp];
-			if (op === undefined) {
-				throw new BadRequestError(`Invalid comparison operator: ${comp}`);
-			}
-			return op;
-		};
-
-		if (params?.before !== undefined) {
-			const op = compToSql(params.beforeComp ?? "lt");
-			conditions.push(`created ${op} ?`);
-			values.push(params.before);
-		}
-		if (params?.after !== undefined) {
-			const op = compToSql(params.afterComp ?? "gte");
-			conditions.push(`created ${op} ?`);
-			values.push(params.after);
-		}
-
-		if (conditions.length === 0) {
-			// If not using any filters we can use the listVideos statement
+		if (!params?.before && !params?.after) {
 			if (params?.limit === undefined) {
 				return all(this.#stmts.listVideos({}));
 			}
 			return all(this.#stmts.listVideosLimit({ limit: params.limit }));
 		}
 
-		const where = `WHERE ${conditions.join(" AND ")}`;
-		const limit = params?.limit ?? 1000;
-		// Not using a prepared statement here, easier to just exec
-		return Array.from(
-			db.exec<VideoRow>(
-				`SELECT * FROM _mf_stream_videos ${where} ORDER BY created DESC LIMIT ?`,
-				...values,
-				limit
-			)
-		);
+		const compToSql: Record<string, string> = {
+			eq: "=",
+			gt: ">",
+			gte: ">=",
+			lt: "<",
+			lte: "<=",
+		};
+		const conditions: string[] = [];
+		const values: (string | number)[] = [];
+
+		if (params.before !== undefined) {
+			const op = compToSql[params.beforeComp ?? "lt"];
+			if (op === undefined) {
+				throw new BadRequestError(
+					"Invalid comparison operator: " + String(params.beforeComp)
+				);
+			}
+			conditions.push("created " + op + " ?");
+			values.push(params.before);
+		}
+		if (params.after !== undefined) {
+			const op = compToSql[params.afterComp ?? "gte"];
+			if (op === undefined) {
+				throw new BadRequestError(
+					"Invalid comparison operator: " + String(params.afterComp)
+				);
+			}
+			conditions.push("created " + op + " ?");
+			values.push(params.after);
+		}
+
+		values.push(params.limit ?? 1000);
+		const sql =
+			"SELECT * FROM _mf_stream_videos WHERE " +
+			conditions.join(" AND ") +
+			" ORDER BY created DESC LIMIT ?";
+		return Array.from(this.#db.exec<VideoRow>(sql, ...values));
 	}
 
 	async generateToken(id: string): Promise<string> {
