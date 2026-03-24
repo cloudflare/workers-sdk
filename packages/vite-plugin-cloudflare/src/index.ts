@@ -27,6 +27,7 @@ import type { PluginConfig } from "./plugin-config";
 import type { CompatDate } from "miniflare";
 import type * as vite from "vite";
 
+// TODO: simplify this function in the next major release (DEVX-2533)
 /**
  * Gets the compatibility date from the local workerd version.
  *
