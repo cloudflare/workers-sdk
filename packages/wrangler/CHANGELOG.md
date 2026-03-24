@@ -1,5 +1,62 @@
 # wrangler
 
+## 4.77.0
+
+### Minor Changes
+
+- [#13023](https://github.com/cloudflare/workers-sdk/pull/13023) [`593c4db`](https://github.com/cloudflare/workers-sdk/commit/593c4db91732efffbfff5a58630c09788006182d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `wrangler versions upload` support for the experimental `secrets` configuration property
+
+  When the new `secrets` property is defined, `wrangler versions upload` now validates that all secrets declared in `secrets.required` are configured on the Worker before the upload succeeds. If any required secrets are missing, the upload fails with a clear error listing which secrets need to be set.
+
+  When `secrets` is not defined, the existing behavior is unchanged.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
+- [#12732](https://github.com/cloudflare/workers-sdk/pull/12732) [`c2e9163`](https://github.com/cloudflare/workers-sdk/commit/c2e916353b59f646fa5804a4aa8d506033d47f5a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add deploy support for the experimental `secrets` configuration property
+
+  When the new `secrets` property is defined, `wrangler deploy` now validates that all secrets declared in `secrets.required` are configured on the Worker before the deploy succeeds. If any required secrets are missing, the deploy fails with a clear error listing which secrets need to be set.
+
+  When `secrets` is not defined, the existing behavior is unchanged.
+
+  ```jsonc
+  // wrangler.jsonc
+  {
+    "secrets": {
+      "required": ["API_KEY", "DB_PASSWORD"]
+    }
+  }
+  ```
+
+### Patch Changes
+
+- [#12896](https://github.com/cloudflare/workers-sdk/pull/12896) [`451dae3`](https://github.com/cloudflare/workers-sdk/commit/451dae371748927ad273e3c0180613ee30b064f2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: Add retry and timeout protection to remote preview API calls
+
+  Remote preview sessions (`wrangler dev --remote`) now automatically retry transient 5xx API errors (up to 3 attempts with linear backoff) and enforce a 30-second per-request timeout. Previously, a single hung or failed API response during session creation or worker upload could block the dev session reload indefinitely.
+
+- [#12569](https://github.com/cloudflare/workers-sdk/pull/12569) [`379f2a2`](https://github.com/cloudflare/workers-sdk/commit/379f2a2803e029ff1d2df43973a95b0aea6fba6e) Thanks [@MattieTK](https://github.com/MattieTK)! - Use `qwik add cloudflare-workers` instead of `qwik add cloudflare-pages` for Workers targets
+
+  Both the wrangler autoconfig and C3 Workers template for Qwik were running `qwik add cloudflare-pages` even when targeting Cloudflare Workers. This caused the wrong adapter directory structure to be scaffolded (`adapters/cloudflare-pages/` instead of `adapters/cloudflare-workers/`), and required post-hoc cleanup of Pages-specific files like `_routes.json`.
+
+  Qwik now provides a dedicated `cloudflare-workers` adapter that generates the correct Workers configuration, including `wrangler.jsonc` with `main` and `assets` fields, a `public/.assetsignore` file, and the correct `adapters/cloudflare-workers/vite.config.ts`.
+
+  Also adds `--skipConfirmation=true` to all `qwik add` invocations so the interactive prompt is skipped in automated contexts.
+
+- [#11899](https://github.com/cloudflare/workers-sdk/pull/11899) [`9a1cf29`](https://github.com/cloudflare/workers-sdk/commit/9a1cf29e6806335886dac56a85246cb76f1412d0) Thanks [@hoodmane](https://github.com/hoodmane)! - Remove cf-requirements support for Python workers. It hasn't worked with the runtime for a while now.
+
+- [#11800](https://github.com/cloudflare/workers-sdk/pull/11800) [`875da60`](https://github.com/cloudflare/workers-sdk/commit/875da60de78d67931567192eecae60b467c2491d) Thanks [@southpolesteve](https://github.com/southpolesteve)! - Add upgrade hint to unexpected configuration field warnings when an update is available
+
+  When Wrangler encounters unexpected fields in the configuration file and a newer version of Wrangler is available, it now displays a message suggesting to update. This helps users who may be using configuration options that were added in a newer version of Wrangler.
+
+- Updated dependencies [[`b8f3309`](https://github.com/cloudflare/workers-sdk/commit/b8f3309c1f3428c61d0a38c09d38d51d3fd999a5), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`f8516dd`](https://github.com/cloudflare/workers-sdk/commit/f8516dd474258535e1d9a8582286c41362d0ee36), [`9c9fe30`](https://github.com/cloudflare/workers-sdk/commit/9c9fe3030e80d83e6bf67cf2754751e3d11949db), [`6a6449e`](https://github.com/cloudflare/workers-sdk/commit/6a6449ece88b41194a8b4c9fc4566e422e06ff1e)]:
+  - miniflare@4.20260317.2
+
 ## 4.76.0
 
 ### Minor Changes

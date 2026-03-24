@@ -1,5 +1,13 @@
 # @cloudflare/workflows-shared
 
+## 0.7.1
+
+### Patch Changes
+
+- [#12985](https://github.com/cloudflare/workers-sdk/pull/12985) [`17a57e6`](https://github.com/cloudflare/workers-sdk/commit/17a57e641798dca0b298bd91dcdcef6be30d38b6) Thanks [@pombosilva](https://github.com/pombosilva)! - Fix `waitForEvent` delivering events to stale waiters after timeout.
+
+  When a `step.waitForEvent()` call timed out, its resolver was not removed from the workflow's internal waiters map. This meant the next `step.waitForEvent()` for the same event type would have its incoming event consumed by the dead resolver instead of the live one, causing the workflow to hang indefinitely.
+
 ## 0.7.0
 
 ### Minor Changes
