@@ -658,7 +658,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("unresolved module error messages", () => {
-		it("should recommend alias when a non-Node module cannot be resolved", async () => {
+		it("should recommend alias when a non-Node module cannot be resolved", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
@@ -687,7 +689,9 @@ export default { fetch() { return new Response(foo); } }`
 			`);
 		});
 
-		it("should NOT recommend alias for Node built-in modules", async () => {
+		it("should NOT recommend alias for Node built-in modules", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			fs.writeFileSync("index.js", "import fs from 'fs';");
 
