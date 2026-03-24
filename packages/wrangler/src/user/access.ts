@@ -102,7 +102,11 @@ export async function getAccessHeaders(
 	if (clientId !== undefined || clientSecret !== undefined) {
 		logger.warn(
 			"Both CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET must be set to use Access Service Token authentication. " +
-				`Only ${clientId !== undefined ? "CLOUDFLARE_ACCESS_CLIENT_ID" : "CLOUDFLARE_ACCESS_CLIENT_SECRET"} was found.`
+				`Only ${
+					clientId !== undefined
+						? "CLOUDFLARE_ACCESS_CLIENT_ID"
+						: "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+				} was found.`
 		);
 	}
 
