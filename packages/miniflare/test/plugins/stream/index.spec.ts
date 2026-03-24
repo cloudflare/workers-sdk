@@ -677,8 +677,8 @@ describe("Stream downloads", () => {
 		})) as DownloadGetResponse;
 
 		expect(result.default).toBeDefined();
-		expect(result.default!.status).toBe("ready");
-		expect(result.default!.percentComplete).toBe(100);
+		expect(result.default?.status).toBe("ready");
+		expect(result.default?.percentComplete).toBe(100);
 	});
 
 	test("generate audio download", async ({ expect }) => {
@@ -697,7 +697,7 @@ describe("Stream downloads", () => {
 		})) as DownloadGetResponse;
 
 		expect(result.audio).toBeDefined();
-		expect(result.audio!.status).toBe("ready");
+		expect(result.audio?.status).toBe("ready");
 	});
 
 	test("get downloads", async ({ expect }) => {
