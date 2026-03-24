@@ -36,6 +36,8 @@ export function formatCompatibilityDate(date: Date): CompatDate {
  * Gets a safe compatibility date from workerd. If the workerd compatibility
  * date is in the future, returns today's date instead. This handles the case
  * where workerd releases set their compatibility date up to 7 days in the future.
+ *
+ * @return The compatibility Date (`YYYY-MM-DD`)
  */
 function getSafeCompatibilityDate(): CompatDate {
 	// The compatibility data from workerd follows the CompatDate format
