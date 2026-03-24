@@ -935,7 +935,10 @@ defined at the top-level.
 
 ### `supportedCompatibilityDate`
 
-Exported value containing the latest [compatibility date](https://developers.cloudflare.com/workers/platform/compatibility-dates/) supported by the locally installed `workerd` package. If the `workerd` package's compatibility date is in the future, the value contains today's date instead. The value is a string in the `YYYY-MM-DD` format (e.g. `"2025-09-27"`).
+Each workerd release exposes a supported compat date that it guarantees can be used with this version of the package. This date is up to 7 days after the release date of the version.
+Normally this `supportedCompatibilityDate` is equal to the value exported by workerd, but if this supported compat date is in the future (because the workerd package was released in the last 7 days) then the value of this export is today.
+
+This value is a string in the `YYYY-MM-DD` format (e.g. `"2025-09-27"`).
 
 ## Configuration
 
