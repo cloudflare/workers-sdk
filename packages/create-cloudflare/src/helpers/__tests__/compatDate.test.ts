@@ -56,6 +56,25 @@ describe("Compatibility Date Helpers", () => {
 				expect.stringContaining(fallbackDate)
 			);
 		});
+
+		test("fallback when wrangler does not export supportedCompatibilityDate (older version)", async ({
+			expect,
+		}) => {
+			// Simulate an older version of wrangler that doesn't have this export
+			const mockWrangler = {};
+			vi.mocked(createRequire).mockReturnValue(
+				(() => mockWrangler) as unknown as NodeJS.Require
+			);
+
+			const date = getWorkerdCompatibilityDate("./my-app");
+
+			const fallbackDate = "2026-03-03";
+			expect(date).toBe(fallbackDate);
+			expect(spinner.start).toHaveBeenCalled();
+			expect(spinner.stop).toHaveBeenCalledWith(
+				expect.stringContaining(fallbackDate)
+			);
+		});
 	});
 
 	describe("getLatestTypesEntrypoint", () => {

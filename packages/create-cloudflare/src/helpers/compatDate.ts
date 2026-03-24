@@ -22,6 +22,15 @@ export function getWorkerdCompatibilityDate(projectPath: string): CompatDate {
 			projectRequire("wrangler");
 		const { supportedCompatibilityDate } = wrangler;
 
+		if (
+			typeof supportedCompatibilityDate !== "string" ||
+			!/^\d{4}-\d{2}-\d{2}$/.test(supportedCompatibilityDate)
+		) {
+			throw new Error(
+				"wrangler does not export a valid supportedCompatibilityDate"
+			);
+		}
+
 		s.stop(
 			`${brandColor("compatibility date")} ${dim(supportedCompatibilityDate)}`
 		);
