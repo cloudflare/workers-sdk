@@ -72,8 +72,13 @@ async function updateAngularJson(
 	const architectSection = angularJson.projects[projectName].architect;
 	architectSection.build.options.outputPath = "dist";
 	architectSection.build.options.outputMode = "server";
-	// ssr is guaranteed to be truthy here (checked by hasSsr before calling this)
+	// ssr is guaranteed to be truthy here (checked by hasSsr before calling this).
+	// `ssr: true` is a valid Angular shorthand for SSR with defaults — normalise it
+	// to an object before setting properties on it.
 	assert(architectSection.build.options.ssr);
+	if (typeof architectSection.build.options.ssr === "boolean") {
+		architectSection.build.options.ssr = {};
+	}
 	architectSection.build.options.ssr["experimentalPlatform"] = "neutral";
 
 	await writeFile(
@@ -131,7 +136,7 @@ type AngularJson = {
 					options: {
 						outputPath: string;
 						outputMode: string;
-						ssr?: Record<string, unknown> | false | null;
+						ssr?: Record<string, unknown> | boolean | null;
 						assets: string[];
 					};
 				};

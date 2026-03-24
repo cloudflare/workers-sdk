@@ -53,6 +53,25 @@ const SSR_FALSE_ANGULAR_JSON = {
 	},
 };
 
+/** angular.json for a project with SSR enabled via the `true` boolean shorthand */
+const SSR_TRUE_ANGULAR_JSON = {
+	projects: {
+		"my-angular-app": {
+			architect: {
+				build: {
+					options: {
+						browser: "src/main.ts",
+						tsConfig: "tsconfig.app.json",
+						assets: [],
+						styles: [],
+						ssr: true,
+					},
+				},
+			},
+		},
+	},
+};
+
 /** angular.json for a project with SSR enabled (object value) */
 const SSR_ANGULAR_JSON = {
 	projects: {
@@ -193,6 +212,46 @@ describe("Angular framework configure()", () => {
 			expect(framework.configurationDescription).toBe(
 				"Configuring Angular SPA project (assets only)"
 			);
+		});
+	});
+
+	describe("project with ssr: true (boolean shorthand)", () => {
+		beforeEach(async () => {
+			await writeFile(
+				resolve("angular.json"),
+				JSON.stringify(SSR_TRUE_ANGULAR_JSON, null, 2)
+			);
+			await mkdir(resolve("src"), { recursive: true });
+		});
+
+		it("returns SSR wranglerConfig without crashing", async ({ expect }) => {
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			const result = await framework.configure(BASE_OPTIONS);
+
+			expect(result.wranglerConfig).toEqual({
+				main: "./dist/server/server.mjs",
+				assets: {
+					binding: "ASSETS",
+					directory: "dist/my-angular-app/browser",
+				},
+			});
+		});
+
+		it("sets experimentalPlatform in angular.json when ssr was true", async ({
+			expect,
+		}) => {
+			const { readFileSync } = await import("node:fs");
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			await framework.configure(BASE_OPTIONS);
+
+			const angularJson = JSON.parse(
+				readFileSync(resolve("angular.json"), "utf8")
+			);
+			const options =
+				angularJson.projects["my-angular-app"].architect.build.options;
+			// The boolean `true` should have been promoted to an object
+			expect(typeof options.ssr).toBe("object");
+			expect(options.ssr.experimentalPlatform).toBe("neutral");
 		});
 	});
 
