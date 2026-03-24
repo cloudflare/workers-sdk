@@ -4,4 +4,4 @@
 
 Re-export `supportedCompatibilityDate` from miniflare
 
-Re-exports the `supportedCompatibilityDate` value from miniflare that contains a recent and safe compatibility date from the local version of `workerd`
+The re-exports contains a recent and safe compatibility date from the local version of `workerd`.
