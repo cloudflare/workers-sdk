@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { FALLBACK_COMPAT_DATE } from "helpers/compatDate";
 import { readJSON, readToml } from "helpers/files";
 import { beforeAll, describe } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
@@ -19,7 +20,6 @@ import {
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
 import type { RunnerTestSuite } from "vitest";
-import { FALLBACK_COMPAT_DATE } from "helpers/compatDate";
 
 const workerTests = getWorkerTests();
 
