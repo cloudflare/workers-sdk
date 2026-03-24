@@ -129,6 +129,7 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 				expect,
 			}) => {
 				setIsTTY(true);
+				vi.mocked(ci).isCI = false;
 
 				await expect(
 					getAccessHeaders("access-protected.com")
