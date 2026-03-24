@@ -7,6 +7,14 @@ import type { C3Context } from "types";
 import type { CompatDate } from "wrangler";
 
 /**
+ * Compatibility date to fallback to if getting the compatibility date from wrangler fails for whatever reason.
+ *
+ * Note: this fallback date doesn't have any special meaning, it's simply the latest compatibility date at the time of writing
+ *       (source: https://github.com/cloudflare/workerd/blob/main/src/workerd/io/release-version.txt#L1)
+ */
+export const FALLBACK_COMPAT_DATE = "2026-03-24";
+
+/**
  * Retrieves the latest workerd compatibility date
  *
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
@@ -36,15 +44,12 @@ export function getWorkerdCompatibilityDate(projectPath: string): CompatDate {
 		);
 		return supportedCompatibilityDate;
 	} catch {
-		// Note: this fallback date doesn't have any special meaning, it's simply the latest compatibility date at the time of writing
-		//       (source: https://github.com/cloudflare/workerd/blob/main/src/workerd/io/release-version.txt#L1)
-		const fallbackDate = "2026-03-24";
 		s.stop(
 			`${brandColor("compatibility date")} ${dim(
-				`Could not find workerd date, falling back to "${fallbackDate}"`
+				`Could not find workerd date, falling back to "${FALLBACK_COMPAT_DATE}"`
 			)}`
 		);
-		return fallbackDate;
+		return FALLBACK_COMPAT_DATE;
 	}
 }
 

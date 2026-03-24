@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import {
+	FALLBACK_COMPAT_DATE,
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
 } from "helpers/compatDate";
@@ -49,11 +50,10 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
-			const fallbackDate = "2026-03-24";
-			expect(date).toBe(fallbackDate);
+			expect(date).toBe(FALLBACK_COMPAT_DATE);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(fallbackDate)
+				expect.stringContaining(FALLBACK_COMPAT_DATE)
 			);
 		});
 
@@ -68,11 +68,10 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
-			const fallbackDate = "2026-03-24";
-			expect(date).toBe(fallbackDate);
+			expect(date).toBe(FALLBACK_COMPAT_DATE);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(fallbackDate)
+				expect.stringContaining(FALLBACK_COMPAT_DATE)
 			);
 		});
 	});

@@ -19,6 +19,7 @@ import {
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
 import type { RunnerTestSuite } from "vitest";
+import { FALLBACK_COMPAT_DATE } from "helpers/compatDate";
 
 const workerTests = getWorkerTests();
 
@@ -63,15 +64,33 @@ describe
 						const jsoncPath = join(project.path, "wrangler.jsonc");
 
 						if (existsSync(jsoncPath)) {
-							const config = readJSON(jsoncPath) as { main?: string };
+							const config = readJSON(jsoncPath) as {
+								main?: string;
+								compatibility_date?: string;
+							};
 							if (config.main) {
 								expect(join(project.path, config.main)).toExist();
 							}
+							// Verify the compatibility_date was resolved from the locally
+							// installed wrangler package and not the hardcoded fallback.
+							expect(config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+							expect(config.compatibility_date).not.toEqual(
+								FALLBACK_COMPAT_DATE
+							);
 						} else if (existsSync(tomlPath)) {
-							const config = readToml(tomlPath) as { main?: string };
+							const config = readToml(tomlPath) as {
+								main?: string;
+								compatibility_date?: string;
+							};
 							if (config.main) {
 								expect(join(project.path, config.main)).toExist();
 							}
+							// Verify the compatibility_date was resolved from the locally
+							// installed wrangler package and not the hardcoded fallback.
+							expect(config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+							expect(config.compatibility_date).not.toEqual(
+								FALLBACK_COMPAT_DATE
+							);
 						} else {
 							expect.fail(
 								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`
