@@ -49,7 +49,7 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
-			const fallbackDate = "2026-03-03";
+			const fallbackDate = "2026-03-24";
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
@@ -68,7 +68,7 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
-			const fallbackDate = "2026-03-03";
+			const fallbackDate = "2026-03-24";
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(

@@ -37,8 +37,8 @@ export function getWorkerdCompatibilityDate(projectPath: string): CompatDate {
 		return supportedCompatibilityDate;
 	} catch {
 		// Note: this fallback date doesn't have any special meaning, it's simply the latest compatibility date at the time of writing
-		//       (source: https://github.com/cloudflare/workerd/blob/main/src/workerd/io/supported-compatibility-date.txt)
-		const fallbackDate = "2026-03-03";
+		//       (source: https://github.com/cloudflare/workerd/blob/main/src/workerd/io/release-version.txt#L1)
+		const fallbackDate = "2026-03-24";
 		s.stop(
 			`${brandColor("compatibility date")} ${dim(
 				`Could not find workerd date, falling back to "${fallbackDate}"`
