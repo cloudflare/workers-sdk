@@ -1,5 +1,63 @@
 # create-cloudflare
 
+## 2.65.0
+
+### Minor Changes
+
+- [#12741](https://github.com/cloudflare/workers-sdk/pull/12741) [`e8f62bb`](https://github.com/cloudflare/workers-sdk/commit/e8f62bbfae6cb2c705a630e0d1252d16399c3660) Thanks [@penalosa](https://github.com/penalosa)! - Enable `upload_source_maps` by default for new projects
+
+  All new projects created with C3 now have `upload_source_maps` set to `true` in their Wrangler configuration. This means source maps are automatically uploaded when you deploy, giving you meaningful stack traces in your Worker's logs and error reports without any extra setup.
+
+### Patch Changes
+
+- [#12904](https://github.com/cloudflare/workers-sdk/pull/12904) [`88c9471`](https://github.com/cloudflare/workers-sdk/commit/88c94716ee116fc1790b19e36c20758df14255dc) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.592 | 0.0.599 |
+
+- [#13003](https://github.com/cloudflare/workers-sdk/pull/13003) [`ea13a78`](https://github.com/cloudflare/workers-sdk/commit/ea13a78d61212364956ec21a5c7f6bbc4fe6f6c6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To    |
+  | ------------ | ------ | ----- |
+  | create-solid | 0.6.13 | 0.7.0 |
+
+- [#13004](https://github.com/cloudflare/workers-sdk/pull/13004) [`44d8f22`](https://github.com/cloudflare/workers-sdk/commit/44d8f221856affe1632a1447c17b069d3588ac1f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.1.6 | 16.2.1 |
+
+- [#13005](https://github.com/cloudflare/workers-sdk/pull/13005) [`9a742b1`](https://github.com/cloudflare/workers-sdk/commit/9a742b174be8a92f4ca23aa9eb93162f9d69dbb8) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.2.2 | 21.2.3 |
+
+- [#13006](https://github.com/cloudflare/workers-sdk/pull/13006) [`554d68b`](https://github.com/cloudflare/workers-sdk/commit/554d68ba19d11c67342ba166b78ba1f39b626e01) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.0.0 | 5.0.3 |
+
+- [#12569](https://github.com/cloudflare/workers-sdk/pull/12569) [`379f2a2`](https://github.com/cloudflare/workers-sdk/commit/379f2a2803e029ff1d2df43973a95b0aea6fba6e) Thanks [@MattieTK](https://github.com/MattieTK)! - Use `qwik add cloudflare-workers` instead of `qwik add cloudflare-pages` for Workers targets
+
+  Both the wrangler autoconfig and C3 Workers template for Qwik were running `qwik add cloudflare-pages` even when targeting Cloudflare Workers. This caused the wrong adapter directory structure to be scaffolded (`adapters/cloudflare-pages/` instead of `adapters/cloudflare-workers/`), and required post-hoc cleanup of Pages-specific files like `_routes.json`.
+
+  Qwik now provides a dedicated `cloudflare-workers` adapter that generates the correct Workers configuration, including `wrangler.jsonc` with `main` and `assets` fields, a `public/.assetsignore` file, and the correct `adapters/cloudflare-workers/vite.config.ts`.
+
+  Also adds `--skipConfirmation=true` to all `qwik add` invocations so the interactive prompt is skipped in automated contexts.
+
 ## 2.64.9
 
 ### Patch Changes
@@ -305,6 +363,7 @@
   New Workers projects created via `create-cloudflare` now include an `AGENTS.md` file that provides AI coding agents with retrieval-led guidance for Cloudflare APIs. This helps agents avoid using outdated knowledge from their training data and instead consult current documentation.
 
   The file includes:
+
   - Links to Cloudflare documentation and MCP servers
   - Essential wrangler commands (`dev`, `deploy`, `types`)
   - Pointers to product-specific documentation for limits and APIs
@@ -364,7 +423,7 @@
 
   ```json
   {
-  	"compatibility_flags": []
+    "compatibility_flags": []
   }
   ```
 
@@ -683,6 +742,7 @@
 - [#11520](https://github.com/cloudflare/workers-sdk/pull/11520) [`85ec269`](https://github.com/cloudflare/workers-sdk/commit/85ec26985a05b2cc5e0dd3c4904f5b96b9e2de80) Thanks [@vicb](https://github.com/vicb)! - Add placeholder substitution in wrangler config files.
 
   When c3 updates the config file:
+
   - The value `"<WORKER_NAME>"` is replaced with the worker name.
   - The value `"<COMPATIBILITY_DATE>"` is replaced with the latest worked compatibility date.
 
@@ -1157,6 +1217,7 @@
 - [#10766](https://github.com/cloudflare/workers-sdk/pull/10766) [`bd5b720`](https://github.com/cloudflare/workers-sdk/commit/bd5b720c44f8bc04ac153154c1f8b8a291af7139) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not override any `.env` settings in `.gitignore` files
 
   Previously we only looked for `.env*` in the `gitignore` but now we cover more cases such as:
+
   - `.env`
   - `.env\*`
   - `.env.<local|production|staging|...>`
@@ -2472,6 +2533,7 @@
   | @angular/create | 19.1.5 | 19.1.6 |
 
 - [#7854](https://github.com/cloudflare/workers-sdk/pull/7854) [`bff209d`](https://github.com/cloudflare/workers-sdk/commit/bff209d853ae081ec692c41a080071956bf4ae2d) Thanks [@beratbayram](https://github.com/beratbayram)! - Update the Next.js template
+
   - Removed top-level `await` in `next.config.ts` as it is not allowed there and not required.
   - Improved `setupDevPlatform()` comment
 
@@ -2604,6 +2666,7 @@
   | nuxi       | 3.17.2 | 3.20.0 |
 
 - [#7743](https://github.com/cloudflare/workers-sdk/pull/7743) [`5955dac`](https://github.com/cloudflare/workers-sdk/commit/5955dac5ef2c6a0b6eea6dc28d11491966c07c2b) Thanks [@vicb](https://github.com/vicb)! - Update the Next.js experimental template
+
   - Use create-next-app@^14.2.23
   - Rename wrangler types output to cloudflare-env.d.ts
 
@@ -3825,6 +3888,7 @@
 - [#5675](https://github.com/cloudflare/workers-sdk/pull/5675) [`235c439`](https://github.com/cloudflare/workers-sdk/commit/235c4398268322b6c0c13060bc3da91f52b4b066) Thanks [@jculvey](https://github.com/jculvey)! - feat: Improvements to `hono` template.
 
   The `hono` template has been updated as follows:
+
   - Bumps `create-hono` to `0.7.0`
   - Automatically installs dependencies and specifies the detected package manager to avoid interactive prompts
   - Adds a `wrangler.toml` file with commented out examples of all available bindings to match other templates.
@@ -3975,6 +4039,7 @@
 ### Patch Changes
 
 - [#5218](https://github.com/cloudflare/workers-sdk/pull/5218) [`0c535e7`](https://github.com/cloudflare/workers-sdk/commit/0c535e7236cbfc4bf856889454298bb434e48650) Thanks [@jculvey](https://github.com/jculvey)! - refactor: Refactor C3 internal helpers. Includes a few small changes:
+
   - Drops `--save` from internal `pnpm` and `npm` install invocations
   - Switches to `git branch --show-current` for detecting current branch
 
@@ -4188,6 +4253,7 @@
 - [#4754](https://github.com/cloudflare/workers-sdk/pull/4754) [`06f85613`](https://github.com/cloudflare/workers-sdk/commit/06f85613228066ccb323c2818b443e9460b02c94) Thanks [@jculvey](https://github.com/jculvey)! - Adds C3 support for external templates hosted in git repositories via the `--template <source>` option.
 
   The source may be specified as any of the following:
+
   - `user/repo`
   - `git@github.com:user/repo`
   - `https://github.com/user/repo`
@@ -4200,6 +4266,7 @@
   See the `degit` [docs](https://github.com/Rich-Harris/degit) for more details.
 
   At a minimum, templates must contain the following:
+
   - `package.json`
   - `wrangler.toml`
   - `src/` containing a worker script referenced from `wrangler.toml`

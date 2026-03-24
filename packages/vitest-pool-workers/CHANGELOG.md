@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.13.4
+
+### Patch Changes
+
+- [#12999](https://github.com/cloudflare/workers-sdk/pull/12999) [`f9728fd`](https://github.com/cloudflare/workers-sdk/commit/f9728fd19ae384b47c0fa7df492d2506945f9e04) Thanks [@hiendv](https://github.com/hiendv)! - chore: update some tests and fixtures to Vitest 4 / vpw 0.13.x
+
+- Updated dependencies [[`593c4db`](https://github.com/cloudflare/workers-sdk/commit/593c4db91732efffbfff5a58630c09788006182d), [`b8f3309`](https://github.com/cloudflare/workers-sdk/commit/b8f3309c1f3428c61d0a38c09d38d51d3fd999a5), [`451dae3`](https://github.com/cloudflare/workers-sdk/commit/451dae371748927ad273e3c0180613ee30b064f2), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`f8516dd`](https://github.com/cloudflare/workers-sdk/commit/f8516dd474258535e1d9a8582286c41362d0ee36), [`9c9fe30`](https://github.com/cloudflare/workers-sdk/commit/9c9fe3030e80d83e6bf67cf2754751e3d11949db), [`379f2a2`](https://github.com/cloudflare/workers-sdk/commit/379f2a2803e029ff1d2df43973a95b0aea6fba6e), [`c2e9163`](https://github.com/cloudflare/workers-sdk/commit/c2e916353b59f646fa5804a4aa8d506033d47f5a), [`6a6449e`](https://github.com/cloudflare/workers-sdk/commit/6a6449ece88b41194a8b4c9fc4566e422e06ff1e), [`9a1cf29`](https://github.com/cloudflare/workers-sdk/commit/9a1cf29e6806335886dac56a85246cb76f1412d0), [`875da60`](https://github.com/cloudflare/workers-sdk/commit/875da60de78d67931567192eecae60b467c2491d)]:
+  - wrangler@4.77.0
+  - miniflare@4.20260317.2
+
 ## 0.13.3
 
 ### Patch Changes
