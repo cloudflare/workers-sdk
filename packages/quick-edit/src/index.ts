@@ -14,6 +14,7 @@ const ALLOWED_PARENT_ORIGINS = [
 const ALLOWED_PARENT_ORIGIN_WILDCARDS = [
 	"https://*.workers-playground.pages.dev",
 	"https://*.workers-playground.workers.dev",
+	"http://localhost:*",
 ];
 
 // During local development (wrangler dev), the playground runs on localhost.
