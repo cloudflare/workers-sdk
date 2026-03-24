@@ -50,6 +50,7 @@ function getSafeCompatibilityDate(): CompatDate {
 	return workerdCompatibilityDate;
 }
 
+/** `YYYY-MM-DD` compatibility date */
 const supportedCompatibilityDate = getSafeCompatibilityDate();
 
 export { supportedCompatibilityDate };
