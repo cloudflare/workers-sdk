@@ -36,6 +36,9 @@ describe("isCompatDate", () => {
 		expect(isCompatDate("2024-01-15T00:00:00")).toBe(false);
 		expect(isCompatDate(" 2024-01-15")).toBe(false);
 		expect(isCompatDate("2024-01-15 ")).toBe(false);
+
+		// Reverse Date
+		expect(isCompatDate("01-01-2000")).toBe(false);
 	});
 });
 
