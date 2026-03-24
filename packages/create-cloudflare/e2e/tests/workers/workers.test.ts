@@ -72,7 +72,7 @@ describe
 								expect(join(project.path, config.main)).toExist();
 							}
 							// Verify the compatibility_date was resolved from the locally
-							// installed wrangler package and not the hardcoded fallback.
+							// installed wrangler package and it isn't the hardcoded fallback.
 							expect(config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 							expect(config.compatibility_date).not.toEqual(
 								FALLBACK_COMPAT_DATE
@@ -86,7 +86,7 @@ describe
 								expect(join(project.path, config.main)).toExist();
 							}
 							// Verify the compatibility_date was resolved from the locally
-							// installed wrangler package and not the hardcoded fallback.
+							// installed wrangler package and it isn't the hardcoded fallback.
 							expect(config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 							expect(config.compatibility_date).not.toEqual(
 								FALLBACK_COMPAT_DATE
