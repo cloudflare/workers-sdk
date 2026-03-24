@@ -348,4 +348,12 @@ export class Runtime {
 
 export * from "./config";
 
-export * from "./compatibility-date";
+export {
+	supportedCompatibilityDate,
+	formatCompatibilityDate,
+	isCompatDate,
+	type CompatDate,
+	type YYYY,
+	type MM,
+	type DD,
+} from "./compatibility-date";
