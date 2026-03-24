@@ -20,10 +20,15 @@ import {
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
 } from "./details";
+import {
+	isFrameworkSupported,
+	isKnownFramework,
+	type PackageJsonScriptsOverrides,
+} from "./frameworks";
+import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
 import { getAutoConfigId } from "./telemetry-utils";
 import { usesTypescript } from "./uses-typescript";
-import type { PackageJsonScriptsOverrides } from "./frameworks";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
@@ -75,12 +80,17 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
-		if (!autoConfigDetails.framework.autoConfigSupported) {
-			throw new FatalError(
-				autoConfigDetails.framework.id === "cloudflare-pages"
-					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
-					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		if (isKnownFramework(autoConfigDetails.framework.id)) {
+			const frameworkIsSupported = isFrameworkSupported(
+				autoConfigDetails.framework.id
 			);
+			if (!frameworkIsSupported) {
+				throw new FatalError(
+					autoConfigDetails.framework.id === "cloudflare-pages"
+						? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
+						: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+				);
+			}
 		}
 
 		assert(
@@ -104,6 +114,16 @@ export async function runAutoConfig(
 		const { packageManager } = autoConfigDetails;
 
 		const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
+
+		const frameworkPackageInfo = getFrameworkPackageInfo(
+			autoConfigDetails.framework.id
+		);
+		if (frameworkPackageInfo) {
+			autoConfigDetails.framework.validateFrameworkVersion(
+				autoConfigDetails.projectPath,
+				frameworkPackageInfo
+			);
+		}
 
 		const dryRunConfigurationResults =
 			await autoConfigDetails.framework.configure({

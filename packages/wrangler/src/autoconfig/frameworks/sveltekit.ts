@@ -2,14 +2,18 @@ import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runCommand } from "@cloudflare/cli/command";
 import { installPackages } from "@cloudflare/cli/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class SvelteKit extends Framework {
 	async configure({
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
+		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { dlx } = packageManager;
 		if (!dryRun) {
@@ -26,7 +30,9 @@ export class SvelteKit extends Framework {
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${dlx.join(" ")} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
+						`via \`${dlx.join(
+							" "
+						)} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
 					)}`,
 				}
 			);

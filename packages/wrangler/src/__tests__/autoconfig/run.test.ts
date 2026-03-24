@@ -6,7 +6,9 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as details from "../../autoconfig/details";
+import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
+import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
@@ -53,6 +55,8 @@ vi.mock("../../package-manager", () => ({
 		dlx: ["npx"],
 	},
 }));
+
+vi.mock("../../autoconfig/frameworks/utils/packages");
 
 vi.mock("../deploy/deploy", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -162,7 +166,7 @@ describe("autoconfig (deploy)", () => {
 					autoConfigSupported: false,
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
-				},
+				} as unknown as Framework,
 				outputDir: "public",
 				packageManager: NpmPackageManager,
 			})
@@ -226,12 +230,15 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					workerName: "my-worker",
 					framework: {
-						id: "fake",
-						name: "Fake",
+						// "static" is used here because this test exercises the overall runAutoConfig
+						// flow, not framework-specific logic. Note: Using "static" avoids hitting the
+						// getFrameworkPackageInfo assert for unknown framework ids.
+						id: "static",
+						name: "Static",
 						configure: configureSpy,
 						isConfigured: () => false,
 						autoConfigSupported: true,
-					},
+					} as unknown as Framework,
 					outputDir: "dist",
 					packageJson: {
 						dependencies: {
@@ -247,7 +254,7 @@ describe("autoconfig (deploy)", () => {
 				"
 				Detected Project Settings:
 				 - Worker Name: my-worker
-				 - Framework: Fake
+				 - Framework: Static
 				 - Build Command: echo 'built' > build.txt
 				 - Output Directory: dist
 
@@ -275,7 +282,7 @@ describe("autoconfig (deploy)", () => {
 				    ]
 				  }
 
-				🛠️  Configuring project for Fake
+				🛠️  Configuring project for Static
 
 				[build] Running: echo 'built' > build.txt"
 			`);
@@ -571,7 +578,7 @@ describe("autoconfig (deploy)", () => {
 						autoConfigSupported: false,
 						configure: async () => ({ wranglerConfig: {} }),
 						isConfigured: () => false,
-					},
+					} as unknown as Framework,
 					workerName: "my-worker",
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
@@ -592,18 +599,18 @@ describe("autoconfig (deploy)", () => {
 					projectPath: process.cwd(),
 					configured: false,
 					framework: {
-						id: "some-unsupported",
-						name: "Some Unsupported Framework",
+						id: "hono",
+						name: "Hono",
 						autoConfigSupported: false,
 						configure: async () => ({ wranglerConfig: {} }),
 						isConfigured: () => false,
-					},
+					} as unknown as Framework,
 					workerName: "my-worker",
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The detected framework ("Some Unsupported Framework") cannot be automatically configured.]`
+				`[Error: The detected framework ("Hono") cannot be automatically configured.]`
 			);
 		});
 
@@ -624,8 +631,11 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					outputDir: "dist",
 					framework: {
-						id: "no-flags-framework",
-						name: "No Flags Framework",
+						// "static" is used here because this test only exercises compatibility flag
+						// merging behaviour. Note: Using "static" avoids the getFrameworkPackageInfo assert
+						// for unknown framework ids while keeping the test focused on its intent.
+						id: "static",
+						name: "Static",
 						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
@@ -634,7 +644,7 @@ describe("autoconfig (deploy)", () => {
 							},
 						}),
 						isConfigured: () => false,
-					},
+					} as unknown as Framework,
 					packageManager: NpmPackageManager,
 				});
 
@@ -658,8 +668,11 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					outputDir: "dist",
 					framework: {
-						id: "other-flags-framework",
-						name: "Other Flags Framework",
+						// "static" is used here because this test only exercises compatibility flag
+						// merging behaviour. Using "static" avoids the getFrameworkPackageInfo assert
+						// for unknown framework ids while keeping the test focused on its intent.
+						id: "static",
+						name: "Static",
 						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
@@ -668,7 +681,7 @@ describe("autoconfig (deploy)", () => {
 							},
 						}),
 						isConfigured: () => false,
-					},
+					} as unknown as Framework,
 					packageManager: NpmPackageManager,
 				});
 
@@ -695,8 +708,11 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					outputDir: "dist",
 					framework: {
-						id: "nodejs-compat-framework",
-						name: "Nodejs Compat Framework",
+						// "static" is used here because this test only exercises compatibility flag
+						// merging behaviour. Using "static" avoids the getFrameworkPackageInfo assert
+						// for unknown framework ids while keeping the test focused on its intent.
+						id: "static",
+						name: "Static",
 						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
@@ -705,7 +721,7 @@ describe("autoconfig (deploy)", () => {
 							},
 						}),
 						isConfigured: () => false,
-					},
+					} as unknown as Framework,
 					packageManager: NpmPackageManager,
 				});
 
@@ -729,9 +745,8 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					outputDir: "dist",
 					framework: {
-						id: "nodejs-als-framework",
+						id: "static",
 						name: "Nodejs Als Framework",
-						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
 								compatibility_flags: ["nodejs_als", "some_other_flag"],
@@ -739,7 +754,7 @@ describe("autoconfig (deploy)", () => {
 							},
 						}),
 						isConfigured: () => false,
-					},
+					} as unknown as Framework,
 					packageManager: NpmPackageManager,
 				});
 
@@ -751,6 +766,49 @@ describe("autoconfig (deploy)", () => {
 				]);
 				expect(wranglerConfig.compatibility_flags).not.toContain("nodejs_als");
 			});
+		});
+
+		it("validateFrameworkVersion is called before configure for a supported framework", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			// Mock getInstalledPackageVersion to return a valid version so that
+			// validateFrameworkVersion does not throw
+			vi.mocked(getInstalledPackageVersion).mockReturnValue("5.0.0");
+
+			const framework = new Astro({ id: "astro", name: "Astro" });
+
+			const callOrder: string[] = [];
+			vi.spyOn(framework, "validateFrameworkVersion").mockImplementation(() => {
+				callOrder.push("validateFrameworkVersion");
+			});
+			vi.spyOn(framework, "configure").mockImplementation(async () => {
+				callOrder.push("configure");
+				return { wranglerConfig: { assets: { directory: "dist" } } };
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: "dist",
+				framework,
+				packageManager: NpmPackageManager,
+			});
+
+			// configure is called twice: once as a dry-run (to build the summary) and
+			// once for real. validateFrameworkVersion must precede both.
+			expect(callOrder).toEqual([
+				"validateFrameworkVersion",
+				"configure",
+				"configure",
+			]);
 		});
 	});
 });
