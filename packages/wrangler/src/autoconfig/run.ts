@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { FatalError, parseJSONC } from "@cloudflare/workers-utils";
-import { supportedCompatibilityDate } from "../api/integrations";
+import { supportedCompatibilityDate } from "miniflare";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";

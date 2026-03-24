@@ -74,7 +74,7 @@ export type {
 	CompatDate,
 } from "./integrations";
 
-export { supportedCompatibilityDate, isCompatDate } from "./integrations";
+export { supportedCompatibilityDate, isCompatDate } from "miniflare";
 
 // Exports from ./remoteBindings
 export {
