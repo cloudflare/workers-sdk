@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-utils": minor
+"@cloudflare/workers-utils": major
 ---
 
 Remove the `getLocalWorkerdCompatibilityDate` utility from the package
