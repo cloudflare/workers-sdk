@@ -1,7 +1,10 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import { getDockerPath, getRegistryPath } from "@cloudflare/workers-utils";
-import { kCurrentWorker, Miniflare } from "miniflare";
-import * as miniflareModule from "miniflare";
+import {
+	kCurrentWorker,
+	Miniflare,
+	supportedCompatibilityDate,
+} from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -48,7 +51,7 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
  */
 export function unstable_getDevCompatibilityDate() {
-	return miniflareModule.supportedCompatibilityDate;
+	return supportedCompatibilityDate;
 }
 
 export {
@@ -116,7 +119,7 @@ export type GetPlatformProxyOptions = {
  */
 export type PlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 > = {
 	/**
 	 * Environment object containing the various Cloudflare bindings
@@ -150,7 +153,7 @@ export type PlatformProxy<
  */
 export async function getPlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
@@ -493,7 +496,7 @@ export function unstable_getMiniflareWorkerOptions(
 										doClassName: binding.class_name,
 										containerDOClassNames,
 										containerBuildId: options?.containerBuildId,
-									})
+								  })
 								: undefined,
 					} satisfies DurableObjectDefinition,
 				];
@@ -519,7 +522,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		containerEngine: useContainers
-			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
+			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
 			: undefined,
 
 		...bindingOptions,
