@@ -1,4 +1,48 @@
+import { logger } from "../logger";
+import { ServiceType } from "./index";
 import type { ConnectivityService } from "./index";
+
+export function displayServiceDetails(service: ConnectivityService) {
+	logger.log(`   Name: ${service.name}`);
+	logger.log(`   Type: ${service.type}`);
+
+	// Display service-specific details
+	if (service.type === ServiceType.Tcp) {
+		if (service.tcp_port) {
+			logger.log(`   TCP Port: ${service.tcp_port}`);
+		}
+	} else if (service.type === ServiceType.Http) {
+		if (service.http_port) {
+			logger.log(`   HTTP Port: ${service.http_port}`);
+		}
+		if (service.https_port) {
+			logger.log(`   HTTPS Port: ${service.https_port}`);
+		}
+	}
+
+	// Display host details
+	if (service.host.ipv4) {
+		logger.log(`   IPv4: ${service.host.ipv4}`);
+	}
+	if (service.host.ipv6) {
+		logger.log(`   IPv6: ${service.host.ipv6}`);
+	}
+	if (service.host.hostname) {
+		logger.log(`   Hostname: ${service.host.hostname}`);
+	}
+
+	// Display network details
+	if (service.host.network) {
+		logger.log(`   Tunnel ID: ${service.host.network.tunnel_id}`);
+	} else if (service.host.resolver_network) {
+		logger.log(`   Tunnel ID: ${service.host.resolver_network.tunnel_id}`);
+		if (service.host.resolver_network.resolver_ips) {
+			logger.log(
+				`   Resolver IPs: ${service.host.resolver_network.resolver_ips.join(", ")}`
+			);
+		}
+	}
+}
 
 export function formatServiceForTable(service: ConnectivityService) {
 	// Build port info based on service type
