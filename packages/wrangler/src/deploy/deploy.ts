@@ -16,7 +16,7 @@ import {
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { Response } from "undici";
-import { syncAssets } from "../assets";
+import { buildAssetManifest, syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -801,6 +801,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						props.dispatchNamespace
 					)
 				: undefined;
+
+		// validate asset directory
+		if (props.assetsOptions && props.dryRun) {
+			await buildAssetManifest(props.assetsOptions.directory);
+		}
 
 		const workersSitesAssets = await syncWorkersSite(
 			config,
