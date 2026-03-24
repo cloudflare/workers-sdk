@@ -894,6 +894,19 @@ describe("containers registries credentials", () => {
 		expect(std.out).toMatchInlineSnapshot(`"custom-expiry-token"`);
 	});
 
+	it("should generate credentials with --library-push", async () => {
+		setIsTTY(false);
+		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
+			"library_push",
+		]);
+
+		await runWrangler(
+			"containers registries credentials registry.cloudflare.com --library-push"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
+	});
+
 	it("should output valid JSON when --json flag is used", async () => {
 		setIsTTY(false);
 		mockGenerateCredentials("registry.cloudflare.com", "test-password", 15, [
