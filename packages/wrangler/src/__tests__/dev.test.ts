@@ -18,6 +18,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { supportedCompatibilityDate } from "../api";
 /* eslint-enable no-restricted-imports */
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
@@ -45,8 +46,6 @@ import type {
 } from "../api";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Mock, MockInstance } from "vitest";
-
-import { supportedCompatibilityDate } from "../api";
 
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 	importOriginal()
@@ -1659,7 +1658,7 @@ describe.sequential("wrangler dev", () => {
 							binding
 						): binding is [
 							string,
-							Extract<Binding, { type: "plain_text" | "secret_text" }>
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
 						] =>
 							binding[1].type === "plain_text" ||
 							binding[1].type === "secret_text"
@@ -1709,7 +1708,7 @@ describe.sequential("wrangler dev", () => {
 							binding
 						): binding is [
 							string,
-							Extract<Binding, { type: "plain_text" | "secret_text" }>
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
 						] =>
 							binding[1].type === "plain_text" ||
 							binding[1].type === "secret_text"

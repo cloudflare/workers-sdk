@@ -29,7 +29,7 @@ describe("Compatibility Date Helpers", () => {
 				supportedCompatibilityDate: "2025-01-10",
 			};
 			vi.mocked(createRequire).mockReturnValue(
-				(() => mockWrangler) as unknown as NodeJS.Require,
+				(() => mockWrangler) as unknown as NodeJS.Require
 			);
 
 			const date = getWorkerdCompatibilityDate("./my-app");

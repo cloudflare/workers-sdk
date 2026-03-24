@@ -121,7 +121,7 @@ export type GetPlatformProxyOptions = {
  */
 export type PlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 > = {
 	/**
 	 * Environment object containing the various Cloudflare bindings
@@ -155,7 +155,7 @@ export type PlatformProxy<
  */
 export async function getPlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
@@ -498,7 +498,7 @@ export function unstable_getMiniflareWorkerOptions(
 										doClassName: binding.class_name,
 										containerDOClassNames,
 										containerBuildId: options?.containerBuildId,
-								  })
+									})
 								: undefined,
 					} satisfies DurableObjectDefinition,
 				];
@@ -524,7 +524,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		containerEngine: useContainers
-			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
+			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
 
 		...bindingOptions,
