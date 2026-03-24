@@ -49,6 +49,8 @@ export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectCla
  * @deprecated use `supportedCompatibilityDate` instead.
  *
  * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
+ *
+ * @returns YYYY-MM-DD compatibility date
  */
 export function unstable_getDevCompatibilityDate() {
 	return supportedCompatibilityDate;
