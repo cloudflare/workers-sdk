@@ -305,6 +305,11 @@ export async function getImageRepoTags(
 /**
  * Checks if the given image has any duplicate tags from previous dev sessions,
  * and remove them if so.
+ *
+ * Only removes tags that share the same repository name (e.g. cloudflare-dev/orchestrator)
+ * but have a different tag (build ID). This prevents removing tags for other container
+ * classes that happen to share the same underlying Docker image (e.g. when multiple
+ * containers are built from the same Dockerfile).
  */
 export async function cleanupDuplicateImageTags(
 	dockerPath: string,
@@ -312,9 +317,12 @@ export async function cleanupDuplicateImageTags(
 ): Promise<void> {
 	try {
 		const repoTags = await getImageRepoTags(dockerPath, imageTag);
-		// Remove all cloudflare-dev tags from previous sessions except the current one
+		// Extract the repository name (everything before the last colon)
+		const lastColon = imageTag.lastIndexOf(":");
+		const repo = lastColon !== -1 ? imageTag.slice(0, lastColon) : imageTag;
+		// Only remove tags from the same repository (class name) with a different build ID
 		const tagsToRemove = repoTags.filter(
-			(tag) => tag !== imageTag && tag.startsWith("cloudflare-dev")
+			(tag) => tag !== imageTag && tag.startsWith(repo + ":")
 		);
 		if (tagsToRemove.length > 0) {
 			runDockerCmdWithOutput(dockerPath, ["rmi", ...tagsToRemove]);
