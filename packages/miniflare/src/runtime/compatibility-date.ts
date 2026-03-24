@@ -24,7 +24,7 @@ export function isCompatDate(str: string): str is CompatDate {
  * Returns the date formatted as a compatibility date
  *
  * @param date The target date to convert
- * @returns The date as a CompatDate string (a string following the format `YYYY-MM-DD`)
+ * @returns The date as a CompatDate string (`YYYY-MM-DD`)
  */
 export function formatCompatibilityDate(date: Date): CompatDate {
 	const compatDate = date.toISOString().slice(0, 10);
