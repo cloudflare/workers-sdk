@@ -2,4 +2,6 @@
 "create-cloudflare": minor
 ---
 
-Python workers template now includes workers-runtime-sdk as a dev dependency. Also webtypy is removed from the dependency.
+Update dependencies in Python workers templates
+
+The `workers-runtime-sdk` library is added as a dev dependency and the `webtypy` is removed from as a dependency.
