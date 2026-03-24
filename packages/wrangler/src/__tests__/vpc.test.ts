@@ -425,6 +425,7 @@ describe("vpc service commands", () => {
 			   Name: test-tcp-service
 			   Type: tcp
 			   TCP Port: 5432
+			   App Protocol: postgresql
 			   IPv4: 10.0.0.5
 			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000
 			   Created: 1/1/2024, 12:00:00 AM
@@ -444,8 +445,100 @@ describe("vpc service commands", () => {
 			┌─┬─┬─┬─┬─┬─┬─┬─┐
 			│ id │ name │ type │ ports │ host │ tunnel │ created │ modified │
 			├─┼─┼─┼─┼─┼─┼─┼─┤
-			│ tcp-service-uuid │ test-tcp-service │ tcp │ TCP:5432 │ 10.0.0.5 │ 550e8400... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
+			│ tcp-service-uuid │ test-tcp-service │ tcp │ TCP:5432 (postgresql) │ 10.0.0.5 │ 550e8400... │ 1/1/2024, 12:00:00 AM │ 1/1/2024, 12:00:00 AM │
 			└─┴─┴─┴─┴─┴─┴─┴─┘"
+		`);
+	});
+
+	it("should handle creating a TCP service with --app-protocol postgresql", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-pg --type tcp --tcp-port 5432 --app-protocol postgresql --ipv4 10.0.0.5 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "app_protocol": "postgresql",
+			  "host": {
+			    "ipv4": "10.0.0.5",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			    },
+			  },
+			  "name": "test-pg",
+			  "tcp_port": 5432,
+			  "type": "tcp",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-pg'
+			✅ Created VPC service: service-uuid
+			   Name: test-pg
+			   Type: tcp
+			   TCP Port: 5432
+			   App Protocol: postgresql
+			   IPv4: 10.0.0.5
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
+		`);
+	});
+
+	it("should handle creating a TCP service with --app-protocol mysql", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-mysql --type tcp --tcp-port 3306 --app-protocol mysql --ipv4 10.0.0.6 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "app_protocol": "mysql",
+			  "host": {
+			    "ipv4": "10.0.0.6",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			    },
+			  },
+			  "name": "test-mysql",
+			  "tcp_port": 3306,
+			  "type": "tcp",
+			}
+		`);
+	});
+
+	it("should reject --app-protocol with invalid value", async () => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-bad-proto --type tcp --tcp-port 5432 --app-protocol redis --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+			)
+		).rejects.toThrow();
+		expect(std.err).toContain("Invalid values");
+		expect(std.err).toContain(
+			'Argument: app-protocol, Given: "redis", Choices: "postgresql", "mysql"'
+		);
+	});
+
+	it("should handle updating a TCP service with --app-protocol", async () => {
+		const reqProm = mockWvpcServiceUpdate();
+		await runWrangler(
+			"vpc service update service-uuid --name test-pg-updated --type tcp --tcp-port 5432 --app-protocol postgresql --ipv4 10.0.0.5 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "app_protocol": "postgresql",
+			  "host": {
+			    "ipv4": "10.0.0.5",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			    },
+			  },
+			  "name": "test-pg-updated",
+			  "tcp_port": 5432,
+			  "type": "tcp",
+			}
 		`);
 	});
 });
@@ -655,6 +748,7 @@ const mockTcpService: ConnectivityService = {
 	type: ServiceType.Tcp,
 	name: "test-tcp-service",
 	tcp_port: 5432,
+	app_protocol: "postgresql",
 	host: {
 		ipv4: "10.0.0.5",
 		network: {

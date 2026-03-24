@@ -7,6 +7,7 @@ export interface ServiceArgs {
 	name: string;
 	type: ServiceType;
 	tcpPort?: number;
+	appProtocol?: string;
 	httpPort?: number;
 	httpsPort?: number;
 	ipv4?: string;
@@ -156,6 +157,9 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 	// Add service-specific fields
 	if (args.type === ServiceType.Tcp) {
 		request.tcp_port = args.tcpPort;
+		if (args.appProtocol) {
+			request.app_protocol = args.appProtocol;
+		}
 	} else if (args.type === ServiceType.Http) {
 		request.http_port = args.httpPort;
 		request.https_port = args.httpsPort;

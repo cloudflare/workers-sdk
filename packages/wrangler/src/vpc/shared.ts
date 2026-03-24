@@ -11,6 +11,9 @@ export function displayServiceDetails(service: ConnectivityService) {
 		if (service.tcp_port) {
 			logger.log(`   TCP Port: ${service.tcp_port}`);
 		}
+		if (service.app_protocol) {
+			logger.log(`   App Protocol: ${service.app_protocol}`);
+		}
 	} else if (service.type === ServiceType.Http) {
 		if (service.http_port) {
 			logger.log(`   HTTP Port: ${service.http_port}`);
@@ -50,6 +53,9 @@ export function formatServiceForTable(service: ConnectivityService) {
 	if (service.type === "tcp") {
 		if (service.tcp_port) {
 			ports = `TCP:${service.tcp_port}`;
+			if (service.app_protocol) {
+				ports += ` (${service.app_protocol})`;
+			}
 		}
 	} else if (service.type === "http") {
 		const httpPorts = [];

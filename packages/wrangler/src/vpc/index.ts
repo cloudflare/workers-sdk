@@ -105,6 +105,13 @@ export const serviceOptions = {
 		description: "TCP port number",
 		group: "TCP Options",
 	},
+	"app-protocol": {
+		type: "string",
+		choices: ["postgresql", "mysql"] as const,
+		conflicts: ["http-port", "https-port"],
+		description: "Application protocol for the TCP service",
+		group: "TCP Options",
+	},
 	"http-port": {
 		type: "number",
 		conflicts: ["tcp-port"],
