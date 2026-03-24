@@ -2584,6 +2584,72 @@ unixSerialTest(
 	}
 );
 
+test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			abortIsolate("crash!");
+			export default {
+				fetch(request) {
+					return new Response("ok");
+				},
+			}
+		`,
+	});
+	// dispose() on a startup-failed instance propagates the same
+	// ERR_RUNTIME_FAILURE
+	onTestFinished(() => mf.dispose().catch(() => {}));
+
+	await expect(mf.ready).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_RUNTIME_FAILURE",
+			"The Workers runtime failed to start. " +
+				"There is likely additional logging output above."
+		)
+	);
+});
+
+test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+			import { abortIsolate } from "cloudflare:workers";
+			let counter = 1;
+			export default {
+				fetch(request) {
+					if (new URL(request.url).searchParams.get("crash")) {
+						abortIsolate("test crash");
+					}
+					return new Response(\`ok \${counter++}\`);
+				},
+			}
+		`,
+	});
+	useDispose(mf);
+
+	await mf.ready;
+	const r1 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r1.text()).toBe("ok 1");
+
+	const r2 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r2.text()).toBe("ok 2");
+
+	// Trigger crash
+	await expect(
+		mf.dispatchFetch("http://placeholder/?crash=1")
+	).rejects.toThrow();
+
+	// Wait for workerd to reset
+	await new Promise((resolve) => setTimeout(resolve, 0));
+
+	// Starts over with counter = 1 again
+	const r3 = await mf.dispatchFetch("http://placeholder/");
+	expect(await r3.text()).toBe("ok 1");
+});
+
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
 	const result = childProcess.spawn(

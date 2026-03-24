@@ -44,6 +44,8 @@ export interface RuntimeOptions {
 	verbose?: boolean;
 	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 	handleStructuredLogs?: StructuredLogsHandler;
+	// Called when workerd crashes after the initial ready signal
+	onWorkerdCrashRestart?: () => void;
 }
 
 async function waitForPorts(
@@ -217,7 +219,6 @@ export class Runtime {
 	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
-		// TODO: what happens if runtime crashes?
 
 		// 2. Start new process
 		const command = getRuntimeCommand();
@@ -311,6 +312,23 @@ export class Runtime {
 
 		if (ports === undefined && !abortSignal.aborted) {
 			startupLogBuffer.handleStartupFailure();
+		} else {
+			// workerd is now listening. Watch for unexpected exits so we can
+			// restart.
+			const currentProcess = this.#process;
+			currentProcess?.once("exit", () => {
+				if (this.#process !== currentProcess) {
+					// We goit here because dispose() set this.#process to
+					// undefined before sending SIGKILL
+					return;
+				}
+				if (abortSignal.aborted) {
+					return;
+				}
+				// Crash: clear stale #process and notify the caller.
+				this.#process = undefined;
+				options.onWorkerdCrashRestart?.();
+			});
 		}
 
 		return ports;

@@ -2286,6 +2286,21 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 			handleStructuredLogs: this.#sharedOpts.core.handleStructuredLogs,
+			onWorkerdCrashRestart: () => {
+				// workerd crashed after successful startup. Try to restart
+				// workerd. I copied this from the constructor.
+				// TODO(NOW): What do we do when it fails??
+				void this.#runtimeMutex
+					.runWith(() => this.#assembleAndUpdateConfig())
+					.catch((e) => {
+						// If initialisation failed, attempting to `dispose()` this instance
+						// will too. Therefore, remove from the instance registry now, so we
+						// can still test async initialisation failures, without test failures
+						// telling us to `dispose()` the instance.
+						maybeInstanceRegistry?.delete(this);
+						throw e;
+					});
+			},
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
