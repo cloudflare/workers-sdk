@@ -140,16 +140,21 @@ describe("Angular framework configure()", () => {
 			);
 			// outputMode and outputPath should not have been set
 			expect(
-				angularJson.projects["my-angular-app"].architect.build.options.outputMode
+				angularJson.projects["my-angular-app"].architect.build.options
+					.outputMode
 			).toBeUndefined();
 			expect(
-				angularJson.projects["my-angular-app"].architect.build.options.outputPath
+				angularJson.projects["my-angular-app"].architect.build.options
+					.outputPath
 			).toBeUndefined();
 		});
 
 		it("skips side effects in dryRun mode", async ({ expect }) => {
 			const framework = new Angular({ id: "angular", name: "Angular" });
-			const result = await framework.configure({ ...BASE_OPTIONS, dryRun: true });
+			const result = await framework.configure({
+				...BASE_OPTIONS,
+				dryRun: true,
+			});
 
 			expect(result.wranglerConfig).toEqual({
 				assets: { directory: "dist/my-angular-app/" },
@@ -261,7 +266,10 @@ describe("Angular framework configure()", () => {
 		it("skips side effects in dryRun mode", async ({ expect }) => {
 			const { existsSync } = await import("node:fs");
 			const framework = new Angular({ id: "angular", name: "Angular" });
-			const result = await framework.configure({ ...BASE_OPTIONS, dryRun: true });
+			const result = await framework.configure({
+				...BASE_OPTIONS,
+				dryRun: true,
+			});
 
 			// Config is still returned
 			expect(result.wranglerConfig).toHaveProperty("main");
