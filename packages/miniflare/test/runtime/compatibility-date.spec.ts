@@ -85,24 +85,9 @@ describe("supportedCompatibilityDate", () => {
 	});
 
 	test("should not be in the future", ({ expect }) => {
-		const supportedCompatibilityDateAsDate = new Date(
-			supportedCompatibilityDate
-		);
-		const now = new Date();
-
-		// The returned date should not be after today (in UTC)
-		// We compare timestamps at midnight UTC for both dates
-		const resultTimestamp = Date.UTC(
-			supportedCompatibilityDateAsDate.getUTCFullYear(),
-			supportedCompatibilityDateAsDate.getUTCMonth(),
-			supportedCompatibilityDateAsDate.getUTCDate()
-		);
-		const todayTimestamp = Date.UTC(
-			now.getUTCFullYear(),
-			now.getUTCMonth(),
-			now.getUTCDate()
-		);
-
-		expect(resultTimestamp).toBeLessThanOrEqual(todayTimestamp);
+		// supportedCompatibilityDate is already a YYYY-MM-DD string, which sorts
+		// lexicographically as a date. Compare directly against today's date.
+		const todayDate = formatCompatibilityDate(new Date());
+		expect(supportedCompatibilityDate <= todayDate).toBe(true);
 	});
 });
