@@ -46,6 +46,8 @@ describe("access", () => {
 					"CF-Access-Client-Id": "test-client-id.access",
 					"CF-Access-Client-Secret": "test-client-secret",
 				});
+				// No warning is presented since both env variables are set
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should warn when only CLOUDFLARE_ACCESS_CLIENT_ID is set", async ({
