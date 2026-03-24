@@ -42,23 +42,23 @@ describe("isCompatDate", () => {
 describe("formatCompatibilityDate", () => {
 	test("returns correctly formatted date string", ({ expect }) => {
 		// Use UTC dates to avoid timezone issues
-		const date = new Date(Date.UTC(2024, 0, 15)); // January 15, 2024
+		const date = new Date(Date.UTC(2024, 0, 15));
 		expect(formatCompatibilityDate(date)).toBe("2024-01-15");
 	});
 
 	test("pads single-digit months and days with zeros", ({ expect }) => {
-		const date1 = new Date(Date.UTC(2024, 0, 1)); // January 1, 2024
+		const date1 = new Date(Date.UTC(2024, 0, 1));
 		expect(formatCompatibilityDate(date1)).toBe("2024-01-01");
 
-		const date2 = new Date(Date.UTC(2024, 8, 5)); // September 5, 2024
+		const date2 = new Date(Date.UTC(2024, 8, 5));
 		expect(formatCompatibilityDate(date2)).toBe("2024-09-05");
 	});
 
 	test("handles year boundaries correctly", ({ expect }) => {
-		const date1 = new Date(Date.UTC(2023, 11, 31)); // December 31, 2023
+		const date1 = new Date(Date.UTC(2023, 11, 31));
 		expect(formatCompatibilityDate(date1)).toBe("2023-12-31");
 
-		const date2 = new Date(Date.UTC(2024, 0, 1)); // January 1, 2024
+		const date2 = new Date(Date.UTC(2024, 0, 1));
 		expect(formatCompatibilityDate(date2)).toBe("2024-01-01");
 	});
 
