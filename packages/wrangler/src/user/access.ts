@@ -62,13 +62,15 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 /**
  * Get the headers needed to authenticate with an Access-protected domain.
  *
- * Returns:
+ * @param domain The hostname of the Access-protected domain (e.g. `"example.com"`).
+ * @returns
  * - Service token headers (`CF-Access-Client-Id` + `CF-Access-Client-Secret`) if env vars are set
  * - A `Cookie: CF_Authorization=...` header if obtained via `cloudflared` (interactive only)
  * - An empty object if the domain is not behind Access
- *
- * Throws a `UserError` in non-interactive environments when the domain is behind Access
- * but no service token credentials are configured.
+ * @throws {UserError} If the response does not contain a `CF_Authorization` cookie,
+ *   indicating the service token is invalid, expired, or lacks a Service Auth policy.
+ *   Also throws in non-interactive environments when the domain is behind Access
+ *   but no service token credentials are configured.
  */
 export async function getAccessHeaders(
 	domain: string
