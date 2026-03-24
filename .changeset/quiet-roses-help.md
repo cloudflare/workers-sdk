@@ -2,7 +2,7 @@
 "create-cloudflare": patch
 ---
 
-Fix the fallback compatibility date being always incorrectly used when running the CLI via `pnpm`
+Avoid resorting to the fallback compatibility date when running via `pnpm`
 
 Previously, when running `create-cloudflare` via `pnpm` the resolution of the local `miniflare` package failed and the fallback date was always used instead of the actual `workerd` compatibility date.
 
