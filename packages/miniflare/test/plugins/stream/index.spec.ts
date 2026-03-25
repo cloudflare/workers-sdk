@@ -1181,8 +1181,8 @@ describe("Stream watermarks", () => {
 		})) as Watermark;
 
 		expect(watermark.size).toBe(TEST_IMAGE_BYTES.byteLength);
-		// downloadedFrom is empty string when created from a stream (not a URL)
-		expect(watermark.downloadedFrom).toBe("");
+		// downloadedFrom is null when created from a stream (not a URL)
+		expect(watermark.downloadedFrom).toBeNull();
 	});
 });
 
