@@ -35,6 +35,8 @@ describe("normalizeAndValidateConfig()", () => {
 			configPath: undefined,
 			d1_databases: [],
 			vectorize: [],
+			ai_search_namespaces: [],
+			ai_search: [],
 			hyperdrive: [],
 			dev: {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
@@ -2103,6 +2105,176 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - The field "vectorize" should be an array but got null."
 				`);
+			});
+		});
+
+		describe("[ai_search_namespaces]", () => {
+			it("should error if ai_search_namespaces is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai_search_namespaces: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "ai_search_namespaces" should be an array but got {}."
+				`);
+			});
+
+			it("should error if ai_search_namespaces bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search_namespaces: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, namespace: 2111 },
+							{
+								binding: "BINDING_2",
+								namespace: "production",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "ai_search_namespaces[0]" bindings should have a string "binding" field but got {}.
+					  - "ai_search_namespaces[0]" bindings must have a "namespace" field but got {}.
+					  - "ai_search_namespaces[1]" bindings must have a "namespace" field but got {"binding":"VALID"}.
+					  - "ai_search_namespaces[2]" bindings should have a string "binding" field but got {"binding":2000,"namespace":2111}.
+					  - "ai_search_namespaces[2]" bindings must have a "namespace" field but got {"binding":2000,"namespace":2111}."
+				`);
+			});
+
+			it("should accept valid ai_search_namespaces bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search_namespaces: [
+							{
+								binding: "AI_SEARCH",
+								namespace: "production",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search_namespaces: [
+							{
+								binding: "AI_SEARCH",
+								namespace: "production",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
+			});
+		});
+
+		describe("[ai_search]", () => {
+			it("should error if ai_search is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai_search: {} } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "ai_search" should be an array but got {}."
+				`);
+			});
+
+			it("should error if ai_search bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, instance_name: 2111 },
+							{
+								binding: "BINDING_2",
+								instance_name: "cloudflare-blog",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "ai_search[0]" bindings should have a string "binding" field but got {}.
+					  - "ai_search[0]" bindings must have an "instance_name" field but got {}.
+					  - "ai_search[1]" bindings must have an "instance_name" field but got {"binding":"VALID"}.
+					  - "ai_search[2]" bindings should have a string "binding" field but got {"binding":2000,"instance_name":2111}.
+					  - "ai_search[2]" bindings must have an "instance_name" field but got {"binding":2000,"instance_name":2111}."
+				`);
+			});
+
+			it("should accept valid ai_search bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search: [
+							{
+								binding: "BLOG_SEARCH",
+								instance_name: "cloudflare-blog",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error on additional properties", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						ai_search: [
+							{
+								binding: "BLOG_SEARCH",
+								instance_name: "cloudflare-blog",
+								extra_field: "unexpected",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toContain("extra_field");
 			});
 		});
 

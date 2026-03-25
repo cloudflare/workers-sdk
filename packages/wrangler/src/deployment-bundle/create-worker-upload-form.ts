@@ -126,6 +126,11 @@ export function createWorkerUploadForm(
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -321,6 +326,54 @@ export function createWorkerUploadForm(
 			index_name: index_name,
 			raw,
 		});
+	});
+
+	ai_search_namespaces.forEach(({ binding, namespace, raw }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`);
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "ai_search_namespace",
+				namespace,
+				raw,
+			});
+		}
+	});
+
+	ai_search.forEach(({ binding, instance_name, raw }) => {
+		if (options?.dryRun) {
+			instance_name ??= INHERIT_SYMBOL;
+		}
+		if (instance_name === undefined) {
+			throw new UserError(
+				`${binding} bindings must have an "instance_name" field`
+			);
+		}
+
+		if (instance_name === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "ai_search",
+				instance_name,
+				raw,
+			});
+		}
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {
