@@ -107,6 +107,19 @@ describe("Framework.validateFrameworkVersion()", () => {
 		expect(std.warn).toBe("");
 	});
 
+	it("does not throw nor warn when the installed version is an update within the known major", ({
+		expect,
+	}) => {
+		vi.mocked(getInstalledPackageVersion).mockReturnValue("4.3.2");
+		const framework = new TestFramework({ id: "test", name: "Test" });
+
+		expect(() =>
+			framework.validateFrameworkVersion("/project", PACKAGE_INFO)
+		).not.toThrow();
+		expect(framework.frameworkVersion).toBe("4.3.2");
+		expect(std.warn).toBe("");
+	});
+
 	it("does not throw but warns when installed version exceeds maximumKnownMajorVersion", ({
 		expect,
 	}) => {
