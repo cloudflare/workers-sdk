@@ -318,7 +318,7 @@ export class Runtime {
 			const currentProcess = this.#process;
 			currentProcess?.once("exit", () => {
 				if (this.#process !== currentProcess) {
-					// We goit here because dispose() set this.#process to
+					// We got here because dispose() set this.#process to
 					// undefined before sending SIGKILL
 					return;
 				}
