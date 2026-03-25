@@ -62,6 +62,8 @@ describe("r2", () => {
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
+					? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+					🤖 Using fallback value in non-interactive context: yes
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
@@ -87,6 +89,8 @@ describe("r2", () => {
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket with InfrequentAccess storage class using a concurrency of 20
+					? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+					🤖 Using fallback value in non-interactive context: yes
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
@@ -237,6 +241,8 @@ describe("r2", () => {
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
+					? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+					🤖 Using fallback value in non-interactive context: yes
 					Uploaded 100% (2 out of 2)"
 				`);
 			});

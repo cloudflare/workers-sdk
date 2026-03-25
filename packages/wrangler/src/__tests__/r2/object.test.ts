@@ -153,6 +153,7 @@ describe("r2", () => {
 								{
 								  "authorization": "Bearer some-api-token",
 								  "cache-control": "cache-control-mock",
+								  "cf-r2-data-catalog-check": "true",
 								  "content-disposition": "content-disposition-mock",
 								  "content-encoding": "content-encoding-mock",
 								  "content-language": "content-lang-mock",
