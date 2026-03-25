@@ -660,7 +660,6 @@ interface EnvironmentInheritable {
 	 * Specify the cache behavior of the Worker.
 	 *
 	 * @inheritable
-	 * @hidden
 	 */
 	cache: CacheOptions | undefined;
 
