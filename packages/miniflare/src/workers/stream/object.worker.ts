@@ -1,5 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
-import { all, BlobStore, createTypedSql, get } from "miniflare:shared";
+import {
+	all,
+	BlobStore,
+	createTypedSql,
+	get,
+	SharedBindings,
+	Timers,
+} from "miniflare:shared";
 import { BadRequestError, InvalidURLError, NotFoundError } from "./errors";
 import { SQL_SCHEMA } from "./schemas";
 import type {
@@ -15,12 +22,18 @@ const BLOB_NAMESPACE = "stream-data";
 interface Env {
 	MINIFLARE_BLOBS?: Fetcher;
 	MINIFLARE_STICKY_BLOBS?: boolean;
+	[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS]?: boolean;
 }
 
 export class StreamObject extends DurableObject<Env> {
+	readonly timers = new Timers();
 	readonly #blob: BlobStore;
 	readonly #db: TypedSql;
 	readonly #stmts: ReturnType<typeof sqlStmts>;
+
+	#now() {
+		return new Date(this.timers.now()).toISOString();
+	}
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -28,7 +41,7 @@ export class StreamObject extends DurableObject<Env> {
 		db.exec("PRAGMA foreign_keys = ON");
 		db.exec(SQL_SCHEMA);
 		this.#db = db;
-		this.#stmts = sqlStmts(db);
+		this.#stmts = sqlStmts(db, () => this.#now());
 		const stickyBlobs = !!env.MINIFLARE_STICKY_BLOBS;
 		this.#blob = new BlobStore(
 			env.MINIFLARE_BLOBS as Fetcher,
@@ -42,7 +55,7 @@ export class StreamObject extends DurableObject<Env> {
 		params: StreamUrlUploadParams
 	): Promise<VideoRow> {
 		const id = crypto.randomUUID();
-		const now = new Date().toISOString();
+		const now = this.#now();
 
 		let blobId: BlobId | null = null;
 		let size = 0;
@@ -158,7 +171,7 @@ export class StreamObject extends DurableObject<Env> {
 		const payload = {
 			sub: id,
 			kid: "local-mode-key",
-			exp: Math.floor(Date.now() / 1000) + 6 * 60 * 60,
+			exp: Math.floor(this.timers.now() / 1000) + 6 * 60 * 60,
 		};
 		return btoa(JSON.stringify(payload));
 	}
@@ -245,7 +258,7 @@ export class StreamObject extends DurableObject<Env> {
 		);
 
 		const id = crypto.randomUUID();
-		const now = new Date().toISOString();
+		const now = this.#now();
 
 		this.#stmts.insertWatermark({
 			id,
@@ -325,10 +338,37 @@ export class StreamObject extends DurableObject<Env> {
 			throw new NotFoundError(`Download not found: ${videoId}/${downloadType}`);
 		}
 	}
+
+	async fetch(
+		req: Request<unknown, { miniflare?: { controlOp?: { name: string; args?: unknown[] } } }>
+	) {
+		if (this.env[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS] === true) {
+			const controlOp = req.cf?.miniflare?.controlOp;
+			if (controlOp !== undefined) {
+				const args = controlOp.args ?? [];
+				switch (controlOp.name) {
+					case "enableFakeTimers":
+						await this.timers.enableFakeTimers(args[0] as number);
+						return Response.json(null);
+					case "disableFakeTimers":
+						await this.timers.disableFakeTimers();
+						return Response.json(null);
+					case "advanceFakeTime":
+						await this.timers.advanceFakeTime(args[0] as number);
+						return Response.json(null);
+					case "waitForFakeTasks":
+						await this.timers.waitForFakeTasks();
+						return Response.json(null);
+				}
+			}
+		}
+
+		return new Response(null, { status: 404 });
+	}
 }
 
 // Helper functions to return all db statements
-function sqlStmts(db: TypedSql) {
+function sqlStmts(db: TypedSql, now: () => string) {
 	// Videos
 
 	const stmtGetVideo = db.stmt<Pick<VideoRow, "id">, VideoRow>(
@@ -521,10 +561,10 @@ function sqlStmts(db: TypedSql) {
 			if (current === undefined)
 				throw new NotFoundError(`Video not found: ${id}`);
 
-			const now = new Date().toISOString();
+			const nowValue = now();
 			stmtUpdateVideo({
 				id,
-				modified: now,
+				modified: nowValue,
 				creator:
 					"creator" in params ? (params.creator ?? null) : current.creator,
 				meta:
