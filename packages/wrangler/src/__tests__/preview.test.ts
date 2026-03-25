@@ -749,6 +749,96 @@ describe("wrangler preview", () => {
 			expect(Array.isArray(deploymentRequestBody?.modules)).toBe(true);
 		});
 
+		test("should include source maps in deployment modules when upload_source_maps is enabled", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					upload_source_maps: true,
+				})
+			);
+
+			let deploymentRequestBody:
+				| (Record<string, unknown> & {
+						modules?: Array<{
+							name: string;
+							content_type: string;
+							content_base64: string;
+						}>;
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-sourcemaps",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-sourcemaps",
+									preview_id: "preview-id-sourcemaps",
+									preview_name: "test-preview",
+									urls: ["https://sourcemaps123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.modules).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						name: expect.stringMatching(/\.map$/),
+						content_type: "application/source-map",
+					}),
+				])
+			);
+		});
+
 		test("should include migrations in the deployment request", async ({
 			expect,
 		}) => {

@@ -17,6 +17,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -49,7 +50,11 @@ import type {
 	DeploymentResource,
 	PreviewResource,
 } from "./api";
-import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+import type {
+	CfModule,
+	Config,
+	PreviewsConfig,
+} from "@cloudflare/workers-utils";
 
 type PreviewDeploymentModule = {
 	name: string;
@@ -178,57 +183,60 @@ async function getDeploymentModules(
 	);
 
 	const destination = path.join(tmpdir(), `wrangler-preview-${Date.now()}`);
-	const { modules, resolvedEntryPointPath, bundleType } = await bundleWorker(
-		entry,
-		destination,
-		{
-			bundle: true,
-			additionalModules: [],
-			moduleCollector,
-			doBindings: config.durable_objects.bindings,
-			workflowBindings: config.workflows ?? [],
-			jsxFactory: config.jsx_factory,
-			jsxFragment: config.jsx_fragment,
-			tsconfig: config.tsconfig,
-			minify: config.minify,
-			keepNames: config.keep_names ?? true,
-			sourcemap: false,
-			nodejsCompatMode,
+	const bundleResult = await bundleWorker(entry, destination, {
+		bundle: true,
+		additionalModules: [],
+		moduleCollector,
+		doBindings: config.durable_objects.bindings,
+		workflowBindings: config.workflows ?? [],
+		jsxFactory: config.jsx_factory,
+		jsxFragment: config.jsx_fragment,
+		tsconfig: config.tsconfig,
+		minify: config.minify,
+		keepNames: config.keep_names ?? true,
+		sourcemap: config.upload_source_maps ?? false,
+		nodejsCompatMode,
+		compatibilityDate,
+		compatibilityFlags,
+		alias: config.alias,
+		define: config.define,
+		checkFetch: false,
+		targetConsumer: "deploy",
+		watch: undefined,
+		testScheduled: undefined,
+		inject: undefined,
+		plugins: [logBuildOutput(nodejsCompatMode)],
+		isOutfile: undefined,
+		local: false,
+		projectRoot:
+			config.userConfigPath !== undefined
+				? path.dirname(config.userConfigPath)
+				: undefined,
+		defineNavigatorUserAgent: isNavigatorDefined(
 			compatibilityDate,
-			compatibilityFlags,
-			alias: config.alias,
-			define: config.define,
-			checkFetch: false,
-			targetConsumer: "deploy",
-			watch: undefined,
-			testScheduled: undefined,
-			inject: undefined,
-			plugins: [logBuildOutput(nodejsCompatMode)],
-			isOutfile: undefined,
-			local: false,
-			projectRoot:
-				config.userConfigPath !== undefined
-					? path.dirname(config.userConfigPath)
-					: undefined,
-			defineNavigatorUserAgent: isNavigatorDefined(
-				compatibilityDate,
-				compatibilityFlags
-			),
-			external: undefined,
-			entryName: undefined,
-			metafile: undefined,
-		}
-	);
+			compatibilityFlags
+		),
+		external: undefined,
+		entryName: undefined,
+		metafile: undefined,
+	});
+	const { modules, resolvedEntryPointPath, bundleType } = bundleResult;
 
 	const mainModuleName = path.basename(resolvedEntryPointPath);
 	const mainModuleContent = readFileSync(resolvedEntryPointPath, "utf-8");
+	const mainModule: CfModule = {
+		name: mainModuleName,
+		filePath: resolvedEntryPointPath,
+		content: mainModuleContent,
+		type: bundleType,
+	};
 	const mainContentType =
 		moduleTypeMimeType[bundleType] ?? "application/octet-stream";
 	const deploymentModules: PreviewDeploymentModule[] = [
 		{
-			name: mainModuleName,
+			name: mainModule.name,
 			content_type: mainContentType,
-			content_base64: toBase64(mainModuleContent),
+			content_base64: toBase64(mainModule.content),
 		},
 		...modules.map((mod) => {
 			const contentType =
@@ -240,6 +248,16 @@ async function getDeploymentModules(
 			};
 		}),
 	];
+
+	if (config.upload_source_maps) {
+		deploymentModules.push(
+			...loadSourceMaps(mainModule, modules, bundleResult).map((sourceMap) => ({
+				name: sourceMap.name,
+				content_type: "application/source-map",
+				content_base64: toBase64(sourceMap.content),
+			}))
+		);
+	}
 
 	if (assetFiles?._headers !== undefined) {
 		deploymentModules.push({
