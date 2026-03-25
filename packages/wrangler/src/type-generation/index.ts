@@ -198,6 +198,22 @@ export const typesCommand = createCommand({
 							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
 						)
 					);
+
+					// Also register environment-specific names (e.g. "worker-foo" for env "foo")
+					// so that service/DO bindings referencing those names can be resolved.
+					const { rawConfig } = experimental_readRawConfig({
+						config: secondaryConfig.configPath,
+					});
+					for (const envName of Object.keys(rawConfig.env ?? {})) {
+						const envConfig = readConfig({
+							config: secondaryConfig.configPath,
+							env: envName,
+						});
+						const envKey = envConfig.name;
+						if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
+							secondaryEntries.set(envKey, serviceEntry);
+						}
+					}
 				} else {
 					throw new UserError(
 						`Could not resolve entry point for service config '${secondaryConfig}'.`
