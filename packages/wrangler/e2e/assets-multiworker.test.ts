@@ -211,15 +211,21 @@ describe.each(
 					false
 				);
 
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>"
+				await waitForLong(() =>
+					expect(fetchText(`${url}/asset`)).resolves.toBe(
+						"<p>have an asset directly</p>"
+					)
 				);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
+				await waitForLong(() =>
+					expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					)
 				);
-				await expect(
-					fetch(`${url}/worker`).then((r) => r.text())
-				).resolves.toBe("hello world from a worker with assets");
+				await waitForLong(() =>
+					expect(fetch(`${url}/worker`).then((r) => r.text())).resolves.toBe(
+						"hello world from a worker with assets"
+					)
+				);
 			});
 
 			it("can fetch a regular worker through a worker with assets, including with rpc", async ({
