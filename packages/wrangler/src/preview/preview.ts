@@ -121,7 +121,7 @@ function getPreviewMigrationsToUpload(
 		);
 		if (foundIndex === -1) {
 			logger.warn(
-				`The published preview for ${workerName} has a migration tag "${currentMigrationTag}, which was not found in your ${configFileName(
+				`The published preview for ${workerName} has a migration tag "${currentMigrationTag}", which was not found in your ${configFileName(
 					config.configPath
 				)} file. You may have already deleted it. Applying all available migrations to the preview...`
 			);
