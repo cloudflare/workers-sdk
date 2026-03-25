@@ -295,6 +295,145 @@ async function viteResolve(
 	return trimViteVersionHash(resolved.id);
 }
 
+/**
+ * When a `require()` call resolves to an ESM file (e.g. because Vite 8's
+ * rolldown-based resolver selected the `"import"` export condition), walk up
+ * the directory tree to find the nearest `package.json` that owns the file
+ * and look for a CJS-compatible alternative via the `"require"` or `"default"`
+ * export condition.
+ *
+ * This handles the Vite 8 regression where `pluginContainer.resolveId()` with
+ * `{ custom: { "node-resolve": { isRequire: true } } }` still picks the
+ * `"import"` entry instead of `"require"` for packages with dual CJS/ESM
+ * exports (e.g. `pg-protocol`, `pg-connection-string`, `mimetext`).
+ */
+export function findCjsAlternative(resolvedPath: string): string | undefined {
+	// Strip any query suffix (e.g. ?mf_vitest_no_cjs_esm_shim, ?v=hash)
+	const cleanPath = resolvedPath.replace(/\?.*$/, "");
+
+	// Only .js, .mjs, and .cjs files can be module entry points.
+	// Bail out early for non-JS extensions (wasm, json, etc.) to avoid
+	// unnecessary filesystem walks.
+	if (!/\.[mc]?js$/.test(cleanPath)) {
+		return undefined;
+	}
+
+	// Walk up looking for the package.json that owns this file
+	let dir = posixPath.dirname(cleanPath);
+	while (dir !== posixPath.dirname(dir)) {
+		const pkgJsonPath = posixPath.join(dir, "package.json");
+		let pkg: Record<string, unknown>;
+		try {
+			pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")) as Record<
+				string,
+				unknown
+			>;
+		} catch (e) {
+			if (!isFileNotFoundError(e)) {
+				throw e;
+			}
+			dir = posixPath.dirname(dir);
+			continue;
+		}
+
+		if (pkg.exports && typeof pkg.exports === "object") {
+			// Build a relative path from the package root to the resolved file
+			// e.g. "./esm/index.js" or "./esm/index.mjs"
+			const relPath =
+				"./" + posixPath.relative(dir, cleanPath).replaceAll("\\", "/");
+
+			const cjsEntry = findCjsEntryInExports(
+				pkg.exports as Record<string, unknown>,
+				relPath
+			);
+			if (cjsEntry) {
+				const cjsAbsPath = posixPath.join(dir, cjsEntry);
+				if (isFile(cjsAbsPath)) {
+					return cjsAbsPath;
+				}
+			}
+		}
+
+		// Stop at package boundary — don't cross into a parent package
+		if (pkg.name) {
+			break;
+		}
+		dir = posixPath.dirname(dir);
+	}
+
+	return undefined;
+}
+
+/**
+ * Given a package `exports` map and the relative path of a file that was
+ * resolved via the `"import"` condition, find the `"require"` or `"default"`
+ * entry that points to a different (CJS) file.
+ *
+ * Handles both flat maps (`{ ".": { "import": "...", "require": "..." } }`) and
+ * subpath maps (`{ "./esm/index.js": { "require": "..." } }`).
+ */
+export function findCjsEntryInExports(
+	exports: Record<string, unknown>,
+	esmRelPath: string
+): string | undefined {
+	for (const value of Object.values(exports)) {
+		if (typeof value !== "object" || value === null) {
+			continue;
+		}
+		const result = findCjsEntryInConditions(
+			value as Record<string, unknown>,
+			esmRelPath
+		);
+		if (result !== undefined) {
+			return result;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Given a single conditions object from a package exports map and the relative
+ * path of the file that was resolved via `"import"`, return the path from the
+ * `"require"` or `"default"` condition if it points to a different file.
+ *
+ * Recurses into nested conditions.
+ */
+export function findCjsEntryInConditions(
+	conditions: Record<string, unknown>,
+	esmRelPath: string
+): string | undefined {
+	const importEntry = conditions["import"];
+	const requireEntry = conditions["require"] ?? conditions["default"];
+
+	// The "import" entry matches our resolved path → prefer "require"/"default"
+	if (
+		typeof importEntry === "string" &&
+		importEntry === esmRelPath &&
+		typeof requireEntry === "string" &&
+		requireEntry !== importEntry
+	) {
+		return requireEntry;
+	}
+
+	// Recurse into nested condition objects (skip terminal string conditions)
+	for (const [key, value] of Object.entries(conditions)) {
+		if (key === "import" || key === "require" || key === "default") {
+			continue;
+		}
+		if (typeof value === "object" && value !== null) {
+			const result = findCjsEntryInConditions(
+				value as Record<string, unknown>,
+				esmRelPath
+			);
+			if (result !== undefined) {
+				return result;
+			}
+		}
+	}
+
+	return undefined;
+}
+
 type ResolveMethod = "import" | "require";
 async function resolve(
 	vite: Vite.ViteDevServer,
@@ -331,7 +470,27 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	const resolved = await viteResolve(
+		vite,
+		specifier,
+		referrer,
+		method === "require"
+	);
+
+	// Vite 8 (rolldown resolver) may resolve a require() call to the ESM
+	// "import" export condition instead of "require"/"default". Detect this and
+	// redirect to the CJS alternative so workerd doesn't choke on `import`
+	// statements inside a commonJsModule. See:
+	// https://github.com/cloudflare/workers-sdk/issues/12984
+	// https://github.com/cloudflare/workers-sdk/issues/13037
+	if (method === "require" && !specifier.startsWith("node:")) {
+		const cjsAlt = findCjsAlternative(resolved);
+		if (cjsAlt !== undefined) {
+			return cjsAlt;
+		}
+	}
+
+	return resolved;
 }
 
 function buildRedirectResponse(filePath: string) {
