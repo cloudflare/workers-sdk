@@ -1,7 +1,19 @@
 import http from "node:http";
-import { Miniflare, STREAM_COMPAT_DATE } from "miniflare";
+import { pathToFileURL } from "node:url";
+import {
+	Miniflare,
+	STREAM_COMPAT_DATE,
+	STREAM_OBJECT_CLASS_NAME,
+	STREAM_PLUGIN_NAME,
+} from "miniflare";
+import type { MiniflareOptions } from "miniflare";
 import { describe, test } from "vitest";
-import { useDispose, useServer } from "../../test-shared";
+import {
+	MiniflareDurableObjectControlStub,
+	useDispose,
+	useServer,
+	useTmp,
+} from "../../test-shared";
 import type {
 	StreamCaption as Caption,
 	StreamDownloadGetResponse as DownloadGetResponse,
@@ -12,11 +24,23 @@ import type {
 // Mock image / video bytes
 const TEST_VIDEO_BYTES = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
 const TEST_IMAGE_BYTES = new Uint8Array([255, 216, 255, 224]);
+const STREAM_OBJECT_NAME = "stream-data";
+const FAKE_TIME_START = 1_000_000;
 
 function staticBytesListener(bytes: Uint8Array): http.RequestListener {
 	return (_req, res) => {
 		res.writeHead(200, { "Content-Type": "application/octet-stream" });
 		res.end(Buffer.from(bytes));
+	};
+}
+
+function statusListener(
+	statusCode: number,
+	statusMessage?: string
+): http.RequestListener {
+	return (_req, res) => {
+		res.writeHead(statusCode, statusMessage);
+		res.end();
 	};
 }
 
@@ -29,7 +53,13 @@ export default {
 			const result = await handleCommand(stream, op, args || {});
 			return Response.json({ ok: true, result });
 		} catch (err) {
-			return Response.json({ ok: false, error: err.message }, { status: 200 });
+			return Response.json({
+				ok: false,
+				error: err.message,
+				name: err.name,
+				code: err.code,
+				statusCode: err.statusCode,
+			}, { status: 200 });
 		}
 	}
 }
@@ -40,6 +70,8 @@ async function handleCommand(stream, op, args) {
 			const resp = await fetch(args.url);
 			return stream.upload(resp.body, args.params);
 		}
+		case "upload.fromUrl":
+			return stream.upload(args.url, args.params);
 		case "video.details":
 			return stream.video(args.id).details();
 		case "video.update":
@@ -73,6 +105,12 @@ async function handleCommand(stream, op, args) {
 			const resp = await fetch(args.url);
 			return stream.watermarks.generate(resp.body, args.params || {});
 		}
+		case "watermarks.generate.fromUrl":
+			return stream.watermarks.generate(args.url, args.params || {});
+		case "watermarks.generate.fromFile": {
+			const file = new File(["test"], "watermark.png");
+			return stream.watermarks.generate(file, args.params || {});
+		}
 		case "watermarks.list":
 			return stream.watermarks.list();
 		case "watermarks.get":
@@ -88,15 +126,31 @@ async function handleCommand(stream, op, args) {
 }
 `;
 
-function createMiniflare(): Miniflare {
+function createMiniflare(options: Partial<MiniflareOptions> = {}): Miniflare {
 	return new Miniflare({
 		compatibilityDate: STREAM_COMPAT_DATE,
 		stream: { binding: "STREAM" },
 		streamPersist: false,
 		modules: true,
 		script: WORKER_SCRIPT,
-	});
+		...options,
+	} as MiniflareOptions);
 }
+
+async function getStreamObjectControl(
+	mf: Miniflare
+): Promise<MiniflareDurableObjectControlStub> {
+	const objectNamespace = await mf._getInternalDurableObjectNamespace(
+		STREAM_PLUGIN_NAME,
+		"stream:object",
+		STREAM_OBJECT_CLASS_NAME
+	);
+	const objectId = objectNamespace.idFromName(STREAM_OBJECT_NAME);
+	const objectStub = objectNamespace.get(objectId);
+	return new MiniflareDurableObjectControlStub(objectStub);
+}
+
+type CmdError = Error & { name: string; code?: number; statusCode?: number };
 
 async function sendCmdToWorker(
 	mf: Miniflare,
@@ -112,9 +166,16 @@ async function sendCmdToWorker(
 		ok: boolean;
 		result: unknown;
 		error?: string;
+		name?: string;
+		code?: number;
+		statusCode?: number;
 	};
 	if (!data.ok) {
-		throw new Error(data.error);
+		const err: CmdError = new Error(data.error);
+		err.name = data.name ?? "Error";
+		err.code = data.code;
+		err.statusCode = data.statusCode;
+		throw err;
 	}
 	return data.result;
 }
@@ -170,6 +231,18 @@ describe("Stream videos", () => {
 		expect(video.thumbnailTimestampPct).toBe(0.5);
 	});
 
+	test("upload from URL propagates fetch failures", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(statusListener(500, "Boom"));
+
+		await expect(
+			sendCmdToWorker(mf, "upload.fromUrl", {
+				url: videoUrl.toString(),
+			})
+		).rejects.toThrow("Failed to fetch video from URL: 500 Boom");
+	});
+
 	test("throw when getting details for non existent video", async ({
 		expect,
 	}) => {
@@ -209,6 +282,18 @@ describe("Stream videos", () => {
 		expect(updated.modified).not.toBe(originalModified);
 	});
 
+	test("throws when updating non existent video", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "video.update", {
+				id: "00000000-0000-0000-0000-000000000000",
+				params: { creator: "nobody" },
+			})
+		).rejects.toThrow("Video not found");
+	});
+
 	test("delete video", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
@@ -235,6 +320,64 @@ describe("Stream videos", () => {
 				id: "00000000-0000-0000-0000-000000000000",
 			})
 		).rejects.toThrow("Video not found");
+	});
+
+	test("partial update preserves untouched fields", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+			params: {
+				creator: "original-creator",
+				meta: { title: "Original" },
+				requireSignedURLs: true,
+				thumbnailTimestampPct: 0.3,
+			},
+		})) as Video;
+
+		// Only update creator — all other fields should be preserved
+		const updated = (await sendCmdToWorker(mf, "video.update", {
+			id: video.id,
+			params: { creator: "new-creator" },
+		})) as Video;
+
+		expect(updated.creator).toBe("new-creator");
+		expect(updated.meta).toEqual({ title: "Original" });
+		expect(updated.requireSignedURLs).toBe(true);
+		expect(updated.thumbnailTimestampPct).toBe(0.3);
+	});
+
+	test("update can null-clear creator and scheduledDeletion", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+			params: {
+				creator: "will-be-cleared",
+				scheduledDeletion: new Date(Date.now() + 86_400_000).toISOString(),
+			},
+		})) as Video;
+
+		expect(video.creator).toBe("will-be-cleared");
+		expect(video.scheduledDeletion).toBeTruthy();
+
+		const updated = (await sendCmdToWorker(mf, "video.update", {
+			id: video.id,
+			params: { creator: null, scheduledDeletion: null },
+		})) as Video;
+
+		expect(updated.creator).toBeNull();
+		expect(updated.scheduledDeletion).toBeNull();
 	});
 
 	test("generate token", async ({ expect }) => {
@@ -319,21 +462,47 @@ describe("Stream videos list", () => {
 		expect(limited).toHaveLength(2);
 	});
 
+	test("list rejects invalid before comparison operator", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "videos.list", {
+				params: { before: new Date().toISOString(), beforeComp: "wat" },
+			})
+		).rejects.toThrow("Invalid comparison operator: wat");
+	});
+
+	test("list rejects invalid after comparison operator", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "videos.list", {
+				params: { after: new Date().toISOString(), afterComp: "wat" },
+			})
+		).rejects.toThrow("Invalid comparison operator: wat");
+	});
+
 	test("list ordered by created descending", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);
 		const { http: videoUrl } = await useServer(
 			staticBytesListener(TEST_VIDEO_BYTES)
 		);
+		const object = await getStreamObjectControl(mf);
+		await object.enableFakeTimers(FAKE_TIME_START);
 
 		const v1 = (await sendCmdToWorker(mf, "upload", {
 			url: videoUrl.toString(),
 		})) as Video;
-		await new Promise((r) => setTimeout(r, 5));
+		await object.advanceFakeTime(5);
 		const v2 = (await sendCmdToWorker(mf, "upload", {
 			url: videoUrl.toString(),
 		})) as Video;
-		await new Promise((r) => setTimeout(r, 5));
+		await object.advanceFakeTime(5);
 		const v3 = (await sendCmdToWorker(mf, "upload", {
 			url: videoUrl.toString(),
 		})) as Video;
@@ -343,6 +512,192 @@ describe("Stream videos list", () => {
 		expect(videos[0].id).toBe(v3.id);
 		expect(videos[1].id).toBe(v2.id);
 		expect(videos[2].id).toBe(v1.id);
+	});
+
+	test("list filters by before date (default lt operator)", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const object = await getStreamObjectControl(mf);
+		await object.enableFakeTimers(FAKE_TIME_START);
+
+		const v1 = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+		await object.advanceFakeTime(10_000);
+		await sendCmdToWorker(mf, "upload", { url: videoUrl.toString() });
+
+		// Filter to only videos created before a cutoff that excludes v2
+		const cutoff = new Date(FAKE_TIME_START + 5_000).toISOString();
+		const filtered = (await sendCmdToWorker(mf, "videos.list", {
+			params: { before: cutoff },
+		})) as Video[];
+
+		expect(filtered).toHaveLength(1);
+		expect(filtered[0].id).toBe(v1.id);
+	});
+
+	test("list filters by after date (default gte operator)", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const object = await getStreamObjectControl(mf);
+		await object.enableFakeTimers(FAKE_TIME_START);
+
+		await sendCmdToWorker(mf, "upload", { url: videoUrl.toString() });
+		await object.advanceFakeTime(10_000);
+		const v2 = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Filter to only videos created at or after a cutoff that excludes v1
+		const cutoff = new Date(FAKE_TIME_START + 5_000).toISOString();
+		const filtered = (await sendCmdToWorker(mf, "videos.list", {
+			params: { after: cutoff },
+		})) as Video[];
+
+		expect(filtered).toHaveLength(1);
+		expect(filtered[0].id).toBe(v2.id);
+	});
+
+	test("list filters with combined before and after bounds", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const object = await getStreamObjectControl(mf);
+		await object.enableFakeTimers(FAKE_TIME_START);
+
+		await sendCmdToWorker(mf, "upload", { url: videoUrl.toString() }); // t=0
+		await object.advanceFakeTime(10_000);
+		const v2 = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video; // t=10s
+		await object.advanceFakeTime(10_000);
+		await sendCmdToWorker(mf, "upload", { url: videoUrl.toString() }); // t=20s
+
+		const after = new Date(FAKE_TIME_START + 5_000).toISOString();
+		const before = new Date(FAKE_TIME_START + 15_000).toISOString();
+		const filtered = (await sendCmdToWorker(mf, "videos.list", {
+			params: { after, before },
+		})) as Video[];
+
+		expect(filtered).toHaveLength(1);
+		expect(filtered[0].id).toBe(v2.id);
+	});
+
+	test("list with non-default comparison operators (gt, lte)", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const object = await getStreamObjectControl(mf);
+		await object.enableFakeTimers(FAKE_TIME_START);
+
+		const v1 = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video; // t=0
+		await object.advanceFakeTime(10_000);
+		const v2 = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video; // t=10s
+
+		// afterComp=gt with v1's exact created time should NOT include v1
+		const afterGtResult = (await sendCmdToWorker(mf, "videos.list", {
+			params: { after: v1.created, afterComp: "gt" },
+		})) as Video[];
+		expect(afterGtResult.map((v) => v.id)).not.toContain(v1.id);
+		expect(afterGtResult.map((v) => v.id)).toContain(v2.id);
+
+		// beforeComp=lte with v1's exact created time should include v1
+		const beforeLteResult = (await sendCmdToWorker(mf, "videos.list", {
+			params: { before: v1.created, beforeComp: "lte" },
+		})) as Video[];
+		expect(beforeLteResult.map((v) => v.id)).toContain(v1.id);
+		expect(beforeLteResult.map((v) => v.id)).not.toContain(v2.id);
+	});
+});
+
+describe("Stream reloads", () => {
+	test("keeps in-memory data across setOptions reloads", async ({ expect }) => {
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const opts = {
+			compatibilityDate: STREAM_COMPAT_DATE,
+			stream: { binding: "STREAM" },
+			streamPersist: false,
+			modules: true,
+			script: WORKER_SCRIPT,
+		} satisfies MiniflareOptions;
+		const mf = new Miniflare(opts);
+		useDispose(mf);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		await mf.setOptions({
+			...opts,
+			script: `${WORKER_SCRIPT}\n// reload stream worker`,
+		});
+
+		const details = (await sendCmdToWorker(mf, "video.details", {
+			id: video.id,
+		})) as Video;
+		expect(details.id).toBe(video.id);
+
+		const videos = (await sendCmdToWorker(mf, "videos.list")) as Video[];
+		expect(videos).toHaveLength(1);
+		expect(videos[0].id).toBe(video.id);
+	});
+
+	test("keeps persisted data when persistence path format changes on reload", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+		const opts = {
+			compatibilityDate: STREAM_COMPAT_DATE,
+			stream: { binding: "STREAM" },
+			streamPersist: tmp,
+			modules: true,
+			script: WORKER_SCRIPT,
+		} satisfies MiniflareOptions;
+		const mf = new Miniflare(opts);
+		useDispose(mf);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		await mf.setOptions({
+			...opts,
+			streamPersist: pathToFileURL(tmp).href,
+			script: `${WORKER_SCRIPT}\n// reload persisted stream worker`,
+		});
+
+		const details = (await sendCmdToWorker(mf, "video.details", {
+			id: video.id,
+		})) as Video;
+		expect(details.id).toBe(video.id);
+		expect(details.size).toBe(TEST_VIDEO_BYTES.byteLength);
 	});
 });
 
@@ -499,6 +854,73 @@ describe("Stream captions", () => {
 			})
 		).rejects.toThrow("Video not found");
 	});
+
+	test("caption upload via File fails serialization across the binding", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "captions.upload", {
+				id: "00000000-0000-0000-0000-000000000000",
+				language: "en",
+			})
+		).rejects.toThrow(
+			'Could not serialize object of type "File". This type does not support serialization.'
+		);
+	});
+
+	test("generate caption is idempotent (upsert)", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Generate the same caption twice
+		await sendCmdToWorker(mf, "captions.generate", {
+			id: video.id,
+			language: "en",
+		});
+		await sendCmdToWorker(mf, "captions.generate", {
+			id: video.id,
+			language: "en",
+		});
+
+		// Should still only have one caption, not two
+		const captions = (await sendCmdToWorker(mf, "captions.list", {
+			id: video.id,
+		})) as Caption[];
+		expect(captions.filter((c) => c.language === "en")).toHaveLength(1);
+	});
+
+	test("list captions throws for non-existent video", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "captions.list", {
+				id: "00000000-0000-0000-0000-000000000000",
+			})
+		).rejects.toThrow("Video not found");
+	});
+
+	test("delete caption throws for non-existent video", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "captions.delete", {
+				id: "00000000-0000-0000-0000-000000000000",
+				language: "en",
+			})
+		).rejects.toThrow("Caption not found");
+	});
 });
 
 describe("Stream watermarks", () => {
@@ -547,6 +969,36 @@ describe("Stream watermarks", () => {
 		expect(watermark.padding).toBe(0.1);
 		expect(watermark.scale).toBe(0.3);
 		expect(watermark.position).toBe("center");
+	});
+
+	test("create watermark from URL propagates fetch failures", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: imageUrl } = await useServer(statusListener(404, "Missing"));
+
+		await expect(
+			sendCmdToWorker(mf, "watermarks.generate.fromUrl", {
+				url: imageUrl.toString(),
+				params: { name: "missing" },
+			})
+		).rejects.toThrow("Failed to fetch watermark from URL: 404 Missing");
+	});
+
+	test("create watermark via File fails serialization across the binding", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "watermarks.generate.fromFile", {
+				params: { name: "unsupported" },
+			})
+		).rejects.toThrow(
+			'Could not serialize object of type "File". This type does not support serialization.'
+		);
 	});
 
 	test("list watermarks", async ({ expect }) => {
@@ -658,6 +1110,79 @@ describe("Stream watermarks", () => {
 				params: { padding: -0.1 },
 			})
 		).rejects.toThrow("padding must be between 0.0 and 1.0");
+	});
+
+	test("scale out of range throws", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: imageUrl } = await useServer(
+			staticBytesListener(TEST_IMAGE_BYTES)
+		);
+
+		await expect(
+			sendCmdToWorker(mf, "watermarks.generate", {
+				url: imageUrl.toString(),
+				params: { scale: 1.1 },
+			})
+		).rejects.toThrow("scale must be between 0.0 and 1.0");
+	});
+
+	test("boundary values 0.0 and 1.0 are accepted for range params", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: imageUrl } = await useServer(
+			staticBytesListener(TEST_IMAGE_BYTES)
+		);
+
+		// 0.0 and 1.0 are valid boundary values — should not throw
+		const watermark = (await sendCmdToWorker(mf, "watermarks.generate", {
+			url: imageUrl.toString(),
+			params: { opacity: 0.0, padding: 1.0, scale: 0.0 },
+		})) as Watermark;
+
+		expect(watermark.id).toBeTruthy();
+		expect(watermark.opacity).toBe(0.0);
+		expect(watermark.padding).toBe(1.0);
+		expect(watermark.scale).toBe(0.0);
+	});
+
+	test("watermark created with empty name stores empty string", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: imageUrl } = await useServer(
+			staticBytesListener(TEST_IMAGE_BYTES)
+		);
+
+		const watermark = (await sendCmdToWorker(mf, "watermarks.generate", {
+			url: imageUrl.toString(),
+			params: {},
+		})) as Watermark;
+
+		expect(watermark.name).toBe("");
+	});
+
+	test("create watermark from ReadableStream stores correct size", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: imageUrl } = await useServer(
+			staticBytesListener(TEST_IMAGE_BYTES)
+		);
+
+		// The "watermarks.generate" op fetches the URL and passes resp.body (ReadableStream)
+		const watermark = (await sendCmdToWorker(mf, "watermarks.generate", {
+			url: imageUrl.toString(),
+			params: { name: "stream-wm" },
+		})) as Watermark;
+
+		expect(watermark.size).toBe(TEST_IMAGE_BYTES.byteLength);
+		// downloadedFrom is empty string when created from a stream (not a URL)
+		expect(watermark.downloadedFrom).toBe("");
 	});
 });
 
@@ -797,6 +1322,71 @@ describe("Stream downloads", () => {
 			})
 		).rejects.toThrow("Video not found");
 	});
+
+	test("get downloads for non existent video throws", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "downloads.get", {
+				id: "00000000-0000-0000-0000-000000000000",
+			})
+		).rejects.toThrow("Video not found");
+	});
+
+	test("generate download is idempotent (upsert)", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Generate the same download twice
+		await sendCmdToWorker(mf, "downloads.generate", {
+			id: video.id,
+			type: "default",
+		});
+		await sendCmdToWorker(mf, "downloads.generate", {
+			id: video.id,
+			type: "default",
+		});
+
+		// Should still only have one default download entry
+		const result = (await sendCmdToWorker(mf, "downloads.get", {
+			id: video.id,
+		})) as DownloadGetResponse;
+		expect(result.default).toBeDefined();
+		expect(result.default?.status).toBe("ready");
+		// audio should not be present
+		expect(result.audio).toBeUndefined();
+	});
+
+	test("delete download throws for non-existent video", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(
+			sendCmdToWorker(mf, "downloads.delete", {
+				id: "00000000-0000-0000-0000-000000000000",
+				type: "default",
+			})
+		).rejects.toThrow("Download not found");
+	});
+});
+
+describe("Stream unsupported binding operations", () => {
+	test("createDirectUpload is not supported", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+
+		await expect(sendCmdToWorker(mf, "createDirectUpload")).rejects.toThrow(
+			"createDirectUpload is not supported in local mode"
+		);
+	});
 });
 
 describe("Stream deletes clean up properly", () => {
@@ -858,5 +1448,55 @@ describe("Stream deletes clean up properly", () => {
 			id: video2.id,
 		})) as Video;
 		expect(details.size).toBe(TEST_VIDEO_BYTES.byteLength);
+	});
+
+	test("deleting one video does not affect another video's captions and downloads", async ({
+		expect,
+	}) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const videoA = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+		const videoB = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+
+		// Add captions and downloads to both
+		await sendCmdToWorker(mf, "captions.generate", {
+			id: videoA.id,
+			language: "en",
+		});
+		await sendCmdToWorker(mf, "captions.generate", {
+			id: videoB.id,
+			language: "en",
+		});
+		await sendCmdToWorker(mf, "downloads.generate", {
+			id: videoA.id,
+			type: "default",
+		});
+		await sendCmdToWorker(mf, "downloads.generate", {
+			id: videoB.id,
+			type: "default",
+		});
+
+		// Delete only video A
+		await sendCmdToWorker(mf, "video.delete", { id: videoA.id });
+
+		// videoB's captions and downloads should be unaffected
+		const captionsB = (await sendCmdToWorker(mf, "captions.list", {
+			id: videoB.id,
+		})) as Caption[];
+		expect(captionsB).toHaveLength(1);
+		expect(captionsB[0].language).toBe("en");
+
+		const downloadsB = (await sendCmdToWorker(mf, "downloads.get", {
+			id: videoB.id,
+		})) as DownloadGetResponse;
+		expect(downloadsB.default).toBeDefined();
 	});
 });
