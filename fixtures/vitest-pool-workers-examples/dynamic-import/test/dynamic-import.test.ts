@@ -1,4 +1,8 @@
-import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import {
+	env,
+	runDurableObjectAlarm,
+	runInDurableObject,
+} from "cloudflare:test";
 import { exports } from "cloudflare:workers";
 import { it } from "vitest";
 

@@ -9,7 +9,11 @@ export class GreeterDO implements DurableObject {
 }
 
 export default {
-	async fetch(request: Request, _env: unknown, _ctx: ExecutionContext): Promise<Response> {
+	async fetch(
+		request: Request,
+		_env: unknown,
+		_ctx: ExecutionContext
+	): Promise<Response> {
 		// Dynamic import inside a fetch handler — this is the pattern that
 		// triggers the cross-DO I/O violation in vitest-pool-workers 0.13.x
 		// when called via `exports.default.fetch()` in tests.
