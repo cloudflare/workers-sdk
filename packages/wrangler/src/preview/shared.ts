@@ -1,9 +1,29 @@
 import { execSync } from "node:child_process";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getWorkersCIBranchName,
+	UserError,
+} from "@cloudflare/workers-utils";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 export function getBranchName(): string | undefined {
+	const workersCIBranch = getWorkersCIBranchName();
+	if (workersCIBranch) {
+		return workersCIBranch;
+	}
+
+	const githubBranch =
+		process.env.GITHUB_HEAD_REF ?? process.env.GITHUB_REF_NAME;
+	if (githubBranch) {
+		return githubBranch;
+	}
+
+	const gitlabBranch = process.env.CI_COMMIT_REF_NAME;
+	if (gitlabBranch) {
+		return gitlabBranch;
+	}
+
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
 		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();

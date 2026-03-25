@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, test } from "vitest";
-import { extractConfigBindings } from "../preview/shared";
+import { beforeEach, describe, test, vi } from "vitest";
+import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockStdin } from "./helpers/mock-stdin";
@@ -23,6 +23,35 @@ describe("wrangler preview", () => {
 	runInTempDir();
 	mockApiToken();
 	mockAccountId();
+
+	describe("getBranchName", () => {
+		beforeEach(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test("should prefer the Workers CI branch env var", ({ expect }) => {
+			vi.stubEnv("WORKERS_CI_BRANCH", "workers-build-branch");
+			vi.stubEnv("GITHUB_REF_NAME", "github-branch");
+			vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
+
+			expect(getBranchName()).toBe("workers-build-branch");
+		});
+
+		test("should use the GitHub Actions branch env vars", ({ expect }) => {
+			vi.stubEnv("GITHUB_HEAD_REF", "github-pr-branch");
+			expect(getBranchName()).toBe("github-pr-branch");
+
+			vi.unstubAllEnvs();
+			vi.stubEnv("GITHUB_REF_NAME", "github-push-branch");
+			expect(getBranchName()).toBe("github-push-branch");
+		});
+
+		test("should use the GitLab branch env var", ({ expect }) => {
+			vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
+
+			expect(getBranchName()).toBe("gitlab-branch");
+		});
+	});
 
 	describe("extractConfigBindings", () => {
 		test("should extract vars as plain_text bindings", ({ expect }) => {
