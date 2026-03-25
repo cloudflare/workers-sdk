@@ -107,7 +107,7 @@ For framework issues:
 
 For runtime issues:
 
-> This looks like a Workers runtime issue rather than a tooling issue. The right place to track this is [cloudflare/workerd](https://github.com/cloudflare/workerd) so I've moved the issue there.
+> This looks like a Workers runtime issue rather than a tooling issue. The right place to track this is [cloudflare/workerd](https://github.com/cloudflare/workerd) — could a maintainer transfer this issue there?
 
 (Set Action field to: "Transfer to cloudflare/workerd, then post this comment.")
 
