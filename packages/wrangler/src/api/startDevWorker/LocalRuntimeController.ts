@@ -109,7 +109,7 @@ export async function convertToConfigBundle(
 					assetDirectory: "",
 					excludePatterns: event.config.legacy?.site?.exclude ?? [],
 					includePatterns: event.config.legacy?.site?.include ?? [],
-			  }
+				}
 			: undefined,
 		assets: event.config?.assets,
 		initialPort: undefined,
@@ -120,12 +120,12 @@ export async function convertToConfigBundle(
 					inspect: false,
 					inspectorPort: undefined,
 					inspectorHost: undefined,
-			  }
+				}
 			: {
 					inspect: true,
 					inspectorPort: 0,
 					inspectorHost: event.config.dev.inspector?.hostname,
-			  }),
+				}),
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
@@ -211,7 +211,7 @@ export class LocalRuntimeController extends RuntimeController {
 				const auth =
 					Object.keys(remoteBindings).length === 0
 						? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-						  undefined
+							undefined
 						: await unwrapHook(data.config.dev.auth);
 
 				this.#remoteProxySessionData =
@@ -342,7 +342,7 @@ export class LocalRuntimeController extends RuntimeController {
 									port: userWorkerInspectorUrl.port,
 									pathname: `/core:user:${getName(data.config)}`,
 								},
-						  }
+							}
 						: {}),
 					userWorkerInnerUrlOverrides: {
 						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
