@@ -18,12 +18,11 @@ function getStub(env: Env): DurableObjectStub<StreamObject> {
 }
 
 function rowsToDownloadResponse(
-	rows: { type: string; download: StreamDownload }[]
+	rows: { type: StreamDownloadType; download: StreamDownload }[]
 ): StreamDownloadGetResponse {
 	const result: StreamDownloadGetResponse = {};
 	for (const { type, download } of rows) {
-		if (type === "default") result.default = download;
-		else if (type === "audio") result.audio = download;
+		result[type] = download;
 	}
 	return result;
 }

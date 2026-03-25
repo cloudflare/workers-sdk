@@ -105,7 +105,7 @@ export class StreamObject extends DurableObject<Env> {
 	}
 
 	async listVideos(params?: StreamVideosListParams): Promise<VideoRow[]> {
-		if (!params?.before && !params?.after) {
+		if (params?.before === undefined && params?.after === undefined) {
 			if (params?.limit === undefined) {
 				return all(this.#stmts.listVideos({}));
 			}

@@ -122,7 +122,7 @@ export type WatermarkRow = {
 
 export type DownloadRow = {
 	video_id: string;
-	download_type: string;
+	download_type: StreamDownloadType;
 	status: string;
 	percent_complete: number;
 	url: string | null;
@@ -192,7 +192,7 @@ export function rowToStreamWatermark(row: WatermarkRow): StreamWatermark {
 }
 
 export function rowToStreamDownload(row: DownloadRow): {
-	type: string;
+	type: StreamDownloadType;
 	download: StreamDownload;
 } {
 	return {
