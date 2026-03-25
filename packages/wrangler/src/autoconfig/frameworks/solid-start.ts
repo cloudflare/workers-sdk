@@ -2,9 +2,12 @@ import assert from "node:assert";
 import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
-import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { usesTypescript } from "../uses-typescript";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";

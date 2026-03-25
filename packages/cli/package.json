@@ -27,7 +27,6 @@
 	"devDependencies": {
 		"@clack/core": "^0.3.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*",
 		"chalk": "^5.2.0",
 		"log-update": "^5.0.1"
 	},

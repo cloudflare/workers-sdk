@@ -1,10 +1,10 @@
 import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { transformFile } from "@cloudflare/workers-utils";
+import { quoteShellArgs, runCommand } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import * as typescriptParser from "recast/parsers/typescript";
-import { transformFile } from "../c3-vendor/codemod";
-import { quoteShellArgs, runCommand } from "../c3-vendor/command";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";

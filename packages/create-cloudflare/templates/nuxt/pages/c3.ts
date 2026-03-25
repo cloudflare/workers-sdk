@@ -1,11 +1,15 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import {
+	getPackageManager,
+	installPackages,
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
-import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
@@ -38,7 +42,8 @@ const configure = async () => {
 		packages.push("h3");
 	}
 
-	await installPackages(packages, {
+	const packageManager = await getPackageManager();
+	await installPackages(packageManager, packages, {
 		dev: true,
 		startText: "Installing nitro module `nitro-cloudflare-dev`",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,

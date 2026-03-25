@@ -2,10 +2,10 @@ import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { getPackageManager, installPackages } from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
@@ -23,7 +23,8 @@ const configure = async (ctx: C3Context) => {
 };
 
 async function installCFWorker() {
-	await installPackages(["xhr2"], {
+	const packageManager = await getPackageManager();
+	await installPackages(packageManager, ["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,

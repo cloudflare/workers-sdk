@@ -1,5 +1,5 @@
+import { runCommand } from "@cloudflare/workers-utils";
 import semiver from "semiver";
-import { runCommand } from "../c3-vendor/command";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";

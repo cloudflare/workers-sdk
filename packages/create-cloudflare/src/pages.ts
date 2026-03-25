@@ -1,5 +1,6 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { quoteShellArgs, runCommand } from "helpers/command";
+import { quoteShellArgs } from "@cloudflare/workers-utils";
+import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { getProductionBranch } from "./git";

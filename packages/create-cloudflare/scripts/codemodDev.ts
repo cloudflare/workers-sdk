@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { parseFile, parseTs } from "helpers/codemod";
+import { parseFile, parseTs } from "@cloudflare/workers-utils";
 import { writeFile } from "helpers/files";
 import * as recast from "recast";
 

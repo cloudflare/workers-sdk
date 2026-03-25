@@ -12,6 +12,7 @@ import {
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
+import { getPackageManager, installWrangler } from "@cloudflare/workers-utils";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
 import { runCommand } from "helpers/command";
@@ -19,7 +20,7 @@ import {
 	detectPackageManager,
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
-import { installWrangler, npmInstall } from "helpers/packages";
+import { npmInstall } from "helpers/packages";
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
@@ -171,7 +172,8 @@ const configure = async (ctx: C3Context) => {
 
 	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
 	// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
-	await installWrangler();
+	const packageManager = await getPackageManager();
+	await installWrangler(packageManager, false);
 
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();

@@ -1,10 +1,11 @@
 import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { quoteShellArgs, transformFile } from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
-import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { quoteShellArgs, runCommand } from "helpers/command";
+import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
+import { loadTemplateSnippets } from "helpers/load-template-snippets";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";

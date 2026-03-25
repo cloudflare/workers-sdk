@@ -2,9 +2,9 @@ import assert from "node:assert";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import { runCommand } from "./command";
-import type { PackageManager } from "../../package-manager";
+import { runCommand } from "./command-helpers";
+import { parsePackageJSON, readFileSync } from "./parse";
+import type { PackageManager } from "./package-managers";
 
 type InstallConfig = {
 	startText?: string;
@@ -24,11 +24,11 @@ type InstallConfig = {
  * @param config.doneText - Spinner done text
  * @param config.force - Whether to install with `--force` or not
  */
-export const installPackages = async (
+export async function installPackages(
 	packageManager: PackageManager,
 	packages: string[],
 	config: InstallConfig = {}
-) => {
+) {
 	const { type } = packageManager;
 	const { force, dev, startText, doneText } = config;
 	const isWorkspaceRoot = config.isWorkspaceRoot ?? false;
@@ -70,6 +70,10 @@ export const installPackages = async (
 		case "yarn":
 			cmd = "add";
 			saveFlag = dev ? "-D" : "";
+			break;
+		case "bun":
+			cmd = "add";
+			saveFlag = dev ? "-d" : "";
 			break;
 		case "npm":
 		case "pnpm":
@@ -115,7 +119,7 @@ export const installPackages = async (
 		}
 		await writeFile(pkgJsonPath, JSON.stringify(pkgJson, null, 2));
 	}
-};
+}
 
 /**
  * Returns the potential flag(/s) that need to be added to a package manager's install command when it is
@@ -125,10 +129,10 @@ export const installPackages = async (
  * @param isWorkspaceRoot Flag indicating whether the install command is being run at the root of a workspace
  * @returns an array containing the flag(/s) to use, or an empty array if not supported or not running in the workspace root.
  */
-const getWorkspaceInstallRootFlag = (
+function getWorkspaceInstallRootFlag(
 	packageManagerType: PackageManager["type"],
 	isWorkspaceRoot: boolean
-): string[] => {
+): string[] {
 	if (!isWorkspaceRoot) {
 		return [];
 	}
@@ -143,15 +147,15 @@ const getWorkspaceInstallRootFlag = (
 			// npm and bun don't have the workspace check
 			return [];
 	}
-};
+}
 
 /**
  *  Installs the latest version of wrangler in the project directory if it isn't already.
  */
-export const installWrangler = async (
+export async function installWrangler(
 	packageManager: PackageManager,
 	isWorkspaceRoot: boolean
-) => {
+) {
 	const { type } = packageManager;
 
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
@@ -165,4 +169,4 @@ export const installWrangler = async (
 			`via \`${type} install wrangler --save-dev\``
 		)}`,
 	});
-};
+}

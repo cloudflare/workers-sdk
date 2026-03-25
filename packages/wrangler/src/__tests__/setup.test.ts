@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
+import * as c3 from "@cloudflare/workers-utils";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, assert, describe, test, vi } from "vitest";
-import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";
 import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";

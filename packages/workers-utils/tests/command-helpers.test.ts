@@ -1,9 +1,7 @@
 import { existsSync } from "node:fs";
 import { spawn } from "cross-spawn";
-import { readMetricsConfig } from "helpers/metrics-config";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import whichPMRuns from "which-pm-runs";
-import { quoteShellArgs, runCommand } from "../command";
+import { quoteShellArgs, runCommand } from "../src/command-helpers";
 import type { ChildProcess } from "node:child_process";
 
 // We can change how the mock spawn works by setting these variables
@@ -13,8 +11,6 @@ let spawnStderr: string | undefined = undefined;
 
 vi.mock("cross-spawn");
 vi.mock("fs");
-vi.mock("which-pm-runs");
-vi.mock("helpers/metrics-config");
 
 describe("Command Helpers", () => {
 	afterEach(() => {
@@ -48,7 +44,6 @@ describe("Command Helpers", () => {
 			} as unknown as ChildProcess;
 		});
 
-		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 		vi.mocked(existsSync).mockImplementation(() => false);
 	});
 
@@ -58,68 +53,6 @@ describe("Command Helpers", () => {
 			stdio: "inherit",
 			env: process.env,
 			signal: expect.any(AbortSignal),
-		});
-	});
-
-	describe("respect telemetry permissions when running wrangler", () => {
-		test("runCommand has WRANGLER_SEND_METRICS=false if its a wrangler command and c3 telemetry is disabled", async ({
-			expect,
-		}) => {
-			vi.mocked(readMetricsConfig).mockReturnValue({
-				c3permission: {
-					enabled: false,
-					date: new Date(2000),
-				},
-			});
-			await runCommand(["npx", "wrangler"]);
-
-			expect(spawn).toHaveBeenCalledWith(
-				"npx",
-				["wrangler"],
-				expect.objectContaining({
-					env: expect.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				})
-			);
-		});
-
-		test("runCommand doesn't have WRANGLER_SEND_METRICS=false if its a wrangler command and c3 telemetry is enabled", async ({
-			expect,
-		}) => {
-			vi.mocked(readMetricsConfig).mockReturnValue({
-				c3permission: {
-					enabled: true,
-					date: new Date(2000),
-				},
-			});
-			await runCommand(["npx", "wrangler"]);
-
-			expect(spawn).toHaveBeenCalledWith(
-				"npx",
-				["wrangler"],
-				expect.objectContaining({
-					env: expect.not.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				})
-			);
-		});
-
-		test("runCommand doesn't have WRANGLER_SEND_METRICS=false if not a wrangler command", async ({
-			expect,
-		}) => {
-			vi.mocked(readMetricsConfig).mockReturnValue({
-				c3permission: {
-					enabled: false,
-					date: new Date(2000),
-				},
-			});
-			await runCommand(["ls", "-l"]);
-
-			expect(spawn).toHaveBeenCalledWith(
-				"ls",
-				["-l"],
-				expect.objectContaining({
-					env: expect.not.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				})
-			);
 		});
 	});
 

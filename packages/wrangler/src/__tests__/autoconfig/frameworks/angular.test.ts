@@ -1,10 +1,20 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import * as workersUtils from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
-import * as c3Packages from "../../../autoconfig/c3-vendor/packages";
 import { Angular } from "../../../autoconfig/frameworks/angular";
 import { NpmPackageManager } from "../../../package-manager";
 import { runInTempDir } from "../../helpers/run-in-tmp";
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const originalModule =
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		await importOriginal<Awaited<typeof import("@cloudflare/workers-utils")>>();
+	return {
+		...originalModule,
+		installPackages: vi.fn(),
+	};
+});
 
 const BASE_OPTIONS = {
 	projectPath: process.cwd(),
@@ -22,7 +32,7 @@ describe("Angular framework configure()", () => {
 
 	beforeEach(() => {
 		installSpy = vi
-			.spyOn(c3Packages, "installPackages")
+			.spyOn(workersUtils, "installPackages")
 			.mockImplementation(async () => {});
 	});
 

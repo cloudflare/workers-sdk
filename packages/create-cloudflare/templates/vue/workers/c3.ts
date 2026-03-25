@@ -1,10 +1,10 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { getPackageManager, installPackages } from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
@@ -31,7 +31,8 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	await installPackages(["@cloudflare/vite-plugin"], {
+	const packageManager = await getPackageManager();
+	await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
 		dev: true,
 		startText: "Installing the Cloudflare Vite plugin",
 		doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,

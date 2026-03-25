@@ -1,8 +1,11 @@
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/workers-utils";
+import { installPackages } from "@cloudflare/workers-utils";
 import * as recast from "recast";
-import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 

@@ -2,12 +2,12 @@ import assert from "node:assert";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { transformFile } from "@cloudflare/workers-utils";
+import { installPackages } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { logger } from "../../logger";
-import { transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { transformViteConfig } from "./utils/vite-config";
 import { Framework } from ".";
@@ -154,7 +154,9 @@ export class ReactRouter extends Framework {
 			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
-				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+				doneText: `${brandColor(`installed`)} ${dim(
+					"@cloudflare/vite-plugin"
+				)}`,
 				isWorkspaceRoot,
 			});
 

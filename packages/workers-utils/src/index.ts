@@ -98,3 +98,26 @@ export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
 export { MetricsRegistry } from "./prometheus-metrics";
 export type { Counter } from "./prometheus-metrics";
+
+export { runCommand, quoteShellArgs } from "./command-helpers";
+
+export {
+	type PackageManager,
+	getPackageManager,
+	getPackageManagerName,
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+	BunPackageManager,
+	sniffUserAgent,
+} from "./package-managers";
+
+export { installPackages, installWrangler } from "./packages";
+
+export {
+	mergeObjectProperties,
+	parseJs,
+	parseTs,
+	parseFile,
+	transformFile,
+} from "./codemod";

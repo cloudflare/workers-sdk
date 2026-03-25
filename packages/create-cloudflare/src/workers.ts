@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { getPackageManager, installPackages } from "@cloudflare/workers-utils";
 import { runCommand } from "helpers/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import TOML from "smol-toml";
 import {
@@ -77,7 +77,8 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 		compatibilityFlags.includes("nodejs_compat") ||
 		compatibilityFlags.includes("nodejs_compat_v2")
 	) {
-		await installPackages(["@types/node"], {
+		const packageManager = await getPackageManager();
+		await installPackages(packageManager, ["@types/node"], {
 			dev: true,
 			startText: "Installing @types/node",
 			doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
@@ -189,7 +190,8 @@ function hasProjectReferences(config: unknown): boolean {
  * and updates the .tsconfig file to use the latest entrypoint version.
  */
 async function installWorkersTypes(npm: string) {
-	await installPackages(["@cloudflare/workers-types"], {
+	const packageManager = await getPackageManager();
+	await installPackages(packageManager, ["@cloudflare/workers-types"], {
 		dev: true,
 		startText: "Installing @cloudflare/workers-types",
 		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,

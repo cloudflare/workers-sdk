@@ -8,12 +8,15 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { parseJSONC } from "@cloudflare/workers-utils";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/workers-utils";
+import { runCommand } from "@cloudflare/workers-utils";
+import { installPackages } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { logger } from "../../logger";
-import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { runCommand } from "../c3-vendor/command";
-import { installPackages } from "../c3-vendor/packages";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
@@ -110,7 +113,11 @@ function validateMinimumAstroVersion(astroVersion: string) {
 	const minumumAstroVersion = "4.0.0";
 	if (astroVersion && semiver(astroVersion, minumumAstroVersion) < 0) {
 		throw new AutoConfigFrameworkConfigurationError(
-			`The version of Astro used in the project (${JSON.stringify(astroVersion)}) is not supported by the Wrangler automatic configuration. Please update the Astro version to at least ${JSON.stringify(minumumAstroVersion)} and try again.`
+			`The version of Astro used in the project (${JSON.stringify(
+				astroVersion
+			)}) is not supported by the Wrangler automatic configuration. Please update the Astro version to at least ${JSON.stringify(
+				minumumAstroVersion
+			)} and try again.`
 		);
 	}
 }
@@ -281,7 +288,9 @@ function updateTsConfig(projectPath: string) {
 			// Adding an `include` field here would override the parent's includes, breaking type-checking.
 			// Instead, warn the user to add it manually.
 			logger.warn(
-				`Could not find an existing \`include\` field in tsconfig.json. You may need to manually add ${JSON.stringify(includeEntry)} to your tsconfig.json \`include\` array.`
+				`Could not find an existing \`include\` field in tsconfig.json. You may need to manually add ${JSON.stringify(
+					includeEntry
+				)} to your tsconfig.json \`include\` array.`
 			);
 			return;
 		}

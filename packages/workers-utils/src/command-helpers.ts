@@ -1,7 +1,23 @@
-import { stripAnsi } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
+
+// Inlined from @cloudflare/cli to avoid importing the barrel index.ts,
+// which re-exports check-macos-version.ts and causes a Rollup sourcemap
+// conflict ("Multiple conflicting contents for sourcemap source").
+const linkRegex =
+	// eslint-disable-next-line no-control-regex
+	/\u001B\]8;;(?<url>.+)\u001B\\(?<label>.+)\u001B\]8;;\u001B\\/g;
+
+const stripAnsi = (str: string) => {
+	const pattern = [
+		"[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+		"(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))",
+	].join("|");
+	const regex = RegExp(pattern, "g");
+
+	return str.replace(linkRegex, "$2").replace(regex, "");
+};
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']

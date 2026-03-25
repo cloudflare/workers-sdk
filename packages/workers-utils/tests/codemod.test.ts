@@ -1,7 +1,7 @@
-import { mergeObjectProperties } from "helpers/codemod";
 import * as recast from "recast";
 import parser from "recast/parsers/babel";
 import { describe, test } from "vitest";
+import { mergeObjectProperties } from "../src/codemod";
 import type { ExpectStatic } from "vitest";
 
 describe("mergeObjectProperties", () => {

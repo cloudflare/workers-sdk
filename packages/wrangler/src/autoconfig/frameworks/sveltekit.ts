@@ -1,7 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "../c3-vendor/command";
-import { installPackages } from "../c3-vendor/packages";
+import { installPackages, runCommand } from "@cloudflare/workers-utils";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
@@ -26,7 +25,9 @@ export class SvelteKit extends Framework {
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${dlx.join(" ")} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
+						`via \`${dlx.join(
+							" "
+						)} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
 					)}`,
 				}
 			);

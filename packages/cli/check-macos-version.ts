@@ -1,5 +1,4 @@
 import os from "node:os";
-import { UserError } from "@cloudflare/workers-utils";
 import ci from "ci-info";
 
 /**
@@ -29,7 +28,7 @@ export function checkMacOSVersion(options: { shouldThrow: boolean }): void {
 
 	if (macOSVersion && isVersionLessThan(macOSVersion, MINIMUM_MACOS_VERSION)) {
 		if (options.shouldThrow) {
-			throw new UserError(
+			throw new Error(
 				`Unsupported macOS version: The Cloudflare Workers runtime cannot run on the current version of macOS (${macOSVersion}). ` +
 					`The minimum requirement is macOS ${MINIMUM_MACOS_VERSION}+. See https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd ` +
 					`If you cannot upgrade your version of macOS, you could try running in a DevContainer setup with a supported version of Linux (glibc 2.35+ required).`

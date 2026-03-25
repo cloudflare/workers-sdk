@@ -7,6 +7,7 @@ import {
 	getLocalWorkerdCompatibilityDate,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
+import { installWrangler } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -14,7 +15,6 @@ import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
-import { installWrangler } from "./c3-vendor/packages";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
@@ -164,7 +164,11 @@ export async function runAutoConfig(
 		}
 
 		logger.debug(
-			`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
+			`Running autoconfig with:\n${JSON.stringify(
+				autoConfigDetails,
+				null,
+				2
+			)}...`
 		);
 
 		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {

@@ -1,10 +1,13 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import {
+	getPackageManager,
+	installPackages,
+	transformFile,
+} from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";
@@ -20,7 +23,8 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	// Install the adapter
 	const pkg = `@sveltejs/adapter-cloudflare`;
-	await installPackages([pkg], {
+	const packageManager = await getPackageManager();
+	await installPackages(packageManager, [pkg], {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
