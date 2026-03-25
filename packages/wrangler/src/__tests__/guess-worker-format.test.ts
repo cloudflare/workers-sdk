@@ -113,4 +113,21 @@ describe("guess worker format", () => {
 		);
 		expect(guess.exports).toStrictEqual(["Hello", "default"]);
 	});
+
+	it("should detect a modules worker that uses source phase imports", async ({
+		expect,
+	}) => {
+		await writeFile("./mod.wasm", "");
+		await writeFile(
+			"./index.js",
+			`import source mod from './mod.wasm';
+export default { fetch() { return new Response(mod); } };`
+		);
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.js"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess.format).toBe("modules");
+	});
 });

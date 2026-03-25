@@ -47,6 +47,7 @@ export const COMMON_ESBUILD_OPTIONS = {
 	// v8 supports es2024 features as of 11.9
 	// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 	target: "es2024",
+	supported: { "import-source": true },
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
@@ -385,6 +386,7 @@ export async function bundleWorker(
 			: undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
+		supported: COMMON_ESBUILD_OPTIONS.supported,
 		sourcemap: sourcemap ?? true,
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.

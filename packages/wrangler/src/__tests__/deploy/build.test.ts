@@ -1212,6 +1212,18 @@ export default { fetch() { return new Response(foo); } }`
 			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
+
+		it("should preserve source phase imports without error", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const scriptContent = `import source mod from './mod.wasm';
+export default { fetch() { return new Response(mod); } };`;
+			fs.writeFileSync("index.js", scriptContent);
+			fs.writeFileSync("mod.wasm", "");
+			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
+		});
 	});
 	describe("--no-bundle --minify", () => {
 		it("should warn that no-bundle and minify can't be used together", async ({

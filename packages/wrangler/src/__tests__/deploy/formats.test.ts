@@ -931,6 +931,52 @@ export default{
 				}
 			`);
 		});
+
+		it("should copy source phase wasm imports to --outdir if specified", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import source hello from './hello.wasm';
+export default {
+  async fetch() {
+    return new Response(txt + hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outdir some-dir");
+
+			expect(fs.existsSync("some-dir/index.js")).toBe(true);
+			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+			expect(fs.readFileSync("some-dir/index.js", "utf8")).toContain(
+				'import source hello from "./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm";'
+			);
+			expect(
+				fs.existsSync(
+					"some-dir/0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt"
+				)
+			).toBe(true);
+			expect(
+				fs.existsSync(
+					"some-dir/d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"
+				)
+			).toBe(true);
+		});
 	});
 	describe("--outfile", () => {
 		it("should generate worker bundle at --outfile if specified", async ({
@@ -1054,6 +1100,56 @@ export default{
 				  "warn": "",
 				}
 			`);
+		});
+
+		it("should include source phase wasm imports in the worker bundle", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import source hello from './hello.wasm';
+export default {
+  async fetch() {
+    return new Response(txt + hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toContain(
+				dedent`
+					// index.js
+					import txt from "./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt";
+					import source hello from "./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm";
+				`
+			);
+			expect(fs.readFileSync("some-dir/worker.bundle", "utf8")).toContain(
+				'Content-Disposition: form-data; name="./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"; filename="./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"'
+			);
 		});
 
 		it("should include bindings in the worker bundle", async ({ expect }) => {
