@@ -1168,9 +1168,7 @@ describe("generate types", () => {
 				env: {
 					staging: {
 						name: "primary-worker-staging",
-						services: [
-							{ binding: "DO_WORKER", service: "do-worker-staging" },
-						],
+						services: [{ binding: "DO_WORKER", service: "do-worker-staging" }],
 						durable_objects: {
 							bindings: [
 								{
