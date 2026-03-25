@@ -35,7 +35,7 @@ describe("Framework.validateFrameworkVersion()", () => {
 
 		expect(() =>
 			framework.validateFrameworkVersion("/project", PACKAGE_INFO)
-		).toThrow("Unable to discern the version of the `some-pkg` package");
+		).toThrow("Unable to detect the version of the `some-pkg` package");
 	});
 
 	it("throws AutoConfigFrameworkConfigurationError when installed version is below minimum", ({

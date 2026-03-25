@@ -57,7 +57,7 @@ export abstract class Framework {
 
 		assert(
 			frameworkVersion,
-			`Unable to discern the version of the \`${frameworkPackageInfo.name}\` package`
+			`Unable to detect the version of the \`${frameworkPackageInfo.name}\` package`
 		);
 
 		if (semiver(frameworkVersion, frameworkPackageInfo.minimumVersion) < 0) {
