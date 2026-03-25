@@ -584,7 +584,7 @@ describe("autoconfig (deploy)", () => {
 					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.]`
+				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.]`
 			);
 		});
 

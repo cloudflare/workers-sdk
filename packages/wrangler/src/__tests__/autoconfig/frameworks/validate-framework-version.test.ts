@@ -50,8 +50,8 @@ describe("Framework.validateFrameworkVersion()", () => {
 
 		expect(() =>
 			framework.validateFrameworkVersion("/project", PACKAGE_INFO)
-		).toThrow(
-			'The version of Test used in the project ("1.0.0") is not supported by the Wrangler automatic configuration. Please update the Test version to at least "2.0.0" and try again.'
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: The version of Test used in the project ("1.0.0") cannot be automatically configured. Please update the Test version to at least "2.0.0" and try again.]`
 		);
 	});
 
@@ -132,9 +132,7 @@ describe("Framework.validateFrameworkVersion()", () => {
 		expect(framework.frameworkVersion).toBe("5.0.0");
 		expect(std.warn).toContain('"5.0.0"');
 		expect(std.warn).toContain("Test");
-		expect(std.warn).toContain(
-			"is not officially known / supported by the Wrangler automatic configuration"
-		);
+		expect(std.warn).toContain("is not officially supported");
 	});
 
 	it("throws an AssertionError when frameworkVersion getter is accessed before validateFrameworkVersion is called", ({
