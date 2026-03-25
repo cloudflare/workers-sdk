@@ -2,7 +2,11 @@ import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServiceType } from "../vpc/index";
-import { validateHostname, validateRequest } from "../vpc/validation";
+import {
+	extractPortFromHostname,
+	validateHostname,
+	validateRequest,
+} from "../vpc/validation";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -699,6 +703,123 @@ describe("vpc service commands", () => {
 		expect(std.err).toContain("Invalid values");
 		expect(std.err).toContain("cert-verification-mode");
 		expect(std.err).toContain('"invalid"');
+	});
+
+	it("should extract port from hostname for TCP services", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-tcp-hostport --type tcp --hostname mysql.internal:3306 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "hostname": "mysql.internal",
+			    "resolver_network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
+			    },
+			  },
+			  "name": "test-tcp-hostport",
+			  "tcp_port": 3306,
+			  "type": "tcp",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-tcp-hostport'
+			✅ Created VPC service: service-uuid
+			   Name: test-tcp-hostport
+			   Type: tcp
+			   TCP Port: 3306
+			   Hostname: mysql.internal
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440001"
+		`);
+	});
+
+	it("should accept matching --tcp-port when hostname also includes port", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-tcp-match --type tcp --tcp-port 5432 --hostname db.internal:5432 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "hostname": "db.internal",
+			    "resolver_network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
+			    },
+			  },
+			  "name": "test-tcp-match",
+			  "tcp_port": 5432,
+			  "type": "tcp",
+			}
+		`);
+	});
+
+	it("should reject conflicting --tcp-port and hostname port", async () => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-tcp-conflict --type tcp --tcp-port 5432 --hostname db.internal:3306 --tunnel-id 550e8400-e29b-41d4-a716-446655440001"
+			)
+		).rejects.toThrow(
+			"Conflicting TCP port: --hostname includes port 3306 but --tcp-port is 5432"
+		);
+	});
+});
+
+describe("extractPortFromHostname", () => {
+	it("should extract port from hostname:port", () => {
+		expect(extractPortFromHostname("db.example.com:5432")).toEqual({
+			hostname: "db.example.com",
+			port: 5432,
+		});
+	});
+
+	it("should return undefined port for plain hostname", () => {
+		expect(extractPortFromHostname("db.example.com")).toEqual({
+			hostname: "db.example.com",
+			port: undefined,
+		});
+	});
+
+	it("should not extract port from IPv6 addresses", () => {
+		expect(extractPortFromHostname("2001:db8::1")).toEqual({
+			hostname: "2001:db8::1",
+			port: undefined,
+		});
+	});
+
+	it("should not extract port from bracketed IPv6 addresses", () => {
+		expect(extractPortFromHostname("[::1]")).toEqual({
+			hostname: "[::1]",
+			port: undefined,
+		});
+	});
+
+	it("should handle port at boundary values", () => {
+		expect(extractPortFromHostname("host:1")).toEqual({
+			hostname: "host",
+			port: 1,
+		});
+		expect(extractPortFromHostname("host:65535")).toEqual({
+			hostname: "host",
+			port: 65535,
+		});
+	});
+
+	it("should reject port 0 or above 65535", () => {
+		expect(extractPortFromHostname("host:0")).toEqual({
+			hostname: "host:0",
+			port: undefined,
+		});
+		expect(extractPortFromHostname("host:65536")).toEqual({
+			hostname: "host:65536",
+			port: undefined,
+		});
 	});
 });
 

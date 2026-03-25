@@ -2,8 +2,8 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { updateService } from "./client";
 import { displayServiceDetails } from "./shared";
-import { buildRequest, validateRequest } from "./validation";
-import { serviceOptions, type ServiceType } from "./index";
+import { buildRequest, toServiceArgs, validateRequest } from "./validation";
+import { serviceOptions } from "./index";
 
 export const vpcServiceUpdateCommand = createCommand({
 	metadata: {
@@ -21,40 +21,13 @@ export const vpcServiceUpdateCommand = createCommand({
 	},
 	positionalArgs: ["service-id"],
 	validateArgs: (args) => {
-		// Validate arguments - this will throw UserError if validation fails
-		validateRequest({
-			name: args.name,
-			type: args.type as ServiceType,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
-			httpPort: args.httpPort,
-			httpsPort: args.httpsPort,
-			ipv4: args.ipv4,
-			ipv6: args.ipv6,
-			hostname: args.hostname,
-			tunnelId: args.tunnelId,
-			resolverIps: args.resolverIps,
-			certVerificationMode: args.certVerificationMode,
-		});
+		validateRequest(toServiceArgs(args));
 	},
 	async handler(args, { config }) {
 		logger.log(`🚧 Updating VPC service '${args.serviceId}'`);
 
-		const request = buildRequest({
-			name: args.name,
-			type: args.type as ServiceType,
-			tcpPort: args.tcpPort,
-			appProtocol: args.appProtocol,
-			httpPort: args.httpPort,
-			httpsPort: args.httpsPort,
-			ipv4: args.ipv4,
-			ipv6: args.ipv6,
-			hostname: args.hostname,
-			tunnelId: args.tunnelId,
-			resolverIps: args.resolverIps,
-			certVerificationMode: args.certVerificationMode,
-		});
-
+		const serviceArgs = toServiceArgs(args);
+		const request = buildRequest(serviceArgs);
 		const service = await updateService(config, args.serviceId, request);
 
 		logger.log(`✅ Updated VPC service: ${service.service_id}`);

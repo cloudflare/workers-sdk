@@ -79,6 +79,87 @@ export function validateHostname(hostname: string): void {
 	}
 }
 
+/**
+ * For TCP services, extract a port number from a "host:port" hostname if present.
+ * Uses the URL class to reliably parse the host and port, which correctly
+ * handles IPv6 addresses, bracketed notation, and edge cases.
+ *
+ * Returns the hostname with the port stripped and the extracted port number,
+ * or the original hostname and undefined if no port suffix was found.
+ */
+export function extractPortFromHostname(hostname: string): {
+	hostname: string;
+	port: number | undefined;
+} {
+	try {
+		// Use a dummy scheme so the URL constructor can parse "host:port"
+		const url = new URL(`tcp://${hostname}`);
+		if (url.port === "") {
+			return { hostname, port: undefined };
+		}
+		const port = parseInt(url.port, 10);
+		if (port < 1) {
+			return { hostname, port: undefined };
+		}
+		return { hostname: url.hostname, port };
+	} catch {
+		return { hostname, port: undefined };
+	}
+}
+
+/**
+ * Convert yargs-style command args into ServiceArgs, applying
+ * hostname:port resolution for TCP services so that
+ * `--hostname db.internal:5432` is equivalent to
+ * `--hostname db.internal --tcp-port 5432`.
+ */
+export function toServiceArgs(args: {
+	name: string;
+	type: string;
+	tcpPort?: number;
+	appProtocol?: string;
+	httpPort?: number;
+	httpsPort?: number;
+	ipv4?: string;
+	ipv6?: string;
+	hostname?: string;
+	tunnelId: string;
+	resolverIps?: string;
+	certVerificationMode?: string;
+}): ServiceArgs {
+	const type = args.type as ServiceType;
+	let { hostname } = args;
+	let tcpPort = args.tcpPort;
+
+	if (type === ServiceType.Tcp && hostname) {
+		const extracted = extractPortFromHostname(hostname);
+		if (extracted.port !== undefined) {
+			if (tcpPort && tcpPort !== extracted.port) {
+				throw new UserError(
+					`Conflicting TCP port: --hostname includes port ${extracted.port} but --tcp-port is ${tcpPort}. Provide the port in one place only.`
+				);
+			}
+			hostname = extracted.hostname;
+			tcpPort = extracted.port;
+		}
+	}
+
+	return {
+		name: args.name,
+		type,
+		tcpPort,
+		appProtocol: args.appProtocol,
+		httpPort: args.httpPort,
+		httpsPort: args.httpsPort,
+		ipv4: args.ipv4,
+		ipv6: args.ipv6,
+		hostname,
+		tunnelId: args.tunnelId,
+		resolverIps: args.resolverIps,
+		certVerificationMode: args.certVerificationMode,
+	};
+}
+
 export function validateRequest(args: ServiceArgs) {
 	// Validate host configuration - must have either IP addresses or hostname, not both
 	const hasIpAddresses = Boolean(args.ipv4 || args.ipv6);
