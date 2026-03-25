@@ -150,7 +150,8 @@ export function rowToStreamVideo(row: VideoRow): StreamVideo {
 		size: row.size,
 		preview: `${baseUrl}/watch`,
 		allowedOrigins: JSON.parse(row.allowed_origins) as string[],
-		requireSignedURLs: row.require_signed_urls === 1 ? true : null,
+		requireSignedURLs:
+			row.require_signed_urls === null ? null : row.require_signed_urls === 1,
 		uploaded: row.uploaded,
 		uploadExpiry: row.upload_expiry,
 		maxSizeBytes: row.max_size_bytes,
