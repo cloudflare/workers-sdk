@@ -171,6 +171,22 @@ describe("wrangler preview", () => {
 				})
 			);
 			msw.resetHandlers();
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [
+									{ code: 10025, message: "Preview deployment not found" },
+								],
+							},
+							{ status: 404 }
+						)
+				)
+			);
 		});
 
 		test("should create a new preview with defaults applied", async ({
@@ -371,7 +387,7 @@ describe("wrangler preview", () => {
 
 			expect(lookupPreviewUrl).toContain("/previews/Feature%20Branch%2FOne");
 			expect(createDeploymentUrl).toContain(
-				"/previews/Feature%20Branch%2FOne/deployments"
+				"/previews/preview-id-direct-name/deployments"
 			);
 		});
 
@@ -761,6 +777,7 @@ describe("wrangler preview", () => {
 						};
 				  })
 				| undefined;
+			let latestDeploymentUrl: string | undefined;
 
 			msw.use(
 				http.get(
@@ -775,9 +792,6 @@ describe("wrangler preview", () => {
 							{ status: 404 }
 						)
 				),
-				http.get(`*/accounts/:accountId/workers/scripts`, () => {
-					return HttpResponse.json({ success: true, result: [] });
-				}),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews`,
 					() =>
@@ -795,6 +809,23 @@ describe("wrangler preview", () => {
 							},
 							{ status: 201 }
 						)
+				),
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+					({ request }) => {
+						latestDeploymentUrl = request.url;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-current",
+								preview_id: "preview-id-migrations",
+								preview_name: "test-preview",
+								migration_tag: "v1",
+								urls: ["https://current.test-worker.cloudflare.app"],
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
 				),
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
@@ -822,13 +853,119 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --name test-preview");
 
+			expect(latestDeploymentUrl).toContain(
+				"/accounts/some-account-id/workers/workers/test-worker/previews/preview-id-migrations/deployments/latest"
+			);
 			expect(deploymentRequestBody?.migrations).toMatchObject({
+				old_tag: "v1",
 				new_tag: "v2",
-				steps: [
-					{ new_classes: ["Counter"] },
-					{ renamed_classes: [{ from: "Counter", to: "CounterV2" }] },
-				],
+				steps: [{ renamed_classes: [{ from: "Counter", to: "CounterV2" }] }],
 			});
+		});
+
+		test("should handle first preview deployment when latest deployment is missing", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					migrations: [{ tag: "v1", new_classes: ["Counter"] }],
+				})
+			);
+
+			let deploymentRequestBody:
+				| (Record<string, unknown> & {
+						migrations?: {
+							new_tag?: string;
+							old_tag?: string;
+							steps?: unknown[];
+						};
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-first-migration",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments/latest`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [
+									{
+										code: 10222,
+										message:
+											"This Worker has no versions, which means this Worker has no content or versioned settings.",
+									},
+								],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-first-migration",
+									preview_id: "preview-id-first-migration",
+									preview_name: "test-preview",
+									urls: ["https://first123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.migrations).toMatchObject({
+				new_tag: "v1",
+				steps: [{ new_classes: ["Counter"] }],
+			});
+			expect(deploymentRequestBody?.migrations?.old_tag).toBeUndefined();
 		});
 
 		test("should include deployment annotations from message and tag args", async ({

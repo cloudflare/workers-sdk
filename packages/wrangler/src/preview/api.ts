@@ -69,6 +69,7 @@ export interface DeploymentResource {
 	id: string;
 	preview_id: string;
 	preview_name: string;
+	migration_tag?: string;
 	urls?: string[];
 	compatibility_date?: string;
 	compatibility_flags?: string[];
@@ -222,17 +223,18 @@ export async function deletePreview(
 	);
 }
 
-export async function getLatestPreviewDeployment(
+export async function getPreviewDeployment(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewIdentifier: string
+	previewIdentifier: string,
+	deploymentIdentifier: string
 ): Promise<DeploymentResource> {
 	return fetchResult<DeploymentResource>(
 		config,
 		`/accounts/${accountId}/workers/workers/${workerName}/previews/${encodeURIComponent(
 			previewIdentifier
-		)}/deployments/latest`
+		)}/deployments/${encodeURIComponent(deploymentIdentifier)}`
 	);
 }
 

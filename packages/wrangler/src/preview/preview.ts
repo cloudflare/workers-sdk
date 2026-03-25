@@ -12,7 +12,6 @@ import { bundleWorker } from "../deployment-bundle/bundle";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
 import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
-import { getMigrationsToUpload } from "../durable";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
@@ -34,6 +33,7 @@ import {
 	createPreviewDeployment,
 	deletePreview,
 	editPreview,
+	getPreviewDeployment,
 	getPreview,
 } from "./api";
 import {
@@ -104,6 +104,51 @@ type MergedVersionLevel = {
 
 function toBase64(content: string | Uint8Array): string {
 	return Buffer.from(content).toString("base64");
+}
+
+function getPreviewMigrationsToUpload(
+	workerName: string,
+	config: Config,
+	currentMigrationTag?: string
+): CreatePreviewDeploymentRequestParams["migrations"] {
+	if (config.migrations.length === 0) {
+		return undefined;
+	}
+
+	if (currentMigrationTag) {
+		const foundIndex = config.migrations.findIndex(
+			(migration) => migration.tag === currentMigrationTag
+		);
+		if (foundIndex === -1) {
+			logger.warn(
+				`The published preview for ${workerName} has a migration tag "${currentMigrationTag}, which was not found in your ${configFileName(
+					config.configPath
+				)} file. You may have already deleted it. Applying all available migrations to the preview...`
+			);
+			return {
+				old_tag: currentMigrationTag,
+				new_tag: config.migrations[config.migrations.length - 1].tag,
+				steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
+			};
+		}
+
+		if (foundIndex !== config.migrations.length - 1) {
+			return {
+				old_tag: currentMigrationTag,
+				new_tag: config.migrations[config.migrations.length - 1].tag,
+				steps: config.migrations
+					.slice(foundIndex + 1)
+					.map(({ tag: _tag, ...rest }) => rest),
+			};
+		}
+
+		return undefined;
+	}
+
+	return {
+		new_tag: config.migrations[config.migrations.length - 1].tag,
+		steps: config.migrations.map(({ tag: _tag, ...rest }) => rest),
+	};
 }
 
 async function getDeploymentModules(
@@ -220,6 +265,7 @@ async function assemblePreviewDeploymentSettings(
 	scriptPath: string | undefined,
 	accountId: string,
 	workerName: string,
+	previewIdentifier: string,
 	options: { message?: string; tag?: string }
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -264,15 +310,37 @@ async function assemblePreviewDeploymentSettings(
 			...(options.tag && { "workers/tag": options.tag }),
 		};
 	}
-	const migrations = await getMigrationsToUpload(workerName, {
-		accountId,
-		config,
-		useServiceEnvironments: false,
-		env: undefined,
-		dispatchNamespace: undefined,
-	});
-	if (migrations) {
-		request.migrations = migrations;
+	if (config.migrations.length > 0) {
+		let latestDeploymentMigrationTag: string | undefined;
+		try {
+			const latestDeployment = await getPreviewDeployment(
+				config,
+				accountId,
+				workerName,
+				previewIdentifier,
+				"latest"
+			);
+			latestDeploymentMigrationTag = latestDeployment.migration_tag;
+		} catch (error) {
+			if (
+				!(
+					typeof error === "object" &&
+					error !== null &&
+					(("status" in error && error.status === 404) ||
+						("code" in error && (error.code === 10025 || error.code === 10222)))
+				)
+			) {
+				throw error;
+			}
+		}
+		const migrations = getPreviewMigrationsToUpload(
+			workerName,
+			config,
+			latestDeploymentMigrationTag
+		);
+		if (migrations) {
+			request.migrations = migrations;
+		}
 	}
 	if (previews?.limits !== undefined) {
 		request.limits = previews.limits;
@@ -672,13 +740,14 @@ export async function handlePreviewCommand(
 		args.script,
 		accountId,
 		workerName,
+		preview.id,
 		{ message: args.message, tag: args.tag }
 	);
 	const deployment = await createPreviewDeployment(
 		config,
 		accountId,
 		workerName,
-		previewIdentifier,
+		preview.id,
 		deploymentRequest,
 		{ ignoreDefaults }
 	);
