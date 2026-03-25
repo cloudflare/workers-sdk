@@ -64,7 +64,7 @@ export abstract class Framework {
 			throw new AutoConfigFrameworkConfigurationError(
 				`The version of ${this.name} used in the project (${JSON.stringify(
 					frameworkVersion
-				)}) is not supported by the Wrangler automatic configuration. Please update the ${
+				)}) cannot be automatically configured. Please update the ${
 					this.name
 				} version to at least ${JSON.stringify(
 					frameworkPackageInfo.minimumVersion
@@ -79,7 +79,7 @@ export abstract class Framework {
 			logger.warn(
 				`The version of ${this.name} used in the project (${JSON.stringify(
 					frameworkVersion
-				)}) is not officially known / supported by the Wrangler automatic configuration. So the operation might not complete successfully. Please report this to workers-sdk`
+				)}) is not officially supported, and may fail to correctly configure. Please report any issues to https://github.com/cloudflare/workers-sdk/issues`
 			);
 		}
 

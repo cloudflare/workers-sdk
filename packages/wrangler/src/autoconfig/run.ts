@@ -87,7 +87,7 @@ export async function runAutoConfig(
 			if (!frameworkIsSupported) {
 				throw new FatalError(
 					autoConfigDetails.framework.id === "cloudflare-pages"
-						? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
+						? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
 						: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
 				);
 			}
