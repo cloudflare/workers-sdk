@@ -340,7 +340,10 @@ export class StreamObject extends DurableObject<Env> {
 	}
 
 	async fetch(
-		req: Request<unknown, { miniflare?: { controlOp?: { name: string; args?: unknown[] } } }>
+		req: Request<
+			unknown,
+			{ miniflare?: { controlOp?: { name: string; args?: unknown[] } } }
+		>
 	) {
 		if (this.env[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS] === true) {
 			const controlOp = req.cf?.miniflare?.controlOp;

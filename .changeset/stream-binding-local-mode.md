@@ -8,6 +8,7 @@ Add local mode support for Stream bindings
 Miniflare and `wrangler dev` now support using [Cloudflare Stream](https://developers.cloudflare.com/stream/) bindings locally.
 
 Supported operations:
+
 - `upload()` — upload video via URL
 - `video(id).details()`, `.update()`, `.delete()`, `.generateToken()`
 - `videos.list()`
@@ -16,6 +17,7 @@ Supported operations:
 - `watermarks.generate()`, `.list()`, `.get()`, `.delete()`
 
 The following are not yet supported in local mode and will throw:
+
 - `createDirectUpload()`
 - Caption upload via `File`
 - Watermark generation via `File`

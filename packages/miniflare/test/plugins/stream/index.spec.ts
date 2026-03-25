@@ -6,7 +6,6 @@ import {
 	STREAM_OBJECT_CLASS_NAME,
 	STREAM_PLUGIN_NAME,
 } from "miniflare";
-import type { MiniflareOptions } from "miniflare";
 import { describe, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
@@ -20,6 +19,7 @@ import type {
 	StreamVideo as Video,
 	StreamWatermark as Watermark,
 } from "@cloudflare/workers-types";
+import type { MiniflareOptions } from "miniflare";
 
 // Mock image / video bytes
 const TEST_VIDEO_BYTES = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
