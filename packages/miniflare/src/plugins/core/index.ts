@@ -6,7 +6,7 @@ import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { bold } from "kleur/colors";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
@@ -17,7 +17,6 @@ import {
 	kVoid,
 	Service,
 	ServiceDesignator,
-	supportedCompatibilityDate,
 	Worker_Binding,
 	Worker_ContainerEngine,
 	Worker_DurableObjectNamespace,
@@ -473,37 +472,13 @@ function maybeGetCustomServiceService(
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
-function getCurrentCompatibilityDate() {
-	// Get current compatibility date in UTC timezone
-	const now = new Date().toISOString();
-	return now.substring(0, now.indexOf("T"));
-}
-
-function validateCompatibilityDate(log: Log, compatibilityDate: string) {
-	if (numericCompare(compatibilityDate, getCurrentCompatibilityDate()) > 0) {
+function validateCompatibilityDate(compatibilityDate: string) {
+	if (numericCompare(compatibilityDate, getTodaysCompatDate()) > 0) {
 		// If this compatibility date is in the future, throw
 		throw new MiniflareCoreError(
 			"ERR_FUTURE_COMPATIBILITY_DATE",
 			`Compatibility date "${compatibilityDate}" is in the future and unsupported`
 		);
-	} else if (
-		numericCompare(compatibilityDate, supportedCompatibilityDate) > 0
-	) {
-		// If this compatibility date is greater than the maximum supported
-		// compatibility date of the runtime, but not in the future, warn,
-		// and use the maximum supported date instead
-		log.warn(
-			[
-				"The latest compatibility date supported by the installed Cloudflare Workers Runtime is ",
-				bold(`"${supportedCompatibilityDate}"`),
-				",\nbut you've requested ",
-				bold(`"${compatibilityDate}"`),
-				". Falling back to ",
-				bold(`"${supportedCompatibilityDate}"`),
-				"...",
-			].join("")
-		);
-		return supportedCompatibilityDate;
 	}
 	return compatibilityDate;
 }
@@ -773,7 +748,6 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		const compatibilityDate = validateCompatibilityDate(
-			log,
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 		);
 
