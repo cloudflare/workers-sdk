@@ -265,7 +265,7 @@ export class StreamObject extends DurableObject<Env> {
 			name: params.name ?? "",
 			size,
 			created: now,
-			downloaded_from: downloadedFrom ?? "",
+			downloaded_from: downloadedFrom,
 			opacity: params.opacity ?? 1.0,
 			padding: params.padding ?? 0.05,
 			scale: params.scale ?? 0.15,
