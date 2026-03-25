@@ -29,6 +29,7 @@ export const vpcServiceCreateCommand = createCommand({
 			hostname: args.hostname,
 			tunnelId: args.tunnelId,
 			resolverIps: args.resolverIps,
+			certVerificationMode: args.certVerificationMode,
 		});
 	},
 	async handler(args, { config }) {
@@ -46,6 +47,7 @@ export const vpcServiceCreateCommand = createCommand({
 			hostname: args.hostname,
 			tunnelId: args.tunnelId,
 			resolverIps: args.resolverIps,
+			certVerificationMode: args.certVerificationMode,
 		});
 
 		const service = await createService(config, request);

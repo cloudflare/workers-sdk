@@ -22,6 +22,12 @@ export enum ServiceType {
 	Tcp = "tcp",
 }
 
+export type CertVerificationMode = "verify_full" | "verify_ca" | "disabled";
+
+export interface TlsSettings {
+	cert_verification_mode: CertVerificationMode;
+}
+
 export interface ServicePortOptions {
 	tcpPort?: number;
 	appProtocol?: string;
@@ -67,6 +73,7 @@ export interface ConnectivityService {
 	http_port?: number;
 	https_port?: number;
 	host: ServiceHost;
+	tls_settings?: TlsSettings;
 	created_at: string;
 	updated_at: string;
 }
@@ -79,6 +86,7 @@ export interface ConnectivityServiceRequest {
 	http_port?: number;
 	https_port?: number;
 	host: ServiceHost;
+	tls_settings?: TlsSettings;
 }
 
 export interface ConnectivityServiceListParams {
@@ -154,5 +162,12 @@ export const serviceOptions = {
 		demandOption: true,
 		group: "Required Configuration",
 		description: "UUID of the Cloudflare tunnel",
+	},
+	"cert-verification-mode": {
+		type: "string",
+		choices: ["verify_full", "verify_ca", "disabled"] as const,
+		description:
+			"TLS certificate verification mode for the connection to the origin",
+		group: "TLS Options",
 	},
 } as const;

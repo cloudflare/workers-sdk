@@ -23,6 +23,13 @@ export function displayServiceDetails(service: ConnectivityService) {
 		}
 	}
 
+	// Display TLS settings
+	if (service.tls_settings) {
+		logger.log(
+			`   Cert Verification Mode: ${service.tls_settings.cert_verification_mode}`
+		);
+	}
+
 	// Display host details
 	if (service.host.ipv4) {
 		logger.log(`   IPv4: ${service.host.ipv4}`);

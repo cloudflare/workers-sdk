@@ -541,6 +541,165 @@ describe("vpc service commands", () => {
 			}
 		`);
 	});
+
+	it("should handle creating a TCP service with --cert-verification-mode verify_ca", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-tcp-tls --type tcp --tcp-port 5432 --ipv4 10.0.0.5 --tunnel-id 550e8400-e29b-41d4-a716-446655440000 --cert-verification-mode verify_ca"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.5",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			    },
+			  },
+			  "name": "test-tcp-tls",
+			  "tcp_port": 5432,
+			  "tls_settings": {
+			    "cert_verification_mode": "verify_ca",
+			  },
+			  "type": "tcp",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-tcp-tls'
+			✅ Created VPC service: service-uuid
+			   Name: test-tcp-tls
+			   Type: tcp
+			   TCP Port: 5432
+			   Cert Verification Mode: verify_ca
+			   IPv4: 10.0.0.5
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
+		`);
+	});
+
+	it("should handle creating an HTTP service with --cert-verification-mode disabled", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-http-tls --type http --http-port 80 --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000 --cert-verification-mode disabled"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.1",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440000",
+			    },
+			  },
+			  "http_port": 80,
+			  "name": "test-http-tls",
+			  "tls_settings": {
+			    "cert_verification_mode": "disabled",
+			  },
+			  "type": "http",
+			}
+		`);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🚧 Creating VPC service 'test-http-tls'
+			✅ Created VPC service: service-uuid
+			   Name: test-http-tls
+			   Type: http
+			   HTTP Port: 80
+			   Cert Verification Mode: disabled
+			   IPv4: 10.0.0.1
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000"
+		`);
+	});
+
+	it("should not include tls_settings when --cert-verification-mode is not specified", async () => {
+		const reqProm = mockWvpcServiceCreate();
+		await runWrangler(
+			"vpc service create test-no-tls --type tcp --tcp-port 5432 --ipv4 10.0.0.5 --tunnel-id 550e8400-e29b-41d4-a716-446655440000"
+		);
+
+		const reqBody = await reqProm;
+		expect(reqBody.tls_settings).toBeUndefined();
+	});
+
+	it("should handle getting a service with tls_settings", async () => {
+		const serviceWithTls: ConnectivityService = {
+			...mockTcpService,
+			tls_settings: {
+				cert_verification_mode: "verify_ca",
+			},
+		};
+
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/connectivity/directory/services/:serviceId",
+				() => {
+					return HttpResponse.json(createFetchResult(serviceWithTls, true));
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler("vpc service get tcp-service-uuid");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			🔍 Getting VPC service 'tcp-service-uuid'
+			✅ Retrieved VPC service: tcp-service-uuid
+			   Name: test-tcp-service
+			   Type: tcp
+			   TCP Port: 5432
+			   App Protocol: postgresql
+			   Cert Verification Mode: verify_ca
+			   IPv4: 10.0.0.5
+			   Tunnel ID: 550e8400-e29b-41d4-a716-446655440000
+			   Created: 1/1/2024, 12:00:00 AM
+			   Modified: 1/1/2024, 12:00:00 AM"
+		`);
+	});
+
+	it("should handle updating a service with --cert-verification-mode", async () => {
+		const reqProm = mockWvpcServiceUpdate();
+		await runWrangler(
+			"vpc service update service-uuid --name test-updated --type http --http-port 80 --ipv4 10.0.0.2 --tunnel-id 550e8400-e29b-41d4-a716-446655440001 --cert-verification-mode verify_full"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			{
+			  "host": {
+			    "ipv4": "10.0.0.2",
+			    "network": {
+			      "tunnel_id": "550e8400-e29b-41d4-a716-446655440001",
+			    },
+			  },
+			  "http_port": 80,
+			  "name": "test-updated",
+			  "tls_settings": {
+			    "cert_verification_mode": "verify_full",
+			  },
+			  "type": "http",
+			}
+		`);
+	});
+
+	it("should reject --cert-verification-mode with invalid value", async () => {
+		await expect(() =>
+			runWrangler(
+				"vpc service create test-bad-tls --type tcp --tcp-port 5432 --ipv4 10.0.0.1 --tunnel-id 550e8400-e29b-41d4-a716-446655440000 --cert-verification-mode invalid"
+			)
+		).rejects.toThrow();
+		expect(std.err).toContain("Invalid values");
+		expect(std.err).toContain("cert-verification-mode");
+		expect(std.err).toContain('"invalid"');
+	});
 });
 
 describe("hostname validation", () => {
@@ -780,6 +939,7 @@ function mockWvpcServiceCreate(): Promise<ConnectivityServiceRequest> {
 								http_port: reqBody.http_port,
 								https_port: reqBody.https_port,
 								host: reqBody.host,
+								tls_settings: reqBody.tls_settings,
 								created_at: "2024-01-01T00:00:00Z",
 								updated_at: "2024-01-01T00:00:00Z",
 							},
@@ -813,6 +973,7 @@ function mockWvpcServiceUpdate(): Promise<ConnectivityServiceRequest> {
 								http_port: reqBody.http_port,
 								https_port: reqBody.https_port,
 								host: reqBody.host,
+								tls_settings: reqBody.tls_settings,
 								created_at: "2024-01-01T00:00:00Z",
 								updated_at: "2024-01-01T00:00:00Z",
 							},

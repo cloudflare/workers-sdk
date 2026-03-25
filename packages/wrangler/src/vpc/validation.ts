@@ -1,7 +1,11 @@
 import net from "node:net";
 import { UserError } from "@cloudflare/workers-utils";
 import { ServiceType } from "./index";
-import type { ConnectivityServiceRequest, ServiceHost } from "./index";
+import type {
+	CertVerificationMode,
+	ConnectivityServiceRequest,
+	ServiceHost,
+} from "./index";
 
 export interface ServiceArgs {
 	name: string;
@@ -15,6 +19,7 @@ export interface ServiceArgs {
 	hostname?: string;
 	tunnelId: string;
 	resolverIps?: string;
+	certVerificationMode?: string;
 }
 
 export function validateHostname(hostname: string): void {
@@ -163,6 +168,13 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 	} else if (args.type === ServiceType.Http) {
 		request.http_port = args.httpPort;
 		request.https_port = args.httpsPort;
+	}
+
+	// Add TLS settings if specified
+	if (args.certVerificationMode) {
+		request.tls_settings = {
+			cert_verification_mode: args.certVerificationMode as CertVerificationMode,
+		};
 	}
 
 	return request;
