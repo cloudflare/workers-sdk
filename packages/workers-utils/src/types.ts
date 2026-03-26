@@ -276,7 +276,7 @@ export type Trigger =
 	| ({ type: "route" } & ZoneNameRoute)
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
-	| ({ type: "queue-consumer" } & QueueConsumer);
+	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">);
 
 type BindingOmit<T> = Omit<T, "binding">;
 type NameOmit<T> = Omit<T, "name">;

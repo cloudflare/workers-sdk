@@ -3432,6 +3432,47 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("should error if queues consumer type is not 'worker'", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							consumers: [
+								{ queue: "myQueue", type: "http_pull" },
+								{ queue: "myQueue2", type: "r2_bucket" },
+							],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "queues.consumers[0].type" has an invalid value "http_pull". Only "worker" consumers can be configured in your Wrangler configuration.
+					  - "queues.consumers[1].type" has an invalid value "r2_bucket". Only "worker" consumers can be configured in your Wrangler configuration."
+				`);
+			});
+
+			it("should allow queues consumer type 'worker' explicitly", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						queues: {
+							consumers: [{ queue: "myQueue", type: "worker" }],
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should error if queues consumers are not valid", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
