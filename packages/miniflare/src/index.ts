@@ -2808,7 +2808,12 @@ export class Miniflare {
 			await this.#runtime?.dispose();
 
 			await this.#stopLoopbackServer();
-			await removeDir(this.#tmpPath);
+			// Best-effort cleanup: on Windows, workerd may not release file handles
+			// immediately after disposal, causing EBUSY errors. The temp directory
+			// lives in os.tmpdir() so the OS will clean it up eventually.
+			try {
+				await removeDir(this.#tmpPath);
+			} catch {}
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
