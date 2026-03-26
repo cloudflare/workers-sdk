@@ -178,8 +178,7 @@ describe("email routing commands", () => {
 
 	describe("list", () => {
 		it("should list zones with email routing status", async ({ expect }) => {
-			mockListZones([mockZone]);
-			mockGetSettings(mockZone.id, mockSettings);
+			mockListEmailRoutingZones([mockSettings]);
 
 			await runWrangler("email routing list");
 
@@ -188,63 +187,25 @@ describe("email routing commands", () => {
 		});
 
 		it("should handle no zones", async ({ expect }) => {
-			mockListZones([]);
+			mockListEmailRoutingZones([]);
 
 			await runWrangler("email routing list");
 
-			expect(std.out).toContain("No zones found in this account.");
+			expect(std.out).toContain(
+				"No zones found with Email Routing in this account."
+			);
 		});
 
-		it("should show 'not configured' for zones where email routing is not set up", async ({ expect }) => {
-			mockListZones([mockZone]);
-			msw.use(
-				http.get(
-					"*/zones/:zoneId/email/routing",
-					() => {
-						return HttpResponse.json(
-							createFetchResult(null, false, [
-								{
-									code: 1000,
-									message: "not found",
-								},
-							])
-						);
-					},
-					{ once: true }
-				)
-			);
+		it("should show disabled zones", async ({ expect }) => {
+			mockListEmailRoutingZones([
+				{ ...mockSettings, enabled: false, status: "disabled" },
+			]);
 
 			await runWrangler("email routing list");
 
 			expect(std.out).toContain("example.com");
 			expect(std.out).toContain("no");
-			expect(std.out).toContain("not configured");
-		});
-
-		it("should show 'error' and warn for real API failures", async ({ expect }) => {
-			mockListZones([mockZone]);
-			msw.use(
-				http.get(
-					"*/zones/:zoneId/email/routing",
-					() => {
-						return HttpResponse.json(
-							createFetchResult(null, false, [
-								{
-									code: 10000,
-									message: "Authentication error",
-								},
-							])
-						);
-					},
-					{ once: true }
-				)
-			);
-
-			await runWrangler("email routing list");
-
-			expect(std.out).toContain("example.com");
-			expect(std.out).toContain("error");
-			expect(std.warn).toContain("Failed to fetch email routing settings");
+			expect(std.out).toContain("disabled");
 		});
 	});
 
@@ -322,11 +283,14 @@ describe("email routing commands", () => {
 
 	describe("disable", () => {
 		it("should disable email routing", async ({ expect }) => {
-			mockDisableEmailRouting("zone-id-1");
+			mockDisableEmailRouting("zone-id-1", {
+				...mockSettings,
+				enabled: false,
+			});
 
 			await runWrangler("email routing disable --zone-id zone-id-1");
 
-			expect(std.out).toContain("Email Routing disabled for zone zone-id-1");
+			expect(std.out).toContain("Email Routing disabled");
 		});
 	});
 
@@ -870,6 +834,18 @@ describe("email sending commands", () => {
 
 // --- Mock API handlers: Email Routing ---
 
+function mockListEmailRoutingZones(settings: (typeof mockSettings)[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/email/routing/zones",
+			() => {
+				return HttpResponse.json(createFetchResult(settings, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
 function mockListZones(
 	zones: Array<{
 		id: string;
@@ -924,7 +900,7 @@ function mockEnableEmailRouting(
 ) {
 	msw.use(
 		http.post(
-			"*/zones/:zoneId/email/routing/dns",
+			"*/zones/:zoneId/email/routing/enable",
 			() => {
 				return HttpResponse.json(createFetchResult(settings, true));
 			},
@@ -933,12 +909,15 @@ function mockEnableEmailRouting(
 	);
 }
 
-function mockDisableEmailRouting(_zoneId: string) {
+function mockDisableEmailRouting(
+	_zoneId: string,
+	settings: typeof mockSettings
+) {
 	msw.use(
-		http.delete(
-			"*/zones/:zoneId/email/routing/dns",
+		http.post(
+			"*/zones/:zoneId/email/routing/disable",
 			() => {
-				return HttpResponse.json(createFetchResult([], true));
+				return HttpResponse.json(createFetchResult(settings, true));
 			},
 			{ once: true }
 		)
@@ -959,8 +938,8 @@ function mockGetDns(_zoneId: string, records: typeof mockDnsRecords) {
 
 function mockUnlockDns(_zoneId: string, settings: typeof mockSettings) {
 	msw.use(
-		http.patch(
-			"*/zones/:zoneId/email/routing/dns",
+		http.post(
+			"*/zones/:zoneId/email/routing/unlock",
 			() => {
 				return HttpResponse.json(createFetchResult(settings, true));
 			},

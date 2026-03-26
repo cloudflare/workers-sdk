@@ -15,8 +15,10 @@ export const emailRoutingDisableCommand = createCommand({
 	},
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
-		await disableEmailRouting(config, zoneId);
+		const settings = await disableEmailRouting(config, zoneId);
 
-		logger.log(`Email Routing disabled for zone ${zoneId}.`);
+		logger.log(
+			`Email Routing disabled for ${settings.name} (status: ${settings.status})`
+		);
 	},
 });

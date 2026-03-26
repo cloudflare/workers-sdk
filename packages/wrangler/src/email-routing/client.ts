@@ -57,7 +57,7 @@ export async function enableEmailRouting(
 	await requireAuth(config);
 	return await fetchResult<EmailRoutingSettings>(
 		config,
-		`/zones/${zoneId}/email/routing/dns`,
+		`/zones/${zoneId}/email/routing/enable`,
 		{
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -69,13 +69,15 @@ export async function enableEmailRouting(
 export async function disableEmailRouting(
 	config: Config,
 	zoneId: string
-): Promise<EmailRoutingDnsRecord[]> {
+): Promise<EmailRoutingSettings> {
 	await requireAuth(config);
-	return await fetchResult<EmailRoutingDnsRecord[]>(
+	return await fetchResult<EmailRoutingSettings>(
 		config,
-		`/zones/${zoneId}/email/routing/dns`,
+		`/zones/${zoneId}/email/routing/disable`,
 		{
-			method: "DELETE",
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({}),
 		}
 	);
 }
@@ -98,9 +100,9 @@ export async function unlockEmailRoutingDns(
 	await requireAuth(config);
 	return await fetchResult<EmailRoutingSettings>(
 		config,
-		`/zones/${zoneId}/email/routing/dns`,
+		`/zones/${zoneId}/email/routing/unlock`,
 		{
-			method: "PATCH",
+			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({}),
 		}
