@@ -380,6 +380,8 @@ const DefaultScopes = {
 		"See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
 	"email_routing:write":
 		"See and change Email Routing settings, rules, and destination addresses.",
+	"email_sending:write":
+		"See and change Email Sending settings and configuration.",
 } as const;
 
 /**
