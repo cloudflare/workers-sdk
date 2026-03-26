@@ -80,6 +80,9 @@ const ignoreMessages = [
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
+	// Output gate is broken during Durable Object (incl. Workflow) instance disposal at test
+	// teardown — this is normal workerd behaviour and not actionable by the user
+	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
 function trimSymbolizerWarning(chunk: string): string {
 	return chunk.includes(symbolizerWarning)
