@@ -369,13 +369,23 @@ export function findCjsAlternative(resolvedPath: string): string | undefined {
  * resolved via the `"import"` condition, find the `"require"` or `"default"`
  * entry that points to a different (CJS) file.
  *
- * Handles both flat maps (`{ ".": { "import": "...", "require": "..." } }`) and
- * subpath maps (`{ "./esm/index.js": { "require": "..." } }`).
+ * Handles:
+ * - Sugar conditional exports (`{ "import": "...", "require": "..." }`)
+ * - Subpath maps (`{ ".": { "import": "...", "require": "..." } }`)
  */
 export function findCjsEntryInExports(
 	exports: Record<string, unknown>,
 	esmRelPath: string
 ): string | undefined {
+	// Handle sugar conditional exports (no subpath keys like ".")
+	// e.g. { "import": "./esm/index.js", "require": "./cjs/index.js" }
+	const directResult = findCjsEntryInConditions(exports, esmRelPath);
+	if (directResult !== undefined) {
+		return directResult;
+	}
+
+	// Handle subpath exports maps
+	// e.g. { ".": { "import": "...", "require": "..." } }
 	for (const value of Object.values(exports)) {
 		if (typeof value !== "object" || value === null) {
 			continue;
@@ -392,11 +402,36 @@ export function findCjsEntryInExports(
 }
 
 /**
+ * Collect all terminal string values from a (potentially nested) conditions
+ * object. Used to check whether a resolved path appears anywhere inside a
+ * nested `"import"` condition (e.g. `{ "types": "...", "default": "./esm/index.mjs" }`).
+ */
+function collectTerminalStrings(
+	obj: Record<string, unknown>
+): string[] {
+	const result: string[] = [];
+	for (const value of Object.values(obj)) {
+		if (typeof value === "string") {
+			result.push(value);
+		} else if (typeof value === "object" && value !== null) {
+			result.push(
+				...collectTerminalStrings(value as Record<string, unknown>)
+			);
+		}
+	}
+	return result;
+}
+
+/**
  * Given a single conditions object from a package exports map and the relative
  * path of the file that was resolved via `"import"`, return the path from the
  * `"require"` or `"default"` condition if it points to a different file.
  *
- * Recurses into nested conditions.
+ * Handles:
+ * - Flat `"import"` strings: `{ "import": "./esm/index.js", "require": "..." }`
+ * - Nested `"import"` objects: `{ "import": { "types": "...", "default": "./esm/index.mjs" }, "require": "..." }`
+ *
+ * Recurses into other nested condition objects (e.g. `"node"`, `"browser"`).
  */
 export function findCjsEntryInConditions(
 	conditions: Record<string, unknown>,
@@ -405,17 +440,27 @@ export function findCjsEntryInConditions(
 	const importEntry = conditions["import"];
 	const requireEntry = conditions["require"] ?? conditions["default"];
 
-	// The "import" entry matches our resolved path → prefer "require"/"default"
-	if (
-		typeof importEntry === "string" &&
-		importEntry === esmRelPath &&
-		typeof requireEntry === "string" &&
-		requireEntry !== importEntry
-	) {
-		return requireEntry;
+	if (typeof requireEntry === "string" && requireEntry !== esmRelPath) {
+		// Case 1: "import" is a plain string that matches the resolved path
+		if (typeof importEntry === "string" && importEntry === esmRelPath) {
+			return requireEntry;
+		}
+
+		// Case 2: "import" is a nested conditions object (common in TypeScript
+		// packages, e.g. { "types": "...", "default": "./esm/index.mjs" }).
+		// Check whether any terminal string inside it matches esmRelPath.
+		if (typeof importEntry === "object" && importEntry !== null) {
+			const importPaths = collectTerminalStrings(
+				importEntry as Record<string, unknown>
+			);
+			if (importPaths.includes(esmRelPath)) {
+				return requireEntry;
+			}
+		}
 	}
 
-	// Recurse into nested condition objects (skip terminal string conditions)
+	// Recurse into nested condition objects (skip terminal string conditions
+	// and "import"/"require"/"default" which we already handled above)
 	for (const [key, value] of Object.entries(conditions)) {
 		if (key === "import" || key === "require" || key === "default") {
 			continue;
