@@ -51,3 +51,44 @@ test("hello_world support", async ({ expect, seed, vitestRun }) => {
 
 	await expect(result.exitCode).resolves.toBe(0);
 });
+
+test("adminSecretsStore seeds and reads secrets", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
+		"wrangler.jsonc": dedent`
+				{
+					"name": "test-worker",
+					"compatibility_date": "2025-12-02",
+					"compatibility_flags": ["nodejs_compat"],
+					"secrets_store_secrets": [
+						{
+							"binding": "MY_SECRET",
+							"secret_name": "my-secret",
+							"store_id": "aaaabbbbccccdddd0000000000000000"
+						}
+					]
+				}
+			`,
+		"index.test.ts": dedent`
+				import { adminSecretsStore } from "cloudflare:test";
+				import { env } from "cloudflare:workers";
+				import { it } from "vitest";
+
+				it("seeds and retrieves a secret", async ({ expect }) => {
+					const admin = adminSecretsStore(env.MY_SECRET);
+					await admin.create("test-value");
+					const value = await env.MY_SECRET.get();
+					expect(value).toBe("test-value");
+				});
+			`,
+	});
+
+	const result = await vitestRun();
+	await expect(result.exitCode).resolves.toBe(0);
+});
