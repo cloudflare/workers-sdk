@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { sendEmail } from "../client";
@@ -150,7 +151,7 @@ function parseAttachments(
 	}
 	return attachmentPaths.map((filePath) => {
 		const content = readFileSync(filePath);
-		const filename = filePath.split("/").pop() || filePath;
+		const filename = path.basename(filePath);
 
 		return {
 			content: content.toString("base64"),

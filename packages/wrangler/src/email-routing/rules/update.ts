@@ -136,7 +136,7 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			actions: [{ type: args.actionType, value: args.actionValue }],
 			matchers: [
 				{
-					type: args.matchType!,
+					type: args.matchType as string,
 					field: args.matchField,
 					value: args.matchValue,
 				},

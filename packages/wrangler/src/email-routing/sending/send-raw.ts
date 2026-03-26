@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { sendRawEmail } from "../client";
@@ -47,8 +47,11 @@ export const emailSendingSendRawCommand = createCommand({
 
 		if (args.mimeFile) {
 			mimeMessage = readFileSync(args.mimeFile, "utf-8");
+		} else if (args.mime) {
+			mimeMessage = args.mime;
 		} else {
-			mimeMessage = args.mime!;
+			// Unreachable due to validateArgs but needed to satisfy TypeScript
+			throw new UserError("Missing MIME message");
 		}
 
 		const result = await sendRawEmail(config, {

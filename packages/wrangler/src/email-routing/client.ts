@@ -279,7 +279,7 @@ export async function listEmailSendingSubdomains(
 	zoneId: string
 ): Promise<EmailSendingSubdomain[]> {
 	await requireAuth(config);
-	return await fetchResult<EmailSendingSubdomain[]>(
+	return await fetchPagedListResult<EmailSendingSubdomain>(
 		config,
 		`/zones/${zoneId}/email/sending/subdomains`
 	);
