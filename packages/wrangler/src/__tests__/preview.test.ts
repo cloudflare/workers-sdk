@@ -1237,6 +1237,360 @@ describe("wrangler preview", () => {
 				"workers/tag": "v1.2.3",
 			});
 		});
+
+		test("should inherit top-level previews config into an environment when env.previews is absent", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					placement: { mode: "smart" },
+					previews: {
+						observability: { enabled: true },
+						vars: { TOP_LEVEL_PREVIEW: "top-value" },
+						kv_namespaces: [{ binding: "TOP_KV", id: "top-kv-id" }],
+					},
+					env: {
+						staging: {},
+					},
+				})
+			);
+
+			let createPreviewRequestBody:
+				| {
+						observability?: { enabled?: boolean };
+				  }
+				| undefined;
+			let deploymentRequestBody:
+				| {
+						compatibility_date?: string;
+						placement?: { mode?: string };
+						env?: Record<
+							string,
+							{ type: string; text?: string; namespace_id?: string }
+						>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async ({ request }) => {
+						createPreviewRequestBody =
+							(await request.json()) as typeof createPreviewRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-env-inherit",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									observability: { enabled: true },
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-env-inherit",
+									preview_id: "preview-id-env-inherit",
+									preview_name: "test-preview",
+									urls: ["https://env-inherit.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: deploymentRequestBody?.env ?? {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --env staging --name test-preview");
+
+			expect(createPreviewRequestBody?.observability).toEqual({
+				enabled: true,
+			});
+			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+			expect(deploymentRequestBody?.placement).toEqual({ mode: "smart" });
+			expect(deploymentRequestBody?.env).toMatchObject({
+				TOP_LEVEL_PREVIEW: { type: "plain_text", text: "top-value" },
+				TOP_KV: { type: "kv_namespace", namespace_id: "top-kv-id" },
+			});
+		});
+
+		test("should use env-specific previews config instead of top-level previews config", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					limits: { cpu_ms: 100 },
+					previews: {
+						observability: { enabled: true },
+						vars: { TOP_LEVEL_PREVIEW: "top-value" },
+						kv_namespaces: [{ binding: "TOP_KV", id: "top-kv-id" }],
+						limits: { cpu_ms: 25 },
+					},
+					env: {
+						staging: {
+							previews: {
+								observability: { enabled: false },
+								vars: { STAGE_PREVIEW: "stage-value" },
+								queues: {
+									producers: [{ binding: "STAGE_QUEUE", queue: "jobs" }],
+								},
+								limits: { cpu_ms: 50 },
+							},
+						},
+					},
+				})
+			);
+
+			let createPreviewRequestBody:
+				| {
+						observability?: { enabled?: boolean };
+				  }
+				| undefined;
+			let deploymentRequestBody:
+				| {
+						compatibility_date?: string;
+						limits?: { cpu_ms?: number };
+						env?: Record<
+							string,
+							{
+								type: string;
+								text?: string;
+								queue_name?: string;
+								namespace_id?: string;
+							}
+						>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async ({ request }) => {
+						createPreviewRequestBody =
+							(await request.json()) as typeof createPreviewRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-env-override",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									observability: { enabled: false },
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-env-override",
+									preview_id: "preview-id-env-override",
+									preview_name: "test-preview",
+									urls: ["https://env-override.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: deploymentRequestBody?.env ?? {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --env staging --name test-preview");
+
+			expect(createPreviewRequestBody?.observability).toEqual({
+				enabled: false,
+			});
+			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+			expect(deploymentRequestBody?.limits).toEqual({ cpu_ms: 50 });
+			expect(deploymentRequestBody?.env).toMatchObject({
+				STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
+				STAGE_QUEUE: { type: "queue", queue_name: "jobs" },
+			});
+			expect(deploymentRequestBody?.env).not.toHaveProperty(
+				"TOP_LEVEL_PREVIEW"
+			);
+			expect(deploymentRequestBody?.env).not.toHaveProperty("TOP_KV");
+		});
+
+		test("should respect env-specific worker name for preview and deployment requests", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "top-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					env: {
+						staging: {
+							name: "staging-worker",
+						},
+					},
+				})
+			);
+
+			let getPreviewUrl: string | undefined;
+			let createDeploymentUrl: string | undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					({ request }) => {
+						getPreviewUrl = request.url;
+						return HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-env-worker",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "staging-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					({ request }) => {
+						createDeploymentUrl = request.url;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-env-worker",
+									preview_id: "preview-id-env-worker",
+									preview_name: "test-preview",
+									urls: ["https://env-worker.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --env staging --name test-preview");
+
+			expect(getPreviewUrl).toContain("/workers/workers/staging-worker/previews/");
+			expect(createDeploymentUrl).toContain(
+				"/workers/workers/staging-worker/previews/preview-id-env-worker/deployments"
+			);
+		});
+
+		test("should fail before making API calls when env-specific previews config is invalid", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					env: {
+						staging: {
+							previews: {
+								browser: "not-an-object",
+							},
+						},
+					},
+				})
+			);
+
+			let requested = false;
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`, () => {
+					requested = true;
+					return HttpResponse.json({ success: true, result: {} });
+				})
+			);
+
+			await expect(
+				runWrangler("preview --env staging --name test-preview")
+			).rejects.toThrow(/previews\.browser/);
+			expect(requested).toBe(false);
+		});
 	});
 
 	describe("preview delete", () => {
@@ -1330,6 +1684,32 @@ describe("wrangler preview", () => {
 				'preview delete --name "Feature Branch/One" -y --worker-name test-worker'
 			);
 			expect(deleteUrl).toContain("/previews/Feature%20Branch%2FOne");
+		});
+
+		test("should respect env-specific worker name when deleting", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "top-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					env: { staging: { name: "staging-worker" } },
+				})
+			);
+			let deleteUrl: string | undefined;
+			msw.use(
+				http.delete(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					({ request }) => {
+						deleteUrl = request.url;
+						return HttpResponse.json({ success: true, result: null });
+					}
+				)
+			);
+			await runWrangler("preview delete --env staging --name test-preview -y");
+			expect(deleteUrl).toContain("/workers/workers/staging-worker/previews/");
 		});
 	});
 
@@ -1433,6 +1813,33 @@ describe("wrangler preview", () => {
 			await runWrangler("preview settings --worker-name override-worker");
 			expect(std.out).toContain("Bindings");
 			expect(std.out).toContain("(none)");
+		});
+
+		test("should respect env-specific worker name when listing settings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "top-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					env: { staging: { name: "staging-worker" } },
+				})
+			);
+			let getUrl: string | undefined;
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
+					getUrl = request.url;
+					return HttpResponse.json({
+						success: true,
+						result: { preview_defaults: {} },
+					});
+				})
+			);
+			await runWrangler("preview settings --env staging");
+			expect(getUrl).toContain("/workers/workers/staging-worker");
+			expect(std.out).toContain("Worker: staging-worker");
 		});
 	});
 
@@ -1781,6 +2188,116 @@ describe("wrangler preview", () => {
 			expect(binding?.text).toBe("new-value");
 			expect(binding?.namespace_id).toBeUndefined();
 		});
+
+		test("should resolve env-specific previews settings using config inheritability rules", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					placement: { mode: "smart" },
+					limits: { cpu_ms: 100 },
+					previews: {
+						vars: { TOP_ONLY: "top" },
+						limits: { cpu_ms: 25 },
+					},
+					env: {
+						staging: {
+							previews: {
+								vars: { STAGE_ONLY: "stage" },
+								limits: { cpu_ms: 50 },
+							},
+						},
+					},
+				})
+			);
+
+			let patchRequestBody:
+				| {
+						preview_defaults?: {
+							compatibility_date?: string;
+							placement?: { mode?: string };
+							limits?: { cpu_ms?: number };
+							env?: Record<string, { type: string; text?: string }>;
+						};
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: { preview_defaults: {} },
+					})
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/workers/:workerId`,
+					async ({ request }) => {
+						patchRequestBody =
+							(await request.json()) as typeof patchRequestBody;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
+			);
+
+			await runWrangler(
+				"preview settings update --env staging --worker-name override-worker --skip-confirmation"
+			);
+
+			expect(patchRequestBody?.preview_defaults?.compatibility_date).toBe(
+				"2025-01-01"
+			);
+			expect(patchRequestBody?.preview_defaults?.placement).toEqual({
+				mode: "smart",
+			});
+			expect(patchRequestBody?.preview_defaults?.limits).toEqual({
+				cpu_ms: 50,
+			});
+			expect(patchRequestBody?.preview_defaults?.env).toMatchObject({
+				STAGE_ONLY: { type: "plain_text", text: "stage" },
+			});
+			expect(patchRequestBody?.preview_defaults?.env).not.toHaveProperty(
+				"TOP_ONLY"
+			);
+		});
+
+		test("should fail before making API calls when env-specific previews.queues is malformed", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					env: {
+						staging: {
+							previews: {
+								queues: [{ binding: "MY_QUEUE", queue: "jobs" }],
+							},
+						},
+					},
+				})
+			);
+
+			let requested = false;
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+					requested = true;
+					return HttpResponse.json({ success: true, result: { preview_defaults: {} } });
+				})
+			);
+
+			await expect(
+				runWrangler(
+					"preview settings update --env staging --worker-name override-worker --skip-confirmation"
+				)
+			).rejects.toThrow(/previews\.queues/);
+			expect(requested).toBe(false);
+		});
 	});
 
 	describe("preview secret", () => {
@@ -1847,6 +2364,93 @@ describe("wrangler preview", () => {
 					'Secret "API_KEY" added to Previews settings for "test-worker"'
 				);
 			});
+
+			test("should respect env-specific worker name when using --env", async ({
+				expect,
+			}) => {
+				mockStdIn.send("env-secret");
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "top-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						env: {
+							staging: {
+								name: "staging-worker",
+							},
+						},
+					})
+				);
+
+				let getUrl: string | undefined;
+				let patchUrl: string | undefined;
+
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							getUrl = request.url;
+							return HttpResponse.json({
+								success: true,
+								result: { preview_defaults: {} },
+							});
+						}
+					),
+					http.patch(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							patchUrl = request.url;
+							return HttpResponse.json({ success: true, result: {} });
+						}
+					)
+				);
+
+				await runWrangler("preview secret put API_KEY --env staging");
+
+				expect(getUrl).toContain("/workers/workers/staging-worker");
+				expect(patchUrl).toContain("/workers/workers/staging-worker");
+				expect(std.out).toContain(
+					'Secret "API_KEY" added to Previews settings for "staging-worker"'
+				);
+			});
+
+			test("should fail before making API calls when env-specific previews config is invalid", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						env: {
+							staging: {
+								previews: {
+									browser: "not-an-object",
+								},
+							},
+						},
+					})
+				);
+
+				let requested = false;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						requested = true;
+						return HttpResponse.json({ success: true, result: { preview_defaults: {} } });
+					}),
+					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+						requested = true;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+
+				await expect(
+					runWrangler("preview secret put API_KEY --env staging")
+				).rejects.toThrow(/previews\.browser/);
+				expect(requested).toBe(false);
+			});
 		});
 
 		describe("delete", () => {
@@ -1894,6 +2498,40 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain(
 					'Secret "REMOVE_ME" deleted from Previews settings'
 				);
+			});
+
+			test("should respect env-specific worker name when deleting a secret", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "top-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						env: { staging: { name: "staging-worker" } },
+					})
+				);
+				let getUrl: string | undefined;
+				let patchUrl: string | undefined;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
+						getUrl = request.url;
+						return HttpResponse.json({
+							success: true,
+							result: { preview_defaults: { env: { REMOVE_ME: { type: "secret_text" } } } },
+						});
+					}),
+					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
+						patchUrl = request.url;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+				await runWrangler(
+					"preview secret delete REMOVE_ME --env staging --skip-confirmation"
+				);
+				expect(getUrl).toContain("/workers/workers/staging-worker");
+				expect(patchUrl).toContain("/workers/workers/staging-worker");
 			});
 		});
 
@@ -1944,6 +2582,32 @@ describe("wrangler preview", () => {
 				expect(std.out).toContain("MY_SECRET");
 				expect(std.out).not.toContain("PLAIN");
 			});
+
+			test("should respect env-specific worker name when listing secrets", async ({
+				expect,
+			}) => {
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "top-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						env: { staging: { name: "staging-worker" } },
+					})
+				);
+				let getUrl: string | undefined;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
+						getUrl = request.url;
+						return HttpResponse.json({
+							success: true,
+							result: { preview_defaults: { env: {} } },
+						});
+					})
+				);
+				await runWrangler("preview secret list --env staging");
+				expect(getUrl).toContain("/workers/workers/staging-worker");
+			});
 		});
 
 		describe("bulk", () => {
@@ -1989,6 +2653,39 @@ describe("wrangler preview", () => {
 					EXISTING_SECRET: { type: "secret_text" },
 					ENVIRONMENT: { type: "plain_text", text: "preview" },
 				});
+			});
+
+			test("should respect env-specific worker name when bulk uploading secrets", async ({
+				expect,
+			}) => {
+				writeFileSync("secrets.env", "API_KEY=one\n");
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "top-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						env: { staging: { name: "staging-worker" } },
+					})
+				);
+				let getUrl: string | undefined;
+				let patchUrl: string | undefined;
+				msw.use(
+					http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
+						getUrl = request.url;
+						return HttpResponse.json({
+							success: true,
+							result: { preview_defaults: { env: {} } },
+						});
+					}),
+					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
+						patchUrl = request.url;
+						return HttpResponse.json({ success: true, result: {} });
+					})
+				);
+				await runWrangler("preview secret bulk secrets.env --env staging");
+				expect(getUrl).toContain("/workers/workers/staging-worker");
+				expect(patchUrl).toContain("/workers/workers/staging-worker");
 			});
 		});
 	});
