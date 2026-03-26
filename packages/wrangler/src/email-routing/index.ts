@@ -32,17 +32,33 @@ export const emailRoutingRulesNamespace = createNamespace({
 	},
 });
 
-export const emailRoutingCatchAllNamespace = createNamespace({
+export const emailRoutingAddressesNamespace = createNamespace({
 	metadata: {
-		description: "Manage Email Routing catch-all rule",
+		description: "Manage Email Routing destination addresses",
 		status: "open-beta",
 		owner: "Product: Email Routing",
 	},
 });
 
-export const emailRoutingAddressesNamespace = createNamespace({
+export const emailSendingNamespace = createNamespace({
 	metadata: {
-		description: "Manage Email Routing destination addresses",
+		description: "Manage Email Sending",
+		status: "open-beta",
+		owner: "Product: Email Routing",
+	},
+});
+
+export const emailSendingSubdomainsNamespace = createNamespace({
+	metadata: {
+		description: "Manage Email Sending subdomains",
+		status: "open-beta",
+		owner: "Product: Email Routing",
+	},
+});
+
+export const emailSendingDnsNamespace = createNamespace({
+	metadata: {
+		description: "Manage Email Sending DNS records",
 		status: "open-beta",
 		owner: "Product: Email Routing",
 	},
@@ -140,4 +156,31 @@ export interface CloudflareZone {
 		id: string;
 		name: string;
 	};
+}
+
+// --- Email Sending types ---
+
+export interface EmailSendingSubdomain {
+	email_sending_enabled: boolean;
+	name: string;
+	tag: string;
+	created?: string;
+	email_sending_dkim_selector?: string;
+	email_sending_return_path_domain?: string;
+	enabled?: boolean;
+	modified?: string;
+}
+
+export interface EmailSendingDnsRecord {
+	content?: string;
+	name?: string;
+	priority?: number;
+	ttl?: number;
+	type?: string;
+}
+
+export interface EmailSendingSendResponse {
+	delivered: string[];
+	permanent_bounces: string[];
+	queued: string[];
 }

@@ -7,6 +7,9 @@ import type {
 	EmailRoutingDnsRecord,
 	EmailRoutingRule,
 	EmailRoutingSettings,
+	EmailSendingDnsRecord,
+	EmailSendingSendResponse,
+	EmailSendingSubdomain,
 } from "./index";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -265,6 +268,132 @@ export async function deleteEmailRoutingAddress(
 		`/accounts/${accountId}/email/routing/addresses/${addressId}`,
 		{
 			method: "DELETE",
+		}
+	);
+}
+
+// --- Email Sending: Subdomains ---
+
+export async function listEmailSendingSubdomains(
+	config: Config,
+	zoneId: string
+): Promise<EmailSendingSubdomain[]> {
+	await requireAuth(config);
+	return await fetchResult<EmailSendingSubdomain[]>(
+		config,
+		`/zones/${zoneId}/email/sending/subdomains`
+	);
+}
+
+export async function getEmailSendingSubdomain(
+	config: Config,
+	zoneId: string,
+	subdomainId: string
+): Promise<EmailSendingSubdomain> {
+	await requireAuth(config);
+	return await fetchResult<EmailSendingSubdomain>(
+		config,
+		`/zones/${zoneId}/email/sending/subdomains/${subdomainId}`
+	);
+}
+
+export async function createEmailSendingSubdomain(
+	config: Config,
+	zoneId: string,
+	name: string
+): Promise<EmailSendingSubdomain> {
+	await requireAuth(config);
+	return await fetchResult<EmailSendingSubdomain>(
+		config,
+		`/zones/${zoneId}/email/sending/subdomains`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name }),
+		}
+	);
+}
+
+export async function deleteEmailSendingSubdomain(
+	config: Config,
+	zoneId: string,
+	subdomainId: string
+): Promise<void> {
+	await requireAuth(config);
+	await fetchResult(
+		config,
+		`/zones/${zoneId}/email/sending/subdomains/${subdomainId}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
+
+// --- Email Sending: DNS ---
+
+export async function getEmailSendingSubdomainDns(
+	config: Config,
+	zoneId: string,
+	subdomainId: string
+): Promise<EmailSendingDnsRecord[]> {
+	await requireAuth(config);
+	return await fetchResult<EmailSendingDnsRecord[]>(
+		config,
+		`/zones/${zoneId}/email/sending/subdomains/${subdomainId}/dns`
+	);
+}
+
+// --- Email Sending: Send ---
+
+export async function sendEmail(
+	config: Config,
+	body: {
+		from: string | { address: string; name: string };
+		subject: string;
+		to: string | string[];
+		text?: string;
+		html?: string;
+		cc?: string | string[];
+		bcc?: string | string[];
+		reply_to?: string | { address: string; name: string };
+		headers?: Record<string, string>;
+		attachments?: Array<{
+			content: string;
+			filename: string;
+			type: string;
+			disposition: "attachment" | "inline";
+			content_id?: string;
+		}>;
+	}
+): Promise<EmailSendingSendResponse> {
+	const accountId = await requireAuth(config);
+	return await fetchResult<EmailSendingSendResponse>(
+		config,
+		`/accounts/${accountId}/email/sending/send`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		}
+	);
+}
+
+export async function sendRawEmail(
+	config: Config,
+	body: {
+		from: string;
+		recipients: string[];
+		mime_message: string;
+	}
+): Promise<EmailSendingSendResponse> {
+	const accountId = await requireAuth(config);
+	return await fetchResult<EmailSendingSendResponse>(
+		config,
+		`/accounts/${accountId}/email/sending/send_raw`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
 		}
 	);
 }

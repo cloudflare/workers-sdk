@@ -108,21 +108,27 @@ import { emailRoutingEnableCommand } from "./email-routing/enable";
 import {
 	emailNamespace,
 	emailRoutingAddressesNamespace,
-	emailRoutingCatchAllNamespace,
 	emailRoutingDnsNamespace,
 	emailRoutingNamespace,
 	emailRoutingRulesNamespace,
+	emailSendingDnsNamespace,
+	emailSendingNamespace,
+	emailSendingSubdomainsNamespace,
 } from "./email-routing/index";
 import { emailRoutingListCommand } from "./email-routing/list";
-import { emailRoutingCatchAllGetCommand } from "./email-routing/rules/catch-all-get";
-import { emailRoutingCatchAllUpdateCommand } from "./email-routing/rules/catch-all-update";
 import { emailRoutingRulesCreateCommand } from "./email-routing/rules/create";
 import { emailRoutingRulesDeleteCommand } from "./email-routing/rules/delete";
 import { emailRoutingRulesGetCommand } from "./email-routing/rules/get";
 import { emailRoutingRulesListCommand } from "./email-routing/rules/list";
 import { emailRoutingRulesUpdateCommand } from "./email-routing/rules/update";
 import { emailRoutingSettingsCommand } from "./email-routing/settings";
-import { getEnvironmentVariableFactory } from "./environment-variables/factory";
+import { emailSendingDnsGetCommand } from "./email-routing/sending/dns-get";
+import { emailSendingSendCommand } from "./email-routing/sending/send";
+import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
+import { emailSendingSubdomainsCreateCommand } from "./email-routing/sending/subdomains/create";
+import { emailSendingSubdomainsDeleteCommand } from "./email-routing/sending/subdomains/delete";
+import { emailSendingSubdomainsGetCommand } from "./email-routing/sending/subdomains/get";
+import { emailSendingSubdomainsListCommand } from "./email-routing/sending/subdomains/list";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -1923,18 +1929,6 @@ export function createCLIParser(argv: string[]) {
 			definition: emailRoutingRulesDeleteCommand,
 		},
 		{
-			command: "wrangler email routing rules catch-all",
-			definition: emailRoutingCatchAllNamespace,
-		},
-		{
-			command: "wrangler email routing rules catch-all get",
-			definition: emailRoutingCatchAllGetCommand,
-		},
-		{
-			command: "wrangler email routing rules catch-all update",
-			definition: emailRoutingCatchAllUpdateCommand,
-		},
-		{
 			command: "wrangler email routing addresses",
 			definition: emailRoutingAddressesNamespace,
 		},
@@ -1953,6 +1947,43 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler email routing addresses delete",
 			definition: emailRoutingAddressesDeleteCommand,
+		},
+		{ command: "wrangler email sending", definition: emailSendingNamespace },
+		{
+			command: "wrangler email sending send",
+			definition: emailSendingSendCommand,
+		},
+		{
+			command: "wrangler email sending send-raw",
+			definition: emailSendingSendRawCommand,
+		},
+		{
+			command: "wrangler email sending subdomains",
+			definition: emailSendingSubdomainsNamespace,
+		},
+		{
+			command: "wrangler email sending subdomains list",
+			definition: emailSendingSubdomainsListCommand,
+		},
+		{
+			command: "wrangler email sending subdomains get",
+			definition: emailSendingSubdomainsGetCommand,
+		},
+		{
+			command: "wrangler email sending subdomains create",
+			definition: emailSendingSubdomainsCreateCommand,
+		},
+		{
+			command: "wrangler email sending subdomains delete",
+			definition: emailSendingSubdomainsDeleteCommand,
+		},
+		{
+			command: "wrangler email sending dns",
+			definition: emailSendingDnsNamespace,
+		},
+		{
+			command: "wrangler email sending dns get",
+			definition: emailSendingDnsGetCommand,
 		},
 	]);
 	registry.registerNamespace("email");

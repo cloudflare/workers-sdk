@@ -1,13 +1,14 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { updateEmailRoutingRule } from "../client";
+import { updateEmailRoutingCatchAll, updateEmailRoutingRule } from "../client";
 import { zoneArgs } from "../index";
 import { resolveZoneId } from "../utils";
 
 export const emailRoutingRulesUpdateCommand = createCommand({
 	metadata: {
-		description: "Update an Email Routing rule",
+		description:
+			"Update an Email Routing rule (use 'catch-all' as the rule ID to update the catch-all rule)",
 		status: "open-beta",
 		owner: "Product: Email Routing",
 	},
@@ -16,7 +17,8 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		"rule-id": {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the routing rule to update",
+			description:
+				"The ID of the routing rule to update, or 'catch-all' for the catch-all rule",
 		},
 		name: {
 			type: "string",
@@ -28,18 +30,18 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		},
 		"match-type": {
 			type: "string",
-			demandOption: true,
-			description: "Matcher type (e.g. literal)",
+			description:
+				"Matcher type (e.g. literal). Required for regular rules, ignored for catch-all.",
 		},
 		"match-field": {
 			type: "string",
-			demandOption: true,
-			description: "Matcher field (e.g. to)",
+			description:
+				"Matcher field (e.g. to). Required for regular rules, ignored for catch-all.",
 		},
 		"match-value": {
 			type: "string",
-			demandOption: true,
-			description: "Matcher value (e.g. user@example.com)",
+			description:
+				"Matcher value (e.g. user@example.com). Required for regular rules, ignored for catch-all.",
 		},
 		"action-type": {
 			type: "string",
@@ -55,27 +57,86 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		},
 		priority: {
 			type: "number",
-			description: "Rule priority",
+			description: "Rule priority (ignored for catch-all)",
 		},
 	},
 	positionalArgs: ["rule-id"],
 	validateArgs: (args) => {
-		if (
-			args.actionType !== "drop" &&
-			(!args.actionValue || args.actionValue.length === 0)
-		) {
-			throw new UserError(
-				"--action-value is required when --action-type is not 'drop'"
-			);
+		if (args.ruleId === "catch-all") {
+			// Catch-all only supports forward and drop
+			if (args.actionType !== "forward" && args.actionType !== "drop") {
+				throw new UserError(
+					"Catch-all rule only supports 'forward' or 'drop' action types"
+				);
+			}
+			if (
+				args.actionType === "forward" &&
+				(!args.actionValue || args.actionValue.length === 0)
+			) {
+				throw new UserError(
+					"--action-value is required when --action-type is 'forward'"
+				);
+			}
+		} else {
+			// Regular rules require matcher args
+			if (!args.matchType) {
+				throw new UserError(
+					"--match-type is required when updating a regular rule"
+				);
+			}
+			if (!args.matchField) {
+				throw new UserError(
+					"--match-field is required when updating a regular rule"
+				);
+			}
+			if (!args.matchValue) {
+				throw new UserError(
+					"--match-value is required when updating a regular rule"
+				);
+			}
+			if (
+				args.actionType !== "drop" &&
+				(!args.actionValue || args.actionValue.length === 0)
+			) {
+				throw new UserError(
+					"--action-value is required when --action-type is not 'drop'"
+				);
+			}
 		}
 	},
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
+
+		if (args.ruleId === "catch-all") {
+			const rule = await updateEmailRoutingCatchAll(config, zoneId, {
+				actions: [
+					{
+						type: args.actionType,
+						value: args.actionValue,
+					},
+				],
+				matchers: [{ type: "all" }],
+				enabled: args.enabled,
+			});
+
+			logger.log(`Updated catch-all rule:`);
+			logger.log(`  Enabled: ${rule.enabled}`);
+			logger.log(`  Actions:`);
+			for (const a of rule.actions) {
+				if (a.value && a.value.length > 0) {
+					logger.log(`    - ${a.type}: ${a.value.join(", ")}`);
+				} else {
+					logger.log(`    - ${a.type}`);
+				}
+			}
+			return;
+		}
+
 		const rule = await updateEmailRoutingRule(config, zoneId, args.ruleId, {
 			actions: [{ type: args.actionType, value: args.actionValue }],
 			matchers: [
 				{
-					type: args.matchType,
+					type: args.matchType!,
 					field: args.matchField,
 					value: args.matchValue,
 				},

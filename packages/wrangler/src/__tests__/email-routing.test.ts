@@ -74,6 +74,38 @@ const mockAddress = {
 	verified: "2024-01-01T12:00:00Z",
 };
 
+const mockSubdomain = {
+	email_sending_enabled: true,
+	name: "sub.example.com",
+	tag: "aabbccdd11223344aabbccdd11223344",
+	created: "2024-01-01T00:00:00Z",
+	email_sending_dkim_selector: "cf-bounce",
+	email_sending_return_path_domain: "cf-bounce.sub.example.com",
+	enabled: true,
+	modified: "2024-01-02T00:00:00Z",
+};
+
+const mockSendingDnsRecords = [
+	{
+		content: "v=spf1 include:_spf.mx.cloudflare.net ~all",
+		name: "sub.example.com",
+		ttl: 1,
+		type: "TXT",
+	},
+	{
+		content: "cf-bounce._domainkey.sub.example.com",
+		name: "cf-bounce._domainkey.sub.example.com",
+		ttl: 1,
+		type: "CNAME",
+	},
+];
+
+const mockSendResult = {
+	delivered: ["recipient@example.com"],
+	permanent_bounces: [],
+	queued: [],
+};
+
 // --- Help text tests ---
 
 describe("email routing help", () => {
@@ -103,9 +135,25 @@ describe("email routing help", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toContain("Manage Email Routing destination addresses");
 	});
+
+	it("should show help text for email sending", async () => {
+		await runWrangler("email sending");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toContain("Manage Email Sending");
+	});
+
+	it("should show help text for email sending subdomains", async () => {
+		await runWrangler("email sending subdomains");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toContain("Manage Email Sending subdomains");
+	});
 });
 
-// --- Command tests ---
+// --- Email Routing Command tests ---
 
 describe("email routing commands", () => {
 	mockAccountId();
@@ -342,6 +390,18 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Name:     My Rule");
 			expect(std.out).toContain("Enabled:  true");
 		});
+
+		it("should get the catch-all rule when rule-id is 'catch-all'", async () => {
+			mockGetCatchAll("zone-id-1", mockCatchAll);
+
+			await runWrangler(
+				"email routing rules get catch-all --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Catch-all rule:");
+			expect(std.out).toContain("Enabled: true");
+			expect(std.out).toContain("forward: catchall@example.com");
+		});
 	});
 
 	// --- rules create ---
@@ -408,46 +468,12 @@ describe("email routing commands", () => {
 
 			expect(std.out).toContain("Updated routing rule:");
 		});
-	});
 
-	// --- rules delete ---
-
-	describe("rules delete", () => {
-		it("should delete a routing rule", async () => {
-			mockDeleteRule("zone-id-1", "rule-id-1");
-
-			await runWrangler(
-				"email routing rules delete rule-id-1 --zone-id zone-id-1"
-			);
-
-			expect(std.out).toContain("Deleted routing rule: rule-id-1");
-		});
-	});
-
-	// --- catch-all get ---
-
-	describe("rules catch-all get", () => {
-		it("should get the catch-all rule", async () => {
-			mockGetCatchAll("zone-id-1", mockCatchAll);
-
-			await runWrangler(
-				"email routing rules catch-all get --zone-id zone-id-1"
-			);
-
-			expect(std.out).toContain("Catch-all rule:");
-			expect(std.out).toContain("Enabled: true");
-			expect(std.out).toContain("forward: catchall@example.com");
-		});
-	});
-
-	// --- catch-all update ---
-
-	describe("rules catch-all update", () => {
 		it("should update the catch-all rule to drop", async () => {
 			const reqProm = mockUpdateCatchAll("zone-id-1");
 
 			await runWrangler(
-				"email routing rules catch-all update --zone-id zone-id-1 --action-type drop --enabled true"
+				"email routing rules update catch-all --zone-id zone-id-1 --action-type drop --enabled true"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -463,7 +489,7 @@ describe("email routing commands", () => {
 			const reqProm = mockUpdateCatchAll("zone-id-1");
 
 			await runWrangler(
-				"email routing rules catch-all update --zone-id zone-id-1 --action-type forward --action-value catchall@example.com"
+				"email routing rules update catch-all --zone-id zone-id-1 --action-type forward --action-value catchall@example.com"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -474,14 +500,38 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Updated catch-all rule:");
 		});
 
-		it("should error when forward is used without --action-value", async () => {
+		it("should error when catch-all forward is used without --action-value", async () => {
 			await expect(
 				runWrangler(
-					"email routing rules catch-all update --zone-id zone-id-1 --action-type forward"
+					"email routing rules update catch-all --zone-id zone-id-1 --action-type forward"
 				)
 			).rejects.toThrow(
 				"--action-value is required when --action-type is 'forward'"
 			);
+		});
+
+		it("should error when regular rule update is missing --match-type", async () => {
+			await expect(
+				runWrangler(
+					"email routing rules update rule-id-1 --zone-id zone-id-1 --action-type forward --action-value dest@example.com"
+				)
+			).rejects.toThrow(
+				"--match-type is required when updating a regular rule"
+			);
+		});
+	});
+
+	// --- rules delete ---
+
+	describe("rules delete", () => {
+		it("should delete a routing rule", async () => {
+			mockDeleteRule("zone-id-1", "rule-id-1");
+
+			await runWrangler(
+				"email routing rules delete rule-id-1 --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Deleted routing rule: rule-id-1");
 		});
 	});
 
@@ -547,7 +597,278 @@ describe("email routing commands", () => {
 	});
 });
 
-// --- Mock API handlers ---
+// --- Email Sending Command tests ---
+
+describe("email sending commands", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		// @ts-expect-error we're using a very simple setTimeout mock here
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+			setImmediate(fn);
+		});
+		setIsTTY(true);
+	});
+
+	afterEach(() => {
+		clearDialogs();
+	});
+
+	// --- subdomains list ---
+
+	describe("subdomains list", () => {
+		it("should list sending subdomains", async () => {
+			mockListSendingSubdomains("zone-id-1", [mockSubdomain]);
+
+			await runWrangler(
+				"email sending subdomains list --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("sub.example.com");
+			expect(std.out).toContain("yes");
+		});
+
+		it("should handle no sending subdomains", async () => {
+			mockListSendingSubdomains("zone-id-1", []);
+
+			await runWrangler(
+				"email sending subdomains list --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("No sending subdomains found.");
+		});
+	});
+
+	// --- subdomains get ---
+
+	describe("subdomains get", () => {
+		it("should get a sending subdomain", async () => {
+			mockGetSendingSubdomain(
+				"zone-id-1",
+				"aabbccdd11223344aabbccdd11223344",
+				mockSubdomain
+			);
+
+			await runWrangler(
+				"email sending subdomains get aabbccdd11223344aabbccdd11223344 --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Sending subdomain: sub.example.com");
+			expect(std.out).toContain("Tag:              aabbccdd11223344aabbccdd11223344");
+			expect(std.out).toContain("Sending enabled:  true");
+			expect(std.out).toContain("DKIM selector:    cf-bounce");
+		});
+	});
+
+	// --- subdomains create ---
+
+	describe("subdomains create", () => {
+		it("should create a sending subdomain", async () => {
+			const reqProm = mockCreateSendingSubdomain("zone-id-1");
+
+			await runWrangler(
+				"email sending subdomains create sub.example.com --zone-id zone-id-1"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				name: "sub.example.com",
+			});
+
+			expect(std.out).toContain("Created sending subdomain: sub.example.com");
+		});
+	});
+
+	// --- subdomains delete ---
+
+	describe("subdomains delete", () => {
+		it("should delete a sending subdomain", async () => {
+			mockDeleteSendingSubdomain(
+				"zone-id-1",
+				"aabbccdd11223344aabbccdd11223344"
+			);
+
+			await runWrangler(
+				"email sending subdomains delete aabbccdd11223344aabbccdd11223344 --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain(
+				"Deleted sending subdomain: aabbccdd11223344aabbccdd11223344"
+			);
+		});
+	});
+
+	// --- dns get ---
+
+	describe("dns get", () => {
+		it("should show sending subdomain dns records", async () => {
+			mockGetSendingDns(
+				"zone-id-1",
+				"aabbccdd11223344aabbccdd11223344",
+				mockSendingDnsRecords
+			);
+
+			await runWrangler(
+				"email sending dns get aabbccdd11223344aabbccdd11223344 --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("TXT");
+			expect(std.out).toContain("v=spf1");
+		});
+
+		it("should handle no dns records", async () => {
+			mockGetSendingDns(
+				"zone-id-1",
+				"aabbccdd11223344aabbccdd11223344",
+				[]
+			);
+
+			await runWrangler(
+				"email sending dns get aabbccdd11223344aabbccdd11223344 --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain(
+				"No DNS records found for this sending subdomain."
+			);
+		});
+	});
+
+	// --- send ---
+
+	describe("send", () => {
+		it("should send an email with text body", async () => {
+			const reqProm = mockSendEmail();
+
+			await runWrangler(
+				"email sending send --from sender@example.com --to recipient@example.com --subject 'Test Email' --text 'Hello World'"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				from: "sender@example.com",
+				to: "recipient@example.com",
+				subject: "Test Email",
+				text: "Hello World",
+			});
+
+			expect(std.out).toContain("Delivered to: recipient@example.com");
+		});
+
+		it("should send an email with html body", async () => {
+			const reqProm = mockSendEmail();
+
+			await runWrangler(
+				"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --html '<h1>Hello</h1>'"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				from: "sender@example.com",
+				subject: "Test",
+				html: "<h1>Hello</h1>",
+			});
+
+			expect(std.out).toContain("Delivered to:");
+		});
+
+		it("should send with from-name", async () => {
+			const reqProm = mockSendEmail();
+
+			await runWrangler(
+				"email sending send --from sender@example.com --from-name 'John Doe' --to recipient@example.com --subject 'Test' --text 'Hi'"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				from: { address: "sender@example.com", name: "John Doe" },
+			});
+		});
+
+		it("should send with cc and bcc", async () => {
+			const reqProm = mockSendEmail();
+
+			await runWrangler(
+				"email sending send --from sender@example.com --to recipient@example.com --cc cc@example.com --bcc bcc@example.com --subject 'Test' --text 'Hi'"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				cc: ["cc@example.com"],
+				bcc: ["bcc@example.com"],
+			});
+		});
+
+		it("should send with custom headers", async () => {
+			const reqProm = mockSendEmail();
+
+			await runWrangler(
+				"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'Hi' --header 'X-Custom:value'"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				headers: { "X-Custom": "value" },
+			});
+		});
+
+		it("should error when neither --text nor --html is provided", async () => {
+			await expect(
+				runWrangler(
+					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test'"
+				)
+			).rejects.toThrow(
+				"At least one of --text or --html must be provided"
+			);
+		});
+
+		it("should display queued and bounced recipients", async () => {
+			mockSendEmailWithResult({
+				delivered: [],
+				queued: ["queued@example.com"],
+				permanent_bounces: ["bounced@example.com"],
+			});
+
+			await runWrangler(
+				"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'Hi'"
+			);
+
+			expect(std.out).toContain("Queued for: queued@example.com");
+			expect(std.warn).toContain("Permanently bounced: bounced@example.com");
+		});
+	});
+
+	// --- send-raw ---
+
+	describe("send-raw", () => {
+		it("should send a raw MIME email", async () => {
+			const reqProm = mockSendRawEmail();
+			const mimeMessage =
+				"From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Hello\r\n\r\nHello, World!";
+
+			await runWrangler(
+				`email sending send-raw --from sender@example.com --to recipient@example.com --mime '${mimeMessage}'`
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				from: "sender@example.com",
+				recipients: ["recipient@example.com"],
+				mime_message: mimeMessage,
+			});
+
+			expect(std.out).toContain("Delivered to: recipient@example.com");
+		});
+
+		it("should error when neither --mime nor --mime-file is provided", async () => {
+			await expect(
+				runWrangler(
+					"email sending send-raw --from sender@example.com --to recipient@example.com"
+				)
+			).rejects.toThrow(
+				"You must provide either --mime (inline MIME message) or --mime-file (path to MIME file)"
+			);
+		});
+	});
+});
+
+// --- Mock API handlers: Email Routing ---
 
 function mockListZones(
 	zones: Array<{
@@ -809,4 +1130,138 @@ function mockDeleteAddress(_addressId: string) {
 			{ once: true }
 		)
 	);
+}
+
+// --- Mock API handlers: Email Sending ---
+
+function mockListSendingSubdomains(
+	_zoneId: string,
+	subdomains: (typeof mockSubdomain)[]
+) {
+	msw.use(
+		http.get(
+			"*/zones/:zoneId/email/sending/subdomains",
+			() => {
+				return HttpResponse.json(createFetchResult(subdomains, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetSendingSubdomain(
+	_zoneId: string,
+	_subdomainId: string,
+	subdomain: typeof mockSubdomain
+) {
+	msw.use(
+		http.get(
+			"*/zones/:zoneId/email/sending/subdomains/:subdomainId",
+			() => {
+				return HttpResponse.json(createFetchResult(subdomain, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCreateSendingSubdomain(_zoneId: string): Promise<unknown> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.post(
+				"*/zones/:zoneId/email/sending/subdomains",
+				async ({ request }) => {
+					const reqBody = await request.json();
+					resolve(reqBody);
+					return HttpResponse.json(
+						createFetchResult({ ...mockSubdomain, ...reqBody }, true)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
+}
+
+function mockDeleteSendingSubdomain(
+	_zoneId: string,
+	_subdomainId: string
+) {
+	msw.use(
+		http.delete(
+			"*/zones/:zoneId/email/sending/subdomains/:subdomainId",
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetSendingDns(
+	_zoneId: string,
+	_subdomainId: string,
+	records: typeof mockSendingDnsRecords
+) {
+	msw.use(
+		http.get(
+			"*/zones/:zoneId/email/sending/subdomains/:subdomainId/dns",
+			() => {
+				return HttpResponse.json(createFetchResult(records, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockSendEmail(): Promise<unknown> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/email/sending/send",
+				async ({ request }) => {
+					const reqBody = await request.json();
+					resolve(reqBody);
+					return HttpResponse.json(
+						createFetchResult(mockSendResult, true)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
+}
+
+function mockSendEmailWithResult(result: {
+	delivered: string[];
+	queued: string[];
+	permanent_bounces: string[];
+}) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/email/sending/send",
+			async () => {
+				return HttpResponse.json(createFetchResult(result, true));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockSendRawEmail(): Promise<unknown> {
+	return new Promise((resolve) => {
+		msw.use(
+			http.post(
+				"*/accounts/:accountId/email/sending/send_raw",
+				async ({ request }) => {
+					const reqBody = await request.json();
+					resolve(reqBody);
+					return HttpResponse.json(
+						createFetchResult(mockSendResult, true)
+					);
+				},
+				{ once: true }
+			)
+		);
+	});
 }
