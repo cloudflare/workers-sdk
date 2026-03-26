@@ -659,7 +659,7 @@ export function maybeGetResolvedMainPath(
 ): string | undefined {
 	const projectPath = getProjectPath(project);
 	const main = options.main;
-	if (main === undefined) {
+	if (main === undefined || main === false) {
 		return;
 	}
 	if (typeof projectPath === "string") {

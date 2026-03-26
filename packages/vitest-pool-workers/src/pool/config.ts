@@ -34,8 +34,13 @@ const WorkersPoolOptionsSchema = z.object({
 	 * `import module from "<path-to-main>"` inside tests gives exactly the same
 	 * `module` instance as is used internally for the `SELF` and Durable Object
 	 * bindings.
+	 *
+	 * Set to `false` to explicitly disable automatic entrypoint import, even
+	 * when a wrangler config provides one. This is useful for pure unit testing
+	 * where `SELF` and Durable Object bindings to the current worker are not
+	 * needed.
 	 */
-	main: z.ostring(),
+	main: z.union([z.string(), z.literal(false)]).optional(),
 	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
@@ -290,8 +295,15 @@ async function parseCustomPoolOptions(
 				}
 			);
 
-		// If `main` wasn't explicitly configured, fall back to Wrangler config's
+		// If `main` wasn't explicitly configured, fall back to Wrangler config's.
+		// `main: false` is not nullish, so `??=` preserves it (skips fallback).
 		options.main ??= main;
+
+		// Now that the fallback has been resolved, convert `false` to `undefined`
+		// so downstream code only ever sees `string | undefined`.
+		if (options.main === false) {
+			options.main = undefined;
+		}
 
 		options.miniflare.workers = [
 			...options.miniflare.workers,
