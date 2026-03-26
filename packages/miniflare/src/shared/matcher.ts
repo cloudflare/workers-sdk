@@ -12,10 +12,16 @@ export function globsToRegExps(globs: string[] = []): MatcherRegExps {
 		// ...however, we don't actually want to include the "g" flag, since it will
 		// change `lastIndex` as paths are matched, and we want to reuse `RegExp`s.
 		// So, reconstruct each `RegExp` without any flags.
+		//
+		// We also re-add the trailing "$" anchor that was stripped. Without it, a
+		// pattern like `**/*.wasm` would incorrectly match `foo.wasm.js` since the
+		// regex matches `foo.wasm` anywhere inside the string. The leading "^" is
+		// intentionally kept absent so the pattern can match anywhere within an
+		// absolute path (e.g. `**/*.wasm` still matches `/abs/path/to/foo.wasm`).
 		if (glob.startsWith("!")) {
-			exclude.push(new RegExp(globToRegexp(glob.slice(1), opts), ""));
+			exclude.push(new RegExp(globToRegexp(glob.slice(1), opts).source + "$"));
 		} else {
-			include.push(new RegExp(globToRegexp(glob, opts), ""));
+			include.push(new RegExp(globToRegexp(glob, opts).source + "$"));
 		}
 	}
 	return { include, exclude };
