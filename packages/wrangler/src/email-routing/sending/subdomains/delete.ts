@@ -7,7 +7,7 @@ import { resolveZoneId } from "../../utils";
 export const emailSendingSubdomainsDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an Email Sending subdomain",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

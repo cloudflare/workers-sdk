@@ -9,7 +9,7 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 	metadata: {
 		description:
 			"Update an Email Routing rule (use 'catch-all' as the rule ID to update the catch-all rule)",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

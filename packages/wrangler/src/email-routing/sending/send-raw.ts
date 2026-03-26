@@ -7,7 +7,7 @@ import { sendRawEmail } from "../client";
 export const emailSendingSendRawCommand = createCommand({
 	metadata: {
 		description: "Send a raw MIME email message",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

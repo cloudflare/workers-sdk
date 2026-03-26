@@ -2,8 +2,7 @@ import { UserError } from "@cloudflare/workers-utils";
 import { fetchListResult } from "../cfetch";
 import { requireAuth } from "../user";
 import { retryOnAPIFailure } from "../utils/retry";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 /**
  * Resolve a zone ID from either --zone (domain name) or --zone-id (direct ID).

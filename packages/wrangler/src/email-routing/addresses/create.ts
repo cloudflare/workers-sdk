@@ -5,7 +5,7 @@ import { createEmailRoutingAddress } from "../client";
 export const emailRoutingAddressesCreateCommand = createCommand({
 	metadata: {
 		description: "Create an Email Routing destination address",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

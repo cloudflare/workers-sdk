@@ -15,7 +15,7 @@ const NOT_CONFIGURED_CODES = new Set([
 export const emailRoutingListCommand = createCommand({
 	metadata: {
 		description: "List zones with Email Routing",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {},

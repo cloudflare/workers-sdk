@@ -7,7 +7,7 @@ import { resolveZoneId } from "../utils";
 export const emailRoutingRulesDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an Email Routing rule",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

@@ -7,7 +7,7 @@ import { resolveZoneId } from "./utils";
 export const emailRoutingDnsGetCommand = createCommand({
 	metadata: {
 		description: "Show DNS records required for Email Routing",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

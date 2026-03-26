@@ -5,7 +5,7 @@ import { deleteEmailRoutingAddress } from "../client";
 export const emailRoutingAddressesDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an Email Routing destination address",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

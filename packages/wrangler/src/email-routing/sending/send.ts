@@ -8,7 +8,7 @@ import { sendEmail } from "../client";
 export const emailSendingSendCommand = createCommand({
 	metadata: {
 		description: "Send an email using the Email Sending builder",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

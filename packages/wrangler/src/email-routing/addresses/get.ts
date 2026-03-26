@@ -5,7 +5,7 @@ import { getEmailRoutingAddress } from "../client";
 export const emailRoutingAddressesGetCommand = createCommand({
 	metadata: {
 		description: "Get a specific Email Routing destination address",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

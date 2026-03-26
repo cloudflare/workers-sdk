@@ -3,7 +3,7 @@ import { createNamespace } from "../core/create-command";
 export const emailNamespace = createNamespace({
 	metadata: {
 		description: "Manage Cloudflare Email services",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -11,7 +11,7 @@ export const emailNamespace = createNamespace({
 export const emailRoutingNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -19,7 +19,7 @@ export const emailRoutingNamespace = createNamespace({
 export const emailRoutingDnsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing DNS settings",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -27,7 +27,7 @@ export const emailRoutingDnsNamespace = createNamespace({
 export const emailRoutingRulesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing rules",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -35,7 +35,7 @@ export const emailRoutingRulesNamespace = createNamespace({
 export const emailRoutingAddressesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing destination addresses",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -43,7 +43,7 @@ export const emailRoutingAddressesNamespace = createNamespace({
 export const emailSendingNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -51,7 +51,7 @@ export const emailSendingNamespace = createNamespace({
 export const emailSendingSubdomainsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending subdomains",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });
@@ -59,7 +59,7 @@ export const emailSendingSubdomainsNamespace = createNamespace({
 export const emailSendingDnsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending DNS records",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 });

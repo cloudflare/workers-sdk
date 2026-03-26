@@ -7,7 +7,7 @@ import { resolveZoneId } from "./utils";
 export const emailRoutingDnsUnlockCommand = createCommand({
 	metadata: {
 		description: "Unlock MX records for Email Routing",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

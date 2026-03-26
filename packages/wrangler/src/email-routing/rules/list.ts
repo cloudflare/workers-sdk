@@ -7,7 +7,7 @@ import { resolveZoneId } from "../utils";
 export const emailRoutingRulesListCommand = createCommand({
 	metadata: {
 		description: "List Email Routing rules",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {

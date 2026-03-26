@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -112,7 +112,7 @@ describe("email routing help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help text for email routing", async () => {
+	it("should show help text for email routing", async ({ expect }) => {
 		await runWrangler("email routing");
 		await endEventLoop();
 
@@ -120,7 +120,7 @@ describe("email routing help", () => {
 		expect(std.out).toContain("Manage Email Routing");
 	});
 
-	it("should show help text for email routing rules", async () => {
+	it("should show help text for email routing rules", async ({ expect }) => {
 		await runWrangler("email routing rules");
 		await endEventLoop();
 
@@ -128,7 +128,7 @@ describe("email routing help", () => {
 		expect(std.out).toContain("Manage Email Routing rules");
 	});
 
-	it("should show help text for email routing addresses", async () => {
+	it("should show help text for email routing addresses", async ({ expect }) => {
 		await runWrangler("email routing addresses");
 		await endEventLoop();
 
@@ -136,7 +136,7 @@ describe("email routing help", () => {
 		expect(std.out).toContain("Manage Email Routing destination addresses");
 	});
 
-	it("should show help text for email sending", async () => {
+	it("should show help text for email sending", async ({ expect }) => {
 		await runWrangler("email sending");
 		await endEventLoop();
 
@@ -144,7 +144,7 @@ describe("email routing help", () => {
 		expect(std.out).toContain("Manage Email Sending");
 	});
 
-	it("should show help text for email sending subdomains", async () => {
+	it("should show help text for email sending subdomains", async ({ expect }) => {
 		await runWrangler("email sending subdomains");
 		await endEventLoop();
 
@@ -177,7 +177,7 @@ describe("email routing commands", () => {
 	// --- list ---
 
 	describe("list", () => {
-		it("should list zones with email routing status", async () => {
+		it("should list zones with email routing status", async ({ expect }) => {
 			mockListZones([mockZone]);
 			mockGetSettings(mockZone.id, mockSettings);
 
@@ -187,7 +187,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("yes");
 		});
 
-		it("should handle no zones", async () => {
+		it("should handle no zones", async ({ expect }) => {
 			mockListZones([]);
 
 			await runWrangler("email routing list");
@@ -195,7 +195,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("No zones found in this account.");
 		});
 
-		it("should show 'not configured' for zones where email routing is not set up", async () => {
+		it("should show 'not configured' for zones where email routing is not set up", async ({ expect }) => {
 			mockListZones([mockZone]);
 			msw.use(
 				http.get(
@@ -221,7 +221,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("not configured");
 		});
 
-		it("should show 'error' and warn for real API failures", async () => {
+		it("should show 'error' and warn for real API failures", async ({ expect }) => {
 			mockListZones([mockZone]);
 			msw.use(
 				http.get(
@@ -251,13 +251,13 @@ describe("email routing commands", () => {
 	// --- zone validation ---
 
 	describe("zone validation", () => {
-		it("should error when neither --zone nor --zone-id is provided", async () => {
+		it("should error when neither --zone nor --zone-id is provided", async ({ expect }) => {
 			await expect(runWrangler("email routing settings")).rejects.toThrow(
 				"You must provide either --zone (domain name) or --zone-id (zone ID)."
 			);
 		});
 
-		it("should error when both --zone and --zone-id are provided", async () => {
+		it("should error when both --zone and --zone-id are provided", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"email routing settings --zone example.com --zone-id zone-id-1"
@@ -265,7 +265,7 @@ describe("email routing commands", () => {
 			).rejects.toThrow();
 		});
 
-		it("should error when --zone domain is not found", async () => {
+		it("should error when --zone domain is not found", async ({ expect }) => {
 			// Return empty zones list for the domain lookup
 			msw.use(
 				http.get(
@@ -286,7 +286,7 @@ describe("email routing commands", () => {
 	// --- settings ---
 
 	describe("settings", () => {
-		it("should get settings with --zone-id", async () => {
+		it("should get settings with --zone-id", async ({ expect }) => {
 			mockGetSettings("zone-id-1", mockSettings);
 
 			await runWrangler("email routing settings --zone-id zone-id-1");
@@ -296,7 +296,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Status:   ready");
 		});
 
-		it("should get settings with --zone (domain resolution)", async () => {
+		it("should get settings with --zone (domain resolution)", async ({ expect }) => {
 			mockZoneLookup("example.com", "zone-id-1");
 			mockGetSettings("zone-id-1", mockSettings);
 
@@ -309,7 +309,7 @@ describe("email routing commands", () => {
 	// --- enable ---
 
 	describe("enable", () => {
-		it("should enable email routing", async () => {
+		it("should enable email routing", async ({ expect }) => {
 			mockEnableEmailRouting("zone-id-1", mockSettings);
 
 			await runWrangler("email routing enable --zone-id zone-id-1");
@@ -321,7 +321,7 @@ describe("email routing commands", () => {
 	// --- disable ---
 
 	describe("disable", () => {
-		it("should disable email routing", async () => {
+		it("should disable email routing", async ({ expect }) => {
 			mockDisableEmailRouting("zone-id-1");
 
 			await runWrangler("email routing disable --zone-id zone-id-1");
@@ -333,7 +333,7 @@ describe("email routing commands", () => {
 	// --- dns get ---
 
 	describe("dns get", () => {
-		it("should show dns records", async () => {
+		it("should show dns records", async ({ expect }) => {
 			mockGetDns("zone-id-1", mockDnsRecords);
 
 			await runWrangler("email routing dns get --zone-id zone-id-1");
@@ -346,7 +346,7 @@ describe("email routing commands", () => {
 	// --- dns unlock ---
 
 	describe("dns unlock", () => {
-		it("should unlock dns records", async () => {
+		it("should unlock dns records", async ({ expect }) => {
 			mockUnlockDns("zone-id-1", mockSettings);
 
 			await runWrangler("email routing dns unlock --zone-id zone-id-1");
@@ -358,7 +358,7 @@ describe("email routing commands", () => {
 	// --- rules list ---
 
 	describe("rules list", () => {
-		it("should list routing rules", async () => {
+		it("should list routing rules", async ({ expect }) => {
 			mockListRules("zone-id-1", [mockRule]);
 
 			await runWrangler("email routing rules list --zone-id zone-id-1");
@@ -367,7 +367,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("My Rule");
 		});
 
-		it("should handle no rules", async () => {
+		it("should handle no rules", async ({ expect }) => {
 			mockListRules("zone-id-1", []);
 
 			await runWrangler("email routing rules list --zone-id zone-id-1");
@@ -379,7 +379,7 @@ describe("email routing commands", () => {
 	// --- rules get ---
 
 	describe("rules get", () => {
-		it("should get a specific rule", async () => {
+		it("should get a specific rule", async ({ expect }) => {
 			mockGetRule("zone-id-1", "rule-id-1", mockRule);
 
 			await runWrangler(
@@ -391,7 +391,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Enabled:  true");
 		});
 
-		it("should get the catch-all rule when rule-id is 'catch-all'", async () => {
+		it("should get the catch-all rule when rule-id is 'catch-all'", async ({ expect }) => {
 			mockGetCatchAll("zone-id-1", mockCatchAll);
 
 			await runWrangler(
@@ -407,7 +407,7 @@ describe("email routing commands", () => {
 	// --- rules create ---
 
 	describe("rules create", () => {
-		it("should create a forwarding rule", async () => {
+		it("should create a forwarding rule", async ({ expect }) => {
 			const reqProm = mockCreateRule("zone-id-1");
 
 			await runWrangler(
@@ -423,7 +423,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Created routing rule:");
 		});
 
-		it("should create a drop rule without --action-value", async () => {
+		it("should create a drop rule without --action-value", async ({ expect }) => {
 			const reqProm = mockCreateRule("zone-id-1");
 
 			await runWrangler(
@@ -438,7 +438,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Created routing rule:");
 		});
 
-		it("should error when forward is used without --action-value", async () => {
+		it("should error when forward is used without --action-value", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"email routing rules create --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward"
@@ -452,7 +452,7 @@ describe("email routing commands", () => {
 	// --- rules update ---
 
 	describe("rules update", () => {
-		it("should update a routing rule", async () => {
+		it("should update a routing rule", async ({ expect }) => {
 			const reqProm = mockUpdateRule("zone-id-1", "rule-id-1");
 
 			await runWrangler(
@@ -469,7 +469,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Updated routing rule:");
 		});
 
-		it("should update the catch-all rule to drop", async () => {
+		it("should update the catch-all rule to drop", async ({ expect }) => {
 			const reqProm = mockUpdateCatchAll("zone-id-1");
 
 			await runWrangler(
@@ -485,7 +485,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Updated catch-all rule:");
 		});
 
-		it("should update the catch-all rule to forward", async () => {
+		it("should update the catch-all rule to forward", async ({ expect }) => {
 			const reqProm = mockUpdateCatchAll("zone-id-1");
 
 			await runWrangler(
@@ -500,7 +500,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Updated catch-all rule:");
 		});
 
-		it("should error when catch-all forward is used without --action-value", async () => {
+		it("should error when catch-all forward is used without --action-value", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"email routing rules update catch-all --zone-id zone-id-1 --action-type forward"
@@ -510,7 +510,7 @@ describe("email routing commands", () => {
 			);
 		});
 
-		it("should error when regular rule update is missing --match-type", async () => {
+		it("should error when regular rule update is missing --match-type", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"email routing rules update rule-id-1 --zone-id zone-id-1 --action-type forward --action-value dest@example.com"
@@ -524,7 +524,7 @@ describe("email routing commands", () => {
 	// --- rules delete ---
 
 	describe("rules delete", () => {
-		it("should delete a routing rule", async () => {
+		it("should delete a routing rule", async ({ expect }) => {
 			mockDeleteRule("zone-id-1", "rule-id-1");
 
 			await runWrangler(
@@ -538,7 +538,7 @@ describe("email routing commands", () => {
 	// --- addresses list ---
 
 	describe("addresses list", () => {
-		it("should list destination addresses", async () => {
+		it("should list destination addresses", async ({ expect }) => {
 			mockListAddresses([mockAddress]);
 
 			await runWrangler("email routing addresses list");
@@ -547,7 +547,7 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("addr-id-1");
 		});
 
-		it("should handle no addresses", async () => {
+		it("should handle no addresses", async ({ expect }) => {
 			mockListAddresses([]);
 
 			await runWrangler("email routing addresses list");
@@ -559,7 +559,7 @@ describe("email routing commands", () => {
 	// --- addresses get ---
 
 	describe("addresses get", () => {
-		it("should get a destination address", async () => {
+		it("should get a destination address", async ({ expect }) => {
 			mockGetAddress("addr-id-1", mockAddress);
 
 			await runWrangler("email routing addresses get addr-id-1");
@@ -572,7 +572,7 @@ describe("email routing commands", () => {
 	// --- addresses create ---
 
 	describe("addresses create", () => {
-		it("should create a destination address", async () => {
+		it("should create a destination address", async ({ expect }) => {
 			mockCreateAddress();
 
 			await runWrangler("email routing addresses create newdest@example.com");
@@ -587,7 +587,7 @@ describe("email routing commands", () => {
 	// --- addresses delete ---
 
 	describe("addresses delete", () => {
-		it("should delete a destination address", async () => {
+		it("should delete a destination address", async ({ expect }) => {
 			mockDeleteAddress("addr-id-1");
 
 			await runWrangler("email routing addresses delete addr-id-1");
@@ -621,7 +621,7 @@ describe("email sending commands", () => {
 	// --- subdomains list ---
 
 	describe("subdomains list", () => {
-		it("should list sending subdomains", async () => {
+		it("should list sending subdomains", async ({ expect }) => {
 			mockListSendingSubdomains("zone-id-1", [mockSubdomain]);
 
 			await runWrangler(
@@ -632,7 +632,7 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("yes");
 		});
 
-		it("should handle no sending subdomains", async () => {
+		it("should handle no sending subdomains", async ({ expect }) => {
 			mockListSendingSubdomains("zone-id-1", []);
 
 			await runWrangler(
@@ -646,7 +646,7 @@ describe("email sending commands", () => {
 	// --- subdomains get ---
 
 	describe("subdomains get", () => {
-		it("should get a sending subdomain", async () => {
+		it("should get a sending subdomain", async ({ expect }) => {
 			mockGetSendingSubdomain(
 				"zone-id-1",
 				"aabbccdd11223344aabbccdd11223344",
@@ -667,7 +667,7 @@ describe("email sending commands", () => {
 	// --- subdomains create ---
 
 	describe("subdomains create", () => {
-		it("should create a sending subdomain", async () => {
+		it("should create a sending subdomain", async ({ expect }) => {
 			const reqProm = mockCreateSendingSubdomain("zone-id-1");
 
 			await runWrangler(
@@ -685,7 +685,7 @@ describe("email sending commands", () => {
 	// --- subdomains delete ---
 
 	describe("subdomains delete", () => {
-		it("should delete a sending subdomain", async () => {
+		it("should delete a sending subdomain", async ({ expect }) => {
 			mockDeleteSendingSubdomain(
 				"zone-id-1",
 				"aabbccdd11223344aabbccdd11223344"
@@ -704,7 +704,7 @@ describe("email sending commands", () => {
 	// --- dns get ---
 
 	describe("dns get", () => {
-		it("should show sending subdomain dns records", async () => {
+		it("should show sending subdomain dns records", async ({ expect }) => {
 			mockGetSendingDns(
 				"zone-id-1",
 				"aabbccdd11223344aabbccdd11223344",
@@ -719,7 +719,7 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("v=spf1");
 		});
 
-		it("should handle no dns records", async () => {
+		it("should handle no dns records", async ({ expect }) => {
 			mockGetSendingDns(
 				"zone-id-1",
 				"aabbccdd11223344aabbccdd11223344",
@@ -739,7 +739,7 @@ describe("email sending commands", () => {
 	// --- send ---
 
 	describe("send", () => {
-		it("should send an email with text body", async () => {
+		it("should send an email with text body", async ({ expect }) => {
 			const reqProm = mockSendEmail();
 
 			await runWrangler(
@@ -756,7 +756,7 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("Delivered to: recipient@example.com");
 		});
 
-		it("should send an email with html body", async () => {
+		it("should send an email with html body", async ({ expect }) => {
 			const reqProm = mockSendEmail();
 
 			await runWrangler(
@@ -772,7 +772,7 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("Delivered to:");
 		});
 
-		it("should send with from-name", async () => {
+		it("should send with from-name", async ({ expect }) => {
 			const reqProm = mockSendEmail();
 
 			await runWrangler(
@@ -784,7 +784,7 @@ describe("email sending commands", () => {
 			});
 		});
 
-		it("should send with cc and bcc", async () => {
+		it("should send with cc and bcc", async ({ expect }) => {
 			const reqProm = mockSendEmail();
 
 			await runWrangler(
@@ -797,7 +797,7 @@ describe("email sending commands", () => {
 			});
 		});
 
-		it("should send with custom headers", async () => {
+		it("should send with custom headers", async ({ expect }) => {
 			const reqProm = mockSendEmail();
 
 			await runWrangler(
@@ -809,7 +809,7 @@ describe("email sending commands", () => {
 			});
 		});
 
-		it("should error when neither --text nor --html is provided", async () => {
+		it("should error when neither --text nor --html is provided", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test'"
@@ -819,7 +819,7 @@ describe("email sending commands", () => {
 			);
 		});
 
-		it("should display queued and bounced recipients", async () => {
+		it("should display queued and bounced recipients", async ({ expect }) => {
 			mockSendEmailWithResult({
 				delivered: [],
 				queued: ["queued@example.com"],
@@ -838,7 +838,7 @@ describe("email sending commands", () => {
 	// --- send-raw ---
 
 	describe("send-raw", () => {
-		it("should send a raw MIME email", async () => {
+		it("should send a raw MIME email", async ({ expect }) => {
 			const reqProm = mockSendRawEmail();
 			const mimeMessage =
 				"From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Hello\r\n\r\nHello, World!";
@@ -856,7 +856,7 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("Delivered to: recipient@example.com");
 		});
 
-		it("should error when neither --mime nor --mime-file is provided", async () => {
+		it("should error when neither --mime nor --mime-file is provided", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"email sending send-raw --from sender@example.com --to recipient@example.com"
@@ -999,7 +999,8 @@ function mockCreateRule(_zoneId: string): Promise<unknown> {
 			http.post(
 				"*/zones/:zoneId/email/routing/rules",
 				async ({ request }) => {
-					const reqBody = await request.json();
+					const reqBody =
+						(await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ id: "new-rule-id", ...reqBody }, true)
@@ -1017,7 +1018,8 @@ function mockUpdateRule(_zoneId: string, _ruleId: string): Promise<unknown> {
 			http.put(
 				"*/zones/:zoneId/email/routing/rules/:ruleId",
 				async ({ request }) => {
-					const reqBody = await request.json();
+					const reqBody =
+						(await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ id: "rule-id-1", ...reqBody }, true)
@@ -1059,7 +1061,8 @@ function mockUpdateCatchAll(_zoneId: string): Promise<unknown> {
 			http.put(
 				"*/zones/:zoneId/email/routing/rules/catch_all",
 				async ({ request }) => {
-					const reqBody = await request.json();
+					const reqBody =
+						(await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ id: "catch-all-id", ...reqBody }, true)
@@ -1171,7 +1174,8 @@ function mockCreateSendingSubdomain(_zoneId: string): Promise<unknown> {
 			http.post(
 				"*/zones/:zoneId/email/sending/subdomains",
 				async ({ request }) => {
-					const reqBody = await request.json();
+					const reqBody =
+						(await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ ...mockSubdomain, ...reqBody }, true)

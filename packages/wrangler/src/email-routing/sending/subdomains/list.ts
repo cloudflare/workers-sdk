@@ -7,7 +7,7 @@ import { resolveZoneId } from "../../utils";
 export const emailSendingSubdomainsListCommand = createCommand({
 	metadata: {
 		description: "List Email Sending subdomains",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {
