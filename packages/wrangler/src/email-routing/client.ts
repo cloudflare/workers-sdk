@@ -25,6 +25,16 @@ export async function listZones(config: Config): Promise<CloudflareZone[]> {
 	);
 }
 
+export async function listEmailRoutingZones(
+	config: Config
+): Promise<EmailRoutingSettings[]> {
+	const accountId = await requireAuth(config);
+	return await fetchPagedListResult<EmailRoutingSettings>(
+		config,
+		`/accounts/${accountId}/email/routing/zones`
+	);
+}
+
 // --- Settings ---
 
 export async function getEmailRoutingSettings(
@@ -106,7 +116,9 @@ export async function listEmailRoutingRules(
 	await requireAuth(config);
 	return await fetchPagedListResult<EmailRoutingRule>(
 		config,
-		`/zones/${zoneId}/email/routing/rules`
+		`/zones/${zoneId}/email/routing/rules`,
+		{},
+		new URLSearchParams({ order: "created", direction: "asc" })
 	);
 }
 
@@ -227,7 +239,9 @@ export async function listEmailRoutingAddresses(
 	const accountId = await requireAuth(config);
 	return await fetchPagedListResult<EmailRoutingAddress>(
 		config,
-		`/accounts/${accountId}/email/routing/addresses`
+		`/accounts/${accountId}/email/routing/addresses`,
+		{},
+		new URLSearchParams({ order: "created", direction: "asc" })
 	);
 }
 
