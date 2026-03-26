@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, test, vi } from "vitest";
+import { afterAll, beforeEach, describe, test, vi } from "vitest";
 import { extractConfigBindings, getBranchName } from "../preview/shared";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -26,6 +26,13 @@ describe("wrangler preview", () => {
 
 	describe("getBranchName", () => {
 		beforeEach(() => {
+			vi.unstubAllEnvs();
+			vi.stubEnv("WORKERS_CI_BRANCH", undefined);
+			vi.stubEnv("GITHUB_REF_NAME", undefined);
+			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
+		});
+
+		afterAll(() => {
 			vi.unstubAllEnvs();
 		});
 
