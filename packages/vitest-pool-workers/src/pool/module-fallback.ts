@@ -246,8 +246,29 @@ async function viteResolve(
 ): Promise<string> {
 	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
 		ssr: true,
+		// Vite ≤7: the rollup-based resolve plugin reads `isRequire` from this
+		// private `custom["node-resolve"]` bag to select the correct conditional
+		// export (`"require"` vs `"import"`).
 		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
 		custom: { "node-resolve": { isRequire } },
+		// Vite 8+: the resolver was rewritten to use rolldown and no longer reads
+		// `custom["node-resolve"]`. The `kind` field is read by the
+		// `vite:resolve-dev` plugin, which uses `kind === "require-call"` to
+		// set `isRequire: true` when resolving pre-bundled (optimized) deps.
+		// For deps that are NOT pre-bundled the `vite:resolve-builtin` native
+		// Rust plugin handles resolution — but its `isRequire` flag is a static
+		// value set at construction time and it does NOT read `kind` per-call.
+		// So `kind` alone is insufficient for the general case; `findCjsAlternative`
+		// below provides the fallback. We still pass `kind` so that pre-bundled
+		// deps resolve correctly and so future Vite versions that fix
+		// `vite:resolve-builtin` work without any change here.
+		// The `kind` field is not declared on the legacy `PluginContainer` type,
+		// so we cast it through `unknown`.
+		// https://github.com/cloudflare/workers-sdk/issues/12984
+		// https://github.com/cloudflare/workers-sdk/issues/13037
+		...(isRequire
+			? ({ kind: "require-call" } as unknown as object)
+			: undefined),
 	});
 	if (resolved === null) {
 		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
@@ -296,16 +317,25 @@ async function viteResolve(
 }
 
 /**
- * When a `require()` call resolves to an ESM file (e.g. because Vite 8's
- * rolldown-based resolver selected the `"import"` export condition), walk up
- * the directory tree to find the nearest `package.json` that owns the file
- * and look for a CJS-compatible alternative via the `"require"` or `"default"`
- * export condition.
+ * When a `require()` call resolves to an ESM file, walk up the directory tree
+ * to find the nearest `package.json` that owns the file and look for a
+ * CJS-compatible alternative via the `"require"` or `"default"` export
+ * condition.
  *
- * This handles the Vite 8 regression where `pluginContainer.resolveId()` with
- * `{ custom: { "node-resolve": { isRequire: true } } }` still picks the
- * `"import"` entry instead of `"require"` for packages with dual CJS/ESM
- * exports (e.g. `pg-protocol`, `pg-connection-string`, `mimetext`).
+ * In Vite 8 the main resolve plugin (`vite:resolve-builtin`, backed by
+ * `viteResolvePlugin` from `rolldown/experimental`) does NOT dynamically read
+ * the `kind` field from the hook options to pick `"require"` vs `"import"`.
+ * Its `isRequire` flag is a static value set at plugin-construction time, so
+ * passing `kind: "require-call"` on the `pluginContainer.resolveId()` call is
+ * not sufficient. As a result, `require()` calls can still resolve to the
+ * `"import"` export condition entry (e.g. `pg-protocol/esm/index.js`) instead
+ * of `"require"`/`"default"` (e.g. `pg-protocol/dist/index.js`), causing
+ * workerd to choke on `import` statements inside a `commonJsModule`.
+ *
+ * This function detects the mismatch and redirects to the CJS alternative.
+ *
+ * See: https://github.com/cloudflare/workers-sdk/issues/12984
+ *      https://github.com/cloudflare/workers-sdk/issues/13037
  */
 export function findCjsAlternative(resolvedPath: string): string | undefined {
 	// Strip any query suffix (e.g. ?mf_vitest_no_cjs_esm_shim, ?v=hash)
@@ -406,17 +436,13 @@ export function findCjsEntryInExports(
  * object. Used to check whether a resolved path appears anywhere inside a
  * nested `"import"` condition (e.g. `{ "types": "...", "default": "./esm/index.mjs" }`).
  */
-function collectTerminalStrings(
-	obj: Record<string, unknown>
-): string[] {
+function collectTerminalStrings(obj: Record<string, unknown>): string[] {
 	const result: string[] = [];
 	for (const value of Object.values(obj)) {
 		if (typeof value === "string") {
 			result.push(value);
 		} else if (typeof value === "object" && value !== null) {
-			result.push(
-				...collectTerminalStrings(value as Record<string, unknown>)
-			);
+			result.push(...collectTerminalStrings(value as Record<string, unknown>));
 		}
 	}
 	return result;
@@ -430,6 +456,7 @@ function collectTerminalStrings(
  * Handles:
  * - Flat `"import"` strings: `{ "import": "./esm/index.js", "require": "..." }`
  * - Nested `"import"` objects: `{ "import": { "types": "...", "default": "./esm/index.mjs" }, "require": "..." }`
+ *   (common in TypeScript packages)
  *
  * Recurses into other nested condition objects (e.g. `"node"`, `"browser"`).
  */
@@ -522,12 +549,13 @@ async function resolve(
 		method === "require"
 	);
 
-	// Vite 8 (rolldown resolver) may resolve a require() call to the ESM
-	// "import" export condition instead of "require"/"default". Detect this and
-	// redirect to the CJS alternative so workerd doesn't choke on `import`
-	// statements inside a commonJsModule. See:
-	// https://github.com/cloudflare/workers-sdk/issues/12984
-	// https://github.com/cloudflare/workers-sdk/issues/13037
+	// In Vite 8, the main `vite:resolve-builtin` plugin does not read the
+	// `kind` field from hook options to pick `"require"` vs `"import"` export
+	// conditions. Its `isRequire` is fixed at construction time, so `require()`
+	// calls can still resolve to the `"import"` condition (e.g. an ESM wrapper
+	// file). Detect and redirect to the CJS alternative.
+	// See: https://github.com/cloudflare/workers-sdk/issues/12984
+	//      https://github.com/cloudflare/workers-sdk/issues/13037
 	if (method === "require" && !specifier.startsWith("node:")) {
 		const cjsAlt = findCjsAlternative(resolved);
 		if (cjsAlt !== undefined) {

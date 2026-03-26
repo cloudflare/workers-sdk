@@ -65,7 +65,9 @@ describe("findCjsEntryInConditions", () => {
 		expect(result).toBeUndefined();
 	});
 
-	it("recurses into nested condition objects", ({ expect }) => {
+	it("recurses into nested condition objects (e.g. 'node' key)", ({
+		expect,
+	}) => {
 		const result = findCjsEntryInConditions(
 			{
 				node: {
@@ -78,26 +80,41 @@ describe("findCjsEntryInConditions", () => {
 		expect(result).toBe("./cjs/node.js");
 	});
 
-	it("does not recurse into import/require/default string entries", ({
+	it("handles nested conditions under 'import' (TypeScript-style)", ({
 		expect,
 	}) => {
-		// Strings under "import"/"require"/"default" are terminal, not nested maps
+		// Common pattern: { "import": { "types": "...", "default": "./esm/index.mjs" }, "require": "./cjs/index.js" }
 		const result = findCjsEntryInConditions(
 			{
-				import: "./esm/index.js",
+				import: {
+					types: "./esm/index.d.ts",
+					default: "./esm/index.mjs",
+				},
 				require: "./cjs/index.js",
 			},
-			"./cjs/index.js"
+			"./esm/index.mjs"
 		);
-		// require entry IS NOT the esm path, so no match from import condition
-		expect(result).toBeUndefined();
+		expect(result).toBe("./cjs/index.js");
+	});
+
+	it("handles deeply nested import conditions", ({ expect }) => {
+		const result = findCjsEntryInConditions(
+			{
+				import: {
+					node: {
+						default: "./esm/node.mjs",
+					},
+				},
+				require: "./cjs/index.js",
+			},
+			"./esm/node.mjs"
+		);
+		expect(result).toBe("./cjs/index.js");
 	});
 });
 
 describe("findCjsEntryInExports", () => {
-	it("finds cjs entry from a standard dual-format exports map", ({
-		expect,
-	}) => {
+	it("finds cjs entry from a standard subpath exports map", ({ expect }) => {
 		const result = findCjsEntryInExports(
 			{
 				".": {
@@ -109,6 +126,19 @@ describe("findCjsEntryInExports", () => {
 			"./esm/index.mjs"
 		);
 		expect(result).toBe("./lib/index.js");
+	});
+
+	it("handles sugar conditional exports (no subpath keys)", ({ expect }) => {
+		// Package uses: { "exports": { "import": "...", "require": "..." } }
+		// instead of:  { "exports": { ".": { "import": "...", "require": "..." } } }
+		const result = findCjsEntryInExports(
+			{
+				import: "./esm/index.js",
+				require: "./cjs/index.js",
+			},
+			"./esm/index.js"
+		);
+		expect(result).toBe("./cjs/index.js");
 	});
 
 	it("returns undefined when no matching entry exists", ({ expect }) => {
@@ -157,9 +187,6 @@ describe("findCjsAlternative", () => {
 		await removeDir(tmpDir);
 	});
 
-	/**
-	 * Creates files under tmpDir.  `files` is a map of relative path → content.
-	 */
 	function scaffold(files: Record<string, string>) {
 		for (const [relPath, content] of Object.entries(files)) {
 			const abs = path.join(tmpDir, relPath);
@@ -168,11 +195,7 @@ describe("findCjsAlternative", () => {
 		}
 	}
 
-	/**
-	 * Returns a POSIX-style absolute path inside tmpDir.
-	 */
 	function p(...parts: string[]): string {
-		// On Windows posixPath.join would use forward slashes; on POSIX it's the same
 		return path.posix.join(tmpDir.replaceAll("\\", "/"), ...parts);
 	}
 
@@ -219,7 +242,7 @@ describe("findCjsAlternative", () => {
 		expect(result).toBe(p("dist/index.cjs"));
 	});
 
-	it("returns undefined for a plain CJS .js file (not in type:module pkg)", ({
+	it("returns undefined for a plain CJS .js file (not in exports as import)", ({
 		expect,
 	}) => {
 		scaffold({
@@ -255,11 +278,11 @@ describe("findCjsAlternative", () => {
 					".": {
 						import: "./esm/index.mjs",
 						require: "./lib/index.js",
-						// lib/index.js is NOT created
 					},
 				},
 			}),
 			"esm/index.mjs": "export default 42;",
+			// lib/index.js intentionally not created
 		});
 
 		const result = findCjsAlternative(p("esm/index.mjs"));
@@ -309,7 +332,46 @@ describe("findCjsAlternative", () => {
 		expect(result).toBe(p("index.js"));
 	});
 
-	it("strips query suffix before checking ESM nature", ({ expect }) => {
+	it("works for sugar conditional exports (no subpath keys)", ({ expect }) => {
+		scaffold({
+			"package.json": JSON.stringify({
+				name: "my-pkg",
+				exports: {
+					import: "./esm/index.mjs",
+					require: "./lib/index.js",
+				},
+			}),
+			"esm/index.mjs": "export default 42;",
+			"lib/index.js": "module.exports = 42;",
+		});
+
+		const result = findCjsAlternative(p("esm/index.mjs"));
+		expect(result).toBe(p("lib/index.js"));
+	});
+
+	it("works for TypeScript-style nested import conditions", ({ expect }) => {
+		scaffold({
+			"package.json": JSON.stringify({
+				name: "my-ts-pkg",
+				exports: {
+					".": {
+						import: {
+							types: "./esm/index.d.ts",
+							default: "./esm/index.mjs",
+						},
+						require: "./cjs/index.js",
+					},
+				},
+			}),
+			"esm/index.mjs": "export default 42;",
+			"cjs/index.js": "module.exports = 42;",
+		});
+
+		const result = findCjsAlternative(p("esm/index.mjs"));
+		expect(result).toBe(p("cjs/index.js"));
+	});
+
+	it("strips query suffix before checking", ({ expect }) => {
 		scaffold({
 			"package.json": JSON.stringify({
 				name: "my-pkg",
@@ -324,20 +386,19 @@ describe("findCjsAlternative", () => {
 			"lib/index.js": "module.exports = 42;",
 		});
 
-		// The module-fallback passes paths with ?mf_vitest_no_cjs_esm_shim suffix
 		const result = findCjsAlternative(
 			p("esm/index.mjs") + "?mf_vitest_no_cjs_esm_shim"
 		);
 		expect(result).toBe(p("lib/index.js"));
 	});
 
-	it("returns undefined for non-ESM .cjs file", ({ expect }) => {
+	it("returns undefined for non-JS extensions", ({ expect }) => {
 		scaffold({
 			"package.json": JSON.stringify({ name: "my-pkg" }),
-			"lib/index.cjs": "module.exports = 42;",
+			"lib/index.wasm": "",
 		});
 
-		const result = findCjsAlternative(p("lib/index.cjs"));
+		const result = findCjsAlternative(p("lib/index.wasm"));
 		expect(result).toBeUndefined();
 	});
 });
