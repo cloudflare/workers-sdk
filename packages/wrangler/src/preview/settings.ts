@@ -82,7 +82,7 @@ export function formatPreviewsSettings(
 			typeof previewDefaults.observability.head_sampling_rate === "number"
 				? `, ${previewDefaults.observability.head_sampling_rate.toFixed(
 						1
-				  )} sampling`
+					)} sampling`
 				: "";
 		settingsRows.push(["observability", `${enabledLabel}${sampling}`]);
 	}

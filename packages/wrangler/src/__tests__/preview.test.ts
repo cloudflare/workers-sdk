@@ -1553,7 +1553,9 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --env staging --name test-preview");
 
-			expect(getPreviewUrl).toContain("/workers/workers/staging-worker/previews/");
+			expect(getPreviewUrl).toContain(
+				"/workers/workers/staging-worker/previews/"
+			);
 			expect(createDeploymentUrl).toContain(
 				"/workers/workers/staging-worker/previews/preview-id-env-worker/deployments"
 			);
@@ -1580,10 +1582,13 @@ describe("wrangler preview", () => {
 
 			let requested = false;
 			msw.use(
-				http.get(`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`, () => {
-					requested = true;
-					return HttpResponse.json({ success: true, result: {} });
-				})
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						requested = true;
+						return HttpResponse.json({ success: true, result: {} });
+					}
+				)
 			);
 
 			await expect(
@@ -1829,13 +1834,16 @@ describe("wrangler preview", () => {
 			);
 			let getUrl: string | undefined;
 			msw.use(
-				http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
-					getUrl = request.url;
-					return HttpResponse.json({
-						success: true,
-						result: { preview_defaults: {} },
-					});
-				})
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId`,
+					({ request }) => {
+						getUrl = request.url;
+						return HttpResponse.json({
+							success: true,
+							result: { preview_defaults: {} },
+						});
+					}
+				)
 			);
 			await runWrangler("preview settings --env staging");
 			expect(getUrl).toContain("/workers/workers/staging-worker");
@@ -2287,7 +2295,10 @@ describe("wrangler preview", () => {
 			msw.use(
 				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
 					requested = true;
-					return HttpResponse.json({ success: true, result: { preview_defaults: {} } });
+					return HttpResponse.json({
+						success: true,
+						result: { preview_defaults: {} },
+					});
 				})
 			);
 
@@ -2438,7 +2449,10 @@ describe("wrangler preview", () => {
 				msw.use(
 					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
 						requested = true;
-						return HttpResponse.json({ success: true, result: { preview_defaults: {} } });
+						return HttpResponse.json({
+							success: true,
+							result: { preview_defaults: {} },
+						});
 					}),
 					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
 						requested = true;
@@ -2515,17 +2529,27 @@ describe("wrangler preview", () => {
 				let getUrl: string | undefined;
 				let patchUrl: string | undefined;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
-						getUrl = request.url;
-						return HttpResponse.json({
-							success: true,
-							result: { preview_defaults: { env: { REMOVE_ME: { type: "secret_text" } } } },
-						});
-					}),
-					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
-						patchUrl = request.url;
-						return HttpResponse.json({ success: true, result: {} });
-					})
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							getUrl = request.url;
+							return HttpResponse.json({
+								success: true,
+								result: {
+									preview_defaults: {
+										env: { REMOVE_ME: { type: "secret_text" } },
+									},
+								},
+							});
+						}
+					),
+					http.patch(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							patchUrl = request.url;
+							return HttpResponse.json({ success: true, result: {} });
+						}
+					)
 				);
 				await runWrangler(
 					"preview secret delete REMOVE_ME --env staging --skip-confirmation"
@@ -2597,13 +2621,16 @@ describe("wrangler preview", () => {
 				);
 				let getUrl: string | undefined;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
-						getUrl = request.url;
-						return HttpResponse.json({
-							success: true,
-							result: { preview_defaults: { env: {} } },
-						});
-					})
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							getUrl = request.url;
+							return HttpResponse.json({
+								success: true,
+								result: { preview_defaults: { env: {} } },
+							});
+						}
+					)
 				);
 				await runWrangler("preview secret list --env staging");
 				expect(getUrl).toContain("/workers/workers/staging-worker");
@@ -2671,17 +2698,23 @@ describe("wrangler preview", () => {
 				let getUrl: string | undefined;
 				let patchUrl: string | undefined;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
-						getUrl = request.url;
-						return HttpResponse.json({
-							success: true,
-							result: { preview_defaults: { env: {} } },
-						});
-					}),
-					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, ({ request }) => {
-						patchUrl = request.url;
-						return HttpResponse.json({ success: true, result: {} });
-					})
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							getUrl = request.url;
+							return HttpResponse.json({
+								success: true,
+								result: { preview_defaults: { env: {} } },
+							});
+						}
+					),
+					http.patch(
+						`*/accounts/:accountId/workers/workers/:workerId`,
+						({ request }) => {
+							patchUrl = request.url;
+							return HttpResponse.json({ success: true, result: {} });
+						}
+					)
 				);
 				await runWrangler("preview secret bulk secrets.env --env staging");
 				expect(getUrl).toContain("/workers/workers/staging-worker");

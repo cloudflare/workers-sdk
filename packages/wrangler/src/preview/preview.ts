@@ -548,7 +548,7 @@ function formatPreviewResource(
 	const obsValue = obsEnabled
 		? `enabled${
 				formattedRate !== undefined ? `, ${formattedRate} sampling` : ""
-		  }`
+			}`
 		: "disabled";
 
 	const lines: string[] = [
