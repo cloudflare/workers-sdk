@@ -4425,6 +4425,16 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		);
 	}
 
+	// Validate that consumer type, if specified, is "worker".
+	// Non-worker consumer types (e.g., "http_pull") cannot be configured via
+	// wrangler config. Use `wrangler queues consumer http add` instead.
+	if ("type" in value && value.type !== undefined && value.type !== "worker") {
+		diagnostics.errors.push(
+			`"${field}.type" has an invalid value "${value.type}". Only "worker" consumers can be configured in your Wrangler configuration.`
+		);
+		isValid = false;
+	}
+
 	const options: {
 		key: string;
 		type: "number" | "string" | "boolean";

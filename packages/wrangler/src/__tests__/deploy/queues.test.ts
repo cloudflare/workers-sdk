@@ -23,7 +23,6 @@ import {
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
 	mockPostConsumerById,
-	mockPostQueueHTTPConsumer,
 	mockPutQueueConsumerById,
 } from "./helpers";
 import type { QueueResponse } from "../../queues/client";
@@ -433,62 +432,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post queue http consumers on deploy", async ({ expect }) => {
-			writeWranglerConfig({
-				queues: {
-					consumers: [
-						{
-							queue: queueName,
-							type: "http_pull",
-							dead_letter_queue: "myDLQ",
-							max_batch_size: 5,
-							visibility_timeout_ms: 4000,
-							max_retries: 10,
-							retry_delay: 1,
-						},
-					],
-				},
-			});
-			await fs.promises.writeFile("index.js", `export default {};`);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const existingQueue: QueueResponse = {
-				queue_id: queueId,
-				queue_name: queueName,
-				created_on: "",
-				producers: [],
-				consumers: [],
-				producers_total_count: 0,
-				consumers_total_count: 0,
-				modified_on: "",
-			};
-			mockGetQueueByName(queueName, existingQueue);
-			mockPostQueueHTTPConsumer(queueId, {
-				type: "http_pull",
-				dead_letter_queue: "myDLQ",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					visibility_timeout_ms: 4000,
-					retry_delay: 1,
-				},
-			});
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				  Consumer for queue1
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
-		it("should update queue http consumers when one already exists for queue", async ({
+		it("should reject http_pull consumer type in config", async ({
 			expect,
 		}) => {
 			writeWranglerConfig({
@@ -496,61 +440,16 @@ describe("deploy", () => {
 					consumers: [
 						{
 							queue: queueName,
-							type: "http_pull",
+							// Cast needed to simulate invalid user input that bypasses static type checking; runtime validation is what this test exercises
+							type: "http_pull" as "worker",
 						},
 					],
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const existingQueue: QueueResponse = {
-				queue_id: queueId,
-				queue_name: queueName,
-				created_on: "",
-				producers: [],
-				consumers: [
-					{
-						type: "http_pull",
-						consumer_id: "queue1-consumer-id",
-						settings: {},
-					},
-				],
-				producers_total_count: 0,
-				consumers_total_count: 0,
-				modified_on: "",
-			};
-			mockGetQueueByName(queueName, existingQueue);
-
-			msw.use(
-				http.put(
-					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
-					async ({ params }) => {
-						expect(params.queueId).toEqual(queueId);
-						expect(params.consumerId).toEqual("queue1-consumer-id");
-						expect(params.accountId).toEqual("some-account-id");
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						});
-					}
-				)
+			await expect(runWrangler("deploy index.js")).rejects.toThrowError(
+				/Only "worker" consumers can be configured in your Wrangler configuration/
 			);
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				  Consumer for queue1
-				Current Version ID: Galaxy-Class"
-			`);
 		});
 
 		it("should support queue consumer concurrency with a max concurrency specified", async ({

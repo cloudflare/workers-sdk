@@ -56,7 +56,6 @@ import {
 	getQueue,
 	postConsumer,
 	putConsumer,
-	putConsumerById,
 } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
@@ -1501,80 +1500,48 @@ export async function updateQueueConsumers(
 	for (const consumer of consumers) {
 		const queue = await getQueue(config, consumer.queue);
 
-		if (consumer.type === "http_pull") {
-			const body: PostTypedConsumerBody = {
-				type: consumer.type,
-				dead_letter_queue: consumer.dead_letter_queue,
-				settings: {
-					batch_size: consumer.max_batch_size,
-					max_retries: consumer.max_retries,
-					visibility_timeout_ms: consumer.visibility_timeout_ms,
-					retry_delay: consumer.retry_delay,
-				},
-			};
-
-			const existingConsumer = queue.consumers && queue.consumers[0];
-			if (existingConsumer) {
-				updateConsumers.push(
-					putConsumerById(
-						config,
-						queue.queue_id,
-						existingConsumer.consumer_id,
-						body
-					).then(() => [`Consumer for ${consumer.queue}`])
-				);
-				continue;
-			}
-			updateConsumers.push(
-				postConsumer(config, consumer.queue, body).then(() => [
-					`Consumer for ${consumer.queue}`,
-				])
-			);
-		} else {
-			if (scriptName === undefined) {
-				// TODO: how can we reliably get the current script name?
-				throw new UserError(
-					"Script name is required to update queue consumers",
-					{ telemetryMessage: true }
-				);
-			}
-
-			const body: PostTypedConsumerBody = {
-				type: "worker",
-				dead_letter_queue: consumer.dead_letter_queue,
-				script_name: scriptName,
-				settings: {
-					batch_size: consumer.max_batch_size,
-					max_retries: consumer.max_retries,
-					max_wait_time_ms:
-						consumer.max_batch_timeout !== undefined
-							? 1000 * consumer.max_batch_timeout
-							: undefined,
-					max_concurrency: consumer.max_concurrency,
-					retry_delay: consumer.retry_delay,
-				},
-			};
-
-			// Current script already assigned to queue?
-			const existingConsumer =
-				queue.consumers.filter(
-					(c) => c.script === scriptName || c.service === scriptName
-				).length > 0;
-			const envName = undefined; // TODO: script environment for wrangler deploy?
-			if (existingConsumer) {
-				updateConsumers.push(
-					putConsumer(config, consumer.queue, scriptName, envName, body).then(
-						() => [`Consumer for ${consumer.queue}`]
-					)
-				);
-				continue;
-			}
-			updateConsumers.push(
-				postConsumer(config, consumer.queue, body).then(() => [
-					`Consumer for ${consumer.queue}`,
-				])
-			);
+		if (scriptName === undefined) {
+			// TODO: how can we reliably get the current script name?
+			throw new UserError("Script name is required to update queue consumers", {
+				telemetryMessage: true,
+			});
 		}
+
+		const body: PostTypedConsumerBody = {
+			type: "worker",
+			dead_letter_queue: consumer.dead_letter_queue,
+			script_name: scriptName,
+			settings: {
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms:
+					consumer.max_batch_timeout !== undefined
+						? 1000 * consumer.max_batch_timeout
+						: undefined,
+				max_concurrency: consumer.max_concurrency,
+				retry_delay: consumer.retry_delay,
+			},
+		};
+
+		// Current script already assigned to queue?
+		const existingConsumer =
+			queue.consumers.filter(
+				(c) => c.script === scriptName || c.service === scriptName
+			).length > 0;
+		const envName = undefined; // TODO: script environment for wrangler deploy?
+		if (existingConsumer) {
+			updateConsumers.push(
+				putConsumer(config, consumer.queue, scriptName, envName, body).then(
+					() => [`Consumer for ${consumer.queue}`]
+				)
+			);
+			continue;
+		}
+		updateConsumers.push(
+			postConsumer(config, consumer.queue, body).then(() => [
+				`Consumer for ${consumer.queue}`,
+			])
+		);
 	}
 
 	return updateConsumers;
