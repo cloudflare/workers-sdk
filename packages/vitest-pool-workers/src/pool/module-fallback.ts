@@ -344,7 +344,7 @@ function resolveExportsEntry(entry: unknown): string | undefined {
 	if (typeof entry === "object" && entry !== null) {
 		const conditions = entry as Record<string, unknown>;
 		// Prefer import > default > require, resolving nested objects recursively
-		for (const key of ["import", "default", "require"]) {
+		for (const key of ["workerd", "worker", "browser", "import", "default", "require"]) {
 			const value = conditions[key];
 			if (typeof value === "string") {
 				return value;
