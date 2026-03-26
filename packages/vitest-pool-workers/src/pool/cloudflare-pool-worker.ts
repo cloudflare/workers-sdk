@@ -77,9 +77,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 			this.options.project,
 			resolvedPoolOptions
 		);
-		if (this.parsedPoolOptions.logLevel) {
-			setPoolLogLevel(this.parsedPoolOptions.logLevel);
-		}
+		setPoolLogLevel(this.parsedPoolOptions.logLevel);
 		this.main = maybeGetResolvedMainPath(
 			this.options.project,
 			this.parsedPoolOptions
