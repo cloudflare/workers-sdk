@@ -441,7 +441,7 @@ describe("deploy", () => {
 						{
 							queue: queueName,
 							// Cast needed to simulate invalid user input that bypasses static type checking; runtime validation is what this test exercises
-						type: "http_pull" as "worker",
+							type: "http_pull" as "worker",
 						},
 					],
 				},
