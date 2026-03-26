@@ -8,7 +8,7 @@ export const emailRoutingDnsGetCommand = createCommand({
 	metadata: {
 		description: "Show DNS records required for Email Routing",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

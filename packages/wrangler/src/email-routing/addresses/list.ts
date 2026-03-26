@@ -6,7 +6,7 @@ export const emailRoutingAddressesListCommand = createCommand({
 	metadata: {
 		description: "List Email Routing destination addresses",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {},
 	async handler(_args, { config }) {

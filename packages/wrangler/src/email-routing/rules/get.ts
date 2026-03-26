@@ -9,7 +9,7 @@ export const emailRoutingRulesGetCommand = createCommand({
 		description:
 			"Get a specific Email Routing rule (use 'catch-all' as the rule ID to get the catch-all rule)",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

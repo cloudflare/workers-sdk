@@ -22,4 +22,4 @@ export type Teams =
 	| "Product: SSL"
 	| "Product: WVPC"
 	| "Product: Tunnels"
-	| "Product: Email Routing";
+	| "Product: Email Service";

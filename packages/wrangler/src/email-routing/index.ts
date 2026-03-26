@@ -4,7 +4,7 @@ export const emailNamespace = createNamespace({
 	metadata: {
 		description: "Manage Cloudflare Email services",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -12,7 +12,7 @@ export const emailRoutingNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -20,7 +20,7 @@ export const emailRoutingDnsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing DNS settings",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -28,7 +28,7 @@ export const emailRoutingRulesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing rules",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -36,7 +36,7 @@ export const emailRoutingAddressesNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Routing destination addresses",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -44,7 +44,7 @@ export const emailSendingNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -52,7 +52,7 @@ export const emailSendingSubdomainsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending subdomains",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 
@@ -60,7 +60,7 @@ export const emailSendingDnsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending DNS records",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 });
 

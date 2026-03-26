@@ -9,7 +9,7 @@ export const emailRoutingRulesCreateCommand = createCommand({
 	metadata: {
 		description: "Create an Email Routing rule",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

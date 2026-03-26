@@ -8,7 +8,7 @@ export const emailSendingDnsGetCommand = createCommand({
 	metadata: {
 		description: "Get DNS records for an Email Sending subdomain",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

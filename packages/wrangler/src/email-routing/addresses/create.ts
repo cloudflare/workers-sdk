@@ -6,7 +6,7 @@ export const emailRoutingAddressesCreateCommand = createCommand({
 	metadata: {
 		description: "Create an Email Routing destination address",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		email: {

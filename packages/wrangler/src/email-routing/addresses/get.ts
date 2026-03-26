@@ -6,7 +6,7 @@ export const emailRoutingAddressesGetCommand = createCommand({
 	metadata: {
 		description: "Get a specific Email Routing destination address",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		"address-id": {

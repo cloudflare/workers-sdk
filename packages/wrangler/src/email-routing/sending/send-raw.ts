@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { sendRawEmail } from "../client";
@@ -8,7 +8,7 @@ export const emailSendingSendRawCommand = createCommand({
 	metadata: {
 		description: "Send a raw MIME email message",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		from: {
@@ -48,7 +48,7 @@ export const emailSendingSendRawCommand = createCommand({
 		if (args.mimeFile) {
 			mimeMessage = readFileSync(args.mimeFile, "utf-8");
 		} else {
-			mimeMessage = args.mime!;
+			mimeMessage = args.mime ?? "";
 		}
 
 		const result = await sendRawEmail(config, {

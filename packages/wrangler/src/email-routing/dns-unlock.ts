@@ -8,7 +8,7 @@ export const emailRoutingDnsUnlockCommand = createCommand({
 	metadata: {
 		description: "Unlock MX records for Email Routing",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

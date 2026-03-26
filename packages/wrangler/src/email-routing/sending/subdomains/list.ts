@@ -8,7 +8,7 @@ export const emailSendingSubdomainsListCommand = createCommand({
 	metadata: {
 		description: "List Email Sending subdomains",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

@@ -8,7 +8,7 @@ export const emailRoutingSettingsCommand = createCommand({
 	metadata: {
 		description: "Get Email Routing settings for a zone",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

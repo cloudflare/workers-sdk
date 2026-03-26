@@ -10,7 +10,7 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		description:
 			"Update an Email Routing rule (use 'catch-all' as the rule ID to update the catch-all rule)",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,
@@ -132,11 +132,15 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			return;
 		}
 
+		if (!args.matchType || !args.matchField || !args.matchValue) {
+			throw new UserError("Missing matcher arguments for regular rule update");
+		}
+
 		const rule = await updateEmailRoutingRule(config, zoneId, args.ruleId, {
 			actions: [{ type: args.actionType, value: args.actionValue }],
 			matchers: [
 				{
-					type: args.matchType!,
+					type: args.matchType,
 					field: args.matchField,
 					value: args.matchValue,
 				},

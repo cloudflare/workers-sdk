@@ -8,7 +8,7 @@ export const emailSendingSubdomainsDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an Email Sending subdomain",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		...zoneArgs,

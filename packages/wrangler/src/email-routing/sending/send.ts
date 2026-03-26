@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { sendEmail } from "../client";
@@ -8,7 +9,7 @@ export const emailSendingSendCommand = createCommand({
 	metadata: {
 		description: "Send an email using the Email Sending builder",
 		status: "open-beta",
-		owner: "Product: Email Routing",
+		owner: "Product: Email Service",
 	},
 	args: {
 		from: {
@@ -150,7 +151,7 @@ function parseAttachments(
 	}
 	return attachmentPaths.map((filePath) => {
 		const content = readFileSync(filePath);
-		const filename = filePath.split("/").pop() || filePath;
+		const filename = path.basename(filePath);
 
 		return {
 			content: content.toString("base64"),
