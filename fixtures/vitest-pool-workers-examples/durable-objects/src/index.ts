@@ -13,6 +13,10 @@ export class Counter implements DurableObject {
 	}
 
 	fetch(request: Request) {
+		const url = new URL(request.url);
+		if (url.pathname === "/redirect") {
+			return Response.redirect("https://example.com/redirected", 302);
+		}
 		this.increment();
 		return new Response(this.count.toString());
 	}
