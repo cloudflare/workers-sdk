@@ -1,4 +1,5 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, it, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
@@ -17,6 +18,7 @@ import {
 	mockSubDomainRequest,
 } from "../helpers/mock-workers-subdomain";
 import {
+	createFetchResult,
 	msw,
 	mswGetVersion,
 	mswListNewDeployments,
@@ -29,6 +31,47 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
+
+// MSW handler that returns the full annotations for version 30000000-... when
+// fetched individually (GET /versions/:id). The generic mswGetVersion() mock
+// returns no annotations, but the real API returns the same data as the list
+// endpoint. Used in tests that skip fetchDeployableVersions (--yes + explicit IDs).
+const mswGetVersion30000000 = http.get(
+	"*/accounts/:accountId/workers/scripts/:workerName/versions/30000000-0000-0000-0000-000000000000",
+	() =>
+		HttpResponse.json(
+			createFetchResult({
+				id: "30000000-0000-0000-0000-000000000000",
+				number: "NCC-74656",
+				annotations: {
+					"workers/triggered_by": "rollback",
+					"workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+					"workers/message": "Rolled back for this version",
+				},
+				metadata: {
+					author_id: "Kathryn-Jane-Gamma-6-0-7-3",
+					author_email: "Kathryn-Janeway@federation.org",
+					source: "wrangler",
+					created_on: "2021-02-02T00:00:00.000000Z",
+					modified_on: "2021-02-02T00:00:00.000000Z",
+				},
+				resources: {
+					bindings: [],
+					script: {
+						etag: "aaabbbccc",
+						handlers: ["fetch"],
+						last_deployed_from: "api",
+					},
+					script_runtime: {
+						compatibility_date: "2020-01-01",
+						compatibility_flags: [],
+						usage_model: "standard",
+						limits: { cpu_ms: 50 },
+					},
+				},
+			})
+		)
+);
 
 describe("versions deploy", () => {
 	mockAccountId();
@@ -115,7 +158,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -180,7 +223,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 0 Worker Version(s) selected
@@ -212,7 +255,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -259,7 +302,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -306,7 +349,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 2 Worker Version(s) selected
@@ -361,7 +404,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -408,7 +451,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 2 Worker Version(s) selected
@@ -463,7 +506,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 2 Worker Version(s) selected
@@ -496,6 +539,7 @@ describe("versions deploy", () => {
 
 		describe("max versions restrictions (temp)", () => {
 			test("2+ versions fails", async ({ expect }) => {
+				msw.use(mswGetVersion30000000);
 				const result = runWrangler(
 					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes"
 				);
@@ -521,7 +565,7 @@ describe("versions deploy", () => {
 					│           Tag:  -
 					│       Message:  -
 					│
-					├ Fetching deployable versions
+					├ Fetching versions
 					│
 					├ Which version(s) do you want to deploy?
 					├ 3 Worker Version(s) selected
@@ -545,6 +589,7 @@ describe("versions deploy", () => {
 			});
 
 			test("--max-versions allows > 2 versions", async ({ expect }) => {
+				msw.use(mswGetVersion30000000);
 				const result = runWrangler(
 					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes"
 				);
@@ -568,7 +613,7 @@ describe("versions deploy", () => {
 					│           Tag:  -
 					│       Message:  -
 					│
-					├ Fetching deployable versions
+					├ Fetching versions
 					│
 					├ Which version(s) do you want to deploy?
 					├ 3 Worker Version(s) selected
@@ -634,7 +679,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -686,7 +731,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -745,7 +790,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -813,7 +858,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -884,7 +929,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -943,7 +988,7 @@ describe("versions deploy", () => {
 				│           Tag:  -
 				│       Message:  -
 				│
-				├ Fetching deployable versions
+				├ Fetching versions
 				│"
 			`);
 		});
