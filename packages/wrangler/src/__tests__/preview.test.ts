@@ -29,6 +29,7 @@ describe("wrangler preview", () => {
 			vi.unstubAllEnvs();
 			vi.stubEnv("WORKERS_CI_BRANCH", undefined);
 			vi.stubEnv("GITHUB_REF_NAME", undefined);
+			vi.stubEnv("GITHUB_HEAD_REF", undefined);
 			vi.stubEnv("CI_COMMIT_REF_NAME", undefined);
 		});
 
@@ -39,6 +40,7 @@ describe("wrangler preview", () => {
 		test("should prefer the Workers CI branch env var", ({ expect }) => {
 			vi.stubEnv("WORKERS_CI_BRANCH", "workers-build-branch");
 			vi.stubEnv("GITHUB_REF_NAME", "github-branch");
+			vi.stubEnv("GITHUB_HEAD_REF", "github-head-branch");
 			vi.stubEnv("CI_COMMIT_REF_NAME", "gitlab-branch");
 
 			expect(getBranchName()).toBe("workers-build-branch");
@@ -48,7 +50,7 @@ describe("wrangler preview", () => {
 			vi.stubEnv("GITHUB_HEAD_REF", "github-pr-branch");
 			expect(getBranchName()).toBe("github-pr-branch");
 
-			vi.unstubAllEnvs();
+			vi.stubEnv("GITHUB_HEAD_REF", undefined);
 			vi.stubEnv("GITHUB_REF_NAME", "github-push-branch");
 			expect(getBranchName()).toBe("github-push-branch");
 		});
