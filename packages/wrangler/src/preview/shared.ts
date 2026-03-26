@@ -14,7 +14,7 @@ export function getBranchName(): string | undefined {
 	}
 
 	const githubBranch =
-		process.env.GITHUB_HEAD_REF ?? process.env.GITHUB_REF_NAME;
+		process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME;
 	if (githubBranch) {
 		return githubBranch;
 	}
