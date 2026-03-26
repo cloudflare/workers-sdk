@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
+import * as cliPackages from "@cloudflare/cli/packages";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, assert, describe, test, vi } from "vitest";
-import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";
 import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -81,7 +81,7 @@ describe("wrangler setup", () => {
 
 		// Let's not actually install Wrangler, to speed up tests
 		const installSpy = vi
-			.spyOn(c3, "installWrangler")
+			.spyOn(cliPackages, "installWrangler")
 			.mockImplementation(async () => {});
 
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -106,7 +106,7 @@ describe("wrangler setup", () => {
 		});
 
 		// Let's not actually install Wrangler, to speed up tests
-		vi.spyOn(c3, "installWrangler").mockImplementation(async () => {});
+		vi.spyOn(cliPackages, "installWrangler").mockImplementation(async () => {});
 
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
@@ -125,7 +125,7 @@ describe("wrangler setup", () => {
 		});
 
 		const installSpy = vi
-			.spyOn(c3, "installWrangler")
+			.spyOn(cliPackages, "installWrangler")
 			.mockImplementation(async () => {});
 
 		const runSpy = vi.spyOn(run, "runAutoConfig");

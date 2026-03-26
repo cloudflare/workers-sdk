@@ -1,5 +1,5 @@
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
-import { runCommand } from "helpers/command";
+import { runWranglerCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
 import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
@@ -63,14 +63,14 @@ describe("wrangler account helpers", () => {
 
 			expect(testCtx.account).toEqual({ id: "env-account-id-123", name: "" });
 			// Should not call wrangler whoami when env var is set
-			expect(runCommand).not.toHaveBeenCalled();
+			expect(runWranglerCommand).not.toHaveBeenCalled();
 		});
 	});
 
 	describe("wranglerLogin", async () => {
 		test("logged in", async ({ expect }) => {
 			const mock = vi
-				.mocked(runCommand)
+				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
 			const loggedIn = await wranglerLogin(ctx);
@@ -90,7 +90,7 @@ describe("wrangler account helpers", () => {
 
 		test("logged out (successful login)", async ({ expect }) => {
 			const mock = vi
-				.mocked(runCommand)
+				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
 				.mockReturnValueOnce(Promise.resolve(loginSuccessOutput));
 
@@ -111,7 +111,7 @@ describe("wrangler account helpers", () => {
 
 		test("logged out (login denied)", async ({ expect }) => {
 			const mock = vi
-				.mocked(runCommand)
+				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
 				.mockReturnValueOnce(Promise.resolve(loginDeniedOutput));
 
@@ -133,7 +133,7 @@ describe("wrangler account helpers", () => {
 
 	test("listAccounts", async ({ expect }) => {
 		const mock = vi
-			.mocked(runCommand)
+			.mocked(runWranglerCommand)
 			.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
 		const accounts = await listAccounts();
@@ -147,7 +147,7 @@ describe("wrangler account helpers", () => {
 	describe("isLoggedIn", async () => {
 		test("logged in", async ({ expect }) => {
 			const mock = vi
-				.mocked(runCommand)
+				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
 			const result = await isLoggedIn();
@@ -161,7 +161,7 @@ describe("wrangler account helpers", () => {
 
 		test("logged out", async ({ expect }) => {
 			const mock = vi
-				.mocked(runCommand)
+				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput));
 
 			const result = await isLoggedIn();
@@ -175,7 +175,7 @@ describe("wrangler account helpers", () => {
 
 		test("wrangler whoami error", async ({ expect }) => {
 			const mock = vi
-				.mocked(runCommand)
+				.mocked(runWranglerCommand)
 				.mockRejectedValueOnce(new Error("fail!"));
 
 			const result = await isLoggedIn();

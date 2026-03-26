@@ -1,10 +1,9 @@
 import assert from "node:assert";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
+import { brandColor, dim } from "./colors";
 import { runCommand } from "./command";
-import type { PackageManager } from "../../package-manager";
 
 type InstallConfig = {
 	startText?: string;
@@ -25,17 +24,16 @@ type InstallConfig = {
  * @param config.force - Whether to install with `--force` or not
  */
 export const installPackages = async (
-	packageManager: PackageManager,
+	packageManager: "npm" | "pnpm" | "yarn" | "bun",
 	packages: string[],
 	config: InstallConfig = {}
 ) => {
-	const { type } = packageManager;
 	const { force, dev, startText, doneText } = config;
 	const isWorkspaceRoot = config.isWorkspaceRoot ?? false;
 
 	if (packages.length === 0) {
 		let cmd;
-		switch (type) {
+		switch (packageManager) {
 			case "yarn":
 				break;
 			case "npm":
@@ -47,12 +45,12 @@ export const installPackages = async (
 
 		await runCommand(
 			[
-				type,
+				packageManager,
 				...(cmd ? [cmd] : []),
 				...packages,
-				...(type === "pnpm" ? ["--no-frozen-lockfile"] : []),
+				...(packageManager === "pnpm" ? ["--no-frozen-lockfile"] : []),
 				...(force === true ? ["--force"] : []),
-				...getWorkspaceInstallRootFlag(type, isWorkspaceRoot),
+				...getWorkspaceInstallRootFlag(packageManager, isWorkspaceRoot),
 			],
 			{
 				cwd: process.cwd(),
@@ -66,10 +64,14 @@ export const installPackages = async (
 
 	let saveFlag;
 	let cmd;
-	switch (type) {
+	switch (packageManager) {
 		case "yarn":
 			cmd = "add";
 			saveFlag = dev ? "-D" : "";
+			break;
+		case "bun":
+			cmd = "add";
+			saveFlag = dev ? "-d" : "";
 			break;
 		case "npm":
 		case "pnpm":
@@ -80,12 +82,12 @@ export const installPackages = async (
 	}
 	await runCommand(
 		[
-			type,
+			packageManager,
 			cmd,
 			...(saveFlag ? [saveFlag] : []),
 			...packages,
 			...(force === true ? ["--force"] : []),
-			...getWorkspaceInstallRootFlag(type, isWorkspaceRoot),
+			...getWorkspaceInstallRootFlag(packageManager, isWorkspaceRoot),
 		],
 		{
 			startText,
@@ -94,7 +96,7 @@ export const installPackages = async (
 		}
 	);
 
-	if (type === "npm") {
+	if (packageManager === "npm") {
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
 		// We can't use `npm install --save-exact` because that always pins to an exact version, and we want to allow ranges too.
 		// So let's just fix that up now by rewriting the package.json.
@@ -121,19 +123,19 @@ export const installPackages = async (
  * Returns the potential flag(/s) that need to be added to a package manager's install command when it is
  * run at the root of a workspace.
  *
- * @param packageManagerType The type of package manager
+ * @param packageManager The type of package manager
  * @param isWorkspaceRoot Flag indicating whether the install command is being run at the root of a workspace
  * @returns an array containing the flag(/s) to use, or an empty array if not supported or not running in the workspace root.
  */
-const getWorkspaceInstallRootFlag = (
-	packageManagerType: PackageManager["type"],
+function getWorkspaceInstallRootFlag(
+	packageManager: "npm" | "pnpm" | "yarn" | "bun",
 	isWorkspaceRoot: boolean
-): string[] => {
+): string[] {
 	if (!isWorkspaceRoot) {
 		return [];
 	}
 
-	switch (packageManagerType) {
+	switch (packageManager) {
 		case "pnpm":
 			return ["--workspace-root"];
 		case "yarn":
@@ -143,17 +145,15 @@ const getWorkspaceInstallRootFlag = (
 			// npm and bun don't have the workspace check
 			return [];
 	}
-};
+}
 
 /**
  *  Installs the latest version of wrangler in the project directory if it isn't already.
  */
-export const installWrangler = async (
-	packageManager: PackageManager,
+export async function installWrangler(
+	packageManager: "npm" | "pnpm" | "yarn" | "bun",
 	isWorkspaceRoot: boolean
-) => {
-	const { type } = packageManager;
-
+) {
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
 	await installPackages(packageManager, [`wrangler@latest`], {
 		dev: true,
@@ -162,7 +162,7 @@ export const installWrangler = async (
 			"A command line tool for building Cloudflare Workers"
 		)}`,
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${type} install wrangler --save-dev\``
+			`via \`${packageManager} install wrangler --save-dev\``
 		)}`,
 	});
-};
+}

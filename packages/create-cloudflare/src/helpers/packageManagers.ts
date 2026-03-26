@@ -1,13 +1,13 @@
 import { existsSync, rmSync } from "node:fs";
 import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
 import {
 	testPackageManager,
 	testPackageManagerVersion,
 } from "../../e2e/helpers/constants";
-import { runCommand } from "./command";
 import type { C3Context } from "types";
 
 /**
@@ -39,7 +39,7 @@ export const detectPackageManager = () => {
 					npm: "pnpm",
 					npx: "pnpm",
 					dlx: ["pnpm", "dlx"],
-				};
+				} as const;
 			}
 			return {
 				name,
@@ -47,7 +47,7 @@ export const detectPackageManager = () => {
 				npm: "pnpm",
 				npx: "pnpx",
 				dlx: ["pnpx"],
-			};
+			} as const;
 		case "yarn":
 			if (semver.gt(version, "2.0.0")) {
 				return {
@@ -56,7 +56,7 @@ export const detectPackageManager = () => {
 					npm: "yarn",
 					npx: "yarn",
 					dlx: ["yarn", "dlx"],
-				};
+				} as const;
 			}
 			return {
 				name,
@@ -64,7 +64,7 @@ export const detectPackageManager = () => {
 				npm: "yarn",
 				npx: "yarn",
 				dlx: ["yarn"],
-			};
+			} as const;
 		case "bun":
 			return {
 				name,
@@ -72,7 +72,7 @@ export const detectPackageManager = () => {
 				npm: "bun",
 				npx: "bunx",
 				dlx: ["bunx"],
-			};
+			} as const;
 
 		case "npm":
 		default:
@@ -82,7 +82,7 @@ export const detectPackageManager = () => {
 				npm: "npm",
 				npx: "npx",
 				dlx: ["npx"],
-			};
+			} as const;
 	}
 };
 

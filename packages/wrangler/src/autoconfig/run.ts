@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { installWrangler } from "@cloudflare/cli/packages";
 import {
 	FatalError,
 	getLocalWorkerdCompatibilityDate,
@@ -14,7 +15,6 @@ import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
-import { installWrangler } from "./c3-vendor/packages";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
@@ -164,11 +164,15 @@ export async function runAutoConfig(
 		}
 
 		logger.debug(
-			`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
+			`Running autoconfig with:\n${JSON.stringify(
+				autoConfigDetails,
+				null,
+				2
+			)}...`
 		);
 
 		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-			await installWrangler(packageManager, isWorkspaceRoot);
+			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
 
 		const configurationResults = await autoConfigDetails.framework.configure({
