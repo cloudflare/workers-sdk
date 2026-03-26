@@ -40,6 +40,11 @@ export const previewCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		json: {
+			describe: "Return output as JSON",
+			type: "boolean",
+			default: false,
+		},
 		"ignore-defaults": {
 			describe:
 				"Only use settings from your config file, ignoring any Previews settings configured in the Cloudflare dashboard",
@@ -52,6 +57,9 @@ export const previewCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+	},
+	behaviour: {
+		printBanner: (args) => args.json !== true,
 	},
 	handler: handlePreviewCommand,
 });
@@ -126,7 +134,7 @@ export const previewSettingsCommand = createCommand({
 			requiresArg: true,
 		},
 		json: {
-			describe: "Return output as clean JSON",
+			describe: "Return output as JSON",
 			type: "boolean",
 			default: false,
 		},
@@ -209,7 +217,7 @@ export const previewSecretListCommand = createCommand({
 	},
 	args: {
 		json: {
-			describe: "Return output as clean JSON",
+			describe: "Return output as JSON",
 			type: "boolean",
 			default: false,
 		},

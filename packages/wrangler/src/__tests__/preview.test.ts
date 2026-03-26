@@ -299,6 +299,71 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("◆ from wrangler.json");
 		});
 
+		test("should output preview and deployment JSON with --json", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-json",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-json",
+									preview_id: "preview-id-json",
+									preview_name: "test-preview",
+									urls: ["https://json123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				)
+			);
+
+			await runWrangler("preview --name test-preview --json");
+
+			expect(std.out).toContain('"preview"');
+			expect(std.out).toContain('"deployment"');
+			expect(std.out).toContain('"id": "preview-id-json"');
+			expect(std.out).toContain('"id": "deployment-id-json"');
+			expect(std.out).not.toContain("Preview: test-preview");
+			expect(std.out).not.toContain("Deployment:");
+		});
+
 		test("should show existing preview status for existing preview", async ({
 			expect,
 		}) => {

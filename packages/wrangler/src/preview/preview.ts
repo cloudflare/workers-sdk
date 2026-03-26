@@ -690,6 +690,7 @@ export async function handlePreviewCommand(
 		name?: string;
 		tag?: string;
 		message?: string;
+		json?: boolean;
 		ignoreDefaults: boolean;
 		workerName?: string;
 		"worker-name"?: string;
@@ -769,6 +770,11 @@ export async function handlePreviewCommand(
 		deploymentRequest,
 		{ ignoreDefaults }
 	);
+
+	if (args.json) {
+		logger.log(JSON.stringify({ preview, deployment }, null, 2));
+		return;
+	}
 
 	const scriptLevel = buildMergedScriptLevel(config, preview);
 	const versionLevel = buildMergedVersionLevel(config, deployment);
