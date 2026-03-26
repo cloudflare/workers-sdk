@@ -578,6 +578,60 @@ const testCases: TestCase[] = [
 		],
 	},
 	{
+		name: "VPC Network (UUID)",
+		scriptPath: "vpc-network-uuid.js",
+		setup: async (helper) => {
+			const networkName = generateResourceName();
+
+			// Create a real Cloudflare tunnel for testing
+			const tunnelId = await helper.tunnel();
+
+			const output = await helper.run(
+				`wrangler vpc network create ${networkName} --tunnel-id ${tunnelId}`
+			);
+
+			// Extract network_id from output: "✅ Created VPC network: <uuid>"
+			const match = output.stdout.match(
+				/Created VPC network:\s+(?<networkId>[\w-]+)/
+			);
+			const networkId = match?.groups?.networkId;
+			assert(
+				networkId,
+				"Failed to extract network ID from VPC network creation output"
+			);
+
+			// Teardown runs LIFO: network is deleted before its tunnel.
+			helper.onTeardown(async () => {
+				await helper.run(`wrangler vpc network delete ${networkId}`);
+			});
+
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						VPC_NETWORK_UUID: {
+							type: "vpc_network",
+							network_id: networkId,
+						},
+					} as unknown as StartDevWorkerInput["bindings"],
+				},
+				miniflareConfig: (connection) =>
+					({
+						vpcNetworks: {
+							VPC_NETWORK_UUID: {
+								network_id: networkId,
+								remoteProxyConnectionString: connection,
+							},
+						},
+					}) as unknown as Partial<WorkerOptions>,
+			};
+		},
+		getExpectFetchToMatch: (expect) => [
+			// Tunnel has no running cloudflared connector, so the internal service
+			// returns a ProxyError — proving the UUID network binding was wired correctly.
+			expect.stringContaining("ProxyError"),
+		],
+	},
+	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
 		setup: async (helper) => {
