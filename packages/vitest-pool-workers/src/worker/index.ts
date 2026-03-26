@@ -206,7 +206,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					// to send the message, so if we detect a cross-DO I/O error we
 					// resend from the runner object.
 					// (Dynamic `import()` cross-DO errors are handled separately by the
-					// transport patch in entrypoints.ts — see #12924.)
+					// onModuleRunner transport patch below — see #12924.)
 					if (isDifferentIOContextError(error)) {
 						const promise = runInRunnerObject(() => {
 							poolSocket.send(structuredSerializableStringify(response));
@@ -245,6 +245,11 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					runner.transport.invoke = (...args: unknown[]) => {
 						return runInRunnerObject(() => originalInvoke(...args));
 					};
+				} else {
+					__console.warn(
+						"[vitest-pool-workers] Could not patch module runner transport. " +
+							"Dynamic import() inside entrypoint/DO handlers may fail."
+					);
 				}
 			},
 		});
