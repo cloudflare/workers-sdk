@@ -1,7 +1,8 @@
+import { DurableObject } from "cloudflare:workers";
+
 // Durable Object that uses dynamic import() in fetch handler.
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/5387
-export class GreeterDO implements DurableObject {
-	constructor(readonly state: DurableObjectState) {}
+export class GreeterDO extends DurableObject {
 	async fetch(request: Request): Promise<Response> {
 		const { greet } = await import("./greeting");
 		return new Response(greet("DO"));
