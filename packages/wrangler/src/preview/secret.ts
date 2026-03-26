@@ -128,7 +128,7 @@ export async function handlePreviewSecretDeleteCommand(
 
 export async function handlePreviewSecretListCommand(
 	args: {
-		format?: string;
+		json?: boolean;
 		workerName?: string;
 		"worker-name"?: string;
 	},
@@ -144,7 +144,7 @@ export async function handlePreviewSecretListCommand(
 	);
 	const secrets = extractSecretSummaries(previewDefaults.env);
 
-	if (args.format === "json") {
+	if (args.json) {
 		logger.log(JSON.stringify(secrets, null, 2));
 		return;
 	}

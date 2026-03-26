@@ -82,7 +82,7 @@ export function formatPreviewsSettings(
 			typeof previewDefaults.observability.head_sampling_rate === "number"
 				? `, ${previewDefaults.observability.head_sampling_rate.toFixed(
 						1
-					)} sampling`
+				  )} sampling`
 				: "";
 		settingsRows.push(["observability", `${enabledLabel}${sampling}`]);
 	}
@@ -199,7 +199,7 @@ export async function handlePreviewSettingsUpdateCommand(
 
 export async function handlePreviewSettingsCommand(
 	args: {
-		format?: string;
+		json?: boolean;
 		workerName?: string;
 		"worker-name"?: string;
 	},
@@ -213,7 +213,7 @@ export async function handlePreviewSettingsCommand(
 		workerName
 	);
 
-	if (args.format === "json") {
+	if (args.json) {
 		logger.log(JSON.stringify(previewDefaults, null, 2));
 		return;
 	}

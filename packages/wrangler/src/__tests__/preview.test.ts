@@ -1299,7 +1299,7 @@ describe("wrangler preview", () => {
 				)
 			);
 			await runWrangler(
-				"preview settings --worker-name override-worker --format json"
+				"preview settings --worker-name override-worker --json"
 			);
 			expect(std.out).toContain('"compatibility_date": "2025-01-01"');
 			expect(std.out).toContain('"ENVIRONMENT"');
@@ -1842,7 +1842,7 @@ describe("wrangler preview", () => {
 					)
 				);
 				await runWrangler(
-					"preview secret list --format json --worker-name test-worker"
+					"preview secret list --json --worker-name test-worker"
 				);
 				expect(std.out).toContain('"name": "DB_PASSWORD"');
 				expect(std.out).toContain('"name": "API_KEY"');

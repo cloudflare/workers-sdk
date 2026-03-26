@@ -125,12 +125,14 @@ export const previewSettingsCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		format: {
-			describe: "Output format",
-			type: "string",
-			choices: ["json", "pretty"] as const,
-			default: "pretty",
+		json: {
+			describe: "Return output as clean JSON",
+			type: "boolean",
+			default: false,
 		},
+	},
+	behaviour: {
+		printBanner: (args) => args.json !== true,
 	},
 	handler: handlePreviewSettingsCommand,
 });
@@ -206,11 +208,10 @@ export const previewSecretListCommand = createCommand({
 		status: "private beta",
 	},
 	args: {
-		format: {
-			describe: "Output format",
-			type: "string",
-			choices: ["json", "pretty"] as const,
-			default: "pretty",
+		json: {
+			describe: "Return output as clean JSON",
+			type: "boolean",
+			default: false,
 		},
 		"worker-name": {
 			describe:
@@ -220,7 +221,7 @@ export const previewSecretListCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printBanner: (args) => args.format === "pretty",
+		printBanner: (args) => args.json !== true,
 	},
 	handler: handlePreviewSecretListCommand,
 });
