@@ -227,10 +227,6 @@ class AISearchNamespaceHandler extends ProvisionResourceHandler<
 		return this.binding.namespace as string;
 	}
 
-	inherit() {
-		this.binding.namespace ??= INHERIT_SYMBOL;
-	}
-
 	async create(name: string) {
 		await createAISearchNamespace(this.complianceConfig, this.accountId, name);
 		return name;
@@ -269,20 +265,14 @@ class AISearchNamespaceHandler extends ProvisionResourceHandler<
 		if (!this.binding.namespace) {
 			return false;
 		}
-		try {
-			await getAISearchNamespace(
-				this.complianceConfig,
-				this.accountId,
-				this.binding.namespace
-			);
-			return true;
-		} catch (e) {
-			if (e instanceof APIError && e.status === 404) {
-				// Namespace does not exist — provision it
-				return false;
-			}
-			throw e;
-		}
+
+		const namespace = await getAISearchNamespace(
+			this.complianceConfig,
+			this.accountId,
+			this.binding.namespace
+		);
+
+		return namespace !== null;
 	}
 }
 
@@ -640,7 +630,7 @@ export async function provisionBindings(
 		printBindings(
 			Object.fromEntries(
 				pendingResources.map((r) => [r.binding, { type: r.resourceType }])
-			) as Record<string, Binding>,
+			),
 			config.tail_consumers,
 			config.streaming_tail_consumers,
 			config.containers,

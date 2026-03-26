@@ -68,18 +68,8 @@ export type WorkerMetadataBinding =
 	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
-	| {
-			type: "ai_search_namespace";
-			name: string;
-			namespace: string;
-			raw?: boolean;
-	  }
-	| {
-			type: "ai_search";
-			name: string;
-			instance_name: string;
-			raw?: boolean;
-	  }
+	| { type: "ai_search_namespace"; name: string; namespace: string }
+	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
 	| {

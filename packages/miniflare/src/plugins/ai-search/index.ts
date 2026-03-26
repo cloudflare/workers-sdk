@@ -27,13 +27,6 @@ export const AI_SEARCH_PLUGIN_NAME = "ai-search";
 const AI_SEARCH_NS_SCOPE = "ai-search-ns";
 const AI_SEARCH_INST_SCOPE = "ai-search-inst";
 
-// TODO: Once workerd adds a `cloudflare-internal:ai-search-api` module,
-// update getBindings() to return `wrapped` bindings (like the AI plugin)
-// instead of plain service bindings. This will give workers a properly
-// typed AISearchNamespace / AISearchInstance object instead of a raw Fetcher.
-// The `namespace` and `instance_name` fields from the schema should then be
-// passed as inner bindings for correct instance routing.
-
 export const AI_SEARCH_PLUGIN: Plugin<typeof AISearchOptionsSchema> = {
 	options: AISearchOptionsSchema,
 	async getBindings(options) {

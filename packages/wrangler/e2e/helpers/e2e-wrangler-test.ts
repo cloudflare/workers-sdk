@@ -396,6 +396,47 @@ export class WranglerE2ETestHelper {
 		}
 	}
 
+	/** Create an AI Search instance in the default namespace and clean it up during tear-down. */
+	async aiSearchInstance(): Promise<string> {
+		const name = generateResourceName("ai-search");
+		const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+		assert(accountId, "CLOUDFLARE_ACCOUNT_ID environment variable is required");
+		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+		assert(apiToken, "CLOUDFLARE_API_TOKEN environment variable is required");
+
+		const resp = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances`,
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiToken}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ id: name }),
+			}
+		);
+		assert(
+			resp.ok,
+			`Failed to create AI Search instance: ${await resp.text()}`
+		);
+
+		this.onTeardown(async () => {
+			try {
+				await fetch(
+					`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances/${name}`,
+					{
+						method: "DELETE",
+						headers: { Authorization: `Bearer ${apiToken}` },
+					}
+				);
+			} catch (e) {
+				console.warn(`Failed to delete AI Search instance ${name}:`, e);
+			}
+		});
+
+		return name;
+	}
+
 	/** Create a ZeroTrust tunnel and clean it up during tear-down. */
 	async tunnel(): Promise<string> {
 		const Cloudflare = (await import("cloudflare")).default;

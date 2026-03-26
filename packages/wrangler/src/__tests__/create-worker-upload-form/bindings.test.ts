@@ -371,32 +371,6 @@ describe("createWorkerUploadForm — bindings", () => {
 				type: "inherit",
 			});
 		});
-
-		it("should throw when ai_search has no instance_name and not in dry run", ({
-			expect,
-		}) => {
-			const bindings: StartDevWorkerInput["bindings"] = {
-				BLOG_SEARCH: { type: "ai_search" } as never,
-			};
-			expect(() =>
-				createWorkerUploadForm(createEsmWorker(), bindings)
-			).toThrowError('BLOG_SEARCH bindings must have an "instance_name" field');
-		});
-
-		it("should convert ai_search to inherit binding during dry run when instance_name is missing", ({
-			expect,
-		}) => {
-			const bindings: StartDevWorkerInput["bindings"] = {
-				BLOG_SEARCH: { type: "ai_search" } as never,
-			};
-			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
-				dryRun: true,
-			});
-			expect(getBindings(form)).toContainEqual({
-				name: "BLOG_SEARCH",
-				type: "inherit",
-			});
-		});
 	});
 
 	describe("pipeline bindings", () => {

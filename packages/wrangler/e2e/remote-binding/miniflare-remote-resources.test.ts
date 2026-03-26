@@ -421,6 +421,58 @@ const testCases: TestCase[] = [
 		],
 	},
 	{
+		name: "AI Search Namespace",
+		scriptPath: "ai-search-namespace.js",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					AI_SEARCH_NS: {
+						type: "ai_search_namespace",
+						namespace: "default",
+					},
+				},
+			},
+			miniflareConfig: (connection) => ({
+				aiSearchNamespaces: {
+					AI_SEARCH_NS: {
+						namespace: "default",
+						remoteProxyConnectionString: connection,
+					},
+				},
+			}),
+		}),
+		expectFetchToMatch: [
+			expect.stringContaining(`"created":true`),
+			expect.stringContaining(`"deleted":true`),
+		],
+	},
+	{
+		name: "AI Search Instance",
+		scriptPath: "ai-search-instance.js",
+		setup: async (helper) => {
+			const instanceName = await helper.aiSearchInstance();
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_INST: {
+							type: "ai_search",
+							instance_name: instanceName,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchInstances: {
+						AI_SEARCH_INST: {
+							instance_name: instanceName,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
+		},
+		expectFetchToMatch: [expect.stringContaining(`"name"`)],
+	},
+	{
 		name: "Pipelines",
 		scriptPath: "pipelines.js",
 		setup: () => ({

@@ -623,7 +623,6 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				output[name] = {
 					type: "ai_search_namespace",
 					namespace: b.namespace,
-					raw: b.raw,
 				};
 				break;
 			}
@@ -635,7 +634,6 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				output[name] = {
 					type: "ai_search",
 					instance_name: b.instance_name,
-					raw: b.raw,
 				};
 				break;
 			}

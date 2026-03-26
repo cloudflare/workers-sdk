@@ -984,7 +984,7 @@ export interface EnvironmentNonInheritable {
 
 	/**
 	 * Specifies AI Search instance bindings that are bound to this Worker environment.
-	 * Each binding is bound directly to a single pre-existing instance within a namespace.
+	 * Each binding is bound directly to a single pre-existing instance within the "default" namespace.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.

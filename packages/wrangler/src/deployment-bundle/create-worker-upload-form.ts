@@ -328,7 +328,7 @@ export function createWorkerUploadForm(
 		});
 	});
 
-	ai_search_namespaces.forEach(({ binding, namespace, raw }) => {
+	ai_search_namespaces.forEach(({ binding, namespace }) => {
 		if (options?.dryRun) {
 			namespace ??= INHERIT_SYMBOL;
 		}
@@ -346,34 +346,16 @@ export function createWorkerUploadForm(
 				name: binding,
 				type: "ai_search_namespace",
 				namespace,
-				raw,
 			});
 		}
 	});
 
-	ai_search.forEach(({ binding, instance_name, raw }) => {
-		if (options?.dryRun) {
-			instance_name ??= INHERIT_SYMBOL;
-		}
-		if (instance_name === undefined) {
-			throw new UserError(
-				`${binding} bindings must have an "instance_name" field`
-			);
-		}
-
-		if (instance_name === INHERIT_SYMBOL) {
-			metadataBindings.push({
-				name: binding,
-				type: "inherit",
-			});
-		} else {
-			metadataBindings.push({
-				name: binding,
-				type: "ai_search",
-				instance_name,
-				raw,
-			});
-		}
+	ai_search.forEach(({ binding, instance_name }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "ai_search",
+			instance_name,
+		});
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {

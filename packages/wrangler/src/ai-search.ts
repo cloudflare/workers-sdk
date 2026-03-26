@@ -1,5 +1,5 @@
+import { APIError, type ComplianceConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export interface AISearchNamespace {
 	name: string;
@@ -13,12 +13,20 @@ export async function getAISearchNamespace(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceName: string
-): Promise<AISearchNamespace> {
-	return await fetchResult<AISearchNamespace>(
-		complianceConfig,
-		`/accounts/${accountId}/ai-search/namespaces/${namespaceName}`,
-		{ method: "GET" }
-	);
+): Promise<AISearchNamespace | null> {
+	try {
+		return await fetchResult<AISearchNamespace>(
+			complianceConfig,
+			`/accounts/${accountId}/ai-search/namespaces/${namespaceName}`,
+			{ method: "GET" }
+		);
+	} catch (e) {
+		if (e instanceof APIError && e.status === 404) {
+			// Namespace does not exist — provision it
+			return null;
+		}
+		throw e;
+	}
 }
 
 /**

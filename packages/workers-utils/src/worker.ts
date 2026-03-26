@@ -232,15 +232,13 @@ export interface CfVectorize {
 
 export interface CfAISearchNamespace {
 	binding: string;
-	namespace?: string | typeof INHERIT_SYMBOL;
-	raw?: boolean;
+	namespace: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
 }
 
 export interface CfAISearch {
 	binding: string;
-	instance_name?: string | typeof INHERIT_SYMBOL;
-	raw?: boolean;
+	instance_name: string;
 	remote?: boolean;
 }
 

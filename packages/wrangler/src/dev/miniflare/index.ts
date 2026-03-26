@@ -707,31 +707,25 @@ export function buildMiniflareBindingOptions(
 					}
 				: undefined,
 
-		aiSearchNamespaces:
-			aiSearchNamespaceBindings.length > 0
-				? Object.fromEntries(
-						aiSearchNamespaceBindings.map((ns) => [
-							ns.binding,
-							{
-								namespace: ns.namespace as string,
-								remoteProxyConnectionString,
-							},
-						])
-					)
-				: undefined,
+		aiSearchNamespaces: Object.fromEntries(
+			aiSearchNamespaceBindings.map((ns) => [
+				ns.binding,
+				{
+					namespace: ns.namespace as string,
+					remoteProxyConnectionString,
+				},
+			])
+		),
 
-		aiSearchInstances:
-			aiSearchInstanceBindings.length > 0
-				? Object.fromEntries(
-						aiSearchInstanceBindings.map((inst) => [
-							inst.binding,
-							{
-								instance_name: inst.instance_name as string,
-								remoteProxyConnectionString,
-							},
-						])
-					)
-				: undefined,
+		aiSearchInstances: Object.fromEntries(
+			aiSearchInstanceBindings.map((inst) => [
+				inst.binding,
+				{
+					instance_name: inst.instance_name,
+					remoteProxyConnectionString,
+				},
+			])
+		),
 
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces.map((kv) =>
