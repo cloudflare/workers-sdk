@@ -1,22 +1,9 @@
 ---
-"@cloudflare/vitest-pool-workers": minor
+"@cloudflare/vitest-pool-workers": patch
 ---
 
-Add configurable `logLevel` option to control `[vpw:*]` pool log verbosity
+Reduce default log verbosity from `VERBOSE` to `WARN`
 
-The pool logger was previously hardcoded to `VERBOSE`, causing debug messages like `[vpw:debug] Adding compatibility flag...` to always appear with no way to suppress them. A new `logLevel` option lets you control this:
+The pool logger was previously hardcoded to `VERBOSE`, causing noisy debug and informational messages on every test run (e.g. `[vpw:debug] Adding compatibility flag...`, `[vpw:info] Starting runtime...`). Only actionable warnings and errors are now printed by default.
 
-```ts
-import { defineConfig } from "vitest/config";
-import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
-
-export default defineConfig({
-	plugins: [
-		cloudflareTest({
-			logLevel: "warn", // "none" | "error" | "warn" | "info" | "debug" | "verbose"
-		}),
-	],
-});
-```
-
-The default is now `"info"`, which hides debug/verbose messages while still showing informational, warning, and error output.
+For debugging, set `NODE_DEBUG=vitest-pool-workers` to restore the detailed output.

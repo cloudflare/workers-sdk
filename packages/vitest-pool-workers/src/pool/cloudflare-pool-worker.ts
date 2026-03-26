@@ -13,7 +13,6 @@ import {
 	getProjectMiniflare,
 	getRunnerName,
 	maybeGetResolvedMainPath,
-	setPoolLogLevel,
 	structuredSerializableParse,
 	structuredSerializableStringify,
 } from ".";
@@ -77,7 +76,6 @@ export class CloudflarePoolWorker implements PoolWorker {
 			this.options.project,
 			resolvedPoolOptions
 		);
-		setPoolLogLevel(this.parsedPoolOptions.logLevel);
 		this.main = maybeGetResolvedMainPath(
 			this.options.project,
 			this.parsedPoolOptions

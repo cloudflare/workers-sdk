@@ -37,13 +37,6 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	main: z.ostring(),
 	/**
-	 * Controls the verbosity of `[vpw:*]` pool log messages.
-	 * Defaults to `"info"`.
-	 */
-	logLevel: z
-		.enum(["none", "error", "warn", "info", "debug", "verbose"])
-		.default("info"),
-	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
 	 */
