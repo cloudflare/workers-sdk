@@ -199,14 +199,14 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				try {
 					poolSocket.send(structuredSerializableStringify(response));
 				} catch (error) {
-					// If the user tried to perform a dynamic `import()` or `console.log()`
-					// from inside a `export default { fetch() { ... } }` handler using `SELF`
-					// or from inside their own Durable Object, Vitest will try to send an
-					// RPC message from a non-`RunnerObject` I/O context. There's nothing we
-					// can really do to prevent this: we want to run these things in different
-					// I/O contexts with the behaviour this causes. We'd still like to send
-					// the RPC message though, so if we detect this, we try resend the message
-					// from the runner object.
+					// If the user called `console.log()` or similar from inside an
+					// `export default { fetch() {} }` handler (via `SELF`/`exports`) or
+					// from inside their own Durable Object, Vitest will try to send an
+					// RPC message from a non-`RunnerObject` I/O context. We'd still like
+					// to send the message, so if we detect a cross-DO I/O error we
+					// resend from the runner object.
+					// (Dynamic `import()` cross-DO errors are handled separately by the
+					// onModuleRunner transport patch below — see #12924.)
 					if (isDifferentIOContextError(error)) {
 						const promise = runInRunnerObject(() => {
 							poolSocket.send(structuredSerializableStringify(response));
@@ -231,6 +231,27 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			runTests: (state, traces) => runBaseTests("run", state, traces),
 			collectTests: (state, traces) => runBaseTests("collect", state, traces),
 			setup: setupEnvironment,
+			// Patch the module runner's transport so that `invoke()` calls always
+			// execute inside the Runner DO's I/O context. Without this, a dynamic
+			// `import()` inside an entrypoint handler (which runs in a *different*
+			// DO context) fails with "Cannot perform I/O on behalf of a different
+			// Durable Object". See: https://github.com/cloudflare/workers-sdk/issues/12924
+			onModuleRunner(moduleRunner: unknown) {
+				const runner = moduleRunner as {
+					transport?: { invoke?: (...args: unknown[]) => unknown };
+				};
+				if (runner.transport?.invoke) {
+					const originalInvoke = runner.transport.invoke.bind(runner.transport);
+					runner.transport.invoke = (...args: unknown[]) => {
+						return runInRunnerObject(() => originalInvoke(...args));
+					};
+				} else {
+					__console.warn(
+						"[vitest-pool-workers] Could not patch module runner transport. " +
+							"Dynamic import() inside entrypoint/DO handlers may fail."
+					);
+				}
+			},
 		});
 
 		return new Response(null, { status: 101, webSocket: poolResponseSocket });
