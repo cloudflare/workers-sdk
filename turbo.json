@@ -1,7 +1,7 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"remoteCache": {
-		"signature": true
+		"signature": true,
 	},
 	"globalEnv": ["CI_OS", "NODE_VERSION"],
 	"globalPassThroughEnv": [
@@ -24,34 +24,36 @@
 		"WRANGLER_LOG_PATH",
 		"WRANGLER_LOG",
 		"CLOUDFLARE_API_TOKEN",
-		"CLOUDFLARE_ACCOUNT_ID"
+		"CLOUDFLARE_ACCOUNT_ID",
+		"TURBO_HASH",
+		"TURBO_INVOCATION_DIR",
 	],
 	"tasks": {
 		"dev": {
 			"persistent": true,
-			"cache": false
+			"cache": false,
 		},
 		"build": {
 			"dependsOn": ["^build"],
-			"outputLogs": "new-only"
+			"outputLogs": "new-only",
 		},
 		"test": {
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
 		},
 		"test:watch": {
 			"persistent": true,
-			"cache": false
+			"cache": false,
 		},
 		"//#check:lint": {},
 		"check:type": {
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
 		},
 		"type:tests": {
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
-			"outputLogs": "new-only"
+			"outputLogs": "new-only",
 		},
 		"test:e2e": {
 			"dependsOn": ["build"],
@@ -60,11 +62,11 @@
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
 				"E2E_ACCOUNT_WORKERS_DEV_DOMAIN",
-				"NODE_DEBUG"
-			]
+				"NODE_DEBUG",
+			],
 		},
 		"//#check:format": {
-			"cache": true
-		}
-	}
+			"cache": true,
+		},
+	},
 }

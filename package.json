@@ -10,6 +10,7 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
+		"enforce-turbo": "node -r esbuild-register tools/enforce/turbo.ts",
 		"build": "dotenv -- turbo build",
 		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:catalog && pnpm check:deployments && pnpm check:workflows && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:catalog": "node -r esbuild-register tools/deployments/validate-catalog-usage.ts",
