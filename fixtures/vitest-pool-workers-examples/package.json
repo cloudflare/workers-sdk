@@ -19,6 +19,7 @@
 		"@types/nunjucks": "^3.2.6",
 		"better-auth": "^1.4.6",
 		"discord-api-types": "0.37.98",
+		"esm-dep": "file:./module-resolution/vendor/esm-dep",
 		"ext-dep": "file:./module-resolution/vendor/ext-dep",
 		"jose": "^5.9.3",
 		"mime-types": "^2.1.35",
