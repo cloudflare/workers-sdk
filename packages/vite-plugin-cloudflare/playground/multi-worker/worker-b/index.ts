@@ -7,6 +7,23 @@ interface Env {
 export default class extends WorkerEntrypoint<Env> {
 	override fetch(request: Request) {
 		const url = new URL(request.url);
+		if (url.pathname === "/websocket") {
+			const upgradeHeader = request.headers.get("Upgrade");
+			if (upgradeHeader !== "websocket") {
+				return new Response("Worker B expected Upgrade: websocket", {
+					status: 426,
+				});
+			}
+
+			const { 0: client, 1: server } = new WebSocketPair();
+			server.accept();
+			server.addEventListener("message", (event) => {
+				server.send(`Worker B received: ${event.data}`);
+			});
+
+			return new Response(null, { status: 101, webSocket: client });
+		}
+
 		if (url.pathname === "/config-test") {
 			return Response.json({
 				configuredVar: this.env.CONFIGURED_VAR,
