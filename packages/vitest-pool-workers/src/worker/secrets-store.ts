@@ -1,5 +1,7 @@
-import { ADMIN_API } from "../../../miniflare/src/workers/secrets-store/constants";
 import type { SecretsStoreSecretAdmin } from "miniflare";
+
+// Must match ADMIN_API in miniflare/src/workers/secrets-store/constants.ts
+const ADMIN_API = "SecretsStoreSecret::admin_api";
 
 /**
  * Returns the admin API for a secrets store binding, allowing tests to
