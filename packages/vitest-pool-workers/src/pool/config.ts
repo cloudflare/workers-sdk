@@ -94,6 +94,14 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 };
 
+/** Post-parse type where `main: false` has been normalised to `undefined`. */
+export type ParsedWorkerPoolOptions = Omit<
+	WorkersPoolOptionsWithDefines,
+	"main"
+> & {
+	main?: string;
+};
+
 type PathParseParams = Pick<ParseParams, "path">;
 
 function isZodErrorLike(value: unknown): value is ZodError {
@@ -200,7 +208,7 @@ export const remoteProxySessionsDataMap = new Map<
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown
-): Promise<WorkersPoolOptionsWithDefines> {
+): Promise<ParsedWorkerPoolOptions> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(
 		value
@@ -320,28 +328,30 @@ async function parseCustomPoolOptions(
 	}
 
 	// Convert `main: false` to `undefined` so downstream code only ever sees
-	// `string | undefined`.
+	// `string | undefined`. After this point the object satisfies
+	// `ParsedWorkerPoolOptions`.
 	if (options.main === false) {
 		options.main = undefined;
 	}
+	const parsed = options as ParsedWorkerPoolOptions;
 
 	// Some assets plumbing that should be hidden from the end user
-	if (options.miniflare?.assets) {
+	if (parsed.miniflare?.assets) {
 		// (Used to set the SELF binding to point to the router worker instead)
-		options.miniflare.hasAssetsAndIsVitest = true;
-		options.miniflare.assets.routerConfig ??= {};
-		options.miniflare.assets.routerConfig.has_user_worker = Boolean(
-			options.main
+		parsed.miniflare.hasAssetsAndIsVitest = true;
+		parsed.miniflare.assets.routerConfig ??= {};
+		parsed.miniflare.assets.routerConfig.has_user_worker = Boolean(
+			parsed.main
 		);
 	}
 
-	return options;
+	return parsed;
 }
 
 export async function parseProjectOptions(
 	project: TestProject,
 	poolOptions: unknown
-): Promise<WorkersPoolOptionsWithDefines> {
+): Promise<ParsedWorkerPoolOptions> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
 	// hit this case.
