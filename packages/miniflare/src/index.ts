@@ -2711,16 +2711,7 @@ export class Miniflare {
 	getSecretsStoreSecretAPI(
 		bindingName: string,
 		workerName?: string
-	): Promise<
-		() => {
-			create: (value: string) => Promise<string>;
-			update: (value: string, id: string) => Promise<string>;
-			duplicate: (id: string, newName: string) => Promise<string>;
-			delete: (id: string) => Promise<void>;
-			list: () => Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
-			get: (id: string) => Promise<string>;
-		}
-	> {
+	): Promise<() => SecretsStoreSecretAdmin> {
 		return this.#getProxy(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
@@ -2826,6 +2817,17 @@ export class Miniflare {
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";
+
+export { ADMIN_API as SECRETS_STORE_ADMIN_API } from "./workers/secrets-store/constants";
+
+export interface SecretsStoreSecretAdmin {
+	create(value: string): Promise<string>;
+	update(value: string, id: string): Promise<string>;
+	duplicate(id: string, newName: string): Promise<string>;
+	delete(id: string): Promise<void>;
+	list(): Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
+	get(id: string): Promise<string>;
+}
 
 export * from "./http";
 export * from "./plugins";

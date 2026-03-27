@@ -80,11 +80,30 @@ test("adminSecretsStore seeds and reads secrets", async ({
 				import { env } from "cloudflare:workers";
 				import { it } from "vitest";
 
-				it("seeds and retrieves a secret", async ({ expect }) => {
+				it("create, update, list, and delete a secret", async ({ expect }) => {
 					const admin = adminSecretsStore(env.MY_SECRET);
-					await admin.create("test-value");
-					const value = await env.MY_SECRET.get();
-					expect(value).toBe("test-value");
+
+					// create
+					const id = await admin.create("initial-value");
+					expect(typeof id).toBe("string");
+					expect(await env.MY_SECRET.get()).toBe("initial-value");
+
+					// update
+					await admin.update("updated-value", id);
+					expect(await env.MY_SECRET.get()).toBe("updated-value");
+
+					// list
+					const secrets = await admin.list();
+					expect(secrets.length).toBeGreaterThan(0);
+
+					// delete
+					await admin.delete(id);
+					try {
+						await env.MY_SECRET.get();
+						expect.unreachable("expected get() to throw after delete");
+					} catch (e) {
+						expect(String(e)).toContain("not found");
+					}
 				});
 			`,
 	});
