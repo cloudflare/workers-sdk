@@ -339,9 +339,7 @@ async function parseCustomPoolOptions(
 		// (Used to set the SELF binding to point to the router worker instead)
 		parsed.miniflare.hasAssetsAndIsVitest = true;
 		parsed.miniflare.assets.routerConfig ??= {};
-		parsed.miniflare.assets.routerConfig.has_user_worker = Boolean(
-			parsed.main
-		);
+		parsed.miniflare.assets.routerConfig.has_user_worker = Boolean(parsed.main);
 	}
 
 	return parsed;
