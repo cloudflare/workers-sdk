@@ -67,8 +67,8 @@ export function structuredSerializableParse(value: string): unknown {
 	return devalue.parse(value, structuredSerializableRevivers);
 }
 
-// Log for pool warnings/errors (user-actionable messages only)
-const log = new Log(LogLevel.WARN, { prefix: "vpw" });
+// Log for pool info/warnings/errors (user-actionable messages only)
+const log = new Log(LogLevel.INFO, { prefix: "" });
 // Debug log gated behind NODE_DEBUG=vitest-pool-workers
 const debug = util.debuglog("vitest-pool-workers");
 // Log for Miniflare instances, used for user code warnings/errors
@@ -662,13 +662,12 @@ export async function getProjectMiniflare(
 		poolOptions,
 		main
 	);
-	debug(
-		"Starting runtime for %s%s...",
-		getRelativeProjectPath(project),
-		mfOptions.inspectorPort !== undefined
-			? ` with inspector on port ${mfOptions.inspectorPort}`
-			: ""
-	);
+	debug("Starting runtime for %s...", getRelativeProjectPath(project));
+	if (mfOptions.inspectorPort !== undefined) {
+		log.info(
+			`Starting inspector on port ${mfOptions.inspectorPort} for ${getRelativeProjectPath(project)}`
+		);
+	}
 	const mf = new Miniflare(mfOptions);
 	await mf.ready;
 	return mf;
