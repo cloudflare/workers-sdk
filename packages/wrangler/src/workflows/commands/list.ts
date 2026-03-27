@@ -2,6 +2,11 @@ import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import {
+	fetchLocalResult,
+	localWorkflowArgs,
+	type LocalWorkflow,
+} from "../local";
 import type { Workflow } from "../types";
 
 export const workflowsListCommand = createCommand({
@@ -11,6 +16,7 @@ export const workflowsListCommand = createCommand({
 		status: "stable",
 	},
 	args: {
+		...localWorkflowArgs,
 		page: {
 			describe:
 				'Show a sepecific page from the listing, can configure page size using "per-page"',
@@ -23,6 +29,30 @@ export const workflowsListCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
+		if (args.local) {
+			const workflows = await fetchLocalResult<LocalWorkflow[]>(
+				args.port,
+				"/workflows"
+			);
+
+			if (workflows.length === 0) {
+				logger.warn("There are no Workflows in the local dev session");
+				return;
+			}
+
+			logger.info(
+				`Showing ${workflows.length} workflow${workflows.length > 1 ? "s" : ""} from local dev session:`
+			);
+
+			const prettierWorkflows = workflows.map((workflow) => ({
+				Name: workflow.name,
+				"Script name": workflow.script_name,
+				"Class name": workflow.class_name,
+			}));
+			logger.table(prettierWorkflows);
+			return;
+		}
+
 		const accountId = await requireAuth(config);
 
 		const URLParams = new URLSearchParams();

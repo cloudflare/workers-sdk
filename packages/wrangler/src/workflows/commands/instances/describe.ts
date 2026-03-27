@@ -12,6 +12,11 @@ import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import formatLabelledValues from "../../../utils/render-labelled-values";
 import {
+	fetchLocalResult,
+	getLocalInstanceIdFromArgs,
+	localWorkflowArgs,
+} from "../../local";
+import {
 	emojifyInstanceStatus,
 	emojifyInstanceTriggerName,
 	emojifyStepType,
@@ -32,9 +37,9 @@ export const workflowsInstancesDescribeCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	positionalArgs: ["name", "id"],
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -61,69 +66,94 @@ export const workflowsInstancesDescribeCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
+		let id: string;
+		let instance: InstanceStatusAndLogs;
 
-		const id = await getInstanceIdFromArgs(accountId, args, config);
-
-		const instance = await fetchResult<InstanceStatusAndLogs>(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
-		);
-
-		const formattedInstance: Record<string, string> = {
-			"Workflow Name": args.name,
-			"Instance Id": id,
-			"Version Id": instance.versionId,
-			Status: emojifyInstanceStatus(instance.status),
-			Trigger: emojifyInstanceTriggerName(instance.trigger.source),
-			Queued: new Date(instance.queued).toLocaleString(),
-		};
-
-		if (instance.success != null) {
-			formattedInstance.Success = instance.success ? "✅ Yes" : "❌ No";
-		}
-
-		// date related stuff, if the workflow is still running assume duration until now
-		if (instance.start != undefined) {
-			formattedInstance.Start = new Date(instance.start).toLocaleString();
-		}
-
-		if (instance.end != undefined) {
-			formattedInstance.End = new Date(instance.end).toLocaleString();
-		}
-
-		if (instance.start != null && instance.end != null) {
-			formattedInstance.Duration = formatDistanceStrict(
-				new Date(instance.end),
-				new Date(instance.start)
+		if (args.local) {
+			id = await getLocalInstanceIdFromArgs(args.port, args);
+			instance = await fetchLocalResult<InstanceStatusAndLogs>(
+				args.port,
+				`/workflows/${encodeURIComponent(args.name)}/instances/${encodeURIComponent(id)}`
 			);
-		} else if (instance.start != null) {
-			// Convert current date to UTC
-			formattedInstance.Duration = formatDistanceStrict(
-				new Date(instance.start),
-				new Date(new Date().toUTCString().slice(0, -4))
+		} else {
+			const accountId = await requireAuth(config);
+			id = await getInstanceIdFromArgs(accountId, args, config);
+			instance = await fetchResult<InstanceStatusAndLogs>(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
 			);
 		}
 
-		const lastSuccessfulStepName = getLastSuccessfulStep(instance);
-		if (lastSuccessfulStepName != null) {
-			formattedInstance["Last Successful Step"] = lastSuccessfulStepName;
-		}
-
-		// display the error if the instance errored out
-		if (instance.error != null) {
-			formattedInstance.Error = red(
-				`${instance.error.name}: ${instance.error.message}`
-			);
-		}
-
-		logRaw("Describing latest instance:");
-		logRaw(formatLabelledValues(formattedInstance));
-		logRaw(white("Steps:"));
-
-		instance.steps.forEach(logStep.bind(false, args));
+		renderInstanceDetails(args, id, instance);
 	},
 });
+
+function renderInstanceDetails(
+	args: typeof workflowsInstancesDescribeCommand.args,
+	id: string,
+	instance: InstanceStatusAndLogs
+) {
+	const formattedInstance: Record<string, string> = {
+		"Workflow Name": args.name,
+		"Instance Id": id,
+		...(instance.versionId != null ? { "Version Id": instance.versionId } : {}),
+		Status: emojifyInstanceStatus(instance.status),
+	};
+
+	if (instance.trigger) {
+		formattedInstance.Trigger = emojifyInstanceTriggerName(
+			instance.trigger.source
+		);
+	}
+
+	if (instance.queued) {
+		formattedInstance.Queued = new Date(instance.queued).toLocaleString();
+	}
+
+	if (instance.success != null) {
+		formattedInstance.Success = instance.success ? "✅ Yes" : "❌ No";
+	}
+
+	// date related stuff, if the workflow is still running assume duration until now
+	if (instance.start != undefined) {
+		formattedInstance.Start = new Date(instance.start).toLocaleString();
+	}
+
+	if (instance.end != undefined) {
+		formattedInstance.End = new Date(instance.end).toLocaleString();
+	}
+
+	if (instance.start != null && instance.end != null) {
+		formattedInstance.Duration = formatDistanceStrict(
+			new Date(instance.end),
+			new Date(instance.start)
+		);
+	} else if (instance.start != null) {
+		// Convert current date to UTC
+		formattedInstance.Duration = formatDistanceStrict(
+			new Date(instance.start),
+			new Date(new Date().toUTCString().slice(0, -4))
+		);
+	}
+
+	const lastSuccessfulStepName = getLastSuccessfulStep(instance);
+	if (lastSuccessfulStepName != null) {
+		formattedInstance["Last Successful Step"] = lastSuccessfulStepName;
+	}
+
+	// display the error if the instance errored out
+	if (instance.error != null) {
+		formattedInstance.Error = red(
+			`${instance.error.name}: ${instance.error.message}`
+		);
+	}
+
+	logRaw("Describing latest instance:");
+	logRaw(formatLabelledValues(formattedInstance));
+	logRaw(white("Steps:"));
+
+	instance.steps.forEach(logStep.bind(false, args));
+}
 
 function logStep(
 	args: typeof workflowsInstancesDescribeCommand.args,

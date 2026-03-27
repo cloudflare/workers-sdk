@@ -4,6 +4,11 @@ import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
+import {
+	fetchLocalResult,
+	localWorkflowArgs,
+	type LocalWorkflowDetails,
+} from "../local";
 import type { Version, Workflow } from "../types";
 
 export const workflowsDescribeCommand = createCommand({
@@ -13,6 +18,7 @@ export const workflowsDescribeCommand = createCommand({
 		status: "stable",
 	},
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -21,6 +27,37 @@ export const workflowsDescribeCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
+		if (args.local) {
+			const workflow = await fetchLocalResult<LocalWorkflowDetails>(
+				args.port,
+				`/workflows/${encodeURIComponent(args.name)}`
+			);
+
+			logRaw(
+				formatLabelledValues({
+					Name: workflow.name,
+					"Script Name": workflow.script_name,
+					"Class Name": workflow.class_name,
+				})
+			);
+
+			if (workflow.instances) {
+				logRaw(white("Instance Status Counts:"));
+				logRaw(
+					formatLabelledValues(
+						Object.fromEntries(
+							Object.entries(workflow.instances).map(([status, count]) => [
+								status,
+								String(count),
+							])
+						),
+						{ indentationCount: 2 }
+					)
+				);
+			}
+			return;
+		}
+
 		const accountId = await requireAuth(config);
 
 		const workflow = await fetchResult<Workflow>(

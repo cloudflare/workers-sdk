@@ -2,6 +2,7 @@ import { fetchCursorPage } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import { fetchLocalResult, localWorkflowArgs } from "../../local";
 import { emojifyInstanceStatus, validateStatus } from "../../utils";
 import type { Instance } from "../../types";
 
@@ -12,9 +13,9 @@ export const workflowsInstancesListCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	positionalArgs: ["name"],
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -43,6 +44,59 @@ export const workflowsInstancesListCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
+		if (args.local) {
+			const URLParams = new URLSearchParams();
+
+			if (args.status !== undefined) {
+				const validatedStatus = validateStatus(args.status);
+				URLParams.set("status", validatedStatus);
+			}
+
+			if (args.perPage !== undefined) {
+				URLParams.set("per_page", args.perPage.toString());
+			}
+
+			URLParams.set("page", args.page.toString());
+
+			const queryString = URLParams.toString();
+			const path = `/workflows/${encodeURIComponent(args.name)}/instances${queryString ? `?${queryString}` : ""}`;
+
+			const instances = await fetchLocalResult<
+				Array<{ id: string; status?: string; created_on?: string }>
+			>(args.port, path);
+
+			if (instances.length === 0 && args.page === 1) {
+				logger.warn(
+					`There are no instances in workflow "${args.name}". You can trigger it with "wrangler workflows trigger ${args.name} --local"`
+				);
+				return;
+			}
+
+			if (instances.length === 0 && args.page > 1) {
+				logger.warn(
+					`No instances found on page ${args.page}. Please try a smaller page number.`
+				);
+				return;
+			}
+
+			logger.info(
+				`Showing ${instances.length} instance${instances.length > 1 ? "s" : ""} from page ${args.page}:`
+			);
+
+			const prettierInstances = instances.map((instance) => ({
+				"Instance ID": instance.id,
+				Created: instance.created_on
+					? new Date(instance.created_on).toLocaleString()
+					: "N/A",
+				Status: instance.status
+					? emojifyInstanceStatus(instance.status as Instance["status"])
+					: "N/A",
+			}));
+
+			logger.table(prettierInstances);
+			return;
+		}
+
 		const accountId = await requireAuth(config);
 
 		const URLParams = new URLSearchParams();
