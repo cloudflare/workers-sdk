@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.30.2
+
+### Patch Changes
+
+- [#12953](https://github.com/cloudflare/workers-sdk/pull/12953) [`80b093e`](https://github.com/cloudflare/workers-sdk/commit/80b093eed2229a272b5aae0c34dc5c076c3d21e5) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix `Cannot perform I/O on behalf of a different request` errors for deferred dynamic imports
+
+  Concurrent requests that loaded the same dynamic import were previously sharing the same promise to resolve it in a Worker context. We now ensure that all imports execute within a Durable Object's IoContext before the result is returned to the Worker.
+
+- Updated dependencies [[`eeaa473`](https://github.com/cloudflare/workers-sdk/commit/eeaa47353c822b0e96fd892f2e3f957dba52715b), [`9fcdfca`](https://github.com/cloudflare/workers-sdk/commit/9fcdfca775d3d412abe7547d0833414599bab221), [`bc24ec8`](https://github.com/cloudflare/workers-sdk/commit/bc24ec81b9ed341dd165b7690f8602f6d738de0c), [`1faff35`](https://github.com/cloudflare/workers-sdk/commit/1faff35e9c84e40af882d15f7515c625d6f5ac95), [`0b4c21a`](https://github.com/cloudflare/workers-sdk/commit/0b4c21a3bf765f4c389c669dc44c8243f6889347), [`535582d`](https://github.com/cloudflare/workers-sdk/commit/535582d581613a3068a934ba0179d2cfde863359), [`992f9a3`](https://github.com/cloudflare/workers-sdk/commit/992f9a3ea15d14599faa573b8d49ee4d7f9e338a), [`f4ea4ac`](https://github.com/cloudflare/workers-sdk/commit/f4ea4accad70d6a55b648c610cfc806e5be36477), [`91b7f73`](https://github.com/cloudflare/workers-sdk/commit/91b7f73e3554e72d539ccd4034faaab1fb60b470), [`f6cdab2`](https://github.com/cloudflare/workers-sdk/commit/f6cdab206cff65e5db62998512676036edde6841), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5), [`ce65246`](https://github.com/cloudflare/workers-sdk/commit/ce65246010eaa0ea3c4c0c74e228f6597cf4332c), [`7a5be20`](https://github.com/cloudflare/workers-sdk/commit/7a5be2078800426a9ef1f8520ef72a99d9847c16), [`6b50bfa`](https://github.com/cloudflare/workers-sdk/commit/6b50bfa58de4716ffb7125e0ec28a68e40b22ce1), [`0386553`](https://github.com/cloudflare/workers-sdk/commit/0386553d80ad10717f5294e8a5979af703cbcbf8), [`9c5ebf5`](https://github.com/cloudflare/workers-sdk/commit/9c5ebf56291199eeaec43513732fd3fa7fbd502d), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5)]:
+  - wrangler@4.78.0
+  - miniflare@4.20260317.3
+
 ## 1.30.1
 
 ### Patch Changes

@@ -1,5 +1,26 @@
 # @cloudflare/workers-utils
 
+## 0.14.0
+
+### Minor Changes
+
+- [#13027](https://github.com/cloudflare/workers-sdk/pull/13027) [`9fcdfca`](https://github.com/cloudflare/workers-sdk/commit/9fcdfca775d3d412abe7547d0833414599bab221) Thanks [@G4brym](https://github.com/G4brym)! - feat: Add `ai_search_namespaces` and `ai_search` binding types
+
+  Two new binding types for AI Search:
+
+  - `ai_search_namespaces`: Namespace binding — `namespace` is required and auto-provisioned at deploy time if it doesn't exist (like R2 buckets)
+  - `ai_search`: Single instance binding bound directly to a pre-existing instance in the default namespace
+
+  Both are remote-only in local dev.
+
+### Patch Changes
+
+- [#13018](https://github.com/cloudflare/workers-sdk/pull/13018) [`9c5ebf5`](https://github.com/cloudflare/workers-sdk/commit/9c5ebf56291199eeaec43513732fd3fa7fbd502d) Thanks [@tgarg-cf](https://github.com/tgarg-cf)! - Validate that queue consumers in wrangler config only use the "worker" type
+
+  Previously, non-worker consumer types (e.g. `http_pull`) could be specified in the `queues.consumers` config. Now, wrangler will error if a consumer `type` other than `"worker"` is specified in the config file.
+
+  To configure non-worker consumer types, use the `wrangler queues consumer` CLI commands instead (e.g. `wrangler queues consumer http-pull add`).
+
 ## 0.13.0
 
 ### Minor Changes
