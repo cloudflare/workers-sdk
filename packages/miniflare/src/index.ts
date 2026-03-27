@@ -2818,8 +2818,6 @@ export class Miniflare {
 
 export type { WorkerdStructuredLog } from "./plugins/core";
 
-export { ADMIN_API as SECRETS_STORE_ADMIN_API } from "./workers/secrets-store/constants";
-
 export interface SecretsStoreSecretAdmin {
 	create(value: string): Promise<string>;
 	update(value: string, id: string): Promise<string>;
