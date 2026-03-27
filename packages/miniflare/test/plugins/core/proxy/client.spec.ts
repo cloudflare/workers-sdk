@@ -5,6 +5,7 @@ import { text } from "node:stream/consumers";
 import { ReadableStream, WritableStream } from "node:stream/web";
 import util from "node:util";
 import {
+	CorePaths,
 	DeferredPromise,
 	fetch,
 	MessageEvent,
@@ -54,6 +55,28 @@ describe("ProxyClient", () => {
 		res.webSocket.send("hello");
 		const event = await eventPromise;
 		expect(event.data).toBe("echo:hello");
+	});
+
+	test("preserves original URL for service binding fetch", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			script: nullScript,
+			serviceBindings: {
+				CUSTOM(request: Request) {
+					return new Response(request.url);
+				},
+			},
+		});
+		useDispose(mf);
+
+		const { CUSTOM } = await mf.getBindings<{
+			CUSTOM: ReplaceWorkersTypes<Fetcher>;
+		}>();
+
+		const url = "https://placeholder/path?query=value";
+		const res = await CUSTOM.fetch(url);
+		expect(await res.text()).toBe(url);
 	});
 
 	test("supports serialising multiple ReadableStreams, Blobs and Files", async ({
@@ -329,11 +352,12 @@ describe("ProxyClient", () => {
 		const mf = new Miniflare({ script: nullScript });
 		useDispose(mf);
 		const url = await mf.ready;
+		const proxyUrl = new URL(CorePaths.PLATFORM_PROXY, url);
 
 		// Check validates `Host` header
 		const statusPromise = new DeferredPromise<number>();
 		const req = http.get(
-			url,
+			proxyUrl,
 			{ setHost: false, headers: { "MF-Op": "GET", Host: "localhost" } },
 			(res) => statusPromise.resolve(res.statusCode ?? 0)
 		);
@@ -341,20 +365,25 @@ describe("ProxyClient", () => {
 		expect(await statusPromise).toBe(401);
 
 		// Check validates `MF-Op-Secret` header
-		let res = await fetch(url, {
+		let res = await fetch(proxyUrl, {
 			headers: { "MF-Op": "GET" }, // (missing)
 		});
 		expect(res.status).toBe(401);
 		await res.arrayBuffer(); // (drain)
-		res = await fetch(url, {
+		res = await fetch(proxyUrl, {
 			headers: { "MF-Op": "GET", "MF-Op-Secret": "aaaa" }, // (too short)
 		});
 		expect(res.status).toBe(401);
 		await res.arrayBuffer(); // (drain)
-		res = await fetch(url, {
+		res = await fetch(proxyUrl, {
 			headers: { "MF-Op": "GET", "MF-Op-Secret": "a".repeat(32) }, // (wrong)
 		});
 		expect(res.status).toBe(401);
+		await res.arrayBuffer(); // (drain)
+
+		// Check requests to proxy path without MF-Op header return 400
+		res = await fetch(proxyUrl);
+		expect(res.status).toBe(400);
 		await res.arrayBuffer(); // (drain)
 	});
 });
