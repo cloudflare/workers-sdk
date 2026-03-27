@@ -46,13 +46,15 @@ async function runInRunnerObject(
 	const id = nextCallbackId++;
 	pendingCallbacks.set(id, callback);
 
-	const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
-	await stub.executeCallback(id);
+	try {
+		const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
+		await stub.executeCallback(id);
 
-	const result = callbackResults.get(id);
-	callbackResults.delete(id);
-
-	return result;
+		return callbackResults.get(id);
+	} finally {
+		pendingCallbacks.delete(id);
+		callbackResults.delete(id);
+	}
 }
 
 /**
@@ -152,7 +154,6 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 	 */
 	async executeCallback(id: number): Promise<void> {
 		const callback = pendingCallbacks.get(id);
-		pendingCallbacks.delete(id);
 
 		if (!callback) {
 			throw new Error(`No pending callback with id ${id}`);
