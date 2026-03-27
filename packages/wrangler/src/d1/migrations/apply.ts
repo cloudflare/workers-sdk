@@ -15,7 +15,6 @@ import {
 } from "./helpers";
 import type { ParseError } from "@cloudflare/workers-utils";
 
-
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {
 		description: "Apply any unapplied D1 migrations",
@@ -70,6 +69,7 @@ export const d1MigrationsApplyCommand = createCommand({
 			type: "boolean",
 			description: "Automatically apply all pending migrations without prompt",
 			default: false,
+			alias: "y",
 		},
 	},
 	positionalArgs: ["database"],
