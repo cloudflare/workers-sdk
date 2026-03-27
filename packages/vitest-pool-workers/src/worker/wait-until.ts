@@ -31,7 +31,7 @@ export async function waitForWaitUntil(
 
 	while (waitUntil.length > 0) {
 		const batch = waitUntil.splice(0);
-		let timeoutId: ReturnType<typeof setTimeout>;
+		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 		const result = await Promise.race([
 			Promise.allSettled(batch).then((results) => ({ results })),
 			new Promise<typeof kTimedOut>(
@@ -39,7 +39,7 @@ export async function waitForWaitUntil(
 					(timeoutId = setTimeout(() => resolve(kTimedOut), WAIT_UNTIL_TIMEOUT))
 			),
 		]);
-		clearTimeout(timeoutId!);
+		clearTimeout(timeoutId);
 
 		if (result === kTimedOut) {
 			__console.warn(
