@@ -1,0 +1,4 @@
+{
+	"name": "mock-directory",
+	"main": "src/index.ts"
+}

@@ -7,13 +7,35 @@ import {
 	registerHandlerAndGlobalWaitUntil,
 	runInRunnerObject,
 } from "cloudflare:test-internal";
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, env } from "cloudflare:workers";
 import * as devalue from "devalue";
 // Using relative path here to ensure `esbuild` bundles it
 import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
+
+// Minimal type declarations for the VitestMocker methods we override.
+// These are internal Vitest types not publicly exported.
+interface PendingSuiteMock {
+	action: "mock" | "unmock";
+	id: string;
+	importer: string;
+	factory?: unknown;
+}
+interface Mocker {
+	resolveMocks: () => Promise<void>;
+	findMockRedirect: (mockPath: string, external: string | null) => string | null;
+	resolveId: (
+		id: string,
+		importer?: string
+	) => Promise<{ id: string; url: string; external: string | null }>;
+	root: string;
+	constructor: unknown;
+}
+interface PendingIds {
+	pendingIds: PendingSuiteMock[];
+}
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -133,6 +155,28 @@ function isDifferentIOContextError(e: unknown) {
 	);
 }
 
+// Fetch the __mocks__ redirect for a given module from the pool-side loopback
+// service, which has host filesystem access. Returns the absolute path to the
+// __mocks__ file, or null if none exists.
+async function fetchMockRedirect(
+	root: string,
+	mockPath: string,
+	external: string | null
+): Promise<string | null> {
+	const params = new URLSearchParams({ root, mockPath });
+	if (external !== null) {
+		params.set("external", external);
+	}
+	const res =
+		await env.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
+			`http://placeholder/mock-redirect?${params}`
+		);
+	if (res.status === 404) {
+		return null;
+	}
+	return res.text();
+}
+
 let patchedFunction = false;
 function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	if (patchedFunction) {
@@ -195,6 +239,53 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		poolSocket.accept();
 
 		init({
+			onModuleRunner: (runner) => {
+				// Override the mocker's __mocks__ directory resolution to work inside
+				// workerd. The default implementation uses node:fs (existsSync, etc.)
+				// which doesn't have host filesystem access inside workerd. Instead,
+				// we pre-fetch redirects from the loopback service (which runs on the
+				// Node.js pool side) in the async resolveMocks(), then let the sync
+				// findMockRedirect() do a simple map lookup.
+				const mocker = (runner as { mocker: Mocker }).mocker;
+				const redirectCache = new Map<string, string>();
+
+				const originalResolveMocks = mocker.resolveMocks.bind(mocker);
+				mocker.resolveMocks = async () => {
+					// Access pending mock registrations from the static property
+					const pendingIds = (mocker.constructor as PendingIds).pendingIds;
+					if (pendingIds?.length) {
+						await Promise.all(
+							pendingIds
+								.filter(
+									(m) => m.action === "mock" && !m.factory
+								)
+								.map(async (m) => {
+									const resolved = await mocker.resolveId(
+										m.id,
+										m.importer
+									);
+									const redirect = await fetchMockRedirect(
+										(mocker as { root: string }).root,
+										resolved.id,
+										resolved.external
+									);
+									if (redirect !== null) {
+										redirectCache.set(resolved.id, redirect);
+									}
+								})
+						);
+					}
+					try {
+						await originalResolveMocks();
+					} finally {
+						redirectCache.clear();
+					}
+				};
+
+				mocker.findMockRedirect = (mockPath: string) => {
+					return redirectCache.get(mockPath) ?? null;
+				};
+			},
 			post: (response) => {
 				try {
 					poolSocket.send(structuredSerializableStringify(response));
