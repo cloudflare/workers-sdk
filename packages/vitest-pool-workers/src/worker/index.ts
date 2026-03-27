@@ -74,7 +74,7 @@ const monkeypatchedSetTimeout = (...args: Parameters<typeof setTimeout>) => {
 	const fromVitest =
 		/\/node_modules\/(\.pnpm\/|\.store\/)?vitest/.test(callerFileName ?? "") ||
 		/\/packages\/vitest\/dist/.test(callerFileName ?? "") ||
-		/\/node_modules\/(\.pnpm\/|\.store\/)?@voidzero-dev[+\/]vite-plus-test/.test(
+		/\/node_modules\/(\.pnpm\/|\.store\/)?@voidzero-dev[+/]vite-plus-test/.test(
 			callerFileName ?? ""
 		);
 

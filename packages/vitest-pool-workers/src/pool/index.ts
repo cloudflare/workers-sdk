@@ -758,10 +758,6 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 		"Expected to find `@cloudflare/vitest-pool-workers`'s `vitest` version constraint"
 	);
 
-	// For alternative vitest distributions (e.g. @voidzero-dev/vite-plus-test),
-	// the package version (0.x) doesn't correspond to the upstream vitest
-	// version. Instead, extract the real vitest version from the @vitest/*
-	// dependencies declared in the distribution's package.json.
 	const actualVitestVersion =
 		vitestPkgJson.name === "vitest"
 			? vitestPkgJson.version
