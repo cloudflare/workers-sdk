@@ -31,12 +31,18 @@ export async function waitForWaitUntil(
 
 	while (waitUntil.length > 0) {
 		const batch = waitUntil.splice(0);
+		let timeoutId: ReturnType<typeof setTimeout>;
 		const result = await Promise.race([
 			Promise.allSettled(batch).then((results) => ({ results })),
-			new Promise<typeof kTimedOut>((resolve) =>
-				setTimeout(() => resolve(kTimedOut), WAIT_UNTIL_TIMEOUT)
+			new Promise<typeof kTimedOut>(
+				(resolve) =>
+					(timeoutId = setTimeout(
+						() => resolve(kTimedOut),
+						WAIT_UNTIL_TIMEOUT
+					))
 			),
 		]);
+		clearTimeout(timeoutId!);
 
 		if (result === kTimedOut) {
 			__console.warn(
