@@ -79,6 +79,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { WorkflowOption } from "../shared";
 import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -997,6 +998,8 @@ export interface GlobalServicesOptions {
 	proxyBindings: Worker_Binding[];
 	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
 	durableObjectClassNames: DurableObjectClassNames;
+	/** Pass Workflow configuration for the explorer worker */
+	workflowOptions?: Map<string, WorkflowOption>;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1006,6 +1009,7 @@ export function getGlobalServices({
 	log,
 	proxyBindings,
 	durableObjectClassNames,
+	workflowOptions,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1140,7 +1144,8 @@ export function getGlobalServices({
 		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			proxyBindings,
-			durableObjectClassNames
+			durableObjectClassNames,
+			workflowOptions
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 		services.push(
