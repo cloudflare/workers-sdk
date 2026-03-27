@@ -17,10 +17,21 @@ import type {
 export function assertNever(_value: never) {}
 
 /**
- * Preview tokens expire after 1 hour (hardcoded in the Workers control plane).
+ * When to proactively refresh the preview token.
+ *
+ * Preview tokens expire after 1 hour (hardcoded in the Workers control plane), so we retry after 50 mins.
  */
 export function getPreviewTokenRefreshInterval() {
 	return 50 * 60 * 1000;
+}
+
+/**
+ * When to retry a failed token refresh.
+ *
+ * Short interval so the user isn't stuck for long if the first attempt fails.
+ */
+export function getFailedRefreshRetryInterval() {
+	return 30 * 1000;
 }
 
 export type MaybePromise<T> = T | Promise<T>;

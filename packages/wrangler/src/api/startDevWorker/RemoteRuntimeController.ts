@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
@@ -20,7 +21,11 @@ import { getAccessToken } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { getPreviewTokenRefreshInterval, unwrapHook } from "./utils";
+import {
+	getFailedRefreshRetryInterval,
+	getPreviewTokenRefreshInterval,
+	unwrapHook,
+} from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -39,16 +44,6 @@ import type { Route } from "@cloudflare/workers-utils";
 
 type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
 
-/**
- * A narrowed variant of StartDevWorkerOptions where dev.auth is required.
- * RemoteRuntimeController only stores config after verifying auth is present.
- */
-type RemoteStartDevWorkerOptions = StartDevWorkerOptions & {
-	dev: StartDevWorkerOptions["dev"] & {
-		auth: NonNullable<StartDevWorkerOptions["dev"]["auth"]>;
-	};
-};
-
 export class RemoteRuntimeController extends RuntimeController {
 	#abortController = new AbortController();
 
@@ -57,15 +52,12 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#session?: CfPreviewSession;
 
-	// Saved so we can re-emit reloadComplete if a token refresh fails,
-	// ensuring the ProxyWorker is never left permanently paused.
-	#latestProxyData?: ProxyData;
-
 	#activeTail?: WebSocket;
 
-	#latestConfig?: RemoteStartDevWorkerOptions;
+	#latestConfig?: StartDevWorkerOptions;
 	#latestBundle?: Bundle;
 	#latestRoutes?: Route[];
+	#latestProxyData?: ProxyData;
 
 	// Timer for proactive token refresh before the 1-hour expiry
 	#refreshTimer?: ReturnType<typeof setTimeout>;
@@ -356,14 +348,19 @@ export class RemoteRuntimeController extends RuntimeController {
 			proxyData,
 		});
 
-		this.#scheduleProactiveRefresh();
+		this.#scheduleRefresh(getPreviewTokenRefreshInterval());
 	}
 
-	#scheduleProactiveRefresh() {
+	#scheduleRefresh(interval: number) {
 		clearTimeout(this.#refreshTimer);
 		this.#refreshTimer = setTimeout(() => {
-			void this.#mutex.runWith(() => this.#refreshPreviewToken());
-		}, getPreviewTokenRefreshInterval());
+			if (this.#latestProxyData) {
+				this.onPreviewTokenExpired({
+					type: "previewTokenExpired",
+					proxyData: this.#latestProxyData,
+				});
+			}
+		}, interval);
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -376,9 +373,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				throw new MissingConfigError("config.dev.auth");
 			}
 
+			assert(config.dev.auth);
 			const auth = await unwrapHook(config.dev.auth);
 
-			this.#latestConfig = config as RemoteStartDevWorkerOptions;
+			this.#latestConfig = config;
 			this.#latestBundle = bundle;
 			this.#latestRoutes = routes;
 
@@ -409,66 +407,6 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 	}
 
-	async #refreshPreviewToken() {
-		if (!this.#latestConfig || !this.#latestBundle) {
-			logger.warn(
-				"Cannot refresh preview token: missing config or bundle data"
-			);
-			return;
-		}
-
-		this.emitReloadStartEvent({
-			type: "reloadStart",
-			config: this.#latestConfig,
-			bundle: this.#latestBundle,
-		});
-
-		try {
-			const auth = await unwrapHook(this.#latestConfig.dev.auth);
-
-			this.#session = await this.#getPreviewSession(
-				this.#latestConfig,
-				auth,
-				this.#latestRoutes
-			);
-
-			await this.#updatePreviewToken(
-				this.#latestConfig,
-				this.#latestBundle,
-				auth,
-				this.#latestRoutes,
-				this.#currentBundleId
-			);
-			logger.log(chalk.green("✔ Preview token refreshed successfully"));
-		} catch (error) {
-			if (error instanceof Error && error.name == "AbortError") {
-				return;
-			}
-
-			this.emitErrorEvent({
-				type: "error",
-				reason: "Error refreshing preview token",
-				cause: castErrorCause(error),
-				source: "RemoteRuntimeController",
-				data: undefined,
-			});
-
-			// Re-emit the last known reloadComplete so the ProxyWorker is unpaused.
-			// Without this, a failed refresh leaves the ProxyWorker permanently paused
-			// and all subsequent requests hang indefinitely.
-			if (this.#latestProxyData && this.#latestConfig && this.#latestBundle) {
-				this.emitReloadCompleteEvent({
-					type: "reloadComplete",
-					config: this.#latestConfig,
-					bundle: this.#latestBundle,
-					proxyData: this.#latestProxyData,
-				});
-			}
-
-			this.#scheduleProactiveRefresh();
-		}
-	}
-
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -496,13 +434,52 @@ export class RemoteRuntimeController extends RuntimeController {
 
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
-	onPreviewTokenExpired(ev: PreviewTokenExpiredEvent): void {
-		logger.log(
-			chalk.dim(
-				`⎔ Preview token expired, refreshing... (host=${ev.proxyData.userWorkerUrl.hostname})`
-			)
-		);
-		void this.#mutex.runWith(() => this.#refreshPreviewToken());
+	onPreviewTokenExpired(_ev: PreviewTokenExpiredEvent): void {
+		logger.log(chalk.dim("⎔ Refreshing preview token..."));
+		void this.#mutex.runWith(async () => {
+			if (!this.#latestConfig || !this.#latestBundle) {
+				logger.warn(
+					"Cannot refresh preview token: missing config or bundle data"
+				);
+				return;
+			}
+
+			try {
+				assert(this.#latestConfig.dev.auth);
+				const auth = await unwrapHook(this.#latestConfig.dev.auth);
+
+				this.#session = await this.#getPreviewSession(
+					this.#latestConfig,
+					auth,
+					this.#latestRoutes
+				);
+
+				await this.#updatePreviewToken(
+					this.#latestConfig,
+					this.#latestBundle,
+					auth,
+					this.#latestRoutes,
+					this.#currentBundleId
+				);
+				logger.log(chalk.green("✔ Preview token refreshed successfully"));
+			} catch (error) {
+				if (error instanceof Error && error.name == "AbortError") {
+					return;
+				}
+
+				this.emitErrorEvent({
+					type: "error",
+					reason: "Error refreshing preview token",
+					cause: castErrorCause(error),
+					source: "RemoteRuntimeController",
+					data: undefined,
+				});
+
+				// Retry sooner than the normal 50-minute interval so the user
+				// isn't stuck for long if the refresh fails transiently.
+				this.#scheduleRefresh(getFailedRefreshRetryInterval());
+			}
+		});
 	}
 
 	override async teardown() {
