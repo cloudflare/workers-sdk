@@ -1,22 +1,22 @@
 {
-	"name": "@fixture/miniflare-node",
-	"private": true,
-	"description": "",
-	"license": "ISC",
-	"author": "",
-	"type": "module",
-	"scripts": {
-		"test:ci": "node --test"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/is-even": "^1.0.2",
-		"is-even": "^1.0.0",
-		"miniflare": "workspace:*",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/miniflare-node",
+  "private": true,
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "scripts": {
+    "test:ci": "pnpm -w enforce-turbo && node --test"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/is-even": "^1.0.2",
+    "is-even": "^1.0.0",
+    "miniflare": "workspace:*",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

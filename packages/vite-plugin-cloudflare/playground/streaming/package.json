@@ -1,23 +1,23 @@
 {
-	"name": "@playground/streaming",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build:default": "vite build",
-		"build:https": "vite build -c ./vite.config.https.ts",
-		"check:type": "tsc --build",
-		"dev": "vite dev",
-		"dev:https": "vite dev -c ./vite.config.https.ts",
-		"preview": "vite preview",
-		"preview:https": "vite preview -c ./vite.config.https.ts"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@vitejs/plugin-basic-ssl": "^2.2.0",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
-	}
+  "name": "@playground/streaming",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:default": "vite build",
+    "build:https": "vite build -c ./vite.config.https.ts",
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "dev": "pnpm -w enforce-turbo && vite dev",
+    "dev:https": "vite dev -c ./vite.config.https.ts",
+    "preview": "vite preview",
+    "preview:https": "vite preview -c ./vite.config.https.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@vitejs/plugin-basic-ssl": "^2.2.0",
+    "typescript": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:*"
+  }
 }

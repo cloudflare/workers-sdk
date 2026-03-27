@@ -1,16 +1,16 @@
 {
-	"name": "<PACKAGE_NAME>",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"test": "vitest"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.12.4",
-		"vitest": "~3.2.0",
-		"wrangler": "^3.101.0"
-	}
+  "name": "<PACKAGE_NAME>",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "pnpm -w enforce-turbo && wrangler dev",
+    "start": "wrangler dev",
+    "test": "pnpm -w enforce-turbo && vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.4",
+    "vitest": "~3.2.0",
+    "wrangler": "^3.101.0"
+  }
 }

@@ -1,23 +1,23 @@
 {
-	"name": "@fixture/wildcard-modules",
-	"private": true,
-	"scripts": {
-		"build": "wrangler deploy --dry-run --outdir=dist",
-		"check:type": "tsc",
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev --x-dev-env",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./test/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@fixture/shared": "workspace:*",
-		"undici": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/wildcard-modules",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && wrangler deploy --dry-run --outdir=dist",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev --x-dev-env",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./test/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@fixture/shared": "workspace:*",
+    "undici": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

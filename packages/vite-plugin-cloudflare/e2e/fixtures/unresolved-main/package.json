@@ -1,13 +1,13 @@
 {
-	"name": "@cloudflare/vite-plugin-e2e-unresolved-main",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"dev": "vite dev"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "*",
-		"vite": "^8.0.0",
-		"wrangler": "*"
-	}
+  "name": "@cloudflare/vite-plugin-e2e-unresolved-main",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -w enforce-turbo && vite dev"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "*",
+    "vite": "^8.0.0",
+    "wrangler": "*"
+  }
 }

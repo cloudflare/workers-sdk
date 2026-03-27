@@ -1,29 +1,29 @@
 {
-	"name": "@fixture/pages-proxy",
-	"private": true,
-	"sideEffects": false,
-	"main": "server/index.js",
-	"scripts": {
-		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
-		"check:type": "tsc",
-		"dev": "wrangler pages dev --compatibility-date=2024-01-17 --port 8790 --proxy 8791 -- pnpm run server",
-		"server": "node dist/index.js",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"miniflare": "workspace:*",
-		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"engines": {
-		"node": ">=14"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/pages-proxy",
+  "private": true,
+  "sideEffects": false,
+  "main": "server/index.js",
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "dev": "pnpm -w enforce-turbo && wrangler pages dev --compatibility-date=2024-01-17 --port 8790 --proxy 8791 -- pnpm run server",
+    "server": "node dist/index.js",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "miniflare": "workspace:*",
+    "typescript": "catalog:default",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

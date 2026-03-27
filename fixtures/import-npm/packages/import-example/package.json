@@ -1,21 +1,21 @@
 {
-	"name": "@cloudflare/import-npm-fixture-import-example",
-	"private": true,
-	"description": "",
-	"author": "",
-	"main": "src/index.js",
-	"scripts": {
-		"check:type": "tsc",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"dependencies": {
-		"@fixture/import-wasm-static": "../../../../fixtures/import-wasm-static"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "../../../../packages/workers-tsconfig",
-		"undici": "^7.18.2",
-		"wrangler": "../../../../packages/wrangler"
-	}
+  "name": "@cloudflare/import-npm-fixture-import-example",
+  "private": true,
+  "description": "",
+  "author": "",
+  "main": "src/index.js",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "dependencies": {
+    "@fixture/import-wasm-static": "../../../../fixtures/import-wasm-static"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "../../../../packages/workers-tsconfig",
+    "undici": "^7.18.2",
+    "wrangler": "../../../../packages/wrangler"
+  }
 }

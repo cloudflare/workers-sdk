@@ -1,15 +1,15 @@
 {
-	"name": "<PACKAGE_NAME>",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
-		"dev": "wrangler dev",
-		"cf-typegen": "wrangler types"
-	},
-	"devDependencies": {
-		"typescript": "^5.0.4",
-		"wrangler": "^4.6.0"
-	}
+  "name": "<PACKAGE_NAME>",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "dev": "pnpm -w enforce-turbo && wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.4",
+    "wrangler": "^4.6.0"
+  }
 }

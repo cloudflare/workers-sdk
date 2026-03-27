@@ -1,40 +1,40 @@
 {
-	"name": "@cloudflare/quick-edit",
-	"version": "0.4.6",
-	"private": true,
-	"description": "VSCode for Web hosted for use in Cloudflare's Quick Editor",
-	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
-	"bugs": {
-		"url": "https://github.com/cloudflare/workers-sdk/issues"
-	},
-	"license": "BSD-3-Clause",
-	"author": "workers-devprod@cloudflare.com",
-	"scripts": {
-		"check:type": "tsc",
-		"custom:build": "./build.sh",
-		"deploy": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler deploy",
-		"preview": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler versions upload",
-		"setup": "./setup.sh"
-	},
-	"dependencies": {
-		"yarn": "^1.22.19"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/node": "catalog:default",
-		"concurrently": "^8.2.2",
-		"esbuild": "catalog:default",
-		"tsx": "^3.12.8",
-		"wrangler": "workspace:*"
-	},
-	"engines": {
-		"node": ">=18.15"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/quick-edit",
+  "version": "0.4.6",
+  "private": true,
+  "description": "VSCode for Web hosted for use in Cloudflare's Quick Editor",
+  "homepage": "https://github.com/cloudflare/workers-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/cloudflare/workers-sdk/issues"
+  },
+  "license": "BSD-3-Clause",
+  "author": "workers-devprod@cloudflare.com",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "custom:build": "./build.sh",
+    "deploy": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler deploy",
+    "preview": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler versions upload",
+    "setup": "./setup.sh"
+  },
+  "dependencies": {
+    "yarn": "^1.22.19"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/node": "catalog:default",
+    "concurrently": "^8.2.2",
+    "esbuild": "catalog:default",
+    "tsx": "^3.12.8",
+    "wrangler": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18.15"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

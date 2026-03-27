@@ -1,22 +1,22 @@
 {
-	"name": "@playground/cloudflare-env",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build:custom-mode": "vite build --app -c vite.config.custom-mode.ts",
-		"build:default": "vite build --app",
-		"check:type": "tsc --build",
-		"dev": "vite dev",
-		"dev:custom-mode": "vite dev -c vite.config.custom-mode.ts",
-		"preview": "vite preview",
-		"preview:custom-mode": "vite preview -c vite.config.custom-mode.ts"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
-	}
+  "name": "@playground/cloudflare-env",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:custom-mode": "vite build --app -c vite.config.custom-mode.ts",
+    "build:default": "vite build --app",
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "dev": "pnpm -w enforce-turbo && vite dev",
+    "dev:custom-mode": "vite dev -c vite.config.custom-mode.ts",
+    "preview": "vite preview",
+    "preview:custom-mode": "vite preview -c vite.config.custom-mode.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "typescript": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:*"
+  }
 }

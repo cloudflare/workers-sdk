@@ -1,44 +1,44 @@
 {
-	"name": "@cloudflare/pages-shared",
-	"version": "0.13.118",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/cloudflare/workers-sdk.git",
-		"directory": "packages/pages-shared"
-	},
-	"files": [
-		"./dist/",
-		"tsconfig.json",
-		"asset-server/**/*",
-		"environment-polyfills/**/*",
-		"metadata-generator/**/*"
-	],
-	"scripts": {
-		"build": "node -r esbuild-register ./scripts/build.ts",
-		"check:type": "tsc",
-		"prepack": "npm run build",
-		"test": "vitest run",
-		"test:ci": "vitest run"
-	},
-	"dependencies": {
-		"miniflare": "workspace:*"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:default",
-		"@cloudflare/workers-shared": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"concurrently": "^8.2.2",
-		"esbuild": "catalog:default",
-		"glob": "^10.5.0",
-		"html-rewriter-wasm": "^0.4.1",
-		"typescript": "catalog:default",
-		"vitest": "catalog:default"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"prerelease": true
-	}
+  "name": "@cloudflare/pages-shared",
+  "version": "0.13.118",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudflare/workers-sdk.git",
+    "directory": "packages/pages-shared"
+  },
+  "files": [
+    "./dist/",
+    "tsconfig.json",
+    "asset-server/**/*",
+    "environment-polyfills/**/*",
+    "metadata-generator/**/*"
+  ],
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && node -r esbuild-register ./scripts/build.ts",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "prepack": "npm run build",
+    "test": "pnpm -w enforce-turbo && vitest run",
+    "test:ci": "pnpm -w enforce-turbo && vitest run"
+  },
+  "dependencies": {
+    "miniflare": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:default",
+    "@cloudflare/workers-shared": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "concurrently": "^8.2.2",
+    "esbuild": "catalog:default",
+    "glob": "^10.5.0",
+    "html-rewriter-wasm": "^0.4.1",
+    "typescript": "catalog:default",
+    "vitest": "catalog:default"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "prerelease": true
+  }
 }

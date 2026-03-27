@@ -1,20 +1,20 @@
 {
-	"name": "@playground/bindings",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build:default": "vite build --app",
-		"cf-typegen": "wrangler types --include-runtime=false",
-		"check:type": "tsc --build",
-		"dev": "vite dev",
-		"preview": "vite preview"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
-	}
+  "name": "@playground/bindings",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:default": "vite build --app",
+    "cf-typegen": "wrangler types --include-runtime=false",
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "dev": "pnpm -w enforce-turbo && vite dev",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "typescript": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:*"
+  }
 }

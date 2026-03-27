@@ -1,22 +1,22 @@
 {
-	"name": "@cloudflare/devprod-status-bot",
-	"version": "1.4.1",
-	"private": true,
-	"scripts": {
-		"check:type": "tsc",
-		"deploy": "wrangler deploy"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default",
-		"@octokit/types": "^13.8.0",
-		"@octokit/webhooks-types": "^7.6.1",
-		"ts-dedent": "^2.2.0",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/devprod-status-bot",
+  "version": "1.4.1",
+  "private": true,
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:default",
+    "@octokit/types": "^13.8.0",
+    "@octokit/webhooks-types": "^7.6.1",
+    "ts-dedent": "^2.2.0",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

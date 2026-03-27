@@ -1,25 +1,25 @@
 {
-	"name": "@vite-plugin-cloudflare/playground",
-	"version": "1.0.0",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"check:type": "tsc --build",
-		"playwright:install": "pnpm playwright install chromium",
-		"pretest:ci": "pnpm playwright:install",
-		"test:ci": "pnpm test:ci:serve && pnpm test:ci:build",
-		"test:ci:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
-		"test:ci:serve": "vitest run -c vitest.config.e2e.ts",
-		"pretest:serve": "pnpm playwright:install",
-		"test:serve": "pnpm test:ci:serve --poolOptions.forks.singleFork=false"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"playwright-chromium": "catalog:default",
-		"semver": "^7.7.1",
-		"ts-dedent": "^2.2.0",
-		"typescript": "catalog:default",
-		"vitest": "catalog:default"
-	}
+  "name": "@vite-plugin-cloudflare/playground",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "playwright:install": "pnpm playwright install chromium",
+    "pretest:ci": "pnpm playwright:install",
+    "test:ci": "pnpm -w enforce-turbo && pnpm test:ci:serve && pnpm test:ci:build",
+    "test:ci:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
+    "test:ci:serve": "vitest run -c vitest.config.e2e.ts",
+    "pretest:serve": "pnpm playwright:install",
+    "test:serve": "pnpm test:ci:serve --poolOptions.forks.singleFork=false"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "playwright-chromium": "catalog:default",
+    "semver": "^7.7.1",
+    "ts-dedent": "^2.2.0",
+    "typescript": "catalog:default",
+    "vitest": "catalog:default"
+  }
 }

@@ -1,19 +1,19 @@
 {
-	"name": "@fixture/entrypoints-rpc",
-	"private": true,
-	"scripts": {
-		"test:ci": "vitest run",
-		"test:watch": "vitest"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"miniflare": "workspace:*",
-		"ts-dedent": "^2.2.0",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/entrypoints-rpc",
+  "private": true,
+  "scripts": {
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "miniflare": "workspace:*",
+    "ts-dedent": "^2.2.0",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

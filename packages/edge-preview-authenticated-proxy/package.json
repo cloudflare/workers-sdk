@@ -1,28 +1,28 @@
 {
-	"name": "@cloudflare/edge-preview-authenticated-proxy",
-	"version": "0.3.1",
-	"private": true,
-	"scripts": {
-		"check:type": "tsc",
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
-		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
-		"@types/cookie": "^0.6.0",
-		"cookie": "^0.7.2",
-		"toucan-js": "4.0.0",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/edge-preview-authenticated-proxy",
+  "version": "0.3.1",
+  "private": true,
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@cloudflare/workers-utils": "workspace:*",
+    "@types/cookie": "^0.6.0",
+    "cookie": "^0.7.2",
+    "toucan-js": "4.0.0",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

@@ -1,30 +1,30 @@
 {
-	"name": "@fixture/pages-node-app",
-	"private": true,
-	"sideEffects": false,
-	"main": "dist/worker.js",
-	"scripts": {
-		"check:type": "tsc",
-		"dev": "wrangler pages dev public --port 12345",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"dependencies": {
-		"stripe": "^9.1.0"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/pages-node-app",
+  "private": true,
+  "sideEffects": false,
+  "main": "dist/worker.js",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "dev": "pnpm -w enforce-turbo && wrangler pages dev public --port 12345",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "dependencies": {
+    "stripe": "^9.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "typescript": "catalog:default",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

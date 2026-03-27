@@ -1,27 +1,27 @@
 {
-	"name": "@fixture/workers-assets-spa",
-	"private": true,
-	"scripts": {
-		"check:type": "tsc",
-		"dev": "wrangler dev",
-		"pretest:ci": "pnpm playwright install chromium",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/jest-image-snapshot": "^6.4.0",
-		"@types/node": "catalog:default",
-		"jest-image-snapshot": "^6.5.1",
-		"playwright-chromium": "catalog:default",
-		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/workers-assets-spa",
+  "private": true,
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "dev": "pnpm -w enforce-turbo && wrangler dev",
+    "pretest:ci": "pnpm playwright install chromium",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/jest-image-snapshot": "^6.4.0",
+    "@types/node": "catalog:default",
+    "jest-image-snapshot": "^6.5.1",
+    "playwright-chromium": "catalog:default",
+    "typescript": "catalog:default",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

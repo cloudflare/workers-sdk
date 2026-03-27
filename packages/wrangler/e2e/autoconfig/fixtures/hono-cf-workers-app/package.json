@@ -1,15 +1,15 @@
 {
-	"name": "hono-cf-workers-app",
-	"type": "module",
-	"scripts": {
-		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
-		"deploy": "wrangler deploy --minify",
-		"dev": "wrangler dev"
-	},
-	"dependencies": {
-		"hono": "^4.11.1"
-	},
-	"devDependencies": {
-		"wrangler": "^4.4.0"
-	}
+  "name": "hono-cf-workers-app",
+  "type": "module",
+  "scripts": {
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "deploy": "wrangler deploy --minify",
+    "dev": "pnpm -w enforce-turbo && wrangler dev"
+  },
+  "dependencies": {
+    "hono": "^4.11.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.4.0"
+  }
 }

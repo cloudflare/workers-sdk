@@ -1,21 +1,21 @@
 {
-	"name": "@cloudflare/vite-plugin-e2e-remote-bindings",
-	"version": "0.0.0",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build": "vite build",
-		"buildAndPreview": "vite build && vite preview",
-		"dev": "vite",
-		"lint": "eslint .",
-		"preview": "vite preview"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "*",
-		"@cloudflare/workers-types": "^4.20250204.0",
-		"globals": "^15.14.0",
-		"typescript": "~5.7.2",
-		"vite": "^8.0.0",
-		"wrangler": "*"
-	}
+  "name": "@cloudflare/vite-plugin-e2e-remote-bindings",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && vite build",
+    "buildAndPreview": "vite build && vite preview",
+    "dev": "pnpm -w enforce-turbo && vite",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "*",
+    "@cloudflare/workers-types": "^4.20250204.0",
+    "globals": "^15.14.0",
+    "typescript": "~5.7.2",
+    "vite": "^8.0.0",
+    "wrangler": "*"
+  }
 }

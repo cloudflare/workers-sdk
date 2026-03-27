@@ -1,23 +1,23 @@
 {
-	"name": "@fixture/worker-durable-objects",
-	"private": true,
-	"description": "",
-	"license": "ISC",
-	"author": "",
-	"main": "src/index.js",
-	"scripts": {
-		"dev": "wrangler deploy --dry-run",
-		"test": "vitest run",
-		"test:ci": "vitest run",
-		"test:watch": "vitest"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/worker-durable-objects",
+  "private": true,
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "pnpm -w enforce-turbo && wrangler deploy --dry-run",
+    "test": "pnpm -w enforce-turbo && vitest run",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:^",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

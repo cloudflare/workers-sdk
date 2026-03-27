@@ -1,59 +1,59 @@
 {
-	"name": "@cloudflare/kv-asset-handler",
-	"version": "0.4.2",
-	"description": "Routes requests to KV assets",
-	"keywords": [
-		"assets",
-		"cloudflare",
-		"kv",
-		"workers",
-		"wrangler"
-	],
-	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
-	"bugs": {
-		"url": "https://github.com/cloudflare/workers-sdk/issues"
-	},
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/cloudflare/workers-sdk.git",
-		"directory": "packages/kv-asset-handler"
-	},
-	"files": [
-		"src",
-		"dist"
-	],
-	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "tsup",
-		"check:type": "tsc",
-		"prepack": "npm run build",
-		"pretest": "npm run build",
-		"test": "vitest",
-		"test:ci": "vitest run"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:default",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/mime": "^3.0.4",
-		"@types/node": "catalog:default",
-		"mime": "^3.0.0",
-		"tsup": "8.3.0",
-		"vitest": "catalog:default"
-	},
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"prerelease": true
-	}
+  "name": "@cloudflare/kv-asset-handler",
+  "version": "0.4.2",
+  "description": "Routes requests to KV assets",
+  "keywords": [
+    "assets",
+    "cloudflare",
+    "kv",
+    "workers",
+    "wrangler"
+  ],
+  "homepage": "https://github.com/cloudflare/workers-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/cloudflare/workers-sdk/issues"
+  },
+  "license": "MIT OR Apache-2.0",
+  "author": "wrangler@cloudflare.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudflare/workers-sdk.git",
+    "directory": "packages/kv-asset-handler"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && tsup",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "prepack": "npm run build",
+    "pretest": "npm run build",
+    "test": "pnpm -w enforce-turbo && vitest",
+    "test:ci": "pnpm -w enforce-turbo && vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:default",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/mime": "^3.0.4",
+    "@types/node": "catalog:default",
+    "mime": "^3.0.0",
+    "tsup": "8.3.0",
+    "vitest": "catalog:default"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "prerelease": true
+  }
 }

@@ -1,30 +1,30 @@
 {
-	"name": "@playground/module-resolution",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build:default": "vite build --app",
-		"build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
-		"check:type": "tsc --build",
-		"dev": "vite dev",
-		"dev:nodejs-compat": "vite dev -c ./vite.config.nodejs-compat.ts",
-		"preview": "vite preview",
-		"preview:nodejs-compat": "vite preview -c ./vite.config.nodejs-compat.ts"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@playground/module-resolution-excludes": "file:./packages/excludes",
-		"@playground/module-resolution-imports": "file:./packages/imports",
-		"@playground/module-resolution-requires": "file:./packages/requires",
-		"@remix-run/cloudflare": "2.12.0",
-		"@types/react": "^18.3.11",
-		"discord-api-types": "0.37.98",
-		"react": "^19.2.1",
-		"slash-create": "6.2.1",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
-	}
+  "name": "@playground/module-resolution",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:default": "vite build --app",
+    "build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "dev": "pnpm -w enforce-turbo && vite dev",
+    "dev:nodejs-compat": "vite dev -c ./vite.config.nodejs-compat.ts",
+    "preview": "vite preview",
+    "preview:nodejs-compat": "vite preview -c ./vite.config.nodejs-compat.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@playground/module-resolution-excludes": "file:./packages/excludes",
+    "@playground/module-resolution-imports": "file:./packages/imports",
+    "@playground/module-resolution-requires": "file:./packages/requires",
+    "@remix-run/cloudflare": "2.12.0",
+    "@types/react": "^18.3.11",
+    "discord-api-types": "0.37.98",
+    "react": "^19.2.1",
+    "slash-create": "6.2.1",
+    "typescript": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:*"
+  }
 }

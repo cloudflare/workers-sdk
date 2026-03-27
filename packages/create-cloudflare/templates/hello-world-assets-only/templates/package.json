@@ -1,13 +1,13 @@
 {
-	"name": "<PACKAGE_NAME>",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev"
-	},
-	"devDependencies": {
-		"wrangler": "^3.78.5"
-	}
+  "name": "<PACKAGE_NAME>",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "pnpm -w enforce-turbo && wrangler dev",
+    "start": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.5"
+  }
 }

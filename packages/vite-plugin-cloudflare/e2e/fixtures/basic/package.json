@@ -1,28 +1,28 @@
 {
-	"name": "@cloudflare/vite-plugin-e2e-basic",
-	"version": "0.0.0",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build": "vite build",
-		"buildAndPreview": "vite build && vite preview",
-		"dev": "vite",
-		"lint": "eslint .",
-		"preview": "vite preview"
-	},
-	"dependencies": {
-		"react": "^19.2.1",
-		"react-dom": "^19.2.1"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "*",
-		"@cloudflare/workers-types": "^4.20250204.0",
-		"@types/react": "19.1.0",
-		"@types/react-dom": "19.1.0",
-		"@vitejs/plugin-react": "^5.2.0",
-		"globals": "^15.14.0",
-		"typescript": "~5.7.2",
-		"vite": "^8.0.0",
-		"wrangler": "*"
-	}
+  "name": "@cloudflare/vite-plugin-e2e-basic",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && vite build",
+    "buildAndPreview": "vite build && vite preview",
+    "dev": "pnpm -w enforce-turbo && vite",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "*",
+    "@cloudflare/workers-types": "^4.20250204.0",
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "globals": "^15.14.0",
+    "typescript": "~5.7.2",
+    "vite": "^8.0.0",
+    "wrangler": "*"
+  }
 }

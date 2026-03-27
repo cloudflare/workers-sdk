@@ -1,23 +1,23 @@
 {
-	"name": "@fixture/get-platform-proxy",
-	"private": true,
-	"description": "A test for the getPlatformProxy utility",
-	"scripts": {
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/jest-image-snapshot": "^6.4.0",
-		"jest-image-snapshot": "^6.5.1",
-		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/get-platform-proxy",
+  "private": true,
+  "description": "A test for the getPlatformProxy utility",
+  "scripts": {
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc --noEmit -p tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/jest-image-snapshot": "^6.4.0",
+    "jest-image-snapshot": "^6.5.1",
+    "typescript": "catalog:default",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

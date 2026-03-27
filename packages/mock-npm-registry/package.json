@@ -1,28 +1,28 @@
 {
-	"name": "@cloudflare/mock-npm-registry",
-	"version": "0.0.0",
-	"private": true,
-	"type": "module",
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		".": "./dist/index.js"
-	},
-	"scripts": {
-		"build": "tsc",
-		"check:types": "tsc"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-utils": "workspace:*",
-		"@types/node": "catalog:default",
-		"@verdaccio/types": "^10.8.0",
-		"get-port": "^7.0.0",
-		"tree-kill": "catalog:default",
-		"ts-dedent": "^2.2.0",
-		"typescript": "catalog:default",
-		"verdaccio": "^6.0.5"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@cloudflare/mock-npm-registry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && tsc",
+    "check:types": "tsc"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-utils": "workspace:*",
+    "@types/node": "catalog:default",
+    "@verdaccio/types": "^10.8.0",
+    "get-port": "^7.0.0",
+    "tree-kill": "catalog:default",
+    "ts-dedent": "^2.2.0",
+    "typescript": "catalog:default",
+    "verdaccio": "^6.0.5"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

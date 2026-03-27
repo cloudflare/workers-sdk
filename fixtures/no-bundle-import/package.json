@@ -1,18 +1,18 @@
 {
-	"name": "@fixture/no-bundle-import",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
-		"test:ci": "vitest run",
-		"test:watch": "vitest"
-	},
-	"devDependencies": {
-		"get-port": "^7.0.0",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/no-bundle-import",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest"
+  },
+  "devDependencies": {
+    "get-port": "^7.0.0",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

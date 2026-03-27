@@ -1,35 +1,35 @@
 {
-	"name": "@cloudflare/playground-preview-worker",
-	"version": "0.3.2",
-	"private": true,
-	"scripts": {
-		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
-		"build-middleware:common": "pnpm dlx esbuild ../wrangler/templates/middleware/common.ts --outfile=src/middleware/common.module.template",
-		"build-middleware:loader": "pnpm dlx esbuild ../wrangler/templates/middleware/loader-modules.ts --outfile=src/middleware/loader.module.template",
-		"check:type": "tsc",
-		"deploy": "wrangler deploy",
-		"deploy:testing": "wrangler deploy -e testing",
-		"start": "wrangler dev",
-		"test:e2e": "vitest run --test-timeout 30000"
-	},
-	"dependencies": {
-		"hono": "^4.12.5",
-		"zod": "^3.22.3"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
-		"@types/cookie": "^0.6.0",
-		"cookie": "^0.7.2",
-		"itty-router": "^4.0.13",
-		"toucan-js": "4.0.0",
-		"undici": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/playground-preview-worker",
+  "version": "0.3.2",
+  "private": true,
+  "scripts": {
+    "build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
+    "build-middleware:common": "pnpm dlx esbuild ../wrangler/templates/middleware/common.ts --outfile=src/middleware/common.module.template",
+    "build-middleware:loader": "pnpm dlx esbuild ../wrangler/templates/middleware/loader-modules.ts --outfile=src/middleware/loader.module.template",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "wrangler deploy",
+    "deploy:testing": "wrangler deploy -e testing",
+    "start": "wrangler dev",
+    "test:e2e": "pnpm -w enforce-turbo && vitest run --test-timeout 30000"
+  },
+  "dependencies": {
+    "hono": "^4.12.5",
+    "zod": "^3.22.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:default",
+    "@cloudflare/workers-utils": "workspace:*",
+    "@types/cookie": "^0.6.0",
+    "cookie": "^0.7.2",
+    "itty-router": "^4.0.13",
+    "toucan-js": "4.0.0",
+    "undici": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

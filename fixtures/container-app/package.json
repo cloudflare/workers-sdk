@@ -1,24 +1,24 @@
 {
-	"name": "@fixture/container-app",
-	"private": true,
-	"scripts": {
-		"cf-typegen": "wrangler types",
-		"container:build": "wrangler containers build ./ -t container-fixture",
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"dev:registry": "wrangler dev -c ./wrangler.registry.jsonc",
-		"start": "wrangler dev",
-		"start:registry": "wrangler dev -c ./wrangler.registry.jsonc"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"ts-dedent": "^2.2.0",
-		"typescript": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json",
-		"node": "20.19.2"
-	}
+  "name": "@fixture/container-app",
+  "private": true,
+  "scripts": {
+    "cf-typegen": "wrangler types",
+    "container:build": "wrangler containers build ./ -t container-fixture",
+    "deploy": "wrangler deploy",
+    "dev": "pnpm -w enforce-turbo && wrangler dev",
+    "dev:registry": "wrangler dev -c ./wrangler.registry.jsonc",
+    "start": "wrangler dev",
+    "start:registry": "wrangler dev -c ./wrangler.registry.jsonc"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "ts-dedent": "^2.2.0",
+    "typescript": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json",
+    "node": "20.19.2"
+  }
 }

@@ -1,34 +1,34 @@
 {
-	"name": "@cloudflare/turbo-r2-archive",
-	"version": "0.0.4",
-	"private": true,
-	"description": "TurboRepo API Compliant Remote Caching w/ Cloudflare Workers using R2",
-	"keywords": [
-		"cloudflare",
-		"remote cache",
-		"turborepo",
-		"typescript",
-		"workers"
-	],
-	"scripts": {
-		"build": "wrangler deploy --dry-run --outdir=./dist",
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
-		"type:check": "tsc"
-	},
-	"dependencies": {
-		"@hono/zod-validator": "^0.4.2",
-		"hono": "^4.12.5",
-		"zod": "^3.22.3"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/turbo-r2-archive",
+  "version": "0.0.4",
+  "private": true,
+  "description": "TurboRepo API Compliant Remote Caching w/ Cloudflare Workers using R2",
+  "keywords": [
+    "cloudflare",
+    "remote cache",
+    "turborepo",
+    "typescript",
+    "workers"
+  ],
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && wrangler deploy --dry-run --outdir=./dist",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "type:check": "tsc"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.4.2",
+    "hono": "^4.12.5",
+    "zod": "^3.22.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

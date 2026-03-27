@@ -1,24 +1,24 @@
 {
-	"name": "@fixture/pages-plugin",
-	"private": true,
-	"files": [
-		"dist/",
-		"index.d.ts",
-		"tsconfig.json",
-		"public/"
-	],
-	"main": "dist/index.js",
-	"types": "index.d.ts",
-	"scripts": {
-		"build": "wrangler pages functions build --plugin --outdir=dist --external=is-odd",
-		"check:type": "tsc"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default",
-		"is-odd": "^3.0.1",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/pages-plugin",
+  "private": true,
+  "files": [
+    "dist/",
+    "index.d.ts",
+    "tsconfig.json",
+    "public/"
+  ],
+  "main": "dist/index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && wrangler pages functions build --plugin --outdir=dist --external=is-odd",
+    "check:type": "pnpm -w enforce-turbo && tsc"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:default",
+    "is-odd": "^3.0.1",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

@@ -1,19 +1,19 @@
 {
-	"name": "@playground/middleware-mode",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"check:type": "tsc --build",
-		"dev": "node server.js"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/express": "^5.0.1",
-		"express": "^5.1.0",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
-	}
+  "name": "@playground/middleware-mode",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "dev": "pnpm -w enforce-turbo && node server.js"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/express": "^5.0.1",
+    "express": "^5.1.0",
+    "typescript": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:*"
+  }
 }

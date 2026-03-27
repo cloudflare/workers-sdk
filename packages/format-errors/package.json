@@ -1,28 +1,28 @@
 {
-	"name": "@cloudflare/format-errors",
-	"version": "0.0.8",
-	"private": true,
-	"scripts": {
-		"build": "wrangler build",
-		"check:type": "tsc",
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
-		"test:ci": "vitest run"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
-		"mustache": "^4.2.0",
-		"toucan-js": "4.0.0",
-		"tsconfig": "*",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*",
-		"zod": "^3.22.3"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/format-errors",
+  "version": "0.0.8",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && wrangler build",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "test:ci": "pnpm -w enforce-turbo && vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:default",
+    "@cloudflare/workers-utils": "workspace:*",
+    "mustache": "^4.2.0",
+    "toucan-js": "4.0.0",
+    "tsconfig": "*",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*",
+    "zod": "^3.22.3"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

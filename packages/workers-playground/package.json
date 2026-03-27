@@ -1,62 +1,62 @@
 {
-	"name": "@cloudflare/workers-playground",
-	"version": "0.4.2",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build": "git clean -xdf dist && tsc && vite build",
-		"check": "pnpm run check:default-hashes && pnpm run check:type",
-		"check:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts check",
-		"check:type": "tsc",
-		"deploy": "pnpm run build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy",
-		"dev": "vite",
-		"generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec oxfmt ./src/QuickEditor/defaultHashes.js"
-	},
-	"dependencies": {
-		"@cloudflare/component-button": "^7.0.11",
-		"@cloudflare/component-code-block": "^4.1.2",
-		"@cloudflare/component-heading": "^4.0.6",
-		"@cloudflare/component-icon": "^11.5.1",
-		"@cloudflare/component-input": "^8.1.1",
-		"@cloudflare/component-listbox": "^1.10.6",
-		"@cloudflare/component-loading": "^6.1.1",
-		"@cloudflare/component-textarea": "^4.1.1",
-		"@cloudflare/component-toast": "^5.1.0",
-		"@cloudflare/component-toggle": "^9.0.13",
-		"@cloudflare/component-tooltip": "^4.3.1",
-		"@cloudflare/component-visually-hidden": "^1.0.85",
-		"@cloudflare/elements": "^3.0.1",
-		"@cloudflare/intl-react": "^1.12.2",
-		"@cloudflare/style-const": "^5.7.2",
-		"@cloudflare/style-container": "7.12.2",
-		"@cloudflare/style-provider": "^3.1.0",
-		"@cloudflare/util-en-garde": "^8.0.10",
-		"@cloudflare/workers-editor-shared": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"glob-to-regexp": "^0.4.1",
-		"lz-string": "^1.5.0",
-		"react": "^18.3.1",
-		"react-dom": "^18.3.1",
-		"react-tabs": "^4.1.0",
-		"swr": "^2.2.0",
-		"uuid": "^9.0.0"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@types/glob-to-regexp": "^0.4.1",
-		"@types/react": "^18.3.3",
-		"@types/react-dom": "^18.2.0",
-		"@types/uuid": "^9.0.2",
-		"@vitejs/plugin-react": "^5.2.0",
-		"react-use-websocket": "^4.13.0",
-		"undici": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:^"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"workers-sdk": {
-		"deploy": true
-	}
+  "name": "@cloudflare/workers-playground",
+  "version": "0.4.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -w enforce-turbo && git clean -xdf dist && tsc && vite build",
+    "check": "pnpm run check:default-hashes && pnpm run check:type",
+    "check:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts check",
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "pnpm run build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy",
+    "dev": "pnpm -w enforce-turbo && vite",
+    "generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec oxfmt ./src/QuickEditor/defaultHashes.js"
+  },
+  "dependencies": {
+    "@cloudflare/component-button": "^7.0.11",
+    "@cloudflare/component-code-block": "^4.1.2",
+    "@cloudflare/component-heading": "^4.0.6",
+    "@cloudflare/component-icon": "^11.5.1",
+    "@cloudflare/component-input": "^8.1.1",
+    "@cloudflare/component-listbox": "^1.10.6",
+    "@cloudflare/component-loading": "^6.1.1",
+    "@cloudflare/component-textarea": "^4.1.1",
+    "@cloudflare/component-toast": "^5.1.0",
+    "@cloudflare/component-toggle": "^9.0.13",
+    "@cloudflare/component-tooltip": "^4.3.1",
+    "@cloudflare/component-visually-hidden": "^1.0.85",
+    "@cloudflare/elements": "^3.0.1",
+    "@cloudflare/intl-react": "^1.12.2",
+    "@cloudflare/style-const": "^5.7.2",
+    "@cloudflare/style-container": "7.12.2",
+    "@cloudflare/style-provider": "^3.1.0",
+    "@cloudflare/util-en-garde": "^8.0.10",
+    "@cloudflare/workers-editor-shared": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "glob-to-regexp": "^0.4.1",
+    "lz-string": "^1.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-tabs": "^4.1.0",
+    "swr": "^2.2.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@types/glob-to-regexp": "^0.4.1",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^9.0.2",
+    "@vitejs/plugin-react": "^5.2.0",
+    "react-use-websocket": "^4.13.0",
+    "undici": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:^"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "workers-sdk": {
+    "deploy": true
+  }
 }

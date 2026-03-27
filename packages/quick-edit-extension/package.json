@@ -1,60 +1,60 @@
 {
-	"name": "@cloudflare/quick-edit-extension",
-	"displayName": "Cloudflare Logic",
-	"version": "0.0.1",
-	"private": true,
-	"description": "",
-	"categories": [
-		"Other"
-	],
-	"publisher": "cloudflare",
-	"browser": "./dist/extension.js",
-	"scripts": {
-		"check:type": "tsc",
-		"package-web": "node -r esbuild-register scripts/bundle.ts",
-		"vscode:prepublish": "pnpm run package-web",
-		"watch-web": "pnpm run package-web -- --watch"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:^",
-		"@cloudflare/workers-types": "catalog:default",
-		"esbuild": "catalog:default",
-		"esbuild-register": "^3.5.0"
-	},
-	"contributes": {
-		"commands": [
-			{
-				"command": "extension.setEntrypoint",
-				"title": "Set Entrypoint"
-			}
-		],
-		"menus": {
-			"commandPalette": [
-				{
-					"command": "extension.setEntrypoint",
-					"when": "editorLangId == javascript"
-				}
-			],
-			"explorer/context": [
-				{
-					"command": "extension.setEntrypoint",
-					"group": "1_modification@1"
-				}
-			]
-		}
-	},
-	"activationEvents": [
-		"onFileSystem:cfs"
-	],
-	"engines": {
-		"vscode": "^1.76.0"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	},
-	"enabledApiProposals": [
-		"fileSearchProvider",
-		"textSearchProvider",
-		"ipc"
-	]
+  "name": "@cloudflare/quick-edit-extension",
+  "displayName": "Cloudflare Logic",
+  "version": "0.0.1",
+  "private": true,
+  "description": "",
+  "categories": [
+    "Other"
+  ],
+  "publisher": "cloudflare",
+  "browser": "./dist/extension.js",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "package-web": "node -r esbuild-register scripts/bundle.ts",
+    "vscode:prepublish": "pnpm run package-web",
+    "watch-web": "pnpm run package-web -- --watch"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:^",
+    "@cloudflare/workers-types": "catalog:default",
+    "esbuild": "catalog:default",
+    "esbuild-register": "^3.5.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.setEntrypoint",
+        "title": "Set Entrypoint"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "extension.setEntrypoint",
+          "when": "editorLangId == javascript"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "extension.setEntrypoint",
+          "group": "1_modification@1"
+        }
+      ]
+    }
+  },
+  "activationEvents": [
+    "onFileSystem:cfs"
+  ],
+  "engines": {
+    "vscode": "^1.76.0"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "enabledApiProposals": [
+    "fileSearchProvider",
+    "textSearchProvider",
+    "ipc"
+  ]
 }

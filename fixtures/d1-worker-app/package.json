@@ -1,25 +1,25 @@
 {
-	"name": "@fixture/d1-basic",
-	"private": true,
-	"scripts": {
-		"check:type": "tsc",
-		"db:query": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers'",
-		"db:query-json": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers' --json",
-		"db:reset": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
-		"start": "wrangler dev --local",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/d1-basic",
+  "private": true,
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "db:query": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers'",
+    "db:query-json": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers' --json",
+    "db:reset": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
+    "start": "wrangler dev --local",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "typescript": "catalog:default",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

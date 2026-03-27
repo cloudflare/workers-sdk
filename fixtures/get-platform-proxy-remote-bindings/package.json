@@ -1,20 +1,20 @@
 {
-	"name": "@fixture/get-platform-proxy-remote-bindings",
-	"private": true,
-	"description": "A test for the getPlatformProxy utility used with remote bindings",
-	"scripts": {
-		"test:e2e": "vitest run",
-		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"miniflare": "workspace:*",
-		"typescript": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/get-platform-proxy-remote-bindings",
+  "private": true,
+  "description": "A test for the getPlatformProxy utility used with remote bindings",
+  "scripts": {
+    "test:e2e": "pnpm -w enforce-turbo && vitest run",
+    "type:tests": "tsc --noEmit -p tests/tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "miniflare": "workspace:*",
+    "typescript": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

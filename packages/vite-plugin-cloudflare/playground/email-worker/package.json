@@ -1,23 +1,23 @@
 {
-	"name": "@playground/email-worker",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"build:default": "vite build",
-		"check:type": "tsc --build",
-		"dev": "vite dev",
-		"preview": "vite preview"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
-		"@types/mimetext": "^2.0.4",
-		"mimetext": "^3.0.27",
-		"postal-mime": "2.4.4",
-		"ts-dedent": "^2.2.0",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
-	}
+  "name": "@playground/email-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:default": "vite build",
+    "check:type": "pnpm -w enforce-turbo && tsc --build",
+    "dev": "pnpm -w enforce-turbo && vite dev",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "workspace:*",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-types": "catalog:default",
+    "@types/mimetext": "^2.0.4",
+    "mimetext": "^3.0.27",
+    "postal-mime": "2.4.4",
+    "ts-dedent": "^2.2.0",
+    "typescript": "catalog:default",
+    "vite": "catalog:default",
+    "wrangler": "workspace:*"
+  }
 }

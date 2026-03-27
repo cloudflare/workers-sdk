@@ -1,17 +1,17 @@
 {
-	"name": "@fixture/rules-basic",
-	"private": true,
-	"description": "",
-	"keywords": [],
-	"license": "ISC",
-	"author": "",
-	"scripts": {
-		"check:type": "tsc"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/rules-basic",
+  "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:default"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

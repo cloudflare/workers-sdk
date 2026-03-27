@@ -1,14 +1,14 @@
 {
-	"name": "@cloudflare/vite-plugin-e2e-no-wrangler-config-for-auxiliary-worker",
-	"version": "0.0.0",
-	"private": true,
-	"type": "module",
-	"scripts": {
-		"dev": "vite"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "*",
-		"vite": "^8.0.0",
-		"wrangler": "*"
-	}
+  "name": "@cloudflare/vite-plugin-e2e-no-wrangler-config-for-auxiliary-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -w enforce-turbo && vite"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "*",
+    "vite": "^8.0.0",
+    "wrangler": "*"
+  }
 }

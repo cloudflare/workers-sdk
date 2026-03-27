@@ -1,37 +1,37 @@
 {
-	"name": "@cloudflare/cli",
-	"version": "1.2.1",
-	"private": true,
-	"description": "An SDK to build workers-sdk CLIs",
-	"keywords": [
-		"cli",
-		"cloudflare",
-		"cloudflare workers",
-		"workers"
-	],
-	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/cloudflare/workers-sdk.git",
-		"directory": "packages/cli"
-	},
-	"scripts": {
-		"check:type": "tsc",
-		"deploy": "echo 'no deploy'",
-		"test:ci": "vitest run"
-	},
-	"dependencies": {
-		"ci-info": "catalog:default"
-	},
-	"devDependencies": {
-		"@clack/core": "^0.3.2",
-		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-utils": "workspace:*",
-		"chalk": "^5.2.0",
-		"log-update": "^5.0.1"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@cloudflare/cli",
+  "version": "1.2.1",
+  "private": true,
+  "description": "An SDK to build workers-sdk CLIs",
+  "keywords": [
+    "cli",
+    "cloudflare",
+    "cloudflare workers",
+    "workers"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "author": "wrangler@cloudflare.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudflare/workers-sdk.git",
+    "directory": "packages/cli"
+  },
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "deploy": "echo 'no deploy'",
+    "test:ci": "pnpm -w enforce-turbo && vitest run"
+  },
+  "dependencies": {
+    "ci-info": "catalog:default"
+  },
+  "devDependencies": {
+    "@clack/core": "^0.3.2",
+    "@cloudflare/workers-tsconfig": "workspace:*",
+    "@cloudflare/workers-utils": "workspace:*",
+    "chalk": "^5.2.0",
+    "log-update": "^5.0.1"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }

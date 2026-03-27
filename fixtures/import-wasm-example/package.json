@@ -1,26 +1,26 @@
 {
-	"name": "@fixture/import-wasm",
-	"private": true,
-	"description": "",
-	"author": "",
-	"main": "src/index.js",
-	"scripts": {
-		"check:type": "tsc",
-		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
-	},
-	"dependencies": {
-		"@fixture/import-wasm-static": "workspace:^"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:^",
-		"typescript": "catalog:default",
-		"undici": "catalog:default",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
-	},
-	"volta": {
-		"extends": "../../package.json"
-	}
+  "name": "@fixture/import-wasm",
+  "private": true,
+  "description": "",
+  "author": "",
+  "main": "src/index.js",
+  "scripts": {
+    "check:type": "pnpm -w enforce-turbo && tsc",
+    "test:ci": "pnpm -w enforce-turbo && vitest run",
+    "test:watch": "pnpm -w enforce-turbo && vitest",
+    "type:tests": "tsc -p ./tests/tsconfig.json"
+  },
+  "dependencies": {
+    "@fixture/import-wasm-static": "workspace:^"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-tsconfig": "workspace:^",
+    "typescript": "catalog:default",
+    "undici": "catalog:default",
+    "vitest": "catalog:default",
+    "wrangler": "workspace:*"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  }
 }
