@@ -2,7 +2,13 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "vitest";
-import { getJsonResponse, isBuild, rootDir } from "../../__test-utils__";
+import {
+	getJsonResponse,
+	isBuild,
+	page,
+	rootDir,
+	viteTestUrl,
+} from "../../__test-utils__";
 
 describe.runIf(isBuild)("output directories", () => {
 	test("creates the correct output directories", ({ expect }) => {
@@ -34,6 +40,60 @@ describe("multi-worker service bindings", async () => {
 		const result = await getJsonResponse("/fetch");
 		expect(result).toEqual({ result: { name: "Worker B" } });
 	});
+
+	test.runIf(!isBuild)(
+		"proxies WebSocket upgrades through another worker service binding in dev",
+		async ({ expect }) => {
+			await page.goto(viteTestUrl);
+			const message = await page.evaluate(async () => {
+				const url = new URL("/websocket-proxy", window.location.href);
+				url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+				return await new Promise<string>((resolve, reject) => {
+					const websocket = new WebSocket(url);
+					let settled = false;
+					const timer = window.setTimeout(() => {
+						if (settled) return;
+						settled = true;
+						websocket.close();
+						reject(new Error("Timed out waiting for proxied WebSocket message"));
+					}, 10_000);
+
+					const finish = (fn: () => void) => {
+						if (settled) return;
+						settled = true;
+						window.clearTimeout(timer);
+						fn();
+					};
+
+					websocket.addEventListener("open", () => {
+						websocket.send("ping");
+					});
+					websocket.addEventListener("message", (event) => {
+						finish(() => {
+							websocket.close();
+							resolve(String(event.data));
+						});
+					});
+					websocket.addEventListener("error", () => {
+						finish(() => reject(new Error("WebSocket error")));
+					});
+					websocket.addEventListener("close", (event) => {
+						if (event.wasClean || settled) return;
+						finish(() =>
+							reject(
+								new Error(
+									`WebSocket closed before message (${event.code}: ${event.reason})`
+								)
+							)
+						);
+					});
+				});
+			});
+
+			expect(message).toBe("pong from worker-b");
+		}
+	);
 
 	test("calls an RPC method on another worker", async ({ expect }) => {
 		const result = await getJsonResponse("/rpc-method");
