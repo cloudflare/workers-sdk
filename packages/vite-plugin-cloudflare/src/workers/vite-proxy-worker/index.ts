@@ -20,6 +20,10 @@ export default class ViteProxyWorker extends WorkerEntrypoint<Env> {
 	}
 
 	override async fetch(request: Request) {
+		if (request.headers.get("Upgrade")?.toLowerCase() === "websocket") {
+			return this.env.ENTRY_USER_WORKER.fetch(request);
+		}
+
 		return this.env.__VITE_MIDDLEWARE__.fetch(request);
 	}
 

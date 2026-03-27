@@ -19,6 +19,10 @@ export default {
 					result,
 				});
 			}
+			case "/websocket-proxy": {
+				const upstreamUrl = new URL("/websocket", request.url);
+				return env.WORKER_B.fetch(new Request(upstreamUrl, request));
+			}
 			case "/rpc-method": {
 				const result = await env.WORKER_B.add(4, 5);
 				return Response.json({
