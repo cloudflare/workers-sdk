@@ -126,6 +126,11 @@ export function createWorkerUploadForm(
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -320,6 +325,36 @@ export function createWorkerUploadForm(
 			type: "vectorize",
 			index_name: index_name,
 			raw,
+		});
+	});
+
+	ai_search_namespaces.forEach(({ binding, namespace }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`);
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "ai_search_namespace",
+				namespace,
+			});
+		}
+	});
+
+	ai_search.forEach(({ binding, instance_name }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "ai_search",
+			instance_name,
 		});
 	});
 

@@ -964,6 +964,44 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies AI Search namespace bindings that are bound to this Worker environment.
+	 * Each binding is scoped to a namespace and allows dynamic instance CRUD within it.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	ai_search_namespaces: {
+		/** The binding name used to refer to the AI Search namespace in the Worker. */
+		binding: string;
+		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+		namespace: string;
+		/** Whether the AI Search namespace binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * Specifies AI Search instance bindings that are bound to this Worker environment.
+	 * Each binding is bound directly to a single pre-existing instance within the "default" namespace.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	ai_search: {
+		/** The binding name used to refer to the AI Search instance in the Worker. */
+		binding: string;
+		/** The user-chosen instance name. Must exist in Cloudflare at deploy time. */
+		instance_name: string;
+		/** Whether the AI Search instance binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

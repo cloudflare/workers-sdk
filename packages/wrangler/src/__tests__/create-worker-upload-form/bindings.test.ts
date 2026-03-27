@@ -292,6 +292,14 @@ describe("createWorkerUploadForm — bindings", () => {
 				namespace_id: "rl-123",
 				simple: { limit: 100, period: 60 },
 			},
+			{
+				type: "ai_search_namespace" as const,
+				namespace: "production",
+			},
+			{
+				type: "ai_search" as const,
+				instance_name: "cloudflare-blog",
+			},
 			{ type: "inherit" as const },
 		])("should pass through $type binding unchanged", (input, { expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
@@ -303,6 +311,64 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_BINDING",
 				...input,
+			});
+		});
+	});
+
+	describe("ai_search bindings", () => {
+		it("should include ai_search binding with instance_name", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				BLOG_SEARCH: {
+					type: "ai_search",
+					instance_name: "cloudflare-blog",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "BLOG_SEARCH",
+				type: "ai_search",
+				instance_name: "cloudflare-blog",
+			});
+		});
+
+		it("should include ai_search_namespace binding", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				AI_SEARCH: {
+					type: "ai_search_namespace",
+					namespace: "production",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "AI_SEARCH",
+				type: "ai_search_namespace",
+				namespace: "production",
+			});
+		});
+
+		it("should throw when ai_search_namespace has no namespace and not in dry run", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				AI_SEARCH: { type: "ai_search_namespace" } as never,
+			};
+			expect(() =>
+				createWorkerUploadForm(createEsmWorker(), bindings)
+			).toThrowError('AI_SEARCH bindings must have a "namespace" field');
+		});
+
+		it("should convert ai_search_namespace to inherit binding during dry run when namespace is missing", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				AI_SEARCH: { type: "ai_search_namespace" } as never,
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings, {
+				dryRun: true,
+			});
+			expect(getBindings(form)).toContainEqual({
+				name: "AI_SEARCH",
+				type: "inherit",
 			});
 		});
 	});
