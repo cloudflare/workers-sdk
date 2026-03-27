@@ -299,12 +299,6 @@ async function parseCustomPoolOptions(
 		// `main: false` is not nullish, so `??=` preserves it (skips fallback).
 		options.main ??= main;
 
-		// Now that the fallback has been resolved, convert `false` to `undefined`
-		// so downstream code only ever sees `string | undefined`.
-		if (options.main === false) {
-			options.main = undefined;
-		}
-
 		options.miniflare.workers = [
 			...options.miniflare.workers,
 			...externalWorkers,
@@ -323,6 +317,12 @@ async function parseCustomPoolOptions(
 
 		// Record any Wrangler `define`s
 		options.defines = define;
+	}
+
+	// Convert `main: false` to `undefined` so downstream code only ever sees
+	// `string | undefined`.
+	if (options.main === false) {
+		options.main = undefined;
 	}
 
 	// Some assets plumbing that should be hidden from the end user
