@@ -50,6 +50,7 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [open beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
@@ -129,6 +130,7 @@ describe("wrangler", () => {
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
+				  wrangler agent-memory           🧠 Manage Agent Memory namespaces [open beta]
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler ai-search              🔍 Manage AI Search instances [open beta]
 				  wrangler browser                🌐 Manage Browser Run sessions [open beta]
