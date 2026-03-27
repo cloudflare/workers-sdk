@@ -396,14 +396,25 @@ export class WranglerE2ETestHelper {
 		}
 	}
 
-	/** Create an AI Search instance in the default namespace and clean it up during tear-down. */
-	async aiSearchInstance(): Promise<string> {
-		const name = generateResourceName("ai-search");
+	/** Create an AI Search instance (backed by an R2 bucket) in the default namespace and clean both up during tear-down. */
+	async aiSearchInstance(): Promise<{
+		instanceId: string;
+		bucketName: string;
+	}> {
+		const instanceId = generateResourceName("ai-search");
+		const bucketName = generateResourceName("ai-search-r2");
 		const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 		assert(accountId, "CLOUDFLARE_ACCOUNT_ID environment variable is required");
 		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 		assert(apiToken, "CLOUDFLARE_API_TOKEN environment variable is required");
 
+		// Create the R2 bucket first — must be torn down after the instance
+		await this.run(`wrangler r2 bucket create ${bucketName}`);
+		this.onTeardown(async () => {
+			await this.run(`wrangler r2 bucket delete ${bucketName}`);
+		});
+
+		// Create the AI Search instance backed by the R2 bucket
 		const resp = await fetch(
 			`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances`,
 			{
@@ -412,7 +423,11 @@ export class WranglerE2ETestHelper {
 					Authorization: `Bearer ${apiToken}`,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ id: name }),
+				body: JSON.stringify({
+					id: instanceId,
+					type: "r2",
+					source: bucketName,
+				}),
 			}
 		);
 		assert(
@@ -423,18 +438,18 @@ export class WranglerE2ETestHelper {
 		this.onTeardown(async () => {
 			try {
 				await fetch(
-					`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances/${name}`,
+					`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai-search/namespaces/default/instances/${instanceId}`,
 					{
 						method: "DELETE",
 						headers: { Authorization: `Bearer ${apiToken}` },
 					}
 				);
 			} catch (e) {
-				console.warn(`Failed to delete AI Search instance ${name}:`, e);
+				console.warn(`Failed to delete AI Search instance ${instanceId}:`, e);
 			}
 		});
 
-		return name;
+		return { instanceId, bucketName };
 	}
 
 	/** Create a ZeroTrust tunnel and clean it up during tear-down. */
