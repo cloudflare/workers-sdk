@@ -2,7 +2,13 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, test } from "vitest";
-import { getJsonResponse, isBuild, rootDir } from "../../__test-utils__";
+import {
+	getJsonResponse,
+	isBuild,
+	page,
+	rootDir,
+	viteTestUrl,
+} from "../../__test-utils__";
 
 describe.runIf(isBuild)("output directories", () => {
 	test("creates the correct output directories", ({ expect }) => {
@@ -34,6 +40,32 @@ describe("multi-worker service bindings", async () => {
 		const result = await getJsonResponse("/fetch");
 		expect(result).toEqual({ result: { name: "Worker B" } });
 	});
+
+	test.runIf(!isBuild)(
+		"proxies WebSocket upgrades to another worker in dev mode",
+		async ({ expect }) => {
+			await page.goto(viteTestUrl);
+
+			const result = await page.evaluate((url) => {
+				return new Promise<string>((resolve, reject) => {
+					const ws = new WebSocket(`${url.replace(/^http/, "ws")}/websocket`);
+
+					ws.addEventListener("open", () => {
+						ws.send("ping");
+					});
+					ws.addEventListener("message", (event) => {
+						resolve(String(event.data));
+						ws.close();
+					});
+					ws.addEventListener("error", () => {
+						reject(new Error("WebSocket connection failed"));
+					});
+				});
+			}, viteTestUrl);
+
+			expect(result).toBe("Worker B received: ping");
+		}
+	);
 
 	test("calls an RPC method on another worker", async ({ expect }) => {
 		const result = await getJsonResponse("/rpc-method");
