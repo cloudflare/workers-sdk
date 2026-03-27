@@ -1,4 +1,5 @@
 import {
+	deleteAgentMemoryNamespace,
 	deleteCertificate,
 	deleteContainerApplication,
 	deleteContainerImage,
@@ -11,6 +12,7 @@ import {
 	listCertificates,
 	listE2eContainerImages,
 	listHyperdriveConfigs,
+	listTmpAgentMemoryNamespaces,
 	listTmpDatabases,
 	listTmpE2EContainerApplications,
 	listTmpE2EProjects,
@@ -53,6 +55,8 @@ async function run() {
 	await deleteMtlsCertificates();
 
 	await deleteContainerApplications();
+
+	await deleteAgentMemoryNamespaces();
 
 	deleteContainerImages();
 }
@@ -168,6 +172,21 @@ async function deleteMtlsCertificates() {
 	}
 	if (mtlsCertificates.length === 0) {
 		console.log(`No mTLS certificates to delete.`);
+	}
+}
+
+async function deleteAgentMemoryNamespaces() {
+	const namespacesToDelete = await listTmpAgentMemoryNamespaces();
+	for (const ns of namespacesToDelete) {
+		console.log("Deleting Agent Memory namespace: " + ns.name);
+		if (await deleteAgentMemoryNamespace(ns.id)) {
+			console.log(`Successfully deleted Agent Memory namespace ${ns.id}`);
+		} else {
+			console.log(`Failed to delete Agent Memory namespace ${ns.id}`);
+		}
+	}
+	if (namespacesToDelete.length === 0) {
+		console.log(`No Agent Memory namespaces to delete.`);
 	}
 }
 

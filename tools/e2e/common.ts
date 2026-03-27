@@ -49,6 +49,14 @@ export type HyperdriveConfig = {
 	created_on: string;
 };
 
+export type AgentMemoryNamespace = {
+	id: string;
+	name: string;
+	account_id: string;
+	created_at: string;
+	updated_at: string;
+};
+
 export type MTlsCertificateResponse = {
 	id: string;
 	name?: string;
@@ -331,6 +339,61 @@ export const listCertificates = async () => {
 
 export const deleteCertificate = async (id: string) => {
 	return await apiFetch(`/mtls_certificates/${id}`, "DELETE");
+};
+
+export const listTmpAgentMemoryNamespaces = async () => {
+	// The Agent Memory API uses cursor-based pagination, so we follow cursors manually
+	// rather than using apiFetchList (which uses page-number pagination).
+	const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
+	const results: AgentMemoryNamespace[] = [];
+	let cursor: string | undefined;
+
+	while (true) {
+		const queryString = cursor
+			? "?" + new URLSearchParams({ cursor }).toString()
+			: "";
+		const url = `${baseUrl}/agentmemory/namespaces${queryString}`;
+
+		const response = await fetch(url, {
+			method: "GET",
+			headers: {
+				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+			},
+		});
+
+		if (!response.ok) {
+			console.error(
+				"Failed to list Agent Memory namespaces",
+				response.status,
+				await response.text()
+			);
+			return [];
+		}
+
+		const json = (await response.json()) as {
+			result: AgentMemoryNamespace[];
+			result_info?: { cursor?: string };
+		};
+
+		results.push(...json.result);
+
+		const nextCursor = json.result_info?.cursor;
+		if (!nextCursor) {
+			break;
+		}
+		cursor = nextCursor;
+	}
+
+	return results.filter(
+		(ns) =>
+			ns.name.startsWith("tmp-e2e-") &&
+			// Namespaces are more than an hour old
+			Date.now() - new Date(ns.created_at).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteAgentMemoryNamespace = async (id: string) => {
+	return await apiFetch(`/agentmemory/namespaces/${id}`, "DELETE");
 };
 
 // Note: the container images functions below don't directly use the REST API since
