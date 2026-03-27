@@ -80,8 +80,6 @@ const ignoreMessages = [
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
-	// Internal workerd diagnostic, not relevant to application developers
-	// See: https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L566
 	"CODE_MOVED for unknown code block",
 ];
 function trimSymbolizerWarning(chunk: string): string {
