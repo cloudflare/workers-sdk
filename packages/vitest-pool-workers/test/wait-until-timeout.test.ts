@@ -2,38 +2,23 @@ import dedent from "ts-dedent";
 import { test, vitestConfig } from "./helpers";
 
 test(
-	"abandons waitUntil promises that never resolve and logs a warning",
+	"waitForWaitUntil abandons promises that never resolve",
 	async ({ expect, seed, vitestRun }) => {
 		await seed({
-			"vitest.config.mts": vitestConfig({
-				main: "./index.ts",
-				miniflare: {
-					compatibilityDate: "2025-12-02",
-					compatibilityFlags: ["nodejs_compat"],
-				},
-			}),
-			"index.ts": dedent`
-				export default {
-					fetch(request, env, ctx) {
-						// Register a waitUntil promise that will never resolve
-						ctx.waitUntil(new Promise(() => {}));
-						return new Response("ok");
-					}
-				}
-			`,
+			"vitest.config.mts": vitestConfig(),
 			"index.test.ts": dedent`
-				import { SELF } from "cloudflare:test";
-				import { setWaitUntilTimeout } from "cloudflare:test-internal";
-				import { beforeAll, expect, it } from "vitest";
+				import {
+					setWaitUntilTimeout,
+					waitForWaitUntil,
+				} from "cloudflare:test-internal";
+				import { expect, it } from "vitest";
 
-				beforeAll(() => {
-					// Use a short timeout so the test doesn't take 30s
+				it("returns after timeout instead of hanging", async () => {
 					setWaitUntilTimeout(100);
-				});
-
-				it("sends request with never-resolving waitUntil", async () => {
-					const response = await SELF.fetch("https://example.com");
-					expect(response.ok).toBe(true);
+					const waitUntil = [new Promise(() => {})];
+					await waitForWaitUntil(waitUntil);
+					// If we get here, the timeout worked — the function didn't hang
+					expect(waitUntil).toHaveLength(0);
 				});
 			`,
 		});
