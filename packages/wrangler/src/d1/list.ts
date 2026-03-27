@@ -14,6 +14,7 @@ export const d1ListCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		json: {

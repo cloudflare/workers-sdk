@@ -8,6 +8,9 @@ export const queuesListCommand = createCommand({
 		status: "stable",
 		owner: "Product: Queues",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		page: {
 			type: "number",

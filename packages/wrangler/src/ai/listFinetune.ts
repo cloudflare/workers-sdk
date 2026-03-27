@@ -12,6 +12,7 @@ export const aiFineTuneListCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		json: {

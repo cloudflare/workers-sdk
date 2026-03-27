@@ -10,6 +10,9 @@ export const workflowsListCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		page: {
 			describe:

@@ -21,6 +21,9 @@ export const r2BucketLocalUploadsGetConfigCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -58,6 +61,9 @@ export const r2BucketLocalUploadsEnableCommand = createCommand({
 		description: "Enable local uploads for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -102,6 +108,9 @@ export const r2BucketLocalUploadsDisableCommand = createCommand({
 		description: "Disable local uploads for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

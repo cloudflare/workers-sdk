@@ -26,6 +26,9 @@ export const r2BucketDomainGetCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -71,6 +74,9 @@ export const r2BucketDomainListCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -114,6 +120,9 @@ export const r2BucketDomainAddCommand = createCommand({
 		description: "Connect a custom domain to an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -198,6 +207,9 @@ export const r2BucketDomainRemoveCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -258,6 +270,9 @@ export const r2BucketDomainUpdateCommand = createCommand({
 			"Update settings for a custom domain connected to an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

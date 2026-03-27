@@ -11,6 +11,9 @@ export const queuesPauseCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	args: {
 		name: {
 			type: "string",
@@ -29,6 +32,9 @@ export const queuesResumeCommand = createCommand({
 		description: "Resume message delivery for a queue",
 		owner: "Product: Queues",
 		status: "stable",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {

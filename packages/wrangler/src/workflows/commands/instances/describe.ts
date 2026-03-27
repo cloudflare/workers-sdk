@@ -32,6 +32,9 @@ export const workflowsInstancesDescribeCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 
 	positionalArgs: ["name", "id"],
 	args: {

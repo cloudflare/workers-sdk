@@ -33,6 +33,9 @@ export const r2BucketNotificationListCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
@@ -74,6 +77,9 @@ export const r2BucketNotificationCreateCommand = createCommand({
 		description: "Create an event notification rule for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -154,6 +160,9 @@ export const r2BucketNotificationDeleteCommand = createCommand({
 		description: "Delete an event notification rule from an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+	},
+	behaviour: {
+		skipConfigValidationErrors: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

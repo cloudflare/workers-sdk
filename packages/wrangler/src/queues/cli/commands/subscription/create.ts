@@ -78,6 +78,9 @@ export const queuesSubscriptionCreateCommand = createCommand({
 		owner: "Product: Queues",
 		status: "stable",
 	},
+	behaviour: {
+		skipConfigValidationErrors: true,
+	},
 	positionalArgs: ["queue"],
 	args: {
 		queue: {

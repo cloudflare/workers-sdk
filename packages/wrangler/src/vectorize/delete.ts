@@ -13,6 +13,7 @@ export const vectorizeDeleteCommand = createCommand({
 	behaviour: {
 		printBanner: true,
 		provideConfig: true,
+		skipConfigValidationErrors: true,
 	},
 	args: {
 		name: {
