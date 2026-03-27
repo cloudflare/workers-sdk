@@ -103,6 +103,44 @@ declare module "cloudflare:test" {
 	): Promise<void>;
 
 	/**
+	 * Admin API for a secrets store binding. Returned by `adminSecretsStore()`.
+	 */
+	export interface SecretsStoreSecretAdmin {
+		/** Create a new secret with the given value. Returns the secret's ID. */
+		create(value: string): Promise<string>;
+		/** Update an existing secret (identified by ID) with a new value. Returns the secret's ID. */
+		update(value: string, id: string): Promise<string>;
+		/** Duplicate a secret (identified by ID) under a new name. Returns the new secret's ID. */
+		duplicate(id: string, newName: string): Promise<string>;
+		/** Delete a secret by ID. */
+		delete(id: string): Promise<void>;
+		/** List all secrets in the store. */
+		list(): Promise<{ name: string; metadata?: { uuid: string } }[]>;
+		/** Get a secret's name by ID. */
+		get(id: string): Promise<string>;
+	}
+
+	/**
+	 * Returns the admin API for a secrets store binding, allowing tests to
+	 * create, update, and delete secrets that would otherwise be read-only
+	 * via `binding.get()`.
+	 *
+	 * @example
+	 * ```ts
+	 * import { adminSecretsStore } from "cloudflare:test";
+	 * import { env } from "cloudflare:workers";
+	 *
+	 * const admin = adminSecretsStore(env.MY_SECRET);
+	 * await admin.create("my-secret-value");
+	 *
+	 * // Now env.MY_SECRET.get() will return "my-secret-value"
+	 * ```
+	 */
+	export function adminSecretsStore(binding: {
+		get(): Promise<string>;
+	}): SecretsStoreSecretAdmin;
+
+	/**
 	 * Creates an introspector for a specific Workflow instance, used to
 	 * modify its behavior and await outcomes.
 	 * This is the primary entry point for testing individual Workflow instances.
