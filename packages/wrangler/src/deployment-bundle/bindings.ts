@@ -630,7 +630,7 @@ export async function provisionBindings(
 		printBindings(
 			Object.fromEntries(
 				pendingResources.map((r) => [r.binding, { type: r.resourceType }])
-			),
+			) as Record<string, Binding>,
 			config.tail_consumers,
 			config.streaming_tail_consumers,
 			config.containers,
