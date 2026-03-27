@@ -17,27 +17,18 @@ export default defineConfig({
 					"service_binding_extra_handlers",
 				],
 				serviceBindings: {
-					WORKER: "worker-under-test",
+					WORKER: "basics-integration-auxiliary",
 				},
 
 				workers: [
 					// Configuration for the "auxiliary" Worker under test.
-					// Unfortunately, auxiliary Workers cannot load their configuration
-					// from `wrangler.toml` files, and must be configured with Miniflare
-					// `WorkerOptions`.
+					// This loads configuration from the `wrangler.jsonc` file and
+					// automatically builds the TypeScript entrypoint.
 					{
-						name: "worker-under-test",
-						modules: true,
-						scriptPath: "./dist/index.js", // Built by `global-setup.ts`
-						compatibilityDate: "2024-01-01",
-						compatibilityFlags: ["nodejs_compat"],
+						wrangler: { configPath: "./wrangler.jsonc" },
 					},
 				],
 			},
 		}),
 	],
-
-	test: {
-		globalSetup: ["./global-setup.ts"],
-	},
 });

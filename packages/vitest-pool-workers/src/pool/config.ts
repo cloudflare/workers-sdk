@@ -79,9 +79,19 @@ export type SourcelessWorkerOptions = Omit<
 	modulesRules?: ModuleRule[];
 };
 
+/**
+ * Configuration for an auxiliary worker that loads its options from a
+ * `wrangler.toml` / `wrangler.json` / `wrangler.jsonc` configuration file.
+ * The worker will be automatically built (compiling TypeScript entrypoints,
+ * bundling, etc.) using `wrangler build`.
+ */
+export type WranglerAuxiliaryWorkerOptions = {
+	wrangler: { configPath: string; environment?: string };
+};
+
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
-		workers?: WorkerOptions[];
+		workers?: (WorkerOptions | WranglerAuxiliaryWorkerOptions)[];
 	};
 };
 
@@ -183,6 +193,87 @@ function filterTails(
 	});
 }
 
+function isWranglerAuxiliaryWorker(
+	worker: Record<string, unknown>
+): worker is { wrangler: { configPath: string; environment?: string } } {
+	return (
+		"wrangler" in worker &&
+		typeof worker.wrangler === "object" &&
+		worker.wrangler !== null &&
+		"configPath" in worker.wrangler &&
+		typeof (worker.wrangler as Record<string, unknown>).configPath ===
+			"string"
+	);
+}
+
+async function resolveWranglerAuxiliaryWorker(
+	rootPath: string,
+	worker: { wrangler: { configPath: string; environment?: string } },
+	index: number
+): Promise<{ worker: WorkerOptions; externalWorkers: WorkerOptions[] }> {
+	const configPath = path.resolve(rootPath, worker.wrangler.configPath);
+	const environment = worker.wrangler.environment;
+
+	// Lazily import wrangler
+	const wrangler = await import("wrangler");
+
+	// Read the worker name from the config
+	const { rawConfig } = wrangler.experimental_readRawConfig({
+		config: configPath,
+		env: environment,
+	});
+	const name = rawConfig.name;
+	if (!name) {
+		throw new Error(
+			`\`miniflare.workers[${index}].wrangler.configPath\`: config at "${configPath}" must have a "name" field`
+		);
+	}
+
+	// Get Miniflare-compatible options from the wrangler config
+	const { workerOptions, main, externalWorkers } =
+		wrangler.unstable_getMiniflareWorkerOptions(configPath, environment, {
+			overrides: { enableContainers: false },
+		});
+
+	if (!main) {
+		throw new Error(
+			`\`miniflare.workers[${index}].wrangler.configPath\`: config at "${configPath}" must have a "main" field`
+		);
+	}
+
+	// Bundle the entrypoint with esbuild in-process. This compiles
+	// TypeScript entrypoints and bundles dependencies, producing a single
+	// JS module — the same thing `wrangler build` does under the hood, but
+	// without spawning a subprocess.
+	const esbuild = await import("esbuild");
+	const result = await esbuild.build({
+		entryPoints: [main],
+		bundle: true,
+		write: false,
+		format: "esm",
+		target: "esnext",
+		conditions: ["workerd", "worker", "browser"],
+		// Leave runtime-provided modules for workerd to resolve
+		external: ["node:*", "cloudflare:*"],
+	});
+	const compiledScript = result.outputFiles[0].text;
+
+	const resolvedWorker = {
+		name,
+		...workerOptions,
+		modulesRoot: path.dirname(main),
+		modules: [
+			{
+				type: "ESModule" as const,
+				path: main.replace(/\.ts$/, ".js"),
+				contents: compiledScript,
+			},
+		],
+	} as WorkerOptions;
+
+	return { worker: resolvedWorker, externalWorkers };
+}
+
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 export const remoteProxySessionsDataMap = new Map<
 	string,
@@ -221,23 +312,35 @@ async function parseCustomPoolOptions(
 	options.miniflare.workers = [];
 	// Try to parse auxiliary worker options
 	if (workers !== undefined) {
-		options.miniflare.workers = workers.map((worker, i) => {
-			try {
-				const workerRootPathOption = getRootPath(worker);
-				const workerRootPath = path.resolve(rootPath, workerRootPathOption);
-				return parseWorkerOptions(
-					workerRootPath,
-					worker,
-					/* withoutScript */ false,
-					{
-						path: ["miniflare", "workers", i],
-					}
-				);
-			} catch (e) {
-				coalesceZodErrors(errorRef, e);
-				return { script: "" }; // (ignored as we'll be throwing)
+		for (let i = 0; i < workers.length; i++) {
+			const worker = workers[i];
+			if (isWranglerAuxiliaryWorker(worker)) {
+				// Resolve the worker from its wrangler config file, automatically
+				// building TypeScript entrypoints and extracting Miniflare options
+				const { worker: resolvedWorker, externalWorkers } =
+					await resolveWranglerAuxiliaryWorker(rootPath, worker, i);
+				options.miniflare.workers.push(resolvedWorker);
+				options.miniflare.workers.push(...externalWorkers);
+			} else {
+				try {
+					const workerRootPathOption = getRootPath(worker);
+					const workerRootPath = path.resolve(rootPath, workerRootPathOption);
+					options.miniflare.workers.push(
+						parseWorkerOptions(
+							workerRootPath,
+							worker,
+							/* withoutScript */ false,
+							{
+								path: ["miniflare", "workers", i],
+							}
+						)
+					);
+				} catch (e) {
+					coalesceZodErrors(errorRef, e);
+					options.miniflare.workers.push({ script: "" } as WorkerOptions); // (ignored as we'll be throwing)
+				}
 			}
-		});
+		}
 	}
 
 	if (errorRef.value !== undefined) {
