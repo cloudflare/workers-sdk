@@ -1497,6 +1497,18 @@ export type WorkflowsListInstancesData = {
 		 * Number of instances per page.
 		 */
 		per_page?: number;
+		/**
+		 * Filter instances by status.
+		 */
+		status?:
+			| "queued"
+			| "running"
+			| "paused"
+			| "errored"
+			| "terminated"
+			| "complete"
+			| "waitingForPause"
+			| "waiting";
 	};
 	url: "/workflows/{workflow_name}/instances";
 };

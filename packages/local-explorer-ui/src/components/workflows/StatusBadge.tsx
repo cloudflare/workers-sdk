@@ -35,13 +35,15 @@ const statusLabels: Record<WorkflowStatus, string> = {
 };
 
 interface WorkflowStatusBadgeProps {
-	status: WorkflowStatus | undefined;
+	status: WorkflowStatus | string | undefined;
 }
 
 export function WorkflowStatusBadge({
 	status,
 }: WorkflowStatusBadgeProps): JSX.Element {
-	const resolvedStatus = status ?? "unknown";
+	const resolvedStatus = (
+		status && status in statusStyles ? status : "unknown"
+	) as WorkflowStatus;
 
 	return (
 		<span

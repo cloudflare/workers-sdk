@@ -1480,6 +1480,24 @@
 							"minimum": 1,
 							"type": "number"
 						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"queued",
+								"running",
+								"paused",
+								"errored",
+								"terminated",
+								"complete",
+								"waitingForPause",
+								"waiting"
+							],
+							"description": "Filter instances by status."
+						}
 					}
 				],
 				"responses": {

@@ -622,7 +622,8 @@ function WorkflowInstancesView() {
 		async (
 			fetchPage?: number,
 			fetchPerPage?: number,
-			quiet?: boolean
+			quiet?: boolean,
+			fetchStatus?: string
 		): Promise<void> => {
 			try {
 				if (!quiet) {
@@ -632,10 +633,27 @@ function WorkflowInstancesView() {
 
 				const p = fetchPage ?? page;
 				const pp = fetchPerPage ?? perPage;
+				const st = fetchStatus ?? statusFilter;
 
 				const response = await workflowsListInstances({
 					path: { workflow_name: params.workflowName },
-					query: { page: p, per_page: pp },
+					query: {
+						page: p,
+						per_page: pp,
+						...(st !== "all"
+							? {
+									status: st as
+										| "queued"
+										| "running"
+										| "paused"
+										| "errored"
+										| "terminated"
+										| "complete"
+										| "waitingForPause"
+										| "waiting",
+								}
+							: {}),
+					},
 				});
 
 				setInstances(response.data?.result ?? []);
@@ -654,7 +672,7 @@ function WorkflowInstancesView() {
 				setFetching(false);
 			}
 		},
-		[params.workflowName, page, perPage]
+		[params.workflowName, page, perPage, statusFilter]
 	);
 
 	const handleRefresh = useCallback(() => {
@@ -693,11 +711,11 @@ function WorkflowInstancesView() {
 		void fetchInstances(1);
 	}
 
-	// Client-side status filter (applied on top of server-side page)
-	const filteredInstances =
-		statusFilter === "all"
-			? instances
-			: instances.filter((inst) => inst.status === statusFilter);
+	function handleStatusFilterChange(newStatus: string): void {
+		setStatusFilter(newStatus);
+		setPage(1);
+		void fetchInstances(1, undefined, false, newStatus);
+	}
 
 	return (
 		<>
@@ -758,7 +776,7 @@ function WorkflowInstancesView() {
 							>
 								<DropdownMenu.Item
 									className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
-									onClick={() => setStatusFilter("all")}
+									onClick={() => handleStatusFilterChange("all")}
 								>
 									All
 								</DropdownMenu.Item>
@@ -766,7 +784,7 @@ function WorkflowInstancesView() {
 									<DropdownMenu.Item
 										className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
 										key={key}
-										onClick={() => setStatusFilter(key)}
+										onClick={() => handleStatusFilterChange(key)}
 									>
 										{label}
 									</DropdownMenu.Item>
@@ -809,16 +827,20 @@ function WorkflowInstancesView() {
 						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
 							No instances found
 						</div>
-					) : filteredInstances.length === 0 ? (
+					) : instances.length === 0 ? (
 						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
-							No instances found in state &lsquo;{statusFilter}&rsquo;
+							{statusFilter !== "all" ? (
+								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+							) : (
+								"No instances found"
+							)}
 						</div>
 					) : (
 						<div
 							className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
 						>
 							<div className="overflow-hidden rounded-lg border border-border">
-								{filteredInstances.map((instance) => (
+								{instances.map((instance) => (
 									<InstanceRow
 										instance={instance}
 										key={instance.id}

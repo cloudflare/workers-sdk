@@ -378,13 +378,17 @@ export async function listWorkflowInstances(
 	workflowName: string,
 	query: ListInstancesQuery
 ): Promise<Response> {
-	const { page = 1, per_page: perPage = 25 } = query;
+	const { page = 1, per_page: perPage = 25, status: statusFilter } = query;
 
 	const workflowExists =
 		c.env.LOCAL_EXPLORER_BINDING_MAP.workflows[workflowName];
 
 	if (workflowExists) {
-		return executeListWorkflowInstances(c, workflowName, { page, perPage });
+		return executeListWorkflowInstances(c, workflowName, {
+			page,
+			perPage,
+			statusFilter,
+		});
 	}
 
 	const ownerMiniflare = await findWorkflowOwner(c, workflowName);
@@ -392,6 +396,9 @@ export async function listWorkflowInstances(
 		const params = new URLSearchParams();
 		params.set("page", String(page));
 		params.set("per_page", String(perPage));
+		if (statusFilter) {
+			params.set("status", statusFilter);
+		}
 		const peerPath = `/workflows/${encodeURIComponent(workflowName)}/instances?${params.toString()}`;
 		const response = await fetchFromPeer(ownerMiniflare, peerPath);
 		if (response) {
@@ -417,9 +424,9 @@ export async function listWorkflowInstances(
 async function executeListWorkflowInstances(
 	c: AppContext,
 	workflowName: string,
-	options: { page: number; perPage: number }
+	options: { page: number; perPage: number; statusFilter?: string }
 ): Promise<Response> {
-	const { page, perPage } = options;
+	const { page, perPage, statusFilter } = options;
 
 	if (c.env.MINIFLARE_LOOPBACK === undefined) {
 		return errorResponse(500, 10001, "Loopback service not available");
@@ -460,11 +467,6 @@ async function executeListWorkflowInstances(
 		)
 		.sort((a, b) => b.birthtimeMs - a.birthtimeMs);
 
-	const totalCount = sqliteFiles.length;
-	const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
-	const offset = (page - 1) * perPage;
-	const pageFiles = sqliteFiles.slice(offset, offset + perPage);
-
 	const engineNamespace = getEngineNamespace(c.env, workflowName);
 
 	// Get cached status counts (resolves all DOs only on first load or after TTL/file count change)
@@ -474,32 +476,60 @@ async function executeListWorkflowInstances(
 		engineNamespace
 	);
 
-	// Resolve full metadata only for the current page's instances
-	const instances = await Promise.all(
-		pageFiles.map(async (entry) => {
-			const hexId = entry.name.replace(/\.sqlite$/, "");
-			if (!engineNamespace) {
-				return { id: hexId };
-			}
-			try {
-				const stubId = engineNamespace.idFromString(hexId);
-				const stub = engineNamespace.get(stubId) as unknown as EngineStub;
-				const metadata = await stub.getInstanceMetadata();
-				return {
-					id: metadata.instanceId || hexId,
-					...(metadata.status !== undefined
-						? { status: STATUS_NAMES[metadata.status] ?? "unknown" }
-						: {}),
-					...(metadata.createdOn ? { created_on: metadata.createdOn } : {}),
-				};
-			} catch {
-				return { id: hexId };
-			}
-		})
-	);
+	// Helper to resolve a single file's metadata
+	async function resolveInstance(entry: DirectoryEntry) {
+		const hexId = entry.name.replace(/\.sqlite$/, "");
+		if (!engineNamespace) {
+			return {
+				id: hexId,
+				status: undefined as string | undefined,
+				created_on: undefined as string | undefined,
+			};
+		}
+		try {
+			const stubId = engineNamespace.idFromString(hexId);
+			const stub = engineNamespace.get(stubId) as unknown as EngineStub;
+			const metadata = await stub.getInstanceMetadata();
+			return {
+				id: metadata.instanceId || hexId,
+				status:
+					(STATUS_NAMES[metadata.status] as string | undefined) ?? "unknown",
+				created_on: metadata.createdOn || undefined,
+			};
+		} catch {
+			return { id: hexId, status: undefined, created_on: undefined };
+		}
+	}
+
+	let instances: Array<{ id: string; status?: string; created_on?: string }>;
+	let totalCount: number;
+
+	if (statusFilter) {
+		// Status filter requires resolving ALL instances to filter server-side
+		const allResolved = await Promise.all(sqliteFiles.map(resolveInstance));
+		const filtered = allResolved.filter((inst) => inst.status === statusFilter);
+		totalCount = filtered.length;
+		const offset = (page - 1) * perPage;
+		instances = filtered.slice(offset, offset + perPage);
+	} else {
+		// No filter — only resolve the current page (efficient)
+		totalCount = sqliteFiles.length;
+		const offset = (page - 1) * perPage;
+		const pageFiles = sqliteFiles.slice(offset, offset + perPage);
+		instances = await Promise.all(pageFiles.map(resolveInstance));
+	}
+
+	const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+
+	// Clean undefined fields from response
+	const cleanInstances = instances.map(({ id, status, created_on }) => ({
+		id,
+		...(status !== undefined ? { status } : {}),
+		...(created_on ? { created_on } : {}),
+	}));
 
 	return c.json({
-		...wrapResponse(instances),
+		...wrapResponse(cleanInstances),
 		result_info: {
 			page,
 			per_page: perPage,

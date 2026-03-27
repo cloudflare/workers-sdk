@@ -101,7 +101,7 @@ const StatsStrip = memo(function StatsStrip({
 		<div className="grid grid-cols-3 overflow-hidden rounded-lg border border-border bg-bg">
 			<div className="flex items-center justify-between px-5 py-2">
 				<span className="text-base text-text-secondary">Status</span>
-				<WorkflowStatusBadge status={status as never} />
+				<WorkflowStatusBadge status={status} />
 			</div>
 			<div className="flex items-center justify-between border-l border-border px-5 py-2">
 				<span className="text-base text-text-secondary">Steps Completed</span>
@@ -603,15 +603,16 @@ function InstanceDetailView() {
 								disabled={!eventType.trim() || sendingEvent}
 								loading={sendingEvent}
 								onClick={() => {
-									setSendingEvent(true);
 									let payload: unknown;
-									try {
-										payload = eventPayload.trim()
-											? JSON.parse(eventPayload)
-											: undefined;
-									} catch {
-										payload = undefined;
+									if (eventPayload.trim()) {
+										try {
+											payload = JSON.parse(eventPayload);
+										} catch {
+											// Invalid JSON — keep dialog open
+											return;
+										}
 									}
+									setSendingEvent(true);
 									void workflowsSendInstanceEvent({
 										path: {
 											workflow_name: params.workflowName,

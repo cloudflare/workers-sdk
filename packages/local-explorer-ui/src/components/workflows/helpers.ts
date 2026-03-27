@@ -1,23 +1,3 @@
-export function formatTimestamp(ts: string | undefined | null): string {
-	if (!ts) {
-		return "—";
-	}
-	try {
-		const d = new Date(ts);
-		return d.toLocaleString("en-GB", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-			second: "2-digit",
-			hour12: false,
-		});
-	} catch {
-		return ts;
-	}
-}
-
 export function formatDuration(
 	startStr?: string | null,
 	endStr?: string | null

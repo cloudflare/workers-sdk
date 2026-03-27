@@ -950,6 +950,18 @@ export const zWorkflowsListInstancesData = z.object({
 		.object({
 			page: z.number().gte(1).optional().default(1),
 			per_page: z.number().gte(1).lte(100).optional().default(25),
+			status: z
+				.enum([
+					"queued",
+					"running",
+					"paused",
+					"errored",
+					"terminated",
+					"complete",
+					"waitingForPause",
+					"waiting",
+				])
+				.optional(),
 		})
 		.optional(),
 });
