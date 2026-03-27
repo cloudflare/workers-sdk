@@ -34,13 +34,13 @@ test("globsToRegExps/testRegExps: matches glob patterns", ({ expect }) => {
 	).toBe(true);
 });
 
-test("globsToRegExps/testRegExps: does not match double-extension paths (e.g. foo.wasm.js for **/*.wasm)", ({
+test("globsToRegExps/testRegExps: endAnchor prevents matching double-extension paths", ({
 	expect,
 }) => {
 	// Regression test for https://github.com/cloudflare/workers-sdk/issues/8280
-	// A pattern like **/*.wasm must NOT match foo.wasm.js — the extension must
-	// be anchored to the end of the path.
-	const wasmMatcher = globsToRegExps(["**/*.wasm"]);
+	// With endAnchor, a pattern like **/*.wasm must NOT match foo.wasm.js — the
+	// extension must be anchored to the end of the path.
+	const wasmMatcher = globsToRegExps(["**/*.wasm"], { endAnchor: true });
 
 	expect(testRegExps(wasmMatcher, "foo.wasm")).toBe(true);
 	expect(testRegExps(wasmMatcher, "path/to/foo.wasm")).toBe(true);
@@ -50,4 +50,13 @@ test("globsToRegExps/testRegExps: does not match double-extension paths (e.g. fo
 	expect(testRegExps(wasmMatcher, "foo.wasm.js")).toBe(false);
 	expect(testRegExps(wasmMatcher, "src/main.wasm.test.js")).toBe(false);
 	expect(testRegExps(wasmMatcher, "foo.wasm.map")).toBe(false);
+});
+
+test("globsToRegExps/testRegExps: without endAnchor, matches substring patterns", ({
+	expect,
+}) => {
+	// KV Sites relies on patterns like "b" matching any path containing "b"
+	const matcher = globsToRegExps(["b"]);
+	expect(testRegExps(matcher, "b/b.txt")).toBe(true);
+	expect(testRegExps(matcher, "a.txt")).toBe(false);
 });
