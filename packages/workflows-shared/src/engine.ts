@@ -195,6 +195,41 @@ export class Engine extends DurableObject<Env> {
 		};
 	}
 
+	/**
+	 * Returns detailed logs including timestamps, ordered by ID.
+	 * Used by the local explorer to reconstruct step-level detail.
+	 */
+	readDetailedLogs(): Array<{
+		id: number;
+		timestamp: string;
+		event: number;
+		group: string | null;
+		target: string | null;
+		metadata: Record<string, unknown>;
+	}> {
+		const rows = [
+			...this.ctx.storage.sql.exec<{
+				id: number;
+				timestamp: string;
+				event: number;
+				groupKey: string | null;
+				target: string | null;
+				metadata: string;
+			}>(
+				"SELECT id, timestamp, event, groupKey, target, metadata FROM states ORDER BY id ASC"
+			),
+		];
+
+		return rows.map((row) => ({
+			id: row.id,
+			timestamp: String(row.timestamp).replace(" ", "T") + "Z",
+			event: row.event,
+			group: row.groupKey,
+			target: row.target,
+			metadata: JSON.parse(row.metadata) as Record<string, unknown>,
+		}));
+	}
+
 	readLogsFromEvent(eventType: InstanceEvent): EngineLogs {
 		const logs = [
 			...this.ctx.storage.sql.exec<{
@@ -239,6 +274,51 @@ export class Engine extends DurableObject<Env> {
 			return InstanceStatus.Queued;
 		}
 		return res;
+	}
+
+	// Returns instance metadata for the local explorer.
+	async getInstanceMetadata(): Promise<{
+		instanceId: string;
+		status: InstanceStatus;
+		createdOn: string;
+	}> {
+		const status = await this.getStatus();
+		// Read the full metadata to get the created_on timestamp
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		let createdOn = metadata?.instance?.created_on ?? "";
+
+		// Backfill for instances created before created_on was populated:
+		// try the earliest log entry, then the earliest priority queue entry.
+		if (!createdOn) {
+			const queries = [
+				"SELECT timestamp AS ts FROM states ORDER BY id ASC LIMIT 1",
+				"SELECT created_on AS ts FROM priority_queue ORDER BY id ASC LIMIT 1",
+			];
+			for (const query of queries) {
+				if (createdOn) {
+					break;
+				}
+				try {
+					for (const row of this.ctx.storage.sql.exec(query)) {
+						if (row.ts) {
+							// SQLite DATETIME('now','subsec') returns "YYYY-MM-DD HH:MM:SS.sss"
+							// which is not valid ISO 8601 (needs T separator and Z timezone).
+							const raw = String(row.ts).replace(" ", "T") + "Z";
+							createdOn = raw;
+						}
+					}
+				} catch {
+					// Table may not exist
+				}
+			}
+		}
+
+		return {
+			instanceId: this.instanceId ?? "",
+			status,
+			createdOn,
+		};
 	}
 
 	async setStatus(

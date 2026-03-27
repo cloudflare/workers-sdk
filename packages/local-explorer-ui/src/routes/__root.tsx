@@ -12,6 +12,7 @@ import {
 	localExplorerListWorkers,
 	r2ListBuckets,
 	workersKvNamespaceListNamespaces,
+	workflowsListWorkflows,
 } from "../api";
 import { Sidebar } from "../components/Sidebar";
 import { filterVisibleWorkers } from "../components/WorkerSelector";
@@ -21,6 +22,7 @@ import type {
 	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
+	WorkflowsWorkflow,
 } from "../api";
 
 // Extended types with workerName for filtering
@@ -32,14 +34,21 @@ type R2BucketWithWorker = R2Bucket & { workerName?: string };
 export const Route = createRootRoute({
 	component: RootLayout,
 	loader: async () => {
-		const [workersResponse, kvResponse, d1Response, doResponse, r2Response] =
-			await Promise.allSettled([
-				localExplorerListWorkers(),
-				workersKvNamespaceListNamespaces(),
-				d1ListDatabases(),
-				durableObjectsNamespaceListNamespaces(),
-				r2ListBuckets(),
-			]);
+		const [
+			workersResponse,
+			kvResponse,
+			d1Response,
+			doResponse,
+			r2Response,
+			workflowsResponse,
+		] = await Promise.allSettled([
+			localExplorerListWorkers(),
+			workersKvNamespaceListNamespaces(),
+			d1ListDatabases(),
+			durableObjectsNamespaceListNamespaces(),
+			r2ListBuckets(),
+			workflowsListWorkflows(),
+		]);
 
 		let workers = new Array<LocalExplorerWorker>();
 		if (workersResponse.status === "fulfilled") {
@@ -84,6 +93,14 @@ export const Route = createRootRoute({
 			r2Error = `R2 Error: ${r2Response.reason instanceof Error ? r2Response.reason.message : JSON.stringify(r2Response.reason)}`;
 		}
 
+		let workflows = new Array<WorkflowsWorkflow>();
+		let workflowsError: string | null = null;
+		if (workflowsResponse.status === "fulfilled") {
+			workflows = workflowsResponse.value.data?.result ?? [];
+		} else {
+			workflowsError = `Workflows Error: ${workflowsResponse.reason instanceof Error ? workflowsResponse.reason.message : JSON.stringify(workflowsResponse.reason)}`;
+		}
+
 		return {
 			d1Error,
 			databases,
@@ -94,6 +111,8 @@ export const Route = createRootRoute({
 			r2Buckets,
 			r2Error,
 			workers,
+			workflows,
+			workflowsError,
 		};
 	},
 });
@@ -158,6 +177,7 @@ function RootLayout() {
 				databases: loaderData.databases,
 				doNamespaces: loaderData.doNamespaces,
 				r2Buckets: loaderData.r2Buckets,
+				workflows: loaderData.workflows,
 			};
 		}
 
@@ -175,6 +195,9 @@ function RootLayout() {
 			r2Buckets: loaderData.r2Buckets.filter(
 				(bucket) => bucket.workerName === selectedWorker
 			),
+			workflows: loaderData.workflows.filter(
+				(wf) => wf.script_name === selectedWorker
+			),
 		};
 	}, [
 		selectedWorker,
@@ -182,6 +205,7 @@ function RootLayout() {
 		loaderData.databases,
 		loaderData.doNamespaces,
 		loaderData.r2Buckets,
+		loaderData.workflows,
 	]);
 
 	return (
@@ -200,6 +224,8 @@ function RootLayout() {
 					workers={visibleWorkers}
 					selectedWorker={selectedWorker}
 					onWorkerChange={handleWorkerChange}
+					workflows={filteredData.workflows}
+					workflowsError={loaderData.workflowsError}
 				/>
 				<main className="flex flex-1 flex-col overflow-y-auto">
 					<Outlet />
