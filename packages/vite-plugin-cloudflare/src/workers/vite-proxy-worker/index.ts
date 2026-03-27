@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { fetchThroughViteProxyWorker } from "./fetch";
 
 interface Env {
 	ENTRY_USER_WORKER: Service<WorkerEntrypoint>;
@@ -20,7 +21,7 @@ export default class ViteProxyWorker extends WorkerEntrypoint<Env> {
 	}
 
 	override async fetch(request: Request) {
-		return this.env.__VITE_MIDDLEWARE__.fetch(request);
+		return fetchThroughViteProxyWorker(request, this.env);
 	}
 
 	override tail(events: TraceItem[]) {
