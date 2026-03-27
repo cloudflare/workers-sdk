@@ -243,6 +243,7 @@ export function Sidebar({
 					label: wf.name as string,
 					link: {
 						params: { workflowName: wf.name },
+						search: workerSearch,
 						to: "/workflows/$workflowName",
 					},
 				}))}
