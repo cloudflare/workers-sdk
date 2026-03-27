@@ -12,7 +12,6 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
-
 describe("migrate", () => {
 	runInTempDir();
 	const mockStd = mockConsoleMethods();
@@ -230,7 +229,7 @@ Your database may not be available to serve requests during the migration, conti
 			expect(std.out).toBe("");
 		});
 
-		it("applies migrations from a migration directory containing .sql files", async () => {
+		it("applies migrations from a migration directory containing .sql files", async ( { expect }) => {
 			setIsTTY(false);
 			const commands: string[] = [];
 
@@ -312,7 +311,7 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
-		it("should not prompt when --force is passed", async () => {
+		it("should not prompt when --force is passed", async ({ expect }) => {
 			setIsTTY(false);
 			const std = mockConsoleMethods();
 
