@@ -40,6 +40,7 @@ import {
 	Response,
 } from "./http";
 import {
+	BROWSER_RENDERING_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -1473,6 +1474,9 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
+				const headful = this.#workerOpts.some(
+					(w) => w[BROWSER_RENDERING_PLUGIN_NAME].browserRendering?.headful
+				);
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
 						// Puppeteer v22.13.1 supported chrome version:
@@ -1484,6 +1488,7 @@ export class Miniflare {
 						browserVersion: "126.0.6478.182",
 						log: this.#log,
 						tmpPath: this.#tmpPath,
+						headful,
 					});
 				browserProcess.nodeProcess.on("exit", () => {
 					this.#browserProcesses.delete(sessionId);
