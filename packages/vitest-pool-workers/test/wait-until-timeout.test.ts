@@ -1,12 +1,14 @@
 import dedent from "ts-dedent";
 import { test, vitestConfig } from "./helpers";
 
-test(
-	"waitForWaitUntil abandons promises that never resolve",
-	async ({ expect, seed, vitestRun }) => {
-		await seed({
-			"vitest.config.mts": vitestConfig(),
-			"index.test.ts": dedent`
+test("waitForWaitUntil abandons promises that never resolve", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig(),
+		"index.test.ts": dedent`
 				import {
 					setWaitUntilTimeout,
 					waitForWaitUntil,
@@ -21,12 +23,9 @@ test(
 					expect(waitUntil).toHaveLength(0);
 				});
 			`,
-		});
-		const result = await vitestRun();
-		expect(await result.exitCode).toBe(0);
-		const output = result.stdout + result.stderr;
-		expect(output).toContain(
-			"waitUntil promise(s) did not resolve within"
-		);
-	}
-);
+	});
+	const result = await vitestRun();
+	expect(await result.exitCode).toBe(0);
+	const output = result.stdout + result.stderr;
+	expect(output).toContain("waitUntil promise(s) did not resolve within");
+});

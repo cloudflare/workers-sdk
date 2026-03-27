@@ -36,10 +36,7 @@ export async function waitForWaitUntil(
 			Promise.allSettled(batch).then((results) => ({ results })),
 			new Promise<typeof kTimedOut>(
 				(resolve) =>
-					(timeoutId = setTimeout(
-						() => resolve(kTimedOut),
-						WAIT_UNTIL_TIMEOUT
-					))
+					(timeoutId = setTimeout(() => resolve(kTimedOut), WAIT_UNTIL_TIMEOUT))
 			),
 		]);
 		clearTimeout(timeoutId!);
