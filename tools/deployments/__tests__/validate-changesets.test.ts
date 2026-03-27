@@ -24,6 +24,7 @@ describe("findPackageNames()", () => {
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
+				"@cloudflare/codemod",
 				"@cloudflare/containers-shared",
 				"@cloudflare/devprod-status-bot",
 				"@cloudflare/edge-preview-authenticated-proxy",

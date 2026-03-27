@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
 import { installPackages } from "@cloudflare/cli/packages";
+import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
-import { transformFile } from "../c3-vendor/codemod";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
@@ -69,7 +69,11 @@ function validateMinimumWakuVersion(projectPath: string) {
 	const minumumWakuVersion = "1.0.0-alpha.4";
 	if (wakuVersion && semiver(wakuVersion, minumumWakuVersion) < 0) {
 		throw new AutoConfigFrameworkConfigurationError(
-			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported by the Wrangler automatic configuration. Please update the Waku version to at least ${JSON.stringify(minumumWakuVersion)} and try again.`
+			`The version of Waku used in the project (${JSON.stringify(
+				wakuVersion
+			)}) is not supported by the Wrangler automatic configuration. Please update the Waku version to at least ${JSON.stringify(
+				minumumWakuVersion
+			)} and try again.`
 		);
 	}
 }

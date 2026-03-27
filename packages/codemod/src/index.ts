@@ -1,6 +1,5 @@
-import { lstatSync, readdirSync, writeFileSync } from "node:fs";
-import path, { extname, join } from "node:path";
-import { readFileSync } from "@cloudflare/workers-utils";
+import { readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
@@ -26,33 +25,33 @@ import type { Program } from "esprima";
 */
 
 // Parse an input string as javascript and return an ast
-export const parseJs = (src: string) => {
+export function parseJs(src: string) {
 	src = src.trim();
 	try {
 		return recast.parse(src, { parser: esprimaParser });
 	} catch {
 		throw new Error("Error parsing js template.");
 	}
-};
+}
 
 // Parse an input string as typescript and return an ast
-export const parseTs = (src: string) => {
+export function parseTs(src: string) {
 	src = src.trim();
 	try {
 		return recast.parse(src, { parser: typescriptParser });
 	} catch {
 		throw new Error("Error parsing ts template.");
 	}
-};
+}
 
 // Parse a provided file with recast and return an ast
 // Selects the correct parser based on the file extension
-export const parseFile = (filePath: string) => {
+export function parseFile(filePath: string) {
 	const lang = path.extname(filePath).slice(1);
 	const parser = lang === "js" ? esprimaParser : typescriptParser;
 
 	try {
-		const fileContents = readFileSync(path.resolve(filePath));
+		const fileContents = readFileSync(path.resolve(filePath), "utf-8");
 
 		if (fileContents) {
 			return recast.parse(fileContents, { parser }).program as Program;
@@ -62,46 +61,17 @@ export const parseFile = (filePath: string) => {
 	}
 
 	return null;
-};
+}
 
 // Transform a file with the provided transformer methods and write it back to disk
-export const transformFile = (
-	filePath: string,
-	methods: recast.types.Visitor
-) => {
+export function transformFile(filePath: string, methods: recast.types.Visitor) {
 	const ast = parseFile(filePath);
 
 	if (ast) {
 		recast.visit(ast, methods);
 		writeFileSync(filePath, recast.print(ast).code);
 	}
-};
-
-export const loadSnippets = (parentFolder: string) => {
-	const snippetsPath = join(parentFolder, "snippets");
-
-	if (!lstatSync(snippetsPath, { throwIfNoEntry: false })?.isDirectory()) {
-		return {};
-	}
-
-	const files = readdirSync(snippetsPath);
-
-	return (
-		files
-			// don't try loading directories
-			.filter((fileName) => lstatSync(join(snippetsPath, fileName)).isFile())
-			// only load js or ts files
-			.filter((fileName) => [".js", ".ts"].includes(extname(fileName)))
-			.reduce((acc, snippetPath) => {
-				const [file, ext] = snippetPath.split(".");
-				const key = `${file}${ext === "js" ? "Js" : "Ts"}`;
-				return {
-					...acc,
-					[key]: parseFile(join(snippetsPath, snippetPath))?.body,
-				};
-			}, {}) as Record<string, recast.types.ASTNode[]>
-	);
-};
+}
 
 /**
  * merges provided properties into a given object (updating the object itself), deeply merging them in case
@@ -110,10 +80,10 @@ export const loadSnippets = (parentFolder: string) => {
  * @param sourceObject the object into which merge the new properties
  * @param newProperties the new properties to add/merge
  */
-export const mergeObjectProperties = (
+export function mergeObjectProperties(
 	sourceObject: recast.types.namedTypes.ObjectExpression,
 	newProperties: recast.types.namedTypes.ObjectProperty[]
-): void => {
+): void {
 	newProperties.forEach((newProp) => {
 		const newPropName = getPropertyName(newProp);
 		if (!newPropName) {
@@ -143,12 +113,12 @@ export const mergeObjectProperties = (
 
 		sourceObject.properties[indexOfExisting] = newProp;
 	});
-};
+}
 
-const getPropertyName = (newProp: recast.types.namedTypes.ObjectProperty) => {
+function getPropertyName(newProp: recast.types.namedTypes.ObjectProperty) {
 	return newProp.key.type === "Identifier"
 		? newProp.key.name
 		: newProp.key.type === "StringLiteral"
 			? newProp.key.value
 			: null;
-};
+}

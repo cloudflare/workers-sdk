@@ -78,6 +78,7 @@
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@bomb.sh/tab": "^0.0.12",
 		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/codemod": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
