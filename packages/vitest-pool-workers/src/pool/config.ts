@@ -304,7 +304,6 @@ async function parseCustomPoolOptions(
 			);
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's.
-		// `main: false` is not nullish, so `??=` preserves it (skips fallback).
 		options.main ??= main;
 
 		options.miniflare.workers = [
