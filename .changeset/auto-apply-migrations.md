@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Add a new `--force` flag to `d1 migrations apply` which skips the interactive
