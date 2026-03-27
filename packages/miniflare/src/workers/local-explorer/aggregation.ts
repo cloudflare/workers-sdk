@@ -5,9 +5,11 @@
  * any one instance can aggregate data from all instances.
  */
 
-import { LOCAL_EXPLORER_API_PATH } from "../../plugins/core/constants";
+import { CorePaths } from "../core";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { AppContext } from "./common";
+
+const EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
 
 /**
  * Header that indicates a request should not trigger further aggregation.
@@ -60,7 +62,7 @@ export async function fetchFromPeer(
 	init?: RequestInit
 ): Promise<Response | null> {
 	try {
-		const url = new URL(`${LOCAL_EXPLORER_API_PATH}${apiPath}`, peerUrl);
+		const url = new URL(`${EXPLORER_API_PATH}${apiPath}`, peerUrl);
 		const response = await fetch(url.toString(), {
 			...init,
 			headers: {
