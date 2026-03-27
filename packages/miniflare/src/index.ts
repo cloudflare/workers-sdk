@@ -133,6 +133,7 @@ import {
 	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
+	CorePaths,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -1384,7 +1385,7 @@ export class Miniflare {
 		const { pathname } = new URL(req.url ?? "", "http://localhost");
 
 		// If this is the path for live-reload, handle the request
-		if (pathname === "/cdn-cgi/mf/reload") {
+		if (pathname === CorePaths.LIVE_RELOAD) {
 			this.#liveReloadServer.handleUpgrade(req, socket, head, (ws) => {
 				this.#liveReloadServer.emit("connection", ws, req);
 			});
@@ -2715,16 +2716,7 @@ export class Miniflare {
 	getSecretsStoreSecretAPI(
 		bindingName: string,
 		workerName?: string
-	): Promise<
-		() => {
-			create: (value: string) => Promise<string>;
-			update: (value: string, id: string) => Promise<string>;
-			duplicate: (id: string, newName: string) => Promise<string>;
-			delete: (id: string) => Promise<void>;
-			list: () => Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
-			get: (id: string) => Promise<string>;
-		}
-	> {
+	): Promise<() => SecretsStoreSecretAdmin> {
 		return this.#getProxy(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
@@ -2836,6 +2828,15 @@ export class Miniflare {
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";
+
+export interface SecretsStoreSecretAdmin {
+	create(value: string): Promise<string>;
+	update(value: string, id: string): Promise<string>;
+	duplicate(id: string, newName: string): Promise<string>;
+	delete(id: string): Promise<void>;
+	list(): Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
+	get(id: string): Promise<string>;
+}
 
 export * from "./http";
 export * from "./plugins";

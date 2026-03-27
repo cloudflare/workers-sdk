@@ -1,5 +1,45 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.13.5
+
+### Patch Changes
+
+- [#13077](https://github.com/cloudflare/workers-sdk/pull/13077) [`11c77b7`](https://github.com/cloudflare/workers-sdk/commit/11c77b7e19340eec4c3cf34fd4c758bc2ac54fa0) Thanks [@penalosa](https://github.com/penalosa)! - fix: `runInDurableObject` now correctly returns redirect responses (3xx) from Durable Object callbacks instead of throwing "Expected callback for X" errors
+
+- [#13056](https://github.com/cloudflare/workers-sdk/pull/13056) [`8384743`](https://github.com/cloudflare/workers-sdk/commit/8384743fc2613a2cfb3ed8f936a74104dcc22b0b) Thanks [@penalosa](https://github.com/penalosa)! - fix: Support dynamic `import()` inside entrypoint and Durable Object handlers
+
+  Previously, calling `exports.default.fetch()` or `SELF.fetch()` on a worker whose handler used a dynamic `import()` would hang and fail with "Cannot perform I/O on behalf of a different Durable Object". This happened because the module runner's transport — which communicates over a WebSocket owned by the runner Durable Object — was invoked from a different DO context.
+
+  The fix patches the module runner's transport via the `onModuleRunner` hook so that all `invoke()` calls are routed through the runner DO's I/O context, regardless of where the `import()` originates.
+
+- [#13074](https://github.com/cloudflare/workers-sdk/pull/13074) [`4618c05`](https://github.com/cloudflare/workers-sdk/commit/4618c058493a65e74495e14a4b653b05d52689bf) Thanks [@penalosa](https://github.com/penalosa)! - fix: only apply module fallback extension probing for `require()`, not `import`
+
+  The module fallback service previously tried adding `.js`, `.mjs`, `.cjs`, and `.json` suffixes to extensionless specifiers unconditionally. Per the Node.js spec, this extension-probing behaviour is specific to CommonJS `require()`. ESM `import` statements must include explicit file extensions.
+
+  Extension-less TypeScript `import` specifiers continue to work correctly — they are resolved by Vite's resolver rather than the fallback's extension loop.
+
+- [#13073](https://github.com/cloudflare/workers-sdk/pull/13073) [`baec845`](https://github.com/cloudflare/workers-sdk/commit/baec845dbf60e6edc6be480e43bd1a701469d29d) Thanks [@penalosa](https://github.com/penalosa)! - Add `adminSecretsStore()` to `cloudflare:test` for seeding secrets in tests
+
+  Secrets store bindings only expose a read-only `.get()` method, so there was previously no way to seed secret values from within a test. The new `adminSecretsStore()` helper returns Miniflare's admin API for a secrets store binding, giving tests full control over create, update, and delete operations.
+
+  ```ts
+  import { adminSecretsStore } from "cloudflare:test";
+  import { env } from "cloudflare:workers";
+
+  const admin = adminSecretsStore(env.MY_SECRET);
+  await admin.create("test-value");
+
+  const value = await env.MY_SECRET.get(); // "test-value"
+  ```
+
+- [#13083](https://github.com/cloudflare/workers-sdk/pull/13083) [`cfd513f`](https://github.com/cloudflare/workers-sdk/commit/cfd513fb5910e990c24f7fde64a56d5b425bd095) Thanks [@penalosa](https://github.com/penalosa)! - Add a 30-second timeout to `waitUntil` promise draining to prevent hanging tests
+
+  Previously, if a `ctx.waitUntil()` promise never resolved, the test suite would hang indefinitely after the test file finished. Now, any `waitUntil` promises that haven't settled within 30 seconds are abandoned with a warning, allowing the test suite to continue. This aligns with the [production `waitUntil` limit](https://developers.cloudflare.com/workers/platform/limits/#duration).
+
+- Updated dependencies [[`eeaa473`](https://github.com/cloudflare/workers-sdk/commit/eeaa47353c822b0e96fd892f2e3f957dba52715b), [`9fcdfca`](https://github.com/cloudflare/workers-sdk/commit/9fcdfca775d3d412abe7547d0833414599bab221), [`bc24ec8`](https://github.com/cloudflare/workers-sdk/commit/bc24ec81b9ed341dd165b7690f8602f6d738de0c), [`1faff35`](https://github.com/cloudflare/workers-sdk/commit/1faff35e9c84e40af882d15f7515c625d6f5ac95), [`0b4c21a`](https://github.com/cloudflare/workers-sdk/commit/0b4c21a3bf765f4c389c669dc44c8243f6889347), [`535582d`](https://github.com/cloudflare/workers-sdk/commit/535582d581613a3068a934ba0179d2cfde863359), [`992f9a3`](https://github.com/cloudflare/workers-sdk/commit/992f9a3ea15d14599faa573b8d49ee4d7f9e338a), [`f4ea4ac`](https://github.com/cloudflare/workers-sdk/commit/f4ea4accad70d6a55b648c610cfc806e5be36477), [`91b7f73`](https://github.com/cloudflare/workers-sdk/commit/91b7f73e3554e72d539ccd4034faaab1fb60b470), [`f6cdab2`](https://github.com/cloudflare/workers-sdk/commit/f6cdab206cff65e5db62998512676036edde6841), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5), [`ce65246`](https://github.com/cloudflare/workers-sdk/commit/ce65246010eaa0ea3c4c0c74e228f6597cf4332c), [`7a5be20`](https://github.com/cloudflare/workers-sdk/commit/7a5be2078800426a9ef1f8520ef72a99d9847c16), [`6b50bfa`](https://github.com/cloudflare/workers-sdk/commit/6b50bfa58de4716ffb7125e0ec28a68e40b22ce1), [`0386553`](https://github.com/cloudflare/workers-sdk/commit/0386553d80ad10717f5294e8a5979af703cbcbf8), [`9c5ebf5`](https://github.com/cloudflare/workers-sdk/commit/9c5ebf56291199eeaec43513732fd3fa7fbd502d), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5)]:
+  - wrangler@4.78.0
+  - miniflare@4.20260317.3
+
 ## 0.13.4
 
 ### Patch Changes

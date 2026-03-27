@@ -391,6 +391,8 @@ type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
 	| "ai"
+	| "aiSearchNamespaces"
+	| "aiSearchInstances"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -498,6 +500,11 @@ export function buildMiniflareBindingOptions(
 		...extractBindingsOfType("unsafe_ratelimit", bindings),
 	];
 	const aiBindings = extractBindingsOfType("ai", bindings);
+	const aiSearchNamespaceBindings = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -598,6 +605,14 @@ export function buildMiniflareBindingOptions(
 		warnOrError("ai", ai.remote, "always-remote");
 	}
 
+	for (const ns of aiSearchNamespaceBindings) {
+		warnOrError("ai_search_namespace", ns.remote, "always-remote");
+	}
+
+	for (const inst of aiSearchInstanceBindings) {
+		warnOrError("ai_search", inst.remote, "always-remote");
+	}
+
 	for (const media of mediaBindings) {
 		warnOrError("media", media.remote, "always-remote");
 	}
@@ -691,6 +706,26 @@ export function buildMiniflareBindingOptions(
 						remoteProxyConnectionString,
 					}
 				: undefined,
+
+		aiSearchNamespaces: Object.fromEntries(
+			aiSearchNamespaceBindings.map((ns) => [
+				ns.binding,
+				{
+					namespace: ns.namespace as string,
+					remoteProxyConnectionString,
+				},
+			])
+		),
+
+		aiSearchInstances: Object.fromEntries(
+			aiSearchInstanceBindings.map((inst) => [
+				inst.binding,
+				{
+					instance_name: inst.instance_name,
+					remoteProxyConnectionString,
+				},
+			])
+		),
 
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces.map((kv) =>

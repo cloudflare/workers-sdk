@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.66.0
+
+### Minor Changes
+
+- [#12964](https://github.com/cloudflare/workers-sdk/pull/12964) [`e0831c6`](https://github.com/cloudflare/workers-sdk/commit/e0831c6ead822c7a03f10d87ce44e8c4d0f05ef2) Thanks [@ryanking13](https://github.com/ryanking13)! - Update dependencies in Python workers templates
+
+  The `workers-runtime-sdk` library is added as a dev dependency and the `webtypy` is removed as a dependency.
+
 ## 2.65.0
 
 ### Minor Changes

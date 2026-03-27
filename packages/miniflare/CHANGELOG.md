@@ -1,5 +1,53 @@
 # miniflare
 
+## 4.20260317.3
+
+### Minor Changes
+
+- [#13027](https://github.com/cloudflare/workers-sdk/pull/13027) [`9fcdfca`](https://github.com/cloudflare/workers-sdk/commit/9fcdfca775d3d412abe7547d0833414599bab221) Thanks [@G4brym](https://github.com/G4brym)! - feat: Add `ai_search_namespaces` and `ai_search` binding types
+
+  Two new binding types for AI Search:
+
+  - `ai_search_namespaces`: Namespace binding — `namespace` is required and auto-provisioned at deploy time if it doesn't exist (like R2 buckets)
+  - `ai_search`: Single instance binding bound directly to a pre-existing instance in the default namespace
+
+  Both are remote-only in local dev.
+
+- [#13030](https://github.com/cloudflare/workers-sdk/pull/13030) [`0386553`](https://github.com/cloudflare/workers-sdk/commit/0386553d80ad10717f5294e8a5979af703cbcbf8) Thanks [@natewong1313](https://github.com/natewong1313)! - Add local mode support for Stream bindings
+
+  Miniflare and `wrangler dev` now support using [Cloudflare Stream](https://developers.cloudflare.com/stream/) bindings locally.
+
+  Supported operations:
+
+  - `upload()` — upload video via URL
+  - `video(id).details()`, `.update()`, `.delete()`, `.generateToken()`
+  - `videos.list()`
+  - `captions.generate()`, `.list()`, `.delete()`
+  - `downloads.generate()`, `.get()`, `.delete()`
+  - `watermarks.generate()`, `.list()`, `.get()`, `.delete()`
+
+  The following are not yet supported in local mode and will throw:
+
+  - `createDirectUpload()`
+  - Caption upload via `File`
+  - Watermark generation via `File`
+
+  Data is persisted across restarts by default. You must set `streamPersist: false` in Miniflare options to disable persistence.
+
+### Patch Changes
+
+- [#12686](https://github.com/cloudflare/workers-sdk/pull/12686) [`1faff35`](https://github.com/cloudflare/workers-sdk/commit/1faff35e9c84e40af882d15f7515c625d6f5ac95) Thanks [@edmundhung](https://github.com/edmundhung)! - Move internal proxy endpoint to reserved `/cdn-cgi/` path
+
+  The internal HTTP endpoint used by `getPlatformProxy` has been moved to a reserved path. This is an internal change with no impact on the `getPlatformProxy` API.
+
+- [#13080](https://github.com/cloudflare/workers-sdk/pull/13080) [`f4ea4ac`](https://github.com/cloudflare/workers-sdk/commit/f4ea4accad70d6a55b648c610cfc806e5be36477) Thanks [@penalosa](https://github.com/penalosa)! - fix: glob patterns for module rules no longer match double-extension filenames like `foo.wasm.js`
+
+  Previously, the `globsToRegExps` helper compiled glob patterns without a trailing `$` anchor. This caused patterns like `**/*.wasm` to match any path containing `.wasm` as a substring — including filenames such as `foo.wasm.js` or `main.wasm.test.ts`.
+
+  When using `@cloudflare/vitest-pool-workers` with a `wrangler.configPath`, Wrangler's default `CompiledWasm` module rule (`**/*.wasm`) was silently applied to test files whose names contained `.wasm`, causing them to be loaded as WebAssembly binaries instead of JavaScript and failing at runtime.
+
+  The fix restores the `$` end anchor in the compiled regex so that `**/*.wasm` only matches paths that literally end in `.wasm`, while the leading `^` remains absent to allow matching anywhere within an absolute path.
+
 ## 4.20260317.2
 
 ### Patch Changes

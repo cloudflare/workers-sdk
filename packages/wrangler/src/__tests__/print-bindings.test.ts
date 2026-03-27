@@ -71,3 +71,31 @@ describe("printBindings — variable display", () => {
 		expect(output).not.toContain(longValue);
 	});
 });
+
+describe("printBindings — AI Search bindings", () => {
+	it("shows AI Search namespace bindings", ({ expect }) => {
+		const output = callPrintBindings({
+			AI_SEARCH: {
+				type: "ai_search_namespace",
+				namespace: "production",
+			},
+		});
+
+		expect(output).toContain("AI_SEARCH");
+		expect(output).toContain("AI Search Namespace");
+		expect(output).toContain("production");
+	});
+
+	it("shows AI Search instance bindings", ({ expect }) => {
+		const output = callPrintBindings({
+			BLOG_SEARCH: {
+				type: "ai_search",
+				instance_name: "cloudflare-blog",
+			},
+		});
+
+		expect(output).toContain("BLOG_SEARCH");
+		expect(output).toContain("AI Search Instance");
+		expect(output).toContain("cloudflare-blog");
+	});
+});

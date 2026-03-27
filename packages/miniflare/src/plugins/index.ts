@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ValueOf } from "../workers";
 import { AI_PLUGIN, AI_PLUGIN_NAME } from "./ai";
+import { AI_SEARCH_PLUGIN, AI_SEARCH_PLUGIN_NAME } from "./ai-search";
 import {
 	ANALYTICS_ENGINE_PLUGIN,
 	ANALYTICS_ENGINE_PLUGIN_NAME,
@@ -61,6 +62,7 @@ export const PLUGINS = {
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
+	[AI_SEARCH_PLUGIN_NAME]: AI_SEARCH_PLUGIN,
 	[BROWSER_RENDERING_PLUGIN_NAME]: BROWSER_RENDERING_PLUGIN,
 	[DISPATCH_NAMESPACE_PLUGIN_NAME]: DISPATCH_NAMESPACE_PLUGIN,
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
@@ -126,6 +128,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof SECRET_STORE_PLUGIN.options> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.options> &
 	z.input<typeof AI_PLUGIN.options> &
+	z.input<typeof AI_SEARCH_PLUGIN.options> &
 	z.input<typeof BROWSER_RENDERING_PLUGIN.options> &
 	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
@@ -207,6 +210,7 @@ export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
 export * from "./ai";
+export * from "./ai-search";
 export * from "./browser-rendering";
 export * from "./dispatch-namespace";
 export * from "./images";

@@ -1202,6 +1202,9 @@ importers:
       discord-api-types:
         specifier: 0.37.98
         version: 0.37.98
+      esm-dep:
+        specifier: file:./module-resolution/vendor/esm-dep
+        version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep
       ext-dep:
         specifier: file:./module-resolution/vendor/ext-dep
         version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep
@@ -10342,6 +10345,9 @@ packages:
     peerDependenciesMeta:
       jiti:
         optional: true
+
+  esm-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep:
+    resolution: {directory: fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep, type: directory}
 
   espree@10.4.0:
     resolution: {integrity: sha512-j6PAQ2uUr79PZhBjP5C5fhl8e39FmRnOjsD5lGnWrFU8i2G776tBK7+nP8KuQUTTyAZUwfQqXAgrVH5MbH9CYQ==}
@@ -21216,6 +21222,8 @@ snapshots:
       jiti: 2.6.1
     transitivePeerDependencies:
       - supports-color
+
+  esm-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep: {}
 
   espree@10.4.0:
     dependencies:

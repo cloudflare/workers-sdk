@@ -187,26 +187,31 @@ function withImportMetaUrl(contents: string, url: string | URL): string {
 	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
 }
 
-// Extensions `workerd` won't resolve automatically, but Node.js will.
-// Note: `.json` is especially important for CommonJS `require()` chains.
-const moduleExtensions = [".js", ".mjs", ".cjs", ".json"];
-function maybeGetTargetFilePath(target: string): string | undefined {
+// Extensions that Node's `require()` probes automatically but `workerd` won't.
+// ESM `import` requires explicit extensions; Vite's resolver handles those.
+const requireExtensions = [".js", ".mjs", ".cjs", ".json"];
+function maybeGetTargetFilePath(
+	target: string,
+	isRequire: boolean
+): string | undefined {
 	// Can't use `fs.existsSync()` here as `target` could be a directory
 	// (e.g. `node:fs` and `node:fs/promises`)
 	if (isFile(target)) {
 		return target;
 	}
-	for (const extension of moduleExtensions) {
-		const targetWithExtension = target + extension;
-		if (fs.existsSync(targetWithExtension)) {
-			return targetWithExtension;
+	if (isRequire) {
+		for (const extension of requireExtensions) {
+			const targetWithExtension = target + extension;
+			if (fs.existsSync(targetWithExtension)) {
+				return targetWithExtension;
+			}
 		}
 	}
 	if (target.endsWith(disableCjsEsmShimSuffix)) {
 		return target;
 	}
 	if (isDirectory(target)) {
-		return maybeGetTargetFilePath(target + "/index");
+		return maybeGetTargetFilePath(target + "/index", isRequire);
 	}
 }
 
@@ -305,7 +310,8 @@ async function resolve(
 ): Promise<string /* filePath */> {
 	const referrerDir = posixPath.dirname(referrer);
 
-	let filePath = maybeGetTargetFilePath(target);
+	const isRequire = method === "require";
+	let filePath = maybeGetTargetFilePath(target, isRequire);
 	if (filePath !== undefined) {
 		return filePath;
 	}
@@ -326,7 +332,8 @@ async function resolve(
 		libPath,
 		specifier.replaceAll(":", "/")
 	);
-	filePath = maybeGetTargetFilePath(specifierLibPath);
+	// Always probe extensions for pool-internal lib modules
+	filePath = maybeGetTargetFilePath(specifierLibPath, /* isRequire */ true);
 	if (filePath !== undefined) {
 		return filePath;
 	}

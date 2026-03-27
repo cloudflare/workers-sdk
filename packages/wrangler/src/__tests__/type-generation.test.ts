@@ -440,6 +440,16 @@ const bindingsConfigMock: Omit<
 	],
 	send_email: [{ name: "SEND_EMAIL_BINDING" }],
 	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	// AI Search and AI Search Namespace type generation is being done in a separate effort in ticket RAG-1028
+	ai_search_namespaces: [
+		{ binding: "AI_SEARCH_NS_BINDING", namespace: "production" },
+	],
+	ai_search: [
+		{
+			binding: "AI_SEARCH_BINDING",
+			instance_name: "cloudflare-blog",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
