@@ -398,7 +398,14 @@ export async function getHostAndRoutes(
 		}
 	});
 	if (routes) {
-		const assetOptions = getAssetsOptions({ assets: args.assets }, config);
+		const assetOptions = getAssetsOptions({
+			args: {
+				assets: args.assets,
+			},
+			config,
+			// during local dev we don't care about validating the directory's existence
+			validateDirectoryExistence: false,
+		});
 		validateRoutes(routes, assetOptions);
 	}
 	return { host, routes };
@@ -417,7 +424,9 @@ export function getInferredHost(
 			throw new UserError(
 				`Cannot infer host from first route: ${JSON.stringify(
 					firstRoute
-				)}.\nYou can explicitly set the \`dev.host\` configuration in your ${configFileName(configPath)} file, for example:
+				)}.\nYou can explicitly set the \`dev.host\` configuration in your ${configFileName(
+					configPath
+				)} file, for example:
 
 	\`\`\`
 	${formatConfigSnippet(

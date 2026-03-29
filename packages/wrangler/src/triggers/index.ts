@@ -55,7 +55,11 @@ export const triggersDeployCommand = createCommand({
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	async handler(args, { config }) {
-		const assetsOptions = getAssetsOptions({ assets: undefined }, config);
+		const assetsOptions = getAssetsOptions({
+			args: { assets: undefined },
+			config,
+			validateDirectoryExistence: true,
+		});
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
 		});

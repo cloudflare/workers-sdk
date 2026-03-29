@@ -413,7 +413,11 @@ export const deployCommand = createCommand({
 		const entry = await getEntry(args, config, "deploy");
 		validateAssetsArgsAndConfig(args, config);
 
-		const assetsOptions = getAssetsOptions(args, config);
+		const assetsOptions = getAssetsOptions({
+			args,
+			config,
+			validateDirectoryExistence: true,
+		});
 
 		if (args.latest) {
 			logger.warn(

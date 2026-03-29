@@ -302,13 +302,15 @@ async function resolveConfig(
 		input
 	);
 
-	const assetsOptions = getAssetsOptions(
-		{
+	const assetsOptions = getAssetsOptions({
+		args: {
 			assets: input?.assets,
 			script: input.entrypoint,
 		},
-		config
-	);
+		config,
+		// For local dev we don't need to validate the directory's existence
+		validateDirectoryExistence: false,
+	});
 
 	const resolved = {
 		name:

@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path, { join } from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
@@ -83,22 +84,32 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			return [];
 		}
 
+		let assetDirectory = options.assets.directory;
+		const directoryStats = await fs.stat(assetDirectory).catch(() => undefined);
+		if (!directoryStats) {
+			// If the assets directory doesn't exist yet (e.g. the build output
+			// hasn't been generated), create an empty temp directory so that the
+			// asset services can still start up with zero assets.
+			assetDirectory = await fs.mkdtemp(
+				path.join(os.tmpdir(), "miniflare-assets-")
+			);
+		}
+
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
 		const storageService: Service = {
 			name: storageServiceName,
 			disk: {
-				path: options.assets.directory,
+				path: assetDirectory,
 				writable: true,
 				allowDotfiles: true,
 			},
 		};
 
-		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
-			options.assets.directory
-		);
+		const { encodedAssetManifest, assetsReverseMap } =
+			await buildAssetManifest(assetDirectory);
 
-		const redirectsFile = join(options.assets.directory, REDIRECTS_FILENAME);
-		const headersFile = join(options.assets.directory, HEADERS_FILENAME);
+		const redirectsFile = join(assetDirectory, REDIRECTS_FILENAME);
+		const headersFile = join(assetDirectory, HEADERS_FILENAME);
 
 		const redirectsContents = maybeGetFile(redirectsFile);
 		const headersContents = maybeGetFile(headersFile);
