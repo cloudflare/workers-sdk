@@ -90,7 +90,9 @@ export function assertNonConfigured(
 class MultipleFrameworksCIError extends FatalError {
 	constructor(frameworks: string[]) {
 		super(
-			dedent`Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(", ")}.
+			dedent`Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: ${frameworks.join(
+				", "
+			)}.
 
 				To fix this issue either:
 				  - check your project's configuration to make sure that the target framework
@@ -336,6 +338,14 @@ function findDetectedFramework(
 				// or as part of a Vitest installation, so it's pretty safe to ignore it in this case
 				return knownNonViteSettings;
 			}
+		}
+
+		if (frameworkIdsFound.has("waku") && frameworkIdsFound.has("hono")) {
+			// The waku framework has a tight integration with hono, so it's likely that hono can also
+			// be detected in waku projects, if that's the case let's filter hono out
+			return settingsForOnlyKnownFrameworks.find(
+				({ framework }) => framework.id === "waku"
+			);
 		}
 	}
 
