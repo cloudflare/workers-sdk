@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
@@ -108,7 +108,9 @@ export const syncAssets = async (
 	// 3. fill buckets and upload assets
 	const numberFilesToUpload = initializeAssetsResponse.buckets.flat().length;
 	logger.info(
-		`🌀 Found ${numberFilesToUpload} new or modified static asset${numberFilesToUpload > 1 ? "s" : ""} to upload. Proceeding with upload...`
+		`🌀 Found ${numberFilesToUpload} new or modified static asset${
+			numberFilesToUpload > 1 ? "s" : ""
+		} to upload. Proceeding with upload...`
 	);
 
 	// Create the buckets outside of doUpload so we can retry without losing track of potential duplicate files
@@ -216,7 +218,9 @@ export const syncAssets = async (
 				} else if (isJwtExpired(initializeAssetsResponse.jwt)) {
 					throw new FatalError(
 						`Upload took too long.\n` +
-							`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
+							`Asset upload took too long on bucket ${bucketIndex + 1}/${
+								initializeAssetsResponse.buckets.length
+							}. Please try again.\n` +
 							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
 						undefined,
 						{ telemetryMessage: "Asset upload took too long" }
@@ -258,7 +262,9 @@ export const syncAssets = async (
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
 	logger.log(
-		`✨ Success! Uploaded ${numberFilesToUpload} file${numberFilesToUpload > 1 ? "s" : ""} ${skippedMessage}${formatTime(uploadMs)}\n`
+		`✨ Success! Uploaded ${numberFilesToUpload} file${
+			numberFilesToUpload > 1 ? "s" : ""
+		} ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
 
 	return completionJwt;
@@ -348,7 +354,9 @@ function logAssetsUploadStatus(
 	uploadedAssetFiles: string[]
 ) {
 	logger.info(
-		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${numberFilesToUpload === 1 ? "" : "s"}`
+		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} asset${
+			numberFilesToUpload === 1 ? "" : "s"
+		}`
 	);
 	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
 }
@@ -360,7 +368,9 @@ function logAssetsUploadStatus(
  */
 function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
 	logger.info(
-		`✨ Read ${assetFiles.length} file${assetFiles.length === 1 ? "" : "s"} from the assets directory ${directory}`
+		`✨ Read ${assetFiles.length} file${
+			assetFiles.length === 1 ? "" : "s"
+		} from the assets directory ${directory}`
 	);
 	assetFiles.forEach((file) => logger.debug(`/${file}`));
 }
@@ -389,6 +399,8 @@ export type AssetsOptions = {
 };
 
 export class NonExistentAssetsDirError extends UserError {}
+
+export class NonDirectoryAssetsDirError extends UserError {}
 
 export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
@@ -421,17 +433,30 @@ export function getAssetsOptions(
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
 	const directory = path.resolve(assetsBasePath, assets.directory);
 
-	if (!existsSync(directory)) {
-		const sourceOfTruthMessage = args.assets
-			? '"--assets" command line argument'
-			: '"assets.directory" field in your configuration file';
+	const directoryStat = statSync(directory, { throwIfNoEntry: false });
 
+	const sourceOfTruthMessage = args.assets
+		? '"--assets" command line argument'
+		: '"assets.directory" field in your configuration file';
+
+	if (!directoryStat) {
 		throw new NonExistentAssetsDirError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
 				`${directory}`,
 
 			{
 				telemetryMessage: `The assets directory specified does not exist`,
+			}
+		);
+	}
+
+	if (!directoryStat.isDirectory()) {
+		throw new NonDirectoryAssetsDirError(
+			`The path specified by the ${sourceOfTruthMessage} doesn't point to a directory:\n` +
+				`${directory}`,
+
+			{
+				telemetryMessage: `The assets directory path specified is not a directory`,
 			}
 		);
 	}
