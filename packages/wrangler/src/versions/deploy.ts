@@ -344,9 +344,8 @@ function formatVersions(
  * The list of possible versions will include all deployable versions.
  *
  * Versions are sorted by upload date (latest first). The interactive
- * Versions are sorted by upload date (latest first). The interactive
  * prompt displays 5 versions at a time with scrolling, and supports
- * tag, message, or creation date.
+ * type-to-search filtering by version ID, tag, message, or creation date.
  *
  * @param accountId
  * @param workerName
@@ -402,6 +401,11 @@ async function promptVersionsToDeploy(
 		options: selectableVersions.map((version) => ({
 			value: version.id,
 			label: version.id,
+			searchText: [
+				version.metadata.created_on,
+				version.annotations?.["workers/tag"] ?? "",
+				version.annotations?.["workers/message"] ?? "",
+			].filter((text): text is string => text.length > 0),
 			sublabel: gray(`
 ${ZERO_WIDTH_SPACE}       Created:  ${version.metadata.created_on}
 ${ZERO_WIDTH_SPACE}           Tag:  ${

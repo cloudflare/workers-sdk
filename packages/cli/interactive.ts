@@ -562,21 +562,32 @@ const getMultiSelectSearchRenderers = (
 			? `${space(2)}${dim("Search:")} ${white(searchText)}${dim("▏")}`
 			: `${space(2)}${dim("Type to search, SPACE to select, ENTER to submit")}`;
 
-		const selectedLine =
-			selectedCount > 0
-				? `${space(2)}${brandColor(`${selectedCount} selected`)}`
+		const statusParts = [];
+		if (searchText) {
+			statusParts.push(dim(`${filtered.length} match${filtered.length === 1 ? "" : "es"}`));
+		}
+		if (selectedCount > 0) {
+			statusParts.push(brandColor(`${selectedCount} selected`));
+		}
+		const statusLine =
+			statusParts.length > 0
+				? `${space(2)}${statusParts.join(dim(" • "))}`
 				: "";
+
+		const emptyState = searchText
+			? `${space(2)}${dim("No matching options. Backspace to edit search.")}`
+			: `${space(2)}${dim("No options available.")}`;
 
 		const lines = [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
 			searchLine,
-			...(selectedLine ? [selectedLine] : []),
+			...(statusLine ? [statusLine] : []),
 			`${hasMoreAbove ? `${space(2)}${dim("...")}\n` : ""}${
 				filtered.length > 0
 					? windowedOptions
 							.map((opt, i) => renderOption(opt, windowStart + i))
 							.join(`\n`)
-					: `${space(2)}${dim("No matching options")}`
+					: emptyState
 			}${hasMoreBelow ? `\n${space(2)}${dim("...")}` : ""}`,
 			``, // extra line for readability
 		];
