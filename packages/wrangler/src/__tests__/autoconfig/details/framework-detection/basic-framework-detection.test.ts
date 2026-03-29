@@ -7,7 +7,7 @@ import { runInTempDir } from "../../../helpers/run-in-tmp";
 describe("detectFramework() / basic framework detection", () => {
 	runInTempDir();
 
-	it("returns undefined detectedFramework when no framework is detected", async ({
+	it("defaults to the static framework when no framework is detected", async ({
 		expect,
 	}) => {
 		await writeFile(
@@ -17,7 +17,7 @@ describe("detectFramework() / basic framework detection", () => {
 
 		const result = await detectFramework(process.cwd());
 
-		expect(result.detectedFramework).toBeUndefined();
+		expect(result.detectedFramework.framework.id).toBe("static");
 	});
 
 	it("detects astro when astro is in dependencies", async ({ expect }) => {

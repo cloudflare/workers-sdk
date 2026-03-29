@@ -184,7 +184,7 @@ export async function getDetailsForAutoConfig({
 						detectedFramework,
 						packageManager
 					),
-			  }
+				}
 			: {}),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};

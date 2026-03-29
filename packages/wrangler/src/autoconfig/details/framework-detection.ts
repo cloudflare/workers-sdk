@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
@@ -17,7 +18,10 @@ import {
 	YarnPackageManager,
 } from "../../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
-import { allKnownFrameworksIds } from "../frameworks/get-framework";
+import {
+	allKnownFrameworksIds,
+	staticFramework,
+} from "../frameworks/get-framework";
 import type { PackageManager } from "../../package-manager";
 import type { KnownFrameworkId } from "../frameworks/get-framework";
 import type { Config } from "@cloudflare/workers-utils";
@@ -36,7 +40,7 @@ import type { Settings } from "@netlify/build-info";
  * @param wranglerConfig Optional parsed wrangler config for the project
  * @returns An object containing:
  *   - `detectedFramework`: The matched framework together with its build
- *     command and output directory, or `undefined` when no framework is found.
+ *     command and output directory.
  *   - `packageManager`: The package manager detected in the project.
  *   - `isWorkspaceRoot`: `true` when the project path is the root of a
  *     monorepo workspace (only present when relevant).
@@ -50,7 +54,7 @@ export async function detectFramework(
 	projectPath: string,
 	wranglerConfig?: Config
 ): Promise<{
-	detectedFramework: DetectedFramework | undefined;
+	detectedFramework: DetectedFramework;
 	packageManager: PackageManager;
 	isWorkspaceRoot?: boolean;
 }> {
@@ -83,8 +87,6 @@ export async function detectFramework(
 		}
 	}
 
-	const detectedFramework = findDetectedFramework(buildSettings);
-
 	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
 	const packageManager = convertDetectedPackageManager(project.packageManager);
@@ -93,17 +95,11 @@ export async function detectFramework(
 		existsSync(join(projectPath, lockFile))
 	);
 
-	if (!lockFileExists) {
-		logger.warn(
-			"No lock file has been detected in the current working directory." +
-				" This might indicate that the project is part of a workspace. Auto-configuration of " +
-				`projects inside workspaces is limited. See ${chalk.hex("#3B818D")(
-					"https://developers.cloudflare.com/workers/framework-guides/automatic-configuration/#workspaces"
-				)}`
-		);
-	}
+	const maybeDetectedFramework = maybeFindDetectedFramework(buildSettings);
 
-	if (await isPagesProject(projectPath, wranglerConfig, detectedFramework)) {
+	if (
+		await isPagesProject(projectPath, wranglerConfig, maybeDetectedFramework)
+	) {
 		return {
 			detectedFramework: {
 				framework: {
@@ -116,7 +112,31 @@ export async function detectFramework(
 		};
 	}
 
-	return { detectedFramework, packageManager, isWorkspaceRoot };
+	const detectedFramework = maybeDetectedFramework ?? {
+		framework: {
+			id: staticFramework.id,
+			name: staticFramework.name,
+		},
+	};
+
+	if (
+		!lockFileExists &&
+		detectedFramework.framework.id !== staticFramework.id
+	) {
+		logger.warn(
+			"No lock file has been detected in the current working directory." +
+				" This might indicate that the project is part of a workspace. Auto-configuration of " +
+				`projects inside workspaces is limited. See ${chalk.hex("#3B818D")(
+					"https://developers.cloudflare.com/workers/framework-guides/automatic-configuration/#workspaces"
+				)}`
+		);
+	}
+
+	return {
+		detectedFramework,
+		packageManager,
+		isWorkspaceRoot,
+	};
 }
 
 /**
@@ -236,7 +256,7 @@ async function isPagesProject(
  * @throws {MultipleFrameworksCIError} In CI environments when multiple known frameworks
  *         are detected and no clear winner can be determined
  */
-function findDetectedFramework(
+function maybeFindDetectedFramework(
 	settings: Settings[]
 ): DetectedFramework | undefined {
 	if (settings.length === 0) {
@@ -290,9 +310,11 @@ function findDetectedFramework(
 		if (frameworkIdsFound.has("waku") && frameworkIdsFound.has("hono")) {
 			// The waku framework has a tight integration with hono, so it's likely that hono can also
 			// be detected in waku projects, if that's the case let's filter hono out
-			return settingsForOnlyKnownFrameworks.find(
+			const wakuSettings = settingsForOnlyKnownFrameworks.find(
 				({ framework }) => framework.id === "waku"
 			);
+			assert(wakuSettings);
+			return wakuSettings;
 		}
 	}
 

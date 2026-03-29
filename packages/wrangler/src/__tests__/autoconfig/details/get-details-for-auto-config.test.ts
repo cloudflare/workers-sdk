@@ -166,7 +166,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await seed({
 			"package.json": JSON.stringify({
 				name: "my-app",
-				dependencies: {},
+				dependencies: { astro: "6" },
 			}),
 			"index.html": "<h1>Hello World</h1>",
 		});
