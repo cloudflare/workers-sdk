@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as user from "../../user";
@@ -93,7 +92,6 @@ describe("containers instances", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
@@ -135,7 +133,7 @@ describe("containers instances", () => {
 		);
 	});
 
-	it("should list instances as JSON (non-TTY)", async () => {
+	it("should render a table (non-TTY)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -156,25 +154,18 @@ describe("containers instances", () => {
 		);
 		await runWrangler(`containers instances ${APP_ID}`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		const output = JSON.parse(std.out);
-		expect(output).toHaveLength(2);
-		expect(output[0]).toEqual({
-			id: "11111111-1111-1111-1111-111111111111",
-			state: "running",
-			location: "sfo06",
-			version: 3,
-			created: "2025-06-01T10:00:00Z",
-		});
-		expect(output[1]).toEqual({
-			id: "22222222-2222-2222-2222-222222222222",
-			state: "provisioning",
-			location: "iad01",
-			version: 2,
-			created: "2025-06-01T11:00:00Z",
-		});
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┬─┬─┐
+			│ INSTANCE │ STATE │ LOCATION │ VERSION │ CREATED │
+			├─┼─┼─┼─┼─┤
+			│ 11111111-1111-1111-1111-111111111111 │ running │ sfo06 │ 3 │ 2025-06-01T10:00:00Z │
+			├─┼─┼─┼─┼─┤
+			│ 22222222-2222-2222-2222-222222222222 │ provisioning │ iad01 │ 2 │ 2025-06-01T11:00:00Z │
+			└─┴─┴─┴─┴─┘"
+		`);
 	});
 
-	it("should show DO instance IDs and names for DO-backed apps (non-TTY)", async () => {
+	it("should render DO instance table (non-TTY)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -193,26 +184,31 @@ describe("containers instances", () => {
 			)
 		);
 		await runWrangler(`containers instances ${APP_ID}`);
-		const output = JSON.parse(std.out);
-		expect(output).toHaveLength(2);
-		// First row: DO with a running deployment
-		expect(output[0]).toEqual({
-			id: "do-instance-1111",
-			name: "random-76",
-			state: "running",
-			location: "dfw01",
-			version: 57,
-			created: "2025-06-01T10:00:00Z",
-		});
-		// Second row: DO without a running deployment (inactive)
-		expect(output[1]).toEqual({
-			id: "do-instance-2222",
-			name: "random-88",
-			state: "inactive",
-			location: null,
-			version: null,
-			created: "2025-05-26T10:00:00Z",
-		});
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌─┬─┬─┬─┬─┬─┐
+			│ INSTANCE │ NAME │ STATE │ LOCATION │ VERSION │ CREATED │
+			├─┼─┼─┼─┼─┼─┤
+			│ do-instance-1111 │ random-76 │ running │ dfw01 │ 57 │ 2025-06-01T10:00:00Z │
+			├─┼─┼─┼─┼─┼─┤
+			│ do-instance-2222 │ random-88 │ inactive │ - │ - │ 2025-05-26T10:00:00Z │
+			└─┴─┴─┴─┴─┴─┘"
+		`);
+	});
+
+	it("should reject --per-page 0", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler(`containers instances ${APP_ID} --per-page 0`)
+		).rejects.toThrowError(/--per-page must be at least 1/);
+	});
+
+	it("should reject --per-page with negative value", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler(`containers instances ${APP_ID} --per-page -1`)
+		).rejects.toThrowError(/--per-page must be at least 1/);
 	});
 
 	it("should error on invalid ID format", async () => {
@@ -286,10 +282,9 @@ describe("containers instances", () => {
 		);
 		await runWrangler(`containers instances ${APP_ID}`);
 		expect(requestCount).toBe(1);
-		const output = JSON.parse(std.out);
-		expect(output).toHaveLength(2);
-		expect(output[0].id).toBe("11111111-1111-1111-1111-111111111111");
-		expect(output[1].id).toBe("22222222-2222-2222-2222-222222222222");
+		// Table output should contain both instances
+		expect(std.out).toContain("11111111-1111-1111-1111-111111111111");
+		expect(std.out).toContain("22222222-2222-2222-2222-222222222222");
 	});
 
 	describe("--json", () => {

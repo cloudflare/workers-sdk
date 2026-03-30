@@ -9,14 +9,18 @@ import {
 } from "../../plugins/core/constants";
 import { CoreBindings } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
+import { wrapResponse } from "./common";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
+	zR2BucketDeleteObjectsData,
+	zR2BucketListObjectsData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
@@ -28,7 +32,27 @@ import {
 	listKVNamespaces,
 	putKVValue,
 } from "./resources/kv";
+import {
+	deleteR2Objects,
+	getR2Object,
+	listR2Buckets,
+	listR2Objects,
+	putR2Object,
+} from "./resources/r2";
+import {
+	changeWorkflowInstanceStatus,
+	createWorkflowInstance,
+	deleteWorkflow,
+	deleteWorkflowInstance,
+	getWorkflowDetails,
+	getWorkflowInstanceDetails,
+	listWorkflowInstances,
+	listWorkflows,
+	sendWorkflowInstanceEvent,
+} from "./resources/workflows";
 import type { BindingIdMap } from "../../plugins/core/types";
+import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { LocalExplorerWorker } from "./generated";
 
 export type Env = {
 	[key: string]: unknown;
@@ -67,7 +91,8 @@ app.use("/api/*", async (c, next) => {
 			headers: {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers": "Content-Type",
+				"Access-Control-Allow-Headers":
+					"Content-Type, cf-metadata-only, cf-r2-custom-metadata",
 				"Access-Control-Max-Age": "86400",
 			},
 		});
@@ -156,17 +181,16 @@ app.get(
 	(c) => listKVKeys(c, c.req.valid("query"))
 );
 
-app.get(
-	"/api/storage/kv/namespaces/:namespace_id/values/:key_name",
-	getKVValue
+app.get("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
+	getKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
-app.put(
-	"/api/storage/kv/namespaces/:namespace_id/values/:key_name",
-	putKVValue
+
+app.put("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
+	putKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
-app.delete(
-	"/api/storage/kv/namespaces/:namespace_id/values/:key_name",
-	deleteKVValue
+
+app.delete("/api/storage/kv/namespaces/:namespace_id/values/:key_name", (c) =>
+	deleteKVValue(c, c.req.param("namespace_id"), c.req.param("key_name"))
 );
 
 app.post(
@@ -190,7 +214,7 @@ app.get(
 app.post(
 	"/api/d1/database/:database_id/raw",
 	validateRequestBody(zD1RawDatabaseQueryData.shape.body),
-	(c) => rawD1Database(c, c.req.valid("json"))
+	(c) => rawD1Database(c, c.req.param("database_id"), c.req.valid("json"))
 );
 
 // ============================================================================
@@ -210,5 +234,127 @@ app.post(
 	validateRequestBody(zDurableObjectsNamespaceQuerySqliteData.shape.body),
 	(c) => queryDOSqlite(c, c.req.param("namespace_id"), c.req.valid("json"))
 );
+
+// ============================================================================
+// R2 Endpoints
+// ============================================================================
+
+app.get("/api/r2/buckets", listR2Buckets);
+
+app.get(
+	"/api/r2/buckets/:bucket_name/objects",
+	validateQuery(zR2BucketListObjectsData.shape.query.unwrap()),
+	(c) => listR2Objects(c, c.req.param("bucket_name"), c.req.valid("query"))
+);
+
+app.get("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
+	getR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"), {
+		"cf-metadata-only": c.req.header("cf-metadata-only"),
+	})
+);
+
+app.put("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
+	putR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"), {
+		"content-type": c.req.header("content-type"),
+		"cf-r2-custom-metadata": c.req.header("cf-r2-custom-metadata"),
+	})
+);
+
+app.delete(
+	"/api/r2/buckets/:bucket_name/objects",
+	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
+	(c) => deleteR2Objects(c, c.req.param("bucket_name"), c.req.valid("json"))
+);
+
+// ============================================================================
+// Workflows Endpoints
+// ============================================================================
+
+app.get("/api/workflows", (c) => listWorkflows(c));
+
+app.get("/api/workflows/:workflow_name", (c) =>
+	getWorkflowDetails(c, c.req.param("workflow_name"))
+);
+
+app.delete("/api/workflows/:workflow_name", (c) =>
+	deleteWorkflow(c, c.req.param("workflow_name"))
+);
+
+app.get(
+	"/api/workflows/:workflow_name/instances",
+	validateQuery(zWorkflowsListInstancesData.shape.query.unwrap()),
+	(c) =>
+		listWorkflowInstances(c, c.req.param("workflow_name"), c.req.valid("query"))
+);
+
+app.post("/api/workflows/:workflow_name/instances", (c) =>
+	createWorkflowInstance(c, c.req.param("workflow_name"))
+);
+
+app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
+	getWorkflowInstanceDetails(
+		c,
+		c.req.param("workflow_name"),
+		c.req.param("instance_id")
+	)
+);
+
+app.patch("/api/workflows/:workflow_name/instances/:instance_id/status", (c) =>
+	changeWorkflowInstanceStatus(
+		c,
+		c.req.param("workflow_name"),
+		c.req.param("instance_id")
+	)
+);
+
+app.post(
+	"/api/workflows/:workflow_name/instances/:instance_id/events/:event_type",
+	(c) =>
+		sendWorkflowInstanceEvent(
+			c,
+			c.req.param("workflow_name"),
+			c.req.param("instance_id"),
+			c.req.param("event_type")
+		)
+);
+
+app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
+	deleteWorkflowInstance(
+		c,
+		c.req.param("workflow_name"),
+		c.req.param("instance_id")
+	)
+);
+
+// ============================================================================
+// Workers Registry Endpoint
+// ============================================================================
+
+app.get("/api/workers", async (c) => {
+	const loopback = c.env.MINIFLARE_LOOPBACK;
+	const selfWorkerNames = c.env.LOCAL_EXPLORER_WORKER_NAMES;
+	const selfSet = new Set(selfWorkerNames);
+
+	try {
+		const response = await loopback.fetch("http://localhost/core/dev-registry");
+		const registry = await response.json<WorkerRegistry>();
+
+		const workers: LocalExplorerWorker[] = Object.entries(registry).map(
+			([name, def]) => ({
+				host: def.host,
+				isSelf: selfSet.has(name),
+				name,
+				port: def.port,
+				protocol: def.protocol,
+			})
+		);
+
+		return c.json(wrapResponse(workers));
+	} catch (err) {
+		const message =
+			err instanceof Error ? err.message : "Failed to fetch dev registry";
+		return errorResponse(500, 10000, message);
+	}
+});
 
 export default app;

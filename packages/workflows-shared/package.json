@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workflows-shared",
-	"version": "0.6.0",
+	"version": "0.7.1",
 	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workflows.",
 	"keywords": [
@@ -39,13 +39,13 @@
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"esbuild": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:vitest-3"
+		"vitest": "catalog:default"
 	},
 	"engines": {
 		"node": ">=18.0.0"

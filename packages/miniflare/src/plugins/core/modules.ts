@@ -122,7 +122,7 @@ export function compileModuleRules(rules: ModuleRule[]) {
 		if (finalisedTypes.has(rule.type)) continue;
 		compiledRules.push({
 			type: rule.type,
-			include: globsToRegExps(rule.include),
+			include: globsToRegExps(rule.include, { endAnchor: true }),
 		});
 		if (!rule.fallthrough) finalisedTypes.add(rule.type);
 	}

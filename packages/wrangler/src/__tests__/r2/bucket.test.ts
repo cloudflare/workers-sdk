@@ -3415,7 +3415,7 @@ describe("r2", () => {
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
 				});
-				it("should handle removing non-existant rule ID as expected", async () => {
+				it("should handle removing non-existent rule ID as expected", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 					const lifecycleRules = {
@@ -4047,7 +4047,7 @@ describe("r2", () => {
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
 				});
-				it("should handle removing non-existant rule ID as expected", async () => {
+				it("should handle removing non-existent rule ID as expected", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 

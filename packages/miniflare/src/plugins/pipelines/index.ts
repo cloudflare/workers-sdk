@@ -12,16 +12,18 @@ import {
 export const PipelineOptionsSchema = z.object({
 	pipelines: z
 		.union([
-			z.record(z.string()),
-			z.string().array(),
 			z.record(
-				z.object({
-					pipeline: z.string(),
-					remoteProxyConnectionString: z
-						.custom<RemoteProxyConnectionString>()
-						.optional(),
-				})
+				z.union([
+					z.string(),
+					z.object({
+						pipeline: z.string(),
+						remoteProxyConnectionString: z
+							.custom<RemoteProxyConnectionString>()
+							.optional(),
+					}),
+				])
 			),
+			z.string().array(),
 		])
 		.optional(),
 });
@@ -76,13 +78,13 @@ function bindingEntries(
 	namespaces?:
 		| Record<
 				string,
-				{
-					pipeline: string;
-					remoteProxyConnectionString?: RemoteProxyConnectionString;
-				}
+				| string
+				| {
+						pipeline: string;
+						remoteProxyConnectionString?: RemoteProxyConnectionString;
+				  }
 		  >
 		| string[]
-		| Record<string, string>
 ): [
 	bindingName: string,
 	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },

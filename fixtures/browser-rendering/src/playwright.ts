@@ -37,7 +37,7 @@ export default {
 					const { sessionId } = await playwright.acquire(env.MYBROWSER);
 					const browser = await playwright.connect(env.MYBROWSER, sessionId);
 					// closing a browser obtained with playwright.connect actually disconnects
-					// (it doesn's close the porcess)
+					// (it doesn't close the process)
 					await browser.close();
 					const sessionInfo = await playwright
 						.sessions(env.MYBROWSER)

@@ -75,13 +75,20 @@ jobs:
   test:
     timeout-minutes: 60
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.suite }}-test
       cancel-in-progress: true
 
-    name: ${{ format('Tests ({0})', matrix.description) }}
+    name: ${{ format('Tests ({0}, {1})', matrix.description, matrix.suite) }}
     strategy:
       fail-fast: false
       matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        suite:
+          - packages-and-tools
+          - fixtures
         include:
           - os: macos-latest
             description: macOS
@@ -122,7 +129,7 @@ jobs:
 
       - name: Run tests (tools only)
         # tools _only_ needs to be tested on Linux because they're only intended to run in CI
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.os == 'ubuntu-latest'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
         run: pnpm run test:ci --log-order=stream --filter="@cloudflare/tools"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -130,9 +137,7 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (packages)
-        # We are running the package tests first be able to get early feedback on changes.
-        # There is no point in running the fixtures if a package is broken.
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools'
         # We skip @cloudflare/vitest-pool-workers tests in CI on Windows because they're very flaky. We still run the vitest-pool-workers-examples fixture, which is a comprehensive set of example tests and gives us a lot of confidence.
         # The @cloudflare/vitest-pool-workers tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
         run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
@@ -143,7 +148,7 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (fixtures)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'fixtures'
         # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
         run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
         env:
@@ -156,5 +161,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.suite }}
           path: .turbo/runs

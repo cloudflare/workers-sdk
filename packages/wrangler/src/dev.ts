@@ -324,6 +324,10 @@ export type AdditionalDevProps = {
 	ai?: {
 		binding: string;
 	};
+	stream?: {
+		binding: string;
+		remote?: boolean;
+	};
 	version_metadata?: {
 		binding: string;
 	};

@@ -18,7 +18,7 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*",
-		"ws": "^8.18.0"
+		"ws": "catalog:default"
 	},
 	"engines": {
 		"node": ">=14"

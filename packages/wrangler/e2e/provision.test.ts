@@ -6,7 +6,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
-import { retry } from "./helpers/retry";
+import { waitForLong } from "./helpers/wait-for";
 
 const TIMEOUT = 500_000;
 const normalize = (str: string) => {
@@ -122,11 +122,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			assert(d1Match?.groups);
 			d1Id = d1Match.groups.d1;
 
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+			await waitForLong(
+				async () => {
+					const response = await fetch(deployedUrl);
+					expect(await response.text()).toEqual("Hello World!");
+				},
+				{ timeout: 30_000 }
 			);
-			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
 		it("can inherit bindings on re-deploy and won't re-provision", async ({
@@ -149,11 +151,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Current Version ID: 00000000-0000-0000-0000-000000000000"
 			`);
 
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+			await waitForLong(
+				async () => {
+					const response = await fetch(deployedUrl);
+					expect(await response.text()).toEqual("Hello World!");
+				},
+				{ timeout: 30_000 }
 			);
-			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 		it("can inspect current bindings", async ({ expect }) => {
 			const versionsRaw = await helper.run(`wrangler versions list --json`);

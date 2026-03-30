@@ -1,5 +1,8 @@
 import { assert, describe, it } from "vitest";
-import { convertConfigBindingsToStartWorkerBindings } from "../../../api/startDevWorker/utils";
+import {
+	convertConfigBindingsToStartWorkerBindings,
+	convertStartDevOptionsToBindings,
+} from "../../../api/startDevWorker/utils";
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
 	it("converts config bindings into startWorker bindings", async ({
@@ -56,6 +59,7 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 					service: "my-service",
 				},
 			],
+			stream: { binding: "MY_STREAM" },
 			mtls_certificates: [
 				{
 					binding: "MTLS",
@@ -122,6 +126,9 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 			MY_SERVICE: {
 				service: "my-service",
 				type: "service",
+			},
+			MY_STREAM: {
+				type: "stream",
 			},
 			MY_VECTORIZE: {
 				index_name: "idx",
@@ -192,5 +199,18 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 		assert(result);
 		assert(result.MY_DB.type === "d1");
 		expect(result.MY_DB.database_id).toBe("staging-db-id");
+	});
+
+	it("converts programmatic dev stream bindings", ({ expect }) => {
+		const result = convertStartDevOptionsToBindings({
+			stream: { binding: "MY_STREAM", remote: true },
+		});
+
+		expect(result).toEqual({
+			MY_STREAM: {
+				remote: true,
+				type: "stream",
+			},
+		});
 	});
 });

@@ -131,7 +131,9 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 		if (removeEolV22) {
 			assert.strictEqual(crypto.Cipher, undefined);
 			assert.strictEqual(crypto.Decipher, undefined);
+			// @ts-expect-error createCipher removed from @types/node@22
 			assert.strictEqual(crypto.createCipher, undefined);
+			// @ts-expect-error createDecipher removed from @types/node@22
 			assert.strictEqual(crypto.createDecipher, undefined);
 		} else {
 			assertTypeOfProperties(crypto, {
@@ -755,7 +757,6 @@ export const WorkerdTests: Record<string, () => Promise<void>> = {
 			// As `node:sqlite` has only be added in Node 22.5.0, we need to try/catch to not error with older versions.
 			// Note: This test is not meant to be executed by the Node runtime,
 			// but only by workerd where `node:sqlite` is available.
-			// @ts-expect-error TS2307 - node:sqlite is only available in Node 22.5.0+
 			sqlite = await import("node:sqlite");
 		} catch {
 			throw new Error(

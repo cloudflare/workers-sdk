@@ -1,5 +1,30 @@
 # @cloudflare/workflows-shared
 
+## 0.7.1
+
+### Patch Changes
+
+- [#12985](https://github.com/cloudflare/workers-sdk/pull/12985) [`17a57e6`](https://github.com/cloudflare/workers-sdk/commit/17a57e641798dca0b298bd91dcdcef6be30d38b6) Thanks [@pombosilva](https://github.com/pombosilva)! - Fix `waitForEvent` delivering events to stale waiters after timeout.
+
+  When a `step.waitForEvent()` call timed out, its resolver was not removed from the workflow's internal waiters map. This meant the next `step.waitForEvent()` for the same event type would have its incoming event consumed by the dead resolver instead of the live one, causing the workflow to hang indefinitely.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#12881](https://github.com/cloudflare/workers-sdk/pull/12881) [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflow instances now support pause, resume, restart, and terminate in local dev.
+
+  ```js
+  const instance = await env.MY_WORKFLOW.create({
+    id: "my-instance",
+  });
+
+  await instance.pause(); // pauses after the current step completes
+  await instance.resume(); // resumes from where it left off
+  await instance.restart(); // restarts the workflow from the beginning
+  await instance.terminate(); // terminates the workflow immediately
+  ```
+
 ## 0.6.0
 
 ### Minor Changes
@@ -13,8 +38,8 @@
 
   ```ts
   await step.do("my-step", async (ctx) => {
-  	// ctx.attempt is 1 on first try, 2 on first retry, etc.
-  	console.log(`Attempt ${ctx.attempt}`);
+    // ctx.attempt is 1 on first try, 2 on first retry, etc.
+    console.log(`Attempt ${ctx.attempt}`);
   });
   ```
 
@@ -29,16 +54,16 @@
   ```jsonc
   // wrangler.jsonc
   {
-  	"workflows": [
-  		{
-  			"binding": "MY_WORKFLOW",
-  			"name": "my-workflow",
-  			"class_name": "MyWorkflow",
-  			"limits": {
-  				"steps": 5000,
-  			},
-  		},
-  	],
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "limits": {
+          "steps": 5000
+        }
+      }
+    ]
   }
   ```
 
@@ -58,7 +83,7 @@
   ```ts
   // First wait for the workflow instance to complete:
   await expect(
-  	instance.waitForStatus({ status: "complete" })
+    instance.waitForStatus({ status: "complete" })
   ).resolves.not.toThrow();
 
   // Then, get its output
@@ -66,7 +91,7 @@
 
   // Or for errored workflow instances, get their error:
   await expect(
-  	instance.waitForStatus({ status: "errored" })
+    instance.waitForStatus({ status: "errored" })
   ).resolves.not.toThrow();
   const error = await instance.getError();
   ```

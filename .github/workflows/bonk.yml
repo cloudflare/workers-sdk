@@ -12,27 +12,43 @@ concurrency:
 
 jobs:
   bonk:
-    if: github.event.sender.type != 'Bot' && (contains(github.event.comment.body, '/bonk') || contains(github.event.comment.body, '@ask-bonk')) && contains(fromJSON('["MEMBER", "OWNER"]'), github.event.comment.author_association)
+    if: github.event.sender.type != 'Bot' && (contains(github.event.comment.body, '/bonk') || contains(github.event.comment.body, '@ask-bonk'))
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       id-token: write
       contents: write
       issues: write
       pull-requests: write
     steps:
+      - name: Check if comment author is Cloudflare org member
+        run: |
+          STATUS=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /orgs/cloudflare/members/${{ github.event.comment.user.login }} \
+            --silent -i 2>/dev/null | head -1 | awk '{print $2}') || true
+          if [ "$STATUS" != "204" ]; then
+            echo "User ${{ github.event.comment.user.login }} is not a member of the Cloudflare organization"
+            exit 1
+          fi
+          echo "User ${{ github.event.comment.user.login }} is a Cloudflare org member"
+        env:
+          GH_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Run Bonk
-        uses: ask-bonk/ask-bonk/github@24832587005550860c8ad13fd96519e731ca632a # main
+        uses: ask-bonk/ask-bonk/github@c39e982defd0114385df54e72012a3fc4333c4d4
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_AI_GATEWAY_ACCOUNT_ID }}
           CLOUDFLARE_GATEWAY_ID: ${{ secrets.CF_AI_GATEWAY_NAME }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_AI_GATEWAY_TOKEN }}
         with:
           model: "cloudflare-ai-gateway/anthropic/claude-opus-4-6"
-          mentions: "/bonk,ask-bonk"
+          mentions: "/bonk,@ask-bonk"
           permissions: write
+          agent: bonk

@@ -8,6 +8,7 @@ export default mergeConfig(
 		plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
 		test: {
 			include: ["src/**/__tests__/**.test.ts"],
+			mockReset: true,
 			setupFiles: ["vitest.setup.ts"],
 		},
 	})

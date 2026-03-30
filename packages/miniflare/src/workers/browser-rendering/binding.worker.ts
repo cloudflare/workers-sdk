@@ -69,7 +69,7 @@ export class BrowserSession extends DurableObject<Env> {
 		});
 
 		server.addEventListener("message", (m) => {
-			// both @cloudflare/puppeteer and @cloudflare/playwright send ping messges each second,
+			// both @cloudflare/puppeteer and @cloudflare/playwright send ping messages each second,
 			// so we use them to check the status of the browser
 			if (m.data === "ping") {
 				this.#checkStatus().catch((err) => {
@@ -77,15 +77,25 @@ export class BrowserSession extends DurableObject<Env> {
 				});
 				return;
 			}
+
 			// HACK: TODO: Figure out what the chunking mechanism is in @cloudflare/puppeteer and unchunk the messages here, rather than just naively slicing off the header. This Worker should probably have the increase_websocket_message_size compat flag added
 			ws.send(new TextDecoder().decode((m.data as ArrayBuffer).slice(4)));
 		});
-		server.addEventListener("close", ({ code, reason }) => {
-			ws.close(code, reason);
+		const forwardClose = (ws: WebSocket, e: CloseEvent) => {
+			// Reserved codes 1005 (No Status Received) and 1006 (Abnormal Closure) are
+			// valid in CloseEvent but throw InvalidAccessError when passed to .close().
+			if (e.code === 1005 || e.code === 1006) {
+				ws.close();
+			} else {
+				ws.close(e.code, e.reason);
+			}
+		};
+		server.addEventListener("close", (e) => {
+			forwardClose(ws, e);
 			this.ws = undefined;
 		});
-		ws.addEventListener("close", ({ code, reason }) => {
-			server.close(code, reason);
+		ws.addEventListener("close", (e) => {
+			forwardClose(server, e);
 			this.server = undefined;
 		});
 		this.ws = ws;
@@ -117,10 +127,8 @@ export class BrowserSession extends DurableObject<Env> {
 			const resp = await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(url);
 
 			if (!resp.ok) {
-				// Browser process has exited, we should close the WebSocket
-				// TODO should we send a error code?
+				// Browser process has exited, close the WebSockets
 				this.closeWebSockets();
-				return;
 			}
 		}
 	}

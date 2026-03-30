@@ -1,11 +1,12 @@
+import assert from "node:assert";
 import { join } from "node:path";
 import { fetch } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import { retry } from "../helpers/retry";
+import { waitForLong } from "../helpers/wait-for";
 import { WorkerdTests } from "./worker/index";
 
 type TestConfig = {
@@ -870,13 +871,21 @@ describe.each(groupedLocalConfigs)(
 				(resp) => !resp.ok,
 				async () => await fetch(`${url}/ping`)
 			);
-			await expect(readyResp.text()).resolves.toEqual("pong");
+			const responseText = await readyResp.text();
+			assert(
+				responseText === "pong",
+				`Expected "pong" but got "${responseText}"`
+			);
 
 			// Assert runtime flag values
 			for await (const [flag, value] of Object.entries(expectRuntimeFlags)) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
-				expect(flagResp.ok).toEqual(true);
-				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(value);
+				assert(flagResp.ok, `Expected flag response to be ok for "${flag}"`);
+				const flagValue = await flagResp.json();
+				assert(
+					flagValue === value,
+					`Expected flag "${flag}" to be ${value} but got ${flagValue}`
+				);
 			}
 
 			return async () => await wrangler.stop();
@@ -888,13 +897,13 @@ describe.each(groupedLocalConfigs)(
 			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForLong(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 }
 				);
 			}
 		);
@@ -928,13 +937,21 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 				(resp) => !resp.ok,
 				async () => await fetch(`${url}/ping`)
 			);
-			await expect(readyResp.text()).resolves.toEqual("pong");
+			const responseText = await readyResp.text();
+			assert(
+				responseText === "pong",
+				`Expected "pong" but got "${responseText}"`
+			);
 
 			// Assert runtime flag values
 			for await (const flag of collectEnabledFlags(localTestConfigs)) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
-				expect(flagResp.ok).toEqual(true);
-				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(false);
+				assert(flagResp.ok, `Expected flag response to be ok for "${flag}"`);
+				const flagValue = await flagResp.json();
+				assert(
+					flagValue === false,
+					`Expected flag "${flag}" to be false but got ${flagValue}`
+				);
 			}
 
 			return async () => await wrangler.stop();
@@ -946,13 +963,13 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForLong(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 }
 				);
 			}
 		);
@@ -987,13 +1004,21 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 				(resp) => !resp.ok,
 				async () => await fetch(`${url}/ping`)
 			);
-			await expect(readyResp.text()).resolves.toEqual("pong");
+			const responseText = await readyResp.text();
+			assert(
+				responseText === "pong",
+				`Expected "pong" but got "${responseText}"`
+			);
 
 			// Assert runtime flag values
 			for await (const flag of flags) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
-				expect(flagResp.ok).toEqual(true);
-				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(true);
+				assert(flagResp.ok, `Expected flag response to be ok for "${flag}"`);
+				const flagValue = await flagResp.json();
+				assert(
+					flagValue === true,
+					`Expected flag "${flag}" to be true but got ${flagValue}`
+				);
 			}
 
 			return async () => await wrangler.stop();
@@ -1005,13 +1030,13 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			async (testName, { expect }) => {
 				// Retries the callback until it succeeds or times out.
 				// Useful for the i.e. DNS tests where underlying requests might error/timeout.
-				await vi.waitFor(
+				await waitForLong(
 					async () => {
 						const response = await fetch(`${url}/${testName}`);
 						const body = await response.text();
 						expect(body).toMatch("passed");
 					},
-					{ timeout: 19_000, interval: 200 }
+					{ timeout: 19_000 }
 				);
 			}
 		);

@@ -134,6 +134,9 @@
 		/* Kumo tooltip overrides for dark mode */
 		--color-kumo-tip-shadow: transparent;
 		--color-kumo-tip-stroke: var(--color-border);
+
+		/* Kumo overlay override for dark mode - darker backdrop for dialogs */
+		--color-kumo-overlay: var(--color-surface);
 	}
 }
 
@@ -144,4 +147,34 @@
 			sans-serif;
 		@apply text-text bg-bg-secondary text-sm leading-normal;
 	}
+}
+
+/* Style Kumo Pagination buttons to match our theme — background only, no border changes */
+.pagination-styled button {
+	background-color: var(--color-bg);
+}
+
+.pagination-styled button:hover:not(:disabled) {
+	background-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.pagination-styled button:disabled {
+	opacity: 0.4;
+}
+
+.pagination-styled input {
+	background-color: var(--color-bg);
+}
+
+/* Tabs: inactive track uses surface-tertiary, active indicator matches table rows */
+.tabs-styled [role="tablist"] {
+	background-color: var(--color-surface-tertiary);
+}
+
+.tabs-styled [data-active] {
+	background-color: var(--color-bg);
+}
+
+.tabs-styled [role="tab"] {
+	font-weight: 400;
 }

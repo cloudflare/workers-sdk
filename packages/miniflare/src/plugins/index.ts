@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ValueOf } from "../workers";
 import { AI_PLUGIN, AI_PLUGIN_NAME } from "./ai";
+import { AI_SEARCH_PLUGIN, AI_SEARCH_PLUGIN_NAME } from "./ai-search";
 import {
 	ANALYTICS_ENGINE_PLUGIN,
 	ANALYTICS_ENGINE_PLUGIN_NAME,
@@ -31,6 +32,7 @@ import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
+import { STREAM_PLUGIN, STREAM_PLUGIN_NAME } from "./stream";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
 import {
 	VERSION_METADATA_PLUGIN,
@@ -60,9 +62,11 @@ export const PLUGINS = {
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
+	[AI_SEARCH_PLUGIN_NAME]: AI_SEARCH_PLUGIN,
 	[BROWSER_RENDERING_PLUGIN_NAME]: BROWSER_RENDERING_PLUGIN,
 	[DISPATCH_NAMESPACE_PLUGIN_NAME]: DISPATCH_NAMESPACE_PLUGIN,
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
+	[STREAM_PLUGIN_NAME]: STREAM_PLUGIN,
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
 	[VPC_SERVICES_PLUGIN_NAME]: VPC_SERVICES_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
@@ -124,9 +128,11 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof SECRET_STORE_PLUGIN.options> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.options> &
 	z.input<typeof AI_PLUGIN.options> &
+	z.input<typeof AI_SEARCH_PLUGIN.options> &
 	z.input<typeof BROWSER_RENDERING_PLUGIN.options> &
 	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
+	z.input<typeof STREAM_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
 	z.input<typeof VPC_SERVICES_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
@@ -145,6 +151,7 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions> &
 	z.input<typeof IMAGES_PLUGIN.sharedOptions> &
+	z.input<typeof STREAM_PLUGIN.sharedOptions> &
 	z.input<typeof HELLO_WORLD_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
@@ -203,9 +210,11 @@ export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
 export * from "./ai";
+export * from "./ai-search";
 export * from "./browser-rendering";
 export * from "./dispatch-namespace";
 export * from "./images";
+export * from "./stream";
 export * from "./vectorize";
 export * from "./vpc-services";
 export * from "./mtls";

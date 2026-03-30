@@ -4,11 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "webtypy>=0.1.7",
-]
+dependencies = []
 
 [dependency-groups]
 dev = [
-    "workers-py"
+    "workers-py",
+    "workers-runtime-sdk",
 ]

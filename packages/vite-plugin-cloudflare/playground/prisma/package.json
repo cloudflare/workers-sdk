@@ -21,7 +21,7 @@
 		"@prisma/client": "^7.0.0",
 		"prisma": "^7.0.0",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }
