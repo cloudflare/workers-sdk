@@ -1,8 +1,7 @@
-import { mergeObjectProperties } from "helpers/codemod";
 import * as recast from "recast";
 import parser from "recast/parsers/babel";
 import { describe, test } from "vitest";
-import type { ExpectStatic } from "vitest";
+import { mergeObjectProperties } from "../src/index";
 
 describe("mergeObjectProperties", () => {
 	const tests = [
@@ -94,35 +93,25 @@ describe("mergeObjectProperties", () => {
 	}[];
 
 	tests.forEach(({ testName, ...testObjects }) =>
-		test(testName, ({ expect }) =>
-			testMergeObjectProperties(testObjects, expect)
-		)
+		test(`${testName}`, ({ expect }) => {
+			const {
+				sourcePropertiesObject,
+				newPropertiesObject,
+				expectedPropertiesObject,
+			} = testObjects;
+			const sourceObj = createObjectExpression(sourcePropertiesObject);
+			const newProperties = createObjectExpression(newPropertiesObject)
+				.properties as recast.types.namedTypes.ObjectProperty[];
+			const expectedObj = createObjectExpression(expectedPropertiesObject);
+
+			mergeObjectProperties(sourceObj, newProperties);
+
+			expect(recast.prettyPrint(sourceObj, { parser }).code).toEqual(
+				recast.prettyPrint(expectedObj, { parser }).code
+			);
+		})
 	);
 });
-
-const testMergeObjectProperties = (
-	{
-		sourcePropertiesObject,
-		newPropertiesObject,
-		expectedPropertiesObject,
-	}: {
-		sourcePropertiesObject: Record<string, unknown>;
-		newPropertiesObject: Record<string, unknown>;
-		expectedPropertiesObject: Record<string, unknown>;
-	},
-	expect: ExpectStatic
-) => {
-	const sourceObj = createObjectExpression(sourcePropertiesObject);
-	const newProperties = createObjectExpression(newPropertiesObject)
-		.properties as recast.types.namedTypes.ObjectProperty[];
-	const expectedObj = createObjectExpression(expectedPropertiesObject);
-
-	mergeObjectProperties(sourceObj, newProperties);
-
-	expect(recast.prettyPrint(sourceObj, { parser }).code).toEqual(
-		recast.prettyPrint(expectedObj, { parser }).code
-	);
-};
 
 const createObjectExpression = (
 	sourceObj: Record<string, unknown>
