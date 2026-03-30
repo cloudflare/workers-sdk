@@ -224,7 +224,7 @@ import {
 import ci from "ci-info";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { fetch } from "undici";
+import { fetch, WebSocket } from "undici";
 import {
 	getConfigCache,
 	purgeConfigCaches,
@@ -238,6 +238,7 @@ import { domainUsesAccess } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
+	getAuthWorkerUrlFromEnv,
 	getClientIdFromEnv,
 	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
@@ -838,8 +839,18 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 /**
  * Fetch an access token from the remote service.
  */
-async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
-	const { authorizationCode, codeVerifier = "" } = localState;
+async function exchangeAuthCodeForAccessToken(explicitParams?: {
+	code: string;
+	redirectUri: string;
+	clientId: string;
+	codeVerifier: string;
+}): Promise<AccessContext> {
+	const authorizationCode =
+		explicitParams?.code ?? localState.authorizationCode;
+	const codeVerifier =
+		explicitParams?.codeVerifier ?? localState.codeVerifier ?? "";
+	const redirectUri = explicitParams?.redirectUri ?? OAUTH_CALLBACK_URL;
+	const clientId = explicitParams?.clientId ?? getClientIdFromEnv();
 
 	if (!codeVerifier) {
 		logger.warn("No code verifier is being sent.");
@@ -850,8 +861,8 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: OAUTH_CALLBACK_URL,
-		client_id: getClientIdFromEnv(),
+		redirect_uri: redirectUri,
+		client_id: clientId,
 		code_verifier: codeVerifier,
 	});
 
@@ -975,6 +986,7 @@ type LoginProps = {
 	browser: boolean;
 	callbackHost: string;
 	callbackPort: number;
+	xWebsocketCallback?: boolean;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -1027,6 +1039,138 @@ export async function getOAuthTokenFromLocalState(): Promise<
 	}
 
 	return localState.accessToken?.value;
+}
+
+/**
+ * Gets an OAuth token using a WebSocket relay through the auth worker.
+ * This enables `wrangler login` in environments where localhost isn't
+ * accessible from the user's browser (containers, remote VMs, Codespaces).
+ *
+ * Flow:
+ * 1. Generate PKCE codes and state
+ * 2. Open WebSocket to auth worker (the state is the session ID)
+ * 3. Build auth URL with the auth worker's callback URL as redirect_uri
+ * 4. Open browser / print URL
+ * 5. Wait for the auth code to arrive via WebSocket
+ * 6. Exchange auth code for tokens (PKCE ensures only we can do this)
+ */
+async function getOauthTokenViaWebSocket(options: {
+	browser: boolean;
+	scopes: string[];
+	clientId: string;
+	denied: {
+		url: string;
+		error: string;
+	};
+	granted: {
+		url: string;
+	};
+}): Promise<AccessContext> {
+	// 1. Generate PKCE codes and state
+	const { codeChallenge, codeVerifier } = await generatePKCECodes();
+	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
+
+	// 2. Open WebSocket to auth worker
+	const authWorkerUrl = getAuthWorkerUrlFromEnv();
+	const wsUrl =
+		authWorkerUrl.replace("https://", "wss://").replace("http://", "ws://") +
+		`/session/${stateQueryParam}`;
+
+	const ws = new WebSocket(wsUrl);
+
+	// Wait for connection to open
+	await new Promise<void>((resolve, reject) => {
+		ws.addEventListener("open", () => resolve(), { once: true });
+		ws.addEventListener(
+			"error",
+			(event) => {
+				reject(
+					new UserError(
+						`Failed to connect to auth relay at ${authWorkerUrl}: ${String(event)}`
+					)
+				);
+			},
+			{ once: true }
+		);
+	});
+
+	// 3. Build auth URL with the auth worker's callback URL as redirect_uri
+	const remoteCallbackUrl = `${authWorkerUrl}/callback`;
+	const authUrl = generateAuthUrl({
+		authUrl: getAuthUrlFromEnv(),
+		clientId: options.clientId,
+		scopes: options.scopes,
+		stateQueryParam,
+		codeChallenge,
+		callbackUrl: remoteCallbackUrl,
+	});
+
+	// 4. Open browser or print URL
+	if (options.browser) {
+		logger.log(`Opening a link in your default browser: ${authUrl}`);
+		await openInBrowser(authUrl);
+	} else {
+		logger.log(`Visit this link to authenticate: ${authUrl}`);
+	}
+
+	// 5. Wait for auth code via WebSocket (with 120s timeout)
+	const result = await Promise.race([
+		new Promise<{ code?: string; error?: string }>((resolve, reject) => {
+			ws.addEventListener(
+				"message",
+				(event) => {
+					try {
+						resolve(
+							JSON.parse(
+								typeof event.data === "string" ? event.data : String(event.data)
+							)
+						);
+					} catch {
+						reject(new Error("Invalid message from auth relay"));
+					}
+				},
+				{ once: true }
+			);
+			ws.addEventListener(
+				"close",
+				() => {
+					reject(
+						new UserError("Auth relay connection closed before login completed")
+					);
+				},
+				{ once: true }
+			);
+		}),
+		new Promise<never>((_resolve, reject) => {
+			setTimeout(() => {
+				ws.close();
+				reject(
+					new UserError(
+						"Timed out waiting for authorization code, please try again."
+					)
+				);
+			}, 120_000);
+		}),
+	]);
+
+	ws.close();
+
+	// 6. Handle error (user denied consent)
+	if (result.error) {
+		throw new UserError(options.denied.error);
+	}
+
+	if (!result.code) {
+		throw new UserError("No authorization code received from auth relay");
+	}
+
+	// 7. Exchange code for token using the refactored function
+	return exchangeAuthCodeForAccessToken({
+		code: result.code,
+		redirectUri: remoteCallbackUrl,
+		clientId: options.clientId,
+		codeVerifier,
+	});
 }
 
 export async function getOauthToken(options: {
@@ -1186,7 +1330,7 @@ export async function login(
 
 	logger.log("Attempting to login via OAuth...");
 
-	const oauth = await getOauthToken({
+	const oauthOptions = {
 		browser: !!props.browser,
 		scopes: props.scopes ?? DefaultScopeKeys,
 		clientId: getClientIdFromEnv(),
@@ -1199,9 +1343,15 @@ export async function login(
 		granted: {
 			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
 		},
-		callbackHost: props.callbackHost,
-		callbackPort: props.callbackPort,
-	});
+	};
+
+	const oauth = props.xWebsocketCallback
+		? await getOauthTokenViaWebSocket(oauthOptions)
+		: await getOauthToken({
+				...oauthOptions,
+				callbackHost: props.callbackHost,
+				callbackPort: props.callbackPort,
+			});
 
 	writeAuthConfigFile({
 		oauth_token: oauth.token?.value ?? "",

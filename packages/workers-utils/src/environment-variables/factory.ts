@@ -94,6 +94,8 @@ type VariableNames =
 	| "WRANGLER_TOKEN_URL"
 	/** Custom token revocation URL (usually auto-configured). */
 	| "WRANGLER_REVOKE_URL"
+	/** URL of the auth relay worker for WebSocket-based OAuth callback flow (usually auto-configured). */
+	| "WRANGLER_AUTH_WORKER_URL"
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
 
