@@ -13,7 +13,6 @@ export class SvelteKit extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { dlx } = packageManager;
 		if (!dryRun) {
