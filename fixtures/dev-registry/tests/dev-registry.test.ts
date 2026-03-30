@@ -633,6 +633,42 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		}, waitForTimeout);
 	});
 
+	it("supports WebSocket upgrade over service binding", async ({
+		devRegistryPath,
+	}) => {
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
+			devRegistryPath
+		);
+		await runViteDev(
+			"vite.worker-entrypoint.config.ts",
+			devRegistryPath
+		);
+
+		// Test exported-handler -> worker-entrypoint WebSocket proxy
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint",
+				"test-method": "websocket-proxy",
+			});
+			const wsUrl = `${exportedHandler.replace("http", "ws")}?${searchParams}`;
+			const ws = new WebSocket(wsUrl);
+
+			const message = await new Promise<string>((resolve, reject) => {
+				ws.addEventListener("open", () => ws.send("hello"));
+				ws.addEventListener("message", (event) => {
+					resolve(String(event.data));
+					ws.close();
+				});
+				ws.addEventListener("error", () =>
+					reject(new Error("WebSocket connection failed"))
+				);
+			});
+
+			expect(message).toBe("echo:hello");
+		}, waitForTimeout);
+	});
+
 	it("supports tail handler", async ({ devRegistryPath }) => {
 		const exportedHandler = await runViteDev(
 			"vite.exported-handler.config.ts",

@@ -58,6 +58,20 @@ export default {
 				return await service.fetch(url);
 			}
 
+			if (service && testMethod === "websocket-proxy") {
+				return await service.fetch(new Request(url, request));
+			}
+
+			// Handle WebSocket upgrades forwarded via service bindings
+			if (request.headers.get("Upgrade")) {
+				const { 0: client, 1: server } = new WebSocketPair();
+				server.accept();
+				server.addEventListener("message", (event) => {
+					server.send(`echo:${event.data}`);
+				});
+				return new Response(null, { status: 101, webSocket: client });
+			}
+
 			if (testMethod === "tail") {
 				if (request.method === "POST") {
 					const logs = await request.json();
