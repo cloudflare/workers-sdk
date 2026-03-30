@@ -55,43 +55,42 @@ export const workflowsDescribeCommand = createCommand({
 					)
 				);
 			}
-			return;
-		}
+		} else {
+			const accountId = await requireAuth(config);
 
-		const accountId = await requireAuth(config);
+			const workflow = await fetchResult<Workflow>(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}`
+			);
 
-		const workflow = await fetchResult<Workflow>(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}`
-		);
+			const versions = await fetchResult<Version[]>(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}/versions`
+			);
 
-		const versions = await fetchResult<Version[]>(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}/versions`
-		);
+			const latestVersion = versions[0];
 
-		const latestVersion = versions[0];
-
-		logRaw(
-			formatLabelledValues({
-				Name: workflow.name,
-				Id: workflow.id,
-				"Script Name": workflow.script_name,
-				"Class Name": workflow.class_name,
-				"Created On": workflow.created_on,
-				"Modified On": workflow.modified_on,
-			})
-		);
-		logRaw(white("Latest Version:"));
-		logRaw(
-			formatLabelledValues(
-				{
-					Id: latestVersion.id,
+			logRaw(
+				formatLabelledValues({
+					Name: workflow.name,
+					Id: workflow.id,
+					"Script Name": workflow.script_name,
+					"Class Name": workflow.class_name,
 					"Created On": workflow.created_on,
 					"Modified On": workflow.modified_on,
-				},
-				{ indentationCount: 2 }
-			)
-		);
+				})
+			);
+			logRaw(white("Latest Version:"));
+			logRaw(
+				formatLabelledValues(
+					{
+						Id: latestVersion.id,
+						"Created On": workflow.created_on,
+						"Modified On": workflow.modified_on,
+					},
+					{ indentationCount: 2 }
+				)
+			);
+		}
 	},
 });

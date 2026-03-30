@@ -32,17 +32,18 @@ export const workflowsDeleteCommand = createCommand({
 			logger.log(
 				`✅ Workflow "${args.name}" instances removed successfully from local dev session.`
 			);
-			return;
+		} else {
+			const accountId = await requireAuth(config);
+
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}`,
+				{ method: "DELETE" }
+			);
+
+			logger.log(
+				`✅ Workflow "${args.name}" removed successfully. \n Note that running instances might take a few minutes to be properly terminated.`
+			);
 		}
-
-		const accountId = await requireAuth(config);
-
-		await fetchResult(config, `/accounts/${accountId}/workflows/${args.name}`, {
-			method: "DELETE",
-		});
-
-		logger.log(
-			`✅ Workflow "${args.name}" removed successfully. \n Note that running instances might take a few minutes to be properly terminated.`
-		);
 	},
 });

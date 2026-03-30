@@ -63,6 +63,10 @@ export const workflowsTriggerCommand = createCommand({
 				}
 			);
 			instanceId = response.id;
+
+			logger.info(
+				`🚀 Workflow instance "${instanceId}" has been triggered successfully`
+			);
 		} else {
 			const accountId = await requireAuth(config);
 
@@ -79,10 +83,10 @@ export const workflowsTriggerCommand = createCommand({
 				}
 			);
 			instanceId = response.id;
-		}
 
-		logger.info(
-			`🚀 Workflow instance "${instanceId}" has been queued successfully`
-		);
+			logger.info(
+				`🚀 Workflow instance "${instanceId}" has been queued successfully`
+			);
+		}
 	},
 });

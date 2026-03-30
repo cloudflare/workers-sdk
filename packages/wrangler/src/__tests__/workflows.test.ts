@@ -1327,7 +1327,7 @@ describe("wrangler workflows", () => {
 					`workflows trigger my-workflow '{"foo":"bar"}' --local`
 				);
 				expect(std.info).toMatchInlineSnapshot(
-					`"🚀 Workflow instance "local-instance-123" has been queued successfully"`
+					`"🚀 Workflow instance "local-instance-123" has been triggered successfully"`
 				);
 			});
 
@@ -1347,7 +1347,7 @@ describe("wrangler workflows", () => {
 
 				await runWrangler("workflows trigger my-workflow --local");
 				expect(std.info).toMatchInlineSnapshot(
-					`"🚀 Workflow instance "local-instance-456" has been queued successfully"`
+					`"🚀 Workflow instance "local-instance-456" has been triggered successfully"`
 				);
 			});
 		});

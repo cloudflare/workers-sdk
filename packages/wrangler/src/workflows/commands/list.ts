@@ -50,51 +50,50 @@ export const workflowsListCommand = createCommand({
 				"Class name": workflow.class_name,
 			}));
 			logger.table(prettierWorkflows);
-			return;
-		}
+		} else {
+			const accountId = await requireAuth(config);
 
-		const accountId = await requireAuth(config);
+			const URLParams = new URLSearchParams();
 
-		const URLParams = new URLSearchParams();
+			if (args.perPage !== undefined) {
+				URLParams.set("per_page", args.perPage.toString());
+			}
 
-		if (args.perPage !== undefined) {
-			URLParams.set("per_page", args.perPage.toString());
-		}
+			URLParams.set("page", args.page.toString());
 
-		URLParams.set("page", args.page.toString());
-
-		const workflows = await fetchResult<Workflow[]>(
-			config,
-			`/accounts/${accountId}/workflows`,
-			undefined,
-			URLParams
-		);
-
-		if (workflows.length === 0 && args.page === 1) {
-			logger.warn("There are no deployed Workflows in this account");
-			return;
-		}
-
-		if (workflows.length === 0 && args.page > 1) {
-			logger.warn(
-				`No Workflows found on page ${args.page}. Please try a smaller page number.`
+			const workflows = await fetchResult<Workflow[]>(
+				config,
+				`/accounts/${accountId}/workflows`,
+				undefined,
+				URLParams
 			);
-			return;
+
+			if (workflows.length === 0 && args.page === 1) {
+				logger.warn("There are no deployed Workflows in this account");
+				return;
+			}
+
+			if (workflows.length === 0 && args.page > 1) {
+				logger.warn(
+					`No Workflows found on page ${args.page}. Please try a smaller page number.`
+				);
+				return;
+			}
+
+			logger.info(
+				`Showing ${workflows.length} workflow${workflows.length > 1 ? "s" : ""} from page ${args.page}:`
+			);
+
+			const prettierWorkflows = workflows
+				.sort((a, b) => b.created_on.localeCompare(a.created_on))
+				.map((workflow) => ({
+					Name: workflow.name,
+					"Script name": workflow.script_name,
+					"Class name": workflow.class_name,
+					Created: new Date(workflow.created_on).toLocaleString(),
+					Modified: new Date(workflow.modified_on).toLocaleString(),
+				}));
+			logger.table(prettierWorkflows);
 		}
-
-		logger.info(
-			`Showing ${workflows.length} workflow${workflows.length > 1 ? "s" : ""} from page ${args.page}:`
-		);
-
-		const prettierWorkflows = workflows
-			.sort((a, b) => b.created_on.localeCompare(a.created_on))
-			.map((workflow) => ({
-				Name: workflow.name,
-				"Script name": workflow.script_name,
-				"Class name": workflow.class_name,
-				Created: new Date(workflow.created_on).toLocaleString(),
-				Modified: new Date(workflow.modified_on).toLocaleString(),
-			}));
-		logger.table(prettierWorkflows);
 	},
 });
