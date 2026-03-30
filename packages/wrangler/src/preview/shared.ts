@@ -295,14 +295,6 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 		previewDefaults.env = previewEnv;
 	}
 
-	if (config.compatibility_date) {
-		previewDefaults.compatibility_date = config.compatibility_date;
-	}
-
-	if (config.compatibility_flags && config.compatibility_flags.length > 0) {
-		previewDefaults.compatibility_flags = config.compatibility_flags;
-	}
-
 	if (config.limits?.cpu_ms !== undefined) {
 		previewDefaults.limits = { cpu_ms: config.limits.cpu_ms };
 	}

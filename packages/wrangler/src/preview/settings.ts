@@ -59,18 +59,6 @@ export function formatPreviewsSettings(
 	lines.push("");
 
 	const settingsRows: Array<[string, string]> = [];
-	if (typeof previewDefaults.compatibility_date === "string") {
-		settingsRows.push([
-			"compatibility_date",
-			previewDefaults.compatibility_date,
-		]);
-	}
-	if (Array.isArray(previewDefaults.compatibility_flags)) {
-		settingsRows.push([
-			"compatibility_flags",
-			previewDefaults.compatibility_flags.join(", "),
-		]);
-	}
 	if (
 		previewDefaults.observability &&
 		typeof previewDefaults.observability === "object"

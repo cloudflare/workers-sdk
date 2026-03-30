@@ -41,7 +41,6 @@ describe("wrangler preview", () => {
 						success: true,
 						result: {
 							preview_defaults: {
-								compatibility_date: "2025-01-01",
 								logpush: false,
 								env: {
 									ENVIRONMENT: { type: "plain_text", text: "preview" },
@@ -54,7 +53,7 @@ describe("wrangler preview", () => {
 			await runWrangler(
 				"preview settings --worker-name override-worker --json"
 			);
-			expect(std.out).toContain('"compatibility_date": "2025-01-01"');
+			expect(std.out).toContain('"logpush": false');
 			expect(std.out).toContain('"ENVIRONMENT"');
 		});
 
@@ -67,8 +66,6 @@ describe("wrangler preview", () => {
 						success: true,
 						result: {
 							preview_defaults: {
-								compatibility_date: "2025-01-01",
-								compatibility_flags: ["nodejs_compat"],
 								observability: { enabled: true, head_sampling_rate: 0.5 },
 								logpush: false,
 								limits: { cpu_ms: 50 },
@@ -85,8 +82,6 @@ describe("wrangler preview", () => {
 			await runWrangler("preview settings --worker-name override-worker");
 			expect(std.out).toContain("Worker: override-worker");
 			expect(std.out).toContain("Previews settings");
-			expect(std.out).toContain("2025-01-01");
-			expect(std.out).toContain("nodejs_compat");
 			expect(std.out).toContain("enabled, 0.5 sampling");
 			expect(std.out).toContain("disabled");
 			expect(std.out).toContain("cpu_ms 50");
@@ -102,7 +97,6 @@ describe("wrangler preview", () => {
 						success: true,
 						result: {
 							preview_defaults: {
-								compatibility_date: "2025-01-01",
 								env: {},
 							},
 						},
@@ -178,7 +172,6 @@ describe("wrangler preview", () => {
 								string,
 								{ type: string; text?: string; namespace_id?: string }
 							>;
-							compatibility_date?: string;
 							logpush?: boolean;
 							observability?: {
 								enabled?: boolean;
@@ -214,9 +207,6 @@ describe("wrangler preview", () => {
 				"preview settings update --worker-name override-worker --skip-confirmation"
 			);
 			expect(patchCalled).toBe(true);
-			expect(patchRequestBody?.preview_defaults?.compatibility_date).toBe(
-				"2025-01-01"
-			);
 			expect(std.out).toContain(
 				"✨ Updated Previews settings for Worker override-worker."
 			);
@@ -287,7 +277,7 @@ describe("wrangler preview", () => {
 					HttpResponse.json({
 						success: true,
 						result: {
-							preview_defaults: { compatibility_date: "2024-12-31" },
+							preview_defaults: { logpush: true },
 						},
 					})
 				),
@@ -297,7 +287,7 @@ describe("wrangler preview", () => {
 						HttpResponse.json({
 							success: true,
 							result: {
-								preview_defaults: { compatibility_date: "2025-02-02" },
+								preview_defaults: { logpush: false },
 							},
 						})
 				)
@@ -305,7 +295,7 @@ describe("wrangler preview", () => {
 			await runWrangler(
 				"preview settings update --worker-name override-worker --skip-confirmation"
 			);
-			expect(std.out).toContain("2025-02-02");
+			expect(std.out).toContain("disabled");
 		});
 
 		test("should prefer previews limits over top-level limits", async ({
@@ -358,7 +348,6 @@ describe("wrangler preview", () => {
 						success: true,
 						result: {
 							preview_defaults: {
-								compatibility_date: "2025-01-01",
 								env: {
 									ENVIRONMENT: { type: "plain_text", text: "preview" },
 									MY_KV: {
@@ -392,7 +381,6 @@ describe("wrangler preview", () => {
 				JSON.stringify({
 					name: "test-worker",
 					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
 					previews: { logpush: false },
 				})
 			);
@@ -410,7 +398,6 @@ describe("wrangler preview", () => {
 						success: true,
 						result: {
 							preview_defaults: {
-								compatibility_date: "2025-01-01",
 								logpush: true,
 								env: {
 									EXISTING_SECRET: { type: "plain_text", text: "value" },
@@ -445,7 +432,6 @@ describe("wrangler preview", () => {
 				JSON.stringify({
 					name: "test-worker",
 					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
 					previews: { vars: { MY_BINDING: "new-value" } },
 				})
 			);
@@ -462,7 +448,6 @@ describe("wrangler preview", () => {
 						success: true,
 						result: {
 							preview_defaults: {
-								compatibility_date: "2025-01-01",
 								env: {
 									MY_BINDING: {
 										type: "kv_namespace",
@@ -499,7 +484,6 @@ describe("wrangler preview", () => {
 				JSON.stringify({
 					name: "test-worker",
 					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
 					placement: { mode: "smart" },
 					limits: { cpu_ms: 100 },
 					previews: {
@@ -520,7 +504,6 @@ describe("wrangler preview", () => {
 			let patchRequestBody:
 				| {
 						preview_defaults?: {
-							compatibility_date?: string;
 							placement?: { mode?: string };
 							limits?: { cpu_ms?: number };
 							env?: Record<string, { type: string; text?: string }>;
@@ -547,10 +530,6 @@ describe("wrangler preview", () => {
 
 			await runWrangler(
 				"preview settings update --env staging --worker-name override-worker --skip-confirmation"
-			);
-
-			expect(patchRequestBody?.preview_defaults?.compatibility_date).toBe(
-				"2025-01-01"
 			);
 			expect(patchRequestBody?.preview_defaults?.placement).toEqual({
 				mode: "smart",

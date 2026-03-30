@@ -126,9 +126,7 @@ export type PreviewRequestOptions = {
 };
 
 export type PreviewDefaults = {
-	compatibility_date?: string;
-	compatibility_flags?: string[];
-	observability?: {
+		observability?: {
 		enabled?: boolean;
 		head_sampling_rate?: number;
 	};
