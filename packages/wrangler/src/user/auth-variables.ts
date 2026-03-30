@@ -98,6 +98,21 @@ export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
+/**
+ * `WRANGLER_AUTH_WORKER_URL` is the URL of the auth relay worker used for
+ * the WebSocket-based OAuth callback flow.
+ *
+ * A single deployment serves all environments (production and staging) since
+ * the worker only holds ephemeral relay state and is fully agnostic to the
+ * OAuth environment.
+ *
+ * Normally you should not need to set this explicitly.
+ */
+export const getAuthWorkerUrlFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_AUTH_WORKER_URL",
+	defaultValue: () => "https://auth.devprod.cloudflare.dev",
+});
+
 export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_R2_SQL_AUTH_TOKEN",
 });
