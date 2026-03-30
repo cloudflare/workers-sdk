@@ -7,13 +7,13 @@ import {
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
+import { installPackages } from "@cloudflare/cli/packages";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { logger } from "../../logger";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { runCommand } from "../c3-vendor/command";
-import { installPackages } from "../c3-vendor/packages";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
@@ -319,7 +319,7 @@ async function configureAstroLegacy(
 	const astroCloudflarePackageVersion = astroMajorVersion === 5 ? 12 : 11;
 
 	await installPackages(
-		packageManager,
+		packageManager.type,
 		[`@astrojs/cloudflare@${astroCloudflarePackageVersion}`],
 		{
 			startText: `Installing @astrojs/cloudflare adapter (version ${astroCloudflarePackageVersion})`,

@@ -1,7 +1,7 @@
 import { updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import { runCommand } from "helpers/command";
+import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { reporter } from "../metrics";
 import type { C3Context } from "types";
@@ -84,7 +84,7 @@ export const wranglerLogin = async (ctx: C3Context) => {
 
 			// We're using a custom spinner since this is a little complicated.
 			// We want to vary the done status based on the output
-			const output = await runCommand([npx, "wrangler", "login"], {
+			const output = await runWranglerCommand([npx, "wrangler", "login"], {
 				silent: true,
 			});
 			const success = /Successfully logged in/.test(output);
@@ -102,7 +102,7 @@ export const wranglerLogin = async (ctx: C3Context) => {
 export const listAccounts = async () => {
 	const { npx } = detectPackageManager();
 
-	const output = await runCommand([npx, "wrangler", "whoami"], {
+	const output = await runWranglerCommand([npx, "wrangler", "whoami"], {
 		silent: true,
 	});
 
@@ -120,7 +120,7 @@ export const listAccounts = async () => {
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();
 	try {
-		const output = await runCommand([npx, "wrangler", "whoami"], {
+		const output = await runWranglerCommand([npx, "wrangler", "whoami"], {
 			silent: true,
 		});
 		return /You are logged in/.test(output);

@@ -2,12 +2,12 @@ import assert from "node:assert";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { installPackages } from "@cloudflare/cli/packages";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { logger } from "../../logger";
 import { transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { transformViteConfig } from "./utils/vite-config";
 import { Framework } from ".";
@@ -151,7 +151,7 @@ export class ReactRouter extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const viteEnvironmentKey = configPropertyName(projectPath);
 		if (!dryRun) {
-			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
+			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
@@ -189,7 +189,7 @@ export class ReactRouter extends Framework {
 				`
 			);
 
-			await installPackages(packageManager, ["isbot"], {
+			await installPackages(packageManager.type, ["isbot"], {
 				dev: true,
 				startText: "Installing the isbot package",
 				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,

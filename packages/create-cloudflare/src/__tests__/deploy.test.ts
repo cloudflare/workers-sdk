@@ -1,13 +1,13 @@
+import { runCommand } from "@cloudflare/cli/command";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
-import { runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
 import { beforeEach, describe, test, vi } from "vitest";
 import { offerToDeploy, runDeploy } from "../deploy";
 import { chooseAccount, wranglerLogin } from "../wrangler/accounts";
 import { createTestContext } from "./helpers";
 
-vi.mock("helpers/command");
+vi.mock("@cloudflare/cli/command");
 vi.mock("../wrangler/accounts");
 vi.mock("@cloudflare/cli/interactive");
 vi.mock("which-pm-runs");
