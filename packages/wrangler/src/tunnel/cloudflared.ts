@@ -554,7 +554,9 @@ async function downloadBinary(
  * 3. Cached binary in ~/.wrangler/cloudflared/{version}/
  * 4. Download latest from Cloudflare update worker
  */
-export async function getCloudflaredPath(): Promise<string> {
+export async function getCloudflaredPath(options?: {
+	skipVersionCheck?: boolean;
+}): Promise<string> {
 	// Check for environment variable override first
 	const envPath = getCloudflaredPathFromEnv();
 	if (envPath) {
@@ -575,7 +577,9 @@ export async function getCloudflaredPath(): Promise<string> {
 	const pathBin = tryGetCloudflaredFromPath();
 	if (pathBin) {
 		logger.debug("Using cloudflared from PATH");
-		await warnIfOutdated(pathBin);
+		if (!options?.skipVersionCheck) {
+			await warnIfOutdated(pathBin);
+		}
 		return pathBin;
 	}
 
@@ -631,9 +635,15 @@ export async function getCloudflaredPath(): Promise<string> {
  */
 export async function spawnCloudflared(
 	args: string[],
-	options?: { stdio?: "inherit" | "pipe"; env?: Record<string, string> }
+	options?: {
+		stdio?: "inherit" | "pipe";
+		env?: Record<string, string>;
+		skipVersionCheck?: boolean;
+	}
 ): Promise<ChildProcess> {
-	const binPath = await getCloudflaredPath();
+	const binPath = await getCloudflaredPath({
+		skipVersionCheck: options?.skipVersionCheck,
+	});
 
 	logger.debug(
 		`Spawning cloudflared: ${binPath} ${redactCloudflaredArgsForLogging(args).join(" ")}`
