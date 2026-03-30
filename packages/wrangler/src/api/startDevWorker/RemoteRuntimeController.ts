@@ -360,6 +360,52 @@ export class RemoteRuntimeController extends RuntimeController {
 		}, interval);
 	}
 
+	async #refreshPreviewToken() {
+		if (!this.#latestConfig || !this.#latestBundle) {
+			logger.warn(
+				"Cannot refresh preview token: missing config or bundle data"
+			);
+			return;
+		}
+
+		try {
+			assert(this.#latestConfig.dev.auth);
+			const auth = await unwrapHook(this.#latestConfig.dev.auth);
+
+			this.#session = await this.#getPreviewSession(
+				this.#latestConfig,
+				auth,
+				this.#latestRoutes
+			);
+
+			const refreshed = await this.#updatePreviewToken(
+				this.#latestConfig,
+				this.#latestBundle,
+				auth,
+				this.#latestRoutes,
+				this.#currentBundleId
+			);
+
+			if (!refreshed) {
+				throw new Error("Failed to refresh preview token");
+			}
+
+			logger.log(chalk.green("✔ Preview token refreshed successfully"));
+		} catch (error) {
+			if (error instanceof Error && error.name == "AbortError") {
+				return;
+			}
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Error refreshing preview token",
+				cause: castErrorCause(error),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
+		}
+	}
+
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
 		logger.log(chalk.dim("⎔ Starting remote preview..."));
 
@@ -433,51 +479,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 	onPreviewTokenExpired(_ev: PreviewTokenExpiredEvent): void {
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
-		void this.#mutex.runWith(async () => {
-			if (!this.#latestConfig || !this.#latestBundle) {
-				logger.warn(
-					"Cannot refresh preview token: missing config or bundle data"
-				);
-				return;
-			}
-
-			try {
-				assert(this.#latestConfig.dev.auth);
-				const auth = await unwrapHook(this.#latestConfig.dev.auth);
-
-				this.#session = await this.#getPreviewSession(
-					this.#latestConfig,
-					auth,
-					this.#latestRoutes
-				);
-
-				const refreshed = await this.#updatePreviewToken(
-					this.#latestConfig,
-					this.#latestBundle,
-					auth,
-					this.#latestRoutes,
-					this.#currentBundleId
-				);
-
-				if (!refreshed) {
-					throw new Error("Failed to refresh preview token");
-				}
-
-				logger.log(chalk.green("✔ Preview token refreshed successfully"));
-			} catch (error) {
-				if (error instanceof Error && error.name == "AbortError") {
-					return;
-				}
-
-				this.emitErrorEvent({
-					type: "error",
-					reason: "Error refreshing preview token",
-					cause: castErrorCause(error),
-					source: "RemoteRuntimeController",
-					data: undefined,
-				});
-			}
-		});
+		void this.#mutex.runWith(() => this.#refreshPreviewToken());
 	}
 
 	override async teardown() {
