@@ -27,6 +27,13 @@
 			"database_id": "some-db-id",
 		},
 	],
+	"workflows": [
+		{
+			"binding": "MY_WORKFLOW",
+			"class_name": "MyWorkflow",
+			"name": "my-workflow",
+		},
+	],
 	"durable_objects": {
 		"bindings": [
 			{
