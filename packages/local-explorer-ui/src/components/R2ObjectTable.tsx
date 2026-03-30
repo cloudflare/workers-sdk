@@ -292,10 +292,7 @@ export function R2ObjectTable({
 										className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
 										onClick={() => onNavigateToPrefix(item.prefix)}
 									>
-										<FolderIcon
-											className="text-orange-600 dark:text-orange-400"
-											size={16}
-										/>
+										<FolderIcon className="text-primary" size={16} />
 										<span className="font-medium">{displayName}</span>
 									</button>
 								</Table.Cell>

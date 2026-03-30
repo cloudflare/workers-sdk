@@ -47,7 +47,7 @@ export function AnimatedCloudflareLogo({
 						</defs>
 						<use
 							href="#loader-cloud"
-							className="animate-[animated-logo-cloud_1s_ease-out_forwards] fill-primary stroke-primary stroke-[0.5] [fill-opacity:0] [stroke-dasharray:145] [stroke-dashoffset:145] motion-reduce:animate-none motion-reduce:[fill-opacity:1] motion-reduce:[stroke-dashoffset:0]"
+							className="animate-[animated-logo-cloud_1s_ease-out_forwards] fill-[#f38020] stroke-[#f38020] stroke-[0.5] [fill-opacity:0] [stroke-dasharray:145] [stroke-dashoffset:145] motion-reduce:animate-none motion-reduce:[fill-opacity:1] motion-reduce:[stroke-dashoffset:0]"
 							mask="url(#animated-logo-mask)"
 						/>
 					</svg>
