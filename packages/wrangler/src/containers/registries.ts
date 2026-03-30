@@ -501,6 +501,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 	expirationMinutes: number;
 	push?: boolean;
 	pull?: boolean;
+	libraryPush?: boolean;
 	json?: boolean;
 }) {
 	const cloudflareRegistry = getCloudflareContainerRegistry();
@@ -511,7 +512,11 @@ async function registryCredentialsCommand(credentialsArgs: {
 		);
 	}
 
-	if (!credentialsArgs.pull && !credentialsArgs.push) {
+	if (
+		!credentialsArgs.pull &&
+		!credentialsArgs.push &&
+		!credentialsArgs.libraryPush
+	) {
 		throw new UserError(
 			"You have to specify either --push or --pull in the command."
 		);
@@ -523,6 +528,7 @@ async function registryCredentialsCommand(credentialsArgs: {
 			permissions: [
 				...(credentialsArgs.push ? ["push"] : []),
 				...(credentialsArgs.pull ? ["pull"] : []),
+				...(credentialsArgs.libraryPush ? ["library_push"] : []),
 			] as ImageRegistryPermissions[],
 		});
 	if (credentialsArgs.json) {
@@ -622,6 +628,12 @@ export const containersRegistriesCredentialsCommand = createCommand({
 		pull: {
 			type: "boolean",
 			description: "If you want these credentials to be able to pull",
+		},
+		"library-push": {
+			type: "boolean",
+			description:
+				"If you want these credentials to be able to push to the public library namespace",
+			hidden: true,
 		},
 		json: {
 			type: "boolean",

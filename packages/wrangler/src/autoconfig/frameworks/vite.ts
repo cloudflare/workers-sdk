@@ -1,5 +1,5 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages } from "../c3-vendor/packages";
+import { installPackages } from "@cloudflare/cli/packages";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
 	transformViteConfig,
@@ -19,7 +19,7 @@ export class Vite extends Framework {
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
+			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,

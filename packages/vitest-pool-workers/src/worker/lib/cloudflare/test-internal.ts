@@ -7,5 +7,6 @@ export * from "../../durable-objects";
 export * from "../../entrypoints";
 export * from "../../env";
 export * from "../../events";
+export * from "../../secrets-store";
 export * from "../../wait-until";
 export * from "../../workflows";

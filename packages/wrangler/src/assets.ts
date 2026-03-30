@@ -264,7 +264,7 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
-const buildAssetManifest = async (dir: string) => {
+export const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	logReadFilesFromDirectory(dir, files);
 

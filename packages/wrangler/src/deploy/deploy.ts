@@ -16,7 +16,7 @@ import {
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import { Response } from "undici";
-import { syncAssets } from "../assets";
+import { buildAssetManifest, syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
@@ -33,6 +33,10 @@ import {
 } from "../deployment-bundle/module-collection";
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import {
+	addRequiredSecretsInheritBindings,
+	handleMissingSecretsError,
+} from "../deployment-bundle/secrets-validation";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -52,7 +56,6 @@ import {
 	getQueue,
 	postConsumer,
 	putConsumer,
-	putConsumerById,
 } from "../queues/client";
 import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
@@ -62,7 +65,6 @@ import {
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
-import { INVALID_INHERIT_BINDING_CODE } from "../utils/error-codes";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
@@ -802,6 +804,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
+		// validate asset directory
+		if (props.assetsOptions && props.dryRun) {
+			await buildAssetManifest(props.assetsOptions.directory);
+		}
+
 		const workersSitesAssets = await syncWorkersSite(
 			config,
 			accountId,
@@ -841,31 +848,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		}
 
-		// When `secrets.required` is defined, validate the secrets exist on the Worker.
-		// If the Worker doesn't exist yet, fail immediately.
-		// If the Worker exists, add explicit inherit bindings so the API validates
-		// each secret is present on the previous version.
-		// Secrets already provided via --secrets-file are excluded since
-		// they are part of the upload and don't need to be inherited.
-		if (config.secrets?.required?.length) {
-			const inheritedSecrets = config.secrets.required.filter(
-				(secretName) => !(secretName in bindings)
-			);
-
-			if (inheritedSecrets.length > 0) {
-				if (!workerExists) {
-					throw new UserError(
-						`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
-							`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
-							`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
-					);
-				}
-
-				for (const secretName of inheritedSecrets) {
-					bindings[secretName] = { type: "inherit" };
-				}
-			}
-		}
+		addRequiredSecretsInheritBindings(config, bindings, {
+			type: "deploy",
+			workerExists,
+		});
 
 		if (workersSitesAssets.manifest) {
 			modules.push({
@@ -1201,31 +1187,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					logger.error(message);
 				}
 
-				// Reformat strict inherit binding errors as user-friendly missing secret errors.
-				// The API returns all missing inherit bindings as separate errors in response.errors, which map to individual err.notes entries.
-				if (
-					err instanceof APIError &&
-					err.code === INVALID_INHERIT_BINDING_CODE
-				) {
-					const missingSecretNames = err.notes
-						.map((note) =>
-							note.text.match(/^inherit binding '(.+?)' is invalid/)
-						)
-						.filter((match): match is RegExpMatchArray => match !== null)
-						.map((match) => match[1])
-						.filter((secretName) =>
-							config.secrets?.required?.includes(secretName)
-						);
-
-					if (missingSecretNames.length > 0) {
-						err.preventReport();
-						throw new UserError(
-							`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
-								`Use \`wrangler secret put <NAME>\` to set secrets before deploying.\n` +
-								`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`
-						);
-					}
-				}
+				handleMissingSecretsError(err, config, {
+					type: "deploy",
+					workerExists,
+				});
 
 				// Apply source mapping to validation startup errors if possible
 				if (
@@ -1535,80 +1500,48 @@ export async function updateQueueConsumers(
 	for (const consumer of consumers) {
 		const queue = await getQueue(config, consumer.queue);
 
-		if (consumer.type === "http_pull") {
-			const body: PostTypedConsumerBody = {
-				type: consumer.type,
-				dead_letter_queue: consumer.dead_letter_queue,
-				settings: {
-					batch_size: consumer.max_batch_size,
-					max_retries: consumer.max_retries,
-					visibility_timeout_ms: consumer.visibility_timeout_ms,
-					retry_delay: consumer.retry_delay,
-				},
-			};
-
-			const existingConsumer = queue.consumers && queue.consumers[0];
-			if (existingConsumer) {
-				updateConsumers.push(
-					putConsumerById(
-						config,
-						queue.queue_id,
-						existingConsumer.consumer_id,
-						body
-					).then(() => [`Consumer for ${consumer.queue}`])
-				);
-				continue;
-			}
-			updateConsumers.push(
-				postConsumer(config, consumer.queue, body).then(() => [
-					`Consumer for ${consumer.queue}`,
-				])
-			);
-		} else {
-			if (scriptName === undefined) {
-				// TODO: how can we reliably get the current script name?
-				throw new UserError(
-					"Script name is required to update queue consumers",
-					{ telemetryMessage: true }
-				);
-			}
-
-			const body: PostTypedConsumerBody = {
-				type: "worker",
-				dead_letter_queue: consumer.dead_letter_queue,
-				script_name: scriptName,
-				settings: {
-					batch_size: consumer.max_batch_size,
-					max_retries: consumer.max_retries,
-					max_wait_time_ms:
-						consumer.max_batch_timeout !== undefined
-							? 1000 * consumer.max_batch_timeout
-							: undefined,
-					max_concurrency: consumer.max_concurrency,
-					retry_delay: consumer.retry_delay,
-				},
-			};
-
-			// Current script already assigned to queue?
-			const existingConsumer =
-				queue.consumers.filter(
-					(c) => c.script === scriptName || c.service === scriptName
-				).length > 0;
-			const envName = undefined; // TODO: script environment for wrangler deploy?
-			if (existingConsumer) {
-				updateConsumers.push(
-					putConsumer(config, consumer.queue, scriptName, envName, body).then(
-						() => [`Consumer for ${consumer.queue}`]
-					)
-				);
-				continue;
-			}
-			updateConsumers.push(
-				postConsumer(config, consumer.queue, body).then(() => [
-					`Consumer for ${consumer.queue}`,
-				])
-			);
+		if (scriptName === undefined) {
+			// TODO: how can we reliably get the current script name?
+			throw new UserError("Script name is required to update queue consumers", {
+				telemetryMessage: true,
+			});
 		}
+
+		const body: PostTypedConsumerBody = {
+			type: "worker",
+			dead_letter_queue: consumer.dead_letter_queue,
+			script_name: scriptName,
+			settings: {
+				batch_size: consumer.max_batch_size,
+				max_retries: consumer.max_retries,
+				max_wait_time_ms:
+					consumer.max_batch_timeout !== undefined
+						? 1000 * consumer.max_batch_timeout
+						: undefined,
+				max_concurrency: consumer.max_concurrency,
+				retry_delay: consumer.retry_delay,
+			},
+		};
+
+		// Current script already assigned to queue?
+		const existingConsumer =
+			queue.consumers.filter(
+				(c) => c.script === scriptName || c.service === scriptName
+			).length > 0;
+		const envName = undefined; // TODO: script environment for wrangler deploy?
+		if (existingConsumer) {
+			updateConsumers.push(
+				putConsumer(config, consumer.queue, scriptName, envName, body).then(
+					() => [`Consumer for ${consumer.queue}`]
+				)
+			);
+			continue;
+		}
+		updateConsumers.push(
+			postConsumer(config, consumer.queue, body).then(() => [
+				`Consumer for ${consumer.queue}`,
+			])
+		);
 	}
 
 	return updateConsumers;

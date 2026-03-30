@@ -657,32 +657,6 @@ export function mockPostConsumerById(
 	return requests;
 }
 
-export function mockPostQueueHTTPConsumer(
-	expectedQueueId: string,
-	expectedBody: PostTypedConsumerBody
-) {
-	const requests = { count: 0 };
-	msw.use(
-		http.post(
-			`*/accounts/:accountId/queues/:queueId/consumers`,
-			async ({ request, params }) => {
-				const body = await request.json();
-				expect(params.queueId).toEqual(expectedQueueId);
-				expect(params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
-				requests.count += 1;
-				return HttpResponse.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {},
-				});
-			}
-		)
-	);
-	return requests;
-}
-
 export const mockAUSRequest = async (
 	bodies?: AssetManifest[],
 	buckets: string[][] = [[]],

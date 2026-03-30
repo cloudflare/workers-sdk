@@ -301,6 +301,18 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "ai_search_namespaces": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "ai_search_namespace", ...x };
+				}
+				break;
+			}
+			case "ai_search": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "ai_search", ...x };
+				}
+				break;
+			}
 			case "unsafe": {
 				if (pages) {
 					break;
@@ -600,6 +612,28 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 					type: "vectorize",
 					index_name: b.index_name,
 					raw: b.raw,
+				};
+				break;
+			}
+			case "ai_search_namespace": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "ai_search_namespace" }
+				>;
+				output[name] = {
+					type: "ai_search_namespace",
+					namespace: b.namespace,
+				};
+				break;
+			}
+			case "ai_search": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "ai_search" }
+				>;
+				output[name] = {
+					type: "ai_search",
+					instance_name: b.instance_name,
 				};
 				break;
 			}

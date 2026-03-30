@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.76.0",
+	"version": "4.78.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -92,7 +92,6 @@
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",
 		"@types/command-exists": "^1.2.0",
-		"@types/cross-spawn": "^6.0.2",
 		"@types/esprima": "^4.0.3",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/javascript-time-ago": "^2.0.3",
@@ -120,7 +119,6 @@
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",
-		"cross-spawn": "^7.0.3",
 		"date-fns": "^4.1.0",
 		"devtools-protocol": "^0.0.1182435",
 		"dotenv": "^16.3.1",

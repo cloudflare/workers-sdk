@@ -2,8 +2,8 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { runCommand } from "@cloudflare/cli/command";
 import getPort from "get-port";
-import { runCommand } from "helpers/command";
 import {
 	readFile,
 	readJSON,

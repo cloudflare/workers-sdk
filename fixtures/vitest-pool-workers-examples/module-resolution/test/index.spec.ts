@@ -1,6 +1,7 @@
 import { instrument } from "@microlabs/otel-cf-workers";
 import { SELF } from "cloudflare:test";
 import { Utils } from "discord-api-types/v10";
+import { value as esmDepValue } from "esm-dep";
 import dep from "ext-dep";
 import mime from "mime-types";
 import { assert, describe, expect, test } from "vitest";
@@ -39,5 +40,12 @@ describe("test", () => {
 	// Verify CommonJS require() of JSON files works
 	test("resolves dependency that requires JSON files", async () => {
 		assert.equal(mime.lookup("test.html"), "text/html");
+	});
+
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/12022
+	// ESM imports with extensionless specifiers should be resolved by Vite, not
+	// by the module fallback's extension-probing loop (which is only for require()).
+	test("resolves ESM dependency with extensionless internal import", async () => {
+		assert.equal(esmDepValue, 456);
 	});
 });

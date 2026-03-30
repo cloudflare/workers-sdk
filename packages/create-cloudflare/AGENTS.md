@@ -19,7 +19,6 @@ Project scaffolding CLI for Cloudflare Workers. Single entry: `src/cli.ts` serve
 ## CONVENTIONS
 
 - `no-console: error` — use project's logging utilities
-- Own `.prettierrc` — same settings as root but without `prettier-plugin-packagejson`
 - Templates excluded from linting (except `c3.ts` files within templates)
 - Templates excluded from formatting (except hello-world templates)
 

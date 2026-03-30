@@ -50,18 +50,18 @@ let dispatcher;
 
 port.addEventListener("message", async (event) => {
   const { id, method, url, headers, body } = event.data;
-  if (dispatcherUrl !== url) {
-    dispatcherUrl = url;
-    dispatcher = new Pool(url, {
-      connect: { rejectUnauthorized: false },
-      // Disable timeouts for local dev — long-running responses (streaming,
+  try {
+    if (dispatcherUrl !== url) {
+      dispatcherUrl = url;
+      dispatcher = new Pool(new URL(url).origin, {
+        connect: { rejectUnauthorized: false },
+              // Disable timeouts for local dev — long-running responses (streaming,
       // slow uploads, long-polling) should not be killed by undici defaults.
       headersTimeout: 0,
       bodyTimeout: 0,
-    });
-  }
-  headers["${CoreHeaders.OP_SYNC}"] = "true";
-  try {
+      });
+    }
+    headers["${CoreHeaders.OP_SYNC}"] = "true";
     // body cannot be a ReadableStream, so no need to specify duplex
     const response = await fetch(url, { method, headers, body, dispatcher });
     const responseBody = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}") === "ReadableStream"
@@ -86,9 +86,10 @@ port.addEventListener("message", async (event) => {
       // If error failed to serialise, post simplified version
       port.postMessage({ id, error: new Error(String(error)) });
     }
+  } finally {
+    Atomics.store(notifyHandle, /* index */ 0, /* value */ 1);
+    Atomics.notify(notifyHandle, /* index */ 0);
   }
-  Atomics.store(notifyHandle, /* index */ 0, /* value */ 1);
-  Atomics.notify(notifyHandle, /* index */ 0);
 });
 
 port.start();
