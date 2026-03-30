@@ -25,6 +25,13 @@ export async function seedKV(): Promise<void> {
 }
 
 /**
+ * Seed the R2 bucket with test data.
+ */
+export async function seedR2(): Promise<void> {
+	await fetch(`${workerUrl}/r2/seed`);
+}
+
+/**
  * Seed the D1 database with test data.
  */
 export async function seedD1(): Promise<void> {
@@ -51,6 +58,27 @@ const WAIT_OPTIONS = {
  */
 export async function navigateToKV(namespaceId: string): Promise<void> {
 	await navigateTo(`/cdn-cgi/explorer/kv/${namespaceId}`);
+	await waitForPageLoad();
+}
+
+/**
+ * Navigate to an R2 bucket.
+ */
+export async function navigateToR2Bucket(bucketName: string): Promise<void> {
+	await navigateTo(`/cdn-cgi/explorer/r2/${bucketName}`);
+	await waitForPageLoad();
+}
+
+/**
+ * Navigate to an R2 object detail page.
+ */
+export async function navigateToR2Object(
+	bucketName: string,
+	objectKey: string
+): Promise<void> {
+	await navigateTo(
+		`/cdn-cgi/explorer/r2/${bucketName}/object/${encodeURIComponent(objectKey)}`
+	);
 	await waitForPageLoad();
 }
 

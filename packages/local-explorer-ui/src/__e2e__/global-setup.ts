@@ -38,6 +38,7 @@ export async function setup({ provide }: TestProject): Promise<void> {
 	console.log("Seeding test data...");
 	await Promise.all([
 		fetch(`${workerUrl}/kv/seed`),
+		fetch(`${workerUrl}/r2/seed`),
 		fetch(`${workerUrl}/d1`),
 		fetch(`${workerUrl}/do?id=test-object`),
 	]);
