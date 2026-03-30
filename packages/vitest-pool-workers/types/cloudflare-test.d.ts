@@ -328,6 +328,39 @@ declare module "cloudflare:test" {
 		disableSleeps(steps?: { name: string; index?: number }[]): Promise<void>;
 
 		/**
+		 * Disables retry backoff delays, causing retry attempts of a failing
+		 * `step.do()` to execute immediately without waiting.
+		 *
+		 * By default, when a step fails and has retries configured, the engine
+		 * waits according to the retry config (e.g., exponential backoff).
+		 * This method eliminates those delays while preserving retry behavior
+		 * (all attempts still execute, just without waiting between them).
+		 *
+		 * @example Disable all retry delays:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableRetryDelays();
+		 * });
+		 * ```
+		 *
+		 * @example Disable retry delays for specific steps:
+		 * ```ts
+		 * await instance.modify(m => {
+		 *   m.disableRetryDelays([{ name: "fetch-data" }, { name: "call-api" }]);
+		 * });
+		 * ```
+		 *
+		 * @param steps - Optional array of specific steps to disable retry delays for.
+		 * If omitted, **all retry delays** in the Workflow will be disabled.
+		 * A step is an object specifying the step `name` and optional `index` (1-based).
+		 * If multiple steps share the same name, `index` targets a specific one.
+		 * Defaults to the first step found (`index: 1`).
+		 */
+		disableRetryDelays(
+			steps?: { name: string; index?: number }[]
+		): Promise<void>;
+
+		/**
 		 * Mocks the result of a `step.do()`, causing it to return a specified
 		 * value instantly without executing the step's actual implementation.
 		 *

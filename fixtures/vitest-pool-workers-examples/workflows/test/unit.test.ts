@@ -148,6 +148,40 @@ it("should be reviewed, accepted and complete", async ({ expect }) => {
 	expect(output).toEqual({ decision: "approve", status: "moderated" });
 });
 
+it("should disable retry delays when mocking step errors", async ({
+	expect,
+}) => {
+	const mockResult = { violationScore: 0 };
+
+	await using instance = await introspectWorkflowInstance(
+		env.MODERATOR,
+		INSTANCE_ID
+	);
+	await instance.modify(async (m) => {
+		await m.disableSleeps();
+		await m.disableRetryDelays();
+		await m.mockStepError(
+			{ name: STEP_NAME },
+			new Error("Transient failure"),
+			2
+		);
+		await m.mockStepResult({ name: STEP_NAME }, mockResult);
+	});
+
+	await env.MODERATOR.create({
+		id: INSTANCE_ID,
+	});
+
+	expect(await instance.waitForStepResult({ name: STEP_NAME })).toEqual(
+		mockResult
+	);
+
+	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
+
+	const output = await instance.getOutput();
+	expect(output).toEqual({ status: "auto_approved" });
+});
+
 it("should force human review to timeout and error", async ({ expect }) => {
 	const mockResult = { violationScore: 50 };
 
