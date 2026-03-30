@@ -10,7 +10,6 @@ import type { RawConfig } from "@cloudflare/workers-utils";
 export abstract class Framework {
 	readonly id: FrameworkInfo["id"];
 	readonly name: FrameworkInfo["name"];
-	readonly autoConfigSupported: boolean = true;
 
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {
