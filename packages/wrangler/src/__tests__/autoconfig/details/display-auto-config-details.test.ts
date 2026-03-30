@@ -56,7 +56,6 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 					({
 						wranglerConfig: {},
 					}) satisfies ReturnType<Framework["configure"]>,
-				autoConfigSupported: true,
 			} as unknown as Framework,
 			buildCommand: "astro build",
 			outputDir: "dist",

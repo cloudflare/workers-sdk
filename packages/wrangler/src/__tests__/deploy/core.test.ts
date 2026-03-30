@@ -588,7 +588,6 @@ describe("deploy", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					autoConfigSupported: false,
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
 				} as unknown as Framework,
@@ -632,7 +631,6 @@ describe("deploy", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					autoConfigSupported: false,
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
 				} as unknown as Framework,

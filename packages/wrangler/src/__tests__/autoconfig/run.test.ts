@@ -163,7 +163,6 @@ describe("autoconfig (deploy)", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					autoConfigSupported: false,
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
 				} as unknown as Framework,
@@ -237,7 +236,6 @@ describe("autoconfig (deploy)", () => {
 						name: "Static",
 						configure: configureSpy,
 						isConfigured: () => false,
-						autoConfigSupported: true,
 					} as unknown as Framework,
 					outputDir: "dist",
 					packageJson: {
@@ -575,7 +573,6 @@ describe("autoconfig (deploy)", () => {
 					framework: {
 						id: "cloudflare-pages",
 						name: "Cloudflare Pages",
-						autoConfigSupported: false,
 						configure: async () => ({ wranglerConfig: {} }),
 						isConfigured: () => false,
 					} as unknown as Framework,
@@ -601,7 +598,6 @@ describe("autoconfig (deploy)", () => {
 					framework: {
 						id: "hono",
 						name: "Hono",
-						autoConfigSupported: false,
 						configure: async () => ({ wranglerConfig: {} }),
 						isConfigured: () => false,
 					} as unknown as Framework,
@@ -636,7 +632,6 @@ describe("autoconfig (deploy)", () => {
 						// for unknown framework ids while keeping the test focused on its intent.
 						id: "static",
 						name: "Static",
-						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
 								// No compatibility_flags specified
@@ -673,7 +668,6 @@ describe("autoconfig (deploy)", () => {
 						// for unknown framework ids while keeping the test focused on its intent.
 						id: "static",
 						name: "Static",
-						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
 								compatibility_flags: ["global_fetch_strictly_public"],
@@ -713,7 +707,6 @@ describe("autoconfig (deploy)", () => {
 						// for unknown framework ids while keeping the test focused on its intent.
 						id: "static",
 						name: "Static",
-						autoConfigSupported: true,
 						configure: async () => ({
 							wranglerConfig: {
 								compatibility_flags: ["nodejs_compat"],
