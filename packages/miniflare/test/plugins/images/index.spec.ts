@@ -41,7 +41,8 @@ describe("Images hosted CRUD", () => {
 
 		await images.hosted.upload(imageBuffer(), { id: "blob-test" });
 
-		const stream = await images.hosted.image("blob-test");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const stream = await images.hosted.image("blob-test").bytes();
 		assert(stream !== null);
 		const data = new Uint8Array(await new Response(stream).arrayBuffer());
 		expect(data).toEqual(TEST_IMAGE_BYTES);
@@ -64,7 +65,8 @@ describe("Images hosted CRUD", () => {
 		);
 		expect(metadata.id).toBe("base64-test");
 
-		const stream = await images.hosted.image("base64-test");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const stream = await images.hosted.image("base64-test").bytes();
 		assert(stream !== null);
 		const data = new Uint8Array(await new Response(stream).arrayBuffer());
 		expect(data).toEqual(TEST_IMAGE_BYTES);
@@ -77,7 +79,8 @@ describe("Images hosted CRUD", () => {
 		useDispose(mf);
 		const images = await mf.getImagesBinding("IMAGES");
 
-		const metadata = await images.hosted.details("does-not-exist");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const metadata = await images.hosted.image("does-not-exist").details();
 		expect(metadata).toBe(null);
 	});
 
@@ -88,7 +91,8 @@ describe("Images hosted CRUD", () => {
 		useDispose(mf);
 		const images = await mf.getImagesBinding("IMAGES");
 
-		const stream = await images.hosted.image("does-not-exist");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const stream = await images.hosted.image("does-not-exist").bytes();
 		expect(stream).toBe(null);
 	});
 
@@ -99,7 +103,8 @@ describe("Images hosted CRUD", () => {
 
 		await images.hosted.upload(imageBuffer(), { id: "update-test" });
 
-		const metadata = await images.hosted.update("update-test", {
+		// @ts-expect-error updated types pending workerd PR #6288
+		const metadata = await images.hosted.image("update-test").update({
 			requireSignedURLs: true,
 		});
 		expect(metadata.requireSignedURLs).toBe(true);
@@ -112,10 +117,12 @@ describe("Images hosted CRUD", () => {
 
 		await images.hosted.upload(imageBuffer(), { id: "delete-test" });
 
-		const deleted = await images.hosted.delete("delete-test");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const deleted = await images.hosted.image("delete-test").delete();
 		expect(deleted).toBe(true);
 
-		const metadata = await images.hosted.details("delete-test");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const metadata = await images.hosted.image("delete-test").details();
 		expect(metadata).toBe(null);
 	});
 
@@ -124,7 +131,8 @@ describe("Images hosted CRUD", () => {
 		useDispose(mf);
 		const images = await mf.getImagesBinding("IMAGES");
 
-		const deleted = await images.hosted.delete("does-not-exist");
+		// @ts-expect-error updated types pending workerd PR #6288
+		const deleted = await images.hosted.image("does-not-exist").delete();
 		expect(deleted).toBe(false);
 	});
 
