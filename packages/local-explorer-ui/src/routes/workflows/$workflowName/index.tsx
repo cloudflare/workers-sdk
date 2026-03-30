@@ -63,60 +63,62 @@ export const Route = createFileRoute("/workflows/$workflowName/")({
 
 const STATUS_SUMMARY_CONFIG = [
 	{
+		color: "text-[#2b7bfb] dark:text-[#004ac2]",
+		icon: CheckCircleIcon,
 		key: "complete",
 		label: "Complete",
-		icon: CheckCircleIcon,
-		color: "text-[#2b7bfb] dark:text-[#004ac2]",
 		weight: "fill" as const,
 	},
 	{
+		color: "text-[#fb2b36] dark:text-[#c10007]",
+		icon: WarningCircleIcon,
 		key: "errored",
 		label: "Errored",
-		icon: WarningCircleIcon,
-		color: "text-[#fb2b36] dark:text-[#c10007]",
 		weight: "fill" as const,
 	},
 	{
+		color: "text-text-secondary",
+		icon: CircleNotchIcon,
 		key: "queued",
 		label: "Queued",
-		icon: CircleNotchIcon,
-		color: "text-text-secondary",
 		weight: "regular" as const,
 	},
 	{
+		color: "text-text-secondary",
+		icon: PlayIcon,
 		key: "running",
 		label: "Running",
-		icon: PlayIcon,
-		color: "text-text-secondary",
 		weight: "fill" as const,
 	},
 	{
+		color: "text-text-secondary",
+		icon: PauseIcon,
 		key: "paused",
 		label: "Paused",
-		icon: PauseIcon,
-		color: "text-text-secondary",
 		weight: "fill" as const,
 	},
 	{
+		color: "text-text-secondary",
+		icon: SpinnerIcon,
 		key: "waiting",
 		label: "Waiting",
-		icon: SpinnerIcon,
-		color: "text-text-secondary",
 		weight: "regular" as const,
 	},
 	{
+		color: "text-text-secondary",
+		icon: SquareIcon,
 		key: "terminated",
 		label: "Terminated",
-		icon: SquareIcon,
-		color: "text-text-secondary",
 		weight: "fill" as const,
 	},
 ] as const;
 
-const StatusSummary = memo(function StatusSummary({
-	statusCounts,
-}: {
+interface StatusSummaryProps {
 	statusCounts: Record<string, number>;
+}
+
+const StatusSummary = memo<StatusSummaryProps>(function StatusSummary({
+	statusCounts,
 }): JSX.Element {
 	return (
 		<div className="mb-4 flex divide-x divide-border overflow-hidden rounded-lg border border-border bg-bg">
@@ -127,6 +129,7 @@ const StatusSummary = memo(function StatusSummary({
 							<Icon className={color} size={12} weight={weight} />
 							{label}
 						</div>
+
 						<div className="mt-0.5 text-base text-text">
 							{statusCounts[key] ?? 0}
 						</div>
@@ -141,10 +144,7 @@ const StatusSummary = memo(function StatusSummary({
 // Action helpers
 // ---------------------------------------------------------------------------
 
-const ACTION_CONFIG_LIST: Record<
-	Action,
-	{ icon: typeof PauseIcon; style: string; weight: "fill" | "regular" }
-> = {
+const ACTION_CONFIG_LIST = {
 	pause: {
 		icon: PauseIcon,
 		style:
@@ -168,27 +168,37 @@ const ACTION_CONFIG_LIST: Record<
 		style: "border-border bg-bg text-danger hover:bg-danger/10",
 		weight: "fill",
 	},
-};
+} satisfies Record<
+	Action,
+	{
+		icon: typeof PauseIcon;
+		style: string;
+		weight: "fill" | "regular";
+	}
+>;
 
 // ---------------------------------------------------------------------------
 // Instance row with inline action buttons
 // ---------------------------------------------------------------------------
 
-const InstanceRow = memo(function InstanceRow({
-	instance,
-	onActionComplete,
-	workflowName,
-}: {
+interface InstanceRowProps {
 	instance: WorkflowsInstance;
 	onActionComplete: () => void;
 	workflowName: string;
+}
+
+const InstanceRow = memo<InstanceRowProps>(function InstanceRow({
+	instance,
+	onActionComplete,
+	workflowName,
 }): JSX.Element {
 	const navigate = useNavigate();
+
 	const [actionInProgress, setActionInProgress] = useState<Action | null>(null);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-	const [sendEventOpen, setSendEventOpen] = useState<boolean>(false);
-	const [eventType, setEventType] = useState<string>("");
 	const [eventPayload, setEventPayload] = useState<string>("");
+	const [eventType, setEventType] = useState<string>("");
+	const [sendEventOpen, setSendEventOpen] = useState<boolean>(false);
 	const [sendingEvent, setSendingEvent] = useState<boolean>(false);
 
 	const status = instance.status ?? "unknown";
@@ -199,14 +209,18 @@ const InstanceRow = memo(function InstanceRow({
 		action: Action
 	): Promise<void> {
 		e.stopPropagation();
+
 		setActionInProgress(action);
+
 		try {
 			await workflowsChangeInstanceStatus({
+				body: {
+					action,
+				},
 				path: {
 					workflow_name: workflowName,
 					instance_id: instance.id ?? "",
 				},
-				body: { action },
 			});
 			onActionComplete();
 		} catch {
@@ -224,6 +238,7 @@ const InstanceRow = memo(function InstanceRow({
 	async function handleDeleteConfirm(): Promise<void> {
 		setDeleteDialogOpen(false);
 		setActionInProgress("terminate");
+
 		try {
 			await workflowsDeleteInstance({
 				path: {
@@ -248,6 +263,7 @@ const InstanceRow = memo(function InstanceRow({
 		if (!eventType.trim()) {
 			return;
 		}
+
 		let payload: unknown;
 		if (eventPayload.trim()) {
 			try {
@@ -257,16 +273,19 @@ const InstanceRow = memo(function InstanceRow({
 				return;
 			}
 		}
+
 		setSendingEvent(true);
+
 		try {
 			await workflowsSendInstanceEvent({
+				body: payload,
 				path: {
 					workflow_name: workflowName,
 					instance_id: instance.id ?? "",
 					event_type: eventType.trim(),
 				},
-				body: payload,
 			});
+
 			setSendEventOpen(false);
 			setEventType("");
 			setEventPayload("");
@@ -281,11 +300,11 @@ const InstanceRow = memo(function InstanceRow({
 
 	function handleRowClick(): void {
 		void navigate({
-			to: "/workflows/$workflowName/$instanceId",
 			params: {
 				instanceId: instance.id ?? "",
 				workflowName,
 			},
+			to: "/workflows/$workflowName/$instanceId",
 		});
 	}
 
@@ -299,54 +318,59 @@ const InstanceRow = memo(function InstanceRow({
 					<div>
 						<WorkflowStatusBadge status={status} />
 					</div>
+
 					<span className="text-sm text-text-secondary">
 						{timeAgo(instance.created_on) || "—"}
 					</span>
+
 					<span className="truncate font-mono text-xs text-text">
 						{instance.id}
 					</span>
-					<div className="flex items-center gap-1">
+
+					<div className="flex items-center gap-2">
 						{actions.map((action) => {
 							const config = ACTION_CONFIG_LIST[action];
 							const Icon = config.icon;
 							return (
-								<button
-									key={action}
-									className={`inline-flex size-7 cursor-pointer items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${config.style}`}
+								<Button
+									className={config.style}
 									disabled={actionInProgress !== null}
+									key={action}
+									icon={
+										<Icon
+											className={
+												actionInProgress === action ? "animate-spin" : ""
+											}
+											size={14}
+											weight={config.weight}
+										/>
+									}
 									onClick={(e) => void handleAction(e, action)}
+									size="sm"
 									title={action.charAt(0).toUpperCase() + action.slice(1)}
-								>
-									<Icon
-										size={14}
-										weight={config.weight}
-										className={
-											actionInProgress === action ? "animate-spin" : ""
-										}
-									/>
-								</button>
+								/>
 							);
 						})}
+
 						{status !== "complete" &&
 							status !== "errored" &&
 							status !== "terminated" && (
-								<button
-									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-border bg-bg text-text-secondary transition-colors hover:bg-border/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-text"
+								<Button
 									disabled={actionInProgress !== null}
+									icon={<PaperPlaneTiltIcon size={14} />}
 									onClick={handleSendEventClick}
+									size="sm"
 									title="Send Event"
-								>
-									<PaperPlaneTiltIcon size={14} />
-								</button>
+								/>
 							)}
-						<button
-							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-border bg-bg text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+
+						<Button
 							disabled={actionInProgress !== null}
+							icon={TrashIcon}
 							onClick={handleDeleteClick}
+							size="sm"
 							title="Delete"
-						>
-							<TrashIcon size={14} />
-						</button>
+						/>
 					</div>
 				</div>
 			</div>
@@ -376,14 +400,14 @@ const InstanceRow = memo(function InstanceRow({
 
 					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
 						<Button
-							variant="secondary"
 							onClick={() => setDeleteDialogOpen(false)}
+							variant="secondary"
 						>
 							Cancel
 						</Button>
 						<Button
-							variant="destructive"
 							onClick={() => void handleDeleteConfirm()}
+							variant="destructive"
 						>
 							Delete Instance
 						</Button>
@@ -402,7 +426,7 @@ const InstanceRow = memo(function InstanceRow({
 					}
 				}}
 			>
-				<Dialog size="lg" className="w-[32rem]">
+				<Dialog size="lg" className="w-lg">
 					<div className="border-b border-border px-6 py-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Title className="text-lg font-semibold text-text">
@@ -442,17 +466,17 @@ const InstanceRow = memo(function InstanceRow({
 
 					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
 						<Button
-							variant="secondary"
-							onClick={() => setSendEventOpen(false)}
 							disabled={sendingEvent}
+							onClick={() => setSendEventOpen(false)}
+							variant="secondary"
 						>
 							Cancel
 						</Button>
 						<Button
-							variant="primary"
 							disabled={!eventType.trim() || sendingEvent}
 							loading={sendingEvent}
 							onClick={() => void handleSendEvent()}
+							variant="primary"
 						>
 							Send
 						</Button>
@@ -467,23 +491,23 @@ const InstanceRow = memo(function InstanceRow({
 // Main view
 // ---------------------------------------------------------------------------
 
-function WorkflowInstancesView() {
+function WorkflowInstancesView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 
+	const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
 	const [deleteAllOpen, setDeleteAllOpen] = useState<boolean>(false);
 	const [deletingAll, setDeletingAll] = useState<boolean>(false);
-	const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
-	const [instances, setInstances] = useState<WorkflowsInstance[]>(
-		loaderData.instances
-	);
+	const [fetching, setFetching] = useState<boolean>(false);
 	const [initialLoad, setInitialLoad] = useState<boolean>(
 		loaderData.instances.length === 0 &&
 			(loaderData.resultInfo.total_count ?? 0) === 0
 	);
-	const [fetching, setFetching] = useState<boolean>(false);
+	const [instances, setInstances] = useState<WorkflowsInstance[]>(
+		loaderData.instances
+	);
 	const [page, setPage] = useState<number>(loaderData.resultInfo.page ?? 1);
 	const [perPage, setPerPage] = useState<number>(
 		loaderData.resultInfo.per_page ?? 25
@@ -512,22 +536,6 @@ function WorkflowInstancesView() {
 		setFetching(false);
 	}, [loaderData]);
 
-	// Fetch global status counts (always unfiltered, page 1, per_page 1)
-	const fetchStatusCounts = useCallback(async (): Promise<void> => {
-		try {
-			const response = await workflowsListInstances({
-				path: { workflow_name: params.workflowName },
-				query: { page: 1, per_page: 1 },
-			});
-			setStatusCounts(
-				((response.data?.result_info as Record<string, unknown> | undefined)
-					?.status_counts as Record<string, number>) ?? {}
-			);
-		} catch {
-			// Silent fail — status counts are non-critical
-		}
-	}, [params.workflowName]);
-
 	const fetchInstances = useCallback(
 		async (
 			fetchPage?: number,
@@ -539,13 +547,16 @@ function WorkflowInstancesView() {
 				if (!quiet) {
 					setFetching(true);
 				}
+
 				setError(null);
 
 				const p = fetchPage ?? page;
 				const pp = fetchPerPage ?? perPage;
 				const st = fetchStatus ?? statusFilter;
 
-				const [response] = await Promise.all([
+				// Always fetch unfiltered counts alongside the (possibly filtered) list,
+				// so the status summary always reflects global totals.
+				const [response, countsResponse] = await Promise.all([
 					workflowsListInstances({
 						path: { workflow_name: params.workflowName },
 						query: {
@@ -566,20 +577,24 @@ function WorkflowInstancesView() {
 								: {}),
 						},
 					}),
-					// Always refresh global counts in parallel
-					fetchStatusCounts(),
+					workflowsListInstances({
+						path: { workflow_name: params.workflowName },
+						query: { page: 1, per_page: 1 },
+					}),
 				]);
 
 				setInstances(response.data?.result ?? []);
 				setTotalCount(response.data?.result_info?.total_count ?? 0);
-				// If unfiltered, also update counts from this response directly
-				if (st === "all") {
-					setStatusCounts(
-						((response.data?.result_info as Record<string, unknown> | undefined)
-							?.status_counts as Record<string, number>) ?? {}
-					);
-				}
 				setPage(response.data?.result_info?.page ?? p);
+
+				// Always use the unfiltered response for status counts
+				setStatusCounts(
+					((
+						countsResponse.data?.result_info as
+							| Record<string, unknown>
+							| undefined
+					)?.status_counts as Record<string, number>) ?? {}
+				);
 				setInitialLoad(false);
 			} catch (err) {
 				setError(
@@ -589,7 +604,7 @@ function WorkflowInstancesView() {
 				setFetching(false);
 			}
 		},
-		[params.workflowName, page, perPage, statusFilter, fetchStatusCounts]
+		[params.workflowName, page, perPage, statusFilter]
 	);
 
 	const handleRefresh = useCallback(() => {
@@ -602,6 +617,7 @@ function WorkflowInstancesView() {
 		pollRef.current = setInterval(() => {
 			void fetchInstances(undefined, undefined, true);
 		}, 10_000);
+
 		return () => {
 			if (pollRef.current) {
 				clearInterval(pollRef.current);
@@ -634,9 +650,12 @@ function WorkflowInstancesView() {
 	async function handleDeleteAll(): Promise<void> {
 		setDeletingAll(true);
 		setDeleteAllError(null);
+
 		try {
 			await workflowsDeleteWorkflow({
-				path: { workflow_name: params.workflowName },
+				path: {
+					workflow_name: params.workflowName,
+				},
 			});
 			setDeleteAllOpen(false);
 			void fetchInstances(1);
@@ -773,6 +792,7 @@ function WorkflowInstancesView() {
 		>
 			<div className="px-8 py-6">
 				<StatusSummary statusCounts={statusCounts} />
+
 				<hr className="-mx-8 mb-4 border-border" />
 
 				{error && (
@@ -819,13 +839,13 @@ function WorkflowInstancesView() {
 								<DropdownMenu>
 									<DropdownMenu.Trigger
 										render={
-											<button className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-bg px-3 text-base text-text transition-colors hover:bg-border/60">
+											<Button>
 												{perPage}
 												<CaretUpDownIcon
-													size={12}
 													className="text-text-secondary"
+													size={12}
 												/>
-											</button>
+											</Button>
 										}
 									/>
 									<DropdownMenu.Content
@@ -872,7 +892,7 @@ function WorkflowInstancesView() {
 					}
 				}}
 			>
-				<Dialog size="lg" className="w-[32rem]">
+				<Dialog size="lg" className="w-lg">
 					<div className="border-b border-border px-6 py-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Title className="text-lg font-semibold text-text">
@@ -886,6 +906,7 @@ function WorkflowInstancesView() {
 								{deleteAllError}
 							</div>
 						)}
+
 						<p className="text-sm text-text-secondary">
 							This will permanently delete all instances of{" "}
 							<span className="font-semibold text-text">
@@ -898,17 +919,17 @@ function WorkflowInstancesView() {
 
 					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
 						<Button
-							variant="secondary"
-							onClick={() => setDeleteAllOpen(false)}
 							disabled={deletingAll}
+							onClick={() => setDeleteAllOpen(false)}
+							variant="secondary"
 						>
 							Cancel
 						</Button>
 						<Button
-							variant="destructive"
 							disabled={deletingAll}
 							loading={deletingAll}
 							onClick={() => void handleDeleteAll()}
+							variant="destructive"
 						>
 							Delete all
 						</Button>
