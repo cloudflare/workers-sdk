@@ -80,6 +80,7 @@ const ignoreMessages = [
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
+	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
 function trimSymbolizerWarning(chunk: string): string {
 	return chunk.includes(symbolizerWarning)
