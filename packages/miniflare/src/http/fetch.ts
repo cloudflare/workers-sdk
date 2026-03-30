@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import http from "node:http";
+import { Readable } from "node:stream";
 import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
 import { UndiciHeaders } from "undici/types/dispatcher";
@@ -16,7 +17,23 @@ export async function fetch(
 	init?: RequestInit | Request
 ): Promise<Response> {
 	const requestInit = init as RequestInit;
-	const request = new Request(input, requestInit);
+	// If input is already a Request-like object and there's no extra init to
+	// merge, use it directly rather than re-wrapping.  Re-wrapping can fail in
+	// some environments (e.g. vitest forks with mixed ESM/CJS module graphs)
+	// because undici's internal `webidl.is.Request` brand-check uses class
+	// identity, and the test's ESM-resolved `Request` may be a different object
+	// from the CJS-required `Request` inside this bundle.  Duck-typing on the
+	// public `RequestInfo` interface avoids that brittleness.
+	const isRequestLike =
+		requestInit === undefined &&
+		typeof input === "object" &&
+		input !== null &&
+		typeof (input as Request).url === "string" &&
+		typeof (input as Request).method === "string" &&
+		typeof (input as Request).headers === "object";
+	const request = isRequestLike
+		? (input as Request)
+		: new Request(input, requestInit);
 
 	// Handle WebSocket upgrades
 	if (
@@ -80,10 +97,162 @@ export async function fetch(
 		return responsePromise;
 	}
 
-	const response = await undici.fetch(request, {
-		dispatcher: requestInit?.dispatcher,
-	});
-	return new Response(response.body, response);
+	// Wrap in a try/catch and re-throw as TypeError("fetch failed") to match
+	// the error shape that undici.fetch() produces for dispatcher-level errors
+	// (e.g. when the request contains an `upgrade` header that undici.request()
+	// rejects with InvalidArgumentError).
+	try {
+		return await fetchViaRequest(request, requestInit?.dispatcher);
+	} catch (e) {
+		if (e instanceof TypeError) throw e;
+		throw new TypeError("fetch failed", { cause: e });
+	}
+}
+
+/**
+ * Perform an HTTP request using `undici.request()` instead of `undici.fetch()`.
+ *
+ * `undici.fetch()` implements the Fetch spec's 401 credential-retry path, which
+ * crashes with "expected non-null body source" when the request body is a
+ * ReadableStream and the response status is 401. This is tracked upstream at
+ * https://github.com/nodejs/undici/issues/4910.
+ *
+ * `undici.request()` uses the Dispatcher API directly and has no such path.
+ * To maintain behavioural parity with `undici.fetch()` we explicitly handle:
+ *   - Compression: send `Accept-Encoding: gzip, deflate` and decompress responses
+ *   - Redirects: follow/manual/error modes as per the Fetch spec
+ *   - `set-cookie`: preserve multiple values using `Headers.append()`
+ */
+async function fetchViaRequest(
+	request: Request,
+	dispatcher: undici.Dispatcher | undefined,
+	redirectsRemaining = 20
+): Promise<Response> {
+	const { statusCode, headers: rawHeaders, body: rawBody } =
+		await undici.request(request.url, {
+			method: request.method,
+				// Match undici.fetch() behaviour: add Accept-Encoding if the caller
+			// has not already specified one, so that the workerd entry worker
+			// applies the same content-encoding logic.
+				// Match undici.fetch() defaults: it sends `Accept: */*` and
+			// `Accept-Encoding: gzip, deflate` when the caller hasn't set them.
+			// These are placed before the spread so the caller's own headers
+			// take precedence.
+			headers: {
+				accept: "*/*",
+				"accept-encoding": "gzip, deflate",
+				...Object.fromEntries(request.headers),
+			},
+			// undici.request() accepts Node.js Readable streams but not web
+			// ReadableStreams. Convert if necessary.
+			body:
+				request.body !== null
+					? Readable.fromWeb(
+							request.body as import("node:stream/web").ReadableStream
+						)
+					: null,
+			dispatcher,
+		});
+
+	// Build a proper Headers object.  undici.request() returns headers as a plain
+	// object where `set-cookie` may be an array.  Passing a plain object with an
+	// array value to `new Response()` merges the values incorrectly, losing the
+	// individual cookie boundaries.  Using `Headers.append()` preserves them.
+	const headers = new undici.Headers();
+	for (const [name, value] of Object.entries(rawHeaders)) {
+		if (Array.isArray(value)) {
+			for (const v of value) {
+				headers.append(name, v);
+			}
+		} else if (value !== undefined) {
+			headers.set(name, value);
+		}
+	}
+
+	// Decompress response body to match undici.fetch() behaviour.  undici.fetch()
+	// sends Accept-Encoding and transparently decompresses the response body while
+	// leaving the Content-Encoding header in place.  We do the same here so that
+	// callers (e.g. index.ts dispatchFetch) can apply the same Content-Encoding
+	// stripping logic without receiving a still-compressed body.
+	//
+	// rawBody.body is the web ReadableStream exposed by undici's BodyReadable.
+	const webStream = rawBody.body as ReadableStream | null | undefined;
+	const contentEncoding = rawHeaders["content-encoding"];
+	let responseBody: ReadableStream | null;
+	if (
+		(contentEncoding === "gzip" || contentEncoding === "x-gzip") &&
+		webStream != null
+	) {
+		responseBody = webStream.pipeThrough(new DecompressionStream("gzip"));
+	} else if (contentEncoding === "deflate" && webStream != null) {
+		// Both zlib-wrapped deflate (the common HTTP interpretation) and raw deflate
+		// are handled by DecompressionStream("deflate") in Node 18+.
+		responseBody = webStream.pipeThrough(
+			new DecompressionStream("deflate")
+		);
+	} else if (contentEncoding === "br" && webStream != null) {
+		// "brotli" is not in the TypeScript CompressionFormat union yet, but
+		// Node 22+ supports it via DecompressionStream.
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		responseBody = webStream.pipeThrough(
+			new DecompressionStream("brotli" as any)
+		);
+	} else {
+		responseBody = webStream ?? null;
+	}
+
+	// Handle redirect modes, matching undici.fetch() behaviour.
+	const redirectMode = request.redirect ?? "follow";
+	const isRedirect =
+		statusCode >= 300 &&
+		statusCode < 400 &&
+		rawHeaders["location"] !== undefined;
+
+	if (isRedirect) {
+		if (redirectMode === "error") {
+			await rawBody.dump();
+			throw new TypeError("fetch failed");
+		}
+		if (redirectMode === "manual") {
+			return new Response(
+				responseBody as AsyncIterable<Uint8Array> | null,
+				{ status: statusCode, headers }
+			);
+		}
+		// redirect === "follow"
+		if (redirectsRemaining === 0) {
+			await rawBody.dump();
+			throw new TypeError("fetch failed");
+		}
+		const location = new URL(
+			rawHeaders["location"] as string,
+			request.url
+		).toString();
+		await rawBody.dump();
+		// For 303 See Other: switch to GET and drop the body
+		const redirectMethod = statusCode === 303 ? "GET" : request.method;
+		const redirectBody = statusCode === 303 ? null : request.body;
+		return fetchViaRequest(
+			new Request(location, {
+				method: redirectMethod,
+				headers: request.headers,
+				body: redirectBody,
+				redirect: request.redirect,
+			} as RequestInit),
+			dispatcher,
+			redirectsRemaining - 1
+		);
+	}
+
+	// Responses with status 204/205 must have a null body (per spec).
+	// Pass null explicitly to avoid "Invalid response status code" errors.
+	const noBodyStatus = statusCode === 204 || statusCode === 205;
+	// undici's BodyInit type doesn't list ReadableStream, but it does accept
+	// AsyncIterable<Uint8Array> which ReadableStream satisfies at runtime.
+	return new Response(
+		noBodyStatus ? null : (responseBody as AsyncIterable<Uint8Array> | null),
+		{ status: statusCode, headers }
+	);
 }
 
 export type DispatchFetch = (

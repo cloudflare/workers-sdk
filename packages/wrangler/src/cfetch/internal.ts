@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { Readable } from "node:stream";
 import {
 	APIError,
 	getCloudflareApiBaseUrl,
@@ -7,7 +8,14 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
-import { fetch, FormData, Headers, Request, Response } from "undici";
+import {
+	fetch,
+	request as undiciRequest,
+	FormData,
+	Headers,
+	Request,
+	Response,
+} from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
@@ -73,7 +81,38 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 
 			await logRequest(request, init);
 
-			const response = await fetch(request.url, request);
+			// Using undici.fetch(url, requestObject) triggers "expected non-null
+			// body source" on 401 responses when the body is a ReadableStream,
+			// because undici.fetch() implements the Fetch spec's 401
+			// credential-retry path which checks request.body.source.
+			// undici.request() uses the Dispatcher API directly and has no such
+			// path.  See: https://github.com/cloudflare/workers-sdk/issues/12967
+			const { statusCode, headers: rawHeaders, body } = await undiciRequest(
+				request.url,
+				{
+					method: request.method,
+					headers: Object.fromEntries(request.headers),
+					body:
+						request.body !== null
+							? Readable.fromWeb(
+									request.body as import("node:stream/web").ReadableStream
+								)
+							: null,
+				}
+			);
+			// Build a Headers object that preserves multiple set-cookie values.
+			const responseHeaders = new Headers();
+			for (const [name, value] of Object.entries(rawHeaders)) {
+				if (Array.isArray(value)) {
+					for (const v of value) responseHeaders.append(name, v);
+				} else if (value !== undefined) {
+					responseHeaders.set(name, value);
+				}
+			}
+			const response = new Response(body.body, {
+				status: statusCode,
+				headers: responseHeaders,
+			});
 			await logResponse(response);
 			return response;
 		},

@@ -1,6 +1,7 @@
 import events from "node:events";
+import { Readable } from "node:stream";
 import { getDockerPath } from "@cloudflare/workers-utils";
-import { fetch, Request } from "undici";
+import { request as undiciRequest, Response, Request } from "undici";
 import { startDev } from "../dev/start-dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
@@ -8,7 +9,7 @@ import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
-import type { RequestInfo, RequestInit, Response } from "undici";
+import type { RequestInfo, RequestInit } from "undici";
 
 export interface Unstable_DevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
@@ -245,9 +246,47 @@ export async function unstable_dev(
 			devServer.unregisterHotKeys?.();
 		},
 		fetch: async (input?: RequestInfo, init?: RequestInit) => {
-			return await fetch(
-				...parseRequestInput(address, port, input, init, options?.localProtocol)
+			const [url, forwardInit] = parseRequestInput(
+				address,
+				port,
+				input,
+				init,
+				options?.localProtocol
 			);
+			// forwardInit is a Request object cast as RequestInit.  Using
+			// undici.fetch(url, requestObject) triggers "expected non-null body
+			// source" on 401 responses when the body is a ReadableStream, because
+			// undici.fetch() implements the Fetch spec's 401 credential-retry path
+			// which checks request.body.source.  undici.request() uses the
+			// Dispatcher API directly and has no such path.
+			// See: https://github.com/cloudflare/workers-sdk/issues/12967
+			const forward = forwardInit as Request;
+			const { statusCode, headers: rawHeaders, body } = await undiciRequest(
+				url.toString(),
+				{
+					method: forward.method,
+					headers: Object.fromEntries(forward.headers),
+					body:
+						forward.body !== null
+							? Readable.fromWeb(
+									forward.body as import("node:stream/web").ReadableStream
+								)
+							: null,
+				}
+			);
+			// Build a Headers object that preserves multiple set-cookie values.
+			const responseHeaders = new Headers();
+			for (const [name, value] of Object.entries(rawHeaders)) {
+				if (Array.isArray(value)) {
+					for (const v of value) responseHeaders.append(name, v);
+				} else if (value !== undefined) {
+					responseHeaders.set(name, value);
+				}
+			}
+			return new Response(body.body, {
+				status: statusCode,
+				headers: responseHeaders,
+			});
 		},
 		waitUntilExit: async () => {
 			await events.once(devServer.devEnv, "teardown");

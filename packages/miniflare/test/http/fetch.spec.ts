@@ -20,6 +20,44 @@ test("fetch: performs regular http request", async ({ expect }) => {
 	const res = await fetch(upstream);
 	expect(await res.text()).toBe("upstream");
 });
+test("fetch: returns 401 response for POST with ReadableStream body without throwing", async ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/12967
+	//
+	// undici.fetch() implements the Fetch spec's 401 credential-retry path, which
+	// crashes with "expected non-null body source" when the request body is a
+	// ReadableStream (body.source === null) and the response is 401.  The fix
+	// uses undici.request() which bypasses that code path entirely.
+	//
+	// This test passes a Request object as input to miniflare's fetch() wrapper
+	// (the exact pattern used by dispatchFetch / unstable_startWorker), which
+	// causes the body to flow through as a ReadableStream internally.
+	const upstream = (
+		await useServer((req, res) => {
+			req.resume();
+			res.writeHead(401, { "content-type": "text/plain" });
+			res.end("Unauthorized");
+		})
+	).http;
+
+	const body = new ReadableStream({
+		start(controller) {
+			controller.enqueue(new TextEncoder().encode("hello"));
+			controller.close();
+		},
+	});
+	// Pass the Request object directly as input — this is the pattern that
+	// triggered the bug via dispatchFetch/unstable_startWorker.
+	const request = new Request(upstream, {
+		method: "POST",
+		body,
+		duplex: "half",
+	});
+	const res = await fetch(request);
+	expect(res.status).toBe(401);
+	expect(await res.text()).toBe("Unauthorized");
+});
 test("fetch: performs http request with form data", async ({ expect }) => {
 	const echoUpstream = (
 		await useServer((req, res) => {
