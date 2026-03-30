@@ -1,10 +1,5 @@
-import {
-	Button,
-	Dialog,
-	DropdownMenu,
-	Pagination,
-	Tabs,
-} from "@cloudflare/kumo";
+import { Button, Dialog, DropdownMenu, Pagination } from "@cloudflare/kumo";
+import { Select } from "@cloudflare/kumo/primitives/select";
 import {
 	ArrowClockwiseIcon,
 	ArrowsCounterClockwiseIcon,
@@ -12,14 +7,16 @@ import {
 	CaretUpDownIcon,
 	CheckCircleIcon,
 	CircleNotchIcon,
-	SpinnerIcon,
-	WarningCircleIcon,
+	DotsThreeIcon,
+	ListIcon,
 	PaperPlaneTiltIcon,
 	PauseIcon,
 	PlayIcon,
+	SpinnerIcon,
 	SquareIcon,
 	StopIcon,
 	TrashIcon,
+	WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -32,6 +29,7 @@ import {
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { PageLayout } from "../../../components/layout";
 import { CreateWorkflowInstanceDialog } from "../../../components/workflows/CreateInstanceDialog";
 import { timeAgo } from "../../../components/workflows/helpers";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
@@ -59,7 +57,6 @@ export const Route = createFileRoute("/workflows/$workflowName/")({
 	},
 });
 
-// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // Status summary
 // ---------------------------------------------------------------------------
@@ -201,7 +198,7 @@ const InstanceRow = memo(function InstanceRow({
 		e: React.MouseEvent,
 		action: Action
 	): Promise<void> {
-		e.stopPropagation(); // Don't navigate when clicking action buttons
+		e.stopPropagation();
 		setActionInProgress(action);
 		try {
 			await workflowsChangeInstanceStatus({
@@ -354,7 +351,7 @@ const InstanceRow = memo(function InstanceRow({
 				</div>
 			</div>
 
-			{/* Delete confirmation dialog — outside Table.Row to prevent click propagation */}
+			{/* Delete confirmation dialog */}
 			<Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 				<Dialog size="lg">
 					<div className="border-b border-border px-6 pt-6 pb-4">
@@ -467,112 +464,6 @@ const InstanceRow = memo(function InstanceRow({
 });
 
 // ---------------------------------------------------------------------------
-// Settings tab
-// ---------------------------------------------------------------------------
-
-function SettingsTab({
-	workflowName,
-	onDeleted,
-}: {
-	workflowName: string;
-	onDeleted: () => void;
-}): JSX.Element {
-	const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
-	const [deleting, setDeleting] = useState<boolean>(false);
-	const [error, setError] = useState<string | null>(null);
-
-	function handleOpenChange(open: boolean): void {
-		setConfirmOpen(open);
-		if (!open) {
-			setError(null);
-		}
-	}
-
-	async function handleDeleteAll(): Promise<void> {
-		setDeleting(true);
-		setError(null);
-		try {
-			await workflowsDeleteWorkflow({
-				path: { workflow_name: workflowName },
-			});
-			handleOpenChange(false);
-			onDeleted();
-		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to delete instances"
-			);
-		} finally {
-			setDeleting(false);
-		}
-	}
-
-	return (
-		<div className="px-32 py-6">
-			<h3 className="mb-4 text-lg font-semibold text-text">
-				Delete all instances
-			</h3>
-			<div className="overflow-hidden rounded-lg border border-border bg-bg">
-				<div className="flex items-center justify-between gap-4 px-4 py-1.5">
-					<p className="text-sm text-text-secondary">
-						Permanently delete all workflow instances and their persistence
-						data.
-					</p>
-					<button
-						className="inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-bg p-3 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
-						onClick={() => handleOpenChange(true)}
-					>
-						Delete
-					</button>
-				</div>
-			</div>
-
-			<Dialog.Root open={confirmOpen} onOpenChange={handleOpenChange}>
-				<Dialog size="lg" className="w-[32rem]">
-					<div className="border-b border-border px-6 py-4">
-						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Title className="text-lg font-semibold text-text">
-							Delete all instances
-						</Dialog.Title>
-					</div>
-
-					<div className="px-6 py-5">
-						{error && (
-							<div className="mb-4 rounded-lg border border-danger/20 bg-danger/8 p-3 text-sm text-danger">
-								{error}
-							</div>
-						)}
-						<p className="text-sm text-text-secondary">
-							This will permanently delete all instances of{" "}
-							<span className="font-semibold text-text">{workflowName}</span>.
-							All instance data and persistence files will be removed. This
-							action cannot be undone.
-						</p>
-					</div>
-
-					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
-						<Button
-							variant="secondary"
-							onClick={() => handleOpenChange(false)}
-							disabled={deleting}
-						>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
-							disabled={deleting}
-							loading={deleting}
-							onClick={() => void handleDeleteAll()}
-						>
-							Delete
-						</Button>
-					</div>
-				</Dialog>
-			</Dialog.Root>
-		</div>
-	);
-}
-
-// ---------------------------------------------------------------------------
 // Main view
 // ---------------------------------------------------------------------------
 
@@ -580,7 +471,9 @@ function WorkflowInstancesView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 
-	const [activeTab, setActiveTab] = useState<string>("instances");
+	const [deleteAllOpen, setDeleteAllOpen] = useState<boolean>(false);
+	const [deletingAll, setDeletingAll] = useState<boolean>(false);
+	const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);
 	const [instances, setInstances] = useState<WorkflowsInstance[]>(
@@ -595,6 +488,7 @@ function WorkflowInstancesView() {
 	const [perPage, setPerPage] = useState<number>(
 		loaderData.resultInfo.per_page ?? 25
 	);
+	// Status counts always reflect global (unfiltered) totals
 	const [statusCounts, setStatusCounts] = useState<Record<string, number>>(
 		((loaderData.resultInfo as Record<string, unknown>).status_counts as Record<
 			string,
@@ -618,6 +512,22 @@ function WorkflowInstancesView() {
 		setFetching(false);
 	}, [loaderData]);
 
+	// Fetch global status counts (always unfiltered, page 1, per_page 1)
+	const fetchStatusCounts = useCallback(async (): Promise<void> => {
+		try {
+			const response = await workflowsListInstances({
+				path: { workflow_name: params.workflowName },
+				query: { page: 1, per_page: 1 },
+			});
+			setStatusCounts(
+				((response.data?.result_info as Record<string, unknown> | undefined)
+					?.status_counts as Record<string, number>) ?? {}
+			);
+		} catch {
+			// Silent fail — status counts are non-critical
+		}
+	}, [params.workflowName]);
+
 	const fetchInstances = useCallback(
 		async (
 			fetchPage?: number,
@@ -635,33 +545,40 @@ function WorkflowInstancesView() {
 				const pp = fetchPerPage ?? perPage;
 				const st = fetchStatus ?? statusFilter;
 
-				const response = await workflowsListInstances({
-					path: { workflow_name: params.workflowName },
-					query: {
-						page: p,
-						per_page: pp,
-						...(st !== "all"
-							? {
-									status: st as
-										| "queued"
-										| "running"
-										| "paused"
-										| "errored"
-										| "terminated"
-										| "complete"
-										| "waitingForPause"
-										| "waiting",
-								}
-							: {}),
-					},
-				});
+				const [response] = await Promise.all([
+					workflowsListInstances({
+						path: { workflow_name: params.workflowName },
+						query: {
+							page: p,
+							per_page: pp,
+							...(st !== "all"
+								? {
+										status: st as
+											| "queued"
+											| "running"
+											| "paused"
+											| "errored"
+											| "terminated"
+											| "complete"
+											| "waitingForPause"
+											| "waiting",
+									}
+								: {}),
+						},
+					}),
+					// Always refresh global counts in parallel
+					fetchStatusCounts(),
+				]);
 
 				setInstances(response.data?.result ?? []);
 				setTotalCount(response.data?.result_info?.total_count ?? 0);
-				setStatusCounts(
-					((response.data?.result_info as Record<string, unknown> | undefined)
-						?.status_counts as Record<string, number>) ?? {}
-				);
+				// If unfiltered, also update counts from this response directly
+				if (st === "all") {
+					setStatusCounts(
+						((response.data?.result_info as Record<string, unknown> | undefined)
+							?.status_counts as Record<string, number>) ?? {}
+					);
+				}
 				setPage(response.data?.result_info?.page ?? p);
 				setInitialLoad(false);
 			} catch (err) {
@@ -672,7 +589,7 @@ function WorkflowInstancesView() {
 				setFetching(false);
 			}
 		},
-		[params.workflowName, page, perPage, statusFilter]
+		[params.workflowName, page, perPage, statusFilter, fetchStatusCounts]
 	);
 
 	const handleRefresh = useCallback(() => {
@@ -682,9 +599,6 @@ function WorkflowInstancesView() {
 	// Auto-poll every 10s (quiet refresh — no opacity flash)
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	useEffect(() => {
-		if (activeTab !== "instances") {
-			return;
-		}
 		pollRef.current = setInterval(() => {
 			void fetchInstances(undefined, undefined, true);
 		}, 10_000);
@@ -693,7 +607,7 @@ function WorkflowInstancesView() {
 				clearInterval(pollRef.current);
 			}
 		};
-	}, [fetchInstances, activeTab]);
+	}, [fetchInstances]);
 
 	function handlePageChange(newPage: number): void {
 		setPage(newPage);
@@ -717,197 +631,290 @@ function WorkflowInstancesView() {
 		void fetchInstances(1, undefined, false, newStatus);
 	}
 
-	return (
-		<>
-			<Breadcrumbs
-				icon={WorkflowsIcon}
-				items={[
-					<span className="flex items-center gap-1.5" key="workflow-name">
-						{params.workflowName}
-					</span>,
-				]}
-				title="Workflows"
-			/>
+	async function handleDeleteAll(): Promise<void> {
+		setDeletingAll(true);
+		setDeleteAllError(null);
+		try {
+			await workflowsDeleteWorkflow({
+				path: { workflow_name: params.workflowName },
+			});
+			setDeleteAllOpen(false);
+			void fetchInstances(1);
+		} catch (err) {
+			setDeleteAllError(
+				err instanceof Error ? err.message : "Failed to delete instances"
+			);
+		} finally {
+			setDeletingAll(false);
+		}
+	}
 
-			<div className="px-8 pt-4">
-				<div className="tabs-styled inline-flex">
-					<Tabs
-						variant="segmented"
-						tabs={[
-							{ value: "instances", label: "Instances" },
-							{ value: "settings", label: "Settings" },
-						]}
-						value={activeTab}
-						onValueChange={setActiveTab}
+	return (
+		<PageLayout
+			noPadding
+			header={
+				<Breadcrumbs
+					icon={WorkflowsIcon}
+					items={[
+						<span className="flex items-center gap-1.5" key="workflow-name">
+							{params.workflowName}
+						</span>,
+					]}
+					title="Workflows"
+				>
+					{/* Trigger button */}
+					<Button
+						icon={<PlayIcon weight="fill" />}
+						onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+							(e.target as HTMLButtonElement).blur();
+							setDialogOpen(true);
+						}}
+						variant="primary"
+					>
+						Trigger
+					</Button>
+
+					{/* Status filter */}
+					<Select.Root
+						onValueChange={(value) => {
+							if (value !== null) {
+								handleStatusFilterChange(value);
+							}
+						}}
+						value={statusFilter}
+					>
+						<Select.Trigger>
+							<Button
+								className="inline-flex min-w-32 items-center justify-between"
+								type="button"
+							>
+								<span>
+									{statusFilter === "all"
+										? "All"
+										: (STATUS_SUMMARY_CONFIG.find((s) => s.key === statusFilter)
+												?.label ?? statusFilter)}
+								</span>
+
+								<Select.Icon>
+									<CaretDownIcon
+										className="shrink-0 text-text-secondary"
+										size={14}
+									/>
+								</Select.Icon>
+							</Button>
+						</Select.Trigger>
+
+						<Select.Portal>
+							<Select.Positioner
+								align="start"
+								alignItemWithTrigger={false}
+								className="z-100"
+								side="bottom"
+								sideOffset={4}
+							>
+								<Select.Popup className="min-w-32 overflow-hidden rounded-lg border border-border bg-bg shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
+									<Select.List className="p-1">
+										<Select.Item
+											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none data-highlighted:bg-border/60"
+											value="all"
+										>
+											<Select.Icon>
+												<ListIcon />
+											</Select.Icon>
+											<Select.ItemText>All</Select.ItemText>
+										</Select.Item>
+
+										{STATUS_SUMMARY_CONFIG.map(({ key, label, icon: Icon }) => (
+											<Select.Item
+												className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text transition-colors outline-none select-none data-highlighted:bg-border/60"
+												key={key}
+												value={key}
+											>
+												<Select.Icon>
+													<Icon />
+												</Select.Icon>
+												<Select.ItemText>{label}</Select.ItemText>
+											</Select.Item>
+										))}
+									</Select.List>
+								</Select.Popup>
+							</Select.Positioner>
+						</Select.Portal>
+					</Select.Root>
+
+					{/* Refresh button */}
+					<Button
+						aria-label="Refresh"
+						icon={ArrowsCounterClockwiseIcon}
+						onClick={() => void fetchInstances()}
 					/>
-				</div>
-				<hr className="-mx-8 mt-4 border-border" />
+
+					{/* Three-dots menu */}
+					<DropdownMenu>
+						<DropdownMenu.Trigger
+							render={<Button aria-label="More options" icon={DotsThreeIcon} />}
+						/>
+						<DropdownMenu.Content
+							align="end"
+							className="w-48 bg-bg"
+							side="bottom"
+						>
+							<DropdownMenu.Item
+								className="cursor-pointer rounded-md text-danger transition-colors hover:bg-danger/10"
+								onClick={() => setDeleteAllOpen(true)}
+								icon={TrashIcon}
+							>
+								Delete all instances
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu>
+				</Breadcrumbs>
+			}
+		>
+			<div className="px-8 py-6">
+				<StatusSummary statusCounts={statusCounts} />
+				<hr className="-mx-8 mb-4 border-border" />
+
+				{error && (
+					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+						{error}
+					</div>
+				)}
+
+				{initialLoad ? (
+					<div className="p-12 text-center text-text-secondary">Loading...</div>
+				) : instances.length === 0 && !fetching ? (
+					<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
+						{statusFilter !== "all" ? (
+							<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+						) : (
+							"No instances found"
+						)}
+					</div>
+				) : instances.length === 0 ? (
+					<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
+						{statusFilter !== "all" ? (
+							<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+						) : (
+							"No instances found"
+						)}
+					</div>
+				) : (
+					<div
+						className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
+					>
+						<div className="overflow-hidden rounded-lg border border-border">
+							{instances.map((instance) => (
+								<InstanceRow
+									instance={instance}
+									key={instance.id}
+									onActionComplete={handleRefresh}
+									workflowName={params.workflowName}
+								/>
+							))}
+						</div>
+
+						{totalCount > 0 && (
+							<div className="flex items-center justify-between pt-4">
+								<DropdownMenu>
+									<DropdownMenu.Trigger
+										render={
+											<button className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-bg px-3 text-base text-text transition-colors hover:bg-border/60">
+												{perPage}
+												<CaretUpDownIcon
+													size={12}
+													className="text-text-secondary"
+												/>
+											</button>
+										}
+									/>
+									<DropdownMenu.Content
+										align="start"
+										className="bg-bg"
+										side="top"
+									>
+										{[10, 25, 50, 100].map((size) => (
+											<DropdownMenu.Item
+												className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
+												key={size}
+												onClick={() => handlePerPageChange(size)}
+											>
+												{size}
+												{size === perPage && (
+													<span className="ml-2 text-text-secondary">✓</span>
+												)}
+											</DropdownMenu.Item>
+										))}
+									</DropdownMenu.Content>
+								</DropdownMenu>
+
+								<div className="pagination-styled">
+									<Pagination
+										page={page}
+										perPage={perPage}
+										setPage={handlePageChange}
+										totalCount={totalCount}
+									/>
+								</div>
+							</div>
+						)}
+					</div>
+				)}
 			</div>
 
-			{activeTab === "instances" && (
-				<div className="px-8 py-6">
-					{totalCount > 0 && !initialLoad && (
-						<>
-							<StatusSummary statusCounts={statusCounts} />
-							<hr className="-mx-8 mb-4 border-border" />
-						</>
-					)}
-
-					<div className="mb-4 flex items-center justify-between gap-2">
-						<DropdownMenu>
-							<DropdownMenu.Trigger
-								render={
-									<button className="inline-flex h-9 w-36 cursor-pointer items-center justify-between rounded-lg border border-border bg-bg px-3 text-base text-text transition-colors hover:bg-border/60">
-										<span>
-											{statusFilter === "all"
-												? "All"
-												: (STATUS_SUMMARY_CONFIG.find(
-														(s) => s.key === statusFilter
-													)?.label ?? statusFilter)}
-										</span>
-										<CaretDownIcon size={14} className="text-text-secondary" />
-									</button>
-								}
-							/>
-							<DropdownMenu.Content
-								align="start"
-								className="w-36 bg-bg"
-								side="bottom"
-							>
-								<DropdownMenu.Item
-									className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
-									onClick={() => handleStatusFilterChange("all")}
-								>
-									All
-								</DropdownMenu.Item>
-								{STATUS_SUMMARY_CONFIG.map(({ key, label }) => (
-									<DropdownMenu.Item
-										className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
-										key={key}
-										onClick={() => handleStatusFilterChange(key)}
-									>
-										{label}
-									</DropdownMenu.Item>
-								))}
-							</DropdownMenu.Content>
-						</DropdownMenu>
-
-						<div className="flex items-center gap-2">
-							<button
-								aria-label="Refresh"
-								className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-bg text-text transition-colors hover:bg-border/60"
-								onClick={() => void fetchInstances()}
-							>
-								<ArrowsCounterClockwiseIcon size={14} />
-							</button>
-							<Button
-								onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-									(e.target as HTMLButtonElement).blur();
-									setDialogOpen(true);
-								}}
-								variant="primary"
-							>
-								<PlayIcon size={14} weight="fill" />
-								Trigger
-							</Button>
-						</div>
+			{/* Delete all instances dialog */}
+			<Dialog.Root
+				open={deleteAllOpen}
+				onOpenChange={(open) => {
+					setDeleteAllOpen(open);
+					if (!open) {
+						setDeleteAllError(null);
+					}
+				}}
+			>
+				<Dialog size="lg" className="w-[32rem]">
+					<div className="border-b border-border px-6 py-4">
+						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
+						<Dialog.Title className="text-lg font-semibold text-text">
+							Delete all instances
+						</Dialog.Title>
 					</div>
 
-					{error && (
-						<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
-							{error}
-						</div>
-					)}
-
-					{initialLoad ? (
-						<div className="p-12 text-center text-text-secondary">
-							Loading...
-						</div>
-					) : instances.length === 0 && !fetching ? (
-						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
-							No instances found
-						</div>
-					) : instances.length === 0 ? (
-						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
-							{statusFilter !== "all" ? (
-								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
-							) : (
-								"No instances found"
-							)}
-						</div>
-					) : (
-						<div
-							className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
-						>
-							<div className="overflow-hidden rounded-lg border border-border">
-								{instances.map((instance) => (
-									<InstanceRow
-										instance={instance}
-										key={instance.id}
-										onActionComplete={handleRefresh}
-										workflowName={params.workflowName}
-									/>
-								))}
+					<div className="px-6 py-5">
+						{deleteAllError && (
+							<div className="mb-4 rounded-lg border border-danger/20 bg-danger/8 p-3 text-sm text-danger">
+								{deleteAllError}
 							</div>
+						)}
+						<p className="text-sm text-text-secondary">
+							This will permanently delete all instances of{" "}
+							<span className="font-semibold text-text">
+								{params.workflowName}
+							</span>
+							. All instance data and persistence files will be removed. This
+							action cannot be undone.
+						</p>
+					</div>
 
-							{totalCount > 0 && (
-								<div className="flex items-center justify-between pt-4">
-									<DropdownMenu>
-										<DropdownMenu.Trigger
-											render={
-												<button className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-bg px-3 text-base text-text transition-colors hover:bg-border/60">
-													{perPage}
-													<CaretUpDownIcon
-														size={12}
-														className="text-text-secondary"
-													/>
-												</button>
-											}
-										/>
-										<DropdownMenu.Content
-											align="start"
-											className="bg-bg"
-											side="top"
-										>
-											{[10, 25, 50, 100].map((size) => (
-												<DropdownMenu.Item
-													className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
-													key={size}
-													onClick={() => handlePerPageChange(size)}
-												>
-													{size}
-													{size === perPage && (
-														<span className="ml-2 text-text-secondary">✓</span>
-													)}
-												</DropdownMenu.Item>
-											))}
-										</DropdownMenu.Content>
-									</DropdownMenu>
-
-									<div className="pagination-styled">
-										<Pagination
-											page={page}
-											perPage={perPage}
-											setPage={handlePageChange}
-											totalCount={totalCount}
-										/>
-									</div>
-								</div>
-							)}
-						</div>
-					)}
-				</div>
-			)}
-
-			{activeTab === "settings" && (
-				<SettingsTab
-					workflowName={params.workflowName}
-					onDeleted={() => {
-						setActiveTab("instances");
-						void fetchInstances(1);
-					}}
-				/>
-			)}
+					<div className="flex justify-end gap-2 border-t border-border px-6 py-4">
+						<Button
+							variant="secondary"
+							onClick={() => setDeleteAllOpen(false)}
+							disabled={deletingAll}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={deletingAll}
+							loading={deletingAll}
+							onClick={() => void handleDeleteAll()}
+						>
+							Delete all
+						</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
 
 			<CreateWorkflowInstanceDialog
 				onCreated={handleCreated}
@@ -915,6 +922,6 @@ function WorkflowInstancesView() {
 				open={dialogOpen}
 				workflowName={params.workflowName}
 			/>
-		</>
+		</PageLayout>
 	);
 }

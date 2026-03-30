@@ -30,6 +30,7 @@ import {
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { PageLayout } from "../../../components/layout";
 import { CopyButton } from "../../../components/workflows/CopyButton";
 import {
 	formatDuration,
@@ -375,28 +376,31 @@ function InstanceDetailView() {
 	);
 
 	return (
-		<div className="flex h-full flex-col">
-			<Breadcrumbs
-				icon={WorkflowsIcon}
-				items={[
-					<Link
-						className="flex items-center gap-1.5"
-						key="wf"
-						params={{ workflowName: params.workflowName }}
-						to="/workflows/$workflowName"
-					>
-						{params.workflowName}
-					</Link>,
-					<span
-						className="flex items-center gap-1.5 font-mono text-xs"
-						key="id"
-					>
-						{instanceId}
-					</span>,
-				]}
-				title="Workflows"
-			/>
-
+		<PageLayout
+			noPadding
+			header={
+				<Breadcrumbs
+					icon={WorkflowsIcon}
+					items={[
+						<Link
+							className="flex items-center gap-1.5"
+							key="wf"
+							params={{ workflowName: params.workflowName }}
+							to="/workflows/$workflowName"
+						>
+							{params.workflowName}
+						</Link>,
+						<span
+							className="flex items-center gap-1.5 font-mono text-xs"
+							key="id"
+						>
+							{instanceId}
+						</span>,
+					]}
+					title="Workflows"
+				/>
+			}
+		>
 			<div className="flex-1 overflow-auto">
 				{/* Header */}
 				<div className="px-32 pt-6">
@@ -648,9 +652,9 @@ function InstanceDetailView() {
 
 					{details.error && <ErrorCard error={details.error} />}
 
-					<StepHistory steps={details.steps} />
-				</div>
+				<StepHistory steps={details.steps} />
 			</div>
 		</div>
+		</PageLayout>
 	);
 }
