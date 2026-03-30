@@ -87,13 +87,13 @@ export function cloudflareTest(
 				const provider = "provider" in coverage ? coverage.provider : undefined;
 				if (provider === "v8" || provider === undefined) {
 					const lines = [
-						`Coverage provider "v8" is not supported by \`@cloudflare/vitest-pool-workers\`.`,
-						"V8 native coverage requires \`node:inspector\` which is not functional in the Workers runtime.",
+						'Coverage provider "v8" is not supported by `@cloudflare/vitest-pool-workers`.',
+						"V8 native coverage requires `node:inspector` which is not functional in the Workers runtime.",
 						"",
 						"Use Istanbul instead — it works by instrumenting source code and runs on any JavaScript runtime:",
 						"",
 						"  1. Install: pnpm add -D @vitest/coverage-istanbul",
-						'  2. Set \`test.coverage.provider\` to "istanbul" in your Vitest config',
+						'  2. Set `test.coverage.provider` to "istanbul" in your Vitest config',
 						"",
 						"See https://vitest.dev/guide/coverage#istanbul-provider for more details.",
 					];
