@@ -257,16 +257,14 @@ describe("R2 Bucket", () => {
 			await waitForText("No custom metadata set");
 		});
 
-		test("shows Download and Delete buttons on detail page", async ({
-			expect,
-		}) => {
+		test("shows Download and Delete buttons on detail page", async () => {
 			await navigateToR2Object("my-bucket", "readme.txt");
 
 			const downloadButton = page.getByRole("button", { name: "Download" });
 			const deleteButton = page.getByRole("button", { name: "Delete" });
 
-			expect(await downloadButton.isVisible()).toBe(true);
-			expect(await deleteButton.isVisible()).toBe(true);
+			await downloadButton.waitFor({ state: "visible" });
+			await deleteButton.waitFor({ state: "visible" });
 		});
 
 		test("breadcrumbs show full path for nested objects", async () => {
@@ -532,12 +530,12 @@ describe("R2 Bucket", () => {
 	});
 
 	describe("refresh", () => {
-		test("refresh button is visible", async ({ expect }) => {
+		test("refresh button is visible", async () => {
 			await navigateToR2Bucket("my-bucket");
 			await waitForTableRows(1);
 
 			const refreshButton = page.getByRole("button", { name: "Refresh" });
-			expect(await refreshButton.isVisible()).toBe(true);
+			await refreshButton.waitFor({ state: "visible", timeout: 10_000 });
 		});
 
 		test("refreshes the object list", async () => {
