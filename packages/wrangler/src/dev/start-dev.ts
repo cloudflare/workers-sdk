@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
-import { bold, green } from "@cloudflare/cli/colors";
+import { bold, dim, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
@@ -10,6 +10,7 @@ import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertStartDevOptionsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
+import { startTunnel } from "../dev/tunnel";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
@@ -21,6 +22,7 @@ import {
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
 import type { StartDevOptionsBindings } from "../api/startDevWorker/utils";
 import type { StartDevOptions } from "../dev";
+import type { TunnelController } from "../dev/tunnel";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
 import type { Config } from "@cloudflare/workers-utils";
@@ -121,8 +123,27 @@ export async function startDev(args: StartDevOptions) {
 			? devEnv
 			: [devEnv];
 
+		// Start tunnel early, before the proxy is ready.
+		// The port is already resolved by ConfigController, so we can build the
+		// origin URL now and let cloudflared connect as soon as the server binds.
+		let tunnel: TunnelController | undefined;
+		if (args.tunnel) {
+			const config = primaryDevEnv.config.latestConfig;
+			const protocol = config?.dev?.server?.secure ? "https" : "http";
+			const hostname = config?.dev?.server?.hostname ?? "localhost";
+			const port = config?.dev?.server?.port ?? 8787;
+			const origin = new URL(`${protocol}://${hostname}:${port}`);
+
+			tunnel = startTunnel({ origin });
+		}
+
+		// Clean up tunnel on teardown
+		primaryDevEnv.on("teardown", () => {
+			void tunnel?.dispose();
+		});
+
 		// The ProxyWorker will have a stable host and port, so only listen for the first update
-		void primaryDevEnv.proxy.ready.promise.then(({ url }) => {
+		void primaryDevEnv.proxy.ready.promise.then(async ({ url }) => {
 			if (args.onReady) {
 				args.onReady(url.hostname, parseInt(url.port));
 			}
@@ -149,6 +170,26 @@ export async function startDev(args: StartDevOptions) {
 					false
 			);
 			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
+
+			// Wait for tunnel after local server is ready, so logs appear in order
+			if (tunnel) {
+				try {
+					logger.log(dim("⎔ Starting tunnel (usually takes 5-15s)..."));
+					const { publicUrl } = await tunnel.ready();
+					logger.warn(
+						`Your local dev server is now publicly accessible.\n` +
+							`Anyone with this URL can access your dev server. Avoid exposing sensitive data.`
+					);
+					logger.log(
+						`⬣ Sharing your dev server via Cloudflare Tunnel\n` +
+							`  ${publicUrl.origin}`
+					);
+				} catch (error) {
+					logger.error(
+						`Failed to start tunnel: ${error instanceof Error ? error.message : String(error)}`
+					);
+				}
+			}
 		});
 
 		return {
@@ -254,6 +295,7 @@ async function setupDevEnv(
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
 				generateTypes: args.types,
+				tunnel: args.tunnel,
 			},
 			legacy: {
 				site: (configParam) => {
