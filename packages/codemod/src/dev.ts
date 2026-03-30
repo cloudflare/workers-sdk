@@ -19,7 +19,7 @@ export const testTransform = (
 	filePath: string,
 	methods: recast.types.Visitor
 ) => {
-	const devSnippetsDir = resolve(__dirname, "..", "dev-snippets");
+	const devSnippetsDir = resolve(__dirname, "../dev-snippets");
 	const resolvedInput = resolve(__dirname, filePath);
 	const relativeInput = relative(devSnippetsDir, resolvedInput);
 
@@ -38,8 +38,7 @@ export const testTransform = (
 		console.log(code);
 		const outputPath = join(
 			__dirname,
-			"..",
-			"dev-snippets-outputs",
+			"../dev-snippets-outputs",
 			relativeInput
 		);
 		mkdirSync(dirname(outputPath), {

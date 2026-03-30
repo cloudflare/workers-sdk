@@ -93,8 +93,7 @@ describe("mergeObjectProperties", () => {
 	}[];
 
 	tests.forEach(({ testName, ...testObjects }) =>
-		// oxlint-disable-next-line jest/valid-title
-		test(testName, ({ expect }) => {
+		test(`${testName}`, ({ expect }) => {
 			const {
 				sourcePropertiesObject,
 				newPropertiesObject,
