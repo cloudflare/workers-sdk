@@ -53,7 +53,7 @@ export function getInstalledPackageVersion(
 
 /**
  * Gets the path for a package installed by a project (or undefined if the package is not installed)
-
+ *
  * @param packageName the name of the target package
  * @param projectPath the path of the project
  * @returns the path for the package if the package is installed, undefined otherwise
@@ -63,7 +63,8 @@ function getPackagePath(
 	projectPath: string
 ): string | undefined {
 	try {
-		// require.resolve on package.json is more reliable so let's try that first
+		// Note: we first try to `require.resolve` using the package.json this will succeed
+		//       if the package.json is exported by the package
 		return path.dirname(
 			require.resolve(`${packageName}/package.json`, {
 				paths: [projectPath],
@@ -72,7 +73,9 @@ function getPackagePath(
 	} catch {}
 
 	try {
-		// as a fallback we also try to require.resolve on the package name as well
+		// Note: if `require.resolve` using the package.json failed (the package.json is not
+		//       exported by the package) then let's try to `require.resolve` on the package
+		//       name directly
 		return require.resolve(packageName, {
 			paths: [projectPath],
 		});
