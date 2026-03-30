@@ -121,10 +121,10 @@ const StatusSummary = memo<StatusSummaryProps>(function StatusSummary({
 	statusCounts,
 }): JSX.Element {
 	return (
-		<div className="mb-4 flex divide-x divide-border overflow-hidden rounded-lg border border-border bg-bg">
+		<div className="flex divide-x divide-border overflow-hidden border-b border-border bg-bg">
 			{STATUS_SUMMARY_CONFIG.map(
 				({ key, label, icon: Icon, color, weight }) => (
-					<div className="flex-1 px-3 py-2" key={key}>
+					<div className="flex-1 px-6 py-4" key={key}>
 						<div className="flex items-center gap-1.5 text-xs text-text-secondary">
 							<Icon className={color} size={12} weight={weight} />
 							{label}
@@ -790,96 +790,98 @@ function WorkflowInstancesView(): JSX.Element {
 				</Breadcrumbs>
 			}
 		>
-			<div className="px-8 py-6">
+			<div className="">
 				<StatusSummary statusCounts={statusCounts} />
 
-				<hr className="-mx-8 mb-4 border-border" />
-
-				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
-						{error}
-					</div>
-				)}
-
-				{initialLoad ? (
-					<div className="p-12 text-center text-text-secondary">Loading...</div>
-				) : instances.length === 0 && !fetching ? (
-					<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
-						{statusFilter !== "all" ? (
-							<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
-						) : (
-							"No instances found"
-						)}
-					</div>
-				) : instances.length === 0 ? (
-					<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
-						{statusFilter !== "all" ? (
-							<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
-						) : (
-							"No instances found"
-						)}
-					</div>
-				) : (
-					<div
-						className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
-					>
-						<div className="overflow-hidden rounded-lg border border-border">
-							{instances.map((instance) => (
-								<InstanceRow
-									instance={instance}
-									key={instance.id}
-									onActionComplete={handleRefresh}
-									workflowName={params.workflowName}
-								/>
-							))}
+				<div className="p-4">
+					{error && (
+						<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+							{error}
 						</div>
+					)}
 
-						{totalCount > 0 && (
-							<div className="flex items-center justify-between pt-4">
-								<DropdownMenu>
-									<DropdownMenu.Trigger
-										render={
-											<Button>
-												{perPage}
-												<CaretUpDownIcon
-													className="text-text-secondary"
-													size={12}
-												/>
-											</Button>
-										}
+					{initialLoad ? (
+						<div className="p-12 text-center text-text-secondary">
+							Loading...
+						</div>
+					) : instances.length === 0 && !fetching ? (
+						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
+							{statusFilter !== "all" ? (
+								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+							) : (
+								"No instances found"
+							)}
+						</div>
+					) : instances.length === 0 ? (
+						<div className="rounded-lg border border-border bg-bg px-5 py-8 text-center text-sm text-text-secondary">
+							{statusFilter !== "all" ? (
+								<>No instances found in state &lsquo;{statusFilter}&rsquo;</>
+							) : (
+								"No instances found"
+							)}
+						</div>
+					) : (
+						<div
+							className={`transition-opacity duration-150 ${fetching ? "opacity-60" : "opacity-100"}`}
+						>
+							<div className="overflow-hidden rounded-lg border border-border">
+								{instances.map((instance) => (
+									<InstanceRow
+										instance={instance}
+										key={instance.id}
+										onActionComplete={handleRefresh}
+										workflowName={params.workflowName}
 									/>
-									<DropdownMenu.Content
-										align="start"
-										className="bg-bg"
-										side="top"
-									>
-										{[10, 25, 50, 100].map((size) => (
-											<DropdownMenu.Item
-												className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
-												key={size}
-												onClick={() => handlePerPageChange(size)}
-											>
-												{size}
-												{size === perPage && (
-													<span className="ml-2 text-text-secondary">✓</span>
-												)}
-											</DropdownMenu.Item>
-										))}
-									</DropdownMenu.Content>
-								</DropdownMenu>
-
-								<div className="pagination-styled">
-									<Pagination
-										page={page}
-										perPage={perPage}
-										setPage={handlePageChange}
-										totalCount={totalCount}
-									/>
-								</div>
+								))}
 							</div>
-						)}
-					</div>
-				)}
+
+							{totalCount > 0 && (
+								<div className="flex items-center justify-between pt-4">
+									<DropdownMenu>
+										<DropdownMenu.Trigger
+											render={
+												<Button>
+													{perPage}
+													<CaretUpDownIcon
+														className="text-text-secondary"
+														size={12}
+													/>
+												</Button>
+											}
+										/>
+										<DropdownMenu.Content
+											align="start"
+											className="bg-bg"
+											side="top"
+										>
+											{[10, 25, 50, 100].map((size) => (
+												<DropdownMenu.Item
+													className="cursor-pointer rounded-md transition-colors hover:bg-border/60"
+													key={size}
+													onClick={() => handlePerPageChange(size)}
+												>
+													{size}
+													{size === perPage && (
+														<span className="ml-2 text-text-secondary">✓</span>
+													)}
+												</DropdownMenu.Item>
+											))}
+										</DropdownMenu.Content>
+									</DropdownMenu>
+
+									<div className="pagination-styled">
+										<Pagination
+											page={page}
+											perPage={perPage}
+											setPage={handlePageChange}
+											totalCount={totalCount}
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+					)}
+				</div>
 			</div>
 
 			{/* Delete all instances dialog */}
