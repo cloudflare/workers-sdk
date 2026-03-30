@@ -18,12 +18,9 @@ import {
 	YarnPackageManager,
 } from "../../package-manager";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../../pages/constants";
-import {
-	allKnownFrameworksIds,
-	staticFramework,
-} from "../frameworks/get-framework";
+import { isKnownFramework } from "../frameworks";
+import { staticFramework } from "../frameworks/all-frameworks";
 import type { PackageManager } from "../../package-manager";
-import type { KnownFrameworkId } from "../frameworks/get-framework";
 import type { Config } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
 
@@ -268,7 +265,7 @@ function maybeFindDetectedFramework(
 	}
 
 	const settingsForOnlyKnownFrameworks = settings.filter(({ framework }) =>
-		allKnownFrameworksIds.has(framework.id as KnownFrameworkId)
+		isKnownFramework(framework.id)
 	);
 
 	if (settingsForOnlyKnownFrameworks.length === 0) {
@@ -288,8 +285,8 @@ function maybeFindDetectedFramework(
 	}
 
 	if (settingsForOnlyKnownFrameworks.length === 2) {
-		const frameworkIdsFound = new Set<KnownFrameworkId>(
-			settings.map(({ framework }) => framework.id as KnownFrameworkId)
+		const frameworkIdsFound = new Set<string>(
+			settings.map(({ framework }) => framework.id)
 		);
 
 		const viteId = "vite";

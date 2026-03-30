@@ -1,5 +1,5 @@
-import { Framework } from ".";
-import type { ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import type { ConfigurationResults } from "./framework-class";
 
 export class CloudflarePages extends Framework {
 	async configure(): Promise<ConfigurationResults> {
@@ -7,7 +7,4 @@ export class CloudflarePages extends Framework {
 			wranglerConfig: {},
 		};
 	}
-
-	// Autoconfiguring a Pages project into a Workers one is not yet supported
-	autoConfigSupported = false;
 }

@@ -49,6 +49,7 @@ import {
 	mockPublishRoutesRequest,
 	mockServiceScriptData,
 } from "./helpers";
+import type { Framework } from "../../autoconfig/frameworks";
 import type { OutputEntry } from "../../output";
 
 vi.mock("command-exists");
@@ -587,10 +588,9 @@ describe("deploy", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					autoConfigSupported: false,
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
-				},
+				} as unknown as Framework,
 				outputDir: "public",
 				packageManager: NpmPackageManager,
 			});
@@ -631,10 +631,9 @@ describe("deploy", () => {
 				framework: {
 					id: "cloudflare-pages",
 					name: "Cloudflare Pages",
-					autoConfigSupported: false,
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
-				},
+				} as unknown as Framework,
 				outputDir: "public",
 				packageManager: NpmPackageManager,
 			});

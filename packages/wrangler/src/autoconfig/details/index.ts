@@ -14,7 +14,11 @@ import { confirm, prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
 import { sendMetricsEvent } from "../../metrics";
 import { NpmPackageManager } from "../../package-manager";
-import { allKnownFrameworks, getFramework } from "../frameworks/get-framework";
+import { getFrameworkClass } from "../frameworks";
+import {
+	allFrameworksInfos,
+	staticFramework,
+} from "../frameworks/all-frameworks";
 import {
 	getAutoConfigId,
 	getAutoConfigTriggerCommand,
@@ -154,7 +158,7 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, wranglerConfig);
 
-	const framework = getFramework(detectedFramework?.framework?.id);
+	const framework = getFrameworkClass(detectedFramework.framework.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -422,26 +426,26 @@ export async function confirmAutoConfigDetails(
 	const frameworkId = await select(
 		"What framework is your application using?",
 		{
-			choices: allKnownFrameworks.map((f) => ({
+			choices: allFrameworksInfos.map((f) => ({
 				title: f.name,
 				value: f.id,
 				description:
-					f.id === "static"
+					f.id === staticFramework.id
 						? "No framework at all, or a static framework such as Vite, React or Gatsby."
 						: `The ${f.name} JavaScript framework`,
 			})),
-			defaultOption: allKnownFrameworks.findIndex((framework) => {
+			defaultOption: allFrameworksInfos.findIndex((framework) => {
 				if (!autoConfigDetails?.framework) {
 					// If there is no framework already detected let's default to the static one
 					// (note: there should always be a framework at this point)
-					return framework.id === "static";
+					return framework.id === staticFramework.id;
 				}
 				return autoConfigDetails.framework.id === framework.id;
 			}),
 		}
 	);
 
-	updatedAutoConfigDetails.framework = getFramework(frameworkId);
+	updatedAutoConfigDetails.framework = getFrameworkClass(frameworkId);
 
 	const outputDir = await prompt(
 		"What directory contains your applications' output/asset files?",
