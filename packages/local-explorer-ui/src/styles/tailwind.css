@@ -176,7 +176,6 @@
 	 */
 
 	/* Background tokens */
-	--color-kumo-base: oklch(0% 0 0); /* black */
 	--color-kumo-elevated: oklch(14.5% 0 0); /* neutral-950 */
 	--color-kumo-recessed: oklch(0.31 0 0); /* neutral-750 */
 	--color-kumo-overlay: oklch(26.9% 0 0); /* neutral-800 */
