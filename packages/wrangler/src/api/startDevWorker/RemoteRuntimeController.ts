@@ -21,11 +21,7 @@ import { getAccessToken } from "../../user/access";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import {
-	getFailedRefreshRetryInterval,
-	getPreviewTokenRefreshInterval,
-	unwrapHook,
-} from "./utils";
+import { getPreviewTokenRefreshInterval, unwrapHook } from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -279,11 +275,11 @@ export class RemoteRuntimeController extends RuntimeController {
 		auth: CfAccount,
 		routes: Route[] | undefined,
 		bundleId: number
-	) {
+	): Promise<boolean> {
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		if (bundleId !== this.#currentBundleId) {
-			return;
+			return false;
 		}
 
 		const token = await this.#previewToken({
@@ -319,7 +315,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		// If `token` is undefined, we've surfaced a relevant error to the user above, so ignore this bundle
 		if (bundleId !== this.#currentBundleId || !token) {
-			return;
+			return false;
 		}
 
 		const accessToken = await getAccessToken(token.host);
@@ -349,6 +345,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		});
 
 		this.#scheduleRefresh(getPreviewTokenRefreshInterval());
+		return true;
 	}
 
 	#scheduleRefresh(interval: number) {
@@ -454,13 +451,18 @@ export class RemoteRuntimeController extends RuntimeController {
 					this.#latestRoutes
 				);
 
-				await this.#updatePreviewToken(
+				const refreshed = await this.#updatePreviewToken(
 					this.#latestConfig,
 					this.#latestBundle,
 					auth,
 					this.#latestRoutes,
 					this.#currentBundleId
 				);
+
+				if (!refreshed) {
+					throw new Error("Failed to refresh preview token");
+				}
+
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
 			} catch (error) {
 				if (error instanceof Error && error.name == "AbortError") {
@@ -474,10 +476,6 @@ export class RemoteRuntimeController extends RuntimeController {
 					source: "RemoteRuntimeController",
 					data: undefined,
 				});
-
-				// Retry sooner than the normal 50-minute interval so the user
-				// isn't stuck for long if the refresh fails transiently.
-				this.#scheduleRefresh(getFailedRefreshRetryInterval());
 			}
 		});
 	}

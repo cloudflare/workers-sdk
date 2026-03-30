@@ -25,15 +25,6 @@ export function getPreviewTokenRefreshInterval() {
 	return 50 * 60 * 1000;
 }
 
-/**
- * When to retry a failed token refresh.
- *
- * Short interval so the user isn't stuck for long if the first attempt fails.
- */
-export function getFailedRefreshRetryInterval() {
-	return 30 * 1000;
-}
-
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
 	promise: Promise<T>;
