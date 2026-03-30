@@ -8,7 +8,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { validateActionPinning } from "../validate-action-pinning";
 
 describe("validateActionPinning()", () => {
@@ -20,6 +20,7 @@ describe("validateActionPinning()", () => {
 	});
 
 	afterEach(() => {
+		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
 		rmSync(tmpDir, { recursive: true, force: true });
 	});
 
@@ -37,7 +38,7 @@ describe("validateActionPinning()", () => {
 		writeFileSync(join(dir, "action.yml"), content, "utf-8");
 	}
 
-	it("should pass for pinned third-party actions", () => {
+	it("should pass for pinned third-party actions", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -50,7 +51,7 @@ describe("validateActionPinning()", () => {
 		expect(validateActionPinning(tmpDir)).toEqual([]);
 	});
 
-	it("should pass for pinned actions with a version comment", () => {
+	it("should pass for pinned actions with a version comment", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -63,7 +64,7 @@ describe("validateActionPinning()", () => {
 		expect(validateActionPinning(tmpDir)).toEqual([]);
 	});
 
-	it("should fail for third-party actions pinned to a tag", () => {
+	it("should fail for third-party actions pinned to a tag", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -79,7 +80,9 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("not pinned to a commit SHA");
 	});
 
-	it("should fail for third-party actions pinned to a semver tag", () => {
+	it("should fail for third-party actions pinned to a semver tag", ({
+		expect,
+	}) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -94,7 +97,7 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("Ana06/get-changed-files@v2.3.0");
 	});
 
-	it("should fail for third-party actions pinned to a branch", () => {
+	it("should fail for third-party actions pinned to a branch", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -109,7 +112,9 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("changesets/action@main");
 	});
 
-	it("should skip first-party actions/* regardless of pinning", () => {
+	it("should skip first-party actions/* regardless of pinning", ({
+		expect,
+	}) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -124,7 +129,7 @@ describe("validateActionPinning()", () => {
 		expect(validateActionPinning(tmpDir)).toEqual([]);
 	});
 
-	it("should skip local actions", () => {
+	it("should skip local actions", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -137,7 +142,7 @@ describe("validateActionPinning()", () => {
 		expect(validateActionPinning(tmpDir)).toEqual([]);
 	});
 
-	it("should report multiple errors across multiple files", () => {
+	it("should report multiple errors across multiple files", ({ expect }) => {
 		writeWorkflow(
 			"a.yml",
 			dedent`
@@ -165,7 +170,7 @@ describe("validateActionPinning()", () => {
 		expect(joined).toContain("quux/corge@latest");
 	});
 
-	it("should validate composite actions in .github/actions/", () => {
+	it("should validate composite actions in .github/actions/", ({ expect }) => {
 		writeCompositeAction(
 			"my-action",
 			dedent`
@@ -181,7 +186,7 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain(".github/actions/my-action/action.yml");
 	});
 
-	it("should include the correct line number in errors", () => {
+	it("should include the correct line number in errors", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -200,7 +205,7 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain(":8");
 	});
 
-	it("should handle uses without a hyphen prefix", () => {
+	it("should handle uses without a hyphen prefix", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -216,7 +221,9 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("unpinned/action@v1");
 	});
 
-	it("should fail for third-party actions with no version reference at all", () => {
+	it("should fail for third-party actions with no version reference at all", ({
+		expect,
+	}) => {
 		writeWorkflow(
 			"test.yml",
 			dedent`
@@ -232,7 +239,7 @@ describe("validateActionPinning()", () => {
 		expect(errors[0]).toContain("has no version reference at all");
 	});
 
-	it("should pass when there are no workflow files", () => {
+	it("should pass when there are no workflow files", ({ expect }) => {
 		// tmpDir has the .github/workflows/ directory but no files
 		expect(validateActionPinning(tmpDir)).toEqual([]);
 	});

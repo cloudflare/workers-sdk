@@ -41,7 +41,7 @@ async function updateAppCode() {
 		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
 		appConfig.replace(
 			"providers: [",
-			"providers: [provideHttpClient(withFetch()), ",
+			"providers: [provideHttpClient(withFetch()), "
 		);
 	writeFile(resolve(appConfigPath), newAppConfig);
 	s.stop(`${brandColor(`updated`)} ${dim(appConfigPath)}`);
@@ -51,7 +51,7 @@ async function updateAppCode() {
 	const appRoutes = readFile(resolve(appServerRoutesPath));
 	const newAppRoutes = appRoutes.replace(
 		"RenderMode.Prerender",
-		"RenderMode.Server",
+		"RenderMode.Server"
 	);
 	writeFile(resolve(appServerRoutesPath), newAppRoutes);
 	s.stop(`${brandColor(`updated`)} ${dim(appServerRoutesPath)}`);

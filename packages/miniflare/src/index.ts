@@ -70,7 +70,9 @@ import {
 	SharedOptions,
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
+	STREAM_PLUGIN_NAME,
 	WorkerOptions,
+	WORKFLOWS_PLUGIN_NAME,
 	WrappedBindingNames,
 } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -132,6 +134,7 @@ import {
 	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
+	CorePaths,
 	LogLevel,
 	Mutex,
 	SharedHeaders,
@@ -150,6 +153,7 @@ import type {
 	KVNamespaceListKey,
 	Queue,
 	R2Bucket,
+	StreamBinding,
 } from "@cloudflare/workers-types/experimental";
 import type { Process } from "@puppeteer/browsers";
 
@@ -942,6 +946,7 @@ export class Miniflare {
 
 	// Store `#init()` `Promise`, so we can propagate initialisation errors in
 	// `ready`. We would have no way of catching these otherwise.
+	// eslint-disable-next-line no-unused-private-class-members — oxlint is wrong here, this variable _is_ used
 	readonly #initPromise: Promise<void>;
 
 	// Aborted when dispose() is called
@@ -1219,6 +1224,165 @@ export class Miniflare {
 		}
 	}
 
+	/**
+	 * Lists Workflow Engine DO instances by reading filenames from the
+	 * persistence directory. Same pattern as #handleLoopbackDOStorageRequest
+	 * but also includes mtimeMs for sorting by most recently modified.
+	 *
+	 * @param url in format: /core/workflow-storage/<workflowName>
+	 * @returns [{ name: string, type: "file" | "directory", mtimeMs: number }, ...]
+	 */
+	async #handleLoopbackWorkflowStorageRequest(url: URL): Promise<Response> {
+		const workflowName = decodeURIComponent(
+			url.pathname.slice("/core/workflow-storage/".length)
+		);
+		assert(workflowName, "Workflow name is required");
+
+		const workflowsSharedOpts = this.#sharedOpts.workflows;
+		const coreSharedOpts = this.#sharedOpts.core;
+		const workflowsPersistPath = getPersistPath(
+			WORKFLOWS_PLUGIN_NAME,
+			this.#tmpPath,
+			coreSharedOpts.defaultPersistRoot,
+			workflowsSharedOpts.workflowsPersist
+		);
+
+		// Engine DOs are stored under: <persistPath>/miniflare-workflows-<name>/<hexId>.sqlite
+		const uniqueKey = `miniflare-workflows-${workflowName}`;
+		const namespacePath = path.join(workflowsPersistPath, uniqueKey);
+
+		// Prevent directory traversal
+		if (
+			!namespacePath.startsWith(path.resolve(workflowsPersistPath) + path.sep)
+		) {
+			return new Response("Invalid workflow name", { status: 400 });
+		}
+
+		try {
+			const dirEntries = await fs.promises.readdir(namespacePath, {
+				withFileTypes: true,
+			});
+			// Include birthtimeMs so the handler can sort by file creation time
+			// without resolving Engine DO metadata for every instance.
+			const entries = await Promise.all(
+				dirEntries.map(async (entry) => {
+					let birthtimeMs = 0;
+					if (entry.isFile()) {
+						try {
+							const stat = await fs.promises.stat(
+								path.join(namespacePath, entry.name)
+							);
+							birthtimeMs = stat.birthtimeMs;
+						} catch {
+							// Ignore stat errors
+						}
+					}
+					return {
+						name: entry.name,
+						type: entry.isDirectory()
+							? ("directory" as const)
+							: ("file" as const),
+						birthtimeMs,
+					};
+				})
+			);
+			return Response.json(entries);
+		} catch (e) {
+			if (isFileNotFoundError(e)) {
+				return new Response("Not Found", { status: 404 });
+			}
+			throw e;
+		}
+	}
+
+	/**
+	 * Deletes a Workflow Engine DO instance by removing its .sqlite file
+	 * (and any associated -shm/-wal files) from the persistence directory.
+	 *
+	 * @param url in format: /core/workflow-storage/<workflowName>/<hexId>
+	 */
+	async #handleLoopbackWorkflowStorageDeleteRequest(
+		url: URL
+	): Promise<Response> {
+		const pathAfterPrefix = url.pathname.slice(
+			"/core/workflow-storage/".length
+		);
+		const slashIndex = pathAfterPrefix.indexOf("/");
+
+		const workflowName = decodeURIComponent(
+			slashIndex === -1 ? pathAfterPrefix : pathAfterPrefix.slice(0, slashIndex)
+		);
+		const hexId =
+			slashIndex === -1
+				? null
+				: decodeURIComponent(pathAfterPrefix.slice(slashIndex + 1));
+
+		assert(workflowName, "Workflow name is required");
+
+		const workflowsSharedOpts = this.#sharedOpts.workflows;
+		const coreSharedOpts = this.#sharedOpts.core;
+		const workflowsPersistPath = getPersistPath(
+			WORKFLOWS_PLUGIN_NAME,
+			this.#tmpPath,
+			coreSharedOpts.defaultPersistRoot,
+			workflowsSharedOpts.workflowsPersist
+		);
+
+		const uniqueKey = `miniflare-workflows-${workflowName}`;
+		const namespacePath = path.join(workflowsPersistPath, uniqueKey);
+
+		// Prevent directory traversal
+		if (
+			!namespacePath.startsWith(path.resolve(workflowsPersistPath) + path.sep)
+		) {
+			return new Response("Invalid workflow name", { status: 400 });
+		}
+
+		const extensions = [".sqlite", ".sqlite-shm", ".sqlite-wal"];
+
+		if (hexId) {
+			// Delete a single instance
+			let deleted = false;
+			for (const ext of extensions) {
+				const filePath = path.join(namespacePath, `${hexId}${ext}`);
+				if (!filePath.startsWith(namespacePath + path.sep)) {
+					return new Response("Invalid instance ID", { status: 400 });
+				}
+				try {
+					await fs.promises.unlink(filePath);
+					if (ext === ".sqlite") {
+						deleted = true;
+					}
+				} catch (e) {
+					if (!isFileNotFoundError(e)) {
+						throw e;
+					}
+				}
+			}
+			if (!deleted) {
+				return new Response("Not Found", { status: 404 });
+			}
+		} else {
+			// Delete ALL instances in the workflow
+			try {
+				const dirEntries = await fs.promises.readdir(namespacePath);
+				await Promise.all(
+					dirEntries
+						.filter((name) => extensions.some((ext) => name.endsWith(ext)))
+						.map((name) =>
+							fs.promises.unlink(path.join(namespacePath, name)).catch(() => {})
+						)
+				);
+			} catch (e) {
+				if (!isFileNotFoundError(e)) {
+					throw e;
+				}
+			}
+		}
+
+		return new Response("OK", { status: 200 });
+	}
+
 	get #workerSrcOpts(): NameSourceOptions[] {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
@@ -1311,13 +1475,13 @@ export class Miniflare {
 			} else if (url.pathname === "/browser/launch") {
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
-						// Puppeteer v22.8.2 supported chrome version:
+						// Puppeteer v22.13.1 supported chrome version:
 						// https://pptr.dev/supported-browsers#supported-browser-version-list
 						//
 						// It should match the supported chrome version for the upstream puppeteer
 						// version from which @cloudflare/puppeteer branched off, which is specified in:
-						// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
-						browserVersion: "124.0.6367.207",
+						// https://github.com/cloudflare/puppeteer/?tab=readme-ov-file#workers-version-of-puppeteer-core
+						browserVersion: "126.0.6478.182",
 						log: this.#log,
 						tmpPath: this.#tmpPath,
 					});
@@ -1347,6 +1511,13 @@ export class Miniflare {
 				response = new Response(filePath, { status: 200 });
 			} else if (url.pathname.startsWith("/core/do-storage/")) {
 				response = await this.#handleLoopbackDOStorageRequest(url);
+			} else if (url.pathname.startsWith("/core/workflow-storage/")) {
+				if (request.method === "DELETE") {
+					response =
+						await this.#handleLoopbackWorkflowStorageDeleteRequest(url);
+				} else {
+					response = await this.#handleLoopbackWorkflowStorageRequest(url);
+				}
 			} else if (url.pathname === "/core/dev-registry") {
 				// Used by the local explorer to aggregate resources across instances
 				const registryPath = this.#devRegistry.getRegistryPath();
@@ -1381,7 +1552,7 @@ export class Miniflare {
 		const { pathname } = new URL(req.url ?? "", "http://localhost");
 
 		// If this is the path for live-reload, handle the request
-		if (pathname === "/cdn-cgi/mf/reload") {
+		if (pathname === CorePaths.LIVE_RELOAD) {
 			this.#liveReloadServer.handleUpgrade(req, socket, head, (ws) => {
 				this.#liveReloadServer.emit("connection", ws, req);
 			});
@@ -1959,6 +2130,23 @@ export class Miniflare {
 			}
 		}
 
+		// Collect workflow options from all workers for the explorer binding map
+		const workflowOptions = new Map<
+			string,
+			{ name: string; className: string; scriptName?: string }
+		>();
+		for (const workerOpts of allWorkerOpts) {
+			if (workerOpts.workflows.workflows) {
+				for (const workflow of Object.values(workerOpts.workflows.workflows)) {
+					workflowOptions.set(workflow.name, {
+						name: workflow.name,
+						className: workflow.className,
+						scriptName: workflow.scriptName,
+					});
+				}
+			}
+		}
+
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
@@ -1980,6 +2168,7 @@ export class Miniflare {
 			log: this.#log,
 			proxyBindings,
 			durableObjectClassNames,
+			workflowOptions: workflowOptions.size > 0 ? workflowOptions : undefined,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2142,6 +2331,10 @@ export class Miniflare {
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
+				// Disable timeouts for local dev — long-running responses (streaming,
+				// slow uploads, long-polling) should not be killed by undici defaults.
+				headersTimeout: 0,
+				bodyTimeout: 0,
 			});
 		}
 		if (this.#proxyClient === undefined) {
@@ -2162,7 +2355,9 @@ export class Miniflare {
 			const urlSafeHost = getURLSafeHost(configuredHost);
 			if (this.#sharedOpts.core.logRequests) {
 				this.#log.logReady(
-					`${ready} on ${green(`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`)}`
+					`${ready} on ${green(
+						`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
+					)}`
 				);
 			}
 
@@ -2706,16 +2901,7 @@ export class Miniflare {
 	getSecretsStoreSecretAPI(
 		bindingName: string,
 		workerName?: string
-	): Promise<
-		() => {
-			create: (value: string) => Promise<string>;
-			update: (value: string, id: string) => Promise<string>;
-			duplicate: (id: string, newName: string) => Promise<string>;
-			delete: (id: string) => Promise<void>;
-			list: () => Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
-			get: (id: string) => Promise<string>;
-		}
-	> {
+	): Promise<() => SecretsStoreSecretAdmin> {
 		return this.#getProxy(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
@@ -2757,6 +2943,12 @@ export class Miniflare {
 		set: (value: string) => Promise<void>;
 	}> {
 		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
+	}
+	getStreamBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<StreamBinding> {
+		return this.#getProxy(STREAM_PLUGIN_NAME, bindingName, workerName);
 	}
 
 	/** @internal */
@@ -2821,6 +3013,15 @@ export class Miniflare {
 }
 
 export type { WorkerdStructuredLog } from "./plugins/core";
+
+export interface SecretsStoreSecretAdmin {
+	create(value: string): Promise<string>;
+	update(value: string, id: string): Promise<string>;
+	duplicate(id: string, newName: string): Promise<string>;
+	delete(id: string): Promise<void>;
+	list(): Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
+	get(id: string): Promise<string>;
+}
 
 export * from "./http";
 export * from "./plugins";

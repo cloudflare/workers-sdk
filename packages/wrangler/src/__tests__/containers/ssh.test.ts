@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
@@ -16,7 +15,6 @@ describe("containers ssh", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 

@@ -29,7 +29,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
-import { withTrailingSlash } from "./utils";
+import { satisfiesMinimumViteVersion, withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
 import type {
@@ -80,10 +80,13 @@ function getPersistenceRoot(
 // to paths ensures correct names. This requires us to specify `contents` in
 // the miniflare module definitions though, as the new paths don't exist.
 const miniflareModulesRoot = process.platform === "win32" ? "Z:\\" : "/";
-const ROUTER_WORKER_PATH = "./workers/router-worker.js";
-const ASSET_WORKER_PATH = "./workers/asset-worker.js";
-const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker.js";
-const RUNNER_PATH = "./workers/runner-worker.js";
+const ROUTER_WORKER_PATH = "./workers/router-worker/index.js";
+const ASSET_WORKER_PATH = "./workers/asset-worker/index.js";
+const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker/index.js";
+const RUNNER_PATH = "./workers/runner-worker/index.js";
+const MODULE_RUNNER_PATH = "./workers/runner-worker/module-runner.js";
+const MODULE_RUNNER_LEGACY_PATH =
+	"./workers/runner-worker/module-runner-legacy.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
@@ -345,6 +348,27 @@ export async function getDevMiniflareOptions(
 											path: path.join(miniflareModulesRoot, RUNNER_PATH),
 											contents: fs.readFileSync(
 												fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
+											),
+										},
+										// A breaking change to the module runner was introduced in
+										// https://github.com/vitejs/vite/pull/20924 and released in Vite 7.2.0.
+										// We ship two bundled copies of vite/module-runner and select the
+										// appropriate one based on the user's installed Vite version.
+										{
+											type: "ESModule",
+											path: path.join(
+												miniflareModulesRoot,
+												"workers/runner-worker/vite/module-runner"
+											),
+											contents: fs.readFileSync(
+												fileURLToPath(
+													new URL(
+														satisfiesMinimumViteVersion("7.2.0")
+															? MODULE_RUNNER_PATH
+															: MODULE_RUNNER_LEGACY_PATH,
+														import.meta.url
+													)
+												)
 											),
 										},
 									],

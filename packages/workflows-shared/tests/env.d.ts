@@ -6,3 +6,10 @@ declare namespace Cloudflare {
 		USER_WORKFLOW: import("cloudflare:workers").WorkflowEntrypoint;
 	}
 }
+
+declare module "workerd:unsafe" {
+	const unsafe: {
+		abortAllDurableObjects(): Promise<void>;
+	};
+	export default unsafe;
+}

@@ -1,10 +1,12 @@
 import { resolve } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 
 describe("wrangler setup", () => {
 	describe("run on a hono project", () => {
-		test("detects when a hono app is already configured for Cloudflare", async () => {
+		test("detects when a hono app is already configured for Cloudflare", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(resolve(__dirname, "./fixtures/hono-cf-workers-app"));
 
@@ -16,7 +18,9 @@ describe("wrangler setup", () => {
 			expect(status).toBe(0);
 		});
 
-		test("errors for a hono app that is not configured for Cloudflare, mentioning that auto-configuring it is not supported", async () => {
+		test("errors for a hono app that is not configured for Cloudflare, mentioning that auto-configuring it is not supported", async ({
+			expect,
+		}) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(resolve(__dirname, "./fixtures/hono-nodejs-app"));
 

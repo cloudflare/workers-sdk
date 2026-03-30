@@ -3,21 +3,14 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import { buildImage } from "../../containers-shared/src/build";
 import { generateContainerBuildId } from "../../containers-shared/src/utils";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { waitFor, waitForLong } from "./helpers/wait-for";
 
 const imageSource = ["pull", "build"] as const;
 
@@ -234,7 +227,9 @@ for (const source of imageSource) {
 				);
 			}
 		});
-		it(`will build or pull containers when miniflare starts`, async () => {
+		it(`will build or pull containers when miniflare starts`, async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived("wrangler dev");
 			await worker.readUntil(/Preparing container/);
 			if (source === "pull") {
@@ -246,11 +241,11 @@ for (const source of imageSource) {
 			await worker.readUntil(/Container image\(s\) ready/);
 		});
 
-		it(`will be able to interact with the container`, async () => {
+		it(`will be able to interact with the container`, async ({ expect }) => {
 			const worker = helper.runLongLived("wrangler dev");
 			const ready = await worker.waitForReady();
 
-			await vi.waitFor(async () => {
+			await waitFor(async () => {
 				const response = await fetch(`${ready.url}/status`);
 				expect(response.status).toBe(200);
 				const status = await response.json();
@@ -262,24 +257,21 @@ for (const source of imageSource) {
 			expect(response.status).toBe(200);
 			expect(text).toBe("Container create request sent...");
 
-			await vi.waitFor(async () => {
+			await waitFor(async () => {
 				response = await fetch(`${ready.url}/status`);
 				expect(response.status).toBe(200);
 				const status = await response.json();
 				expect(status).toBe(true);
 			});
 
-			await vi.waitFor(
-				async () => {
-					response = await fetch(`${ready.url}/fetch`, {
-						signal: AbortSignal.timeout(3_000),
-						headers: { "MF-Disable-Pretty-Error": "true" },
-					});
-					text = await response.text();
-					expect(text).toBe("Hello World! Have an env var! I'm an env var!");
-				},
-				{ timeout: 5_000 }
-			);
+			await waitFor(async () => {
+				response = await fetch(`${ready.url}/fetch`, {
+					signal: AbortSignal.timeout(3_000),
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
+				text = await response.text();
+				expect(text).toBe("Hello World! Have an env var! I'm an env var!");
+			});
 
 			// Set up egress HTTP interception so the container can call back to the worker
 			response = await fetch(`${ready.url}/setup-intercept`, {
@@ -291,18 +283,15 @@ for (const source of imageSource) {
 			expect(text).toBe("Intercept setup done");
 
 			// Fetch through the container's /intercept route which curls back to the worker
-			await vi.waitFor(
-				async () => {
-					response = await fetch(`${ready.url}/fetch-intercept`, {
-						signal: AbortSignal.timeout(5_000),
-						headers: { "MF-Disable-Pretty-Error": "true" },
-					});
-					text = await response.text();
-					expect(response.status).toBe(200);
-					expect(text).toBe("hello from worker");
-				},
-				{ timeout: 10_000 }
-			);
+			await waitForLong(async () => {
+				response = await fetch(`${ready.url}/fetch-intercept`, {
+					signal: AbortSignal.timeout(5_000),
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
+				text = await response.text();
+				expect(response.status).toBe(200);
+				expect(text).toBe("hello from worker");
+			});
 
 			// Check that a container is running using `docker ps`
 			const ids = getContainerIds("e2econtainer");
@@ -310,7 +299,9 @@ for (const source of imageSource) {
 			await worker.stop();
 		});
 
-		it("should clean up duplicate image tags after build", async () => {
+		it("should clean up duplicate image tags after build", async ({
+			expect,
+		}) => {
 			const dockerPath = getDockerPath();
 			const fakeBuildID = generateContainerBuildId();
 			const initialImageTag = `cloudflare-dev/test-cleanup:${fakeBuildID}`;
@@ -338,7 +329,7 @@ for (const source of imageSource) {
 			const ready = await worker.waitForReady();
 
 			// check that the container can still start
-			await vi.waitFor(async () => {
+			await waitFor(async () => {
 				const response = await fetch(`${ready.url}/status`);
 				expect(response.status).toBe(200);
 				const status = await response.json();
@@ -351,7 +342,9 @@ for (const source of imageSource) {
 			}).toThrow();
 		});
 
-		it("won't start the container service if no containers are present", async () => {
+		it("won't start the container service if no containers are present", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					...wranglerConfig,
@@ -365,7 +358,9 @@ for (const source of imageSource) {
 			expect(output).not.toContain("Preparing container image(s)...");
 		});
 
-		it("won't start the container service if enable_containers is set to false via config", async () => {
+		it("won't start the container service if enable_containers is set to false via config", async ({
+			expect,
+		}) => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					...wranglerConfig,
@@ -380,7 +375,9 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("will display the ready-on message after the container(s) have been built/pulled", async () => {
+		it("will display the ready-on message after the container(s) have been built/pulled", async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived("wrangler dev");
 			const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
 			await worker.readUntil(readyRegexp);
@@ -398,7 +395,9 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("won't start the container service if --enable-containers is set to false via CLI", async () => {
+		it("won't start the container service if --enable-containers is set to false via CLI", async ({
+			expect,
+		}) => {
 			const worker = helper.runLongLived(
 				"wrangler dev --enable-containers=false"
 			);
@@ -409,7 +408,7 @@ for (const source of imageSource) {
 			);
 		});
 
-		it("errors if no ports are exposed", async () => {
+		it("errors if no ports are exposed", async ({ expect }) => {
 			await helper.seed({
 				Dockerfile: dedent`
 								FROM alpine:latest
@@ -426,7 +425,7 @@ for (const source of imageSource) {
 			expect(await worker.output).toContain("does not expose any ports");
 		});
 
-		it("errors if docker is not installed", async () => {
+		it("errors if docker is not installed", async ({ expect }) => {
 			vi.stubEnv("WRANGLER_DOCKER_BIN", "not-a-real-docker-binary");
 			const worker = helper.runLongLived("wrangler dev");
 			expect(await worker.exitCode).toBe(1);

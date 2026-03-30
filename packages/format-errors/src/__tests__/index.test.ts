@@ -1,15 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import type { Payload } from "../index";
-
-// Mock external dependencies that can't be resolved by Vite in test env
-vi.mock("promjs", () => {
-	const mockCounter = { inc: vi.fn() };
-	const mockRegistry = {
-		create: vi.fn(() => mockCounter),
-		metrics: vi.fn(() => ""),
-	};
-	return { default: () => mockRegistry };
-});
 
 vi.mock("toucan-js", () => {
 	return {
@@ -20,7 +10,7 @@ vi.mock("toucan-js", () => {
 });
 
 describe("handlePrettyErrorRequest", () => {
-	it("should propagate async rejections to callers", async () => {
+	it("should propagate async rejections to callers", async ({ expect }) => {
 		// Mock Youch to throw asynchronously
 		vi.doMock("../Youch", () => {
 			return {
@@ -58,7 +48,7 @@ describe("handlePrettyErrorRequest", () => {
 });
 
 describe("reviveError", () => {
-	it("should revive a plain Error", async () => {
+	it("should revive a plain Error", async ({ expect }) => {
 		const { reviveError } = await import("../index");
 		const error = reviveError({
 			message: "test",
@@ -71,7 +61,7 @@ describe("reviveError", () => {
 		expect(error.stack).toBe("Error: test\n    at foo:1:1");
 	});
 
-	it("should revive a TypeError", async () => {
+	it("should revive a TypeError", async ({ expect }) => {
 		const { reviveError } = await import("../index");
 		const error = reviveError({
 			message: "x is not a function",
@@ -81,7 +71,7 @@ describe("reviveError", () => {
 		expect(error.message).toBe("x is not a function");
 	});
 
-	it("should revive an error with a cause", async () => {
+	it("should revive an error with a cause", async ({ expect }) => {
 		const { reviveError } = await import("../index");
 		const error = reviveError({
 			message: "outer",
@@ -97,7 +87,9 @@ describe("reviveError", () => {
 		expect((error.cause as Error).message).toBe("inner");
 	});
 
-	it("should fall back to Error for unknown error names", async () => {
+	it("should fall back to Error for unknown error names", async ({
+		expect,
+	}) => {
 		const { reviveError } = await import("../index");
 		const error = reviveError({
 			message: "custom",

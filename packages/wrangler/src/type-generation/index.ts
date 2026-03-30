@@ -198,6 +198,22 @@ export const typesCommand = createCommand({
 							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
 						)
 					);
+
+					// Also register environment-specific names (e.g. "worker-foo" for env "foo")
+					// so that service/DO bindings referencing those names can be resolved.
+					const { rawConfig } = experimental_readRawConfig({
+						config: secondaryConfig.configPath,
+					});
+					for (const envName of Object.keys(rawConfig.env ?? {})) {
+						const envConfig = readConfig({
+							config: secondaryConfig.configPath,
+							env: envName,
+						});
+						const envKey = envConfig.name;
+						if (envKey && envKey !== key && !secondaryEntries.has(envKey)) {
+							secondaryEntries.set(envKey, serviceEntry);
+						}
+					}
 				} else {
 					throw new UserError(
 						`Could not resolve entry point for service config '${secondaryConfig}'.`
@@ -1901,6 +1917,20 @@ function collectCoreBindings(
 			}
 		}
 
+		if (env.stream) {
+			if (!env.stream.binding) {
+				throwMissingBindingError({
+					binding: env.stream,
+					bindingType: "stream",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				addBinding(env.stream.binding, "StreamBinding", "stream", envName);
+			}
+		}
+
 		if (env.media) {
 			if (!env.media.binding) {
 				throwMissingBindingError({
@@ -2817,6 +2847,24 @@ function collectCoreBindingsPerEnvironment(
 					bindingCategory: "images",
 					name: env.images.binding,
 					type: "ImagesBinding",
+				});
+			}
+		}
+
+		if (env.stream) {
+			if (!env.stream.binding) {
+				throwMissingBindingError({
+					binding: env.stream,
+					bindingType: "stream",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+				});
+			} else {
+				bindings.push({
+					bindingCategory: "stream",
+					name: env.stream.binding,
+					type: "StreamBinding",
 				});
 			}
 		}

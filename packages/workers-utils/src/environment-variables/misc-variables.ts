@@ -339,12 +339,11 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 
 /**
  * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
- * This is an experimental feature flag. Defaults to false when not set.
  */
 export const getLocalExplorerEnabledFromEnv =
 	getBooleanEnvironmentVariableFactory({
 		variableName: "X_LOCAL_EXPLORER",
-		defaultValue: false,
+		defaultValue: true,
 	});
 
 /**
@@ -391,4 +390,14 @@ export const getCfFetchPathFromEnv = getEnvironmentVariableFactory({
  */
 export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CACHE_DIR",
+});
+
+/**
+ * `CLOUDFLARED_PATH` specifies a custom path to a cloudflared binary.
+ *
+ * If set, Wrangler will use this cloudflared binary instead of downloading one.
+ * The path must point to an existing executable file.
+ */
+export const getCloudflaredPathFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARED_PATH",
 });

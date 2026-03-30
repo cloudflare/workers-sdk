@@ -3,6 +3,12 @@
 	"name": "worker-w-resources",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-05-04",
+	"r2_buckets": [
+		{
+			"bucket_name": "my-bucket",
+			"binding": "BUCKET",
+		},
+	],
 	"kv_namespaces": [
 		{
 			"binding": "KV",

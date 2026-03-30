@@ -102,7 +102,7 @@ export function createRequestHandler(
 	};
 }
 
-export function satisfiesViteVersion(minVersion: string): boolean {
+export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 

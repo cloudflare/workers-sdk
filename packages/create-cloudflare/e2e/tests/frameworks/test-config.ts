@@ -583,6 +583,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Waku",
 			},
 			nodeCompat: false,
+			quarantine: true,
 		},
 		{
 			name: "tanstack-start",
@@ -648,7 +649,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
  * Gets the list of experimental framework test configurations.
  */
 function getExperimentalFrameworkTestConfig(
-	pm: string,
+	pm: string
 ): NamedFrameworkTestConfig[] {
 	return [
 		{

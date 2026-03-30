@@ -39,13 +39,13 @@ const configure = async (ctx: C3Context) => {
 						// preset: "cloudflare_module"
 						b.objectProperty(
 							b.identifier("preset"),
-							b.stringLiteral("cloudflare_module"),
+							b.stringLiteral("cloudflare_module")
 						),
 						b.objectProperty(
 							b.identifier("compatibilityDate"),
-							b.stringLiteral(compatDate),
+							b.stringLiteral(compatDate)
 						),
-					]),
+					])
 				),
 			];
 
@@ -54,7 +54,7 @@ const configure = async (ctx: C3Context) => {
 			} else {
 				mergeObjectProperties(
 					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-					presetDef,
+					presetDef
 				);
 			}
 

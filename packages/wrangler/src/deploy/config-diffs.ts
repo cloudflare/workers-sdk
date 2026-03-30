@@ -22,6 +22,8 @@ const reorderableBindings = {
 	services: true,
 	send_email: true,
 	vectorize: true,
+	ai_search_namespaces: true,
+	ai_search: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,
@@ -47,6 +49,7 @@ const reorderableBindings = {
 	browser: false,
 	ai: false,
 	images: false,
+	stream: false,
 	media: false,
 	version_metadata: false,
 	unsafe: false,
@@ -212,7 +215,13 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
-	const singleBindingFields = ["browser", "ai", "images", "media"] as const;
+	const singleBindingFields = [
+		"browser",
+		"ai",
+		"images",
+		"stream",
+		"media",
+	] as const;
 	for (const singleBindingField of singleBindingFields) {
 		if (
 			normalizedConfig[singleBindingField] &&

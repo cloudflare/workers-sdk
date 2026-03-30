@@ -78,7 +78,7 @@ describe("Command Helpers", () => {
 				["wrangler"],
 				expect.objectContaining({
 					env: expect.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				}),
+				})
 			);
 		});
 
@@ -98,7 +98,7 @@ describe("Command Helpers", () => {
 				["wrangler"],
 				expect.objectContaining({
 					env: expect.not.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				}),
+				})
 			);
 		});
 
@@ -118,7 +118,7 @@ describe("Command Helpers", () => {
 				["-l"],
 				expect.objectContaining({
 					env: expect.not.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				}),
+				})
 			);
 		});
 	});
@@ -128,7 +128,7 @@ describe("Command Helpers", () => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-				`'foo/10 bar/20-baz/'`,
+				`'foo/10 bar/20-baz/'`
 			);
 		});
 
@@ -136,7 +136,7 @@ describe("Command Helpers", () => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-				`"foo/10 bar/20-baz/"`,
+				`"foo/10 bar/20-baz/"`
 			);
 		});
 	});

@@ -1,5 +1,73 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.13.5
+
+### Patch Changes
+
+- [#13077](https://github.com/cloudflare/workers-sdk/pull/13077) [`11c77b7`](https://github.com/cloudflare/workers-sdk/commit/11c77b7e19340eec4c3cf34fd4c758bc2ac54fa0) Thanks [@penalosa](https://github.com/penalosa)! - fix: `runInDurableObject` now correctly returns redirect responses (3xx) from Durable Object callbacks instead of throwing "Expected callback for X" errors
+
+- [#13056](https://github.com/cloudflare/workers-sdk/pull/13056) [`8384743`](https://github.com/cloudflare/workers-sdk/commit/8384743fc2613a2cfb3ed8f936a74104dcc22b0b) Thanks [@penalosa](https://github.com/penalosa)! - fix: Support dynamic `import()` inside entrypoint and Durable Object handlers
+
+  Previously, calling `exports.default.fetch()` or `SELF.fetch()` on a worker whose handler used a dynamic `import()` would hang and fail with "Cannot perform I/O on behalf of a different Durable Object". This happened because the module runner's transport — which communicates over a WebSocket owned by the runner Durable Object — was invoked from a different DO context.
+
+  The fix patches the module runner's transport via the `onModuleRunner` hook so that all `invoke()` calls are routed through the runner DO's I/O context, regardless of where the `import()` originates.
+
+- [#13074](https://github.com/cloudflare/workers-sdk/pull/13074) [`4618c05`](https://github.com/cloudflare/workers-sdk/commit/4618c058493a65e74495e14a4b653b05d52689bf) Thanks [@penalosa](https://github.com/penalosa)! - fix: only apply module fallback extension probing for `require()`, not `import`
+
+  The module fallback service previously tried adding `.js`, `.mjs`, `.cjs`, and `.json` suffixes to extensionless specifiers unconditionally. Per the Node.js spec, this extension-probing behaviour is specific to CommonJS `require()`. ESM `import` statements must include explicit file extensions.
+
+  Extension-less TypeScript `import` specifiers continue to work correctly — they are resolved by Vite's resolver rather than the fallback's extension loop.
+
+- [#13073](https://github.com/cloudflare/workers-sdk/pull/13073) [`baec845`](https://github.com/cloudflare/workers-sdk/commit/baec845dbf60e6edc6be480e43bd1a701469d29d) Thanks [@penalosa](https://github.com/penalosa)! - Add `adminSecretsStore()` to `cloudflare:test` for seeding secrets in tests
+
+  Secrets store bindings only expose a read-only `.get()` method, so there was previously no way to seed secret values from within a test. The new `adminSecretsStore()` helper returns Miniflare's admin API for a secrets store binding, giving tests full control over create, update, and delete operations.
+
+  ```ts
+  import { adminSecretsStore } from "cloudflare:test";
+  import { env } from "cloudflare:workers";
+
+  const admin = adminSecretsStore(env.MY_SECRET);
+  await admin.create("test-value");
+
+  const value = await env.MY_SECRET.get(); // "test-value"
+  ```
+
+- [#13083](https://github.com/cloudflare/workers-sdk/pull/13083) [`cfd513f`](https://github.com/cloudflare/workers-sdk/commit/cfd513fb5910e990c24f7fde64a56d5b425bd095) Thanks [@penalosa](https://github.com/penalosa)! - Add a 30-second timeout to `waitUntil` promise draining to prevent hanging tests
+
+  Previously, if a `ctx.waitUntil()` promise never resolved, the test suite would hang indefinitely after the test file finished. Now, any `waitUntil` promises that haven't settled within 30 seconds are abandoned with a warning, allowing the test suite to continue. This aligns with the [production `waitUntil` limit](https://developers.cloudflare.com/workers/platform/limits/#duration).
+
+- Updated dependencies [[`eeaa473`](https://github.com/cloudflare/workers-sdk/commit/eeaa47353c822b0e96fd892f2e3f957dba52715b), [`9fcdfca`](https://github.com/cloudflare/workers-sdk/commit/9fcdfca775d3d412abe7547d0833414599bab221), [`bc24ec8`](https://github.com/cloudflare/workers-sdk/commit/bc24ec81b9ed341dd165b7690f8602f6d738de0c), [`1faff35`](https://github.com/cloudflare/workers-sdk/commit/1faff35e9c84e40af882d15f7515c625d6f5ac95), [`0b4c21a`](https://github.com/cloudflare/workers-sdk/commit/0b4c21a3bf765f4c389c669dc44c8243f6889347), [`535582d`](https://github.com/cloudflare/workers-sdk/commit/535582d581613a3068a934ba0179d2cfde863359), [`992f9a3`](https://github.com/cloudflare/workers-sdk/commit/992f9a3ea15d14599faa573b8d49ee4d7f9e338a), [`f4ea4ac`](https://github.com/cloudflare/workers-sdk/commit/f4ea4accad70d6a55b648c610cfc806e5be36477), [`91b7f73`](https://github.com/cloudflare/workers-sdk/commit/91b7f73e3554e72d539ccd4034faaab1fb60b470), [`f6cdab2`](https://github.com/cloudflare/workers-sdk/commit/f6cdab206cff65e5db62998512676036edde6841), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5), [`ce65246`](https://github.com/cloudflare/workers-sdk/commit/ce65246010eaa0ea3c4c0c74e228f6597cf4332c), [`7a5be20`](https://github.com/cloudflare/workers-sdk/commit/7a5be2078800426a9ef1f8520ef72a99d9847c16), [`6b50bfa`](https://github.com/cloudflare/workers-sdk/commit/6b50bfa58de4716ffb7125e0ec28a68e40b22ce1), [`0386553`](https://github.com/cloudflare/workers-sdk/commit/0386553d80ad10717f5294e8a5979af703cbcbf8), [`9c5ebf5`](https://github.com/cloudflare/workers-sdk/commit/9c5ebf56291199eeaec43513732fd3fa7fbd502d), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5), [`53ed15a`](https://github.com/cloudflare/workers-sdk/commit/53ed15afcd9680fc8f0236eacd054d3c34ac73e5)]:
+  - wrangler@4.78.0
+  - miniflare@4.20260317.3
+
+## 0.13.4
+
+### Patch Changes
+
+- [#12999](https://github.com/cloudflare/workers-sdk/pull/12999) [`f9728fd`](https://github.com/cloudflare/workers-sdk/commit/f9728fd19ae384b47c0fa7df492d2506945f9e04) Thanks [@hiendv](https://github.com/hiendv)! - chore: update some tests and fixtures to Vitest 4 / vpw 0.13.x
+
+- Updated dependencies [[`593c4db`](https://github.com/cloudflare/workers-sdk/commit/593c4db91732efffbfff5a58630c09788006182d), [`b8f3309`](https://github.com/cloudflare/workers-sdk/commit/b8f3309c1f3428c61d0a38c09d38d51d3fd999a5), [`451dae3`](https://github.com/cloudflare/workers-sdk/commit/451dae371748927ad273e3c0180613ee30b064f2), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`f8516dd`](https://github.com/cloudflare/workers-sdk/commit/f8516dd474258535e1d9a8582286c41362d0ee36), [`9c9fe30`](https://github.com/cloudflare/workers-sdk/commit/9c9fe3030e80d83e6bf67cf2754751e3d11949db), [`379f2a2`](https://github.com/cloudflare/workers-sdk/commit/379f2a2803e029ff1d2df43973a95b0aea6fba6e), [`c2e9163`](https://github.com/cloudflare/workers-sdk/commit/c2e916353b59f646fa5804a4aa8d506033d47f5a), [`6a6449e`](https://github.com/cloudflare/workers-sdk/commit/6a6449ece88b41194a8b4c9fc4566e422e06ff1e), [`9a1cf29`](https://github.com/cloudflare/workers-sdk/commit/9a1cf29e6806335886dac56a85246cb76f1412d0), [`875da60`](https://github.com/cloudflare/workers-sdk/commit/875da60de78d67931567192eecae60b467c2491d)]:
+  - wrangler@4.77.0
+  - miniflare@4.20260317.2
+
+## 0.13.3
+
+### Patch Changes
+
+- [#12881](https://github.com/cloudflare/workers-sdk/pull/12881) [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787) Thanks [@pombosilva](https://github.com/pombosilva)! - Workflows testing util `waitForStatus` now supports waiting for "terminated" and "paused" states.
+
+- Updated dependencies [[`782df44`](https://github.com/cloudflare/workers-sdk/commit/782df4495f14f1366cf03e808ddddea0102eb011), [`3c988e2`](https://github.com/cloudflare/workers-sdk/commit/3c988e204ac0d6117ace9cc8fa5fd2479868811c), [`62545c9`](https://github.com/cloudflare/workers-sdk/commit/62545c9e9146d5107df7bd3d75fa3c453fa7d96b), [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22), [`71ab981`](https://github.com/cloudflare/workers-sdk/commit/71ab9816dc80acba346073bc9d02bd45d1fb5b9a), [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb), [`7c3c6c6`](https://github.com/cloudflare/workers-sdk/commit/7c3c6c6e9c8b4b58e438a9ce8426241f58d8fe82), [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb), [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787)]:
+  - wrangler@4.76.0
+  - miniflare@4.20260317.1
+
+## 0.13.2
+
+### Patch Changes
+
+- Updated dependencies [[`c9b3184`](https://github.com/cloudflare/workers-sdk/commit/c9b31840631585418b8926e8228db486b619b4c7), [`13df6c7`](https://github.com/cloudflare/workers-sdk/commit/13df6c75be49ac32fc1c57e2e24523e86ced2115), [`df0d112`](https://github.com/cloudflare/workers-sdk/commit/df0d1120a856bd65553bf92b4bc6380c15e81cc7), [`81ee98e`](https://github.com/cloudflare/workers-sdk/commit/81ee98e6a0c6be879757289ef6e34e1559d6ee2a), [`c600ce0`](https://github.com/cloudflare/workers-sdk/commit/c600ce0a45ad334a5a961cf7774758860581d9d2), [`f509d13`](https://github.com/cloudflare/workers-sdk/commit/f509d13b97a832a28ed6bc568c7bcf6fc7d4a4ff), [`3b81fc6`](https://github.com/cloudflare/workers-sdk/commit/3b81fc6a75857d5c158824f17d9316adc55878fc), [`0a7fef9`](https://github.com/cloudflare/workers-sdk/commit/0a7fef9ee924b6d0817a69be9d893dc8a40c9a19)]:
+  - wrangler@4.75.0
+  - miniflare@4.20260317.0
+
 ## 0.13.1
 
 ### Patch Changes
@@ -36,13 +104,13 @@
     import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
     export default defineWorkersProject({
-    	test: {
-    		poolOptions: {
-    			workers: {
-    				wrangler: { configPath: "./wrangler.jsonc" },
-    			},
-    		},
-    	},
+      test: {
+        poolOptions: {
+          workers: {
+            wrangler: { configPath: "./wrangler.jsonc" },
+          },
+        },
+      },
     });
     ```
 
@@ -53,11 +121,11 @@
     import { defineConfig } from "vitest/config";
 
     export default defineConfig({
-    	plugins: [
-    		cloudflareTest({
-    			wrangler: { configPath: "./wrangler.jsonc" },
-    		}),
-    	],
+      plugins: [
+        cloudflareTest({
+          wrangler: { configPath: "./wrangler.jsonc" },
+        }),
+      ],
     });
     ```
 
@@ -320,7 +388,7 @@
   ```ts
   // First wait for the workflow instance to complete:
   await expect(
-  	instance.waitForStatus({ status: "complete" })
+    instance.waitForStatus({ status: "complete" })
   ).resolves.not.toThrow();
 
   // Then, get its output
@@ -328,7 +396,7 @@
 
   // Or for errored workflow instances, get their error:
   await expect(
-  	instance.waitForStatus({ status: "errored" })
+    instance.waitForStatus({ status: "errored" })
   ).resolves.not.toThrow();
   const error = await instance.getError();
   ```
@@ -1292,12 +1360,12 @@
     ```js
     // src/index.js
     export default {
-    	async fetch() {
-    		const url = new URL(request.url);
-    		const name = url.pathname;
-    		const value = (await import("." + name)).default;
-    		return new Response(value);
-    	},
+      async fetch() {
+        const url = new URL(request.url);
+        const name = url.pathname;
+        const value = (await import("." + name)).default;
+        return new Response(value);
+      },
     };
     ```
 
@@ -1366,18 +1434,16 @@
       ```js
       // src/index.js
       export default {
-      	async fetch() {
-      		const name = new URL(request.url).pathname;
-      		const moduleName = "./" + name;
-      		const value = (await import(moduleName)).default;
-      		return new Response(value);
-      	},
+        async fetch() {
+          const name = new URL(request.url).pathname;
+          const moduleName = "./" + name;
+          const value = (await import(moduleName)).default;
+          return new Response(value);
+        },
       };
       ```
 
-      Now, no extra modules are included in the bundle, and a request to `http://localhost:8787/hidden/secret.js` will throw an error. You can use the `find_additional_modules` feature to include it again.
-
-      2. Don't use the wildcard import pattern:
+      Now, no extra modules are included in the bundle, and a request to `http://localhost:8787/hidden/secret.js` will throw an error. You can use the `find_additional_modules` feature to include it again. 2. Don't use the wildcard import pattern:
 
       ```js
       // src/index.js
@@ -1385,17 +1451,17 @@
       import two from "./two.js";
 
       export default {
-      	async fetch() {
-      		const name = new URL(request.url).pathname;
-      		switch (name) {
-      			case "/one.js":
-      				return new Response(one);
-      			case "/two.js":
-      				return new Response(two);
-      			default:
-      				return new Response("Not found", { status: 404 });
-      		}
-      	},
+        async fetch() {
+          const name = new URL(request.url).pathname;
+          switch (name) {
+            case "/one.js":
+              return new Response(one);
+            case "/two.js":
+              return new Response(two);
+            default:
+              return new Response("Not found", { status: 404 });
+          }
+        },
       };
       ```
 
@@ -1410,18 +1476,18 @@
       ```js
       // eslint.config.js
       export default [
-      	{
-      		rules: {
-      			"no-restricted-syntax": [
-      				"error",
-      				{
-      					selector: "ImportExpression[argument.type!='Literal']",
-      					message:
-      						"Dynamic imports with non-literal arguments are not allowed.",
-      				},
-      			],
-      		},
-      	},
+        {
+          rules: {
+            "no-restricted-syntax": [
+              "error",
+              {
+                selector: "ImportExpression[argument.type!='Literal']",
+                message:
+                  "Dynamic imports with non-literal arguments are not allowed.",
+              },
+            ],
+          },
+        },
       ];
       ```
 
@@ -1553,21 +1619,21 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-  	test: {
-  		deps: {
-  			optimizer: {
-  				ssr: {
-  					enabled: true,
-  					include: ["your-package-name"],
-  				},
-  			},
-  		},
-  		poolOptions: {
-  			workers: {
-  				// ...
-  			},
-  		},
-  	},
+    test: {
+      deps: {
+        optimizer: {
+          ssr: {
+            enabled: true,
+            include: ["your-package-name"],
+          },
+        },
+      },
+      poolOptions: {
+        workers: {
+          // ...
+        },
+      },
+    },
   });
   ```
 
@@ -2441,16 +2507,16 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-  	test: {
-  		poolOptions: {
-  			workers: {
-  				wrangler: {
-  					configPath: "./wrangler.toml",
-  					environment: "production",
-  				},
-  			},
-  		},
-  	},
+    test: {
+      poolOptions: {
+        workers: {
+          wrangler: {
+            configPath: "./wrangler.toml",
+            environment: "production",
+          },
+        },
+      },
+    },
   });
   ```
 

@@ -1,9 +1,7 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -25,7 +23,6 @@ import {
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
 	mockPostConsumerById,
-	mockPostQueueHTTPConsumer,
 	mockPutQueueConsumerById,
 } from "./helpers";
 import type { QueueResponse } from "../../queues/client";
@@ -95,7 +92,7 @@ describe("deploy", () => {
 	describe("queues", () => {
 		const queueId = "queue-id";
 		const queueName = "queue1";
-		it("should upload producer bindings", async () => {
+		it("should upload producer bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [{ binding: "QUEUE_ONE", queue: "queue1" }],
@@ -143,7 +140,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update queue producers on deploy", async () => {
+		it("should update queue producers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [
@@ -189,7 +186,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post worker queue consumers on deploy", async () => {
+		it("should post worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -244,7 +241,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post worker queue consumers on deploy, using command line script name arg", async () => {
+		it("should post worker queue consumers on deploy, using command line script name arg", async ({
+			expect,
+		}) => {
 			const expectedScriptName = "command-line-arg-script-name";
 			writeWranglerConfig({
 				queues: {
@@ -300,7 +299,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update worker queue consumers on deploy", async () => {
+		it("should update worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -363,7 +362,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should update worker (service) queue consumers with default environment on deploy", async () => {
+		it("should update worker (service) queue consumers with default environment on deploy", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -431,125 +432,29 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should post queue http consumers on deploy", async () => {
+		it("should reject http_pull consumer type in config", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
 						{
 							queue: queueName,
-							type: "http_pull",
-							dead_letter_queue: "myDLQ",
-							max_batch_size: 5,
-							visibility_timeout_ms: 4000,
-							max_retries: 10,
-							retry_delay: 1,
+							// Cast needed to simulate invalid user input that bypasses static type checking; runtime validation is what this test exercises
+							type: "http_pull" as "worker",
 						},
 					],
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const existingQueue: QueueResponse = {
-				queue_id: queueId,
-				queue_name: queueName,
-				created_on: "",
-				producers: [],
-				consumers: [],
-				producers_total_count: 0,
-				consumers_total_count: 0,
-				modified_on: "",
-			};
-			mockGetQueueByName(queueName, existingQueue);
-			mockPostQueueHTTPConsumer(queueId, {
-				type: "http_pull",
-				dead_letter_queue: "myDLQ",
-				settings: {
-					batch_size: 5,
-					max_retries: 10,
-					visibility_timeout_ms: 4000,
-					retry_delay: 1,
-				},
-			});
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				  Consumer for queue1
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
-		it("should update queue http consumers when one already exists for queue", async () => {
-			writeWranglerConfig({
-				queues: {
-					consumers: [
-						{
-							queue: queueName,
-							type: "http_pull",
-						},
-					],
-				},
-			});
-			await fs.promises.writeFile("index.js", `export default {};`);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const existingQueue: QueueResponse = {
-				queue_id: queueId,
-				queue_name: queueName,
-				created_on: "",
-				producers: [],
-				consumers: [
-					{
-						type: "http_pull",
-						consumer_id: "queue1-consumer-id",
-						settings: {},
-					},
-				],
-				producers_total_count: 0,
-				consumers_total_count: 0,
-				modified_on: "",
-			};
-			mockGetQueueByName(queueName, existingQueue);
-
-			msw.use(
-				http.put(
-					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
-					async ({ params }) => {
-						expect(params.queueId).toEqual(queueId);
-						expect(params.consumerId).toEqual("queue1-consumer-id");
-						expect(params.accountId).toEqual("some-account-id");
-						return HttpResponse.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						});
-					}
-				)
+			await expect(runWrangler("deploy index.js")).rejects.toThrowError(
+				/Only "worker" consumers can be configured in your Wrangler configuration/
 			);
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				  Consumer for queue1
-				Current Version ID: Galaxy-Class"
-			`);
 		});
 
-		it("should support queue consumer concurrency with a max concurrency specified", async () => {
+		it("should support queue consumer concurrency with a max concurrency specified", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -612,7 +517,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should support queue consumer concurrency with a null max concurrency", async () => {
+		it("should support queue consumer concurrency with a null max concurrency", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -676,7 +583,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should support queue consumer with max_batch_timeout of 0", async () => {
+		it("should support queue consumer with max_batch_timeout of 0", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					consumers: [
@@ -740,7 +649,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("consumer should error when a queue doesn't exist", async () => {
+		it("consumer should error when a queue doesn't exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [],
@@ -767,7 +678,9 @@ describe("deploy", () => {
 			);
 		});
 
-		it("producer should error when a queue doesn't exist", async () => {
+		it("producer should error when a queue doesn't exist", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				queues: {
 					producers: [{ queue: queueName, binding: "QUEUE_ONE" }],

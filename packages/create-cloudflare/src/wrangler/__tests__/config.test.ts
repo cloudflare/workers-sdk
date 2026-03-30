@@ -18,13 +18,13 @@ describe("update wrangler config", () => {
 	beforeEach(() => {
 		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(mockCompatDate);
 		vi.mocked(existsSync).mockImplementation((f) =>
-			(f as string).endsWith(".toml"),
+			(f as string).endsWith(".toml")
 		);
 		mockWorkersTypesDirectory();
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`,
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
 		);
 	});
 
@@ -49,6 +49,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[[services]]
@@ -106,6 +107,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[[services]]
@@ -144,7 +146,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement `<TBD>` (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<TBD>",
@@ -181,6 +183,7 @@ describe("update wrangler config", () => {
 				"observability": {
 					"enabled": true
 				},
+				"upload_source_maps": true,
 				"compatibility_flags": [
 					"nodejs_compat"
 				]
@@ -213,7 +216,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<WORKER_NAME>",
@@ -250,6 +253,7 @@ describe("update wrangler config", () => {
 				"observability": {
 					"enabled": true
 				},
+				"upload_source_maps": true,
 				"compatibility_flags": [
 					"nodejs_compat"
 				]
@@ -282,7 +286,7 @@ describe("update wrangler config", () => {
 
 	test("string literal replacement", async ({ expect }) => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
-			"\n",
+			"\n"
 		);
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -296,6 +300,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
@@ -348,6 +353,7 @@ describe("update wrangler config", () => {
 			main = "src/index.ts"
 			name = "test"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
@@ -402,6 +408,7 @@ describe("update wrangler config", () => {
 			# https://developers.cloudflare.com/workers/wrangler/configuration/
 			name = "test"
 			compatibility_date = "2001-10-12"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
@@ -442,7 +449,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement with Workflows (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<WORKER_NAME>",
@@ -477,6 +484,7 @@ describe("update wrangler config", () => {
 				"observability": {
 					"enabled": true
 				},
+				"upload_source_maps": true,
 				"compatibility_flags": [
 					"nodejs_compat"
 				]
@@ -567,7 +575,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -586,7 +594,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -606,7 +614,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -643,7 +651,7 @@ describe("update wrangler config", () => {
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "my-worker",
@@ -673,13 +681,14 @@ describe("update wrangler config", () => {
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newToml).not.toContain("nodejs_compat");
+		expect(newToml).not.toContain("upload_source_maps");
 	});
 
-	test("does not add nodejs_compat for Python projects (json)", async ({
+	test("does not add nodejs_compat or upload_source_maps for Python projects (json)", async ({
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const pythonCtx = createTestContext("test", {
 			...ctx.args,
@@ -695,5 +704,6 @@ describe("update wrangler config", () => {
 
 		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newConfig).not.toContain("nodejs_compat");
+		expect(newConfig).not.toContain("upload_source_maps");
 	});
 });

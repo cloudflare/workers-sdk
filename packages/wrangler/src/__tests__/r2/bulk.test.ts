@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { MAX_UPLOAD_SIZE_BYTES } from "../../r2/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -63,6 +62,8 @@ describe("r2", () => {
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
+					? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+					🤖 Using fallback value in non-interactive context: yes
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
@@ -88,6 +89,8 @@ describe("r2", () => {
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket with InfrequentAccess storage class using a concurrency of 20
+					? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+					🤖 Using fallback value in non-interactive context: yes
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
@@ -238,6 +241,8 @@ describe("r2", () => {
 					Resource location: remote
 
 					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
+					? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+					🤖 Using fallback value in non-interactive context: yes
 					Uploaded 100% (2 out of 2)"
 				`);
 			});

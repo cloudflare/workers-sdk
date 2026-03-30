@@ -83,6 +83,11 @@ export function printBindings(
 	const queues = extractBindingsOfType("queue", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
@@ -99,6 +104,7 @@ export function printBindings(
 	const text_blobs = extractBindingsOfType("text_blob", bindings);
 	const browser = extractBindingsOfType("browser", bindings);
 	const images = extractBindingsOfType("images", bindings);
+	const stream = extractBindingsOfType("stream", bindings);
 	const ai = extractBindingsOfType("ai", bindings);
 	const version_metadata = extractBindingsOfType("version_metadata", bindings);
 	// Extract all vars (plain_text, json, secret_text) together to preserve insertion order
@@ -292,7 +298,7 @@ export function printBindings(
 					const value =
 						typeof database_id == "symbol"
 							? database_id
-							: preview_database_id ?? database_name ?? database_id;
+							: (preview_database_id ?? database_name ?? database_id);
 
 					return {
 						name: binding,
@@ -320,6 +326,28 @@ export function printBindings(
 					}),
 				};
 			})
+		);
+	}
+
+	if (ai_search_namespaces.length > 0) {
+		output.push(
+			...ai_search_namespaces.map(({ binding, namespace }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("ai_search_namespace"),
+				value: namespace ? String(namespace) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
+	if (ai_search.length > 0) {
+		output.push(
+			...ai_search.map(({ binding, instance_name }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("ai_search"),
+				value: instance_name ? String(instance_name) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
 		);
 	}
 
@@ -507,6 +535,23 @@ export function printBindings(
 				value: undefined,
 				mode: getMode({
 					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+				}),
+			}))
+		);
+	}
+
+	if (stream.length > 0) {
+		output.push(
+			...stream.map(({ binding, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("stream"),
+				value: undefined,
+				mode: getMode({
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
 				}),
 			}))
 		);
@@ -718,7 +763,9 @@ export function printBindings(
 
 		const maxValueLength = Math.max(
 			...output.map((b) =>
-				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
+				typeof b.value === "symbol"
+					? "inherited".length
+					: (b.value?.length ?? 0)
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
@@ -765,7 +812,7 @@ export function printBindings(
 			const bindingValue = dim(
 				typeof binding.value === "symbol"
 					? chalk.italic("inherited")
-					: binding.value ?? ""
+					: (binding.value ?? "")
 			);
 			const bindingString = padEndAnsi(
 				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,

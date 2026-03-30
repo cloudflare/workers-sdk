@@ -1,15 +1,15 @@
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import { PluginContext } from "../../../src/context";
+import { resolvePluginConfig } from "../../../src/plugin-config";
+import { addBindingsShortcut } from "../../../src/plugins/shortcuts";
 import {
 	resetServerLogs,
 	satisfiesViteVersion,
 	serverLogs,
 	viteServer,
 } from "../../__test-utils__";
-import { PluginContext } from "../../../src/context";
-import { resolvePluginConfig } from "../../../src/plugin-config";
-import { addBindingsShortcut } from "../../../src/plugins/shortcuts";
 
 const normalize = (logs: string[]) =>
 	stripVTControlCharacters(logs.join("\n"))

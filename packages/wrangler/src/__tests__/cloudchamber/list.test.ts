@@ -1,8 +1,6 @@
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -22,7 +20,6 @@ describe("cloudchamber list", () => {
 	beforeEach(mockAccount);
 
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 

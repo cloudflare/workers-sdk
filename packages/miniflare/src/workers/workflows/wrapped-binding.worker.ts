@@ -1,9 +1,7 @@
 import { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 
 class WorkflowImpl implements Workflow {
-	constructor(private binding: WorkflowBinding) {
-		this.binding = binding;
-	}
+	constructor(private binding: WorkflowBinding) {}
 
 	async get(id: string): Promise<WorkflowInstance> {
 		const instanceHandle = new InstanceImpl(id, this.binding);
@@ -69,30 +67,33 @@ class InstanceImpl implements WorkflowInstance {
 		private binding: WorkflowBinding
 	) {}
 
+	private async getInstance(): Promise<WorkflowInstance & Disposable> {
+		return (await this.binding.get(this.id)) as WorkflowInstance & Disposable;
+	}
+
 	public async pause(): Promise<void> {
-		// Look for instance in namespace
-		// Get engine stub
-		// Call a few functions on stub
-		throw new Error("Not implemented yet");
+		using instance = await this.getInstance();
+		await instance.pause();
 	}
 
 	public async resume(): Promise<void> {
-		throw new Error("Not implemented yet");
+		using instance = await this.getInstance();
+		await instance.resume();
 	}
 
 	public async terminate(): Promise<void> {
-		throw new Error("Not implemented yet");
+		using instance = await this.getInstance();
+		await instance.terminate();
 	}
 
 	public async restart(): Promise<void> {
-		throw new Error("Not implemented yet");
+		using instance = await this.getInstance();
+		await instance.restart();
 	}
 
 	public async status(): Promise<InstanceStatus> {
-		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
-			Disposable;
+		using instance = await this.getInstance();
 		using res = (await instance.status()) as InstanceStatus & Disposable;
-		instance[Symbol.dispose]();
 		return structuredClone(res);
 	}
 
@@ -100,10 +101,8 @@ class InstanceImpl implements WorkflowInstance {
 		payload: unknown;
 		type: string;
 	}): Promise<void> {
-		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
-			Disposable;
+		using instance = await this.getInstance();
 		await instance.sendEvent(args);
-		instance[Symbol.dispose]();
 	}
 }
 

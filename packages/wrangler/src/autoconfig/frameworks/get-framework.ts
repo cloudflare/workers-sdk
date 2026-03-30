@@ -22,7 +22,7 @@ export type FrameworkInfo = {
 	class: typeof Framework;
 };
 
-const staticFramework = {
+export const staticFramework = {
 	id: "static",
 	name: "Static",
 	class: Static,
@@ -53,7 +53,7 @@ export const allKnownFrameworksIds = new Set(
 	allKnownFrameworks.map(({ id }) => id)
 );
 
-export function getFramework(frameworkId?: FrameworkInfo["id"]): Framework {
+export function getFramework(frameworkId: FrameworkInfo["id"]): Framework {
 	const targetedFramework = allKnownFrameworks.find(
 		(framework) => framework.id === frameworkId
 	);

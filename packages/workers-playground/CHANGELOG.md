@@ -1,5 +1,11 @@
 # workers-playground
 
+## 0.4.2
+
+### Patch Changes
+
+- [#11899](https://github.com/cloudflare/workers-sdk/pull/11899) [`9a1cf29`](https://github.com/cloudflare/workers-sdk/commit/9a1cf29e6806335886dac56a85246cb76f1412d0) Thanks [@hoodmane](https://github.com/hoodmane)! - Remove cf-requirements support for Python workers. It hasn't worked with the runtime for a while now.
+
 ## 0.4.1
 
 ### Patch Changes

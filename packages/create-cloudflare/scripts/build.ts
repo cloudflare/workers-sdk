@@ -1,6 +1,7 @@
-import { cp } from "fs/promises";
-import { build, BuildOptions, context } from "esbuild";
+import { cp } from "node:fs/promises";
+import { build, context } from "esbuild";
 import * as glob from "glob";
+import type { BuildOptions } from "esbuild";
 
 const run = async () => {
 	const argv = process.argv.slice(2);
@@ -16,7 +17,7 @@ const run = async () => {
 		format: "cjs",
 		define: {
 			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
-				process.env.SPARROW_SOURCE_KEY ?? "",
+				process.env.SPARROW_SOURCE_KEY ?? ""
 			),
 		},
 	};
@@ -34,7 +35,7 @@ const run = async () => {
 	};
 
 	const runWatch = async () => {
-		let ctx = await context(config);
+		const ctx = await context(config);
 		await ctx.watch();
 		console.log("Watching...");
 	};

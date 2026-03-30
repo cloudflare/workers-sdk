@@ -23,32 +23,27 @@ export const additionalModulesPlugin = createPlugin(
 			resolveId: {
 				filter: { id: moduleRuleFilters },
 				async handler(source, importer, options) {
-					const additionalModuleType = matchAdditionalModule(source);
+					const resolved = await this.resolve(source, importer, options);
 
-					if (!additionalModuleType) {
+					if (!resolved) {
 						return;
 					}
 
-					// We clean the module URL here as the default rules include `.wasm?module`.
-					// We therefore need the match to include the query param but remove it before resolving the ID.
-					const resolved = await this.resolve(
-						cleanUrl(source),
-						importer,
-						options
-					);
+					const additionalModuleType = matchAdditionalModule(resolved.id);
 
-					if (!resolved) {
-						throw new Error(
-							`Import "${source}" not found. Does the file exist?`
-						);
+					if (!additionalModuleType) {
+						return resolved;
 					}
 
+					// Strip query params from the resolved path
+					const filePath = cleanUrl(resolved.id);
+
 					// Add the path to the additional module so that we can identify the module in the `hotUpdate` hook
-					additionalModulePaths.add(resolved.id);
+					additionalModulePaths.add(filePath);
 
 					return {
 						external: true,
-						id: createModuleReference(additionalModuleType, resolved.id),
+						id: createModuleReference(additionalModuleType, filePath),
 					};
 				},
 			},
@@ -137,7 +132,11 @@ const moduleRules: ModuleRules = [
 	{ type: "Text", pattern: /\.(txt|html|sql)$/ },
 ];
 
-const moduleRuleFilters = moduleRules.map((rule) => rule.pattern);
+const subpathImportRE = /^#/;
+const moduleRuleFilters = [
+	...moduleRules.map((rule) => rule.pattern),
+	subpathImportRE,
+];
 
 function matchAdditionalModule(source: string) {
 	for (const rule of moduleRules) {

@@ -77,6 +77,8 @@ type VariableNames =
 
 	/** Custom directory for Wrangler's cache files (overrides `node_modules/.cache/wrangler`). */
 	| "WRANGLER_CACHE_DIR"
+	/** Custom path to cloudflared binary (overrides automatic binary management). */
+	| "CLOUDFLARED_PATH"
 
 	// ## Advanced Configuration
 
@@ -94,6 +96,13 @@ type VariableNames =
 	| "WRANGLER_REVOKE_URL"
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
+
+	// ## Cloudflare Access Service Token (for CI/non-interactive environments)
+
+	/** Cloudflare Access Service Token Client ID. Used to authenticate with Access-protected domains in non-interactive environments (e.g. CI). */
+	| "CLOUDFLARE_ACCESS_CLIENT_ID"
+	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
+	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
 
 	// ## Experimental Feature Flags
 

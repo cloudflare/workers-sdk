@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import { thrownIsDoesNotExistError } from "@cloudflare/workers-shared";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- complex deployment logic */
+// eslint-disable-next-line no-restricted-imports
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";

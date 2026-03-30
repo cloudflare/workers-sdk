@@ -44,7 +44,7 @@ async function getVariant(ctx: C3Context) {
 		const selected = variantsOptions.find((v) => v.value === ctx.args.variant);
 		if (!selected) {
 			throw new Error(
-				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`,
+				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`
 			);
 		}
 		return selected.value;

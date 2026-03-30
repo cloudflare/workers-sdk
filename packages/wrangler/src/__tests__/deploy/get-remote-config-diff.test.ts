@@ -331,6 +331,9 @@ describe("getRemoteConfigsDiff", () => {
 				images: {
 					binding: "IMAGES",
 				},
+				stream: {
+					binding: "STREAM",
+				},
 				send_email: [
 					{
 						name: "email",
@@ -425,6 +428,10 @@ describe("getRemoteConfigsDiff", () => {
 				images: {
 					binding: "IMAGES",
 					remote: true,
+				},
+				stream: {
+					binding: "STREAM",
+					remote: false,
 				},
 				send_email: [
 					{

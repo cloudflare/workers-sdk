@@ -79,7 +79,7 @@ export function createReporter() {
 
 	function sendEvent<EventName extends Event["name"]>(
 		name: EventName,
-		properties: EventProperties<EventName>,
+		properties: EventProperties<EventName>
 	): void {
 		if (!isEnabled) {
 			return;
@@ -100,7 +100,7 @@ export function createReporter() {
 					...properties,
 				},
 			},
-			enableLog,
+			enableLog
 		);
 
 		// TODO(consider): retry failed requests
@@ -210,7 +210,7 @@ export function createReporter() {
 							tracker?.setEventProperty(key, value);
 						},
 					},
-					options.promise,
+					options.promise
 				),
 			]);
 
@@ -235,14 +235,14 @@ export function createReporter() {
 	// To be used within `collectAsyncMetrics` to update the properties object sent to sparrow
 	function setEventProperty<Key extends KeysOfUnion<Event["properties"]>>(
 		key: Key,
-		value: unknown,
+		value: unknown
 	) {
 		const store = als.getStore();
 
 		// Throw only on test environment to avoid breaking the CLI
 		if (!store && process.env.VITEST) {
 			throw new Error(
-				"`setEventProperty` must be called within `collectAsyncMetrics`",
+				"`setEventProperty` must be called within `collectAsyncMetrics`"
 			);
 		}
 
@@ -298,14 +298,14 @@ function logTelemetryStatus(enabled: boolean) {
 }
 
 export const runTelemetryCommand = (
-	action: "status" | "enable" | "disable",
+	action: "status" | "enable" | "disable"
 ) => {
 	switch (action) {
 		case "enable": {
 			updateC3Permission(true);
 			logTelemetryStatus(true);
 			logRaw(
-				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!",
+				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!"
 			);
 			break;
 		}

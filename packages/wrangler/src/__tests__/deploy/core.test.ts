@@ -1,5 +1,3 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
@@ -8,7 +6,7 @@ import ci from "ci-info";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { Static } from "../../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../../autoconfig/run";
@@ -120,7 +118,7 @@ describe("deploy", () => {
 		clearOutputFilePath();
 	});
 
-	it("should output log file with deployment details", async () => {
+	it("should output log file with deployment details", async ({ expect }) => {
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "output");
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
 		writeWorkerSource();
@@ -176,7 +174,7 @@ describe("deploy", () => {
 		});
 	});
 
-	it("should successfully deploy with CI tag match", async () => {
+	it("should successfully deploy with CI tag match", async ({ expect }) => {
 		vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 		writeWorkerSource();
 		writeWranglerConfig({
@@ -209,7 +207,9 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME", async () => {
+	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
 		writeWorkerSource();
 		writeWranglerConfig({
@@ -240,7 +240,9 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME and outputs the correct output file", async () => {
+	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME and outputs the correct output file", async ({
+		expect,
+	}) => {
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "override-output");
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
 		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
@@ -294,7 +296,9 @@ describe("deploy", () => {
 		});
 	});
 
-	it("should resolve wrangler.toml relative to the entrypoint", async () => {
+	it("should resolve wrangler.toml relative to the entrypoint", async ({
+		expect,
+	}) => {
 		fs.mkdirSync("./some-path/worker", { recursive: true });
 		fs.writeFileSync(
 			"./some-path/wrangler.toml",
@@ -336,7 +340,7 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should support wrangler.json", async () => {
+	it("should support wrangler.json", async ({ expect }) => {
 		fs.mkdirSync("./my-worker", { recursive: true });
 		fs.writeFileSync(
 			"./wrangler.json",
@@ -380,7 +384,7 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should include serialised FormData in debug logs", async () => {
+	it("should include serialised FormData in debug logs", async ({ expect }) => {
 		fs.mkdirSync("./my-worker", { recursive: true });
 		fs.writeFileSync(
 			"./my-worker/wrangler.toml",
@@ -414,7 +418,7 @@ describe("deploy", () => {
 		);
 	});
 
-	it("should support wrangler.jsonc", async () => {
+	it("should support wrangler.jsonc", async ({ expect }) => {
 		fs.mkdirSync("./my-worker", { recursive: true });
 		fs.writeFileSync(
 			"./wrangler.jsonc",
@@ -458,7 +462,9 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should not deploy if there's any other kind of error when checking deployment source", async () => {
+	it("should not deploy if there's any other kind of error when checking deployment source", async ({
+		expect,
+	}) => {
 		writeWorkerSource();
 		writeWranglerConfig();
 		mockSubDomainRequest();
@@ -526,7 +532,9 @@ describe("deploy", () => {
 		`);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --x-autoconfig=false", async () => {
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --x-autoconfig=false", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			pages_build_output_dir: "public",
 			name: "test-name",
@@ -541,7 +549,9 @@ describe("deploy", () => {
 		);
 	});
 
-	it("should error helpfully if pages_build_output_dir is set in wrangler.toml and --x-autoconfig is provided", async () => {
+	it("should error helpfully if pages_build_output_dir is set in wrangler.toml and --x-autoconfig is provided", async ({
+		expect,
+	}) => {
 		mockConfirm({
 			text: "Are you sure that you want to proceed?",
 			result: true,
@@ -557,7 +567,9 @@ describe("deploy", () => {
 		);
 	});
 
-	it("should attempt to run the autoconfig flow when pages_build_output_dir and (--x-autoconfig is used)", async () => {
+	it("should attempt to run the autoconfig flow when pages_build_output_dir and (--x-autoconfig is used)", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			pages_build_output_dir: "public",
 			name: "test-name",
@@ -598,7 +610,9 @@ describe("deploy", () => {
 		);
 	});
 
-	it("in non-interactive mode, attempts to deploy a Pages project when --x-autoconfig is used", async () => {
+	it("in non-interactive mode, attempts to deploy a Pages project when --x-autoconfig is used", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			pages_build_output_dir: "public",
@@ -639,7 +653,9 @@ describe("deploy", () => {
 		);
 	});
 	describe("output additional script information", () => {
-		it("for first party workers, it should print worker information at log level", async () => {
+		it("for first party workers, it should print worker information at log level", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			fs.writeFileSync(
 				"./wrangler.toml",
@@ -691,7 +707,9 @@ describe("deploy", () => {
 			vi.unstubAllGlobals();
 		});
 
-		it("drops a user into the login flow if they're unauthenticated", async () => {
+		it("drops a user into the login flow if they're unauthenticated", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			writeWranglerConfig();
 			writeWorkerSource();
@@ -725,7 +743,9 @@ describe("deploy", () => {
 		describe("with an alternative auth domain", () => {
 			mockAuthDomain({ domain: "dash.staging.cloudflare.com" });
 
-			it("drops a user into the login flow if they're unauthenticated", async () => {
+			it("drops a user into the login flow if they're unauthenticated", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockDomainUsesAccess({
@@ -767,7 +787,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("warns a user when they're authenticated with an API token in wrangler config file", async () => {
+		it("warns a user when they're authenticated with an API token in wrangler config file", async ({
+			expect,
+		}) => {
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -808,7 +830,9 @@ describe("deploy", () => {
 		});
 
 		describe("non-TTY", () => {
-			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async () => {
+			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async ({
+				expect,
+			}) => {
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 				setIsTTY(false);
 				writeWranglerConfig({
@@ -835,7 +859,9 @@ describe("deploy", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async () => {
+			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async ({
+				expect,
+			}) => {
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
 				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
 				setIsTTY(false);
@@ -862,7 +888,9 @@ describe("deploy", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
+			it("should throw an error in non-TTY & there is more than one account associated with API token", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
 				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
@@ -888,7 +916,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should redact account names in CI even when non-interactive", async () => {
+			it("should redact account names in CI even when non-interactive", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				vi.mocked(ci).isCI = true;
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");
@@ -915,7 +945,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async () => {
+			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				writeWranglerConfig({
 					account_id: undefined,
@@ -939,7 +971,9 @@ describe("deploy", () => {
 			          "
 		        `);
 			});
-			it("should throw error with no account ID provided and no members retrieved", async () => {
+			it("should throw error with no account ID provided and no members retrieved", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				writeWranglerConfig({
 					account_id: undefined,
@@ -966,7 +1000,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("warnings", () => {
-		it("should warn user when worker was last deployed from api", async () => {
+		it("should warn user when worker was last deployed from api", async ({
+			expect,
+		}) => {
 			msw.use(...mswSuccessDeploymentScriptAPI);
 			writeWranglerConfig();
 			writeWorkerSource();
@@ -988,7 +1024,9 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should warn user when additional properties are passed to a services config", async () => {
+		it("should warn user when additional properties are passed to a services config", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				d1_databases: [
 					{
@@ -1016,11 +1054,11 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should log esbuild warnings", async () => {
+		it("should log esbuild warnings", async ({ expect }) => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
-				dedent/* javascript */ `
+				dedent /* javascript */ `
 					export default {
 						fetch() {
 							return
@@ -1045,7 +1083,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("environments", () => {
-		it("should use legacy environments by default", async () => {
+		it("should use legacy environments by default", async ({ expect }) => {
 			writeWranglerConfig({ env: { "some-env": {} } });
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -1071,7 +1109,9 @@ describe("deploy", () => {
 		});
 
 		describe("legacy", () => {
-			it("uses the script name when no environment is specified", async () => {
+			it("uses the script name when no environment is specified", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1095,7 +1135,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("appends the environment name when provided, and there is associated config", async () => {
+			it("appends the environment name when provided, and there is associated config", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1120,7 +1162,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("appends the environment name when provided (with a warning), if there are no configured environments", async () => {
+			it("appends the environment name when provided (with a warning), if there are no configured environments", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({});
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1159,7 +1203,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should throw an error when an environment name when provided, which doesn't match those in the config", async () => {
+			it("should throw an error when an environment name when provided, which doesn't match those in the config", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({ env: { "other-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1195,7 +1241,9 @@ describe("deploy", () => {
 		});
 
 		describe("services", () => {
-			it("uses the script name when no environment is specified", async () => {
+			it("uses the script name when no environment is specified", async ({
+				expect,
+			}) => {
 				writeWranglerConfig();
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1226,7 +1274,7 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("publishes as an environment when provided", async () => {
+			it("publishes as an environment when provided", async ({ expect }) => {
 				writeWranglerConfig({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -1262,7 +1310,9 @@ describe("deploy", () => {
 		});
 	});
 
-	it("should resolve wrangler.toml relative to the entrypoint", async () => {
+	it("should resolve wrangler.toml relative to the entrypoint", async ({
+		expect,
+	}) => {
 		fs.mkdirSync("./some-path/worker", { recursive: true });
 		fs.writeFileSync(
 			"./some-path/wrangler.toml",
@@ -1304,7 +1354,9 @@ describe("deploy", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should output a deploy and an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH if autoconfig run", async () => {
+	it("should output a deploy and an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH if autoconfig run", async ({
+		expect,
+	}) => {
 		const outputFile = "./output.json";
 
 		vi.spyOn(

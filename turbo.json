@@ -9,10 +9,14 @@
 		"CLOUDFLARE_ACCOUNT_ID",
 		"CLOUDFLARE_API_TOKEN",
 		"CLOUDFLARE_CONTAINER_REGISTRY",
+		"CLOUDFLARED_PATH",
 		"ConEmuANSI",
 		"DOCKER_HOST",
+		"E2E_SHARD_COUNT",
+		"E2E_SHARD",
 		"LOCAL_TESTS_WITHOUT_DOCKER",
 		"MINIFLARE_CACHE_DIR",
+		"MINIFLARE_CONTAINER_EGRESS_IMAGE",
 		"MINIFLARE_CONTAINER_EGRESS_IMAGE",
 		"NODE_EXTRA_CA_CERTS",
 		"PWD",
@@ -44,7 +48,7 @@
 			"persistent": true,
 			"cache": false
 		},
-		"check:lint": {},
+		"//#check:lint": {},
 		"check:type": {
 			"dependsOn": ["build"]
 		},
@@ -58,7 +62,12 @@
 		"test:e2e": {
 			"dependsOn": ["build"],
 			"outputLogs": "new-only",
-			"env": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "NODE_DEBUG"]
+			"env": [
+				"CLOUDFLARE_ACCOUNT_ID",
+				"CLOUDFLARE_API_TOKEN",
+				"E2E_ACCOUNT_WORKERS_DEV_DOMAIN",
+				"NODE_DEBUG"
+			]
 		},
 		"//#check:format": {
 			"cache": true

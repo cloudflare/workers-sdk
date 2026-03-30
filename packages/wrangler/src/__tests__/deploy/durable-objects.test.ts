@@ -1,9 +1,7 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect */
-
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { clearOutputFilePath } from "../../output";
 import { fetchSecrets } from "../../utils/fetch-secrets";
@@ -89,7 +87,9 @@ describe("deploy", () => {
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to deploy durable objects without migrations", async () => {
+		it("should warn when you try to deploy durable objects without migrations", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [{ name: "SOMENAME", class_name: "SomeClass" }],
@@ -140,7 +140,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("does not warn if all the durable object bindings are to external classes", async () => {
+		it("does not warn if all the durable object bindings are to external classes", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -178,7 +180,7 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy all migrations on first deploy", async () => {
+		it("should deploy all migrations on first deploy", async ({ expect }) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -229,7 +231,9 @@ describe("deploy", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload migrations past a previously uploaded tag", async () => {
+		it("should upload migrations past a previously uploaded tag", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -288,7 +292,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should not send migrations if they've all already been sent", async () => {
+		it("should not send migrations if they've all already been sent", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				durable_objects: {
 					bindings: [
@@ -340,7 +346,7 @@ describe("deploy", () => {
 		});
 
 		describe("service environments", () => {
-			it("should deploy all migrations on first deploy", async () => {
+			it("should deploy all migrations on first deploy", async ({ expect }) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -399,7 +405,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should deploy all migrations on first deploy (--env)", async () => {
+			it("should deploy all migrations on first deploy (--env)", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -469,7 +477,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should use a script's current migration tag when publishing migrations", async () => {
+			it("should use a script's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -536,7 +546,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should use an environment's current migration tag when publishing migrations", async () => {
+			it("should use an environment's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -615,7 +627,7 @@ describe("deploy", () => {
 		});
 
 		describe("dispatch namespaces", () => {
-			it("should deploy all migrations on first deploy", async () => {
+			it("should deploy all migrations on first deploy", async ({ expect }) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -668,7 +680,9 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should use a script's current migration tag when publishing migrations", async () => {
+			it("should use a script's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -726,7 +740,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("tail consumers", () => {
-		it("should allow specifying workers as tail consumers", async () => {
+		it("should allow specifying workers as tail consumers", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				tail_consumers: [
 					{ service: "listener " },
@@ -762,7 +778,9 @@ describe("deploy", () => {
 		});
 	});
 	describe("user limits", () => {
-		it("should allow specifying a cpu millisecond limit", async () => {
+		it("should allow specifying a cpu millisecond limit", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				limits: { cpu_ms: 15_000 },
 			});
@@ -787,7 +805,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should allow specifying a subrequests limit", async () => {
+		it("should allow specifying a subrequests limit", async ({ expect }) => {
 			writeWranglerConfig({
 				limits: { subrequests: 100 },
 			});
@@ -813,7 +831,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("ai", () => {
-		it("should upload ai bindings", async () => {
+		it("should upload ai bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				ai: { binding: "AI_BIND" },
 				browser: { binding: "MYBROWSER" },
@@ -853,7 +871,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("images", () => {
-		it("should upload images bindings", async () => {
+		it("should upload images bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				images: { binding: "IMAGES_BIND" },
 			});
@@ -886,8 +904,44 @@ describe("deploy", () => {
 			`);
 		});
 	});
+	describe("stream", () => {
+		it("should upload stream bindings", async ({ expect }) => {
+			writeWranglerConfig({
+				stream: { binding: "STREAM_BIND" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "stream",
+						name: "STREAM_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                 Resource
+				env.STREAM_BIND         Stream
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
 	describe("python", () => {
-		it("should upload python module defined in wrangler.toml", async () => {
+		it("should upload python module defined in wrangler.toml", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				main: "index.py",
 				compatibility_flags: ["python_workers"],
@@ -917,7 +971,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should print vendor modules correctly in table", async () => {
+		it("should print vendor modules correctly in table", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "src/index.py",
 				compatibility_flags: ["python_workers"],
@@ -999,7 +1053,9 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should upload python module specified in CLI args", async () => {
+		it("should upload python module specified in CLI args", async ({
+			expect,
+		}) => {
 			writeWranglerConfig({
 				compatibility_flags: ["python_workers"],
 			});
@@ -1029,7 +1085,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("hyperdrive", () => {
-		it("should upload hyperdrive bindings", async () => {
+		it("should upload hyperdrive bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				hyperdrive: [
 					{
@@ -1069,7 +1125,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("vpc_services", () => {
-		it("should upload VPC services bindings", async () => {
+		it("should upload VPC services bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				vpc_services: [
 					{
@@ -1108,7 +1164,7 @@ describe("deploy", () => {
 			`);
 		});
 
-		it("should upload multiple VPC services bindings", async () => {
+		it("should upload multiple VPC services bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				vpc_services: [
 					{
@@ -1158,7 +1214,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("mtls_certificates", () => {
-		it("should upload mtls_certificate bindings", async () => {
+		it("should upload mtls_certificate bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				mtls_certificates: [{ binding: "CERT_ONE", certificate_id: "1234" }],
 			});
@@ -1193,7 +1249,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("pipelines", () => {
-		it("should upload pipelines bindings", async () => {
+		it("should upload pipelines bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				pipelines: [
 					{
@@ -1233,7 +1289,7 @@ describe("deploy", () => {
 		});
 	});
 	describe("secrets_store_secrets", () => {
-		it("should upload secret store bindings", async () => {
+		it("should upload secret store bindings", async ({ expect }) => {
 			writeWranglerConfig({
 				secrets_store_secrets: [
 					{

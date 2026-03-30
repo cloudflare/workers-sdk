@@ -11,6 +11,23 @@ import {
 	PerformanceResourceTiming,
 } from "node:perf_hooks";
 
+// When native perf_hooks is disabled but workerd provides a web-standard
+// globalThis.performance (with addEventListener), unenv's polyfill defers to
+// the native object instead of creating a new Performance() instance.
+// This means Node.js-specific properties like nodeTiming are missing.
+// Detect this case and augment the object with the missing polyfill properties.
+if (!("__unenv__" in performance)) {
+	const proto = Performance.prototype;
+	for (const key of Object.getOwnPropertyNames(proto)) {
+		if (key !== "constructor" && !(key in performance)) {
+			const desc = Object.getOwnPropertyDescriptor(proto, key);
+			if (desc) {
+				Object.defineProperty(performance, key, desc);
+			}
+		}
+	}
+}
+
 // `performance` augments the existing workerd implementation
 // @ts-expect-error Node types do not match unenv
 globalThis.performance = performance;

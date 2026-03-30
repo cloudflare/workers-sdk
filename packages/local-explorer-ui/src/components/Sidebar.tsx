@@ -5,10 +5,15 @@ import { Link } from "@tanstack/react-router";
 import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
+import R2Icon from "../assets/icons/r2.svg?react";
+import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
+	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
+	WorkflowsWorkflow,
 } from "../api";
 import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
@@ -93,6 +98,13 @@ interface SidebarProps {
 	doNamespaces: WorkersNamespace[];
 	kvError: string | null;
 	kvNamespaces: WorkersKvNamespace[];
+	r2Buckets: R2Bucket[];
+	r2Error: string | null;
+	workers: LocalExplorerWorker[];
+	selectedWorker: string;
+	onWorkerChange: (workerName: string) => void;
+	workflows: WorkflowsWorkflow[];
+	workflowsError: string | null;
 }
 
 export function Sidebar({
@@ -103,7 +115,20 @@ export function Sidebar({
 	doNamespaces,
 	kvError,
 	kvNamespaces,
+	r2Buckets,
+	r2Error,
+	workers,
+	selectedWorker,
+	onWorkerChange,
+	workflows,
+	workflowsError,
 }: SidebarProps) {
+	const showWorkerSelector = workers.length > 1;
+
+	// Only include the worker search param when there are multiple workers.
+	// This keeps URLs clean in the common single-worker case.
+	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
+
 	return (
 		<aside className="flex w-sidebar flex-col border-r border-border bg-bg-secondary">
 			<a
@@ -121,6 +146,14 @@ export function Sidebar({
 				</div>
 			</a>
 
+			{showWorkerSelector && (
+				<WorkerSelector
+					workers={workers}
+					selectedWorker={selectedWorker}
+					onWorkerChange={onWorkerChange}
+				/>
+			)}
+
 			<SidebarItemGroup
 				emptyLabel="No namespaces"
 				error={kvError}
@@ -131,6 +164,7 @@ export function Sidebar({
 					label: ns.title,
 					link: {
 						params: { namespaceId: ns.id },
+						search: workerSearch,
 						to: "/kv/$namespaceId",
 					},
 				}))}
@@ -147,7 +181,7 @@ export function Sidebar({
 					label: db.name as string,
 					link: {
 						params: { databaseId: db.uuid },
-						search: { table: undefined },
+						search: { table: undefined, ...workerSearch },
 						to: "/d1/$databaseId",
 					},
 				}))}
@@ -168,11 +202,52 @@ export function Sidebar({
 						label: className,
 						link: {
 							params: { className },
+							search: workerSearch,
 							to: "/do/$className",
 						},
 					};
 				})}
 				title="Durable Objects"
+			/>
+
+			<SidebarItemGroup
+				emptyLabel="No buckets"
+				error={r2Error}
+				icon={R2Icon}
+				items={r2Buckets.map((bucket) => {
+					const bucketName = bucket.name ?? "Unknown";
+					return {
+						id: bucketName,
+						isActive:
+							currentPath === `/r2/${bucketName}` ||
+							currentPath.startsWith(`/r2/${bucketName}/`),
+						label: bucketName,
+						link: {
+							params: { bucketName },
+							search: workerSearch,
+							to: "/r2/$bucketName",
+						},
+					};
+				})}
+				title="R2 Buckets"
+			/>
+			<SidebarItemGroup
+				emptyLabel="No workflows"
+				error={workflowsError}
+				icon={WorkflowsIcon}
+				items={workflows.map((wf) => ({
+					id: wf.name as string,
+					isActive:
+						currentPath === `/workflows/${wf.name}` ||
+						currentPath.startsWith(`/workflows/${wf.name}/`),
+					label: wf.name as string,
+					link: {
+						params: { workflowName: wf.name },
+						search: workerSearch,
+						to: "/workflows/$workflowName",
+					},
+				}))}
+				title="Workflows"
 			/>
 		</aside>
 	);

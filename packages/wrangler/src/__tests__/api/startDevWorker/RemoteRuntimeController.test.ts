@@ -1,6 +1,5 @@
-/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
+// eslint-disable-next-line no-restricted-imports
 import { beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
@@ -12,7 +11,7 @@ import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
 } from "../../../dev/remote";
-import { getAccessToken } from "../../../user/access";
+import { getAccessHeaders } from "../../../user/access";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
@@ -36,7 +35,7 @@ vi.mock("../../../dev/remote", () => ({
 }));
 
 vi.mock("../../../user/access", () => ({
-	getAccessToken: vi.fn(),
+	getAccessHeaders: vi.fn(),
 	domainUsesAccess: vi.fn(),
 }));
 
@@ -164,7 +163,7 @@ describe("RemoteRuntimeController", () => {
 			tailUrl: "wss://test.workers.dev/tail",
 		});
 
-		vi.mocked(getAccessToken).mockResolvedValue(undefined);
+		vi.mocked(getAccessHeaders).mockResolvedValue({});
 	});
 
 	describe("preview token refresh", () => {

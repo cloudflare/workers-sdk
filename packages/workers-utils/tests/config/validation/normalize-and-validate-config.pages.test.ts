@@ -1,14 +1,12 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- see #12346 */
-import { assert, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
+import { assert, beforeEach, describe, it, vi } from "vitest";
 import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
 
 describe("normalizeAndValidateConfig() - Pages configuration", () => {
 	let pagesRawConfig: RawConfig = {};
 
-	beforeEach(() => {
+	beforeEach(({ expect }) => {
 		pagesRawConfig = generateRawConfigForPages("pages-is-awesome", "./public");
 
 		// supress Hyperdrive beta warnings
@@ -21,7 +19,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 	});
 
 	describe("named environments", () => {
-		it("should return config corresponding to the top-level environment, if no named environment is provided", () => {
+		it("should return config corresponding to the top-level environment, if no named environment is provided", ({
+			expect,
+		}) => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				pagesRawConfig,
 				undefined,
@@ -124,7 +124,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 			);
 		});
 
-		it('should return config corresponding to the "preview" named environment, if it exists in the configuration file', () => {
+		it('should return config corresponding to the "preview" named environment, if it exists in the configuration file', ({
+			expect,
+		}) => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				pagesRawConfig,
 				undefined,
@@ -227,7 +229,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 			);
 		});
 
-		it('should return config corresponding to the "production" named environment, if it exists in the configuration file', () => {
+		it('should return config corresponding to the "production" named environment, if it exists in the configuration file', ({
+			expect,
+		}) => {
 			const { config, diagnostics } = normalizeAndValidateConfig(
 				pagesRawConfig,
 				undefined,
@@ -330,7 +334,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 			);
 		});
 
-		it("should return config corresponding to any other Pages-unsupported named environment, if it exists in the configuration file", () => {
+		it("should return config corresponding to any other Pages-unsupported named environment, if it exists in the configuration file", ({
+			expect,
+		}) => {
 			/**
 			 * While Pages config only supports "preview" & "production" named
 			 * environments, the following is a valid test case, because all
@@ -450,7 +456,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 			);
 		});
 
-		it('should return config corresponding to the top-level environment, if the "preview" named environment does not exist in the configuration file', () => {
+		it('should return config corresponding to the top-level environment, if the "preview" named environment does not exist in the configuration file', ({
+			expect,
+		}) => {
 			// delete the "preview" environment configuration. This leaves us
 			// with just top-level and "production" env config
 			delete pagesRawConfig.env?.preview;
@@ -561,7 +569,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 			);
 		});
 
-		it('should return config corresponding to the top-level environment, if the "production" named environment does not exist in the configuration file', () => {
+		it('should return config corresponding to the top-level environment, if the "production" named environment does not exist in the configuration file', ({
+			expect,
+		}) => {
 			// delete the "production" environment configuration. This leaves us
 			// with just the top-level config
 			delete pagesRawConfig.env?.production;
@@ -672,7 +682,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 			);
 		});
 
-		it("should return config corresponding to the top-level environment, if any other Pages-unsupported named environment does not exist in the configuration file", () => {
+		it("should return config corresponding to the top-level environment, if any other Pages-unsupported named environment does not exist in the configuration file", ({
+			expect,
+		}) => {
 			/**
 			 * While Pages config only supports "preview" & "production" named
 			 * environments, the following is a valid test case, because
@@ -782,7 +794,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 		});
 	});
 
-	it("should error if there is a user binding named ASSETS at the top-level", () => {
+	it("should error if there is a user binding named ASSETS at the top-level", ({
+		expect,
+	}) => {
 		const { diagnostics } = normalizeAndValidateConfig(
 			{
 				...pagesRawConfig,
@@ -803,7 +817,9 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 		]);
 	});
 
-	it("should error if there is a user binding named ASSETS in a named environment", () => {
+	it("should error if there is a user binding named ASSETS in a named environment", ({
+		expect,
+	}) => {
 		const { diagnostics } = normalizeAndValidateConfig(
 			{
 				...pagesRawConfig,

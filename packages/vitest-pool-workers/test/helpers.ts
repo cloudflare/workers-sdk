@@ -15,7 +15,7 @@ const debuglog = util.debuglog("vitest-pool-workers:test");
 export const vitestConfig = (
 	cfOptions: Record<string, unknown> = {},
 	testOptions: Record<string, unknown> = {}
-) => dedent/* javascript */ `
+) => dedent /* javascript */ `
 	import { cloudflareTest } from "@cloudflare/vitest-pool-workers"
 
 	import { BaseSequencer } from "vitest/node";
@@ -97,6 +97,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	};
 }
 
+// eslint-disable-next-line jest/expect-expect, jest/no-disabled-tests
 export const test = baseTest.extend<{
 	tmpPath: string;
 	seed: (files: Record<string, string>) => Promise<void>;
@@ -123,6 +124,7 @@ export const test = baseTest.extend<{
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 
 		await use(async ({ flags = [], maxBuffer } = {}) => {
+			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest run --root="${tmpPath}" ` + flags.join(" "),
 				{
@@ -155,6 +157,7 @@ export const test = baseTest.extend<{
 		process.on("exit", killAllProcesses);
 
 		await use(({ flags = [], maxBuffer } = {}) => {
+			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
 				{

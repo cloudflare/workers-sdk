@@ -1,5 +1,4 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
 import { LOCAL_EXPLORER_BASE_PATH } from "miniflare";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
@@ -49,8 +48,8 @@ export default function registerDevHotKeys(
 			},
 			{
 				keys: ["e"],
-				label: "open local explorer",
-				disabled: !getLocalExplorerEnabledFromEnv(),
+				// This makes the label hidden but still enabled
+				// label: "open local explorer",
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
 					const explorerUrl = new URL(LOCAL_EXPLORER_BASE_PATH, url);

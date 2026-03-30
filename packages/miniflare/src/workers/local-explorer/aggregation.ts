@@ -81,11 +81,13 @@ export async function fetchFromPeer(
  * @param c - Hono app context
  * @param localResults - Results from the local instance
  * @param apiPath - API path relative to the explorer API base
+ * @param resultKey - horrible special case because r2 bucket list nests its results
  */
 export async function aggregateListResults<T>(
 	c: AppContext,
 	localResults: T[],
-	apiPath: string
+	apiPath: string,
+	resultKey?: string
 ): Promise<T[]> {
 	const peerUrls = await getPeerUrlsIfAggregating(c);
 	if (peerUrls.length === 0) {
@@ -97,8 +99,16 @@ export async function aggregateListResults<T>(
 			const response = await fetchFromPeer(url, apiPath);
 			if (!response?.ok) return [];
 			try {
-				const data = (await response.json()) as { result: T[] };
-				return Array.isArray(data.result) ? data.result : [];
+				const data = (await response.json()) as {
+					result: T[] | { [key: string]: T[] };
+				};
+				if (Array.isArray(data.result)) {
+					return data.result;
+				}
+				if (resultKey) {
+					return data.result[resultKey] ?? [];
+				}
+				throw new Error("unreachable");
 			} catch {
 				return [];
 			}

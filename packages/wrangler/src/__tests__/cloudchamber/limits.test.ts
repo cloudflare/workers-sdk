@@ -2,9 +2,8 @@ import {
 	dockerImageInspect,
 	InstanceType,
 } from "@cloudflare/containers-shared";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- tests use expect with rejects patterns */
+// eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import {
 	ensureContainerLimits,
 	ensureImageFitsLimits,

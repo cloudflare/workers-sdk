@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import {
 	isExperimental,
 	testPackageManager,
@@ -13,7 +13,7 @@ class TestRunner {
 
 		try {
 			console.log(
-				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`,
+				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`
 			);
 			execSync(
 				`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare -- ${testFilter}`,
@@ -25,7 +25,7 @@ class TestRunner {
 						E2E_TEST_PM: testPackageManager,
 						E2E_TEST_PM_VERSION: testPackageManagerVersion,
 					},
-				},
+				}
 			);
 			console.log("::endgroup::");
 		} catch (e) {
@@ -41,7 +41,7 @@ class TestRunner {
 		if (this.#failed.length > 0) {
 			throw new Error(
 				"At least one task failed:" +
-					this.#failed.map((group) => `\n - ${group}`),
+					this.#failed.map((group) => `\n - ${group}`)
 			);
 		}
 	}

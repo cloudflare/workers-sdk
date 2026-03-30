@@ -1,5 +1,6 @@
 import path from "node:path";
 import dedent from "ts-dedent";
+// eslint-disable-next-line no-restricted-imports
 import { afterAll, assert, beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
@@ -127,7 +128,7 @@ const testCases: TestCase[] = [
 		setup: async (helper) => {
 			const targetWorkerName = generateResourceName();
 			await helper.seed({
-				"target-worker.js": dedent/* javascript */ `
+				"target-worker.js": dedent /* javascript */ `
 					import { WorkerEntrypoint } from "cloudflare:workers"
 					export default {
 						fetch(request) {
@@ -374,7 +375,7 @@ const testCases: TestCase[] = [
 
 			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
-				"customer-worker.js": dedent/* javascript */ `
+				"customer-worker.js": dedent /* javascript */ `
 					import {WorkerEntrypoint} from "cloudflare:workers"
 					export default class W extends WorkerEntrypoint {
 						fetch(request) {
@@ -418,6 +419,67 @@ const testCases: TestCase[] = [
 				})
 			),
 		],
+	},
+	{
+		name: "AI Search Namespace",
+		scriptPath: "ai-search-namespace.js",
+		setup: async (helper) => {
+			const bucketName = await helper.r2(false);
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_NS: {
+							type: "ai_search_namespace",
+							namespace: "default",
+						},
+						R2_BUCKET_NAME: {
+							type: "plain_text",
+							value: bucketName,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchNamespaces: {
+						AI_SEARCH_NS: {
+							namespace: "default",
+							remoteProxyConnectionString: connection,
+						},
+					},
+					bindings: { R2_BUCKET_NAME: bucketName },
+				}),
+			};
+		},
+		expectFetchToMatch: [
+			expect.stringContaining(`"created":true`),
+			expect.stringContaining(`"deleted":true`),
+		],
+	},
+	{
+		name: "AI Search Instance",
+		scriptPath: "ai-search-instance.js",
+		setup: async (helper) => {
+			const { instanceId, bucketName: _bucketName } =
+				await helper.aiSearchInstance();
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_INST: {
+							type: "ai_search",
+							instance_name: instanceId,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchInstances: {
+						AI_SEARCH_INST: {
+							instance_name: instanceId,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
+		},
+		expectFetchToMatch: [expect.stringContaining(`"id"`)],
 	},
 	{
 		name: "Pipelines",
@@ -584,7 +646,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		}, activeTestCases.length * 15_000);
 
 		for (const testCase of activeTestCases) {
-			it("should work for " + testCase.name, async () => {
+			it("should work for " + testCase.name, async ({ expect }) => {
 				const resp = await mf.dispatchFetch("http://example.com/", {
 					headers: { "x-test-module": testCase.scriptPath },
 				});
@@ -616,7 +678,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					],
 				};
 				await helper.seed({
-					"worker.js": dedent/* javascript */ `
+					"worker.js": dedent /* javascript */ `
 						export default {
 							fetch(request) { return new Response("Hello"); }
 						}
@@ -663,7 +725,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			],
 		};
 
-		it("should work for mTLS bindings", async () => {
+		it("should work for mTLS bindings", async ({ expect }) => {
 			const helper = new WranglerE2ETestHelper();
 			await helper.seed(path.resolve(__dirname, "./workers"));
 			const testConfig = await mtlsTestCase.setup(helper);
@@ -735,7 +797,7 @@ describe("Remote bindings (remote proxy session disabled)", () => {
 	}, activeTestCases.length * 15_000);
 
 	for (const testCase of activeTestCases) {
-		it("should work for " + testCase.name, async () => {
+		it("should work for " + testCase.name, async ({ expect }) => {
 			const resp = await mf.dispatchFetch("http://example.com/", {
 				headers: { "x-test-module": testCase.scriptPath },
 			});

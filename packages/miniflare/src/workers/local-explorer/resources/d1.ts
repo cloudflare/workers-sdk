@@ -52,20 +52,31 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
 }
 
 /**
- * Get local D1 databases from the binding map.
+ * D1 database response extended with worker name for filtering in the UI.
  */
-function getLocalD1Databases(env: Env): D1DatabaseResponse[] {
+type D1DatabaseWithWorker = D1DatabaseResponse & {
+	workerName: string;
+};
+
+/**
+ * Get local D1 databases from the binding map.
+ * Each database is tagged with the worker name it belongs to.
+ */
+function getLocalD1Databases(env: Env): D1DatabaseWithWorker[] {
 	const d1BindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
+
 	return Object.entries(d1BindingMap).map(([id, bindingName]) => {
-		// Use the binding name as the database name since we don't have
-		// the actual name locally. The ID is the `database_id` or generated from binding.
-		const databaseName = bindingName.split(":").pop() || bindingName;
+		// Binding names follow the pattern "MINIFLARE_PROXY:d1:workerName:BINDING"
+		const parts = bindingName.split(":");
+		const workerName = parts.length >= 3 ? parts[2] : "unknown";
+		const databaseName = parts.pop() || bindingName;
 
 		return {
 			name: databaseName,
 			uuid: id,
 			version: "production",
-		} satisfies D1DatabaseResponse;
+			workerName,
+		} satisfies D1DatabaseWithWorker;
 	});
 }
 
@@ -176,13 +187,9 @@ type RawDatabaseBody = z.output<typeof zD1RawDatabaseQueryData.shape.body>;
  */
 export async function rawD1Database(
 	c: AppContext,
+	databaseId: string,
 	body: RawDatabaseBody
 ): Promise<Response> {
-	const databaseId = c.req.param("database_id");
-	if (!databaseId) {
-		return errorResponse(400, 10000, "Missing database_id parameter");
-	}
-
 	// Try local first
 	const db = getD1Binding(c.env, databaseId);
 	if (db) {

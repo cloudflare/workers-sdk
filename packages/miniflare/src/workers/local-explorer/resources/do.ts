@@ -12,6 +12,7 @@ import {
 import type { IntrospectSqliteMethod } from "../../../plugins/core/constants";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
+import type { WorkersNamespace } from "../generated";
 import type { z } from "zod";
 
 // ============================================================================
@@ -52,15 +53,18 @@ function getDOBinding(
 }
 
 /**
- * Get local DO namespaces from the binding map.
+ * DO namespace response extended with worker name for filtering in the UI.
+ * We require `id`, `name`, `script`, `class`, and `use_sqlite` since we always have them locally.
  */
-function getLocalDONamespaces(env: Env): {
-	id: string;
-	name: string;
-	script: string;
-	class: string;
-	use_sqlite: boolean;
-}[] {
+type DONamespaceWithWorker = Required<WorkersNamespace> & {
+	workerName: string;
+};
+
+/**
+ * Get local DO namespaces from the binding map.
+ * Each namespace is tagged with the worker name it belongs to.
+ */
+function getLocalDONamespaces(env: Env): DONamespaceWithWorker[] {
 	const doBindingMap = env.LOCAL_EXPLORER_BINDING_MAP.do;
 	return Object.entries(doBindingMap).map(([id, info]) => ({
 		id, // This is the unsafeUniqueKey - ${scriptName}-${className}
@@ -68,6 +72,7 @@ function getLocalDONamespaces(env: Env): {
 		script: info.scriptName,
 		class: info.className,
 		use_sqlite: info.useSQLite,
+		workerName: info.scriptName,
 	}));
 }
 
@@ -159,7 +164,9 @@ export async function listDOObjects(
 		if (cursor) params.set("cursor", cursor);
 		if (limit !== undefined) params.set("limit", String(limit));
 		const queryString = params.toString();
-		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/objects${queryString ? `?${queryString}` : ""}`;
+		const path = `/workers/durable_objects/namespaces/${encodeURIComponent(
+			namespaceId
+		)}/objects${queryString ? `?${queryString}` : ""}`;
 
 		const response = await fetchFromPeer(ownerMiniflare, path);
 		if (response) return response;
@@ -217,9 +224,16 @@ async function executeListDOObjects(
 	const files = (await response.json()) as DirectoryEntry[];
 
 	// Each DO object gets a sqlite file named <objectId>.sqlite,
-	// so filter for those and use that to extract object IDs
+	// so filter for those and use that to extract object IDs.
+	// Exclude metadata.sqlite which is used by workerd for per-namespace
+	// metadata (e.g. alarm storage) and is not a DO object.
 	let objectIds = files
-		.filter((entry) => entry.type === "file" && entry.name.endsWith(".sqlite"))
+		.filter(
+			(entry) =>
+				entry.type === "file" &&
+				entry.name.endsWith(".sqlite") &&
+				entry.name !== "metadata.sqlite"
+		)
 		.map((entry) => entry.name.replace(/\.sqlite$/, ""));
 
 	// Sort for consistent ordering (required for cursor pagination)
@@ -291,7 +305,9 @@ export async function queryDOSqlite(
 	if (ownerMiniflare) {
 		const response = await fetchFromPeer(
 			ownerMiniflare,
-			`/workers/durable_objects/namespaces/${encodeURIComponent(namespaceId)}/query`,
+			`/workers/durable_objects/namespaces/${encodeURIComponent(
+				namespaceId
+			)}/query`,
 			{
 				method: "POST",
 				headers: { "Content-Type": "application/json" },

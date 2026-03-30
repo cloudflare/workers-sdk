@@ -15,7 +15,7 @@ import type {
 	DashApplicationInstances,
 } from "@cloudflare/containers-shared";
 
-type ContainerState =
+type InstanceState =
 	| "provisioning"
 	| "running"
 	| "failed"
@@ -25,9 +25,7 @@ type ContainerState =
 	| "inactive"
 	| "unknown";
 
-function deriveInstanceState(
-	instance: DashApplicationInstance
-): ContainerState {
+function deriveInstanceState(instance: DashApplicationInstance): InstanceState {
 	const status = instance.current_placement?.status;
 	if (!status) {
 		return "unknown";
@@ -48,7 +46,7 @@ function deriveInstanceState(
 	}
 }
 
-function colorState(state: ContainerState): string {
+function colorState(state: InstanceState): string {
 	switch (state) {
 		case "running":
 			return green(state);
@@ -216,9 +214,15 @@ const instancesArgs = {
 		describe: "Number of instances per page",
 		type: "number",
 		default: 25,
+		coerce: (val: number) => {
+			if (val < 1) {
+				throw new UserError("--per-page must be at least 1");
+			}
+			return val;
+		},
 	},
 	json: {
-		describe: "Return output as clean JSON",
+		describe: "Return output as JSON",
 		type: "boolean",
 		default: false,
 	},
@@ -235,29 +239,34 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 		);
 	}
 
-	if (args.json || isNonInteractiveOrCI()) {
+	// --json: output JSON and exit
+	if (args.json) {
 		try {
-			// Fetch all pages
 			const { data } = await fetchPage(args.ID);
 			const rows = buildInstanceRows(data);
-			const jsonRows = rowsToJsonOutput(rows);
-
-			if (jsonRows.length === 0 && !args.json) {
-				logger.log(
-					"No instances found for this application. The application may not have any running containers."
-				);
-				return;
-			}
-
-			logger.json(jsonRows);
+			logger.json(rowsToJsonOutput(rows));
 			return;
 		} catch (err) {
-			if (args.json) {
-				const message = err instanceof Error ? err.message : "Unknown error";
-				throw new JsonFriendlyFatalError(JSON.stringify({ error: message }));
+			if (err instanceof UserError) {
+				throw err;
 			}
-			throw err;
+			const message = err instanceof Error ? err.message : "Unknown error";
+			throw new JsonFriendlyFatalError(JSON.stringify({ error: message }));
 		}
+	}
+
+	// Non-interactive: fetch all results, render a single table, no pagination
+	if (isNonInteractiveOrCI()) {
+		const { data } = await fetchPage(args.ID);
+		const rows = buildInstanceRows(data);
+		if (rows.length === 0) {
+			logger.log(
+				"No instances found for this application. The application may not have any running containers."
+			);
+			return;
+		}
+		renderTable(rows);
+		return;
 	}
 
 	// Interactive: display one page at a time
@@ -268,12 +277,15 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 
 	do {
 		start("Loading instances");
-		const { data, nextPageToken } = await fetchPage(
-			args.ID,
-			args.perPage,
-			pageToken
-		);
-		stop();
+		let data: DashApplicationInstances;
+		let nextPageToken: string | undefined;
+		try {
+			const result = await fetchPage(args.ID, args.perPage, pageToken);
+			data = result.data;
+			nextPageToken = result.nextPageToken;
+		} finally {
+			stop();
+		}
 		const rows = buildInstanceRows(data);
 
 		if (rows.length === 0 && totalShown === 0) {
