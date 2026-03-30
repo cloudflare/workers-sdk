@@ -1,10 +1,10 @@
 import http from "node:http";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
+import { CorePaths } from "../../../src/workers/core/constants";
 import { disposeWithRetry } from "../../test-shared";
 
-const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
+const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 describe("Local Explorer API validation", () => {
 	let mf: Miniflare;
@@ -234,7 +234,7 @@ describe("Local Explorer API validation", () => {
 		const url = await mf.ready;
 		const status = await new Promise<number>((resolve, reject) => {
 			const req = http.get(
-				`${url.origin}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`,
+				`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
 				{ setHost: false, headers: { Host: "evil.com" } },
 				(res) => {
 					res.resume();
@@ -333,7 +333,7 @@ describe("Local Explorer works with custom routes", () => {
 		const url = await mf.ready;
 		const status = await new Promise<number>((resolve, reject) => {
 			const req = http.get(
-				`${url.origin}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`,
+				`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
 				{ setHost: false, headers: { Host: "my-custom-site.com" } },
 				(res) => {
 					res.resume();
@@ -351,7 +351,7 @@ describe("Local Explorer works with custom routes", () => {
 		const url = await mf.ready;
 		const status = await new Promise<number>((resolve, reject) => {
 			const req = http.get(
-				`${url.origin}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`,
+				`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
 				{ setHost: false, headers: { Host: "evil.com" } },
 				(res) => {
 					res.resume();

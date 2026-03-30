@@ -1,7 +1,9 @@
 import { resolve } from "path";
-import { LOCAL_EXPLORER_API_PATH, LOCAL_EXPLORER_BASE_PATH } from "miniflare";
+import { CorePaths } from "miniflare";
 import { afterAll, assert, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+
+const EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
 
 describe("local explorer", () => {
 	let ip: string;
@@ -19,11 +21,11 @@ describe("local explorer", () => {
 		await stop?.();
 	});
 
-	it(`returns local explorer API response for ${LOCAL_EXPLORER_API_PATH}`, async ({
+	it(`returns local explorer API response for ${EXPLORER_API_PATH}`, async ({
 		expect,
 	}) => {
 		const response = await fetch(
-			`http://${ip}:${port}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`
+			`http://${ip}:${port}${EXPLORER_API_PATH}/storage/kv/namespaces`
 		);
 		expect(response.headers.get("Content-Type")).toBe("application/json");
 		const json = await response.json();
@@ -53,12 +55,8 @@ describe("local explorer", () => {
 		expect(text).toBe("Hello World!");
 	});
 
-	it(`serves UI index.html at ${LOCAL_EXPLORER_BASE_PATH}`, async ({
-		expect,
-	}) => {
-		const response = await fetch(
-			`http://${ip}:${port}${LOCAL_EXPLORER_BASE_PATH}`
-		);
+	it(`serves UI index.html at ${CorePaths.EXPLORER}`, async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}${CorePaths.EXPLORER}`);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toBe(
 			"text/html; charset=utf-8"
@@ -68,12 +66,12 @@ describe("local explorer", () => {
 		expect(text).toContain("Cloudflare Local Explorer");
 	});
 
-	it(`serves UI assets at ${LOCAL_EXPLORER_BASE_PATH}/assets/*`, async ({
+	it(`serves UI assets at ${CorePaths.EXPLORER}/assets/*`, async ({
 		expect,
 	}) => {
 		// First get index.html to find the actual asset paths
 		const indexResponse = await fetch(
-			`http://${ip}:${port}${LOCAL_EXPLORER_BASE_PATH}`
+			`http://${ip}:${port}${CorePaths.EXPLORER}`
 		);
 		const html = await indexResponse.text();
 
@@ -85,7 +83,7 @@ describe("local explorer", () => {
 
 		// Fetch the JS asset
 		const jsResponse = await fetch(
-			`http://${ip}:${port}${LOCAL_EXPLORER_BASE_PATH}/${jsPath}`
+			`http://${ip}:${port}${CorePaths.EXPLORER}/${jsPath}`
 		);
 		expect(jsResponse.status).toBe(200);
 		expect(jsResponse.headers.get("Content-Type")).toMatch(
@@ -96,7 +94,7 @@ describe("local explorer", () => {
 	it("serves UI with SPA fallback for unknown routes", async ({ expect }) => {
 		// Request a route that doesn't exist as a file but should be handled by the SPA
 		const response = await fetch(
-			`http://${ip}:${port}${LOCAL_EXPLORER_BASE_PATH}/kv/some-namespace`
+			`http://${ip}:${port}${CorePaths.EXPLORER}/kv/some-namespace`
 		);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toBe(
@@ -123,12 +121,10 @@ describe("local explorer", () => {
 			await stop?.();
 		});
 
-		it("returns worker response for LOCAL_EXPLORER_API_PATH", async ({
+		it(`returns worker response for ${EXPLORER_API_PATH}`, async ({
 			expect,
 		}) => {
-			const response = await fetch(
-				`http://${ip}:${port}${LOCAL_EXPLORER_API_PATH}`
-			);
+			const response = await fetch(`http://${ip}:${port}${EXPLORER_API_PATH}`);
 			const text = await response.text();
 			expect(text).toBe("Hello World!");
 		});
@@ -171,7 +167,7 @@ describe("local explorer", () => {
 			expect,
 		}) => {
 			const response = await fetch(
-				`http://${ip}:${port}${LOCAL_EXPLORER_API_PATH}/storage/kv/namespaces`
+				`http://${ip}:${port}${EXPLORER_API_PATH}/storage/kv/namespaces`
 			);
 			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
@@ -180,9 +176,7 @@ describe("local explorer", () => {
 		});
 
 		it(`serves explorer UI`, async ({ expect }) => {
-			const response = await fetch(
-				`http://${ip}:${port}${LOCAL_EXPLORER_BASE_PATH}`
-			);
+			const response = await fetch(`http://${ip}:${port}${CorePaths.EXPLORER}`);
 			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe(
 				"text/html; charset=utf-8"
