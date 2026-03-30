@@ -126,7 +126,7 @@ export type PreviewRequestOptions = {
 };
 
 export type PreviewDefaults = {
-		observability?: {
+	observability?: {
 		enabled?: boolean;
 		head_sampling_rate?: number;
 	};
@@ -135,6 +135,10 @@ export type PreviewDefaults = {
 	placement?: { mode: string };
 	tail_consumers?: PreviewsConfig["tail_consumers"];
 	env?: EnvBindings;
+};
+
+export type PreviewDefaultsPatch = Partial<Omit<PreviewDefaults, "env">> & {
+	env?: Record<string, Binding | null>;
 };
 
 type WorkerPreviewDefaultsResource = {
@@ -278,7 +282,7 @@ export async function editWorkerPreviewDefaults(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	previewDefaults: PreviewDefaults
+	previewDefaults: PreviewDefaultsPatch
 ): Promise<PreviewDefaults> {
 	const worker = await fetchResult<WorkerPreviewDefaultsResource>(
 		config,

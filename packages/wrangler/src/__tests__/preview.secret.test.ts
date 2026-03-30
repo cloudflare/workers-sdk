@@ -41,19 +41,9 @@ describe("wrangler preview", () => {
 							preview_defaults?: {
 								env?: Record<string, { type: string; text?: string }>;
 							};
-					  }
+				  }
 					| undefined;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								preview_defaults: {
-									env: { OLD_SECRET: { type: "secret_text" } },
-								},
-							},
-						})
-					),
 					http.patch(
 						`*/accounts/:accountId/workers/workers/:workerId`,
 						async ({ request }) => {
@@ -70,9 +60,9 @@ describe("wrangler preview", () => {
 					type: "secret_text",
 					text: "defaults-secret",
 				});
-				expect(
-					patchRequestBody?.preview_defaults?.env?.OLD_SECRET
-				).toMatchObject({ type: "secret_text" });
+				expect(patchRequestBody?.preview_defaults?.env).toEqual({
+					API_KEY: { type: "secret_text", text: "defaults-secret" },
+				});
 				expect(std.out).toContain(
 					'Secret "API_KEY" added to Previews settings for "test-worker"'
 				);
@@ -96,20 +86,9 @@ describe("wrangler preview", () => {
 					})
 				);
 
-				let getUrl: string | undefined;
 				let patchUrl: string | undefined;
 
 				msw.use(
-					http.get(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							getUrl = request.url;
-							return HttpResponse.json({
-								success: true,
-								result: { preview_defaults: {} },
-							});
-						}
-					),
 					http.patch(
 						`*/accounts/:accountId/workers/workers/:workerId`,
 						({ request }) => {
@@ -121,7 +100,6 @@ describe("wrangler preview", () => {
 
 				await runWrangler("preview secret put API_KEY --env staging");
 
-				expect(getUrl).toContain("/workers/workers/staging-worker");
 				expect(patchUrl).toContain("/workers/workers/staging-worker");
 				expect(std.out).toContain(
 					'Secret "API_KEY" added to Previews settings for "staging-worker"'
@@ -149,13 +127,6 @@ describe("wrangler preview", () => {
 
 				let requested = false;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () => {
-						requested = true;
-						return HttpResponse.json({
-							success: true,
-							result: { preview_defaults: {} },
-						});
-					}),
 					http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
 						requested = true;
 						return HttpResponse.json({ success: true, result: {} });
@@ -176,25 +147,11 @@ describe("wrangler preview", () => {
 				let patchRequestBody:
 					| {
 							preview_defaults?: {
-								env?: Record<string, { type: string; text?: string }>;
+								env?: Record<string, { type: string; text?: string } | null>;
 							};
 					  }
 					| undefined;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								preview_defaults: {
-									env: {
-										KEEP_ME: { type: "secret_text" },
-										REMOVE_ME: { type: "secret_text" },
-										VAR: { type: "plain_text", text: "value" },
-									},
-								},
-							},
-						})
-					),
 					http.patch(
 						`*/accounts/:accountId/workers/workers/:workerId`,
 						async ({ request }) => {
@@ -207,10 +164,9 @@ describe("wrangler preview", () => {
 				await runWrangler(
 					"preview secret delete REMOVE_ME --skip-confirmation --worker-name test-worker"
 				);
-				const env = patchRequestBody?.preview_defaults?.env ?? {};
-				expect(env).toHaveProperty("KEEP_ME");
-				expect(env).toHaveProperty("VAR");
-				expect(env).not.toHaveProperty("REMOVE_ME");
+				expect(patchRequestBody?.preview_defaults?.env).toEqual({
+					REMOVE_ME: null,
+				});
 				expect(std.out).toContain(
 					'Secret "REMOVE_ME" deleted from Previews settings'
 				);
@@ -228,23 +184,8 @@ describe("wrangler preview", () => {
 						env: { staging: { name: "staging-worker" } },
 					})
 				);
-				let getUrl: string | undefined;
 				let patchUrl: string | undefined;
 				msw.use(
-					http.get(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							getUrl = request.url;
-							return HttpResponse.json({
-								success: true,
-								result: {
-									preview_defaults: {
-										env: { REMOVE_ME: { type: "secret_text" } },
-									},
-								},
-							});
-						}
-					),
 					http.patch(
 						`*/accounts/:accountId/workers/workers/:workerId`,
 						({ request }) => {
@@ -256,7 +197,6 @@ describe("wrangler preview", () => {
 				await runWrangler(
 					"preview secret delete REMOVE_ME --env staging --skip-confirmation"
 				);
-				expect(getUrl).toContain("/workers/workers/staging-worker");
 				expect(patchUrl).toContain("/workers/workers/staging-worker");
 			});
 		});
@@ -352,19 +292,6 @@ describe("wrangler preview", () => {
 					  }
 					| undefined;
 				msw.use(
-					http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
-						HttpResponse.json({
-							success: true,
-							result: {
-								preview_defaults: {
-									env: {
-										EXISTING_SECRET: { type: "secret_text" },
-										ENVIRONMENT: { type: "plain_text", text: "preview" },
-									},
-								},
-							},
-						})
-					),
 					http.patch(
 						`*/accounts/:accountId/workers/workers/:workerId`,
 						async ({ request }) => {
@@ -376,11 +303,9 @@ describe("wrangler preview", () => {
 				);
 				await runWrangler("preview secret bulk secrets.env");
 				const env = patchRequestBody?.preview_defaults?.env ?? {};
-				expect(env).toMatchObject({
+				expect(env).toEqual({
 					FIRST_KEY: { type: "secret_text", text: "one" },
 					SECOND_KEY: { type: "secret_text", text: "two" },
-					EXISTING_SECRET: { type: "secret_text" },
-					ENVIRONMENT: { type: "plain_text", text: "preview" },
 				});
 			});
 
@@ -397,19 +322,8 @@ describe("wrangler preview", () => {
 						env: { staging: { name: "staging-worker" } },
 					})
 				);
-				let getUrl: string | undefined;
 				let patchUrl: string | undefined;
 				msw.use(
-					http.get(
-						`*/accounts/:accountId/workers/workers/:workerId`,
-						({ request }) => {
-							getUrl = request.url;
-							return HttpResponse.json({
-								success: true,
-								result: { preview_defaults: { env: {} } },
-							});
-						}
-					),
 					http.patch(
 						`*/accounts/:accountId/workers/workers/:workerId`,
 						({ request }) => {
@@ -419,7 +333,6 @@ describe("wrangler preview", () => {
 					)
 				);
 				await runWrangler("preview secret bulk secrets.env --env staging");
-				expect(getUrl).toContain("/workers/workers/staging-worker");
 				expect(patchUrl).toContain("/workers/workers/staging-worker");
 			});
 		});

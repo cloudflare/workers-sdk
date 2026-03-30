@@ -20,31 +20,15 @@ function isSecretBinding(binding: Binding): binding is Binding & {
 	return binding.type === "secret_text";
 }
 
-function upsertSecretBinding(
-	env: EnvBindings,
-	key: string,
-	value: string
-): EnvBindings {
-	return {
-		...env,
-		[key]: { type: "secret_text", text: value },
-	};
-}
-
-function removeSecretBinding(env: EnvBindings, key: string): EnvBindings {
-	const { [key]: _removed, ...rest } = env;
-	return rest;
-}
-
-function upsertManySecretBindings(
-	env: EnvBindings,
+function toSecretBindingsPatch(
 	secrets: Record<string, string>
 ): EnvBindings {
-	const updatedEnv = { ...env };
-	for (const [name, text] of Object.entries(secrets)) {
-		updatedEnv[name] = { type: "secret_text", text };
-	}
-	return updatedEnv;
+	return Object.fromEntries(
+		Object.entries(secrets).map(([name, text]) => [
+			name,
+			{ type: "secret_text", text },
+		])
+	);
 }
 
 function extractSecretSummaries(env: EnvBindings | undefined): SecretSummary[] {
@@ -69,19 +53,8 @@ export async function handlePreviewSecretPutCommand(
 			: await readFromStdin()
 	);
 
-	const previewDefaults = await getWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName
-	);
-	const updatedBindings = upsertSecretBinding(
-		previewDefaults.env ?? {},
-		args.key,
-		secretValue
-	);
 	await editWorkerPreviewDefaults(config, accountId, workerName, {
-		...previewDefaults,
-		env: updatedBindings,
+		env: toSecretBindingsPatch({ [args.key]: secretValue }),
 	});
 	logger.log(
 		`\n✨ Secret "${args.key}" added to Previews settings for "${workerName}".`
@@ -110,18 +83,10 @@ export async function handlePreviewSecretDeleteCommand(
 		}
 	}
 
-	const previewDefaults = await getWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName
-	);
-	const updatedBindings = removeSecretBinding(
-		previewDefaults.env ?? {},
-		args.key
-	);
 	await editWorkerPreviewDefaults(config, accountId, workerName, {
-		...previewDefaults,
-		env: updatedBindings,
+		env: {
+			[args.key]: null,
+		},
 	});
 	logger.log(`\n✨ Secret "${args.key}" deleted from Previews settings.`);
 }
@@ -178,18 +143,8 @@ export async function handlePreviewSecretBulkCommand(
 	const secretCount = Object.keys(content).length;
 	const source = args.file ? `file "${args.file}"` : "stdin";
 
-	const previewDefaults = await getWorkerPreviewDefaults(
-		config,
-		accountId,
-		workerName
-	);
-	const updatedBindings = upsertManySecretBindings(
-		previewDefaults.env ?? {},
-		content
-	);
 	await editWorkerPreviewDefaults(config, accountId, workerName, {
-		...previewDefaults,
-		env: updatedBindings,
+		env: toSecretBindingsPatch(content),
 	});
 	logger.log(
 		`\n✨ Uploaded ${secretCount} secrets from ${source} to Previews settings for "${workerName}".`
