@@ -590,6 +590,31 @@ export type LocalExplorerWorker = {
 	protocol: string;
 };
 
+/**
+ * The name of the workflow.
+ */
+export type WorkflowsWorkflowName = string;
+
+/**
+ * The unique identifier of a workflow instance.
+ */
+export type WorkflowsInstanceId = string;
+
+export type WorkflowsWorkflow = {
+	/**
+	 * The name of the workflow.
+	 */
+	name: string;
+	/**
+	 * The entrypoint class name of the workflow.
+	 */
+	class_name?: string;
+	/**
+	 * The script name containing the workflow.
+	 */
+	script_name?: string;
+};
+
 export type WorkflowsWorkflowDetails = {
 	/**
 	 * The name of the workflow.
@@ -616,31 +641,6 @@ export type WorkflowsWorkflowDetails = {
 		waiting?: number;
 		waitingForPause?: number;
 	};
-};
-
-/**
- * The name of the workflow.
- */
-export type WorkflowsWorkflowName = string;
-
-/**
- * The unique identifier of a workflow instance.
- */
-export type WorkflowsInstanceId = string;
-
-export type WorkflowsWorkflow = {
-	/**
-	 * The name of the workflow.
-	 */
-	name: string;
-	/**
-	 * The entrypoint class name of the workflow.
-	 */
-	class_name?: string;
-	/**
-	 * The script name containing the workflow.
-	 */
-	script_name?: string;
 };
 
 export type WorkflowsInstance = {
