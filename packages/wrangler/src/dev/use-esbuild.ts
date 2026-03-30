@@ -201,16 +201,9 @@ export function runBuild(
 				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
 				// contains miniflare state/cache files written by workerd at
 				// runtime — watching them causes an infinite reload loop).
-				// Note: chokidar v4 compares string patterns via exact equality
-				// against absolute paths, so we must use a function matcher that
-				// checks individual path segments.
-				ignored: (filePath) => {
-					const basenames = filePath.split(path.sep);
-					return basenames.some(
-						(seg) =>
-							seg === ".git" || seg === "node_modules" || seg === ".wrangler"
-					);
-				},
+				// chokidar v4 normalises paths to forward slashes before
+				// matching, so a regex on path segments works cross-platform.
+				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
 			}).on("change", async (_event) => {
 				await updateBundle();
 			});
