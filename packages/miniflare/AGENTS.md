@@ -37,7 +37,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Testing
 
 - Test files use `.spec.ts` (NOT `.test.ts`)
-- `pool: "forks"`, `singleFork: true`
+- `pool: "forks"`, `maxWorkers: 1` (Vitest 4 equivalent of the old `singleFork: true`)
 - Does NOT extend `vitest.shared.ts` — own full vitest config
 - Timeouts: 30s test, 30s hook
 - `globals: true`

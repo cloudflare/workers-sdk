@@ -6,11 +6,7 @@ export default defineConfig({
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
 		pool: "forks",
-		poolOptions: {
-			forks: {
-				singleFork: true,
-			},
-		},
+		maxWorkers: 1,
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(__dirname, "test/setup.mjs")],
 		globals: true,
