@@ -63,19 +63,11 @@ function getPackagePath(
 	projectPath: string
 ): string | undefined {
 	try {
-		// require.resolve on package.json is more reliable so let's try that first
 		return path.dirname(
 			require.resolve(`${packageName}/package.json`, {
 				paths: [projectPath],
 			})
 		);
-	} catch {}
-
-	try {
-		// as a fallback we also try to require.resolve on the package name as well
-		return require.resolve(packageName, {
-			paths: [projectPath],
-		});
 	} catch {}
 
 	return undefined;
