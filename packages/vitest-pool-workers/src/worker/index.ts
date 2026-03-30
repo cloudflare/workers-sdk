@@ -73,7 +73,10 @@ const monkeypatchedSetTimeout = (...args: Parameters<typeof setTimeout>) => {
 	const callerFileName = getCallerFileName(monkeypatchedSetTimeout);
 	const fromVitest =
 		/\/node_modules\/(\.pnpm\/|\.store\/)?vitest/.test(callerFileName ?? "") ||
-		/\/packages\/vitest\/dist/.test(callerFileName ?? "");
+		/\/packages\/vitest\/dist/.test(callerFileName ?? "") ||
+		/\/node_modules\/(\.pnpm\/|\.store\/)?@voidzero-dev[+/]vite-plus-test/.test(
+			callerFileName ?? ""
+		);
 
 	// If this `setTimeout()` isn't from Vitest, or has a non-zero delay,
 	// just call the original function

@@ -23,6 +23,8 @@ export const MODIFIER_KEYS = {
 	FAILURE_INDEX: "failure-index-",
 	DISABLE_SLEEP: "disable-sleep-",
 	DISABLE_ALL_SLEEPS: "disableAllSleeps",
+	DISABLE_RETRY_DELAY: "disable-retry-delay-",
+	DISABLE_ALL_RETRY_DELAYS: "disableAllRetryDelays",
 } as const;
 
 export function isModifierKey(key: string): boolean {
@@ -88,6 +90,23 @@ export class WorkflowInstanceModifier extends RpcTarget {
 			for (const step of steps) {
 				const sleepDisableKey = await this.#getSleepStepDisableKey(step);
 				await this.#state.storage.put(sleepDisableKey, true);
+			}
+		}
+	}
+
+	async disableRetryDelays(steps?: StepSelector[]): Promise<void> {
+		if (!steps) {
+			await this.#state.storage.put(
+				MODIFIER_KEYS.DISABLE_ALL_RETRY_DELAYS,
+				true
+			);
+		} else {
+			for (const step of steps) {
+				const valueKey = await this.#getStepCacheKey(step);
+				await this.#state.storage.put(
+					`${MODIFIER_KEYS.DISABLE_RETRY_DELAY}${valueKey}`,
+					true
+				);
 			}
 		}
 	}

@@ -2274,6 +2274,35 @@ describe.sequential("wrangler dev", () => {
 				)
 			);
 		});
+
+		it("should error with a clear error message if the path specified by '--assets' command line argument is a file, not a directory", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("dev --assets abc")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "--assets" command line argument doesn't point to a directory:
+				<cwd>/abc]
+			`);
+		});
+
+		it("should error with a clear error message if the path specified by '[assets]' configuration key is a file, not a directory", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				assets: {
+					directory: "abc",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("dev")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "assets.directory" field in your configuration file doesn't point to a directory:
+				<cwd>/abc]
+			`);
+		});
 	});
 
 	describe("service bindings", () => {

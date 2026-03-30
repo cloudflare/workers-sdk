@@ -10,11 +10,12 @@ import {
 	logRaw,
 	startSection,
 } from "@cloudflare/cli";
+import { runCommand } from "@cloudflare/cli/command";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
-import { runCommand } from "helpers/command";
+import { runWranglerCommand } from "helpers/command";
 import {
 	detectPackageManager,
 	rectifyPmMismatch,
@@ -176,7 +177,7 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();
 
-		await runCommand([
+		await runWranglerCommand([
 			npx,
 			"wrangler",
 			"setup",
