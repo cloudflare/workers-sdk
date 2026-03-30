@@ -1,5 +1,4 @@
 import { describe, expect, test } from "vitest";
-
 import { stripAnsi } from "..";
 import { getRenderers } from "../interactive";
 import MultiSelectSearchPrompt from "../multiselect-search";
@@ -10,7 +9,9 @@ type PromptInternals = {
 	close: () => void;
 };
 
-function createPrompt(options: ConstructorParameters<typeof MultiSelectSearchPrompt>[0]["options"]) {
+function createPrompt(
+	options: ConstructorParameters<typeof MultiSelectSearchPrompt>[0]["options"]
+) {
 	const prompt = new MultiSelectSearchPrompt({
 		options,
 		render() {
@@ -135,7 +136,11 @@ describe("MultiSelectSearchPrompt", () => {
 
 	test("ranks exact and prefix matches ahead of weaker matches", () => {
 		const { prompt } = createPrompt([
-			{ label: "Later substring", value: "later", sublabel: "contains abc later" },
+			{
+				label: "Later substring",
+				value: "later",
+				sublabel: "contains abc later",
+			},
 			{ label: "Prefix match", value: "prefix-1", sublabel: "abc release" },
 			{ label: "Metadata only", value: "metadata-1", sublabel: "release abc" },
 			{ label: "Other", value: "abc" },
@@ -145,7 +150,7 @@ describe("MultiSelectSearchPrompt", () => {
 		prompt.emit("key", "b");
 		prompt.emit("key", "c");
 
-			expect(prompt.filteredOptions.map((option) => option.value)).toEqual([
+		expect(prompt.filteredOptions.map((option) => option.value)).toEqual([
 			"abc",
 			"prefix-1",
 			"later",
@@ -155,7 +160,11 @@ describe("MultiSelectSearchPrompt", () => {
 
 	test("resets focus to the top ranked match when search results reorder", () => {
 		const { prompt } = createPrompt([
-			{ label: "Later substring", value: "later", sublabel: "contains abc later" },
+			{
+				label: "Later substring",
+				value: "later",
+				sublabel: "contains abc later",
+			},
 			{ label: "Prefix match", value: "prefix-1", sublabel: "abc release" },
 			{ label: "Metadata only", value: "metadata-1", sublabel: "release abc" },
 			{ label: "Other", value: "abc" },
@@ -184,7 +193,8 @@ describe("MultiSelectSearchPrompt", () => {
 			{
 				label: "Version two",
 				value: "id-2",
-				sublabel: "\u001B[90mMessage: release-candidate follows later\u001B[39m",
+				sublabel:
+					"\u001B[90mMessage: release-candidate follows later\u001B[39m",
 				searchText: ["release-candidate follows later"],
 			},
 		]);
@@ -228,6 +238,8 @@ describe("MultiSelectSearchPrompt", () => {
 		const rendered = stripAnsi(lines.join("\n"));
 		expect(rendered).toContain("Search: zzz");
 		expect(rendered).toContain("0 matches • 1 selected");
-		expect(rendered).toContain("No matching options. Backspace to edit search.");
+		expect(rendered).toContain(
+			"No matching options. Backspace to edit search."
+		);
 	});
 });

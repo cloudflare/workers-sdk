@@ -1,6 +1,11 @@
 import { createComponent } from "@cloudflare/style-container";
+import type { ComponentPropsWithoutRef, ComponentType, Ref } from "react";
 
-const Frame = createComponent<"iframe">(
+type FrameProps = ComponentPropsWithoutRef<"iframe"> & {
+	innerRef?: Ref<HTMLIFrameElement>;
+};
+
+const Frame: ComponentType<FrameProps> = createComponent<"iframe">(
 	() => ({
 		position: "absolute",
 		top: 0,

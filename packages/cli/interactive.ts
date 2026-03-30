@@ -564,7 +564,9 @@ const getMultiSelectSearchRenderers = (
 
 		const statusParts = [];
 		if (searchText) {
-			statusParts.push(dim(`${filtered.length} match${filtered.length === 1 ? "" : "es"}`));
+			statusParts.push(
+				dim(`${filtered.length} match${filtered.length === 1 ? "" : "es"}`)
+			);
 		}
 		if (selectedCount > 0) {
 			statusParts.push(brandColor(`${selectedCount} selected`));

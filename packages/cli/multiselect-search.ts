@@ -42,7 +42,10 @@ const normalizeSearchText = (text: string | undefined): string | undefined => {
 	return normalized.length > 0 ? normalized : undefined;
 };
 
-const getMatchPriority = (text: string | undefined, query: string): number | null => {
+const getMatchPriority = (
+	text: string | undefined,
+	query: string
+): number | null => {
 	if (!text) {
 		return null;
 	}
@@ -63,7 +66,10 @@ const getMatchPriority = (text: string | undefined, query: string): number | nul
 	return null;
 };
 
-const getOptionPriority = (option: SearchableOption, query: string): number | null => {
+const getOptionPriority = (
+	option: SearchableOption,
+	query: string
+): number | null => {
 	const priorities = [
 		getMatchPriority(option.value, query),
 		getMatchPriority(option.label, query),
@@ -236,13 +242,13 @@ export default class MultiSelectSearchPrompt extends Prompt {
 		if (idx === -1) {
 			this.selectedValues = [...this.selectedValues, opt.value];
 		} else {
-			this.selectedValues = this.selectedValues.filter(
-				(v) => v !== opt.value
-			);
+			this.selectedValues = this.selectedValues.filter((v) => v !== opt.value);
 		}
 	}
 
-	private applyFilter({ resetFocus = false }: { resetFocus?: boolean } = {}): void {
+	private applyFilter({
+		resetFocus = false,
+	}: { resetFocus?: boolean } = {}): void {
 		const query = this.search.toLowerCase();
 
 		if (query === "") {
@@ -255,12 +261,15 @@ export default class MultiSelectSearchPrompt extends Prompt {
 					priority: getOptionPriority(option, query),
 				}))
 				.filter(
-					(result): result is { option: SearchableOption; index: number; priority: number } =>
-						result.priority !== null
+					(
+						result
+					): result is {
+						option: SearchableOption;
+						index: number;
+						priority: number;
+					} => result.priority !== null
 				)
-				.sort(
-					(a, b) => a.priority - b.priority || a.index - b.index
-				)
+				.sort((a, b) => a.priority - b.priority || a.index - b.index)
 				.map(({ option }) => option);
 		}
 
