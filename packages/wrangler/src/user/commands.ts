@@ -59,6 +59,13 @@ export const loginCommand = createCommand({
 			requiresArg: false,
 			default: 8976,
 		},
+		"x-websocket-callback": {
+			describe:
+				"Use WebSocket relay for OAuth callback (useful in containers/remote environments)",
+			type: "boolean" as const,
+			default: false,
+			hidden: true,
+		},
 	},
 	async handler(args, { config }) {
 		if (args.scopesList) {
@@ -82,6 +89,7 @@ export const loginCommand = createCommand({
 				browser: args.browser,
 				callbackHost: args.callbackHost,
 				callbackPort: args.callbackPort,
+				xWebsocketCallback: args.xWebsocketCallback,
 			});
 			return;
 		}
@@ -89,6 +97,7 @@ export const loginCommand = createCommand({
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
+			xWebsocketCallback: args.xWebsocketCallback,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,

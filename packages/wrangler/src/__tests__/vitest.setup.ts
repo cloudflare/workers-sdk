@@ -162,21 +162,23 @@ vi.mock("../user/generate-auth-url", async (importOriginal) => {
 		OAUTH_CALLBACK_URL,
 		generateAuthUrl: vi
 			.fn()
-			.mockImplementation(({ authUrl, clientId, scopes }) => {
-				return (
-					authUrl +
-					`?response_type=code&` +
-					`client_id=${encodeURIComponent(clientId)}&` +
-					`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
-					// we add offline_access manually for every request
-					`scope=${encodeURIComponent(
-						[...scopes, "offline_access"].join(" ")
-					)}&` +
-					`state=MOCK_STATE_PARAM&` +
-					`code_challenge=${encodeURIComponent("MOCK_CODE_CHALLENGE")}&` +
-					`code_challenge_method=S256`
-				);
-			}),
+			.mockImplementation(
+				({ authUrl, clientId, scopes, callbackUrl = OAUTH_CALLBACK_URL }) => {
+					return (
+						authUrl +
+						`?response_type=code&` +
+						`client_id=${encodeURIComponent(clientId)}&` +
+						`redirect_uri=${encodeURIComponent(callbackUrl)}&` +
+						// we add offline_access manually for every request
+						`scope=${encodeURIComponent(
+							[...scopes, "offline_access"].join(" ")
+						)}&` +
+						`state=MOCK_STATE_PARAM&` +
+						`code_challenge=${encodeURIComponent("MOCK_CODE_CHALLENGE")}&` +
+						`code_challenge_method=S256`
+					);
+				}
+			),
 	};
 });
 

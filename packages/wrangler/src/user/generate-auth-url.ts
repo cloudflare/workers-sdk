@@ -4,6 +4,7 @@ interface GenerateAuthUrlProps {
 	scopes: string[];
 	stateQueryParam: string;
 	codeChallenge: string;
+	callbackUrl?: string;
 }
 
 export const OAUTH_CALLBACK_URL = "http://localhost:8976/oauth/callback";
@@ -18,12 +19,13 @@ export const generateAuthUrl = ({
 	scopes,
 	stateQueryParam,
 	codeChallenge,
+	callbackUrl = OAUTH_CALLBACK_URL,
 }: GenerateAuthUrlProps) => {
 	return (
 		authUrl +
 		`?response_type=code&` +
 		`client_id=${encodeURIComponent(clientId)}&` +
-		`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
+		`redirect_uri=${encodeURIComponent(callbackUrl)}&` +
 		// we add offline_access manually for every request
 		`scope=${encodeURIComponent([...scopes, "offline_access"].join(" "))}&` +
 		`state=${stateQueryParam}&` +
