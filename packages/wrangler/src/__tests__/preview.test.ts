@@ -1,3 +1,4 @@
+import * as childProcess from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
@@ -9,6 +10,16 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
+
+vi.mock("node:child_process", async () => {
+	const actual = await vi.importActual<typeof childProcess>(
+		"node:child_process"
+	);
+	return {
+		...actual,
+		execSync: vi.fn(actual.execSync),
+	};
+});
 
 function configWithPreviews(previews: Partial<PreviewsConfig>): Config {
 	return {
@@ -189,6 +200,7 @@ describe("wrangler preview", () => {
 
 	describe("preview command", () => {
 		beforeEach(() => {
+			vi.stubEnv("CI", undefined);
 			mkdirSync("src", { recursive: true });
 			writeFileSync(
 				"src/index.ts",
@@ -1234,6 +1246,88 @@ describe("wrangler preview", () => {
 				"workers/message": "preview note",
 				"workers/tag": "v1.2.3",
 			});
+		});
+
+		test("should fall back to HEAD commit metadata for annotations in CI", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CI", "true");
+			vi.mocked(childProcess.execSync)
+				.mockImplementationOnce(() => Buffer.from("true"))
+				.mockImplementationOnce(() => Buffer.from("abc123def456\n"))
+				.mockImplementationOnce(() => Buffer.from("true"))
+				.mockImplementationOnce(() => Buffer.from("my commit message\n"));
+
+			let deploymentRequestBody:
+				| (Record<string, unknown> & {
+						annotations?: {
+							"workers/message"?: string;
+							"workers/tag"?: string;
+						};
+				  })
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-ci-annotations",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-ci-annotations",
+									preview_id: "preview-id-ci-annotations",
+									preview_name: "test-preview",
+									urls: ["https://ci123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.annotations).toEqual({
+				"workers/message": "my commit message",
+				"workers/tag": "abc123def456",
+			});
+			vi.unstubAllEnvs();
 		});
 
 		test("should inherit top-level previews config into an environment when env.previews is absent", async ({

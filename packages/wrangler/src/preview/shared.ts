@@ -32,6 +32,28 @@ export function getBranchName(): string | undefined {
 	}
 }
 
+export function shouldUseCIMetadataFallback(): boolean {
+	return process.env.CI === "1" || process.env.CI === "true";
+}
+
+export function getHeadCommitRef(): string | undefined {
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+		return execSync(`git rev-parse HEAD`).toString().trim();
+	} catch {
+		return undefined;
+	}
+}
+
+export function getHeadCommitMessage(): string | undefined {
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+		return execSync(`git log -1 --format=%B`).toString().trim();
+	} catch {
+		return undefined;
+	}
+}
+
 export function resolveWorkerName(
 	args: { workerName?: string; "worker-name"?: string },
 	config: Config

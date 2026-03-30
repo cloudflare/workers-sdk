@@ -42,7 +42,10 @@ import {
 	extractConfigBindings,
 	getBindingValue,
 	getBranchName,
+	getHeadCommitMessage,
+	getHeadCommitRef,
 	resolveWorkerName,
+	shouldUseCIMetadataFallback,
 } from "./shared";
 import type {
 	Binding,
@@ -712,6 +715,12 @@ export async function handlePreviewCommand(
 
 	const previewIdentifier = previewName;
 	const ignoreDefaults = args.ignoreDefaults;
+	const fallbackTag = !args.tag && shouldUseCIMetadataFallback()
+		? getHeadCommitRef()
+		: undefined;
+	const fallbackMessage = !args.message && shouldUseCIMetadataFallback()
+		? getHeadCommitMessage()
+		: undefined;
 	const accountId = await requireAuth(config);
 
 	let existingPreview: PreviewResource | null = null;
@@ -760,7 +769,7 @@ export async function handlePreviewCommand(
 		accountId,
 		workerName,
 		preview.id,
-		{ message: args.message, tag: args.tag }
+		{ message: args.message ?? fallbackMessage, tag: args.tag ?? fallbackTag }
 	);
 	const deployment = await createPreviewDeployment(
 		config,
