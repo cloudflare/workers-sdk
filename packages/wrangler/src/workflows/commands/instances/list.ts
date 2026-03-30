@@ -83,7 +83,13 @@ export const workflowsInstancesListCommand = createCommand({
 				`Showing ${instances.length} instance${instances.length > 1 ? "s" : ""} from page ${args.page}:`
 			);
 
-			const prettierInstances = instances.map((instance) => ({
+			const sortedInstances = instances.sort((a, b) =>
+				args.reverse
+					? (a.created_on ?? "").localeCompare(b.created_on ?? "")
+					: (b.created_on ?? "").localeCompare(a.created_on ?? "")
+			);
+
+			const prettierInstances = sortedInstances.map((instance) => ({
 				"Instance ID": instance.id,
 				Created: instance.created_on
 					? new Date(instance.created_on).toLocaleString()
