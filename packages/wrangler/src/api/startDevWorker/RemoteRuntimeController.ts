@@ -64,8 +64,9 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
-			const { workerAccount, workerContext } =
-				await getWorkerAccountAndContext(props);
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				props
+			);
 
 			return await retryOnAPIFailure(
 				() =>
@@ -298,7 +299,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						assetDirectory: "",
 						excludePatterns: config.legacy?.site?.exclude ?? [],
 						includePatterns: config.legacy?.site?.include ?? [],
-					}
+				  }
 				: undefined,
 			format: bundle.entry.format,
 			bindings: config.bindings,
@@ -360,6 +361,50 @@ export class RemoteRuntimeController extends RuntimeController {
 		}, interval);
 	}
 
+	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
+		logger.log(chalk.dim("⎔ Starting remote preview..."));
+
+		try {
+			const routes = this.#extractRoutes(config);
+
+			if (!config.dev?.auth) {
+				throw new MissingConfigError("config.dev.auth");
+			}
+
+			assert(config.dev.auth);
+			const auth = await unwrapHook(config.dev.auth);
+
+			this.#latestConfig = config;
+			this.#latestBundle = bundle;
+			this.#latestRoutes = routes;
+
+			if (this.#session) {
+				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
+			}
+
+			// Recreate session if the worker name changed, since the session
+			// host bakes in the name from creation time.
+			if (this.#session && config.name !== this.#session.name) {
+				this.#session = undefined;
+			}
+
+			this.#session ??= await this.#getPreviewSession(config, auth, routes);
+			await this.#updatePreviewToken(config, bundle, auth, routes, id);
+		} catch (error) {
+			if (error instanceof Error && error.name == "AbortError") {
+				return;
+			}
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Error reloading remote server",
+				cause: castErrorCause(error),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
+		}
+	}
+
 	async #refreshPreviewToken() {
 		if (!this.#latestConfig || !this.#latestBundle) {
 			logger.warn(
@@ -399,50 +444,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error refreshing preview token",
-				cause: castErrorCause(error),
-				source: "RemoteRuntimeController",
-				data: undefined,
-			});
-		}
-	}
-
-	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
-		logger.log(chalk.dim("⎔ Starting remote preview..."));
-
-		try {
-			const routes = this.#extractRoutes(config);
-
-			if (!config.dev?.auth) {
-				throw new MissingConfigError("config.dev.auth");
-			}
-
-			assert(config.dev.auth);
-			const auth = await unwrapHook(config.dev.auth);
-
-			this.#latestConfig = config;
-			this.#latestBundle = bundle;
-			this.#latestRoutes = routes;
-
-			if (this.#session) {
-				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
-			}
-
-			// Recreate session if the worker name changed, since the session
-			// host bakes in the name from creation time.
-			if (this.#session && config.name !== this.#session.name) {
-				this.#session = undefined;
-			}
-
-			this.#session ??= await this.#getPreviewSession(config, auth, routes);
-			await this.#updatePreviewToken(config, bundle, auth, routes, id);
-		} catch (error) {
-			if (error instanceof Error && error.name == "AbortError") {
-				return;
-			}
-
-			this.emitErrorEvent({
-				type: "error",
-				reason: "Error reloading remote server",
 				cause: castErrorCause(error),
 				source: "RemoteRuntimeController",
 				data: undefined,
