@@ -49,7 +49,14 @@ describe("wrangler preview", () => {
 						async ({ request }) => {
 							patchRequestBody =
 								(await request.json()) as typeof patchRequestBody;
-							return HttpResponse.json({ success: true, result: {} });
+							return HttpResponse.json({
+								success: true,
+								result: {
+									preview_defaults: {
+										env: patchRequestBody?.preview_defaults?.env ?? {},
+									},
+								},
+							});
 						}
 					)
 				);
@@ -64,8 +71,13 @@ describe("wrangler preview", () => {
 					API_KEY: { type: "secret_text", text: "defaults-secret" },
 				});
 				expect(std.out).toContain(
-					'Secret "API_KEY" added to Previews settings for "test-worker"'
+					'Secret "API_KEY" added to Previews settings for Worker test-worker.'
 				);
+				expect(std.out).toContain("Worker: test-worker");
+				expect(std.out).toContain("Previews settings");
+				expect(std.out).toContain("Secrets");
+				expect(std.out).toContain("API_KEY");
+				expect(std.out).toContain("********");
 			});
 
 			test("should respect env-specific worker name when using --env", async ({
@@ -102,7 +114,7 @@ describe("wrangler preview", () => {
 
 				expect(patchUrl).toContain("/workers/workers/staging-worker");
 				expect(std.out).toContain(
-					'Secret "API_KEY" added to Previews settings for "staging-worker"'
+					'Secret "API_KEY" added to Previews settings for Worker staging-worker.'
 				);
 			});
 
@@ -157,7 +169,14 @@ describe("wrangler preview", () => {
 						async ({ request }) => {
 							patchRequestBody =
 								(await request.json()) as typeof patchRequestBody;
-							return HttpResponse.json({ success: true, result: {} });
+							return HttpResponse.json({
+								success: true,
+								result: {
+									preview_defaults: {
+										env: patchRequestBody?.preview_defaults?.env ?? {},
+									},
+								},
+							});
 						}
 					)
 				);
@@ -168,8 +187,12 @@ describe("wrangler preview", () => {
 					REMOVE_ME: null,
 				});
 				expect(std.out).toContain(
-					'Secret "REMOVE_ME" deleted from Previews settings'
+					'Secret "REMOVE_ME" deleted from Previews settings for Worker test-worker.'
 				);
+				expect(std.out).toContain("Worker: test-worker");
+				expect(std.out).toContain("Previews settings");
+				expect(std.out).toContain("Secrets");
+				expect(std.out).toContain("(none)");
 			});
 
 			test("should respect env-specific worker name when deleting a secret", async ({
@@ -244,9 +267,12 @@ describe("wrangler preview", () => {
 					)
 				);
 				await runWrangler("preview secret list --worker-name test-worker");
-				expect(std.out).toContain("Previews settings Secrets:");
+				expect(std.out).toContain("Worker: test-worker");
+				expect(std.out).toContain("Previews settings");
+				expect(std.out).toContain("Secrets");
 				expect(std.out).toContain("MY_SECRET");
 				expect(std.out).not.toContain("PLAIN");
+				expect(std.out).toContain("********");
 			});
 
 			test("should respect env-specific worker name when listing secrets", async ({
@@ -297,7 +323,14 @@ describe("wrangler preview", () => {
 						async ({ request }) => {
 							patchRequestBody =
 								(await request.json()) as typeof patchRequestBody;
-							return HttpResponse.json({ success: true, result: {} });
+							return HttpResponse.json({
+								success: true,
+								result: {
+									preview_defaults: {
+										env: patchRequestBody?.preview_defaults?.env ?? {},
+									},
+								},
+							});
 						}
 					)
 				);
@@ -307,6 +340,11 @@ describe("wrangler preview", () => {
 					FIRST_KEY: { type: "secret_text", text: "one" },
 					SECOND_KEY: { type: "secret_text", text: "two" },
 				});
+				expect(std.out).toContain("Worker: test-worker");
+				expect(std.out).toContain("Secrets");
+				expect(std.out).toContain("FIRST_KEY");
+				expect(std.out).toContain("SECOND_KEY");
+				expect(std.out).toContain("********");
 			});
 
 			test("should respect env-specific worker name when bulk uploading secrets", async ({

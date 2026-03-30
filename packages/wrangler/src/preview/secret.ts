@@ -1,10 +1,13 @@
+import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { parseBulkInputToObject } from "../secret";
 import { requireAuth } from "../user";
+import { drawBox, padToVisibleWidth, visibleLength } from "../utils/box";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { editWorkerPreviewDefaults, getWorkerPreviewDefaults } from "./api";
-import { resolveWorkerName } from "./shared";
+import { getBindingValue, resolveWorkerName } from "./shared";
 import type { Binding, EnvBindings } from "./api";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -33,8 +36,42 @@ function toSecretBindingsPatch(
 
 function extractSecretSummaries(env: EnvBindings | undefined): SecretSummary[] {
 	return Object.entries(env ?? {})
-		.filter(([, binding]) => isSecretBinding(binding))
+		.filter(([, binding]) => binding !== null && isSecretBinding(binding))
 		.map(([name]) => ({ name, type: "secret_text" }));
+}
+
+function formatPreviewSecrets(workerName: string, env: EnvBindings | undefined): string {
+	const secrets = Object.entries(env ?? {}).filter(([, binding]) =>
+		binding !== null && isSecretBinding(binding)
+	);
+	const lines: string[] = [];
+	lines.push(`${chalk.bold.hex("#FFA500")("Worker:")} ${workerName}`);
+	lines.push("");
+	lines.push(`  ${chalk.bold.underline("Previews settings")}`);
+	lines.push("");
+	lines.push(chalk.bold("  Secrets"));
+
+	if (secrets.length === 0) {
+		lines.push(`  ${chalk.dim("(none)")}`);
+		lines.push("");
+		return drawBox(lines);
+	}
+
+	const typeLabel = getBindingTypeFriendlyName("secret_text");
+	const nameWidth = Math.max(...secrets.map(([name]) => name.length));
+	const typeWidth = visibleLength(typeLabel);
+	const valueWidth = Math.max(
+		...secrets.map(([, binding]) => getBindingValue(binding).length)
+	);
+
+	for (const [name, binding] of secrets) {
+		lines.push(
+			`  ${chalk.cyan(padToVisibleWidth(name, nameWidth))}   ${chalk.dim(padToVisibleWidth(typeLabel, typeWidth))}   ${padToVisibleWidth(getBindingValue(binding), valueWidth)}`
+		);
+	}
+
+	lines.push("");
+	return drawBox(lines);
 }
 
 export async function handlePreviewSecretPutCommand(
@@ -53,12 +90,13 @@ export async function handlePreviewSecretPutCommand(
 			: await readFromStdin()
 	);
 
-	await editWorkerPreviewDefaults(config, accountId, workerName, {
+	const updatedPreviewDefaults = await editWorkerPreviewDefaults(config, accountId, workerName, {
 		env: toSecretBindingsPatch({ [args.key]: secretValue }),
 	});
 	logger.log(
-		`\n✨ Secret "${args.key}" added to Previews settings for "${workerName}".`
+		`\n✨ Secret "${args.key}" added to Previews settings for Worker ${chalk.bold.cyan(workerName)}.`
 	);
+	logger.log(formatPreviewSecrets(workerName, updatedPreviewDefaults.env));
 }
 
 export async function handlePreviewSecretDeleteCommand(
@@ -75,7 +113,7 @@ export async function handlePreviewSecretDeleteCommand(
 
 	if (!args.skipConfirmation) {
 		const confirmed = await confirm(
-			`Are you sure you want to delete the secret "${args.key}" from Previews settings for Worker "${workerName}"?`
+			`Are you sure you want to delete the secret "${args.key}" from Previews settings for Worker ${chalk.bold.cyan(workerName)}?`
 		);
 		if (!confirmed) {
 			logger.log("Aborted.");
@@ -83,12 +121,15 @@ export async function handlePreviewSecretDeleteCommand(
 		}
 	}
 
-	await editWorkerPreviewDefaults(config, accountId, workerName, {
+	const updatedPreviewDefaults = await editWorkerPreviewDefaults(config, accountId, workerName, {
 		env: {
 			[args.key]: null,
 		},
 	});
-	logger.log(`\n✨ Secret "${args.key}" deleted from Previews settings.`);
+	logger.log(
+		`\n✨ Secret "${args.key}" deleted from Previews settings for Worker ${chalk.bold.cyan(workerName)}.`
+	);
+	logger.log(formatPreviewSecrets(workerName, updatedPreviewDefaults.env));
 }
 
 export async function handlePreviewSecretListCommand(
@@ -114,12 +155,7 @@ export async function handlePreviewSecretListCommand(
 		return;
 	}
 
-	logger.log("Previews settings Secrets:");
-	logger.log("─────────────────────────────────────────────────────");
-	for (const secret of secrets) {
-		logger.log(`  - ${secret.name}`);
-	}
-	logger.log("─────────────────────────────────────────────────────");
+	logger.log(formatPreviewSecrets(workerName, previewDefaults.env));
 }
 
 export async function handlePreviewSecretBulkCommand(
@@ -143,10 +179,11 @@ export async function handlePreviewSecretBulkCommand(
 	const secretCount = Object.keys(content).length;
 	const source = args.file ? `file "${args.file}"` : "stdin";
 
-	await editWorkerPreviewDefaults(config, accountId, workerName, {
+	const updatedPreviewDefaults = await editWorkerPreviewDefaults(config, accountId, workerName, {
 		env: toSecretBindingsPatch(content),
 	});
 	logger.log(
-		`\n✨ Uploaded ${secretCount} secrets from ${source} to Previews settings for "${workerName}".`
+		`\n✨ Uploaded ${secretCount} secrets from ${source} to Previews settings for Worker ${chalk.bold.cyan(workerName)}.`
 	);
+	logger.log(formatPreviewSecrets(workerName, updatedPreviewDefaults.env));
 }
