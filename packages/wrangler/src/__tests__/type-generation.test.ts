@@ -440,6 +440,16 @@ const bindingsConfigMock: Omit<
 	],
 	send_email: [{ name: "SEND_EMAIL_BINDING" }],
 	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	// AI Search and AI Search Namespace type generation is being done in a separate effort in ticket RAG-1028
+	ai_search_namespaces: [
+		{ binding: "AI_SEARCH_NS_BINDING", namespace: "production" },
+	],
+	ai_search: [
+		{
+			binding: "AI_SEARCH_BINDING",
+			instance_name: "cloudflare-blog",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
@@ -1099,6 +1109,119 @@ describe("generate types", () => {
 			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to a/worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			"
+		`);
+	});
+
+	it("should resolve secondary worker types when env overrides the worker name", async ({
+		expect,
+	}) => {
+		// Reproduces https://github.com/cloudflare/workers-sdk/issues/12971
+		// When a secondary worker has named environments that override the worker name
+		// (e.g. name "do-worker" with env "staging" whose effective name is "do-worker-staging"),
+		// service/DO bindings in the primary worker that reference "do-worker-staging" should
+		// resolve to the typed entry instead of falling back to an unresolved comment type.
+		fs.mkdirSync("primary");
+		fs.mkdirSync("secondary");
+
+		fs.writeFileSync(
+			"./secondary/index.ts",
+			`import { DurableObject } from 'cloudflare:workers';
+			export default { async fetch() {} };
+			export class MyDurableObject extends DurableObject {}
+			`
+		);
+		fs.writeFileSync(
+			"./secondary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "do-worker",
+				main: "./index.ts",
+				durable_objects: {
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+				},
+				migrations: [{ tag: "v1", new_classes: ["MyDurableObject"] }],
+				env: {
+					staging: {
+						name: "do-worker-staging",
+						durable_objects: {
+							bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
+						},
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./primary/index.ts",
+			"export default { async fetch() {} };"
+		);
+		fs.writeFileSync(
+			"./primary/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "primary-worker",
+				main: "./index.ts",
+				services: [{ binding: "DO_WORKER", service: "do-worker" }],
+				durable_objects: {
+					bindings: [
+						{
+							name: "DO_OBJECT",
+							class_name: "MyDurableObject",
+							script_name: "do-worker",
+						},
+					],
+				},
+				env: {
+					staging: {
+						name: "primary-worker-staging",
+						services: [{ binding: "DO_WORKER", service: "do-worker-staging" }],
+						durable_objects: {
+							bindings: [
+								{
+									name: "DO_OBJECT",
+									class_name: "MyDurableObject",
+									script_name: "do-worker-staging",
+								},
+							],
+						},
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		await runWrangler(
+			"types --include-runtime=false -c primary/wrangler.jsonc -c secondary/wrangler.jsonc --path primary/worker-configuration.d.ts"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			- Found Worker 'do-worker' at 'secondary/index.ts' (secondary/wrangler.jsonc)
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface StagingEnv {
+					DO_OBJECT: DurableObjectNamespace<import("../secondary/index").MyDurableObject>;
+					DO_WORKER: Service<typeof import("../secondary/index").default>;
+				}
+				interface Env {
+					DO_OBJECT: DurableObjectNamespace<import("../secondary/index").MyDurableObject>;
+					DO_WORKER: Service<typeof import("../secondary/index").default>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to primary/worker-configuration.d.ts
 
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"

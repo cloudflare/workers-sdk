@@ -63,6 +63,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("r2", () => {
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
 			"Resource location: remote
 			Starting bulk upload of 2 objects to bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000 using a concurrency of 20
+			? Bulk upload may overwrite existing objects. If this bucket has data catalog enabled, this operation could leave the catalog in an invalid state. Continue?
+			🤖 Using fallback value in non-interactive context: yes
 			Uploaded 100% (2 out of 2)"
 		`);
 	});

@@ -91,6 +91,9 @@ patchedDependencies:
   toucan-js@4.0.0:
     hash: qxsfpdzvzbhq2ecirbu5xq4vlq
     path: patches/toucan-js@4.0.0.patch
+  undici@7.24.4:
+    hash: eoxacwyrfksebemwxidpujesci
+    path: patches/undici@7.24.4.patch
   youch@4.1.0-beta.10:
     hash: flgmw54jmjdxqmelxigtxg6kum
     path: patches/youch@4.1.0-beta.10.patch
@@ -173,7 +176,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -236,7 +239,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -257,7 +260,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -296,7 +299,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -314,7 +317,7 @@ importers:
         version: 4.20260317.1
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -350,7 +353,7 @@ importers:
         version: 2.2.0
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -377,7 +380,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -422,7 +425,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -443,7 +446,7 @@ importers:
         version: link:../shared
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -526,7 +529,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -581,7 +584,7 @@ importers:
         version: 4.20260317.1
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -614,7 +617,7 @@ importers:
         version: 1.2.7
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -635,7 +638,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -656,7 +659,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -684,7 +687,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -705,7 +708,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -723,7 +726,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -744,7 +747,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -765,7 +768,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -786,7 +789,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -826,7 +829,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -847,7 +850,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -862,7 +865,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -883,7 +886,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -904,7 +907,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -922,7 +925,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -940,7 +943,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -958,7 +961,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -976,7 +979,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -994,7 +997,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1033,7 +1036,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1048,7 +1051,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1063,7 +1066,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1199,6 +1202,9 @@ importers:
       discord-api-types:
         specifier: 0.37.98
         version: 0.37.98
+      esm-dep:
+        specifier: file:./module-resolution/vendor/esm-dep
+        version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep
       ext-dep:
         specifier: file:./module-resolution/vendor/ext-dep
         version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep
@@ -1266,7 +1272,7 @@ importers:
         version: link:../shared
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1288,7 +1294,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1384,7 +1390,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1405,7 +1411,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1426,7 +1432,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1447,7 +1453,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1468,7 +1474,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1501,7 +1507,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1528,7 +1534,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1549,7 +1555,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1567,7 +1573,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -1596,12 +1602,57 @@ importers:
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
+      '@types/cross-spawn':
+        specifier: ^6.0.2
+        version: 6.0.2
+      '@types/which-pm-runs':
+        specifier: ^1.0.0
+        version: 1.0.0
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
+      cross-spawn:
+        specifier: ^7.0.3
+        version: 7.0.6
       log-update:
         specifier: ^5.0.1
         version: 5.0.1
+      which-pm-runs:
+        specifier: ^2.0.0
+        version: 2.0.0
+
+  packages/codemod:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@types/esprima':
+        specifier: ^4.0.3
+        version: 4.0.3
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.15.17
+      '@vitest/ui':
+        specifier: catalog:default
+        version: 4.1.0(vitest@4.1.0)
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      recast:
+        specifier: ^0.23.11
+        version: 0.23.11
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@3.12.10)(typescript@5.8.3)(yaml@2.8.1)
+      tsx:
+        specifier: ^3.12.8
+        version: 3.12.10
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
 
   packages/containers-shared:
     devDependencies:
@@ -1635,6 +1686,9 @@ importers:
       '@cloudflare/cli':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/codemod':
+        specifier: workspace:*
+        version: link:../codemod
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -1732,8 +1786,8 @@ importers:
         specifier: ^8.4.0
         version: 8.4.0
       recast:
-        specifier: ^0.22.0
-        version: 0.22.0
+        specifier: ^0.23.11
+        version: 0.23.11
       semver:
         specifier: ^7.7.1
         version: 7.7.1
@@ -1748,7 +1802,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vite:
         specifier: catalog:default
         version: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
@@ -1868,7 +1922,7 @@ importers:
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.1)
       vitest:
         specifier: catalog:default
-        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+        version: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/lint-config-shared:
     devDependencies:
@@ -1998,7 +2052,7 @@ importers:
         version: 0.34.5
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       workerd:
         specifier: 1.20260317.1
         version: 1.20260317.1
@@ -2253,7 +2307,7 @@ importers:
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3596,7 +3650,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vitest:
         specifier: catalog:default
         version: 4.1.0(@opentelemetry/api@1.7.0)(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -3745,7 +3799,7 @@ importers:
         version: 4.13.0
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       vite:
         specifier: catalog:default
         version: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
@@ -3922,6 +3976,9 @@ importers:
       '@cloudflare/cli':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/codemod':
+        specifier: workspace:*
+        version: link:../codemod
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
@@ -3964,9 +4021,6 @@ importers:
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
-      '@types/cross-spawn':
-        specifier: ^6.0.2
-        version: 6.0.2
       '@types/esprima':
         specifier: ^4.0.3
         version: 4.0.3
@@ -4048,9 +4102,6 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
-      cross-spawn:
-        specifier: ^7.0.3
-        version: 7.0.6
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -4170,7 +4221,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       update-check:
         specifier: ^1.5.4
         version: 1.5.4
@@ -4224,7 +4275,7 @@ importers:
         version: 2.2.0
       undici:
         specifier: catalog:default
-        version: 7.24.4
+        version: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       wrangler:
         specifier: workspace:*
         version: link:../packages/wrangler
@@ -9048,9 +9099,6 @@ packages:
     resolution: {integrity: sha512-NfJ4UzBCcQGLDlQq7nHxH+tv3kyZ0hHQqF5BO6J7tNJeP5do1llPr8dZ8zHonfhAu0PHAdMkSo+8o0wxg9lZWw==}
     engines: {node: '>=0.8'}
 
-  assert@2.1.0:
-    resolution: {integrity: sha512-eLHpSK/Y4nhMJ07gDaAzoX/XAKS8PSaojml3M0DM4JpV1LAi5JOJ/p6H/XWrl8L+DzVEvVCW1z3vWAaB9oTsQw==}
-
   ast-kit@2.1.3:
     resolution: {integrity: sha512-TH+b3Lv6pUjy/Nu0m6A2JULtdzLpmqF9x1Dhj00ZoEiML8qvVA9j1flkzTKNYgdEhWrjDwtWNpyyCUbfQe514g==}
     engines: {node: '>=20.19.0'}
@@ -9061,10 +9109,6 @@ packages:
 
   ast-types@0.13.4:
     resolution: {integrity: sha512-x1FCFnFifvYDDzTaLII71vG5uvDwgtmDTEVWAxrgeiR8VjMONcCXJx7E+USjDtHlwFmt9MysbqgF9b9Vjr6w+w==}
-    engines: {node: '>=4'}
-
-  ast-types@0.15.2:
-    resolution: {integrity: sha512-c27loCv9QkZinsa5ProX751khO9DJl/AcB5c2KNtA6NRvHKS0PgLfcftz72KVq504vB0Gku5s2kUZzDBvQWvHg==}
     engines: {node: '>=4'}
 
   ast-types@0.16.1:
@@ -10340,6 +10384,9 @@ packages:
       jiti:
         optional: true
 
+  esm-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep:
+    resolution: {directory: fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep, type: directory}
+
   espree@10.4.0:
     resolution: {integrity: sha512-j6PAQ2uUr79PZhBjP5C5fhl8e39FmRnOjsD5lGnWrFU8i2G776tBK7+nP8KuQUTTyAZUwfQqXAgrVH5MbH9CYQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -10737,9 +10784,6 @@ packages:
   get-tsconfig@4.13.6:
     resolution: {integrity: sha512-shZT/QMiSHc/YBLxxOkMtgSid5HFoauqCE3/exfsEcwg1WkeqjG+V40yBbBrsD+jW2HDXcs28xOfcbm2jI8Ddw==}
 
-  get-tsconfig@4.7.0:
-    resolution: {integrity: sha512-pmjiZ7xtB8URYm74PlGJozDNyhvsVLUcpBa8DZBG3bWHwaHa9bPiRpiSfovw+fjhwONSCWKRyk+JQHEGZmMrzw==}
-
   get-uri@6.0.4:
     resolution: {integrity: sha512-E1b1lFFLvLgak2whF2xDBcOy6NLVGZBqqjJjsIhvopKfWWEi64pLVTWWehV8KlLerZkfNTA95sTe2OdJKm1OzQ==}
     engines: {node: '>= 14'}
@@ -11030,10 +11074,6 @@ packages:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
 
-  is-arguments@1.2.0:
-    resolution: {integrity: sha512-7bVbi0huj/wrIAOzb8U1aszg9kdi3KN/CyU19CTI7tAoZYEZoL9yCDXpbXN+uPsuWnP02cyug1gleqq+TU+YCA==}
-    engines: {node: '>= 0.4'}
-
   is-array-buffer@3.0.5:
     resolution: {integrity: sha512-DDfANUiiG2wC1qawP66qlTugJeL5HyzMpfr8lLK+jMQirGzNod0B12cFB/9q838Ru27sBwfw78/rdoU7RERz6A==}
     engines: {node: '>= 0.4'}
@@ -11135,10 +11175,6 @@ packages:
 
   is-module@1.0.0:
     resolution: {integrity: sha512-51ypPSPCoTEIN9dy5Oy+h4pShgJmPCygKfyRCISBI+JoWT/2oJvK8QPxmwv7b/p239jXrm9M1mlQbyKJ5A152g==}
-
-  is-nan@1.3.2:
-    resolution: {integrity: sha512-E+zBKpQ2t6MEo1VsonYmluk9NxGrbzpeeLC2xIViuO2EjU2xsXsBPwTr3Ykv9l08UYEVEdWeRZNouaZqF6RN0w==}
-    engines: {node: '>= 0.4'}
 
   is-negative-zero@2.0.3:
     resolution: {integrity: sha512-5KoIu2Ngpyek75jXodFvnafB6DJgr3u8uuK0LEZJjrU19DrMD3EVERaR8sjz8CCGgpZvxPl9SuE1GMVPFHx1mw==}
@@ -12105,10 +12141,6 @@ packages:
 
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
-    engines: {node: '>= 0.4'}
-
-  object-is@1.1.6:
-    resolution: {integrity: sha512-F8cZ+KfGlSGi09lJT7/Nd6KJZ9ygtvYC0/UYYLI9nmQKLMnydpB9yvbv9K1uSkEu7FU9vYPmVwLg328tX+ot3Q==}
     engines: {node: '>= 0.4'}
 
   object-keys@1.1.1:
@@ -13089,10 +13121,6 @@ packages:
     resolution: {integrity: sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==}
     engines: {node: '>= 12.13.0'}
 
-  recast@0.22.0:
-    resolution: {integrity: sha512-5AAx+mujtXijsEavc5lWXBPQqrM4+Dl5qNH96N2aNeuJFUzpiiToKPsxQD/zAIJHspz7zz0maX0PCtCTFVlixQ==}
-    engines: {node: '>= 4'}
-
   recast@0.23.11:
     resolution: {integrity: sha512-YTUo+Flmw4ZXiWfQKGcwwc11KnoRAYgzAE2E7mXKCjSviTKShtxBsN6YUUBB2gtaBzKzeKunxhUwNHQuRryhWA==}
     engines: {node: '>= 4'}
@@ -13275,9 +13303,6 @@ packages:
   run-script-os@1.1.6:
     resolution: {integrity: sha512-ql6P2LzhBTTDfzKts+Qo4H94VUKpxKDFz6QxxwaUZN0mwvi7L3lpOI7BqPCq7lgDh3XLl0dpeXwfcVIitlrYrw==}
     hasBin: true
-
-  rxjs@7.8.1:
-    resolution: {integrity: sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==}
 
   rxjs@7.8.2:
     resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
@@ -13531,10 +13556,6 @@ packages:
   source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
-
-  source-map@0.7.4:
-    resolution: {integrity: sha512-l3BikUxvPOcn5E74dZiq5BGsTb5yEwhaTSzccU6t4sDOH8NWJCstKO5QT2CvtFoK6F0saL7p9xHAqHOlCPJygA==}
-    engines: {node: '>= 8'}
 
   source-map@0.7.6:
     resolution: {integrity: sha512-i5uvt8C3ikiWeNZSVZNWcfZPItFQOsYTUAOkcUPGd8DqDy1uOUikjt5dG+uRlwyvR108Fb9DOd4GvXfT0N2/uQ==}
@@ -14307,9 +14328,6 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  util@0.12.5:
-    resolution: {integrity: sha512-kZf/K6hEIrWHI6XqOFUiiMa+79wE/D8Q+NCNAWclkyg3b4d2k7s0QGepNjiABc+aR3N1PAyHL7p6UcLY6LmrnA==}
-
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
@@ -14487,7 +14505,7 @@ packages:
       '@vitest/ui': 4.1.0
       happy-dom: '*'
       jsdom: '*'
-      vite: 7.1.12
+      vite: ^6.0.0 || ^7.0.0 || ^8.0.0-0
     peerDependenciesMeta:
       '@edge-runtime/vm':
         optional: true
@@ -14569,6 +14587,10 @@ packages:
   which-pm-runs@1.1.0:
     resolution: {integrity: sha512-n1brCuqClxfFfq/Rb0ICg9giSZqCS+pLtccdag6C2HyufBrh3fBOiy9nb6ggRMvWOVH5GrdJskj5iGTZNxd7SA==}
     engines: {node: '>=4'}
+
+  which-pm-runs@2.0.0:
+    resolution: {integrity: sha512-nZMKNZWw3urJ6GnFOS+rXYe2glmWFVlQQWnKYzYXKvxKjyLO4QqQfp/wIYjMJl35yOp2YG/TR58DcVbQ24Giew==}
+    engines: {node: '>=22.13'}
 
   which-typed-array@1.1.19:
     resolution: {integrity: sha512-rEvr90Bck4WZt9HHFC4DJMsjvu7x+r6bImz0/BrbWb7A2djJ8hnZMrWnHo9F8ssv0OMErasDhftrfROTyqSDrw==}
@@ -16205,7 +16227,7 @@ snapshots:
       cjs-module-lexer: 1.2.3
       esbuild: 0.27.3
       miniflare: 4.20260317.1
-      vitest: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      vitest: 4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
       wrangler: 4.76.0(@cloudflare/workers-types@4.20260317.1)
       zod: 3.25.76
     transitivePeerDependencies:
@@ -16394,7 +16416,7 @@ snapshots:
   '@esbuild-kit/cjs-loader@2.4.4':
     dependencies:
       '@esbuild-kit/core-utils': 3.3.2
-      get-tsconfig: 4.7.0
+      get-tsconfig: 4.13.6
 
   '@esbuild-kit/core-utils@3.3.2':
     dependencies:
@@ -16404,7 +16426,7 @@ snapshots:
   '@esbuild-kit/esm-loader@2.6.5':
     dependencies:
       '@esbuild-kit/core-utils': 3.3.2
-      get-tsconfig: 4.7.0
+      get-tsconfig: 4.13.6
 
   '@esbuild/aix-ppc64@0.23.1':
     optional: true
@@ -17888,7 +17910,7 @@ snapshots:
       '@web3-storage/multipart-parser': 1.0.0
       cookie: 0.6.0
       set-cookie-parser: 2.6.0
-      source-map: 0.7.4
+      source-map: 0.7.6
       turbo-stream: 2.4.0
     optionalDependencies:
       typescript: 5.8.3
@@ -19139,7 +19161,7 @@ snapshots:
 
   '@types/esprima@4.0.3':
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.8
 
   '@types/estree@1.0.5': {}
 
@@ -19554,6 +19576,15 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
+  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))':
+    dependencies:
+      '@vitest/spy': 4.1.0
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      msw: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
+
   '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
     dependencies:
       '@vitest/spy': 4.1.0
@@ -19562,15 +19593,6 @@ snapshots:
     optionalDependencies:
       msw: 2.12.4(@types/node@22.15.17)(typescript@5.8.3)
       vite: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
-
-  '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
-    dependencies:
-      '@vitest/spy': 4.1.0
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      msw: 2.12.4(@types/node@22.15.17)(typescript@5.9.3)
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
 
   '@vitest/mocker@4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))':
     dependencies:
@@ -19883,14 +19905,6 @@ snapshots:
 
   assert-plus@1.0.0: {}
 
-  assert@2.1.0:
-    dependencies:
-      call-bind: 1.0.8
-      is-nan: 1.3.2
-      object-is: 1.1.6
-      object.assign: 4.1.7
-      util: 0.12.5
-
   ast-kit@2.1.3:
     dependencies:
       '@babel/parser': 7.29.0
@@ -19902,10 +19916,6 @@ snapshots:
       pathe: 2.0.3
 
   ast-types@0.13.4:
-    dependencies:
-      tslib: 2.8.1
-
-  ast-types@0.15.2:
     dependencies:
       tslib: 2.8.1
 
@@ -20410,8 +20420,8 @@ snapshots:
       chalk: 4.1.2
       date-fns: 2.30.0
       lodash: 4.17.23
-      rxjs: 7.8.1
-      shell-quote: 1.8.1
+      rxjs: 7.8.2
+      shell-quote: 1.8.3
       spawn-command: 0.0.2
       supports-color: 8.1.1
       tree-kill: 1.2.2
@@ -20629,7 +20639,7 @@ snapshots:
 
   date-fns@2.30.0:
     dependencies:
-      '@babel/runtime': 7.22.5
+      '@babel/runtime': 7.28.6
 
   date-fns@4.1.0: {}
 
@@ -21214,6 +21224,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  esm-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/esm-dep: {}
+
   espree@10.4.0:
     dependencies:
       acorn: 8.15.0
@@ -21716,10 +21728,6 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  get-tsconfig@4.7.0:
-    dependencies:
-      resolve-pkg-maps: 1.0.0
-
   get-uri@6.0.4:
     dependencies:
       basic-ftp: 5.0.5
@@ -22013,11 +22021,6 @@ snapshots:
 
   ipaddr.js@1.9.1: {}
 
-  is-arguments@1.2.0:
-    dependencies:
-      call-bound: 1.0.4
-      has-tostringtag: 1.0.2
-
   is-array-buffer@3.0.5:
     dependencies:
       call-bind: 1.0.8
@@ -22101,11 +22104,6 @@ snapshots:
   is-map@2.0.3: {}
 
   is-module@1.0.0: {}
-
-  is-nan@1.3.2:
-    dependencies:
-      call-bind: 1.0.8
-      define-properties: 1.2.1
 
   is-negative-zero@2.0.3: {}
 
@@ -22700,7 +22698,7 @@ snapshots:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.34.5
-      undici: 7.24.4
+      undici: 7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci)
       workerd: 1.20260317.1
       ws: 8.18.0
       youch: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
@@ -22980,11 +22978,6 @@ snapshots:
   object-inspect@1.13.3: {}
 
   object-inspect@1.13.4: {}
-
-  object-is@1.1.6:
-    dependencies:
-      call-bind: 1.0.8
-      define-properties: 1.2.1
 
   object-keys@1.1.1: {}
 
@@ -23460,6 +23453,15 @@ snapshots:
   postcss-discard-overridden@7.0.0(postcss@8.5.6):
     dependencies:
       postcss: 8.5.6
+
+  postcss-load-config@6.0.1(jiti@2.6.1)(postcss@8.5.8)(tsx@3.12.10)(yaml@2.8.1):
+    dependencies:
+      lilconfig: 3.1.3
+    optionalDependencies:
+      jiti: 2.6.1
+      postcss: 8.5.8
+      tsx: 3.12.10
+      yaml: 2.8.1
 
   postcss-load-config@6.0.1(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(yaml@2.8.1):
     dependencies:
@@ -24001,14 +24003,6 @@ snapshots:
 
   real-require@0.2.0: {}
 
-  recast@0.22.0:
-    dependencies:
-      assert: 2.1.0
-      ast-types: 0.15.2
-      esprima: 4.0.1
-      source-map: 0.6.1
-      tslib: 2.8.1
-
   recast@0.23.11:
     dependencies:
       ast-types: 0.16.1
@@ -24314,10 +24308,6 @@ snapshots:
       queue-microtask: 1.2.3
 
   run-script-os@1.1.6: {}
-
-  rxjs@7.8.1:
-    dependencies:
-      tslib: 2.8.1
 
   rxjs@7.8.2:
     dependencies:
@@ -24632,8 +24622,6 @@ snapshots:
       source-map: 0.6.1
 
   source-map@0.6.1: {}
-
-  source-map@0.7.4: {}
 
   source-map@0.7.6: {}
 
@@ -25148,6 +25136,34 @@ snapshots:
       - tsx
       - yaml
 
+  tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@3.12.10)(typescript@5.8.3)(yaml@2.8.1):
+    dependencies:
+      bundle-require: 5.1.0(esbuild@0.23.1)
+      cac: 6.7.14
+      chokidar: 3.6.0
+      consola: 3.4.2
+      debug: 4.4.1(supports-color@9.2.2)
+      esbuild: 0.23.1
+      execa: 5.1.1
+      joycon: 3.1.1
+      picocolors: 1.1.1
+      postcss-load-config: 6.0.1(jiti@2.6.1)(postcss@8.5.8)(tsx@3.12.10)(yaml@2.8.1)
+      resolve-from: 5.0.0
+      rollup: 4.44.1
+      source-map: 0.8.0-beta.0
+      sucrase: 3.35.0
+      tinyglobby: 0.2.15
+      tree-kill: 1.2.2
+    optionalDependencies:
+      '@microsoft/api-extractor': 7.52.8(@types/node@22.15.17)
+      postcss: 8.5.8
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - jiti
+      - supports-color
+      - tsx
+      - yaml
+
   tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@22.15.17))(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.1):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.23.1)
@@ -25396,7 +25412,7 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-  undici@7.24.4: {}
+  undici@7.24.4(patch_hash=eoxacwyrfksebemwxidpujesci): {}
 
   unenv@2.0.0-rc.24:
     dependencies:
@@ -25473,14 +25489,6 @@ snapshots:
       react: 19.2.4
 
   util-deprecate@1.0.2: {}
-
-  util@0.12.5:
-    dependencies:
-      inherits: 2.0.4
-      is-arguments: 1.2.0
-      is-generator-function: 1.0.10
-      is-typed-array: 1.1.15
-      which-typed-array: 1.1.19
 
   utils-merge@1.0.1: {}
 
@@ -25635,7 +25643,7 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.1
 
-  vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1):
+  vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.3
@@ -25647,7 +25655,7 @@ snapshots:
       esbuild: 0.23.1
       fsevents: 2.3.3
       jiti: 2.6.1
-      tsx: 4.21.0
+      tsx: 3.12.10
       yaml: 2.8.1
 
   vite@8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1):
@@ -25700,10 +25708,10 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)):
+  vitest@4.1.0(@types/node@22.15.17)(@vitest/ui@4.1.0)(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)):
     dependencies:
       '@vitest/expect': 4.1.0
-      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.9.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
+      '@vitest/mocker': 4.1.0(msw@2.12.4(@types/node@22.15.17)(typescript@5.8.3))(vite@8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1))
       '@vitest/pretty-format': 4.1.0
       '@vitest/runner': 4.1.0
       '@vitest/snapshot': 4.1.0
@@ -25720,7 +25728,7 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
+      vite: 8.0.1(@types/node@22.15.17)(esbuild@0.23.1)(jiti@2.6.1)(tsx@3.12.10)(yaml@2.8.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.15.17
@@ -25845,6 +25853,8 @@ snapshots:
       is-weakset: 2.0.3
 
   which-pm-runs@1.1.0: {}
+
+  which-pm-runs@2.0.0: {}
 
   which-typed-array@1.1.19:
     dependencies:

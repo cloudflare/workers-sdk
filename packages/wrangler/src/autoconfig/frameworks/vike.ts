@@ -2,9 +2,9 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
+import { installPackages } from "@cloudflare/cli/packages";
+import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
-import { transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
 import { isPackageInstalled } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
@@ -37,7 +37,7 @@ export class Vike extends Framework {
 			// note: the following installation steps follow the guide in: https://vike.dev/cloudflare#get-started
 
 			await installPackages(
-				packageManager,
+				packageManager.type,
 				["vike-photon", "@photonjs/cloudflare"],
 				{
 					startText: "Installing vike-photon and @photonjs/cloudflare",
@@ -45,7 +45,7 @@ export class Vike extends Framework {
 					isWorkspaceRoot,
 				}
 			);
-			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
+			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				isWorkspaceRoot,
 			});

@@ -46,9 +46,9 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	"Workers + Assets": { em: "dcartertwo", pm: "irvinebroque" },
 	"workers ai": { em: "jkipp-cloudflare" },
 	"workers-builds": {
-		director: "dcartertwo",
+		director: "fredkschott",
 		pm: "yomna-shousha",
-		em: "robertsapunarich",
+		em: "ericclemmons",
 	},
 	workflows: { em: "bruxodasilva", pm: "jonesphillip" },
 	wrangler: { em: "lrapoport-cf", pm: "mattietk" },

@@ -1,4 +1,5 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, WorkflowEntrypoint } from "cloudflare:workers";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -70,6 +71,27 @@ export class MyDurableObject extends DurableObject<Env> {
 		return new Response("OK");
 	}
 }
+
+interface WorkflowParams {
+	name: string;
+}
+
+export class MyWorkflow extends WorkflowEntrypoint<Env, WorkflowParams> {
+	async run(event: WorkflowEvent<WorkflowParams>, step: WorkflowStep) {
+		const name = event.payload.name ?? "World";
+
+		const greeting = await step.do("greet", async () => `Hello, ${name}!`);
+
+		await step.sleep("wait", "1 second");
+
+		const result = await step.do("finalize", async () => {
+			return `${greeting} Workflow complete.`;
+		});
+
+		return result;
+	}
+}
+
 const SEED_DATA: [string, string][] = [
 	["greeting", "Hello, World!"],
 	["counter", "42"],

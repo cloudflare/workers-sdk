@@ -1,5 +1,6 @@
 import path from "node:path";
-import { seed } from "@cloudflare/workers-utils/test-helpers";
+import { normalizeString, seed } from "@cloudflare/workers-utils/test-helpers";
+import * as esbuild from "esbuild";
 import dedent from "ts-dedent";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -532,6 +533,86 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					};
 					"
 				`);
+		});
+	});
+
+	describe("bundling error messages", () => {
+		test("should recommend alias when a non-Node module cannot be resolved", async () => {
+			await seed({
+				"src/index.ts": dedent /* javascript */ `
+					import foo from 'some-nonexistent-module';
+					export default {
+						fetch(request, env, ctx) {
+							return new Response(foo)
+						}
+					} satisfies ExportedHandler
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
+			});
+			const ev = bus.waitFor("error", (e) => e.source === "BundlerController");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			const error = await ev;
+
+			const buildFailure = error.cause as esbuild.BuildFailure;
+			const formattedError = normalizeString(
+				esbuild
+					.formatMessagesSync(buildFailure.errors ?? [], { kind: "error" })
+					.join()
+					.trim()
+			);
+
+			expect(formattedError).toMatchInlineSnapshot(`
+				"X [ERROR] Could not resolve "some-nonexistent-module"
+
+				    index.ts:1:16:
+				      1 │ import foo from 'some-nonexistent-module';
+				        ╵                 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+				  To fix this, you can add an entry to "alias" in your Wrangler configuration.
+				  For more guidance see: https://developers.cloudflare.com/workers/wrangler/configuration/#bundling-issues"
+			`);
+		});
+
+		test("should NOT recommend alias for Node built-in modules", async () => {
+			await seed({
+				"src/index.ts": dedent /* javascript */ `
+					import fs from 'fs';
+					export default {
+						fetch(request, env, ctx) {
+							return new Response(String(fs))
+						}
+					} satisfies ExportedHandler
+				`,
+			});
+			const config = configDefaults({
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
+			});
+			const ev = bus.waitFor("error", (e) => e.source === "BundlerController");
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			const error = await ev;
+
+			const buildFailure = error.cause as esbuild.BuildFailure;
+			const formattedError = normalizeString(
+				esbuild
+					.formatMessagesSync(buildFailure.errors ?? [], { kind: "error" })
+					.join()
+					.trim()
+			);
+
+			expect(formattedError).toMatchInlineSnapshot(`
+				"X [ERROR] Could not resolve "fs"
+
+				    index.ts:1:15:
+				      1 │ import fs from 'fs';
+				        ╵                ~~~~
+
+				  The package "fs" wasn't found on the file system but is built into node.
+				  - Add the "nodejs_compat" compatibility flag to your project."
+			`);
 		});
 	});
 });

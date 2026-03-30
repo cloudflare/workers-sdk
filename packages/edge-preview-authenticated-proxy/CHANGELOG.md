@@ -1,5 +1,15 @@
 # edge-preview-authenticated-proxy
 
+## 0.3.1
+
+### Patch Changes
+
+- [#12753](https://github.com/cloudflare/workers-sdk/pull/12753) [`ea8b1a4`](https://github.com/cloudflare/workers-sdk/commit/ea8b1a4619b663598f03d72760090f5e67827d05) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Replace deprecated `promjs` library with `MetricsRegistry` from `@cloudflare/workers-utils/prometheus-metrics`
+
+  The `promjs` library has been unmaintained since 2022 and has a broken `package.json` requiring workarounds. It has been replaced with a lightweight `MetricsRegistry` class in `@cloudflare/workers-utils/prometheus-metrics` that produces byte-identical Prometheus text exposition format output.
+
+- [#13021](https://github.com/cloudflare/workers-sdk/pull/13021) [`973dfdd`](https://github.com/cloudflare/workers-sdk/commit/973dfddd2d247c269e07fa503470357f612abf0e) Thanks [@penalosa](https://github.com/penalosa)! - Restore the `/exchange` preview session endpoint.
+
 ## 0.3.0
 
 ### Minor Changes

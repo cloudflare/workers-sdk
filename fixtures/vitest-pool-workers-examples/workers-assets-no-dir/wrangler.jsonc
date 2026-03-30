@@ -1,0 +1,10 @@
+{
+	"name": "workers-assets-no-directory",
+	"main": "src/index.ts",
+	// Simulate a project using @cloudflare/vite-plugin where assets are configured
+	// with a binding but no directory (vite-plugin serves them via its dev server).
+	// vitest-pool-workers must not throw "missing required `directory` property" here.
+	"assets": {
+		"binding": "ASSETS",
+	},
+}

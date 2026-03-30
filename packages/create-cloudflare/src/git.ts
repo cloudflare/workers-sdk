@@ -1,11 +1,11 @@
 import assert from "node:assert";
 import { updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
 import { spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";

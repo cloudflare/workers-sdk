@@ -230,6 +230,18 @@ export interface CfVectorize {
 	remote?: boolean;
 }
 
+export interface CfAISearchNamespace {
+	binding: string;
+	namespace: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
+}
+
+export interface CfAISearch {
+	binding: string;
+	instance_name: string;
+	remote?: boolean;
+}
+
 export interface CfSecretsStoreSecrets {
 	binding: string;
 	store_id: string;

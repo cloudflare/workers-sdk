@@ -22,6 +22,8 @@ const reorderableBindings = {
 	services: true,
 	send_email: true,
 	vectorize: true,
+	ai_search_namespaces: true,
+	ai_search: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,

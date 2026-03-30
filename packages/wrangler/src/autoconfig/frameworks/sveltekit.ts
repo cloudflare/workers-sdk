@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "../c3-vendor/command";
-import { installPackages } from "../c3-vendor/packages";
+import { runCommand } from "@cloudflare/cli/command";
+import { installPackages } from "@cloudflare/cli/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
@@ -32,7 +32,7 @@ export class SvelteKit extends Framework {
 			);
 			writeFileSync("static/.assetsignore", "_worker.js\n_routes.json");
 
-			await installPackages(packageManager, [], {
+			await installPackages(packageManager.type, [], {
 				startText: "Installing packages",
 				doneText: `${brandColor("installed")}`,
 				isWorkspaceRoot,

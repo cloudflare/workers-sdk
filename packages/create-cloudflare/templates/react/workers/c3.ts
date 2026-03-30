@@ -2,8 +2,8 @@ import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { transformFile } from "@cloudflare/codemod";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -146,7 +146,11 @@ async function getVariant(ctx: C3Context) {
 		);
 		if (!selected) {
 			throw new Error(
-				`Unknown variant "${ctx.args.variant}". Valid variants are: ${variantsOptions.map((v) => v.value).join(", ")}`
+				`Unknown variant "${
+					ctx.args.variant
+				}". Valid variants are: ${variantsOptions
+					.map((v) => v.value)
+					.join(", ")}`
 			);
 		}
 		return selected;

@@ -1,0 +1,5 @@
+{
+	"name": "esm-dep",
+	"type": "module",
+	"main": "index.mjs"
+}

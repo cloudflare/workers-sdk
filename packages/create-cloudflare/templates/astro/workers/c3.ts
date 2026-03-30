@@ -1,7 +1,7 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
 import { runFrameworkGenerator } from "frameworks/index";
-import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../../src/templates";

@@ -267,15 +267,19 @@ async function getMiniflareOptionsFromConfig(args: {
 
 	let processedAssetOptions: AssetsOptions | undefined;
 
-	try {
-		processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
-	} catch (e) {
-		const isNonExistentError = e instanceof NonExistentAssetsDirError;
-		// we want to loosen up the assets directory existence restriction here,
-		// since `getPlatformProxy` can be run when the assets directory doesn't actual
-		// exist, but all other exceptions should still be thrown
-		if (!isNonExistentError) {
-			throw e;
+	// Only resolve assets if a directory is configured. When assets are configured
+	// without a directory (e.g. via @cloudflare/vite-plugin), skip asset setup.
+	if (config.assets?.directory) {
+		try {
+			processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
+		} catch (e) {
+			const isNonExistentError = e instanceof NonExistentAssetsDirError;
+			// we want to loosen up the assets directory existence restriction here,
+			// since `getPlatformProxy` can be run when the assets directory doesn't
+			// actually exist, but all other exceptions should still be thrown
+			if (!isNonExistentError) {
+				throw e;
+			}
 		}
 	}
 
@@ -499,11 +503,19 @@ export function unstable_getMiniflareWorkerOptions(
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
-	const processedAssetOptions = getAssetsOptions(
-		{ assets: undefined },
-		config,
-		options?.overrides?.assets
-	);
+	// Only resolve assets if a directory is available (from config or overrides).
+	// When assets are configured without a directory (e.g. when using
+	// @cloudflare/vite-plugin, which handles asset serving independently),
+	// there's nothing for Miniflare to serve, so skip asset setup entirely.
+	const hasAssetsDirectory =
+		config.assets?.directory || options?.overrides?.assets?.directory;
+	const processedAssetOptions = hasAssetsDirectory
+		? getAssetsOptions(
+				{ assets: undefined },
+				config,
+				options?.overrides?.assets
+			)
+		: undefined;
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};

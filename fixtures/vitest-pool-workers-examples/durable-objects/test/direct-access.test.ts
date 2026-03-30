@@ -7,6 +7,22 @@ import {
 import { it } from "vitest";
 import { Counter } from "../src/";
 
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/9907
+it("handles redirect responses returned from runInDurableObject callback", async ({
+	expect,
+}) => {
+	const id = env.COUNTER.idFromName("/redirect-test");
+	const stub = env.COUNTER.get(id);
+	const response = await runInDurableObject(stub, (instance: Counter) => {
+		const request = new Request("https://example.com/redirect");
+		return instance.fetch(request);
+	});
+	expect(response.status).toBe(302);
+	expect(response.headers.get("Location")).toBe(
+		"https://example.com/redirected"
+	);
+});
+
 it("increments count and allows direct access to instance/storage", async ({
 	expect,
 }) => {
@@ -32,6 +48,5 @@ it("increments count and allows direct access to instance/storage", async ({
 
 	// Check IDs can be listed
 	const ids = await listDurableObjectIds(env.COUNTER);
-	expect(ids.length).toBe(1);
-	expect(ids[0].equals(id)).toBe(true);
+	expect(ids.map((i) => i.toString())).toContain(id.toString());
 });

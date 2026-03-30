@@ -417,7 +417,9 @@ export const deployCommand = createCommand({
 
 		if (args.latest) {
 			logger.warn(
-				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(config.configPath)} file.`
+				`Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your ${configFileName(
+					config.configPath
+				)} file.`
 			);
 		}
 
@@ -597,7 +599,9 @@ export async function handleMaybeAssetsDeployment(
 
 	// Ask if user wants to write config file
 	const writeConfig = await confirm(
-		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim("This will allow you to simply run `wrangler deploy` on future deployments.")}`
+		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim(
+			"This will allow you to simply run `wrangler deploy` on future deployments."
+		)}`
 	);
 
 	if (writeConfig) {
@@ -614,7 +618,9 @@ export async function handleMaybeAssetsDeployment(
 		writeFileSync(configPath, jsonString);
 		logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
 		logger.log(
-			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(`\`wrangler deploy ${args.assets}\``)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(
+				`\`wrangler deploy ${args.assets}\``
+			)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
 		);
 	} else {
 		logger.log(

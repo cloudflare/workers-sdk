@@ -57,7 +57,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -657,6 +657,65 @@ describe("deploy", () => {
 			`);
 		});
 	});
+	describe("unresolved module error messages", () => {
+		it("should recommend alias when a non-Node module cannot be resolved", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"index.js",
+				`import foo from 'some-nonexistent-module';
+export default { fetch() { return new Response(foo); } }`
+			);
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Could not resolve "some-nonexistent-module"
+
+				    index.js:1:16:
+				      1 │ import foo from 'some-nonexistent-module';
+				        ╵                 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+				  To fix this, you can add an entry to "alias" in your Wrangler configuration.
+				  For more guidance see: https://developers.cloudflare.com/workers/wrangler/configuration/#bundling-issues"
+			`);
+		});
+
+		it("should NOT recommend alias for Node built-in modules", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync("index.js", "import fs from 'fs';");
+
+			await expect(
+				runWrangler("deploy index.js --dry-run").catch((e) =>
+					normalizeString(
+						esbuild
+							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
+							.join()
+							.trim()
+					)
+				)
+			).resolves.toMatchInlineSnapshot(`
+				"X [ERROR] Could not resolve "fs"
+
+				    index.js:1:15:
+				      1 │ import fs from 'fs';
+				        ╵                ~~~~
+
+				  The package "fs" wasn't found on the file system but is built into node.
+				  - Add the "nodejs_compat" compatibility flag to your project."
+			`);
+		});
+	});
 	describe("`nodejs_compat` compatibility flag", () => {
 		it('when absent, should warn on any "external" `node:*` imports', async ({
 			expect,
@@ -1151,6 +1210,18 @@ describe("deploy", () => {
 		`;
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("deploy index.js --dry-run --outdir dist");
+			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
+		});
+
+		it("should preserve source phase imports without error", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const scriptContent = `import source mod from './mod.wasm';
+export default { fetch() { return new Response(mod); } };`;
+			fs.writeFileSync("index.js", scriptContent);
+			fs.writeFileSync("mod.wasm", "");
+			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
