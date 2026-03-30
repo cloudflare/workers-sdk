@@ -27,10 +27,8 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
-		const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-			prompt: "What is the origin of the phrase Hello, World",
-		});
-
-		return new Response(JSON.stringify(response));
+		const url = new URL(request.url);
+		if (url.pathname === "/error") throw new Error("Hello Error");
+		return new Response("Hello World!");
 	},
 };
