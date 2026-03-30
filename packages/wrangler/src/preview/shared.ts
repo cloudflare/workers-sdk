@@ -39,7 +39,7 @@ export function shouldUseCIMetadataFallback(): boolean {
 export function getHeadCommitRef(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse HEAD`).toString().trim();
+		return execSync(`git rev-parse --short HEAD`).toString().trim();
 	} catch {
 		return undefined;
 	}
