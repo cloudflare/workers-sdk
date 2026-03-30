@@ -6,7 +6,7 @@ import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
 import { getWorkersDevSubdomain } from "../routes";
-import { getAccessToken } from "../user/access";
+import { getAccessHeaders } from "../user/access";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
 import type {
@@ -14,6 +14,21 @@ import type {
 	ComplianceConfig,
 } from "@cloudflare/workers-utils";
 import type { HeadersInit } from "undici";
+
+/**
+ * Maximum time (ms) to wait for an individual preview API request before
+ * treating it as a timeout. Without this, a hung API response blocks the
+ * entire dev-session reload indefinitely.
+ */
+const PREVIEW_API_TIMEOUT_MS = 30_000;
+
+/**
+ * Combine the caller's abort signal with a per-request timeout so that a
+ * hung Cloudflare API response doesn't block forever.
+ */
+function withTimeout(signal: AbortSignal): AbortSignal {
+	return AbortSignal.any([signal, AbortSignal.timeout(PREVIEW_API_TIMEOUT_MS)]);
+}
 
 /**
  * A Cloudflare account.
@@ -123,12 +138,8 @@ async function tryExpandToken(
 	try {
 		const switchedExchangeUrl = switchHost(exchangeUrl, ctx.host, !!ctx.zone);
 
-		const headers: HeadersInit = {};
-		const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
-
-		if (accessToken) {
-			headers.cookie = `CF_Authorization=${accessToken}`;
-		}
+		const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname);
+		const headers: HeadersInit = { ...accessHeaders };
 
 		logger.debugWithSanitization(
 			"-- START EXCHANGE API REQUEST:",
@@ -187,10 +198,18 @@ export async function createPreviewSession(
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
 		exchange_url?: string;
-	}>(complianceConfig, initUrl, undefined, undefined, abortSignal, apiToken);
+	}>(
+		complianceConfig,
+		initUrl,
+		undefined,
+		undefined,
+		withTimeout(abortSignal),
+		apiToken
+	);
 
 	const previewSessionToken = exchange_url
-		? ((await tryExpandToken(exchange_url, ctx, abortSignal)) ?? token)
+		? ((await tryExpandToken(exchange_url, ctx, withTimeout(abortSignal))) ??
+			token)
 		: token;
 
 	try {
@@ -200,7 +219,8 @@ export async function createPreviewSession(
 				complianceConfig,
 				account.accountId,
 				undefined,
-				apiToken
+				apiToken,
+				withTimeout(abortSignal)
 			);
 			host = `${name ?? crypto.randomUUID()}.${subdomain}`;
 		}
@@ -280,7 +300,7 @@ async function createPreviewToken(
 			},
 		},
 		undefined,
-		abortSignal
+		withTimeout(abortSignal)
 	);
 
 	return {

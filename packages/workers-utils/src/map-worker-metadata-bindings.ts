@@ -94,6 +94,13 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "stream":
+						{
+							configObj.stream = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "media":
 						{
 							configObj.media = {
@@ -250,6 +257,24 @@ export function mapWorkerMetadataBindings(
 							{
 								binding: binding.name,
 								index_name: binding.index_name,
+							},
+						];
+						break;
+					case "ai_search_namespace":
+						configObj.ai_search_namespaces = [
+							...(configObj.ai_search_namespaces ?? []),
+							{
+								binding: binding.name,
+								namespace: binding.namespace,
+							},
+						];
+						break;
+					case "ai_search":
+						configObj.ai_search = [
+							...(configObj.ai_search ?? []),
+							{
+								binding: binding.name,
+								instance_name: binding.instance_name,
 							},
 						];
 						break;

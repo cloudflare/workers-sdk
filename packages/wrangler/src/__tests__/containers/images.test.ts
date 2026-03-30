@@ -1,6 +1,5 @@
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
@@ -27,7 +26,6 @@ describe("containers images list", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
@@ -193,7 +191,6 @@ describe("containers images delete", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 

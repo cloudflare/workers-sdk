@@ -10,14 +10,16 @@ permissions:
 
 jobs:
   e2e-wrangler-test:
-    name: ${{ format('Wrangler E2E ({0})', matrix.description) }}
+    name: ${{ format('Wrangler E2E ({0}, shard {1}/4)', matrix.description, matrix.shard) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.shard }}
       cancel-in-progress: true
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        shard: [1, 2, 3, 4]
         include:
           - os: macos-latest
             description: macOS
@@ -71,9 +73,11 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os }}
+          E2E_SHARD: ${{ matrix.shard }}
+          E2E_SHARD_COUNT: "4"
 
       - name: Run getPlatformProxy() remote-bindings e2e tests
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.shard == 1
         run: pnpm run test:e2e -F @fixture/get-platform-proxy-remote-bindings
         env:
           TEST_CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
@@ -85,5 +89,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}
+          name: turbo-runs-${{ matrix.os }}-shard-${{ matrix.shard }}
           path: .turbo/runs

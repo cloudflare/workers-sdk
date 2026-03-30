@@ -13,11 +13,14 @@ import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
+import WorkflowsIcon from "../assets/icons/workflows.svg?react";
+import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
 	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
+	WorkflowsWorkflow,
 } from "../api";
 import type { ResolvedTheme, ThemePreference } from "../hooks/useTheme";
 import type { FileRouteTypes } from "../routeTree.gen";
@@ -212,10 +215,15 @@ interface SidebarProps {
 	kvNamespaces: WorkersKvNamespace[];
 	onThemeToggle: () => void;
 	onToggle: () => void;
+	onWorkerChange: (workerName: string) => void;
 	r2Buckets: R2Bucket[];
 	r2Error: string | null;
 	resolvedTheme: ResolvedTheme;
+	selectedWorker: string;
 	themePreference: ThemePreference;
+	workers: LocalExplorerWorker[];
+	workflows: WorkflowsWorkflow[];
+	workflowsError: string | null;
 }
 
 export function Sidebar({
@@ -229,10 +237,15 @@ export function Sidebar({
 	kvNamespaces,
 	onThemeToggle,
 	onToggle,
+	onWorkerChange,
 	r2Buckets,
 	r2Error,
 	resolvedTheme,
+	selectedWorker,
 	themePreference,
+	workers,
+	workflows,
+	workflowsError,
 }: SidebarProps) {
 	const ThemeIcon =
 		themePreference === "system"
@@ -247,6 +260,12 @@ export function Sidebar({
 			: themePreference === "dark"
 				? "Dark"
 				: "Light";
+
+	const showWorkerSelector = workers.length > 1;
+
+	// Only include the worker search param when there are multiple workers.
+	// This keeps URLs clean in the common single-worker case.
+	const workerSearch = workers.length > 1 ? { worker: selectedWorker } : {};
 
 	return (
 		<aside
@@ -278,6 +297,14 @@ export function Sidebar({
 
 			{/* Navigation groups */}
 			<nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto py-2">
+				{showWorkerSelector && (
+					<WorkerSelector
+						workers={workers}
+						selectedWorker={selectedWorker}
+						onWorkerChange={onWorkerChange}
+					/>
+				)}
+
 				<SidebarItemGroup
 					collapsed={collapsed}
 					emptyLabel="No databases"
@@ -359,6 +386,27 @@ export function Sidebar({
 					})}
 					storageKey="r2"
 					title="R2 Buckets"
+				/>
+
+				<SidebarItemGroup
+					collapsed={collapsed}
+					emptyLabel="No workflows"
+					error={workflowsError}
+					icon={WorkflowsIcon}
+					items={workflows.map((wf) => ({
+						id: wf.name as string,
+						isActive:
+							currentPath === `/workflows/${wf.name}` ||
+							currentPath.startsWith(`/workflows/${wf.name}/`),
+						label: wf.name as string,
+						link: {
+							params: { workflowName: wf.name },
+							search: workerSearch,
+							to: "/workflows/$workflowName",
+						},
+					}))}
+					storageKey="workflows"
+					title="Workflows"
 				/>
 			</nav>
 

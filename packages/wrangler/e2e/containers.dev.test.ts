@@ -10,6 +10,7 @@ import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { waitFor, waitForLong } from "./helpers/wait-for";
 
 const imageSource = ["pull", "build"] as const;
 
@@ -244,7 +245,7 @@ for (const source of imageSource) {
 			const worker = helper.runLongLived("wrangler dev");
 			const ready = await worker.waitForReady();
 
-			await vi.waitFor(async () => {
+			await waitFor(async () => {
 				const response = await fetch(`${ready.url}/status`);
 				expect(response.status).toBe(200);
 				const status = await response.json();
@@ -256,24 +257,21 @@ for (const source of imageSource) {
 			expect(response.status).toBe(200);
 			expect(text).toBe("Container create request sent...");
 
-			await vi.waitFor(async () => {
+			await waitFor(async () => {
 				response = await fetch(`${ready.url}/status`);
 				expect(response.status).toBe(200);
 				const status = await response.json();
 				expect(status).toBe(true);
 			});
 
-			await vi.waitFor(
-				async () => {
-					response = await fetch(`${ready.url}/fetch`, {
-						signal: AbortSignal.timeout(3_000),
-						headers: { "MF-Disable-Pretty-Error": "true" },
-					});
-					text = await response.text();
-					expect(text).toBe("Hello World! Have an env var! I'm an env var!");
-				},
-				{ timeout: 5_000 }
-			);
+			await waitFor(async () => {
+				response = await fetch(`${ready.url}/fetch`, {
+					signal: AbortSignal.timeout(3_000),
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
+				text = await response.text();
+				expect(text).toBe("Hello World! Have an env var! I'm an env var!");
+			});
 
 			// Set up egress HTTP interception so the container can call back to the worker
 			response = await fetch(`${ready.url}/setup-intercept`, {
@@ -285,18 +283,15 @@ for (const source of imageSource) {
 			expect(text).toBe("Intercept setup done");
 
 			// Fetch through the container's /intercept route which curls back to the worker
-			await vi.waitFor(
-				async () => {
-					response = await fetch(`${ready.url}/fetch-intercept`, {
-						signal: AbortSignal.timeout(5_000),
-						headers: { "MF-Disable-Pretty-Error": "true" },
-					});
-					text = await response.text();
-					expect(response.status).toBe(200);
-					expect(text).toBe("hello from worker");
-				},
-				{ timeout: 10_000 }
-			);
+			await waitForLong(async () => {
+				response = await fetch(`${ready.url}/fetch-intercept`, {
+					signal: AbortSignal.timeout(5_000),
+					headers: { "MF-Disable-Pretty-Error": "true" },
+				});
+				text = await response.text();
+				expect(response.status).toBe(200);
+				expect(text).toBe("hello from worker");
+			});
 
 			// Check that a container is running using `docker ps`
 			const ids = getContainerIds("e2econtainer");
@@ -334,7 +329,7 @@ for (const source of imageSource) {
 			const ready = await worker.waitForReady();
 
 			// check that the container can still start
-			await vi.waitFor(async () => {
+			await waitFor(async () => {
 				const response = await fetch(`${ready.url}/status`);
 				expect(response.status).toBe(200);
 				const status = await response.json();

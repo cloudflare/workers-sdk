@@ -123,6 +123,10 @@ export type WorkersApiResponseCollection = WorkersApiResponseCommon & {
 		 * Total results available without any search parameters.
 		 */
 		total_count?: number;
+		/**
+		 * The number of total pages in the entire result set.
+		 */
+		total_pages?: number;
 	};
 };
 
@@ -239,6 +243,7 @@ export type D1Messages = Array<{
 }>;
 
 export type D1DatabaseResponse = {
+	jurisdiction?: D1JurisdictionNullable;
 	name?: D1DatabaseName;
 	uuid?: D1DatabaseIdentifier;
 	version?: D1DatabaseVersion;
@@ -250,6 +255,11 @@ export type D1DatabaseVersion = string;
  * D1 database name.
  */
 export type D1DatabaseName = string;
+
+/**
+ * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
+ */
+export type D1JurisdictionNullable = "eu" | "fedramp";
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -557,6 +567,137 @@ export type DoRawQueryResult = {
 	};
 };
 
+export type LocalExplorerWorker = {
+	/**
+	 * Hostname the worker is running on
+	 */
+	host: string;
+	/**
+	 * Whether this worker is the one hosting the explorer
+	 */
+	isSelf: boolean;
+	/**
+	 * Worker name from the dev registry
+	 */
+	name: string;
+	/**
+	 * Port the worker is running on
+	 */
+	port: number;
+	/**
+	 * Protocol (http or https)
+	 */
+	protocol: string;
+};
+
+export type WorkflowsWorkflowDetails = {
+	/**
+	 * The name of the workflow.
+	 */
+	name: string;
+	/**
+	 * The entrypoint class name.
+	 */
+	class_name: string;
+	/**
+	 * The script containing the workflow.
+	 */
+	script_name: string;
+	/**
+	 * Instance counts by status.
+	 */
+	instances: {
+		complete?: number;
+		errored?: number;
+		paused?: number;
+		queued?: number;
+		running?: number;
+		terminated?: number;
+		waiting?: number;
+		waitingForPause?: number;
+	};
+};
+
+/**
+ * The name of the workflow.
+ */
+export type WorkflowsWorkflowName = string;
+
+/**
+ * The unique identifier of a workflow instance.
+ */
+export type WorkflowsInstanceId = string;
+
+export type WorkflowsWorkflow = {
+	/**
+	 * The name of the workflow.
+	 */
+	name: string;
+	/**
+	 * The entrypoint class name of the workflow.
+	 */
+	class_name?: string;
+	/**
+	 * The script name containing the workflow.
+	 */
+	script_name?: string;
+};
+
+export type WorkflowsInstance = {
+	/**
+	 * The unique identifier of the workflow instance.
+	 */
+	id: string;
+	/**
+	 * The current status of the instance.
+	 */
+	status?:
+		| "queued"
+		| "running"
+		| "paused"
+		| "errored"
+		| "terminated"
+		| "complete"
+		| "waitingForPause"
+		| "waiting"
+		| "unknown";
+	/**
+	 * ISO 8601 timestamp of when the instance was created.
+	 */
+	created_on?: string;
+};
+
+export type WorkflowsInstanceDetails = {
+	/**
+	 * The unique identifier of the workflow instance.
+	 */
+	id: string;
+	/**
+	 * The current status of the instance.
+	 */
+	status:
+		| "queued"
+		| "running"
+		| "paused"
+		| "errored"
+		| "terminated"
+		| "complete"
+		| "waitingForPause"
+		| "waiting"
+		| "unknown";
+	/**
+	 * Output value if the workflow completed successfully.
+	 */
+	output?: unknown;
+	/**
+	 * Error details if the workflow errored.
+	 */
+	error?: {
+		name?: string;
+		message?: string;
+	};
+};
+
 export type R2ResultInfoWritable = {
 	[key: string]: unknown;
 };
@@ -569,6 +710,7 @@ export type WorkersNamespaceWritable = {
 };
 
 export type D1DatabaseResponseWritable = {
+	jurisdiction?: D1JurisdictionNullable;
 	name?: D1DatabaseName;
 	version?: D1DatabaseVersion;
 };
@@ -1214,3 +1356,374 @@ export type DurableObjectsNamespaceQuerySqliteResponses = {
 
 export type DurableObjectsNamespaceQuerySqliteResponse =
 	DurableObjectsNamespaceQuerySqliteResponses[keyof DurableObjectsNamespaceQuerySqliteResponses];
+
+export type LocalExplorerListWorkersData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/workers";
+};
+
+export type LocalExplorerListWorkersErrors = {
+	/**
+	 * List workers failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type LocalExplorerListWorkersError =
+	LocalExplorerListWorkersErrors[keyof LocalExplorerListWorkersErrors];
+
+export type LocalExplorerListWorkersResponses = {
+	/**
+	 * List workers response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<LocalExplorerWorker>;
+	};
+};
+
+export type LocalExplorerListWorkersResponse =
+	LocalExplorerListWorkersResponses[keyof LocalExplorerListWorkersResponses];
+
+export type WorkflowsListWorkflowsData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/workflows";
+};
+
+export type WorkflowsListWorkflowsErrors = {
+	/**
+	 * List Workflows response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsListWorkflowsError =
+	WorkflowsListWorkflowsErrors[keyof WorkflowsListWorkflowsErrors];
+
+export type WorkflowsListWorkflowsResponses = {
+	/**
+	 * List Workflows response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<WorkflowsWorkflow>;
+		result_info?: {
+			count?: number;
+		};
+	};
+};
+
+export type WorkflowsListWorkflowsResponse =
+	WorkflowsListWorkflowsResponses[keyof WorkflowsListWorkflowsResponses];
+
+export type WorkflowsDeleteWorkflowData = {
+	body?: never;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}";
+};
+
+export type WorkflowsDeleteWorkflowErrors = {
+	/**
+	 * Delete Workflow response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsDeleteWorkflowError =
+	WorkflowsDeleteWorkflowErrors[keyof WorkflowsDeleteWorkflowErrors];
+
+export type WorkflowsDeleteWorkflowResponses = {
+	/**
+	 * Delete Workflow response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			status?: string;
+			success?: boolean;
+		};
+	};
+};
+
+export type WorkflowsDeleteWorkflowResponse =
+	WorkflowsDeleteWorkflowResponses[keyof WorkflowsDeleteWorkflowResponses];
+
+export type WorkflowsGetWorkflowDetailsData = {
+	body?: never;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}";
+};
+
+export type WorkflowsGetWorkflowDetailsErrors = {
+	/**
+	 * Get Workflow Details response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsGetWorkflowDetailsError =
+	WorkflowsGetWorkflowDetailsErrors[keyof WorkflowsGetWorkflowDetailsErrors];
+
+export type WorkflowsGetWorkflowDetailsResponses = {
+	/**
+	 * Get Workflow Details response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: WorkflowsWorkflowDetails;
+	};
+};
+
+export type WorkflowsGetWorkflowDetailsResponse =
+	WorkflowsGetWorkflowDetailsResponses[keyof WorkflowsGetWorkflowDetailsResponses];
+
+export type WorkflowsListInstancesData = {
+	body?: never;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+	};
+	query?: {
+		/**
+		 * Page number (1-indexed).
+		 */
+		page?: number;
+		/**
+		 * Number of instances per page.
+		 */
+		per_page?: number;
+		/**
+		 * Filter instances by status.
+		 */
+		status?:
+			| "queued"
+			| "running"
+			| "paused"
+			| "errored"
+			| "terminated"
+			| "complete"
+			| "waitingForPause"
+			| "waiting";
+	};
+	url: "/workflows/{workflow_name}/instances";
+};
+
+export type WorkflowsListInstancesErrors = {
+	/**
+	 * List Workflow Instances response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsListInstancesError =
+	WorkflowsListInstancesErrors[keyof WorkflowsListInstancesErrors];
+
+export type WorkflowsListInstancesResponses = {
+	/**
+	 * List Workflow Instances response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: Array<WorkflowsInstance>;
+		result_info?: {
+			page?: number;
+			per_page?: number;
+			total_count?: number;
+			total_pages?: number;
+		};
+	};
+};
+
+export type WorkflowsListInstancesResponse =
+	WorkflowsListInstancesResponses[keyof WorkflowsListInstancesResponses];
+
+export type WorkflowsCreateInstanceData = {
+	body?: {
+		/**
+		 * Optional instance ID. If not provided, a UUID is generated.
+		 */
+		id?: string;
+		/**
+		 * Optional JSON payload to pass to the workflow.
+		 */
+		params?: unknown;
+	};
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances";
+};
+
+export type WorkflowsCreateInstanceErrors = {
+	/**
+	 * Create Workflow Instance response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsCreateInstanceError =
+	WorkflowsCreateInstanceErrors[keyof WorkflowsCreateInstanceErrors];
+
+export type WorkflowsCreateInstanceResponses = {
+	/**
+	 * Create Workflow Instance response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			/**
+			 * The instance ID of the newly created workflow instance.
+			 */
+			id: string;
+		};
+	};
+};
+
+export type WorkflowsCreateInstanceResponse =
+	WorkflowsCreateInstanceResponses[keyof WorkflowsCreateInstanceResponses];
+
+export type WorkflowsDeleteInstanceData = {
+	body?: never;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+		instance_id: WorkflowsInstanceId;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}";
+};
+
+export type WorkflowsDeleteInstanceErrors = {
+	/**
+	 * Delete Workflow Instance response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsDeleteInstanceError =
+	WorkflowsDeleteInstanceErrors[keyof WorkflowsDeleteInstanceErrors];
+
+export type WorkflowsDeleteInstanceResponses = {
+	/**
+	 * Delete Workflow Instance response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			success?: boolean;
+		};
+	};
+};
+
+export type WorkflowsDeleteInstanceResponse =
+	WorkflowsDeleteInstanceResponses[keyof WorkflowsDeleteInstanceResponses];
+
+export type WorkflowsGetInstanceDetailsData = {
+	body?: never;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+		instance_id: WorkflowsInstanceId;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}";
+};
+
+export type WorkflowsGetInstanceDetailsErrors = {
+	/**
+	 * Get Workflow Instance Details response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsGetInstanceDetailsError =
+	WorkflowsGetInstanceDetailsErrors[keyof WorkflowsGetInstanceDetailsErrors];
+
+export type WorkflowsGetInstanceDetailsResponses = {
+	/**
+	 * Get Workflow Instance Details response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: WorkflowsInstanceDetails;
+	};
+};
+
+export type WorkflowsGetInstanceDetailsResponse =
+	WorkflowsGetInstanceDetailsResponses[keyof WorkflowsGetInstanceDetailsResponses];
+
+export type WorkflowsChangeInstanceStatusData = {
+	body: {
+		/**
+		 * The action to perform on the workflow instance.
+		 */
+		action: "pause" | "resume" | "restart" | "terminate";
+	};
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+		instance_id: WorkflowsInstanceId;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}/status";
+};
+
+export type WorkflowsChangeInstanceStatusErrors = {
+	/**
+	 * Change Workflow Instance Status response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsChangeInstanceStatusError =
+	WorkflowsChangeInstanceStatusErrors[keyof WorkflowsChangeInstanceStatusErrors];
+
+export type WorkflowsChangeInstanceStatusResponses = {
+	/**
+	 * Change Workflow Instance Status response.
+	 */
+	200: WorkersApiResponseCommon & {
+		result?: {
+			success?: boolean;
+		};
+	};
+};
+
+export type WorkflowsChangeInstanceStatusResponse =
+	WorkflowsChangeInstanceStatusResponses[keyof WorkflowsChangeInstanceStatusResponses];
+
+export type WorkflowsSendInstanceEventData = {
+	/**
+	 * Optional JSON payload for the event.
+	 */
+	body?: unknown;
+	path: {
+		workflow_name: WorkflowsWorkflowName;
+		instance_id: WorkflowsInstanceId;
+		/**
+		 * The event type to send.
+		 */
+		event_type: string;
+	};
+	query?: never;
+	url: "/workflows/{workflow_name}/instances/{instance_id}/events/{event_type}";
+};
+
+export type WorkflowsSendInstanceEventErrors = {
+	/**
+	 * Send Event response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type WorkflowsSendInstanceEventError =
+	WorkflowsSendInstanceEventErrors[keyof WorkflowsSendInstanceEventErrors];
+
+export type WorkflowsSendInstanceEventResponses = {
+	/**
+	 * Send Event response.
+	 */
+	200: WorkersApiResponseCommon;
+};
+
+export type WorkflowsSendInstanceEventResponse =
+	WorkflowsSendInstanceEventResponses[keyof WorkflowsSendInstanceEventResponses];

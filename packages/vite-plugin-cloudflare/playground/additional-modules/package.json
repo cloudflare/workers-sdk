@@ -2,6 +2,10 @@
 	"name": "@playground/additional-modules",
 	"private": true,
 	"type": "module",
+	"imports": {
+		"#html": "./src/modules/html-example.html",
+		"#modules/html-example.html": "./src/modules/html-example.html"
+	},
 	"scripts": {
 		"build:default": "vite build --app",
 		"check:type": "tsc --build",
@@ -13,7 +17,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
+		"vite": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }

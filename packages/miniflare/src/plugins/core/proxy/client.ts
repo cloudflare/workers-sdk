@@ -10,6 +10,7 @@ import { prefixStream, readPrefix } from "../../../shared";
 import {
 	Awaitable,
 	CoreHeaders,
+	CorePaths,
 	createHTTPReducers,
 	createHTTPRevivers,
 	isDurableObjectStub,
@@ -97,7 +98,10 @@ export class ProxyClient {
 	#bridge: ProxyClientBridge;
 
 	constructor(runtimeEntryURL: URL, dispatchFetch: DispatchFetch) {
-		this.#bridge = new ProxyClientBridge(runtimeEntryURL, dispatchFetch);
+		this.#bridge = new ProxyClientBridge(
+			new URL(CorePaths.PLATFORM_PROXY, runtimeEntryURL),
+			dispatchFetch
+		);
 	}
 
 	// Lazily initialise proxies as required
@@ -120,7 +124,7 @@ export class ProxyClient {
 	setRuntimeEntryURL(runtimeEntryURL: URL) {
 		// This function will be called whenever the runtime restarts. The URL may
 		// be different if the port has changed.
-		this.#bridge.url = runtimeEntryURL;
+		this.#bridge.url = new URL(CorePaths.PLATFORM_PROXY, runtimeEntryURL);
 	}
 
 	dispose(): Promise<void> {
@@ -720,9 +724,12 @@ class ProxyStubHandler<T extends object>
 	#fetcherFetchCall(args: unknown[]) {
 		// @ts-expect-error `...args` isn't type-safe here, but `undici` should
 		//  validate types at runtime, and throw appropriate errors
-		const request = new Request(...args);
+		const userRequest = new Request(...args);
+		// Create a new request with the proxy URL, preserving the original request
+		const request = new Request(this.bridge.url, userRequest);
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
+		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
 		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
 		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
 		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);

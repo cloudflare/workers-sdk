@@ -40,6 +40,13 @@ export type Persistence = z.infer<typeof PersistenceSchema>;
 // be added a regular worker services. These workers shouldn't be routable.
 export type WrappedBindingNames = Set<string>;
 
+// Maps workflow binding names to their workflow options
+export interface WorkflowOption {
+	name: string;
+	className: string;
+	scriptName?: string;
+}
+
 // Maps **service** names to the Durable Object class names exported by them
 export type DurableObjectClassNames = Map<
 	string,

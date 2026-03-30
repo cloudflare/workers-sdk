@@ -841,7 +841,7 @@ describe("asset-server handler", () => {
 				request: "https://foo.com/asset",
 				metadata,
 				fetchAsset: async () => {
-					throw "uh oh";
+					throw new Error("uh oh");
 				},
 				findAssetEntryForPath: findAssetEntryForPath,
 			});
@@ -1337,12 +1337,10 @@ async function getTestResponse({
 		},
 		fetchAsset: async (...args) => {
 			spies.fetchAsset++;
-			return (
-				options.fetchAsset?.(...args) ?? {
-					body: null,
-					contentType: "text/plain",
-				}
-			);
+			return await (options.fetchAsset?.(...args) ?? {
+				body: null,
+				contentType: "text/plain",
+			});
 		},
 		waitUntil: async (promise: Promise<unknown>) => {
 			spies.waitUntil.push(promise);

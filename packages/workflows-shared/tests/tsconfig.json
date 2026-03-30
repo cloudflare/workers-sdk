@@ -2,7 +2,10 @@
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"moduleResolution": "bundler",
-		"types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers"]
+		"types": [
+			"@cloudflare/workers-types",
+			"@cloudflare/vitest-pool-workers/types"
+		]
 	},
 	"include": ["./**/*.ts"]
 }

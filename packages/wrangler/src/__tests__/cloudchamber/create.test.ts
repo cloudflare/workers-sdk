@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 import * as TOML from "smol-toml";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -70,7 +69,6 @@ describe("cloudchamber create", () => {
 	beforeEach(mockAccount);
 	runInTempDir();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 

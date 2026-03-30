@@ -26,9 +26,14 @@ export const runDockerCmd = (
 	const child = spawn(dockerPath, args, {
 		stdio: stdio ?? "inherit",
 		// We need to set detached to true so that the child process
-		// will control all of its child processed and we can kill
-		// all of them in case we need to abort the build process
-		detached: true,
+		// will control all of its child processes and we can kill
+		// all of them in case we need to abort the build process.
+		// On Windows, detached: true opens a new console window per child
+		// process, so we only set it on non-Windows platforms.
+		detached: process.platform !== "win32",
+		// Prevent child processes from opening visible console windows on Windows.
+		// This is a no-op on non-Windows platforms.
+		windowsHide: true,
 	});
 	let errorHandled = false;
 
@@ -51,8 +56,15 @@ export const runDockerCmd = (
 			aborted = true;
 			child.unref();
 			if (child.pid !== undefined) {
-				// kill run on the negative PID kills the whole group controlled by the child process
-				process.kill(-child.pid);
+				if (process.platform === "win32") {
+					// On Windows, negative-PID process group kill is not supported.
+					// Kill the child process directly instead.
+					child.kill();
+				} else {
+					// Kill using the negative PID to terminate the whole process group
+					// controlled by the child process.
+					process.kill(-child.pid);
+				}
 			}
 		},
 		ready,

@@ -96,14 +96,14 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Use `node:` prefix for Node.js imports (`import/enforce-node-protocol-usage`)
 - Prefix unused variables with `_`
 - No `.only()` in tests (`no-only-tests/no-only-tests`)
-- Format with Prettier - run `pnpm prettify` in the workspace root before committing
+- Format with oxfmt - run `pnpm prettify` in the workspace root before committing
 - All changes to published packages require a changeset (see below)
 
-**Formatting (Prettier):**
+**Formatting (oxfmt):**
 
 - Tabs (not spaces), double quotes, semicolons, trailing commas (es5)
 - Import order enforced: builtins → third-party → parent → sibling → index → types
-- `prettier-plugin-packagejson` sorts package.json keys
+- `sortPackageJson` option sorts package.json keys
 
 **Security:**
 

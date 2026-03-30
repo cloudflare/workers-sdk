@@ -137,6 +137,53 @@ test("Miniflare: validates options", async ({ expect }) => {
 	);
 });
 
+test("Miniflare: accepts mixed r2Buckets record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		r2Buckets: {
+			LOCAL_BUCKET: "local-bucket",
+			REMOTE_BUCKET: { id: "remote-bucket" },
+		},
+	});
+	useDispose(mf);
+});
+
+test("Miniflare: accepts mixed kvNamespaces record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		kvNamespaces: {
+			LOCAL_NS: "local-ns",
+			REMOTE_NS: { id: "remote-ns" },
+		},
+	});
+	useDispose(mf);
+});
+
+test("Miniflare: accepts mixed d1Databases record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		d1Databases: {
+			LOCAL_DB: "local-db",
+			REMOTE_DB: { id: "remote-db" },
+		},
+	});
+	useDispose(mf);
+});
+
+test("Miniflare: accepts mixed pipelines record", () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		pipelines: {
+			LOCAL_PIPELINE: "local-pipeline",
+			REMOTE_PIPELINE: { pipeline: "remote-pipeline" },
+		},
+	});
+	useDispose(mf);
+});
 test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 	const mf = new Miniflare({
 		port: 0,

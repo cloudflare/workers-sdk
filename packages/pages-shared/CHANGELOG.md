@@ -1,5 +1,26 @@
 # @cloudflare/pages-shared
 
+## 0.13.119
+
+### Patch Changes
+
+- Updated dependencies [[`9fcdfca`](https://github.com/cloudflare/workers-sdk/commit/9fcdfca775d3d412abe7547d0833414599bab221), [`1faff35`](https://github.com/cloudflare/workers-sdk/commit/1faff35e9c84e40af882d15f7515c625d6f5ac95), [`f4ea4ac`](https://github.com/cloudflare/workers-sdk/commit/f4ea4accad70d6a55b648c610cfc806e5be36477), [`0386553`](https://github.com/cloudflare/workers-sdk/commit/0386553d80ad10717f5294e8a5979af703cbcbf8)]:
+  - miniflare@4.20260317.3
+
+## 0.13.118
+
+### Patch Changes
+
+- Updated dependencies [[`b8f3309`](https://github.com/cloudflare/workers-sdk/commit/b8f3309c1f3428c61d0a38c09d38d51d3fd999a5), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`5aaaab2`](https://github.com/cloudflare/workers-sdk/commit/5aaaab2699db40619084a6adbddef07a96a86450), [`f8516dd`](https://github.com/cloudflare/workers-sdk/commit/f8516dd474258535e1d9a8582286c41362d0ee36), [`9c9fe30`](https://github.com/cloudflare/workers-sdk/commit/9c9fe3030e80d83e6bf67cf2754751e3d11949db), [`6a6449e`](https://github.com/cloudflare/workers-sdk/commit/6a6449ece88b41194a8b4c9fc4566e422e06ff1e)]:
+  - miniflare@4.20260317.2
+
+## 0.13.117
+
+### Patch Changes
+
+- Updated dependencies [[`3c988e2`](https://github.com/cloudflare/workers-sdk/commit/3c988e204ac0d6117ace9cc8fa5fd2479868811c), [`cb71403`](https://github.com/cloudflare/workers-sdk/commit/cb714036d95ad0429f7e7a24c3c3a4317748ce22), [`3a1c149`](https://github.com/cloudflare/workers-sdk/commit/3a1c149e1edf126ab072bf74ed624d3c42d561fb), [`ce48b77`](https://github.com/cloudflare/workers-sdk/commit/ce48b77c4e8796359d86e88f8b18c36b653757cb), [`8729f3d`](https://github.com/cloudflare/workers-sdk/commit/8729f3d0954c5325a0a28da6fa87129411819787)]:
+  - miniflare@4.20260317.1
+
 ## 0.13.116
 
 ### Patch Changes
@@ -445,6 +466,7 @@
 ### Patch Changes
 
 - [#9817](https://github.com/cloudflare/workers-sdk/pull/9817) [`6a0d990`](https://github.com/cloudflare/workers-sdk/commit/6a0d99066ef0633fb28d8ab3989ce943a02ec514) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add `x-cf-pages-analytics` header when Web Analytics token is injected
+
   - Emit `x-cf-pages-analytics: 1` header when analytics script is added to HTML responses
   - Add comprehensive tests covering HTML with/without body, non-HTML responses, and missing analytics config
   - Header indicates when analytics injection is attempted regardless of HTMLRewriter success

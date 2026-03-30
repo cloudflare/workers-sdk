@@ -279,6 +279,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "images", ...x };
 				break;
 			}
+			case "stream": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "stream", ...x };
+				break;
+			}
 			case "version_metadata": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "version_metadata", ...x };
@@ -293,6 +298,18 @@ export function convertConfigToBindings(
 			case "vectorize": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "vectorize", ...x };
+				}
+				break;
+			}
+			case "ai_search_namespaces": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "ai_search_namespace", ...x };
+				}
+				break;
+			}
+			case "ai_search": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "ai_search", ...x };
 				}
 				break;
 			}
@@ -380,6 +397,7 @@ export type StartDevOptionsBindings = Pick<
 	| "services"
 	| "r2"
 	| "ai"
+	| "stream"
 	| "version_metadata"
 	| "d1Databases"
 >;
@@ -400,6 +418,7 @@ export function convertStartDevOptionsToBindings(
 		services: inputBindings.services,
 		r2_buckets: inputBindings.r2,
 		ai: inputBindings.ai,
+		stream: inputBindings.stream,
 		version_metadata: inputBindings.version_metadata,
 		d1_databases: inputBindings.d1Databases,
 	};
@@ -596,6 +615,28 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "ai_search_namespace": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "ai_search_namespace" }
+				>;
+				output[name] = {
+					type: "ai_search_namespace",
+					namespace: b.namespace,
+				};
+				break;
+			}
+			case "ai_search": {
+				const b = binding as Extract<
+					WorkerMetadataBinding,
+					{ type: "ai_search" }
+				>;
+				output[name] = {
+					type: "ai_search",
+					instance_name: b.instance_name,
+				};
+				break;
+			}
 			case "hyperdrive": {
 				const b = binding as Extract<
 					WorkerMetadataBinding,
@@ -649,6 +690,7 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 			case "browser":
 			case "ai":
 			case "images":
+			case "stream":
 			case "version_metadata":
 			case "media":
 			case "inherit": {

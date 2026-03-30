@@ -1,5 +1,13 @@
 # playground-preview-worker
 
+## 0.3.2
+
+### Patch Changes
+
+- [#12753](https://github.com/cloudflare/workers-sdk/pull/12753) [`ea8b1a4`](https://github.com/cloudflare/workers-sdk/commit/ea8b1a4619b663598f03d72760090f5e67827d05) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Replace deprecated `promjs` library with `MetricsRegistry` from `@cloudflare/workers-utils/prometheus-metrics`
+
+  The `promjs` library has been unmaintained since 2022 and has a broken `package.json` requiring workarounds. It has been replaced with a lightweight `MetricsRegistry` class in `@cloudflare/workers-utils/prometheus-metrics` that produces byte-identical Prometheus text exposition format output.
+
 ## 0.3.1
 
 ### Patch Changes

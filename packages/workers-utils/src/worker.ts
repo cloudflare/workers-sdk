@@ -149,6 +149,14 @@ export interface CfMediaBinding {
 }
 
 /**
+ * A binding to Cloudflare Stream
+ */
+export interface CfStreamBinding {
+	binding: string;
+	remote?: boolean;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
@@ -219,6 +227,18 @@ export interface CfVectorize {
 	binding: string;
 	index_name: string;
 	raw?: boolean;
+	remote?: boolean;
+}
+
+export interface CfAISearchNamespace {
+	binding: string;
+	namespace: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
+}
+
+export interface CfAISearch {
+	binding: string;
+	instance_name: string;
 	remote?: boolean;
 }
 

@@ -16,6 +16,7 @@ export {
 	createMessageBatch,
 	getQueueResult,
 	applyD1Migrations,
+	adminSecretsStore,
 	createPagesEventContext,
 	introspectWorkflowInstance,
 	introspectWorkflow,

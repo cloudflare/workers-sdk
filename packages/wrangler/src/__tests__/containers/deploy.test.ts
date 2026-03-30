@@ -13,6 +13,7 @@ import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
@@ -908,6 +909,8 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	it("should error when no scope for containers", async () => {
+		// Reset the spy from setupCommonMocks before setting empty scopes
+		vi.mocked(user.getScopes).mockReset();
 		mockContainersAccount([]);
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,

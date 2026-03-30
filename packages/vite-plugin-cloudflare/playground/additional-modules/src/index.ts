@@ -1,3 +1,5 @@
+import subpathHtml from "#html";
+import subpathHtmlWithExt from "#modules/html-example.html";
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
 import sql from "./modules/sql-example.sql";
@@ -23,6 +25,16 @@ export default {
 			}
 			case "/html": {
 				return new Response(html, { headers: { "Content-Type": "text/html" } });
+			}
+			case "/subpath-html": {
+				return new Response(subpathHtml, {
+					headers: { "Content-Type": "text/html" },
+				});
+			}
+			case "/subpath-html-with-ext": {
+				return new Response(subpathHtmlWithExt, {
+					headers: { "Content-Type": "text/html" },
+				});
 			}
 			case "/text": {
 				return new Response(text);

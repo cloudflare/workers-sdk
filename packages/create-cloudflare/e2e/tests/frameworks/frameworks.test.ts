@@ -25,13 +25,15 @@ import {
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { getFrameworksTests } from "./test-config";
+import type { RunnerTestSuite } from "vitest";
 
 const frameworkTests = getFrameworksTests();
 
 describe
 	.skipIf(frameworkTests.length === 0)
 	.concurrent(`E2E: Web frameworks`, () => {
-		beforeAll((ctx) => {
+		// eslint-disable-next-line no-empty-pattern
+		beforeAll(({}, ctx) => {
 			if (frameworkToTestFilter) {
 				debuglog("Running framework tests with filter:", frameworkToTestFilter);
 				frameworkTests.forEach((testConfig) => {
@@ -39,7 +41,7 @@ describe
 				});
 			}
 
-			recreateLogFolder(ctx);
+			recreateLogFolder(ctx as RunnerTestSuite);
 		});
 
 		frameworkTests.forEach((testConfig) => {

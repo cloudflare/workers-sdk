@@ -916,10 +916,11 @@ describe("tail", () => {
 			await runWrangler("tail test-worker --format=json");
 			await api.ws.connected;
 			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
+			await vi.advanceTimersByTimeAsync(10000);
 			await expect(
 				vi.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Tail disconnected, exiting.]`
+				`[Error: "Tail disconnected, exiting."]`
 			);
 			await api.closeHelper();
 		});

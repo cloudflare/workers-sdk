@@ -107,6 +107,7 @@ export const zWorkersApiResponseCollection = zWorkersApiResponseCommon.and(
 				page: z.number().optional(),
 				per_page: z.number().optional(),
 				total_count: z.number().optional(),
+				total_pages: z.number().optional(),
 			})
 			.optional(),
 	})
@@ -195,7 +196,13 @@ export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
  */
 export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
 
+/**
+ * Specify the location to restrict the D1 database to run and store data. If this option is present, the location hint is ignored.
+ */
+export const zD1JurisdictionNullable = z.enum(["eu", "fedramp"]);
+
 export const zD1DatabaseResponse = z.object({
+	jurisdiction: zD1JurisdictionNullable.optional(),
 	name: zD1DatabaseName.optional(),
 	uuid: zD1DatabaseIdentifier.optional(),
 	version: zD1DatabaseVersion.optional(),
@@ -394,6 +401,86 @@ export const zDoRawQueryResult = z.object({
 		.optional(),
 });
 
+export const zLocalExplorerWorker = z.object({
+	host: z.string(),
+	isSelf: z.boolean(),
+	name: z.string(),
+	port: z.number().int(),
+	protocol: z.string(),
+});
+
+export const zWorkflowsWorkflowDetails = z.object({
+	name: z.string(),
+	class_name: z.string(),
+	script_name: z.string(),
+	instances: z.object({
+		complete: z.number().optional(),
+		errored: z.number().optional(),
+		paused: z.number().optional(),
+		queued: z.number().optional(),
+		running: z.number().optional(),
+		terminated: z.number().optional(),
+		waiting: z.number().optional(),
+		waitingForPause: z.number().optional(),
+	}),
+});
+
+/**
+ * The name of the workflow.
+ */
+export const zWorkflowsWorkflowName = z.string();
+
+/**
+ * The unique identifier of a workflow instance.
+ */
+export const zWorkflowsInstanceId = z.string();
+
+export const zWorkflowsWorkflow = z.object({
+	name: z.string(),
+	class_name: z.string().optional(),
+	script_name: z.string().optional(),
+});
+
+export const zWorkflowsInstance = z.object({
+	id: z.string(),
+	status: z
+		.enum([
+			"queued",
+			"running",
+			"paused",
+			"errored",
+			"terminated",
+			"complete",
+			"waitingForPause",
+			"waiting",
+			"unknown",
+		])
+		.optional(),
+	created_on: z.string().optional(),
+});
+
+export const zWorkflowsInstanceDetails = z.object({
+	id: z.string(),
+	status: z.enum([
+		"queued",
+		"running",
+		"paused",
+		"errored",
+		"terminated",
+		"complete",
+		"waitingForPause",
+		"waiting",
+		"unknown",
+	]),
+	output: z.unknown().optional(),
+	error: z
+		.object({
+			name: z.string().optional(),
+			message: z.string().optional(),
+		})
+		.optional(),
+});
+
 export const zR2ResultInfoWritable = z.record(z.unknown());
 
 export const zWorkersNamespaceWritable = z.object({
@@ -404,6 +491,7 @@ export const zWorkersNamespaceWritable = z.object({
 });
 
 export const zD1DatabaseResponseWritable = z.object({
+	jurisdiction: zD1JurisdictionNullable.optional(),
 	name: zD1DatabaseName.optional(),
 	version: zD1DatabaseVersion.optional(),
 });
@@ -777,3 +865,227 @@ export const zDurableObjectsNamespaceQuerySqliteResponse =
 			result: z.array(zDoRawQueryResult).optional(),
 		})
 	);
+
+export const zLocalExplorerListWorkersData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List workers response.
+ */
+export const zLocalExplorerListWorkersResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zLocalExplorerWorker).optional(),
+	})
+);
+
+export const zWorkflowsListWorkflowsData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * List Workflows response.
+ */
+export const zWorkflowsListWorkflowsResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zWorkflowsWorkflow).optional(),
+		result_info: z
+			.object({
+				count: z.number().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zWorkflowsDeleteWorkflowData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete Workflow response.
+ */
+export const zWorkflowsDeleteWorkflowResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				status: z.string().optional(),
+				success: z.boolean().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zWorkflowsGetWorkflowDetailsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get Workflow Details response.
+ */
+export const zWorkflowsGetWorkflowDetailsResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zWorkflowsWorkflowDetails.optional(),
+		})
+	);
+
+export const zWorkflowsListInstancesData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+	}),
+	query: z
+		.object({
+			page: z.number().gte(1).optional().default(1),
+			per_page: z.number().gte(1).lte(100).optional().default(25),
+			status: z
+				.enum([
+					"queued",
+					"running",
+					"paused",
+					"errored",
+					"terminated",
+					"complete",
+					"waitingForPause",
+					"waiting",
+				])
+				.optional(),
+		})
+		.optional(),
+});
+
+/**
+ * List Workflow Instances response.
+ */
+export const zWorkflowsListInstancesResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z.array(zWorkflowsInstance).optional(),
+		result_info: z
+			.object({
+				page: z.number().optional(),
+				per_page: z.number().optional(),
+				total_count: z.number().optional(),
+				total_pages: z.number().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zWorkflowsCreateInstanceData = z.object({
+	body: z
+		.object({
+			id: z.string().optional(),
+			params: z.unknown().optional(),
+		})
+		.optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Create Workflow Instance response.
+ */
+export const zWorkflowsCreateInstanceResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				id: z.string(),
+			})
+			.optional(),
+	})
+);
+
+export const zWorkflowsDeleteInstanceData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+		instance_id: zWorkflowsInstanceId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete Workflow Instance response.
+ */
+export const zWorkflowsDeleteInstanceResponse = zWorkersApiResponseCommon.and(
+	z.object({
+		result: z
+			.object({
+				success: z.boolean().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zWorkflowsGetInstanceDetailsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+		instance_id: zWorkflowsInstanceId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Get Workflow Instance Details response.
+ */
+export const zWorkflowsGetInstanceDetailsResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: zWorkflowsInstanceDetails.optional(),
+		})
+	);
+
+export const zWorkflowsChangeInstanceStatusData = z.object({
+	body: z.object({
+		action: z.enum(["pause", "resume", "restart", "terminate"]),
+	}),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+		instance_id: zWorkflowsInstanceId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Change Workflow Instance Status response.
+ */
+export const zWorkflowsChangeInstanceStatusResponse =
+	zWorkersApiResponseCommon.and(
+		z.object({
+			result: z
+				.object({
+					success: z.boolean().optional(),
+				})
+				.optional(),
+		})
+	);
+
+export const zWorkflowsSendInstanceEventData = z.object({
+	body: z.unknown().optional(),
+	path: z.object({
+		workflow_name: zWorkflowsWorkflowName,
+		instance_id: zWorkflowsInstanceId,
+		event_type: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Send Event response.
+ */
+export const zWorkflowsSendInstanceEventResponse = zWorkersApiResponseCommon;
