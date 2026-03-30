@@ -1,14 +1,14 @@
-import { stripAnsi } from "@cloudflare/cli";
-import { CancelError } from "@cloudflare/cli/error";
-import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
+import { CancelError } from "./error";
+import { isInteractive, spinner } from "./interactive";
+import { stripAnsi } from ".";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
  */
 type Command = string[];
 
-type RunOptions = {
+export type RunOptions = {
 	startText?: string;
 	doneText?: string | ((output: string) => string);
 	silent?: boolean;

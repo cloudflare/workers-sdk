@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import * as cliPackages from "@cloudflare/cli/packages";
 import { beforeEach, describe, it, vi } from "vitest";
-import * as c3Packages from "../../../autoconfig/c3-vendor/packages";
 import { Angular } from "../../../autoconfig/frameworks/angular";
 import { NpmPackageManager } from "../../../package-manager";
 import { runInTempDir } from "../../helpers/run-in-tmp";
@@ -22,7 +22,7 @@ describe("Angular framework configure()", () => {
 
 	beforeEach(() => {
 		installSpy = vi
-			.spyOn(c3Packages, "installPackages")
+			.spyOn(cliPackages, "installPackages")
 			.mockImplementation(async () => {});
 	});
 
@@ -315,7 +315,7 @@ describe("Angular framework configure()", () => {
 			await framework.configure(BASE_OPTIONS);
 
 			expect(installSpy).toHaveBeenCalledWith(
-				NpmPackageManager,
+				NpmPackageManager.type,
 				["xhr2"],
 				expect.objectContaining({ dev: true })
 			);

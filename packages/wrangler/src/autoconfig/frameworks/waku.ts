@@ -4,11 +4,11 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
+import { installPackages } from "@cloudflare/cli/packages";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
@@ -29,7 +29,7 @@ export class Waku extends Framework {
 
 		if (!dryRun) {
 			await installPackages(
-				packageManager,
+				packageManager.type,
 				["hono", "@cloudflare/vite-plugin"],
 				{
 					dev: true,

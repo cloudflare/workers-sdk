@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
+import * as cliPackages from "@cloudflare/cli/packages";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 // eslint-disable-next-line no-restricted-imports
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
 import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
@@ -191,7 +191,7 @@ describe("autoconfig (deploy)", () => {
 		let installSpy: MockInstance;
 		beforeEach(() => {
 			installSpy = vi
-				.spyOn(c3, "installWrangler")
+				.spyOn(cliPackages, "installWrangler")
 				.mockImplementation(async () => {});
 		});
 

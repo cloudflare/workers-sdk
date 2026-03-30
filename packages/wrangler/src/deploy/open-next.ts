@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readdir } from "node:fs/promises";
+import { runCommand } from "@cloudflare/cli/command";
 import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
-import { runCommand } from "../autoconfig/c3-vendor/command";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
