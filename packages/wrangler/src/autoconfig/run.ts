@@ -164,7 +164,11 @@ export async function runAutoConfig(
 		}
 
 		logger.debug(
-			`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
+			`Running autoconfig with:\n${JSON.stringify(
+				autoConfigDetails,
+				null,
+				2
+			)}...`
 		);
 
 		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {

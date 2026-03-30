@@ -107,7 +107,9 @@ export const setupCommand = createCommand({
 		if (!args.dryRun) {
 			const { type } = await getPackageManager();
 			logCompletionMessage(
-				`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
+				`You can now deploy with ${brandColor(
+					details.packageJson ? `${type} run deploy` : "wrangler deploy"
+				)}`
 			);
 		}
 	},
