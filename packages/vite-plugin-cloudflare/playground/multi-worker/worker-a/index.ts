@@ -19,9 +19,6 @@ export default {
 					result,
 				});
 			}
-			case "/websocket": {
-				return env.WORKER_B.fetch(request);
-			}
 			case "/rpc-method": {
 				const result = await env.WORKER_B.add(4, 5);
 				return Response.json({

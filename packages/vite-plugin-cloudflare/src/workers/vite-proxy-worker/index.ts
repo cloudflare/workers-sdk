@@ -20,8 +20,9 @@ export default class ViteProxyWorker extends WorkerEntrypoint<Env> {
 	}
 
 	override async fetch(request: Request) {
-		// WebSocket service-binding upgrades must reach the user worker directly.
-		if (request.headers.get("upgrade")?.toLowerCase() === "websocket") {
+		// Upgrade requests (e.g. WebSocket) cannot be proxied through the
+		// Node.js middleware binding, so send them directly to the user worker.
+		if (request.headers.get("Upgrade")) {
 			return this.env.ENTRY_USER_WORKER.fetch(request);
 		}
 
