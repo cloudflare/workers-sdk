@@ -128,31 +128,34 @@ async function fetchViaRequest(
 	dispatcher: undici.Dispatcher | undefined,
 	redirectsRemaining = 20
 ): Promise<Response> {
-	const { statusCode, headers: rawHeaders, body: rawBody } =
-		await undici.request(request.url, {
-			method: request.method,
-				// Match undici.fetch() behaviour: add Accept-Encoding if the caller
-			// has not already specified one, so that the workerd entry worker
-			// applies the same content-encoding logic.
-				// Match undici.fetch() defaults: it sends `Accept: */*` and
-			// `Accept-Encoding: gzip, deflate` when the caller hasn't set them.
-			// These are placed before the spread so the caller's own headers
-			// take precedence.
-			headers: {
-				accept: "*/*",
-				"accept-encoding": "gzip, deflate",
-				...Object.fromEntries(request.headers),
-			},
-			// undici.request() accepts Node.js Readable streams but not web
-			// ReadableStreams. Convert if necessary.
-			body:
-				request.body !== null
-					? Readable.fromWeb(
-							request.body as import("node:stream/web").ReadableStream
-						)
-					: null,
-			dispatcher,
-		});
+	const {
+		statusCode,
+		headers: rawHeaders,
+		body: rawBody,
+	} = await undici.request(request.url, {
+		method: request.method,
+		// Match undici.fetch() behaviour: add Accept-Encoding if the caller
+		// has not already specified one, so that the workerd entry worker
+		// applies the same content-encoding logic.
+		// Match undici.fetch() defaults: it sends `Accept: */*` and
+		// `Accept-Encoding: gzip, deflate` when the caller hasn't set them.
+		// These are placed before the spread so the caller's own headers
+		// take precedence.
+		headers: {
+			accept: "*/*",
+			"accept-encoding": "gzip, deflate",
+			...Object.fromEntries(request.headers),
+		},
+		// undici.request() accepts Node.js Readable streams but not web
+		// ReadableStreams. Convert if necessary.
+		body:
+			request.body !== null
+				? Readable.fromWeb(
+						request.body as import("node:stream/web").ReadableStream
+					)
+				: null,
+		dispatcher,
+	});
 
 	// Build a proper Headers object.  undici.request() returns headers as a plain
 	// object where `set-cookie` may be an array.  Passing a plain object with an
@@ -187,9 +190,7 @@ async function fetchViaRequest(
 	} else if (contentEncoding === "deflate" && webStream != null) {
 		// Both zlib-wrapped deflate (the common HTTP interpretation) and raw deflate
 		// are handled by DecompressionStream("deflate") in Node 18+.
-		responseBody = webStream.pipeThrough(
-			new DecompressionStream("deflate")
-		);
+		responseBody = webStream.pipeThrough(new DecompressionStream("deflate"));
 	} else if (contentEncoding === "br" && webStream != null) {
 		// "brotli" is not in the TypeScript CompressionFormat union yet, but
 		// Node 22+ supports it via DecompressionStream.
@@ -214,10 +215,10 @@ async function fetchViaRequest(
 			throw new TypeError("fetch failed");
 		}
 		if (redirectMode === "manual") {
-			return new Response(
-				responseBody as AsyncIterable<Uint8Array> | null,
-				{ status: statusCode, headers }
-			);
+			return new Response(responseBody as AsyncIterable<Uint8Array> | null, {
+				status: statusCode,
+				headers,
+			});
 		}
 		// redirect === "follow"
 		if (redirectsRemaining === 0) {

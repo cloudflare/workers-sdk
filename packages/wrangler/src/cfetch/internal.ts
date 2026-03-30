@@ -21,6 +21,7 @@ import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { ComplianceConfig, Message } from "@cloudflare/workers-utils";
+import type { ReadableStream } from "node:stream/web";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
@@ -87,24 +88,25 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 			// credential-retry path which checks request.body.source.
 			// undici.request() uses the Dispatcher API directly and has no such
 			// path.  See: https://github.com/cloudflare/workers-sdk/issues/12967
-			const { statusCode, headers: rawHeaders, body } = await undiciRequest(
-				request.url,
-				{
-					method: request.method,
-					headers: Object.fromEntries(request.headers),
-					body:
-						request.body !== null
-							? Readable.fromWeb(
-									request.body as import("node:stream/web").ReadableStream
-								)
-							: null,
-				}
-			);
+			const {
+				statusCode,
+				headers: rawHeaders,
+				body,
+			} = await undiciRequest(request.url, {
+				method: request.method,
+				headers: Object.fromEntries(request.headers),
+				body:
+					request.body !== null
+						? Readable.fromWeb(request.body as ReadableStream)
+						: null,
+			});
 			// Build a Headers object that preserves multiple set-cookie values.
 			const responseHeaders = new Headers();
 			for (const [name, value] of Object.entries(rawHeaders)) {
 				if (Array.isArray(value)) {
-					for (const v of value) responseHeaders.append(name, v);
+					for (const v of value) {
+						responseHeaders.append(name, v);
+					}
 				} else if (value !== undefined) {
 					responseHeaders.set(name, value);
 				}

@@ -9,6 +9,7 @@ import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
+import type { ReadableStream } from "node:stream/web";
 import type { RequestInfo, RequestInit } from "undici";
 
 export interface Unstable_DevOptions {
@@ -261,24 +262,25 @@ export async function unstable_dev(
 			// Dispatcher API directly and has no such path.
 			// See: https://github.com/cloudflare/workers-sdk/issues/12967
 			const forward = forwardInit as Request;
-			const { statusCode, headers: rawHeaders, body } = await undiciRequest(
-				url.toString(),
-				{
-					method: forward.method,
-					headers: Object.fromEntries(forward.headers),
-					body:
-						forward.body !== null
-							? Readable.fromWeb(
-									forward.body as import("node:stream/web").ReadableStream
-								)
-							: null,
-				}
-			);
+			const {
+				statusCode,
+				headers: rawHeaders,
+				body,
+			} = await undiciRequest(url.toString(), {
+				method: forward.method,
+				headers: Object.fromEntries(forward.headers),
+				body:
+					forward.body !== null
+						? Readable.fromWeb(forward.body as ReadableStream)
+						: null,
+			});
 			// Build a Headers object that preserves multiple set-cookie values.
 			const responseHeaders = new Headers();
 			for (const [name, value] of Object.entries(rawHeaders)) {
 				if (Array.isArray(value)) {
-					for (const v of value) responseHeaders.append(name, v);
+					for (const v of value) {
+						responseHeaders.append(name, v);
+					}
 				} else if (value !== undefined) {
 					responseHeaders.set(name, value);
 				}
