@@ -5239,7 +5239,7 @@ const validatePreviewsConfig =
 				undefined
 			) && isValid;
 
-		if (previews.limits !== undefined) {
+		if (previews.limits) {
 			isValid =
 				validateRequiredProperty(
 					diagnostics,
