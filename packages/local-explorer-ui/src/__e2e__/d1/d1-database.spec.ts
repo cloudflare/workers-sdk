@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import {
 	clickButton,
 	isTextVisible,
@@ -23,7 +23,7 @@ describe("D1 Database Studio", () => {
 	});
 
 	describe("table list", () => {
-		test("displays available tables in the selector", async () => {
+		test("displays available tables in the selector", async ({ expect }) => {
 			await navigateToD1("DB");
 			await waitForText("D1");
 
@@ -63,7 +63,7 @@ describe("D1 Database Studio", () => {
 	});
 
 	describe("row operations", () => {
-		test("can click 'Add row' button", async () => {
+		test("can click 'Add row' button", async ({ expect }) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(1);
 
@@ -76,7 +76,7 @@ describe("D1 Database Studio", () => {
 			await waitForTableRows(1);
 		});
 
-		test("shows 'Commit' button after making changes", async () => {
+		test("shows 'Commit' button after making changes", async ({ expect }) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(2);
 
@@ -95,7 +95,7 @@ describe("D1 Database Studio", () => {
 			expect(isDiscardVisible).toBe(true);
 		});
 
-		test("discards changes when clicking 'Discard'", async () => {
+		test("discards changes when clicking 'Discard'", async ({ expect }) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(2);
 
@@ -111,7 +111,9 @@ describe("D1 Database Studio", () => {
 	});
 
 	describe("table schema management", () => {
-		test("'Edit Schema' button is visible when table selected", async () => {
+		test("'Edit Schema' button is visible when table selected", async ({
+			expect,
+		}) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(1);
 
@@ -122,7 +124,9 @@ describe("D1 Database Studio", () => {
 			expect(isEditSchemaVisible).toBe(true);
 		});
 
-		test("'Delete Table' button is visible when table selected", async () => {
+		test("'Delete Table' button is visible when table selected", async ({
+			expect,
+		}) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(1);
 
@@ -133,7 +137,7 @@ describe("D1 Database Studio", () => {
 			expect(isDeleteTableVisible).toBe(true);
 		});
 
-		test("shows confirmation when deleting table", async () => {
+		test("shows confirmation when deleting table", async ({ expect }) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(1);
 
@@ -148,7 +152,7 @@ describe("D1 Database Studio", () => {
 	});
 
 	describe("refresh functionality", () => {
-		test("refresh button is visible", async () => {
+		test("refresh button is visible", async ({ expect }) => {
 			await navigateToD1("DB", "users");
 			await waitForTableRows(1);
 
@@ -172,7 +176,7 @@ describe("D1 Database Studio", () => {
 	});
 
 	describe("SQL queries", () => {
-		test("creates a table via SQL", async () => {
+		test("creates a table via SQL", async ({ expect }) => {
 			await navigateToD1("DB");
 			await waitForText("D1");
 			await waitForQueryEditor();
@@ -210,7 +214,7 @@ describe("D1 Database Studio", () => {
 			await waitForText("Charlie");
 		});
 
-		test("deletes a row via SQL", async () => {
+		test("deletes a row via SQL", async ({ expect }) => {
 			await navigateToD1("DB");
 			await waitForText("D1");
 			await waitForQueryEditor();

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import {
 	clickButton,
 	fillByPlaceholder,
@@ -18,7 +18,7 @@ describe("KV Namespace", () => {
 	});
 
 	describe("viewing entries", () => {
-		test("displays entries in the table", async () => {
+		test("displays entries in the table", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 			await waitForText("greeting");
@@ -38,7 +38,7 @@ describe("KV Namespace", () => {
 	});
 
 	describe("searching entries", () => {
-		test("filters entries by prefix", async () => {
+		test("filters entries by prefix", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 
@@ -67,7 +67,7 @@ describe("KV Namespace", () => {
 	});
 
 	describe("adding entries", () => {
-		test("adds a new key/value pair", async () => {
+		test("adds a new key/value pair", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 
@@ -153,7 +153,7 @@ describe("KV Namespace", () => {
 			await waitForText(updatedMockValue);
 		});
 
-		test("cancels editing without saving changes", async () => {
+		test("cancels editing without saving changes", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 
@@ -187,7 +187,7 @@ describe("KV Namespace", () => {
 			await waitForText("Delete key?");
 		});
 
-		test("deletes entry after confirmation", async () => {
+		test("deletes entry after confirmation", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 
@@ -211,7 +211,7 @@ describe("KV Namespace", () => {
 			expect(count).toBe(0);
 		});
 
-		test("cancels deletion when clicking 'Cancel'", async () => {
+		test("cancels deletion when clicking 'Cancel'", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 
@@ -231,7 +231,7 @@ describe("KV Namespace", () => {
 	});
 
 	describe("pagination", () => {
-		test("loads more entries when clicking Load More", async () => {
+		test("loads more entries when clicking Load More", async ({ expect }) => {
 			await navigateToKV("KV");
 			await waitForTableRows(5);
 

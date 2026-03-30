@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import {
 	isTextVisible,
 	navigateToDOClass,
@@ -38,7 +38,9 @@ describe("Durable Objects", () => {
 			await waitForText("Object ID");
 		});
 
-		test("shows Open Studio link for objects if they exist", async () => {
+		test("shows Open Studio link for objects if they exist", async ({
+			expect,
+		}) => {
 			await navigateToDOClass("MyDurableObject");
 			await waitForText("MyDurableObject");
 
@@ -51,7 +53,9 @@ describe("Durable Objects", () => {
 	});
 
 	describe("empty state", () => {
-		test("shows message when no DO objects exist or shows objects", async () => {
+		test("shows message when no DO objects exist or shows objects", async ({
+			expect,
+		}) => {
 			await navigateToDOClass("MyDurableObject");
 
 			await page.waitForTimeout(1_000);
@@ -83,7 +87,7 @@ describe("Durable Objects", () => {
 	});
 
 	describe("SQL queries", () => {
-		test("creates a table via SQL", async () => {
+		test("creates a table via SQL", async ({ expect }) => {
 			await navigateToDOObjectByName("MyDurableObject");
 			await waitForText("Durable Objects");
 			await waitForQueryEditor();
@@ -120,7 +124,7 @@ describe("Durable Objects", () => {
 			await waitForText("Charlie");
 		});
 
-		test("deletes a row via SQL", async () => {
+		test("deletes a row via SQL", async ({ expect }) => {
 			const objectId = await navigateToDOObjectByName("MyDurableObject");
 			await waitForText("Durable Objects");
 			await waitForQueryEditor();
