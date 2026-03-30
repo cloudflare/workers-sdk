@@ -1,6 +1,11 @@
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import {
+	getLocalInstanceIdFromArgs,
+	localWorkflowArgs,
+	updateLocalInstanceStatus,
+} from "../../local";
 import { getInstanceIdFromArgs, updateInstanceStatus } from "../../utils";
 
 export const workflowsInstancesPauseCommand = createCommand({
@@ -9,9 +14,9 @@ export const workflowsInstancesPauseCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	positionalArgs: ["name", "id"],
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -26,11 +31,16 @@ export const workflowsInstancesPauseCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
+		let id: string;
 
-		const id = await getInstanceIdFromArgs(accountId, args, config);
-
-		await updateInstanceStatus(config, accountId, args.name, id, "pause");
+		if (args.local) {
+			id = await getLocalInstanceIdFromArgs(args.port, args);
+			await updateLocalInstanceStatus(args.port, args.name, id, "pause");
+		} else {
+			const accountId = await requireAuth(config);
+			id = await getInstanceIdFromArgs(accountId, args, config);
+			await updateInstanceStatus(config, accountId, args.name, id, "pause");
+		}
 
 		logger.info(
 			`⏸️ The instance "${id}" from ${args.name} was paused successfully`

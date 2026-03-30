@@ -1,6 +1,11 @@
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import {
+	getLocalInstanceIdFromArgs,
+	localWorkflowArgs,
+	updateLocalInstanceStatus,
+} from "../../local";
 import { getInstanceIdFromArgs, updateInstanceStatus } from "../../utils";
 
 export const workflowsInstancesTerminateCommand = createCommand({
@@ -9,9 +14,9 @@ export const workflowsInstancesTerminateCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	positionalArgs: ["name", "id"],
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -26,11 +31,16 @@ export const workflowsInstancesTerminateCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
+		let id: string;
 
-		const id = await getInstanceIdFromArgs(accountId, args, config);
-
-		await updateInstanceStatus(config, accountId, args.name, id, "terminate");
+		if (args.local) {
+			id = await getLocalInstanceIdFromArgs(args.port, args);
+			await updateLocalInstanceStatus(args.port, args.name, id, "terminate");
+		} else {
+			const accountId = await requireAuth(config);
+			id = await getInstanceIdFromArgs(accountId, args, config);
+			await updateInstanceStatus(config, accountId, args.name, id, "terminate");
+		}
 
 		logger.info(
 			`🥷 The instance "${id}" from ${args.name} was terminated successfully`
