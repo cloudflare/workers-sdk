@@ -706,8 +706,10 @@ export async function connectToMiniflareSocket(
 }
 
 interface PackageJson {
+	name?: string;
 	version?: string;
 	peerDependencies?: Record<string, string | undefined>;
+	bundledVersions?: Record<string, string | undefined>;
 }
 function getPackageJson(dirPath: string): PackageJson | undefined {
 	while (true) {
@@ -729,6 +731,15 @@ function getPackageJson(dirPath: string): PackageJson | undefined {
 	}
 }
 
+/**
+ * Extract the upstream vitest version from an alternative distribution's
+ * package.json. Distributions like `@voidzero-dev/vite-plus-test` declare
+ * the bundled vitest version in `bundledVersions.vitest`.
+ */
+function getUpstreamVitestVersion(pkgJson: PackageJson): string | undefined {
+	return pkgJson.bundledVersions?.vitest;
+}
+
 export function assertCompatibleVitestVersion(ctx: Vitest) {
 	// Some package managers don't enforce `peerDependencies` requirements,
 	// so add a runtime sanity check to ensure things don't break in strange ways.
@@ -744,11 +755,15 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 	);
 
 	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
-	const actualVitestVersion = vitestPkgJson.version;
 	assert(
 		expectedVitestVersion !== undefined,
 		"Expected to find `@cloudflare/vitest-pool-workers`'s `vitest` version constraint"
 	);
+
+	const actualVitestVersion =
+		vitestPkgJson.name === "vitest"
+			? vitestPkgJson.version
+			: (getUpstreamVitestVersion(vitestPkgJson) ?? vitestPkgJson.version);
 	assert(
 		actualVitestVersion !== undefined,
 		"Expected to find `vitest`'s version"
