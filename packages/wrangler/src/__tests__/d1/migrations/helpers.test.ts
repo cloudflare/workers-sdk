@@ -1,12 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { describe, it } from "vitest";
 import { getMigrationNames } from "../../../d1/migrations/helpers";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 
 describe("getMigrationNames", () => {
 	runInTempDir();
 
-	it("should return empty array for empty directory", () => {
+	it("should return empty array for empty directory", ({ expect }) => {
 		const migrationsDir = "./migrations";
 		fs.mkdirSync(migrationsDir, { recursive: true });
 
@@ -14,7 +15,7 @@ describe("getMigrationNames", () => {
 		expect(result).toEqual([]);
 	});
 
-	it("should return sorted migration files", () => {
+	it("should return sorted migration files", ({ expect }) => {
 		const migrationsDir = "./migrations";
 		fs.mkdirSync(migrationsDir, { recursive: true });
 
@@ -41,7 +42,7 @@ describe("getMigrationNames", () => {
 		]);
 	});
 
-	it("should ignore non-SQL files", () => {
+	it("should ignore non-SQL files", ({ expect }) => {
 		const migrationsDir = "./migrations";
 		fs.mkdirSync(migrationsDir, { recursive: true });
 
@@ -65,7 +66,7 @@ describe("getMigrationNames", () => {
 		]);
 	});
 
-	it("should handle directory with only non-SQL files", () => {
+	it("should handle directory with only non-SQL files", ({ expect }) => {
 		const migrationsDir = "./migrations";
 		fs.mkdirSync(migrationsDir, { recursive: true });
 
