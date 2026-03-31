@@ -46,7 +46,7 @@ describe("installCloudflareVitePlugin", () => {
 
 			expect(installSpy).not.toHaveBeenCalledWith(
 				expect.anything(),
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.anything()
 			);
 		});
@@ -68,7 +68,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenNthCalledWith(
 				1,
 				"npm",
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.objectContaining({ dev: true })
 			);
 			expect(installSpy).toHaveBeenNthCalledWith(
@@ -94,7 +94,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenNthCalledWith(
 				1,
 				"npm",
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.objectContaining({ dev: true })
 			);
 			expect(installSpy).toHaveBeenNthCalledWith(
@@ -136,7 +136,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenCalledTimes(1);
 			expect(installSpy).not.toHaveBeenCalledWith(
 				expect.anything(),
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.anything()
 			);
 		});
@@ -153,7 +153,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenCalledTimes(1);
 			expect(installSpy).not.toHaveBeenCalledWith(
 				expect.anything(),
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.anything()
 			);
 		});
@@ -172,7 +172,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenCalledTimes(1);
 			expect(installSpy).not.toHaveBeenCalledWith(
 				expect.anything(),
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.anything()
 			);
 		});
@@ -227,7 +227,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenNthCalledWith(
 				1,
 				expect.anything(),
-				["vite@^6"],
+				["vite@^6.1.0"],
 				expect.objectContaining({ isWorkspaceRoot: true })
 			);
 			expect(installSpy).toHaveBeenNthCalledWith(
