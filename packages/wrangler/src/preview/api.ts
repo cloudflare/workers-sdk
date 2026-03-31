@@ -3,6 +3,7 @@ import type {
 	CfWorkerInit,
 	Config,
 	PreviewsConfig,
+	UserLimits,
 } from "@cloudflare/workers-utils";
 
 export interface Binding {
@@ -73,7 +74,7 @@ export interface DeploymentResource {
 	urls?: string[];
 	compatibility_date?: string;
 	compatibility_flags?: string[];
-	limits?: { cpu_ms?: number };
+	limits?: UserLimits;
 	placement?: { mode: string };
 	env?: EnvBindings;
 	created_on: string;
@@ -131,7 +132,7 @@ export type PreviewDefaults = {
 		head_sampling_rate?: number;
 	};
 	logpush?: boolean;
-	limits?: { cpu_ms?: number };
+	limits?: UserLimits;
 	placement?: { mode: string };
 	tail_consumers?: PreviewsConfig["tail_consumers"];
 	env?: EnvBindings;

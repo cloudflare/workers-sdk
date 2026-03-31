@@ -68,7 +68,7 @@ describe("wrangler preview", () => {
 							preview_defaults: {
 								observability: { enabled: true, head_sampling_rate: 0.5 },
 								logpush: false,
-								limits: { cpu_ms: 50 },
+								limits: { cpu_ms: 50, subrequests: 123 },
 								placement: { mode: "smart" },
 								env: {
 									ENVIRONMENT: { type: "plain_text", text: "preview" },
@@ -84,7 +84,8 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("Previews settings");
 			expect(std.out).toContain("enabled, 0.5 sampling");
 			expect(std.out).toContain("disabled");
-			expect(std.out).toContain("cpu_ms 50");
+			expect(std.out).toContain("cpu_ms: 50");
+			expect(std.out).toContain("subrequests: 123");
 			expect(std.out).toContain("smart");
 			expect(std.out).toContain("********");
 			expect(std.out).toContain("╭");
@@ -307,12 +308,16 @@ describe("wrangler preview", () => {
 					name: "test-worker",
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
-					limits: { cpu_ms: 100 },
-					previews: { limits: { cpu_ms: 50 } },
+					limits: { cpu_ms: 100, subrequests: 200 },
+					previews: { limits: { subrequests: 50 } },
 				})
 			);
 			let patchRequestBody:
-				| { preview_defaults?: { limits?: { cpu_ms?: number } } }
+				| {
+						preview_defaults?: {
+							limits?: { cpu_ms?: number; subrequests?: number };
+						};
+				  }
 				| undefined;
 			msw.use(
 				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
@@ -334,7 +339,7 @@ describe("wrangler preview", () => {
 				"preview settings update --worker-name override-worker --skip-confirmation"
 			);
 			expect(patchRequestBody?.preview_defaults?.limits).toEqual({
-				cpu_ms: 50,
+				subrequests: 50,
 			});
 		});
 

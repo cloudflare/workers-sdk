@@ -5242,14 +5242,21 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		if (previews.limits) {
-			isValid =
-				validateRequiredProperty(
-					diagnostics,
-					`${field}.limits`,
-					"cpu_ms",
-					previews.limits.cpu_ms,
-					"number"
-				) && isValid;
+			validateOptionalProperty(
+				diagnostics,
+				`${field}.limits`,
+				"cpu_ms",
+				previews.limits.cpu_ms,
+				"number"
+			);
+
+			validateOptionalProperty(
+				diagnostics,
+				`${field}.limits`,
+				"subrequests",
+				previews.limits.subrequests,
+				"number"
+			);
 		}
 
 		return isValid;

@@ -8608,6 +8608,25 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should accept previews.limits with only subrequests", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						limits: {
+							subrequests: 123,
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should reject previews.queues when passed as a flat array", ({
 				expect,
 			}) => {

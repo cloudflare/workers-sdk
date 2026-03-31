@@ -440,9 +440,19 @@ function buildMergedVersionLevel(
 			),
 		};
 	}
-	if (deployment.limits?.cpu_ms !== undefined) {
+	if (
+		deployment.limits?.cpu_ms !== undefined ||
+		deployment.limits?.subrequests !== undefined
+	) {
 		result.limits = {
-			value: { cpu_ms: deployment.limits.cpu_ms },
+			value: {
+				...(deployment.limits?.cpu_ms !== undefined && {
+					cpu_ms: deployment.limits.cpu_ms,
+				}),
+				...(deployment.limits?.subrequests !== undefined && {
+					subrequests: deployment.limits.subrequests,
+				}),
+			},
 			fromConfig: !!(
 				previews?.limits !== undefined || config.limits !== undefined
 			),
@@ -621,10 +631,21 @@ function formatDeploymentResource(
 			versionLevel.compatibility_flags.fromConfig,
 		]);
 	}
-	if (versionLevel.limits?.value?.cpu_ms !== undefined) {
+	if (
+		versionLevel.limits?.value?.cpu_ms !== undefined ||
+		versionLevel.limits?.value?.subrequests !== undefined
+	) {
+		const limitParts = [
+			versionLevel.limits?.value?.cpu_ms !== undefined
+				? `cpu_ms: ${versionLevel.limits.value.cpu_ms}`
+				: undefined,
+			versionLevel.limits?.value?.subrequests !== undefined
+				? `subrequests: ${versionLevel.limits.value.subrequests}`
+				: undefined,
+		].filter((value): value is string => value !== undefined);
 		settingsRows.push([
 			"limits",
-			`cpu_ms: ${versionLevel.limits.value.cpu_ms}`,
+			limitParts.join(", "),
 			versionLevel.limits.fromConfig,
 		]);
 	}

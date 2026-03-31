@@ -80,8 +80,19 @@ export function formatPreviewsSettings(
 			previewDefaults.logpush ? "enabled" : "disabled",
 		]);
 	}
-	if (typeof previewDefaults.limits?.cpu_ms === "number") {
-		settingsRows.push(["limits", `cpu_ms ${previewDefaults.limits.cpu_ms}`]);
+	if (
+		typeof previewDefaults.limits?.cpu_ms === "number" ||
+		typeof previewDefaults.limits?.subrequests === "number"
+	) {
+		const limitParts = [
+			typeof previewDefaults.limits?.cpu_ms === "number"
+				? `cpu_ms: ${previewDefaults.limits.cpu_ms}`
+				: undefined,
+			typeof previewDefaults.limits?.subrequests === "number"
+				? `subrequests: ${previewDefaults.limits.subrequests}`
+				: undefined,
+		].filter((value): value is string => value !== undefined);
+		settingsRows.push(["limits", limitParts.join(", ")]);
 	}
 	if (typeof previewDefaults.placement?.mode === "string") {
 		settingsRows.push(["placement", previewDefaults.placement.mode]);

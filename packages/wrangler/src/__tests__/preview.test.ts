@@ -1450,12 +1450,12 @@ describe("wrangler preview", () => {
 					name: "test-worker",
 					main: "src/index.ts",
 					compatibility_date: "2025-01-01",
-					limits: { cpu_ms: 100 },
+					limits: { cpu_ms: 100, subrequests: 200 },
 					previews: {
 						observability: { enabled: true },
 						vars: { TOP_LEVEL_PREVIEW: "top-value" },
 						kv_namespaces: [{ binding: "TOP_KV", id: "top-kv-id" }],
-						limits: { cpu_ms: 25 },
+						limits: { cpu_ms: 25, subrequests: 125 },
 					},
 					env: {
 						staging: {
@@ -1465,7 +1465,7 @@ describe("wrangler preview", () => {
 								queues: {
 									producers: [{ binding: "STAGE_QUEUE", queue: "jobs" }],
 								},
-								limits: { cpu_ms: 50 },
+								limits: { subrequests: 50 },
 							},
 						},
 					},
@@ -1480,7 +1480,7 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						compatibility_date?: string;
-						limits?: { cpu_ms?: number };
+						limits?: { cpu_ms?: number; subrequests?: number };
 						env?: Record<
 							string,
 							{
@@ -1554,13 +1554,13 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --env staging --name test-preview");
 
-			expect(createPreviewRequestBody?.observability).toEqual({
-				enabled: false,
-			});
-			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
-			expect(deploymentRequestBody?.limits).toEqual({ cpu_ms: 50 });
-			expect(deploymentRequestBody?.env).toMatchObject({
-				STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
+				expect(createPreviewRequestBody?.observability).toEqual({
+					enabled: false,
+				});
+				expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+				expect(deploymentRequestBody?.limits).toEqual({ subrequests: 50 });
+				expect(deploymentRequestBody?.env).toMatchObject({
+					STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
 				STAGE_QUEUE: { type: "queue", queue_name: "jobs" },
 			});
 			expect(deploymentRequestBody?.env).not.toHaveProperty(
