@@ -309,7 +309,9 @@ export function assemblePreviewScriptSettings(config: Config) {
 	}
 
 	if (previews?.tail_consumers !== undefined) {
-		result.tail_consumers = previews.tail_consumers;
+		result.tail_consumers = previews.tail_consumers.map((tc) => ({
+			name: tc.service,
+		}));
 	}
 
 	return result;
