@@ -179,10 +179,10 @@ async function deleteAgentMemoryNamespaces() {
 	const namespacesToDelete = await listTmpAgentMemoryNamespaces();
 	for (const ns of namespacesToDelete) {
 		console.log("Deleting Agent Memory namespace: " + ns.name);
-		if (await deleteAgentMemoryNamespace(ns.id)) {
-			console.log(`Successfully deleted Agent Memory namespace ${ns.id}`);
+		if (await deleteAgentMemoryNamespace(ns.name)) {
+			console.log(`Successfully deleted Agent Memory namespace ${ns.name}`);
 		} else {
-			console.log(`Failed to delete Agent Memory namespace ${ns.id}`);
+			console.log(`Failed to delete Agent Memory namespace ${ns.name}`);
 		}
 	}
 	if (namespacesToDelete.length === 0) {

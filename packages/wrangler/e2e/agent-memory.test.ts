@@ -56,7 +56,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 
 	it("get namespace", async ({ expect }) => {
 		const output = await helper.run(
-			`wrangler agent-memory namespace get ${namespaceId}`
+			`wrangler agent-memory namespace get ${namespaceName}`
 		);
 
 		expect(normalize(output.stdout)).toContain("tmp-e2e-agent-memory");
@@ -66,11 +66,11 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("agent-memory", () => {
 
 	it("delete namespace", async ({ expect }) => {
 		const output = await helper.run(
-			`wrangler agent-memory namespace delete ${namespaceId} --force`
+			`wrangler agent-memory namespace delete ${namespaceName} --force`
 		);
 
-		expect(output.stdout).toContain(
-			`✅ Deleted Agent Memory namespace ${namespaceId}`
+		expect(normalize(output.stdout)).toContain(
+			`✅ Deleted Agent Memory namespace tmp-e2e-agent-memory`
 		);
 		expect(output.stderr).toBe("");
 	});
