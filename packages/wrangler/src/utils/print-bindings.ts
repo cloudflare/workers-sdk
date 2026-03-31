@@ -97,6 +97,7 @@ export function printBindings(
 	);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
 		bindings
@@ -371,6 +372,22 @@ export function printBindings(
 					name: binding,
 					type: getBindingTypeFriendlyName("vpc_service"),
 					value: service_id,
+					mode: getMode({
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
+					}),
+				};
+			})
+		);
+	}
+
+	if (vpc_networks.length > 0) {
+		output.push(
+			...vpc_networks.map(({ binding, tunnel_id, network_id, remote }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("vpc_network"),
+					value: tunnel_id ?? network_id,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,
