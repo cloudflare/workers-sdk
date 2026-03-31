@@ -105,7 +105,8 @@ export type ConfigBindingFieldName =
 	| "assets"
 	| "unsafe_hello_world"
 	| "worker_loaders"
-	| "vpc_services";
+	| "vpc_services"
+	| "vpc_networks";
 
 /**
  * @deprecated new code should use getBindingTypeFriendlyName() instead
@@ -145,6 +146,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	unsafe_hello_world: "Hello World",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
+	vpc_networks: "VPC Network",
 } as const;
 
 /**
@@ -187,6 +189,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
+	vpc_network: "VPC Network",
 	media: "Media",
 	assets: "Assets",
 	inherit: "Inherited",
@@ -1911,6 +1914,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateVpcServiceBinding),
 			[]
 		),
+		vpc_networks: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"vpc_networks",
+			validateBindingArray(envName, validateVpcNetworkBinding),
+			[]
+		),
 		version_metadata: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2958,6 +2971,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"vpc_network",
 			"stream",
 			"media",
 		];
@@ -4087,6 +4101,65 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"service_id",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateVpcNetworkBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"vpc_networks" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// VPC network bindings must have a binding and exactly one of tunnel_id or network_id.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	const hasTunnelId = hasProperty(value, "tunnel_id");
+	const hasNetworkId = hasProperty(value, "network_id");
+	if (hasTunnelId && hasNetworkId) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "tunnel_id" or "network_id", but not both.`
+		);
+		isValid = false;
+	} else if (!hasTunnelId && !hasNetworkId) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "tunnel_id" or "network_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasTunnelId && typeof value.tunnel_id !== "string") {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "tunnel_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasNetworkId && typeof value.network_id !== "string") {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "network_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"tunnel_id",
+		"network_id",
 		"remote",
 	]);
 

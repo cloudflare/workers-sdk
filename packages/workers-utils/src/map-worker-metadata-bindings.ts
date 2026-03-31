@@ -368,6 +368,21 @@ export function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "vpc_network":
+						{
+							if (binding.tunnel_id !== undefined) {
+								configObj.vpc_networks = [
+									...(configObj.vpc_networks ?? []),
+									{ binding: binding.name, tunnel_id: binding.tunnel_id },
+								];
+							} else if (binding.network_id !== undefined) {
+								configObj.vpc_networks = [
+									...(configObj.vpc_networks ?? []),
+									{ binding: binding.name, network_id: binding.network_id },
+								];
+							}
+						}
+						break;
 					default: {
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],

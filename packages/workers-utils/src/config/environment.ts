@@ -1390,6 +1390,34 @@ export interface EnvironmentNonInheritable {
 		/** Whether the VPC service is remote or not */
 		remote?: boolean;
 	}[];
+
+	/**
+	 * Specifies VPC networks that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	vpc_networks: (
+		| {
+				/** The binding name used to refer to the VPC network in the Worker. */
+				binding: string;
+				/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with network_id. */
+				tunnel_id: string;
+				/** Whether the VPC network is remote or not */
+				remote?: boolean;
+		  }
+		| {
+				/** The binding name used to refer to the VPC network in the Worker. */
+				binding: string;
+				/** The network ID to route traffic through. Mutually exclusive with tunnel_id. */
+				network_id: string;
+				/** Whether the VPC network is remote or not */
+				remote?: boolean;
+		  }
+	)[];
 }
 
 /**

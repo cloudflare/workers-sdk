@@ -77,6 +77,7 @@ describe("normalizeAndValidateConfig()", () => {
 			unsafe_hello_world: [],
 			ratelimits: [],
 			vpc_services: [],
+			vpc_networks: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -4876,6 +4877,120 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "vpc_services[2]" bindings should have a string "binding" field but got {"binding":null,"service_id":123,"invalid":true}.
 					  - "vpc_services[2]" bindings must have a "service_id" field but got {"binding":null,"service_id":123,"invalid":true}.
 					  - "vpc_services[3]" bindings must have a "service_id" field but got {"binding":"MISSING_SERVICE_ID"}."
+				`);
+			});
+		});
+
+		describe("[vpc_networks]", () => {
+			it("should accept valid bindings with tunnel_id", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{
+								binding: "MY_NETWORK",
+								tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+							},
+							{
+								binding: "MY_OTHER_NETWORK",
+								tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.vpc_networks).toEqual([
+					{
+						binding: "MY_NETWORK",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "MY_OTHER_NETWORK",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				]);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept valid bindings with network_id", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{
+								binding: "MY_MESH_NETWORK",
+								network_id: "some-network-id",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.vpc_networks).toEqual([
+					{
+						binding: "MY_MESH_NETWORK",
+						network_id: "some-network-id",
+					},
+				]);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if both tunnel_id and network_id are provided", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{
+								binding: "MY_NETWORK",
+								tunnel_id: "aaa",
+								network_id: "some-network-id",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - "vpc_networks[0]" bindings must have either a "tunnel_id" or "network_id", but not both."
+			`);
+			});
+
+			it("should error if vpc_networks bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vpc_networks: [
+							{},
+							{
+								binding: "VALID",
+								tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+							},
+							{ binding: null, tunnel_id: 123, invalid: true },
+							{ binding: "MISSING_ID" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "vpc_networks[0]" bindings should have a string "binding" field but got {}.
+					  - "vpc_networks[0]" bindings must have either a "tunnel_id" or "network_id" field but got {}.
+					  - "vpc_networks[2]" bindings should have a string "binding" field but got {"binding":null,"tunnel_id":123,"invalid":true}.
+					  - "vpc_networks[2]" bindings must have a string "tunnel_id" field but got {"binding":null,"tunnel_id":123,"invalid":true}.
+					  - "vpc_networks[3]" bindings must have either a "tunnel_id" or "network_id" field but got {"binding":"MISSING_ID"}."
 				`);
 			});
 		});
