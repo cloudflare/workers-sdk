@@ -12,11 +12,13 @@ import KVIcon from "../../assets/icons/kv.svg?react";
 import { AddKVForm } from "../../components/AddKVForm";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { KVTable } from "../../components/KVTable";
+import { RouteError } from "../../components/ResourceNotFound";
 import { SearchForm } from "../../components/SearchForm";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
 	component: NamespaceView,
+	errorComponent: RouteError,
 	loader: async ({ params }) => {
 		const keysResponse = await workersKvNamespaceListANamespace_SKeys({
 			path: { namespace_id: params.namespaceId },

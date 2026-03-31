@@ -30,6 +30,7 @@ import {
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { RouteError } from "../../../components/ResourceNotFound";
 import { CopyButton } from "../../../components/workflows/CopyButton";
 import {
 	formatDuration,
@@ -50,6 +51,7 @@ import type {
 
 export const Route = createFileRoute("/workflows/$workflowName/$instanceId")({
 	component: InstanceDetailView,
+	errorComponent: RouteError,
 	loader: async ({ params }) => {
 		const response = await workflowsGetInstanceDetails({
 			path: {

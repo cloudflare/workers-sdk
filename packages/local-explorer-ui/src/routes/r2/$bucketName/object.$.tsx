@@ -6,11 +6,13 @@ import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CopyButton } from "../../../components/CopyButton";
+import { RouteError } from "../../../components/ResourceNotFound";
 import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
 
 export const Route = createFileRoute("/r2/$bucketName/object/$")({
 	component: ObjectDetailView,
+	errorComponent: RouteError,
 	loader: async ({ params }) => {
 		const objectKey = params._splat;
 		if (!objectKey) {

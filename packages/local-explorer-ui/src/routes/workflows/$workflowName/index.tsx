@@ -32,6 +32,7 @@ import {
 } from "../../../api";
 import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { RouteError } from "../../../components/ResourceNotFound";
 import { CreateWorkflowInstanceDialog } from "../../../components/workflows/CreateInstanceDialog";
 import { timeAgo } from "../../../components/workflows/helpers";
 import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
@@ -41,6 +42,7 @@ import type { Action } from "../../../components/workflows/types";
 
 export const Route = createFileRoute("/workflows/$workflowName/")({
 	component: WorkflowInstancesView,
+	errorComponent: RouteError,
 	loader: async ({ params }) => {
 		const response = await workflowsListInstances({
 			path: { workflow_name: params.workflowName },
