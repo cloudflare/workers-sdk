@@ -170,11 +170,7 @@ export async function handlePreviewSettingsUpdateCommand(
 		return;
 	}
 
-	logger.log(
-		typeof (diff as { toString?: unknown }).toString === "function"
-			? String((diff as { toString: () => string }).toString())
-			: JSON.stringify(diff, null, 2)
-	);
+	logger.log(`${diff}`);
 
 	if (!args.skipConfirmation) {
 		const shouldProceed = await confirm(

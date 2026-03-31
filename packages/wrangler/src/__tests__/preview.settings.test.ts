@@ -219,6 +219,82 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should render a useful diff before updating preview settings", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					previews: {
+						logpush: false,
+						vars: { ENVIRONMENT: "preview" },
+					},
+				})
+			);
+
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {
+								logpush: true,
+							},
+						},
+					})
+				),
+				http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {
+								logpush: false,
+								env: {
+									ENVIRONMENT: { type: "plain_text", text: "preview" },
+								},
+							},
+						},
+					})
+				)
+			);
+
+			await runWrangler(
+				"preview settings update --worker-name override-worker --skip-confirmation"
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				 {
+				[32m+  env: {[39m
+				[32m+    ENVIRONMENT: {[39m
+				[32m+      type: "plain_text"[39m
+				[32m+      text: "preview"[39m
+				[32m+    }[39m
+				[32m+  }[39m
+				[31m-  logpush: true[39m
+				[32m+  logpush: false[39m
+				 }
+
+
+				✨ Updated Previews settings for Worker override-worker.
+				╭──────────────────────────────────────────────────╮
+				│ Worker: override-worker │
+				│ │
+				│   Previews settings │
+				│ │
+				│   logpush   disabled │
+				│ │
+				│   Bindings │
+				│   ENVIRONMENT   Environment Variable   "preview" │
+				│ │
+				╰──────────────────────────────────────────────────╯"
+			`);
+		});
+
 		test("should preserve nested observability fields when only partially overridden", async ({
 			expect,
 		}) => {
