@@ -179,7 +179,7 @@ export class DevRegistry {
 			return;
 		}
 
-		const registry = this.getRegistry();
+		const registry = getWorkerRegistry(this.registryPath!);
 		const json = JSON.stringify(registry);
 		if (json === this.previousJSON) {
 			return;
@@ -201,14 +201,10 @@ export class DevRegistry {
 /**
  * Read the worker registry from the specified path.
  *
- * This function reads the worker definitions from the registry directory, and skips any stale
- * workers that have not been updated in the last 5 minutes. If a worker is stale, it will call
- * the `unregisterStaleWorker` callback if provided.
+ * Skips stale workers that haven't sent a heartbeat in over 5 minutes,
+ * and removes their files from disk.
  */
-export function getWorkerRegistry(
-	registryPath: string,
-	unregisterStaleWorker?: (workerName: string) => void
-): WorkerRegistry {
+export function getWorkerRegistry(registryPath: string): WorkerRegistry {
 	const registry: WorkerRegistry = {};
 
 	if (!existsSync(registryPath)) {
@@ -222,7 +218,9 @@ export function getWorkerRegistry(
 
 			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
 			if (stats === undefined || stats.mtime.getTime() < Date.now() - 300_000) {
-				unregisterStaleWorker?.(workerName);
+				try {
+					unlinkSync(definitionPath);
+				} catch {}
 				continue;
 			}
 
