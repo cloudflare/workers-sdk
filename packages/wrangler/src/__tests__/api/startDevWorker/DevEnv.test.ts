@@ -7,26 +7,73 @@ describe("DevEnv", () => {
 	const std = mockConsoleMethods();
 
 	describe("handleErrorEvent", () => {
-		test("should log BundlerController errors at error level", () => {
+		test("should format esbuild BuildFailure errors nicely for BundlerController", () => {
 			const devEnv = new DevEnv();
 
-			const buildError = new Error("Could not resolve module 'foo'");
+			// Create an esbuild-like BuildFailure with errors and warnings arrays
+			const buildFailure = Object.assign(new Error("Build failed"), {
+				errors: [
+					{
+						id: "",
+						pluginName: "",
+						text: 'Could not resolve "some-missing-module"',
+						location: null,
+						notes: [],
+						detail: undefined,
+					},
+				],
+				warnings: [],
+			});
 
 			devEnv.dispatch({
 				type: "error",
 				reason: "Failed to construct initial bundle",
-				cause: buildError,
+				cause: buildFailure,
 				source: "BundlerController",
 				data: undefined,
 			});
 
-			expect(std.err).toContain("Failed to construct initial bundle");
-			expect(std.err).toContain("Could not resolve module 'foo'");
+			expect(std.err).toContain("Build failed with 1 error");
+			expect(std.err).toContain('Could not resolve "some-missing-module"');
 
 			void devEnv.teardown();
 		});
 
-		test("should log custom build errors at error level", () => {
+		test("should format esbuild BuildFailure from cause for BundlerController", () => {
+			const devEnv = new DevEnv();
+
+			// Create an esbuild-like BuildFailure nested in cause
+			const innerFailure = Object.assign(new Error("Build failed"), {
+				errors: [
+					{
+						id: "",
+						pluginName: "",
+						text: "Syntax error in worker code",
+						location: null,
+						notes: [],
+						detail: undefined,
+					},
+				],
+				warnings: [],
+			});
+			const outerError = new Error("Initial build failed.");
+			outerError.cause = innerFailure;
+
+			devEnv.dispatch({
+				type: "error",
+				reason: "Failed to construct initial bundle",
+				cause: outerError,
+				source: "BundlerController",
+				data: undefined,
+			});
+
+			expect(std.err).toContain("Build failed with 1 error");
+			expect(std.err).toContain("Syntax error in worker code");
+
+			void devEnv.teardown();
+		});
+
+		test("should log non-esbuild BundlerController errors with just the message", () => {
 			const devEnv = new DevEnv();
 
 			const buildError = new Error("Custom build command failed");
@@ -39,7 +86,6 @@ describe("DevEnv", () => {
 				data: { config: undefined, filePath: "src/index.ts" },
 			});
 
-			expect(std.err).toContain("Custom build failed");
 			expect(std.err).toContain("Custom build command failed");
 
 			void devEnv.teardown();
