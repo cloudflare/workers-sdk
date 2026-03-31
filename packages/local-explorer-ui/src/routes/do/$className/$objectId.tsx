@@ -198,10 +198,7 @@ function ObjectView(): JSX.Element {
 						params={{ className: params.className }}
 						to="/do/$className"
 					>
-						{params.className}
-						{namespaceId !== params.className && (
-							<span className="text-kumo-subtle">({namespaceId})</span>
-						)}
+					{params.className}
 					</Link>,
 					<span
 						className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"

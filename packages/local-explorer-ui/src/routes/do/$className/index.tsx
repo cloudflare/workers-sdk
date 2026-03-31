@@ -140,10 +140,7 @@ function NamespaceView() {
 				icon={DOIcon}
 				items={[
 					<span className="flex items-center gap-1.5" key="class-name">
-						{params.className}
-						{namespaceId !== params.className && (
-							<span className="text-kumo-subtle">({namespaceId})</span>
-						)}
+					{params.className}
 					</span>,
 				]}
 				title="Durable Objects"
