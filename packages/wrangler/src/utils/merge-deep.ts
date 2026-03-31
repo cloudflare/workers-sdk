@@ -1,7 +1,5 @@
 /**
- * Deep merge two objects following RFC 7396 JSON Merge Patch
- * https://www.rfc-editor.org/rfc/rfc7396
- * Source overwrites target.
+ * Deep merge two objects. Source overwrites target.
  * Arrays are treated as terminal values and replaced wholesale.
  */
 export function mergeDeep<T>(target: T, source: Partial<T>): T {
