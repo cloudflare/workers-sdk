@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-restricted-imports
 import { describe, test } from "vitest";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
 import { mockConsoleMethods } from "../../helpers/mock-console";
