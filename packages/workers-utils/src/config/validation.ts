@@ -4963,6 +4963,7 @@ const validatePreviewsConfig =
 				"browser",
 				"ai",
 				"images",
+				"stream",
 				"media",
 				"pipelines",
 				"secrets_store_secrets",
@@ -5155,6 +5156,16 @@ const validatePreviewsConfig =
 					diagnostics,
 					`${field}.images`,
 					previews.images,
+					undefined
+				) && isValid;
+		}
+
+		if (previews.stream !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.stream`,
+					previews.stream,
 					undefined
 				) && isValid;
 		}

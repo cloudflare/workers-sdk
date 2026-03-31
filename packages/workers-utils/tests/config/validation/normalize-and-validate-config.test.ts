@@ -3515,6 +3515,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
 			it("should error if hyperdrive.bindings are not valid", ({ expect }) => {
@@ -8574,6 +8575,25 @@ describe("normalizeAndValidateConfig()", () => {
 					previews: {
 						queues: {
 							producers: [{ binding: "MY_QUEUE", queue: "my-queue" }],
+						},
+					},
+				} as unknown as RawConfig;
+
+				const { diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should accept previews.stream as a named simple binding", ({ expect }) => {
+				const rawConfig = {
+					previews: {
+						stream: {
+							binding: "MY_STREAM",
 						},
 					},
 				} as unknown as RawConfig;

@@ -278,6 +278,10 @@ export function extractConfigBindings(config: Config): EnvBindings {
 		env[previews.images.binding] = { type: "images" };
 	}
 
+	if (previews?.stream) {
+		env[previews.stream.binding] = { type: "stream" };
+	}
+
 	if (previews?.media) {
 		env[previews.media.binding] = { type: "media" };
 	}

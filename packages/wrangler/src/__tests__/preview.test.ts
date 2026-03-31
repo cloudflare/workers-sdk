@@ -184,6 +184,7 @@ describe("wrangler preview", () => {
 					{ binding: "MY_AE", dataset: "dataset-name" },
 				],
 				browser: { binding: "MY_BROWSER" },
+				stream: { binding: "MY_STREAM" },
 				version_metadata: { binding: "MY_VERSION_METADATA" },
 			});
 			const bindings = extractConfigBindings(config);
@@ -193,6 +194,7 @@ describe("wrangler preview", () => {
 				MY_HYPERDRIVE: { type: "hyperdrive", id: "hyper-id" },
 				MY_AE: { type: "analytics_engine", dataset: "dataset-name" },
 				MY_BROWSER: { type: "browser" },
+				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
 			});
 		});
