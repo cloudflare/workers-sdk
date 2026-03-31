@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20260317.3",
+	"version": "4.20260329.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
