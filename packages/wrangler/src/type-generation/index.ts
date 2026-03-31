@@ -1903,12 +1903,7 @@ function collectCoreBindings(
 				});
 			}
 
-			addBinding(
-				aiSearch.binding,
-				"AiSearchInstance",
-				"ai_search",
-				envName
-			);
+			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
 		// Pipelines handled separately for async schema fetching
