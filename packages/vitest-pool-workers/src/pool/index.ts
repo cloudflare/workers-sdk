@@ -311,7 +311,7 @@ async function buildProjectWorkerOptions(
 
 	if (runnerWorker.compatibilityDate === undefined) {
 		// No compatibility date was provided, so use today's date
-		runnerWorker.compatibilityDate ??= getTodaysCompatDate();
+		runnerWorker.compatibilityDate = getTodaysCompatDate();
 		log.info(
 			`No compatibility date was provided for project ${getRelativeProjectPath(
 				project
