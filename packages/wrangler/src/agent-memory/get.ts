@@ -12,10 +12,10 @@ export const agentMemoryNamespaceGetCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	args: {
-		namespace_id: {
+		namespace_name: {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the namespace to retrieve",
+			description: "The name of the namespace to retrieve",
 		},
 		json: {
 			type: "boolean",
@@ -23,9 +23,9 @@ export const agentMemoryNamespaceGetCommand = createCommand({
 			description: "Return output as JSON",
 		},
 	},
-	positionalArgs: ["namespace_id"],
-	async handler({ namespace_id, json }, { config }) {
-		const ns = await getNamespace(config, namespace_id);
+	positionalArgs: ["namespace_name"],
+	async handler({ namespace_name, json }, { config }) {
+		const ns = await getNamespace(config, namespace_name);
 
 		if (json) {
 			logger.json(ns);

@@ -38,23 +38,23 @@ export async function listNamespaces(
 
 export async function getNamespace(
 	config: Config,
-	namespaceId: string
+	namespaceName: string
 ): Promise<AgentMemoryNamespace> {
 	const accountId = await requireAuth(config);
 	return await fetchResult<AgentMemoryNamespace>(
 		config,
-		`/accounts/${accountId}/agentmemory/namespaces/${namespaceId}`
+		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`
 	);
 }
 
 export async function deleteNamespace(
 	config: Config,
-	namespaceId: string
+	namespaceName: string
 ): Promise<void> {
 	const accountId = await requireAuth(config);
 	await fetchResult<null>(
 		config,
-		`/accounts/${accountId}/agentmemory/namespaces/${namespaceId}`,
+		`/accounts/${accountId}/agentmemory/namespaces/${namespaceName}`,
 		{ method: "DELETE" }
 	);
 }
