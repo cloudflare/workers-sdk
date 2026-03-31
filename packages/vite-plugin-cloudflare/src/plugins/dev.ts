@@ -12,11 +12,7 @@ import {
 } from "../constants";
 import { getDockerPath } from "../containers";
 import { assertIsNotPreview } from "../context";
-import {
-	compareExportTypes,
-	compareWorkerNameToExportTypesMaps,
-	getCurrentWorkerNameToExportTypesMap,
-} from "../export-types";
+import { compareExportTypes } from "../export-types";
 import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import {
@@ -77,31 +73,17 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					viteDevServer,
 					ctx.miniflare
 				);
-				const currentWorkerNameToExportTypesMap =
-					await getCurrentWorkerNameToExportTypesMap(
-						ctx.resolvedPluginConfig,
-						viteDevServer,
-						ctx.miniflare
-					);
-				const hasChanged = compareWorkerNameToExportTypesMaps(
-					ctx.workerNameToExportTypesMap,
-					currentWorkerNameToExportTypesMap
-				);
 
-				if (hasChanged) {
-					ctx.setWorkerNameToExportTypesMap(currentWorkerNameToExportTypesMap);
-					const updatedOptions = await getDevMiniflareOptions(
-						ctx,
-						viteDevServer
-					);
-					containerTagToOptionsMap = updatedOptions.containerTagToOptionsMap;
-					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
-					await initRunners(
-						ctx.resolvedPluginConfig,
-						viteDevServer,
-						ctx.miniflare
-					);
-				}
+				// Use config-derived export types for initial startup instead of
+				// eagerly loading the worker module graph. Loading the full module
+				// graph here can fail for packages with circular internal imports
+				// (e.g. drizzle-orm) because `noExternal: true` causes Vite's
+				// SSR transform to convert ESM live bindings to `const`, triggering
+				// TDZ errors on circular references.
+				//
+				// The HMR handler below will detect any discrepancy between the
+				// config-derived types and the actual exports when the module first
+				// loads (on first request), and restart the dev server if needed.
 
 				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 					const environment = viteDevServer.environments[environmentName];

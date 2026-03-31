@@ -1,0 +1,16 @@
+{
+	"name": "@playground/circular-deps-do",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}
