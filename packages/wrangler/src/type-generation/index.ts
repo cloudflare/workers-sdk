@@ -1819,6 +1819,21 @@ function collectCoreBindings(
 			);
 		}
 
+		for (const [index, fs] of (env.flagship ?? []).entries()) {
+			if (!fs.binding) {
+				throwMissingBindingError({
+					binding: fs,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(fs.binding, "Flags", "flagship", envName);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -2727,6 +2742,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "unsafe_hello_world",
 				name: helloWorld.binding,
 				type: "HelloWorldBinding",
+			});
+		}
+
+		for (const [index, fs] of (env.flagship ?? []).entries()) {
+			if (!fs.binding) {
+				throwMissingBindingError({
+					binding: fs,
+					bindingType: "flagship",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "flagship",
+				name: fs.binding,
+				type: "Flags",
 			});
 		}
 
