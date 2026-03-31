@@ -328,42 +328,12 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 		previewDefaults.env = previewEnv;
 	}
 
-	if (
-		config.limits?.cpu_ms !== undefined ||
-		config.limits?.subrequests !== undefined
-	) {
-		previewDefaults.limits = {
-			...(config.limits?.cpu_ms !== undefined && {
-				cpu_ms: config.limits.cpu_ms,
-			}),
-			...(config.limits?.subrequests !== undefined && {
-				subrequests: config.limits.subrequests,
-			}),
-		};
-	}
-
-	if (
-		previews?.limits?.cpu_ms !== undefined ||
-		previews?.limits?.subrequests !== undefined
-	) {
-		previewDefaults.limits = {
-			...(previews.limits?.cpu_ms !== undefined && {
-				cpu_ms: previews.limits.cpu_ms,
-			}),
-			...(previews.limits?.subrequests !== undefined && {
-				subrequests: previews.limits.subrequests,
-			}),
-		};
+	if (previews?.limits || config.limits) {
+		previewDefaults.limits = previews?.limits ?? config.limits;
 	}
 
 	if (config.placement) {
 		previewDefaults.placement = parseConfigPlacement(config);
-	}
-
-	if (previews?.tail_consumers) {
-		previewDefaults.tail_consumers = previews.tail_consumers.map((tc) => ({
-			name: tc.service,
-		}));
 	}
 
 	return previewDefaults;
