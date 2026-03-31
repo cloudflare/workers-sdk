@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-utils": major
+"@cloudflare/workers-utils": minor
 ---
 
 Remove `formatCompatibilityDate` from the package's public exports
