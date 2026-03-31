@@ -265,7 +265,7 @@ async function executeListDOObjects(
 	const objects = await Promise.all(
 		paginatedIds.map(async (id) => {
 			let name: string | undefined;
-			if (ns) {
+			if (ns && ns.useSQLite) {
 				try {
 					const doId = ns.binding.idFromString(id);
 					const stub = ns.binding.get(doId);
