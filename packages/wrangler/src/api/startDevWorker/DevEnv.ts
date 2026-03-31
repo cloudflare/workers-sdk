@@ -156,6 +156,10 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 		) {
 			logger.error(event.cause);
 		}
+		// Build errors are recoverable by fixing the code and saving
+		else if (event.source === "BundlerController") {
+			logger.error(`${event.reason}\n`, event.cause);
+		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {
 			// otherwise, re-emit the unknowable errors to the top-level
