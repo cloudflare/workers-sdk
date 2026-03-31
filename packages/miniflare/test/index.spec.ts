@@ -3503,6 +3503,88 @@ test("Miniflare: can use module fallback service", async ({ expect }) => {
 	expect(await res.text()).toBe('Error: No such module "virtual/a.mjs".');
 });
 
+test("Miniflare: can use module fallback service with V2 protocol", async ({
+	expect,
+}) => {
+	// V2 protocol uses file:// URLs instead of paths
+	const modules: Record<string, Omit<Worker_Module, "name">> = {
+		"/virtual/a.mjs": {
+			esModule: `
+			import { b } from "./dir/b.mjs";
+			export default "a" + b;
+			`,
+		},
+		"/virtual/dir/b.mjs": {
+			esModule: 'export { default as b } from "./c.cjs";',
+		},
+		"/virtual/dir/c.cjs": {
+			commonJsModule: 'module.exports = "c" + require("./sub/d.cjs");',
+		},
+		"/virtual/dir/sub/d.cjs": {
+			commonJsModule: 'module.exports = "d";',
+		},
+	};
+
+	const mf = new Miniflare({
+		async unsafeModuleFallbackService(request) {
+			// V2 protocol uses POST with JSON body instead of GET with query params
+			assert(request.method === "POST", "V2 protocol should use POST method");
+
+			const body = (await request.json()) as {
+				type: string;
+				specifier: string;
+				rawSpecifier: string;
+				referrer: string;
+				attributes: Array<{ name: string; value: string }>;
+			};
+
+			assert(
+				body.type === "import" || body.type === "require",
+				`Expected type to be "import" or "require", got "${body.type}"`
+			);
+			assert(
+				body.specifier.startsWith("file://"),
+				`V2 specifier should be a file:// URL, got "${body.specifier}"`
+			);
+
+			const maybeModule = modules[body.specifier];
+			if (maybeModule === undefined) {
+				return new Response(null, { status: 404 });
+			}
+
+			// V2 protocol expects name to match the full URL specifier
+			return Response.json({ name: body.specifier, ...maybeModule });
+		},
+		workers: [
+			{
+				name: "a",
+				routes: ["*/a"],
+				compatibilityFlags: ["export_commonjs_default", "new_module_registry"],
+				modulesRoot: "/",
+				modules: [
+					{
+						type: "ESModule",
+						path: "/virtual/index.mjs",
+						contents: `
+							import a from "./a.mjs";
+							export default {
+								async fetch() {
+									return new Response(a);
+								}
+							}
+						`,
+					},
+				],
+				unsafeUseModuleFallbackService: true,
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost/a");
+	expect(await res.text()).toBe("acd");
+});
+
 test("Miniflare: respects rootPath for path-valued options", async ({
 	expect,
 }) => {
