@@ -20,11 +20,11 @@ describe("getMigrationNames", () => {
 		fs.mkdirSync(migrationsDir, { recursive: true });
 
 		const files = [
-			"migration_20250722141901.sql",
-			"migration_20250529155016.sql",
-			"migration_20250606164215.sql",
-			"migration_20250730071719.sql",
-			"migration_20250610140315.sql",
+			"0003_add_indexes.sql",
+			"0001_create_tables.sql",
+			"0002_add_columns.sql",
+			"0005_update_views.sql",
+			"0004_drop_unused.sql",
 		];
 
 		files.forEach((file) => {
@@ -34,11 +34,11 @@ describe("getMigrationNames", () => {
 		const result = getMigrationNames(migrationsDir);
 
 		expect(result).toEqual([
-			"migration_20250529155016.sql",
-			"migration_20250606164215.sql",
-			"migration_20250610140315.sql",
-			"migration_20250722141901.sql",
-			"migration_20250730071719.sql",
+			"0001_create_tables.sql",
+			"0002_add_columns.sql",
+			"0003_add_indexes.sql",
+			"0004_drop_unused.sql",
+			"0005_update_views.sql",
 		]);
 	});
 
@@ -47,11 +47,11 @@ describe("getMigrationNames", () => {
 		fs.mkdirSync(migrationsDir, { recursive: true });
 
 		fs.writeFileSync(
-			path.join(migrationsDir, "migration_20250529155016.sql"),
+			path.join(migrationsDir, "0001_create_tables.sql"),
 			"-- test"
 		);
 		fs.writeFileSync(
-			path.join(migrationsDir, "migration_20250606164215.sql"),
+			path.join(migrationsDir, "0002_add_columns.sql"),
 			"-- test"
 		);
 		fs.writeFileSync(path.join(migrationsDir, "README.md"), "# readme");
@@ -61,8 +61,8 @@ describe("getMigrationNames", () => {
 		const result = getMigrationNames(migrationsDir);
 
 		expect(result).toEqual([
-			"migration_20250529155016.sql",
-			"migration_20250606164215.sql",
+			"0001_create_tables.sql",
+			"0002_add_columns.sql",
 		]);
 	});
 
