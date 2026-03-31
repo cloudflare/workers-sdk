@@ -146,10 +146,15 @@ export async function handlePreviewSettingsUpdateCommand(
 	// Individual binding entries within env should be replaced wholesale,
 	// not deep-merged. Deep merging would leak stale properties when a
 	// binding changes type (e.g. kv_namespace -> d1).
-	requestPayloadPreviewDefaults.env = {
-		...currentPreviewDefaults.env,
-		...resolvedConfigFileSettings.env,
-	};
+	if (
+		currentPreviewDefaults.env !== undefined ||
+		resolvedConfigFileSettings.env !== undefined
+	) {
+		requestPayloadPreviewDefaults.env = {
+			...currentPreviewDefaults.env,
+			...resolvedConfigFileSettings.env,
+		};
+	}
 
 	const diff = diffJsonObjects(
 		currentPreviewDefaults as Record<string, JsonLike>,

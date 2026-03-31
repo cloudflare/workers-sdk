@@ -378,6 +378,43 @@ describe("wrangler preview", () => {
 			);
 		});
 
+		test("should skip updating when neither remote nor local settings define env", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+				})
+			);
+
+			let patchCalled = false;
+			msw.use(
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							preview_defaults: {},
+						},
+					})
+				),
+				http.patch(`*/accounts/:accountId/workers/workers/:workerId`, () => {
+					patchCalled = true;
+					return HttpResponse.json({ success: true, result: {} });
+				})
+			);
+
+			await runWrangler(
+				"preview settings update --worker-name override-worker"
+			);
+
+			expect(patchCalled).toBe(false);
+			expect(std.out).toContain(
+				"✨ Previews settings for Worker override-worker are already up to date."
+			);
+		});
+
 		test("should not clear existing bindings when previews has only non-binding settings", async ({
 			expect,
 		}) => {
