@@ -21,6 +21,13 @@ import { aiSearchUpdateCommand } from "./ai-search/update";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import {
+	browserCloseCommand,
+	browserCreateCommand,
+	browserListCommand,
+	browserNamespace,
+	browserOpenCommand,
+} from "./browser-rendering";
 import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
@@ -1736,6 +1743,16 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("ai");
+
+	// browser rendering
+	registry.define([
+		{ command: "wrangler browser", definition: browserNamespace },
+		{ command: "wrangler browser create", definition: browserCreateCommand },
+		{ command: "wrangler browser close", definition: browserCloseCommand },
+		{ command: "wrangler browser list", definition: browserListCommand },
+		{ command: "wrangler browser open", definition: browserOpenCommand },
+	]);
+	registry.registerNamespace("browser");
 
 	// secrets store
 	registry.define([

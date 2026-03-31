@@ -2621,7 +2621,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Bailing early in tests]"
+				`[Error: Bailing early in tests]`
 			);
 		});
 	});
