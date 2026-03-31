@@ -4945,7 +4945,6 @@ const validatePreviewsConfig =
 				"define",
 				"durable_objects",
 				"workflows",
-				"migrations",
 				"kv_namespaces",
 				"send_email",
 				"queues",
@@ -5007,14 +5006,6 @@ const validatePreviewsConfig =
 				validateUniqueNameProperty
 			)(diagnostics, `${field}.workflows`, previews.workflows, undefined) &&
 			isValid;
-
-		isValid =
-			validateMigrations(
-				diagnostics,
-				`${field}.migrations`,
-				previews.migrations,
-				undefined
-			) && isValid;
 
 		isValid =
 			validateBindingArray(envName, validateKVBinding)(
