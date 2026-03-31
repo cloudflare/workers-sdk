@@ -7,6 +7,7 @@ import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import { isPackageInstalled } from "./utils/packages";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -48,9 +49,11 @@ export class Vike extends Framework {
 					isWorkspaceRoot,
 				}
 			);
-			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
-				dev: true,
+
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
 				isWorkspaceRoot,
+				projectPath,
 			});
 
 			addVikePhotonToConfigFile(projectPath);

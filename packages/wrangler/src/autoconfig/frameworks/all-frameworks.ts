@@ -174,6 +174,8 @@ export const allKnownFrameworks = [
 			name: "vite",
 			// Vite 6 introduced the Environment API which @cloudflare/vite-plugin requires
 			// See: https://vite.dev/blog/announcing-vite6#experimental-environment-api
+			// (6.1.0 is the minimum version supported by the vite plugin:
+			//  https://github.com/cloudflare/workers-sdk/blob/b9b7e9d9fe/packages/vite-plugin-cloudflare/package.json#L80)
 			minimumVersion: "6.0.0",
 			maximumKnownMajorVersion: "8",
 		},
