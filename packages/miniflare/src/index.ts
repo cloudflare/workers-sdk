@@ -1495,6 +1495,19 @@ export class Miniflare {
 				assert(sessionId !== null, "Missing sessionId query parameter");
 				const process = this.#browserProcesses.get(sessionId);
 				response = new Response(null, { status: process ? 200 : 410 });
+			} else if (url.pathname === "/browser/close") {
+				const sessionId = url.searchParams.get("sessionId");
+				assert(sessionId !== null, "Missing sessionId query parameter");
+				const browserProcess = this.#browserProcesses.get(sessionId);
+				if (!browserProcess) {
+					response = new Response("Session not found", { status: 404 });
+				} else {
+					this.#browserProcesses.delete(sessionId);
+					await browserProcess.close().catch(() => {
+						// oh well, process might already be dead
+					});
+					response = new Response(null, { status: 200 });
+				}
 			} else if (url.pathname === "/browser/sessionIds") {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
