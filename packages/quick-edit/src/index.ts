@@ -7,7 +7,7 @@ const ALLOWED_PARENT_ORIGINS = [
 	"https://workers.cloudflare.com",
 	"https://workers-playground.pages.dev",
 	"https://workers-playground.workers.dev",
-	"http://localhost:8445",
+	"http://localhost:7445",
 ];
 
 // Origin patterns using wildcards, for preview deployments etc.
@@ -16,6 +16,12 @@ const ALLOWED_PARENT_ORIGIN_WILDCARDS = [
 	"https://*.workers-playground.pages.dev",
 	"https://*.workers-playground.workers.dev",
 ];
+
+// During local development (wrangler dev), the playground runs on localhost.
+// We detect this from the request URL and add localhost origins dynamically.
+// The wildcard port "http://localhost:*" allows any port in CSP frame-ancestors,
+// and "http://localhost" is matched as a prefix in the client-side origin check.
+const LOCALHOST_ORIGIN_WILDCARDS = ["http://localhost:*"];
 
 export default {
 	async fetch(request: Request, env: Env) {
@@ -31,8 +37,13 @@ export default {
 			forwardedHost?.endsWith(".devprod.cloudflare.dev") ?? false;
 		const authority = isValidForwardedHost ? forwardedHost : url.host;
 
+		const isLocalDev = url.hostname === "localhost";
+
 		const allOrigins = [...ALLOWED_PARENT_ORIGINS];
 		const allWildcards = [...ALLOWED_PARENT_ORIGIN_WILDCARDS];
+		if (isLocalDev) {
+			allWildcards.push(...LOCALHOST_ORIGIN_WILDCARDS);
+		}
 
 		const configValues = {
 			// Allowed parent origins are injected into the HTML so the client-side
