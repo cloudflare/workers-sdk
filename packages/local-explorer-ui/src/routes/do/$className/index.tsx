@@ -1,5 +1,5 @@
-import { Button, Link as KumoLink, Table } from "@cloudflare/kumo";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button, Label, Link as KumoLink, Table } from "@cloudflare/kumo";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
@@ -49,6 +49,7 @@ function NamespaceView() {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
 	const { namespaceId } = loaderData;
+	const navigate = useNavigate();
 
 	const [cursor, setCursor] = useState<string | null>(loaderData.cursor);
 	const [error, setError] = useState<string | null>(null);
@@ -56,6 +57,7 @@ function NamespaceView() {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	const [objects, setObjects] = useState<WorkersObject[]>(loaderData.objects);
+	const [openInstanceInput, setOpenInstanceInput] = useState<string>("");
 
 	useEffect((): void => {
 		setObjects(loaderData.objects);
@@ -116,6 +118,22 @@ function NamespaceView() {
 		}
 	}
 
+	function handleOpenInstance(e: React.SyntheticEvent): void {
+		e.preventDefault();
+		const trimmed = openInstanceInput.trim();
+		if (!trimmed) {
+			return;
+		}
+		void navigate({
+			params: {
+				className: params.className,
+				objectId: trimmed,
+			},
+			search: { table: undefined },
+			to: "/do/$className/$objectId",
+		});
+	}
+
 	return (
 		<>
 			<Breadcrumbs
@@ -132,6 +150,34 @@ function NamespaceView() {
 			/>
 
 			<div className="px-6 py-6">
+				<form
+					className="mb-6 flex items-end gap-2"
+					onSubmit={handleOpenInstance}
+				>
+					<div className="max-w-100 flex-1">
+						<Label
+							htmlFor="open-instance"
+							tooltip="Get an instance by its name (i.e. idFromName) or by its ID (Cloudflare-generated 64 digit hex ID)"
+						>
+							View specific DO instance
+						</Label>
+						<input
+							id="open-instance"
+							className="mt-1.5 h-9 w-full rounded-lg border border-border bg-bg px-3 font-mono text-sm text-text ring-1 ring-border focus:ring-primary focus:outline-none"
+							placeholder="Enter instance name or hex ID..."
+							value={openInstanceInput}
+							onChange={(e) => setOpenInstanceInput(e.target.value)}
+						/>
+					</div>
+					<Button
+						type="submit"
+						variant="secondary"
+						disabled={!openInstanceInput.trim()}
+					>
+						Open Studio
+					</Button>
+				</form>
+
 				{error && (
 					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
