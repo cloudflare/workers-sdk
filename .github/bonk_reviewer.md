@@ -57,4 +57,17 @@ Each comment needs `path`, `line`, `side`, and `body`. Use `suggestion` fences i
 
 ## What counts as actionable
 
-Logic bugs, security issues (note a lot of this repo covers local development environments), backward compatibility violations, incorrect API behavior. Be pragmatic -- do not nitpick, do not flag subjective preferences.
+**Default to LGTM.** Most PRs from team members are fine. Only flag issues that a senior engineer would block a PR over.
+
+Actionable means: logic bugs, security issues (note a lot of this repo covers local development environments), backward compatibility violations, incorrect API behavior.
+
+**Not actionable** (respond LGTM even if you notice these):
+
+- Style, naming, or formatting preferences -- oxfmt and oxlint handle this
+- Missing tests for pre-existing untested code
+- Suggestions that are improvements but not bugs
+- Performance concerns that are speculative rather than concrete
+- Import ordering, unused variables, or lint-level issues -- the CI catches these
+- Lockfile changes from dependency resolution
+
+Be pragmatic -- do not nitpick, do not flag subjective preferences. When in doubt, LGTM.
