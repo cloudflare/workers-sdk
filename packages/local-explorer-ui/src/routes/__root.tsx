@@ -159,16 +159,12 @@ function RootLayout() {
 
 	const handleWorkerChange = useCallback(
 		(workerName: string) => {
-			// Preserve existing search params (e.g. ?table=) and update worker.
-			// Use window.location.pathname (full path including basepath) so that
-			// router.history.push navigates within /cdn-cgi/explorer/... not /.
-			const currentSearch = new URLSearchParams(routerState.location.searchStr);
-			currentSearch.set("worker", workerName);
-			router.history.push(
-				`${window.location.pathname}?${currentSearch.toString()}`
-			);
+			void router.navigate({
+				search: { worker: workerName },
+				to: "/",
+			});
 		},
-		[router, routerState.location.searchStr]
+		[router]
 	);
 
 	// Filter resources based on selected worker
