@@ -722,7 +722,7 @@ describe("wrangler preview", () => {
 			await runWrangler("preview --name test-preview");
 
 			expect(createPreviewRequestBody?.tail_consumers).toEqual([
-				{ service: "tail-worker" },
+				{ name: "tail-worker" },
 			]);
 		});
 
