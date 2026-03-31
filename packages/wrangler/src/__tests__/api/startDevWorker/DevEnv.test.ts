@@ -1,5 +1,5 @@
 // eslint-disable-next-line no-restricted-imports
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
@@ -7,7 +7,9 @@ describe("DevEnv", () => {
 	const std = mockConsoleMethods();
 
 	describe("handleErrorEvent", () => {
-		test("should format esbuild BuildFailure errors nicely for BundlerController", () => {
+		test("should format esbuild BuildFailure errors nicely for BundlerController", ({
+			expect,
+		}) => {
 			const devEnv = new DevEnv();
 
 			// Create an esbuild-like BuildFailure with errors and warnings arrays
@@ -39,7 +41,9 @@ describe("DevEnv", () => {
 			void devEnv.teardown();
 		});
 
-		test("should format esbuild BuildFailure from cause for BundlerController", () => {
+		test("should format esbuild BuildFailure from cause for BundlerController", ({
+			expect,
+		}) => {
 			const devEnv = new DevEnv();
 
 			// Create an esbuild-like BuildFailure nested in cause
@@ -73,7 +77,9 @@ describe("DevEnv", () => {
 			void devEnv.teardown();
 		});
 
-		test("should log non-esbuild BundlerController errors with just the message", () => {
+		test("should log non-esbuild BundlerController errors with just the message", ({
+			expect,
+		}) => {
 			const devEnv = new DevEnv();
 
 			const buildError = new Error("Custom build command failed");
