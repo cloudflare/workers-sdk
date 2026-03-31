@@ -3,6 +3,7 @@ import type {
 	CfWorkerInit,
 	Config,
 	PreviewsConfig,
+	TailConsumer,
 	UserLimits,
 } from "@cloudflare/workers-utils";
 
@@ -114,7 +115,7 @@ export type CreatePreviewRequestParams = {
 		head_sampling_rate?: number;
 	};
 	logpush?: boolean;
-	tail_consumers?: PreviewResource["tail_consumers"];
+	tail_consumers?: TailConsumer[];
 };
 
 export type UpdatePreviewRequestParams = Omit<

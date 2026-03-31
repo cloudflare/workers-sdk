@@ -307,6 +307,10 @@ export function assemblePreviewScriptSettings(config: Config) {
 		result.logpush = logpush;
 	}
 
+	if (previews?.tail_consumers !== undefined) {
+		result.tail_consumers = previews.tail_consumers;
+	}
+
 	return result;
 }
 

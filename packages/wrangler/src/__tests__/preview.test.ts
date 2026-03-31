@@ -641,6 +641,91 @@ describe("wrangler preview", () => {
 			expect(std.out).toContain("enabled");
 		});
 
+		test("should include previews tail_consumers in the preview resource request", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					previews: {
+						tail_consumers: [{ service: "tail-worker" }],
+					},
+				})
+			);
+
+			let createPreviewRequestBody:
+				| {
+						name?: string;
+						tail_consumers?: Array<{ service: string; environment?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					async ({ request }) => {
+						createPreviewRequestBody =
+							(await request.json()) as typeof createPreviewRequestBody;
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-tail-consumers",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									tail_consumers: [{ name: "tail-worker" }],
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-tail-consumers",
+									preview_id: "preview-id-tail-consumers",
+									preview_name: "test-preview",
+									urls: ["https://tail123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(createPreviewRequestBody?.tail_consumers).toEqual([
+				{ service: "tail-worker" },
+			]);
+		});
+
 		test("should show compatibility_date when configured", async ({
 			expect,
 		}) => {
