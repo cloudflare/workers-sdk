@@ -75,6 +75,7 @@ describe("normalizeAndValidateConfig()", () => {
 			r2_buckets: [],
 			secrets_store_secrets: [],
 			unsafe_hello_world: [],
+			flagship: [],
 			ratelimits: [],
 			vpc_services: [],
 			services: [],
