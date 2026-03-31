@@ -1038,6 +1038,286 @@ describe("wrangler preview", () => {
 			);
 		});
 
+		test("should use previews.define for worker bundling", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export default { fetch() { return new Response(PREVIEW_FLAG); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					define: { PREVIEW_FLAG: '"top-level"' },
+					previews: {
+						define: { PREVIEW_FLAG: '"preview-value"' },
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						main_module?: string;
+						modules?: Array<{
+							name: string;
+							content_base64: string;
+						}>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-define",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-define",
+								preview_id: "preview-id-define",
+								preview_name: "test-preview",
+								urls: ["https://define123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			const mainModule = deploymentRequestBody?.modules?.find(
+				(module) => module.name === deploymentRequestBody?.main_module
+			);
+			const code = Buffer.from(
+				mainModule?.content_base64 ?? "",
+				"base64"
+			).toString("utf8");
+			expect(code).toContain("preview-value");
+			expect(code).not.toContain("top-level");
+		});
+
+		test("should use previews durable_objects for export validation", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class PreviewCounter { fetch() { return new Response('ok'); } } export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					durable_objects: {
+						bindings: [{ name: "COUNTER", class_name: "MissingCounter" }],
+					},
+					previews: {
+						durable_objects: {
+							bindings: [{ name: "COUNTER", class_name: "PreviewCounter" }],
+						},
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<
+							string,
+							{ type: string; class_name?: string; script_name?: string }
+						>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-do",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-do",
+								preview_id: "preview-id-do",
+								preview_name: "test-preview",
+								urls: ["https://do123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.env?.COUNTER).toMatchObject({
+				type: "durable_object_namespace",
+				class_name: "PreviewCounter",
+			});
+			expect(deploymentRequestBody?.env?.COUNTER).not.toMatchObject({
+				class_name: "MissingCounter",
+			});
+		});
+
+		test("should use previews workflows for export validation", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"src/index.ts",
+				"export class PreviewWorkflow {} export default { fetch() { return new Response('ok'); } };"
+			);
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					workflows: [
+						{ binding: "WF", name: "top", class_name: "MissingWorkflow" },
+					],
+					previews: {
+						workflows: [
+							{ binding: "WF", name: "preview", class_name: "PreviewWorkflow" },
+						],
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<
+							string,
+							{ type: string; class_name?: string; workflow_name?: string }
+						>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-workflow",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-workflow",
+								preview_id: "preview-id-workflow",
+								preview_name: "test-preview",
+								urls: ["https://workflow123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			expect(deploymentRequestBody?.env?.WF).toMatchObject({
+				type: "workflow",
+				class_name: "PreviewWorkflow",
+				workflow_name: "preview",
+			});
+			expect(deploymentRequestBody?.env?.WF).not.toMatchObject({
+				class_name: "MissingWorkflow",
+				workflow_name: "top",
+			});
+		});
+
 		test("should include migrations in the deployment request", async ({
 			expect,
 		}) => {
