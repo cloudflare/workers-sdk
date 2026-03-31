@@ -4,22 +4,28 @@ import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
 	durableObjectsNamespaceListObjects,
-} from "../../../api";
-import DOIcon from "../../../assets/icons/durable-objects.svg?react";
-import { Breadcrumbs } from "../../../components/Breadcrumbs";
-import { PageLayout } from "../../../components/layout";
-import type { WorkersObject } from "../../../api";
+} from "../../../../api";
+import DOIcon from "../../../../assets/icons/durable-objects.svg?react";
+import { Breadcrumbs } from "../../../../components/Breadcrumbs";
+import { PageLayout } from "../../../../components/layout";
+import type { WorkersObject } from "../../../../api";
 
-export const Route = createFileRoute("/do/$className/")({
+export const Route = createFileRoute("/$workerName/do/$className/")({
 	component: NamespaceView,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
-		const namespaces = response.data?.result ?? [];
+		const namespaces = (response.data?.result ?? []) as Array<{
+			class?: string;
+			id?: string;
+			name?: string;
+			workerName?: string;
+		}>;
 		const namespace = namespaces.find(
 			(ns) =>
-				ns.class === params.className ||
-				ns.name === params.className ||
-				ns.id === params.className
+				ns.workerName === params.workerName &&
+				(ns.class === params.className ||
+					ns.name === params.className ||
+					ns.id === params.className)
 		);
 		if (!namespace?.id) {
 			throw new Error(`Durable Object class "${params.className}" not found`);
@@ -166,11 +172,12 @@ function NamespaceView() {
 												<Link
 													className="inline-flex h-6.5 items-center gap-1 rounded-md px-2 text-xs hover:bg-border/50"
 													params={{
+														workerName: params.workerName,
 														className: params.className,
 														objectId: obj.id as string,
 													}}
 													search={{ table: undefined }}
-													to="/do/$className/$objectId"
+													to="/$workerName/do/$className/$objectId"
 												>
 													Open Studio
 													<KumoLink.ExternalIcon />

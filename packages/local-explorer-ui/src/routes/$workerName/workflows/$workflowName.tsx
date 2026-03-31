@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/workflows/$workflowName")({
+export const Route = createFileRoute("/$workerName/workflows/$workflowName")({
 	component: () => <Outlet />,
 	loader: async ({ params }) => {
 		return {

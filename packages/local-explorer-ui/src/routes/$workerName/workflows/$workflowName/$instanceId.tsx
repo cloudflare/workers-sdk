@@ -28,29 +28,31 @@ import {
 	workflowsDeleteInstance,
 	workflowsGetInstanceDetails,
 	workflowsSendInstanceEvent,
-} from "../../../api";
-import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
-import { Breadcrumbs } from "../../../components/Breadcrumbs";
-import { PageLayout } from "../../../components/layout";
-import { CopyButton } from "../../../components/workflows/CopyButton";
+} from "../../../../api";
+import WorkflowsIcon from "../../../../assets/icons/workflows.svg?react";
+import { Breadcrumbs } from "../../../../components/Breadcrumbs";
+import { PageLayout } from "../../../../components/layout";
+import { CopyButton } from "../../../../components/workflows/CopyButton";
 import {
 	formatDuration,
 	formatJson,
-} from "../../../components/workflows/helpers";
-import { ScrollableCodeBlock } from "../../../components/workflows/ScrollableCodeBlock";
-import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
-import { StatusIcon } from "../../../components/workflows/StatusIcon";
-import { StepRow } from "../../../components/workflows/StepRow";
+} from "../../../../components/workflows/helpers";
+import { ScrollableCodeBlock } from "../../../../components/workflows/ScrollableCodeBlock";
+import { WorkflowStatusBadge } from "../../../../components/workflows/StatusBadge";
+import { StatusIcon } from "../../../../components/workflows/StatusIcon";
+import { StepRow } from "../../../../components/workflows/StepRow";
 import {
 	getAvailableActions,
 	isTerminalStatus,
-} from "../../../components/workflows/types";
+} from "../../../../components/workflows/types";
 import type {
 	Action,
 	InstanceDetails,
-} from "../../../components/workflows/types";
+} from "../../../../components/workflows/types";
 
-export const Route = createFileRoute("/workflows/$workflowName/$instanceId")({
+export const Route = createFileRoute(
+	"/$workerName/workflows/$workflowName/$instanceId"
+)({
 	component: InstanceDetailView,
 	loader: async ({ params }) => {
 		const response = await workflowsGetInstanceDetails({
@@ -407,8 +409,11 @@ function InstanceDetailView(): JSX.Element {
 						<Link
 							className="flex items-center gap-1.5"
 							key="wf"
-							params={{ workflowName: params.workflowName }}
-							to="/workflows/$workflowName"
+							params={{
+								workflowName: params.workflowName,
+								workerName: params.workerName,
+							}}
+							to="/$workerName/workflows/$workflowName"
 						>
 							{params.workflowName}
 						</Link>,
@@ -562,8 +567,11 @@ function InstanceDetailView(): JSX.Element {
 										.then(() => {
 											setDeleteDialogOpen(false);
 											void navigate({
-												to: "/workflows/$workflowName",
-												params: { workflowName: params.workflowName },
+												to: "/$workerName/workflows/$workflowName",
+												params: {
+													workerName: params.workerName,
+													workflowName: params.workflowName,
+												},
 											});
 										})
 										.finally(() => setDeleting(false));

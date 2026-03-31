@@ -19,22 +19,22 @@ import {
 	r2BucketDeleteObjects,
 	r2BucketListObjects,
 	r2BucketPutObject,
-} from "../../../api";
-import R2Icon from "../../../assets/icons/r2.svg?react";
-import { Breadcrumbs } from "../../../components/Breadcrumbs";
-import { PageLayout } from "../../../components/layout";
-import { R2ObjectTable } from "../../../components/R2ObjectTable";
-import { R2UploadDialog } from "../../../components/R2UploadDialog";
-import { RouteError } from "../../../components/RouteError";
-import { withMinimumDelay } from "../../../utils/async";
-import type { R2Object } from "../../../api";
+} from "../../../../api";
+import R2Icon from "../../../../assets/icons/r2.svg?react";
+import { Breadcrumbs } from "../../../../components/Breadcrumbs";
+import { PageLayout } from "../../../../components/layout";
+import { R2ObjectTable } from "../../../../components/R2ObjectTable";
+import { R2UploadDialog } from "../../../../components/R2UploadDialog";
+import { RouteError } from "../../../../components/RouteError";
+import { withMinimumDelay } from "../../../../utils/async";
+import type { R2Object } from "../../../../api";
 
 export interface R2BucketSearch {
 	delimiter?: boolean;
 	prefix?: string;
 }
 
-export const Route = createFileRoute("/r2/$bucketName/")({
+export const Route = createFileRoute("/$workerName/r2/$bucketName/")({
 	component: BucketView,
 	errorComponent: RouteError,
 	validateSearch: (search: Record<string, unknown>): R2BucketSearch => ({
@@ -173,12 +173,13 @@ function BucketView(): JSX.Element {
 		await navigate({
 			params: {
 				bucketName: params.bucketName,
+				workerName: params.workerName,
 			},
 			search: {
 				prefix: search.prefix && checked ? search.prefix : undefined,
 				delimiter: checked ? undefined : false,
 			},
-			to: "/r2/$bucketName",
+			to: "/$workerName/r2/$bucketName",
 		});
 	}
 
@@ -186,9 +187,10 @@ function BucketView(): JSX.Element {
 		await navigate({
 			params: {
 				bucketName: params.bucketName,
+				workerName: params.workerName,
 			},
 			search: { prefix: newPrefix || undefined },
-			to: "/r2/$bucketName",
+			to: "/$workerName/r2/$bucketName",
 		});
 	}
 
@@ -307,9 +309,12 @@ function BucketView(): JSX.Element {
 		<Link
 			className="text-text no-underline hover:text-primary"
 			key="bucket"
-			params={{ bucketName: params.bucketName }}
+			params={{
+				bucketName: params.bucketName,
+				workerName: params.workerName,
+			}}
 			search={{}}
-			to="/r2/$bucketName"
+			to="/$workerName/r2/$bucketName"
 		>
 			{params.bucketName}
 		</Link>,
@@ -320,9 +325,12 @@ function BucketView(): JSX.Element {
 				<Link
 					className="text-text no-underline hover:text-primary"
 					key={segmentPrefix}
-					params={{ bucketName: params.bucketName }}
+					params={{
+						bucketName: params.bucketName,
+						workerName: params.workerName,
+					}}
 					search={{ prefix: segmentPrefix }}
-					to="/r2/$bucketName"
+					to="/$workerName/r2/$bucketName"
 				>
 					{segment}
 				</Link>
@@ -410,6 +418,7 @@ function BucketView(): JSX.Element {
 							onNavigateToPrefix={handleNavigateToPrefix}
 							onSelectionChange={setSelectedKeys}
 							selectedKeys={selectedKeys}
+							workerName={params.workerName}
 						/>
 					</div>
 					{isTruncated && cursor && (

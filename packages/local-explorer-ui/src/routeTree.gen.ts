@@ -10,170 +10,175 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkflowsWorkflowNameRouteImport } from './routes/workflows/$workflowName'
-import { Route as R2BucketNameRouteImport } from './routes/r2/$bucketName'
-import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
-import { Route as DoClassNameRouteImport } from './routes/do/$className'
-import { Route as D1DatabaseIdRouteImport } from './routes/d1/$databaseId'
-import { Route as WorkflowsWorkflowNameIndexRouteImport } from './routes/workflows/$workflowName/index'
-import { Route as R2BucketNameIndexRouteImport } from './routes/r2/$bucketName/index'
-import { Route as DoClassNameIndexRouteImport } from './routes/do/$className/index'
-import { Route as WorkflowsWorkflowNameInstanceIdRouteImport } from './routes/workflows/$workflowName/$instanceId'
-import { Route as DoClassNameObjectIdRouteImport } from './routes/do/$className/$objectId'
-import { Route as R2BucketNameObjectSplatRouteImport } from './routes/r2/$bucketName/object.$'
+import { Route as WorkerNameWorkflowsWorkflowNameRouteImport } from './routes/$workerName/workflows/$workflowName'
+import { Route as WorkerNameR2BucketNameRouteImport } from './routes/$workerName/r2/$bucketName'
+import { Route as WorkerNameKvNamespaceIdRouteImport } from './routes/$workerName/kv/$namespaceId'
+import { Route as WorkerNameDoClassNameRouteImport } from './routes/$workerName/do/$className'
+import { Route as WorkerNameD1DatabaseIdRouteImport } from './routes/$workerName/d1/$databaseId'
+import { Route as WorkerNameWorkflowsWorkflowNameIndexRouteImport } from './routes/$workerName/workflows/$workflowName/index'
+import { Route as WorkerNameR2BucketNameIndexRouteImport } from './routes/$workerName/r2/$bucketName/index'
+import { Route as WorkerNameDoClassNameIndexRouteImport } from './routes/$workerName/do/$className/index'
+import { Route as WorkerNameWorkflowsWorkflowNameInstanceIdRouteImport } from './routes/$workerName/workflows/$workflowName/$instanceId'
+import { Route as WorkerNameDoClassNameObjectIdRouteImport } from './routes/$workerName/do/$className/$objectId'
+import { Route as WorkerNameR2BucketNameObjectSplatRouteImport } from './routes/$workerName/r2/$bucketName/object.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkflowsWorkflowNameRoute = WorkflowsWorkflowNameRouteImport.update({
-  id: '/workflows/$workflowName',
-  path: '/workflows/$workflowName',
+const WorkerNameWorkflowsWorkflowNameRoute =
+  WorkerNameWorkflowsWorkflowNameRouteImport.update({
+    id: '/$workerName/workflows/$workflowName',
+    path: '/$workerName/workflows/$workflowName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const WorkerNameR2BucketNameRoute = WorkerNameR2BucketNameRouteImport.update({
+  id: '/$workerName/r2/$bucketName',
+  path: '/$workerName/r2/$bucketName',
   getParentRoute: () => rootRouteImport,
 } as any)
-const R2BucketNameRoute = R2BucketNameRouteImport.update({
-  id: '/r2/$bucketName',
-  path: '/r2/$bucketName',
+const WorkerNameKvNamespaceIdRoute = WorkerNameKvNamespaceIdRouteImport.update({
+  id: '/$workerName/kv/$namespaceId',
+  path: '/$workerName/kv/$namespaceId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
-  id: '/kv/$namespaceId',
-  path: '/kv/$namespaceId',
+const WorkerNameDoClassNameRoute = WorkerNameDoClassNameRouteImport.update({
+  id: '/$workerName/do/$className',
+  path: '/$workerName/do/$className',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DoClassNameRoute = DoClassNameRouteImport.update({
-  id: '/do/$className',
-  path: '/do/$className',
+const WorkerNameD1DatabaseIdRoute = WorkerNameD1DatabaseIdRouteImport.update({
+  id: '/$workerName/d1/$databaseId',
+  path: '/$workerName/d1/$databaseId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const D1DatabaseIdRoute = D1DatabaseIdRouteImport.update({
-  id: '/d1/$databaseId',
-  path: '/d1/$databaseId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WorkflowsWorkflowNameIndexRoute =
-  WorkflowsWorkflowNameIndexRouteImport.update({
+const WorkerNameWorkflowsWorkflowNameIndexRoute =
+  WorkerNameWorkflowsWorkflowNameIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => WorkflowsWorkflowNameRoute,
+    getParentRoute: () => WorkerNameWorkflowsWorkflowNameRoute,
   } as any)
-const R2BucketNameIndexRoute = R2BucketNameIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => R2BucketNameRoute,
-} as any)
-const DoClassNameIndexRoute = DoClassNameIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DoClassNameRoute,
-} as any)
-const WorkflowsWorkflowNameInstanceIdRoute =
-  WorkflowsWorkflowNameInstanceIdRouteImport.update({
+const WorkerNameR2BucketNameIndexRoute =
+  WorkerNameR2BucketNameIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => WorkerNameR2BucketNameRoute,
+  } as any)
+const WorkerNameDoClassNameIndexRoute =
+  WorkerNameDoClassNameIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => WorkerNameDoClassNameRoute,
+  } as any)
+const WorkerNameWorkflowsWorkflowNameInstanceIdRoute =
+  WorkerNameWorkflowsWorkflowNameInstanceIdRouteImport.update({
     id: '/$instanceId',
     path: '/$instanceId',
-    getParentRoute: () => WorkflowsWorkflowNameRoute,
+    getParentRoute: () => WorkerNameWorkflowsWorkflowNameRoute,
   } as any)
-const DoClassNameObjectIdRoute = DoClassNameObjectIdRouteImport.update({
-  id: '/$objectId',
-  path: '/$objectId',
-  getParentRoute: () => DoClassNameRoute,
-} as any)
-const R2BucketNameObjectSplatRoute = R2BucketNameObjectSplatRouteImport.update({
-  id: '/object/$',
-  path: '/object/$',
-  getParentRoute: () => R2BucketNameRoute,
-} as any)
+const WorkerNameDoClassNameObjectIdRoute =
+  WorkerNameDoClassNameObjectIdRouteImport.update({
+    id: '/$objectId',
+    path: '/$objectId',
+    getParentRoute: () => WorkerNameDoClassNameRoute,
+  } as any)
+const WorkerNameR2BucketNameObjectSplatRoute =
+  WorkerNameR2BucketNameObjectSplatRouteImport.update({
+    id: '/object/$',
+    path: '/object/$',
+    getParentRoute: () => WorkerNameR2BucketNameRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/d1/$databaseId': typeof D1DatabaseIdRoute
-  '/do/$className': typeof DoClassNameRouteWithChildren
-  '/kv/$namespaceId': typeof KvNamespaceIdRoute
-  '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
-  '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
-  '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
-  '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
-  '/do/$className/': typeof DoClassNameIndexRoute
-  '/r2/$bucketName/': typeof R2BucketNameIndexRoute
-  '/workflows/$workflowName/': typeof WorkflowsWorkflowNameIndexRoute
-  '/r2/$bucketName/object/$': typeof R2BucketNameObjectSplatRoute
+  '/$workerName/d1/$databaseId': typeof WorkerNameD1DatabaseIdRoute
+  '/$workerName/do/$className': typeof WorkerNameDoClassNameRouteWithChildren
+  '/$workerName/kv/$namespaceId': typeof WorkerNameKvNamespaceIdRoute
+  '/$workerName/r2/$bucketName': typeof WorkerNameR2BucketNameRouteWithChildren
+  '/$workerName/workflows/$workflowName': typeof WorkerNameWorkflowsWorkflowNameRouteWithChildren
+  '/$workerName/do/$className/$objectId': typeof WorkerNameDoClassNameObjectIdRoute
+  '/$workerName/workflows/$workflowName/$instanceId': typeof WorkerNameWorkflowsWorkflowNameInstanceIdRoute
+  '/$workerName/do/$className/': typeof WorkerNameDoClassNameIndexRoute
+  '/$workerName/r2/$bucketName/': typeof WorkerNameR2BucketNameIndexRoute
+  '/$workerName/workflows/$workflowName/': typeof WorkerNameWorkflowsWorkflowNameIndexRoute
+  '/$workerName/r2/$bucketName/object/$': typeof WorkerNameR2BucketNameObjectSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/d1/$databaseId': typeof D1DatabaseIdRoute
-  '/kv/$namespaceId': typeof KvNamespaceIdRoute
-  '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
-  '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
-  '/do/$className': typeof DoClassNameIndexRoute
-  '/r2/$bucketName': typeof R2BucketNameIndexRoute
-  '/workflows/$workflowName': typeof WorkflowsWorkflowNameIndexRoute
-  '/r2/$bucketName/object/$': typeof R2BucketNameObjectSplatRoute
+  '/$workerName/d1/$databaseId': typeof WorkerNameD1DatabaseIdRoute
+  '/$workerName/kv/$namespaceId': typeof WorkerNameKvNamespaceIdRoute
+  '/$workerName/do/$className/$objectId': typeof WorkerNameDoClassNameObjectIdRoute
+  '/$workerName/workflows/$workflowName/$instanceId': typeof WorkerNameWorkflowsWorkflowNameInstanceIdRoute
+  '/$workerName/do/$className': typeof WorkerNameDoClassNameIndexRoute
+  '/$workerName/r2/$bucketName': typeof WorkerNameR2BucketNameIndexRoute
+  '/$workerName/workflows/$workflowName': typeof WorkerNameWorkflowsWorkflowNameIndexRoute
+  '/$workerName/r2/$bucketName/object/$': typeof WorkerNameR2BucketNameObjectSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/d1/$databaseId': typeof D1DatabaseIdRoute
-  '/do/$className': typeof DoClassNameRouteWithChildren
-  '/kv/$namespaceId': typeof KvNamespaceIdRoute
-  '/r2/$bucketName': typeof R2BucketNameRouteWithChildren
-  '/workflows/$workflowName': typeof WorkflowsWorkflowNameRouteWithChildren
-  '/do/$className/$objectId': typeof DoClassNameObjectIdRoute
-  '/workflows/$workflowName/$instanceId': typeof WorkflowsWorkflowNameInstanceIdRoute
-  '/do/$className/': typeof DoClassNameIndexRoute
-  '/r2/$bucketName/': typeof R2BucketNameIndexRoute
-  '/workflows/$workflowName/': typeof WorkflowsWorkflowNameIndexRoute
-  '/r2/$bucketName/object/$': typeof R2BucketNameObjectSplatRoute
+  '/$workerName/d1/$databaseId': typeof WorkerNameD1DatabaseIdRoute
+  '/$workerName/do/$className': typeof WorkerNameDoClassNameRouteWithChildren
+  '/$workerName/kv/$namespaceId': typeof WorkerNameKvNamespaceIdRoute
+  '/$workerName/r2/$bucketName': typeof WorkerNameR2BucketNameRouteWithChildren
+  '/$workerName/workflows/$workflowName': typeof WorkerNameWorkflowsWorkflowNameRouteWithChildren
+  '/$workerName/do/$className/$objectId': typeof WorkerNameDoClassNameObjectIdRoute
+  '/$workerName/workflows/$workflowName/$instanceId': typeof WorkerNameWorkflowsWorkflowNameInstanceIdRoute
+  '/$workerName/do/$className/': typeof WorkerNameDoClassNameIndexRoute
+  '/$workerName/r2/$bucketName/': typeof WorkerNameR2BucketNameIndexRoute
+  '/$workerName/workflows/$workflowName/': typeof WorkerNameWorkflowsWorkflowNameIndexRoute
+  '/$workerName/r2/$bucketName/object/$': typeof WorkerNameR2BucketNameObjectSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/d1/$databaseId'
-    | '/do/$className'
-    | '/kv/$namespaceId'
-    | '/r2/$bucketName'
-    | '/workflows/$workflowName'
-    | '/do/$className/$objectId'
-    | '/workflows/$workflowName/$instanceId'
-    | '/do/$className/'
-    | '/r2/$bucketName/'
-    | '/workflows/$workflowName/'
-    | '/r2/$bucketName/object/$'
+    | '/$workerName/d1/$databaseId'
+    | '/$workerName/do/$className'
+    | '/$workerName/kv/$namespaceId'
+    | '/$workerName/r2/$bucketName'
+    | '/$workerName/workflows/$workflowName'
+    | '/$workerName/do/$className/$objectId'
+    | '/$workerName/workflows/$workflowName/$instanceId'
+    | '/$workerName/do/$className/'
+    | '/$workerName/r2/$bucketName/'
+    | '/$workerName/workflows/$workflowName/'
+    | '/$workerName/r2/$bucketName/object/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/d1/$databaseId'
-    | '/kv/$namespaceId'
-    | '/do/$className/$objectId'
-    | '/workflows/$workflowName/$instanceId'
-    | '/do/$className'
-    | '/r2/$bucketName'
-    | '/workflows/$workflowName'
-    | '/r2/$bucketName/object/$'
+    | '/$workerName/d1/$databaseId'
+    | '/$workerName/kv/$namespaceId'
+    | '/$workerName/do/$className/$objectId'
+    | '/$workerName/workflows/$workflowName/$instanceId'
+    | '/$workerName/do/$className'
+    | '/$workerName/r2/$bucketName'
+    | '/$workerName/workflows/$workflowName'
+    | '/$workerName/r2/$bucketName/object/$'
   id:
     | '__root__'
     | '/'
-    | '/d1/$databaseId'
-    | '/do/$className'
-    | '/kv/$namespaceId'
-    | '/r2/$bucketName'
-    | '/workflows/$workflowName'
-    | '/do/$className/$objectId'
-    | '/workflows/$workflowName/$instanceId'
-    | '/do/$className/'
-    | '/r2/$bucketName/'
-    | '/workflows/$workflowName/'
-    | '/r2/$bucketName/object/$'
+    | '/$workerName/d1/$databaseId'
+    | '/$workerName/do/$className'
+    | '/$workerName/kv/$namespaceId'
+    | '/$workerName/r2/$bucketName'
+    | '/$workerName/workflows/$workflowName'
+    | '/$workerName/do/$className/$objectId'
+    | '/$workerName/workflows/$workflowName/$instanceId'
+    | '/$workerName/do/$className/'
+    | '/$workerName/r2/$bucketName/'
+    | '/$workerName/workflows/$workflowName/'
+    | '/$workerName/r2/$bucketName/object/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  D1DatabaseIdRoute: typeof D1DatabaseIdRoute
-  DoClassNameRoute: typeof DoClassNameRouteWithChildren
-  KvNamespaceIdRoute: typeof KvNamespaceIdRoute
-  R2BucketNameRoute: typeof R2BucketNameRouteWithChildren
-  WorkflowsWorkflowNameRoute: typeof WorkflowsWorkflowNameRouteWithChildren
+  WorkerNameD1DatabaseIdRoute: typeof WorkerNameD1DatabaseIdRoute
+  WorkerNameDoClassNameRoute: typeof WorkerNameDoClassNameRouteWithChildren
+  WorkerNameKvNamespaceIdRoute: typeof WorkerNameKvNamespaceIdRoute
+  WorkerNameR2BucketNameRoute: typeof WorkerNameR2BucketNameRouteWithChildren
+  WorkerNameWorkflowsWorkflowNameRoute: typeof WorkerNameWorkflowsWorkflowNameRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -185,136 +190,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workflows/$workflowName': {
-      id: '/workflows/$workflowName'
-      path: '/workflows/$workflowName'
-      fullPath: '/workflows/$workflowName'
-      preLoaderRoute: typeof WorkflowsWorkflowNameRouteImport
+    '/$workerName/workflows/$workflowName': {
+      id: '/$workerName/workflows/$workflowName'
+      path: '/$workerName/workflows/$workflowName'
+      fullPath: '/$workerName/workflows/$workflowName'
+      preLoaderRoute: typeof WorkerNameWorkflowsWorkflowNameRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/r2/$bucketName': {
-      id: '/r2/$bucketName'
-      path: '/r2/$bucketName'
-      fullPath: '/r2/$bucketName'
-      preLoaderRoute: typeof R2BucketNameRouteImport
+    '/$workerName/r2/$bucketName': {
+      id: '/$workerName/r2/$bucketName'
+      path: '/$workerName/r2/$bucketName'
+      fullPath: '/$workerName/r2/$bucketName'
+      preLoaderRoute: typeof WorkerNameR2BucketNameRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/kv/$namespaceId': {
-      id: '/kv/$namespaceId'
-      path: '/kv/$namespaceId'
-      fullPath: '/kv/$namespaceId'
-      preLoaderRoute: typeof KvNamespaceIdRouteImport
+    '/$workerName/kv/$namespaceId': {
+      id: '/$workerName/kv/$namespaceId'
+      path: '/$workerName/kv/$namespaceId'
+      fullPath: '/$workerName/kv/$namespaceId'
+      preLoaderRoute: typeof WorkerNameKvNamespaceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/do/$className': {
-      id: '/do/$className'
-      path: '/do/$className'
-      fullPath: '/do/$className'
-      preLoaderRoute: typeof DoClassNameRouteImport
+    '/$workerName/do/$className': {
+      id: '/$workerName/do/$className'
+      path: '/$workerName/do/$className'
+      fullPath: '/$workerName/do/$className'
+      preLoaderRoute: typeof WorkerNameDoClassNameRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/d1/$databaseId': {
-      id: '/d1/$databaseId'
-      path: '/d1/$databaseId'
-      fullPath: '/d1/$databaseId'
-      preLoaderRoute: typeof D1DatabaseIdRouteImport
+    '/$workerName/d1/$databaseId': {
+      id: '/$workerName/d1/$databaseId'
+      path: '/$workerName/d1/$databaseId'
+      fullPath: '/$workerName/d1/$databaseId'
+      preLoaderRoute: typeof WorkerNameD1DatabaseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workflows/$workflowName/': {
-      id: '/workflows/$workflowName/'
+    '/$workerName/workflows/$workflowName/': {
+      id: '/$workerName/workflows/$workflowName/'
       path: '/'
-      fullPath: '/workflows/$workflowName/'
-      preLoaderRoute: typeof WorkflowsWorkflowNameIndexRouteImport
-      parentRoute: typeof WorkflowsWorkflowNameRoute
+      fullPath: '/$workerName/workflows/$workflowName/'
+      preLoaderRoute: typeof WorkerNameWorkflowsWorkflowNameIndexRouteImport
+      parentRoute: typeof WorkerNameWorkflowsWorkflowNameRoute
     }
-    '/r2/$bucketName/': {
-      id: '/r2/$bucketName/'
+    '/$workerName/r2/$bucketName/': {
+      id: '/$workerName/r2/$bucketName/'
       path: '/'
-      fullPath: '/r2/$bucketName/'
-      preLoaderRoute: typeof R2BucketNameIndexRouteImport
-      parentRoute: typeof R2BucketNameRoute
+      fullPath: '/$workerName/r2/$bucketName/'
+      preLoaderRoute: typeof WorkerNameR2BucketNameIndexRouteImport
+      parentRoute: typeof WorkerNameR2BucketNameRoute
     }
-    '/do/$className/': {
-      id: '/do/$className/'
+    '/$workerName/do/$className/': {
+      id: '/$workerName/do/$className/'
       path: '/'
-      fullPath: '/do/$className/'
-      preLoaderRoute: typeof DoClassNameIndexRouteImport
-      parentRoute: typeof DoClassNameRoute
+      fullPath: '/$workerName/do/$className/'
+      preLoaderRoute: typeof WorkerNameDoClassNameIndexRouteImport
+      parentRoute: typeof WorkerNameDoClassNameRoute
     }
-    '/workflows/$workflowName/$instanceId': {
-      id: '/workflows/$workflowName/$instanceId'
+    '/$workerName/workflows/$workflowName/$instanceId': {
+      id: '/$workerName/workflows/$workflowName/$instanceId'
       path: '/$instanceId'
-      fullPath: '/workflows/$workflowName/$instanceId'
-      preLoaderRoute: typeof WorkflowsWorkflowNameInstanceIdRouteImport
-      parentRoute: typeof WorkflowsWorkflowNameRoute
+      fullPath: '/$workerName/workflows/$workflowName/$instanceId'
+      preLoaderRoute: typeof WorkerNameWorkflowsWorkflowNameInstanceIdRouteImport
+      parentRoute: typeof WorkerNameWorkflowsWorkflowNameRoute
     }
-    '/do/$className/$objectId': {
-      id: '/do/$className/$objectId'
+    '/$workerName/do/$className/$objectId': {
+      id: '/$workerName/do/$className/$objectId'
       path: '/$objectId'
-      fullPath: '/do/$className/$objectId'
-      preLoaderRoute: typeof DoClassNameObjectIdRouteImport
-      parentRoute: typeof DoClassNameRoute
+      fullPath: '/$workerName/do/$className/$objectId'
+      preLoaderRoute: typeof WorkerNameDoClassNameObjectIdRouteImport
+      parentRoute: typeof WorkerNameDoClassNameRoute
     }
-    '/r2/$bucketName/object/$': {
-      id: '/r2/$bucketName/object/$'
+    '/$workerName/r2/$bucketName/object/$': {
+      id: '/$workerName/r2/$bucketName/object/$'
       path: '/object/$'
-      fullPath: '/r2/$bucketName/object/$'
-      preLoaderRoute: typeof R2BucketNameObjectSplatRouteImport
-      parentRoute: typeof R2BucketNameRoute
+      fullPath: '/$workerName/r2/$bucketName/object/$'
+      preLoaderRoute: typeof WorkerNameR2BucketNameObjectSplatRouteImport
+      parentRoute: typeof WorkerNameR2BucketNameRoute
     }
   }
 }
 
-interface DoClassNameRouteChildren {
-  DoClassNameObjectIdRoute: typeof DoClassNameObjectIdRoute
-  DoClassNameIndexRoute: typeof DoClassNameIndexRoute
+interface WorkerNameDoClassNameRouteChildren {
+  WorkerNameDoClassNameObjectIdRoute: typeof WorkerNameDoClassNameObjectIdRoute
+  WorkerNameDoClassNameIndexRoute: typeof WorkerNameDoClassNameIndexRoute
 }
 
-const DoClassNameRouteChildren: DoClassNameRouteChildren = {
-  DoClassNameObjectIdRoute: DoClassNameObjectIdRoute,
-  DoClassNameIndexRoute: DoClassNameIndexRoute,
+const WorkerNameDoClassNameRouteChildren: WorkerNameDoClassNameRouteChildren = {
+  WorkerNameDoClassNameObjectIdRoute: WorkerNameDoClassNameObjectIdRoute,
+  WorkerNameDoClassNameIndexRoute: WorkerNameDoClassNameIndexRoute,
 }
 
-const DoClassNameRouteWithChildren = DoClassNameRoute._addFileChildren(
-  DoClassNameRouteChildren,
-)
+const WorkerNameDoClassNameRouteWithChildren =
+  WorkerNameDoClassNameRoute._addFileChildren(
+    WorkerNameDoClassNameRouteChildren,
+  )
 
-interface R2BucketNameRouteChildren {
-  R2BucketNameIndexRoute: typeof R2BucketNameIndexRoute
-  R2BucketNameObjectSplatRoute: typeof R2BucketNameObjectSplatRoute
+interface WorkerNameR2BucketNameRouteChildren {
+  WorkerNameR2BucketNameIndexRoute: typeof WorkerNameR2BucketNameIndexRoute
+  WorkerNameR2BucketNameObjectSplatRoute: typeof WorkerNameR2BucketNameObjectSplatRoute
 }
 
-const R2BucketNameRouteChildren: R2BucketNameRouteChildren = {
-  R2BucketNameIndexRoute: R2BucketNameIndexRoute,
-  R2BucketNameObjectSplatRoute: R2BucketNameObjectSplatRoute,
+const WorkerNameR2BucketNameRouteChildren: WorkerNameR2BucketNameRouteChildren =
+  {
+    WorkerNameR2BucketNameIndexRoute: WorkerNameR2BucketNameIndexRoute,
+    WorkerNameR2BucketNameObjectSplatRoute:
+      WorkerNameR2BucketNameObjectSplatRoute,
+  }
+
+const WorkerNameR2BucketNameRouteWithChildren =
+  WorkerNameR2BucketNameRoute._addFileChildren(
+    WorkerNameR2BucketNameRouteChildren,
+  )
+
+interface WorkerNameWorkflowsWorkflowNameRouteChildren {
+  WorkerNameWorkflowsWorkflowNameInstanceIdRoute: typeof WorkerNameWorkflowsWorkflowNameInstanceIdRoute
+  WorkerNameWorkflowsWorkflowNameIndexRoute: typeof WorkerNameWorkflowsWorkflowNameIndexRoute
 }
 
-const R2BucketNameRouteWithChildren = R2BucketNameRoute._addFileChildren(
-  R2BucketNameRouteChildren,
-)
+const WorkerNameWorkflowsWorkflowNameRouteChildren: WorkerNameWorkflowsWorkflowNameRouteChildren =
+  {
+    WorkerNameWorkflowsWorkflowNameInstanceIdRoute:
+      WorkerNameWorkflowsWorkflowNameInstanceIdRoute,
+    WorkerNameWorkflowsWorkflowNameIndexRoute:
+      WorkerNameWorkflowsWorkflowNameIndexRoute,
+  }
 
-interface WorkflowsWorkflowNameRouteChildren {
-  WorkflowsWorkflowNameInstanceIdRoute: typeof WorkflowsWorkflowNameInstanceIdRoute
-  WorkflowsWorkflowNameIndexRoute: typeof WorkflowsWorkflowNameIndexRoute
-}
-
-const WorkflowsWorkflowNameRouteChildren: WorkflowsWorkflowNameRouteChildren = {
-  WorkflowsWorkflowNameInstanceIdRoute: WorkflowsWorkflowNameInstanceIdRoute,
-  WorkflowsWorkflowNameIndexRoute: WorkflowsWorkflowNameIndexRoute,
-}
-
-const WorkflowsWorkflowNameRouteWithChildren =
-  WorkflowsWorkflowNameRoute._addFileChildren(
-    WorkflowsWorkflowNameRouteChildren,
+const WorkerNameWorkflowsWorkflowNameRouteWithChildren =
+  WorkerNameWorkflowsWorkflowNameRoute._addFileChildren(
+    WorkerNameWorkflowsWorkflowNameRouteChildren,
   )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  D1DatabaseIdRoute: D1DatabaseIdRoute,
-  DoClassNameRoute: DoClassNameRouteWithChildren,
-  KvNamespaceIdRoute: KvNamespaceIdRoute,
-  R2BucketNameRoute: R2BucketNameRouteWithChildren,
-  WorkflowsWorkflowNameRoute: WorkflowsWorkflowNameRouteWithChildren,
+  WorkerNameD1DatabaseIdRoute: WorkerNameD1DatabaseIdRoute,
+  WorkerNameDoClassNameRoute: WorkerNameDoClassNameRouteWithChildren,
+  WorkerNameKvNamespaceIdRoute: WorkerNameKvNamespaceIdRoute,
+  WorkerNameR2BucketNameRoute: WorkerNameR2BucketNameRouteWithChildren,
+  WorkerNameWorkflowsWorkflowNameRoute:
+    WorkerNameWorkflowsWorkflowNameRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

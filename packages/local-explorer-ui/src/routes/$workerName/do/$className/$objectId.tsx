@@ -1,4 +1,4 @@
-import { Button } from "@cloudflare/kumo";
+import { Button, Breadcrumbs as KumoBreadcrumbs } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	PencilIcon,
@@ -6,28 +6,49 @@ import {
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
-	getRouteApi,
+	Link,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import D1Icon from "../../assets/icons/d1.svg?react";
-import { Breadcrumbs } from "../../components/Breadcrumbs";
-import { PageLayout } from "../../components/layout";
-import { RouteError } from "../../components/RouteError";
-import { Studio } from "../../components/studio";
-import { DropTableConfirmationModal } from "../../components/studio/Modal/DropTableConfirmation";
-import { StudioTableActionsDropdown } from "../../components/studio/Table/ActionsDropdown";
-import { TableSelect } from "../../components/TableSelect";
-import { LocalD1Driver } from "../../drivers/d1";
-import type { StudioRef } from "../../components/studio";
-import type { StudioResource } from "../../types/studio";
+import { durableObjectsNamespaceListNamespaces } from "../../../../api";
+import DOIcon from "../../../../assets/icons/durable-objects.svg?react";
+import { Breadcrumbs } from "../../../../components/Breadcrumbs";
+import { PageLayout } from "../../../../components/layout";
+import { RouteError } from "../../../../components/RouteError";
+import { Studio } from "../../../../components/studio";
+import { DropTableConfirmationModal } from "../../../../components/studio/Modal/DropTableConfirmation";
+import { StudioTableActionsDropdown } from "../../../../components/studio/Table/ActionsDropdown";
+import { TableSelect } from "../../../../components/TableSelect";
+import { LocalDODriver } from "../../../../drivers/do";
+import type { StudioRef } from "../../../../components/studio";
+import type { StudioResource } from "../../../../types/studio";
 
-export const Route = createFileRoute("/d1/$databaseId")({
-	component: DatabaseView,
+export const Route = createFileRoute("/$workerName/do/$className/$objectId")({
+	component: ObjectView,
 	errorComponent: RouteError,
-	loader: async (ctx) => {
-		const driver = new LocalD1Driver(ctx.params.databaseId);
+	loader: async ({ params }) => {
+		// Resolve className to a namespace ID
+		const response = await durableObjectsNamespaceListNamespaces();
+		const namespaces = (response.data?.result ?? []) as Array<{
+			class?: string;
+			id?: string;
+			name?: string;
+			workerName?: string;
+		}>;
+		const namespace = namespaces.find(
+			(ns) =>
+				ns.workerName === params.workerName &&
+				(ns.class === params.className ||
+					ns.name === params.className ||
+					ns.id === params.className)
+		);
+		if (!namespace?.id) {
+			throw new Error(`Durable Object class "${params.className}" not found`);
+		}
+
+		// Fetch tables using the resolved namespace ID
+		const driver = new LocalDODriver(namespace.id, params.objectId);
 		const schemas = await driver.schemas();
 		const mainSchema = schemas["main"] ?? [];
 		const tables = mainSchema
@@ -36,6 +57,7 @@ export const Route = createFileRoute("/d1/$databaseId")({
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 		return {
+			namespaceId: namespace.id,
 			tables,
 		};
 	},
@@ -44,15 +66,13 @@ export const Route = createFileRoute("/d1/$databaseId")({
 	}),
 });
 
-const rootRoute = getRouteApi("__root__");
-
-function DatabaseView(): JSX.Element {
+function ObjectView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
+	const { namespaceId } = loaderData;
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
-	const rootData = rootRoute.useLoaderData();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
@@ -66,25 +86,18 @@ function DatabaseView(): JSX.Element {
 		tableName: string;
 	} | null>(null);
 
-	const driver = useMemo<LocalD1Driver>(
-		() => new LocalD1Driver(params.databaseId),
-		[params.databaseId]
+	const driver = useMemo<LocalDODriver>(
+		() => new LocalDODriver(namespaceId, params.objectId),
+		[namespaceId, params.objectId]
 	);
-
-	// Get database name (binding) from root loader data
-	const databaseName = useMemo(() => {
-		const database = rootData.databases.find(
-			(db) => db.uuid === params.databaseId
-		);
-		return database?.name;
-	}, [rootData.databases, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
-			databaseId: params.databaseId,
-			type: "d1",
+			namespaceId,
+			objectId: params.objectId,
+			type: "do",
 		}),
-		[params.databaseId]
+		[namespaceId, params.objectId]
 	);
 
 	const handleTableChange = useCallback(
@@ -162,23 +175,35 @@ function DatabaseView(): JSX.Element {
 		void handleTableDeleted();
 	}, [deleteTarget, handleTableDeleted]);
 
+	// Truncate the object ID for display
+	const shortObjectId =
+		params.objectId.length > 16
+			? `${params.objectId.slice(0, 8)}...${params.objectId.slice(-8)}`
+			: params.objectId;
+
 	return (
 		<PageLayout
 			header={
 				<Breadcrumbs
-					icon={D1Icon}
+					icon={DOIcon}
 					items={[
-						<span className="flex items-center gap-1.5" key="database-id">
-							{databaseName && databaseName !== params.databaseId ? (
-								<>
-									{databaseName}
-									<span className="text-text-secondary">
-										({params.databaseId})
-									</span>
-								</>
-							) : (
-								params.databaseId
-							)}
+						<Link
+							key="class-name"
+							params={{
+								className: params.className,
+								workerName: params.workerName,
+							}}
+							to="/$workerName/do/$className"
+						>
+							{params.className}
+						</Link>,
+						<span
+							className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"
+							key="object-id"
+							title={params.objectId}
+						>
+							{shortObjectId}
+							<KumoBreadcrumbs.Clipboard text={params.objectId} />
 						</span>,
 						<TableSelect
 							key="table-selector"
@@ -187,7 +212,7 @@ function DatabaseView(): JSX.Element {
 							tables={loaderData.tables}
 						/>,
 					]}
-					title="D1"
+					title="Durable Objects"
 				>
 					<Button
 						aria-label="Refresh tables"
@@ -248,7 +273,7 @@ function DatabaseView(): JSX.Element {
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
-					key={params.databaseId}
+					key={`${namespaceId}-${params.objectId}`}
 					onTableChange={handleTableChange}
 					ref={studioRef}
 					resource={resource}

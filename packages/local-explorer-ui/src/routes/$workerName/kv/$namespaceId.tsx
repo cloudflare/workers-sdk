@@ -11,17 +11,17 @@ import {
 	workersKvNamespaceListANamespace_SKeys,
 	workersKvNamespaceReadKeyValuePair,
 	workersKvNamespaceWriteKeyValuePairWithMetadata,
-} from "../../api";
-import KVIcon from "../../assets/icons/kv.svg?react";
-import { AddKVDialog } from "../../components/AddKVForm";
-import { Breadcrumbs } from "../../components/Breadcrumbs";
-import { KVTable } from "../../components/KVTable";
-import { PageLayout } from "../../components/layout";
-import { RouteError } from "../../components/RouteError";
-import { SearchForm } from "../../components/SearchForm";
-import type { KVEntry } from "../../api";
+} from "../../../api";
+import KVIcon from "../../../assets/icons/kv.svg?react";
+import { AddKVDialog } from "../../../components/AddKVForm";
+import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { KVTable } from "../../../components/KVTable";
+import { PageLayout } from "../../../components/layout";
+import { RouteError } from "../../../components/RouteError";
+import { SearchForm } from "../../../components/SearchForm";
+import type { KVEntry } from "../../../api";
 
-export const Route = createFileRoute("/kv/$namespaceId")({
+export const Route = createFileRoute("/$workerName/kv/$namespaceId")({
 	component: NamespaceView,
 	errorComponent: RouteError,
 	validateSearch: (search) => ({

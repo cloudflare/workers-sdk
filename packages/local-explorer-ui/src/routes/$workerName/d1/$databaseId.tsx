@@ -1,4 +1,4 @@
-import { Button, Breadcrumbs as KumoBreadcrumbs } from "@cloudflare/kumo";
+import { Button } from "@cloudflare/kumo";
 import {
 	ArrowsCounterClockwiseIcon,
 	PencilIcon,
@@ -6,13 +6,12 @@ import {
 } from "@phosphor-icons/react";
 import {
 	createFileRoute,
-	Link,
+	getRouteApi,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { durableObjectsNamespaceListNamespaces } from "../../../api";
-import DOIcon from "../../../assets/icons/durable-objects.svg?react";
+import D1Icon from "../../../assets/icons/d1.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { PageLayout } from "../../../components/layout";
 import { RouteError } from "../../../components/RouteError";
@@ -20,29 +19,15 @@ import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
 import { StudioTableActionsDropdown } from "../../../components/studio/Table/ActionsDropdown";
 import { TableSelect } from "../../../components/TableSelect";
-import { LocalDODriver } from "../../../drivers/do";
+import { LocalD1Driver } from "../../../drivers/d1";
 import type { StudioRef } from "../../../components/studio";
 import type { StudioResource } from "../../../types/studio";
 
-export const Route = createFileRoute("/do/$className/$objectId")({
-	component: ObjectView,
+export const Route = createFileRoute("/$workerName/d1/$databaseId")({
+	component: DatabaseView,
 	errorComponent: RouteError,
-	loader: async ({ params }) => {
-		// Resolve className to a namespace ID
-		const response = await durableObjectsNamespaceListNamespaces();
-		const namespaces = response.data?.result ?? [];
-		const namespace = namespaces.find(
-			(ns) =>
-				ns.class === params.className ||
-				ns.name === params.className ||
-				ns.id === params.className
-		);
-		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
-		}
-
-		// Fetch tables using the resolved namespace ID
-		const driver = new LocalDODriver(namespace.id, params.objectId);
+	loader: async (ctx) => {
+		const driver = new LocalD1Driver(ctx.params.databaseId);
 		const schemas = await driver.schemas();
 		const mainSchema = schemas["main"] ?? [];
 		const tables = mainSchema
@@ -51,7 +36,6 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 			.sort((a, b) => a.label.localeCompare(b.label));
 
 		return {
-			namespaceId: namespace.id,
 			tables,
 		};
 	},
@@ -60,13 +44,15 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 	}),
 });
 
-function ObjectView(): JSX.Element {
+const rootRoute = getRouteApi("__root__");
+
+function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
 	const loaderData = Route.useLoaderData();
-	const { namespaceId } = loaderData;
 	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 	const router = useRouter();
+	const rootData = rootRoute.useLoaderData();
 
 	const lastSyncedTable = useRef<string | undefined>(searchParams.table);
 	const studioRef = useRef<StudioRef>(null);
@@ -80,18 +66,25 @@ function ObjectView(): JSX.Element {
 		tableName: string;
 	} | null>(null);
 
-	const driver = useMemo<LocalDODriver>(
-		() => new LocalDODriver(namespaceId, params.objectId),
-		[namespaceId, params.objectId]
+	const driver = useMemo<LocalD1Driver>(
+		() => new LocalD1Driver(params.databaseId),
+		[params.databaseId]
 	);
+
+	// Get database name (binding) from root loader data
+	const databaseName = useMemo(() => {
+		const database = rootData.databases.find(
+			(db) => db.uuid === params.databaseId
+		);
+		return database?.name;
+	}, [rootData.databases, params.databaseId]);
 
 	const resource = useMemo<StudioResource>(
 		() => ({
-			namespaceId,
-			objectId: params.objectId,
-			type: "do",
+			databaseId: params.databaseId,
+			type: "d1",
 		}),
-		[namespaceId, params.objectId]
+		[params.databaseId]
 	);
 
 	const handleTableChange = useCallback(
@@ -169,32 +162,23 @@ function ObjectView(): JSX.Element {
 		void handleTableDeleted();
 	}, [deleteTarget, handleTableDeleted]);
 
-	// Truncate the object ID for display
-	const shortObjectId =
-		params.objectId.length > 16
-			? `${params.objectId.slice(0, 8)}...${params.objectId.slice(-8)}`
-			: params.objectId;
-
 	return (
 		<PageLayout
 			header={
 				<Breadcrumbs
-					icon={DOIcon}
+					icon={D1Icon}
 					items={[
-						<Link
-							key="class-name"
-							params={{ className: params.className }}
-							to="/do/$className"
-						>
-							{params.className}
-						</Link>,
-						<span
-							className="flex items-center gap-1 font-mono text-xs [&_button]:opacity-100"
-							key="object-id"
-							title={params.objectId}
-						>
-							{shortObjectId}
-							<KumoBreadcrumbs.Clipboard text={params.objectId} />
+						<span className="flex items-center gap-1.5" key="database-id">
+							{databaseName && databaseName !== params.databaseId ? (
+								<>
+									{databaseName}
+									<span className="text-text-secondary">
+										({params.databaseId})
+									</span>
+								</>
+							) : (
+								params.databaseId
+							)}
 						</span>,
 						<TableSelect
 							key="table-selector"
@@ -203,7 +187,7 @@ function ObjectView(): JSX.Element {
 							tables={loaderData.tables}
 						/>,
 					]}
-					title="Durable Objects"
+					title="D1"
 				>
 					<Button
 						aria-label="Refresh tables"
@@ -264,7 +248,7 @@ function ObjectView(): JSX.Element {
 				<Studio
 					driver={driver}
 					initialTable={searchParams.table}
-					key={`${namespaceId}-${params.objectId}`}
+					key={params.databaseId}
 					onTableChange={handleTableChange}
 					ref={studioRef}
 					resource={resource}

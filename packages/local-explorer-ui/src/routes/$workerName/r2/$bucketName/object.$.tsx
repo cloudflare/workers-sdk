@@ -2,16 +2,16 @@ import { Button, Dialog } from "@cloudflare/kumo";
 import { DownloadIcon, TrashIcon } from "@phosphor-icons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
-import R2Icon from "../../../assets/icons/r2.svg?react";
-import { Breadcrumbs } from "../../../components/Breadcrumbs";
-import { CopyButton } from "../../../components/CopyButton";
-import { PageLayout } from "../../../components/layout";
-import { RouteError } from "../../../components/RouteError";
-import { formatDate, formatSize } from "../../../utils/format";
-import type { R2HeadObjectResult } from "../../../api";
+import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../../api";
+import R2Icon from "../../../../assets/icons/r2.svg?react";
+import { Breadcrumbs } from "../../../../components/Breadcrumbs";
+import { CopyButton } from "../../../../components/CopyButton";
+import { PageLayout } from "../../../../components/layout";
+import { RouteError } from "../../../../components/RouteError";
+import { formatDate, formatSize } from "../../../../utils/format";
+import type { R2HeadObjectResult } from "../../../../api";
 
-export const Route = createFileRoute("/r2/$bucketName/object/$")({
+export const Route = createFileRoute("/$workerName/r2/$bucketName/object/$")({
 	component: ObjectDetailView,
 	errorComponent: RouteError,
 	loader: async ({ params }) => {
@@ -149,9 +149,10 @@ function ObjectDetailView(): JSX.Element {
 			void navigate({
 				params: {
 					bucketName: params.bucketName,
+					workerName: params.workerName,
 				},
 				search: parentPrefix ? { prefix: parentPrefix } : {},
-				to: "/r2/$bucketName",
+				to: "/$workerName/r2/$bucketName",
 			});
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to delete object");
@@ -168,9 +169,12 @@ function ObjectDetailView(): JSX.Element {
 		<Link
 			className="text-text no-underline hover:text-primary"
 			key="bucket"
-			params={{ bucketName: params.bucketName }}
+			params={{
+				bucketName: params.bucketName,
+				workerName: params.workerName,
+			}}
 			search={{}}
-			to="/r2/$bucketName"
+			to="/$workerName/r2/$bucketName"
 		>
 			{params.bucketName}
 		</Link>,
@@ -180,9 +184,12 @@ function ObjectDetailView(): JSX.Element {
 				<Link
 					className="text-text no-underline hover:text-primary"
 					key={segmentPrefix}
-					params={{ bucketName: params.bucketName }}
+					params={{
+						bucketName: params.bucketName,
+						workerName: params.workerName,
+					}}
 					search={{ prefix: segmentPrefix }}
-					to="/r2/$bucketName"
+					to="/$workerName/r2/$bucketName"
 				>
 					{segment}
 				</Link>

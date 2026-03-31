@@ -20,6 +20,7 @@ interface R2ObjectTableProps {
 	onNavigateToPrefix: (prefix: string) => void;
 	onSelectionChange: (keys: Set<string>) => void;
 	selectedKeys: Set<string>;
+	workerName: string;
 }
 
 function getDisplayName(key: string, currentPrefix: string): string {
@@ -158,6 +159,7 @@ export function R2ObjectTable({
 	onNavigateToPrefix,
 	onSelectionChange,
 	selectedKeys,
+	workerName,
 }: R2ObjectTableProps): JSX.Element | null {
 	// Combine directories and files for display
 	const items: Array<
@@ -329,8 +331,12 @@ export function R2ObjectTable({
 							<Table.Cell>
 								<Link
 									className="flex items-center gap-2 text-text no-underline hover:text-primary"
-									params={{ bucketName, _splat: key }}
-									to="/r2/$bucketName/object/$"
+									params={{
+										_splat: key,
+										bucketName,
+										workerName,
+									}}
+									to="/$workerName/r2/$bucketName/object/$"
 								>
 									<FileIcon className="text-muted" size={16} />
 									<span className="font-medium">{displayName}</span>

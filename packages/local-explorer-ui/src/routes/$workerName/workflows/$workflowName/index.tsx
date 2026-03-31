@@ -26,18 +26,18 @@ import {
 	workflowsDeleteWorkflow,
 	workflowsListInstances,
 	workflowsSendInstanceEvent,
-} from "../../../api";
-import WorkflowsIcon from "../../../assets/icons/workflows.svg?react";
-import { Breadcrumbs } from "../../../components/Breadcrumbs";
-import { PageLayout } from "../../../components/layout";
-import { CreateWorkflowInstanceDialog } from "../../../components/workflows/CreateInstanceDialog";
-import { timeAgo } from "../../../components/workflows/helpers";
-import { WorkflowStatusBadge } from "../../../components/workflows/StatusBadge";
-import { getAvailableActions } from "../../../components/workflows/types";
-import type { WorkflowsInstance } from "../../../api";
-import type { Action } from "../../../components/workflows/types";
+} from "../../../../api";
+import WorkflowsIcon from "../../../../assets/icons/workflows.svg?react";
+import { Breadcrumbs } from "../../../../components/Breadcrumbs";
+import { PageLayout } from "../../../../components/layout";
+import { CreateWorkflowInstanceDialog } from "../../../../components/workflows/CreateInstanceDialog";
+import { timeAgo } from "../../../../components/workflows/helpers";
+import { WorkflowStatusBadge } from "../../../../components/workflows/StatusBadge";
+import { getAvailableActions } from "../../../../components/workflows/types";
+import type { WorkflowsInstance } from "../../../../api";
+import type { Action } from "../../../../components/workflows/types";
 
-export const Route = createFileRoute("/workflows/$workflowName/")({
+export const Route = createFileRoute("/$workerName/workflows/$workflowName/")({
 	component: WorkflowInstancesView,
 	loader: async ({ params }) => {
 		const response = await workflowsListInstances({
@@ -184,12 +184,14 @@ const ACTION_CONFIG_LIST = {
 interface InstanceRowProps {
 	instance: WorkflowsInstance;
 	onActionComplete: () => void;
+	workerName: string;
 	workflowName: string;
 }
 
 const InstanceRow = memo<InstanceRowProps>(function InstanceRow({
 	instance,
 	onActionComplete,
+	workerName,
 	workflowName,
 }): JSX.Element {
 	const navigate = useNavigate();
@@ -302,9 +304,10 @@ const InstanceRow = memo<InstanceRowProps>(function InstanceRow({
 		void navigate({
 			params: {
 				instanceId: instance.id ?? "",
+				workerName,
 				workflowName,
 			},
-			to: "/workflows/$workflowName/$instanceId",
+			to: "/$workerName/workflows/$workflowName/$instanceId",
 		});
 	}
 
@@ -830,6 +833,7 @@ function WorkflowInstancesView(): JSX.Element {
 										instance={instance}
 										key={instance.id}
 										onActionComplete={handleRefresh}
+										workerName={params.workerName}
 										workflowName={params.workflowName}
 									/>
 								))}

@@ -2,7 +2,6 @@ import { Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
 	Outlet,
-	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
@@ -33,6 +32,16 @@ type KvNamespaceWithWorker = WorkersKvNamespace & { workerName?: string };
 type D1DatabaseWithWorker = D1DatabaseResponse & { workerName?: string };
 type DoNamespaceWithWorker = WorkersNamespace & { workerName?: string };
 type R2BucketWithWorker = R2Bucket & { workerName?: string };
+type WorkflowWithWorker = WorkflowsWorkflow & { script_name?: string };
+
+interface WorkerResourceGroup {
+	databases: D1DatabaseWithWorker[];
+	doNamespaces: DoNamespaceWithWorker[];
+	kvNamespaces: KvNamespaceWithWorker[];
+	r2Buckets: R2BucketWithWorker[];
+	worker: LocalExplorerWorker;
+	workflows: WorkflowWithWorker[];
+}
 
 export const Route = createRootRoute({
 	component: RootLayout,
@@ -97,7 +106,7 @@ export const Route = createRootRoute({
 			r2Error = `R2 Error: ${r2Response.reason instanceof Error ? r2Response.reason.message : JSON.stringify(r2Response.reason)}`;
 		}
 
-		let workflows = new Array<WorkflowsWorkflow>();
+		let workflows = new Array<WorkflowWithWorker>();
 		let workflowsError: string | null = null;
 		if (workflowsResponse.status === "fulfilled") {
 			workflows = workflowsResponse.value.data?.result ?? [];
@@ -125,11 +134,6 @@ function RootLayout() {
 	const loaderData = Route.useLoaderData();
 	const routerState = useRouterState();
 	const currentPath = routerState.location.pathname;
-	const workerFromUrl = useMemo(
-		() => new URLSearchParams(routerState.location.searchStr).get("worker"),
-		[routerState.location.searchStr]
-	);
-	const router = useRouter();
 
 	// Filter out internal workers (like __asset-worker__, __router-worker__, etc.)
 	const visibleWorkers = useMemo(
@@ -137,73 +141,44 @@ function RootLayout() {
 		[loaderData.workers]
 	);
 
-	// Determine the default worker (self worker or first visible worker)
-	const defaultWorker = useMemo(() => {
-		const selfWorker = visibleWorkers.find((w) => w.isSelf);
-		if (selfWorker) {
-			return selfWorker.name;
-		}
-		return visibleWorkers[0]?.name ?? "";
-	}, [visibleWorkers]);
+	const workerGroups = useMemo<WorkerResourceGroup[]>(() => {
+		const defaultWorkerName =
+			visibleWorkers.length === 1 ? visibleWorkers[0]?.name : undefined;
 
-	// The selected worker is either from URL or the default
-	// We don't update the URL if using the default - only when user explicitly selects
-	const selectedWorker = useMemo(() => {
-		// If URL specifies a valid worker, use it
-		if (workerFromUrl && visibleWorkers.some((w) => w.name === workerFromUrl)) {
-			return workerFromUrl;
-		}
-		// Otherwise use the default
-		return defaultWorker;
-	}, [workerFromUrl, visibleWorkers, defaultWorker]);
+		function belongsToWorker(
+			resourceWorkerName: string | undefined,
+			workerName: string
+		): boolean {
+			if (resourceWorkerName) {
+				return resourceWorkerName === workerName;
+			}
 
-	const handleWorkerChange = useCallback(
-		(workerName: string) => {
-			void router.navigate({
-				search: { worker: workerName },
-				to: "/",
-			});
-		},
-		[router]
-	);
-
-	// Filter resources based on selected worker
-	const filteredData = useMemo(() => {
-		if (!selectedWorker) {
-			// No worker selected — no dev registry or single-worker case.
-			// Return all resources unfiltered to preserve backward compatibility.
-			return {
-				kvNamespaces: loaderData.kvNamespaces,
-				databases: loaderData.databases,
-				doNamespaces: loaderData.doNamespaces,
-				r2Buckets: loaderData.r2Buckets,
-				workflows: loaderData.workflows,
-			};
+			return defaultWorkerName === workerName;
 		}
 
-		// Filter each resource type by workerName
-		return {
-			kvNamespaces: loaderData.kvNamespaces.filter(
-				(ns) => ns.workerName === selectedWorker
+		return visibleWorkers.map((worker) => ({
+			worker,
+			databases: loaderData.databases.filter((db) =>
+				belongsToWorker(db.workerName, worker.name)
 			),
-			databases: loaderData.databases.filter(
-				(db) => db.workerName === selectedWorker
+			doNamespaces: loaderData.doNamespaces.filter((ns) =>
+				belongsToWorker(ns.workerName, worker.name)
 			),
-			doNamespaces: loaderData.doNamespaces.filter(
-				(ns) => ns.workerName === selectedWorker
+			kvNamespaces: loaderData.kvNamespaces.filter((ns) =>
+				belongsToWorker(ns.workerName, worker.name)
 			),
-			r2Buckets: loaderData.r2Buckets.filter(
-				(bucket) => bucket.workerName === selectedWorker
+			r2Buckets: loaderData.r2Buckets.filter((bucket) =>
+				belongsToWorker(bucket.workerName, worker.name)
 			),
-			workflows: loaderData.workflows.filter(
-				(wf) => wf.script_name === selectedWorker
+			workflows: loaderData.workflows.filter((workflow) =>
+				belongsToWorker(workflow.script_name, worker.name)
 			),
-		};
+		}));
 	}, [
-		selectedWorker,
-		loaderData.kvNamespaces,
+		visibleWorkers,
 		loaderData.databases,
 		loaderData.doNamespaces,
+		loaderData.kvNamespaces,
 		loaderData.r2Buckets,
 		loaderData.workflows,
 	]);
@@ -233,21 +208,14 @@ function RootLayout() {
 						collapsed={sidebarCollapsed}
 						currentPath={currentPath}
 						d1Error={loaderData.d1Error}
-						databases={filteredData.databases}
 						doError={loaderData.doError}
-						doNamespaces={filteredData.doNamespaces}
 						kvError={loaderData.kvError}
-						kvNamespaces={filteredData.kvNamespaces}
 						onThemeToggle={theme.cycleNext}
 						onToggle={handleToggle}
-						onWorkerChange={handleWorkerChange}
-						r2Buckets={filteredData.r2Buckets}
 						r2Error={loaderData.r2Error}
 						resolvedTheme={theme.resolvedTheme}
-						selectedWorker={selectedWorker}
 						themePreference={theme.preference}
-						workers={visibleWorkers}
-						workflows={filteredData.workflows}
+						workerGroups={workerGroups}
 						workflowsError={loaderData.workflowsError}
 					/>
 				}
