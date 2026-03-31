@@ -57,29 +57,17 @@ export const FLAGSHIP_PLUGIN: Plugin<typeof FlagshipOptionsSchema> = {
 			return [];
 		}
 
-		// Flagship is a remote-only binding — flag evaluation always happens
-		// against the deployed Flagship service. When remoteProxyConnectionString
-		// is provided (i.e. `wrangler dev --remote`), the proxy client worker
-		// forwards requests to the real service. Without it, there is no local
-		// simulation available.
-		return Object.entries(options.flagship).flatMap(([name, config]) => {
-			if (!config.remoteProxyConnectionString) {
-				return [];
-			}
-
-			return [
-				{
+		return Object.entries(options.flagship).map(
+			([name, { remoteProxyConnectionString }]) => {
+				return {
 					name: getUserBindingServiceName(
 						FLAGSHIP_PLUGIN_NAME,
 						name,
-						config.remoteProxyConnectionString
+						remoteProxyConnectionString
 					),
-					worker: remoteProxyClientWorker(
-						config.remoteProxyConnectionString,
-						name
-					),
-				},
-			];
-		});
+					worker: remoteProxyClientWorker(remoteProxyConnectionString, name),
+				};
+			}
+		);
 	},
 };
