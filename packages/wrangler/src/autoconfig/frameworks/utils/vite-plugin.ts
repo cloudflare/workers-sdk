@@ -8,7 +8,7 @@ import type { PackageManager } from "../../../package-manager";
  * Installs the `@cloudflare/vite-plugin` package as a dev dependency
  *
  * If the project has Vite >= 6.0.0 but < 6.1.0 installed, it will first
- * be updated to `^6` to ensure compatibility with the plugin.
+ * be updated to `^6.1.0` to ensure compatibility with the plugin.
  *
  * @param packageManager the type of package manager to use for installation
  * @param projectPath the path of the project (used to check the installed Vite version)
