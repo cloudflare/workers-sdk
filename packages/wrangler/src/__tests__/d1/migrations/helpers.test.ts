@@ -60,10 +60,7 @@ describe("getMigrationNames", () => {
 
 		const result = getMigrationNames(migrationsDir);
 
-		expect(result).toEqual([
-			"0001_create_tables.sql",
-			"0002_add_columns.sql",
-		]);
+		expect(result).toEqual(["0001_create_tables.sql", "0002_add_columns.sql"]);
 	});
 
 	it("should handle directory with only non-SQL files", ({ expect }) => {
