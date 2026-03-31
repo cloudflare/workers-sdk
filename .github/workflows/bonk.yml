@@ -45,7 +45,8 @@ jobs:
         id: prompt
         run: |
           {
-            echo 'value<<EOF'
+            DELIMITER=$(openssl rand -hex 16)
+            echo "value<<$DELIMITER"
             echo "You were invoked by @${{ github.event.comment.user.login }} on ${{ github.event.comment.html_url }}"
             echo ""
             echo "Their comment:"
@@ -54,7 +55,7 @@ jobs:
             echo '```'
             echo ""
             echo "This is your task. Read it carefully and act on it."
-            echo EOF
+            echo "$DELIMITER"
           } >> "$GITHUB_OUTPUT"
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
