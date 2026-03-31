@@ -142,6 +142,16 @@ export function mapWorkerMetadataBindings(
 						];
 						break;
 					}
+					case "flagship": {
+						configObj.flagship = [
+							...(configObj.flagship ?? []),
+							{
+								binding: binding.name,
+								app_id: binding.app_id,
+							},
+						];
+						break;
+					}
 					case "service":
 						{
 							configObj.services = [

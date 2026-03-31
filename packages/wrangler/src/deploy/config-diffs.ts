@@ -33,6 +33,7 @@ const reorderableBindings = {
 	ratelimits: true,
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
+	flagship: true,
 	worker_loaders: true,
 	vpc_services: true,
 

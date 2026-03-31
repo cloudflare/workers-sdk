@@ -104,6 +104,7 @@ export type ConfigBindingFieldName =
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
+	| "flagship"
 	| "worker_loaders"
 	| "vpc_services";
 
@@ -143,6 +144,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
+	flagship: "Flagship",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 } as const;
@@ -184,6 +186,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	secrets_store_secret: "Secrets Store Secret",
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
+	flagship: "Flagship",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -1879,6 +1882,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"unsafe_hello_world",
 			validateBindingArray(envName, validateHelloWorldBinding),
+			[]
+		),
+		flagship: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"flagship",
+			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
 		worker_loaders: notInheritable(
@@ -4691,6 +4704,39 @@ const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"enable_timer",
+	]);
+
+	return isValid;
+};
+
+const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"flagship" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "app_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
 	]);
 
 	return isValid;

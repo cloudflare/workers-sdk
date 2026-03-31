@@ -253,6 +253,11 @@ export interface CfHelloWorld {
 	enable_timer?: boolean;
 }
 
+export interface CfFlagship {
+	binding: string;
+	app_id: string;
+}
+
 export interface CfWorkerLoader {
 	binding: string;
 }
@@ -424,6 +429,7 @@ export interface CfWorkerInit {
 	 * The list of source maps to include on upload.
 	 */
 	sourceMaps: CfWorkerSourceMap[] | undefined;
+
 
 	containers: { class_name: string }[] | undefined;
 
