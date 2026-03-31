@@ -272,7 +272,7 @@ function getWorkflowClasses(
 
 type ProjectWorkers = [
 	runnerWorker: WorkerOptions,
-	...auxiliaryWorkers: WorkerOptions[]
+	...auxiliaryWorkers: WorkerOptions[],
 ];
 
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
@@ -781,7 +781,7 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 	const actualVitestVersion =
 		vitestPkgJson.name === "vitest"
 			? vitestPkgJson.version
-			: getUpstreamVitestVersion(vitestPkgJson) ?? vitestPkgJson.version;
+			: (getUpstreamVitestVersion(vitestPkgJson) ?? vitestPkgJson.version);
 	assert(
 		actualVitestVersion !== undefined,
 		"Expected to find `vitest`'s version"
