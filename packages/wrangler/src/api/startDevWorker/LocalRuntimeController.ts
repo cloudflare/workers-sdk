@@ -55,7 +55,8 @@ export async function convertToConfigBundle(
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
 		} else if (trigger.type === "queue-consumer") {
-			queueConsumers.push(trigger);
+			const { type: _, ...consumer } = trigger;
+			queueConsumers.push(consumer);
 		}
 	}
 	if (event.bundle.entry.format === "service-worker") {

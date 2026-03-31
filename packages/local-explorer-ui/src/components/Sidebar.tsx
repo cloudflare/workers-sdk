@@ -6,12 +6,14 @@ import D1Icon from "../assets/icons/d1.svg?react";
 import DOIcon from "../assets/icons/durable-objects.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
 import R2Icon from "../assets/icons/r2.svg?react";
+import WorkflowsIcon from "../assets/icons/workflows.svg?react";
 import { WorkerSelector, type LocalExplorerWorker } from "./WorkerSelector";
 import type {
 	D1DatabaseResponse,
 	R2Bucket,
 	WorkersKvNamespace,
 	WorkersNamespace,
+	WorkflowsWorkflow,
 } from "../api";
 import type { FileRouteTypes } from "../routeTree.gen";
 import type { FC } from "react";
@@ -101,6 +103,8 @@ interface SidebarProps {
 	workers: LocalExplorerWorker[];
 	selectedWorker: string;
 	onWorkerChange: (workerName: string) => void;
+	workflows: WorkflowsWorkflow[];
+	workflowsError: string | null;
 }
 
 export function Sidebar({
@@ -116,6 +120,8 @@ export function Sidebar({
 	workers,
 	selectedWorker,
 	onWorkerChange,
+	workflows,
+	workflowsError,
 }: SidebarProps) {
 	const showWorkerSelector = workers.length > 1;
 
@@ -224,6 +230,24 @@ export function Sidebar({
 					};
 				})}
 				title="R2 Buckets"
+			/>
+			<SidebarItemGroup
+				emptyLabel="No workflows"
+				error={workflowsError}
+				icon={WorkflowsIcon}
+				items={workflows.map((wf) => ({
+					id: wf.name as string,
+					isActive:
+						currentPath === `/workflows/${wf.name}` ||
+						currentPath.startsWith(`/workflows/${wf.name}/`),
+					label: wf.name as string,
+					link: {
+						params: { workflowName: wf.name },
+						search: workerSearch,
+						to: "/workflows/$workflowName",
+					},
+				}))}
+				title="Workflows"
 			/>
 		</aside>
 	);

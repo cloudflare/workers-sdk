@@ -3,11 +3,7 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
-import {
-	LOCAL_EXPLORER_API_PATH,
-	LOCAL_EXPLORER_BASE_PATH,
-} from "../../plugins/core/constants";
-import { CoreBindings } from "../core";
+import { CoreBindings, CorePaths } from "../core";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import {
@@ -20,6 +16,7 @@ import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
@@ -38,6 +35,17 @@ import {
 	listR2Objects,
 	putR2Object,
 } from "./resources/r2";
+import {
+	changeWorkflowInstanceStatus,
+	createWorkflowInstance,
+	deleteWorkflow,
+	deleteWorkflowInstance,
+	getWorkflowDetails,
+	getWorkflowInstanceDetails,
+	listWorkflowInstances,
+	listWorkflows,
+	sendWorkflowInstanceEvent,
+} from "./resources/workflows";
 import type { BindingIdMap } from "../../plugins/core/types";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { LocalExplorerWorker } from "./generated";
@@ -56,7 +64,9 @@ export type Env = {
 
 export type AppBindings = { Bindings: Env };
 
-const app = new Hono<AppBindings>().basePath(LOCAL_EXPLORER_BASE_PATH);
+const EXPLORER_API_PATH = `${CorePaths.EXPLORER}/api`;
+
+const app = new Hono<AppBindings>().basePath(CorePaths.EXPLORER);
 
 // Global error handler - catches all uncaught errors and wraps them in an error response
 app.onError((err) => {
@@ -109,14 +119,13 @@ function getContentType(filePath: string): string {
 }
 
 app.get("/*", async (c, next) => {
-	if (c.req.path.startsWith(LOCAL_EXPLORER_API_PATH)) {
+	if (c.req.path.startsWith(EXPLORER_API_PATH)) {
 		// continue on to API routes
 		return next();
 	}
 
 	// Some simple asset path handling...
-	let assetPath =
-		c.req.path.replace(LOCAL_EXPLORER_BASE_PATH, "") || "/index.html";
+	let assetPath = c.req.path.replace(CorePaths.EXPLORER, "") || "/index.html";
 	if (assetPath === "/") {
 		assetPath = "/index.html";
 	}
@@ -252,6 +261,66 @@ app.delete(
 	"/api/r2/buckets/:bucket_name/objects",
 	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
 	(c) => deleteR2Objects(c, c.req.param("bucket_name"), c.req.valid("json"))
+);
+
+// ============================================================================
+// Workflows Endpoints
+// ============================================================================
+
+app.get("/api/workflows", (c) => listWorkflows(c));
+
+app.get("/api/workflows/:workflow_name", (c) =>
+	getWorkflowDetails(c, c.req.param("workflow_name"))
+);
+
+app.delete("/api/workflows/:workflow_name", (c) =>
+	deleteWorkflow(c, c.req.param("workflow_name"))
+);
+
+app.get(
+	"/api/workflows/:workflow_name/instances",
+	validateQuery(zWorkflowsListInstancesData.shape.query.unwrap()),
+	(c) =>
+		listWorkflowInstances(c, c.req.param("workflow_name"), c.req.valid("query"))
+);
+
+app.post("/api/workflows/:workflow_name/instances", (c) =>
+	createWorkflowInstance(c, c.req.param("workflow_name"))
+);
+
+app.get("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
+	getWorkflowInstanceDetails(
+		c,
+		c.req.param("workflow_name"),
+		c.req.param("instance_id")
+	)
+);
+
+app.patch("/api/workflows/:workflow_name/instances/:instance_id/status", (c) =>
+	changeWorkflowInstanceStatus(
+		c,
+		c.req.param("workflow_name"),
+		c.req.param("instance_id")
+	)
+);
+
+app.post(
+	"/api/workflows/:workflow_name/instances/:instance_id/events/:event_type",
+	(c) =>
+		sendWorkflowInstanceEvent(
+			c,
+			c.req.param("workflow_name"),
+			c.req.param("instance_id"),
+			c.req.param("event_type")
+		)
+);
+
+app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
+	deleteWorkflowInstance(
+		c,
+		c.req.param("workflow_name"),
+		c.req.param("instance_id")
+	)
 );
 
 // ============================================================================

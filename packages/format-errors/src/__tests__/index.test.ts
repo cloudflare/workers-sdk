@@ -1,16 +1,6 @@
 import { describe, it, vi } from "vitest";
 import type { Payload } from "../index";
 
-// Mock external dependencies that can't be resolved by Vite in test env
-vi.mock("promjs", () => {
-	const mockCounter = { inc: vi.fn() };
-	const mockRegistry = {
-		create: vi.fn(() => mockCounter),
-		metrics: vi.fn(() => ""),
-	};
-	return { default: () => mockRegistry };
-});
-
 vi.mock("toucan-js", () => {
 	return {
 		Toucan: vi.fn().mockImplementation(() => ({

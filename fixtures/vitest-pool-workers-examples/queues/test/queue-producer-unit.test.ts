@@ -19,7 +19,15 @@ it("produces queue message with mocked send", async ({ expect }) => {
 	// Intercept calls to `QUEUE_PRODUCER.send()`
 	const sendSpy = vi
 		.spyOn(env.QUEUE_PRODUCER, "send")
-		.mockImplementation(async () => {});
+		.mockImplementation(async () => ({
+			metadata: {
+				metrics: {
+					backlogCount: 0,
+					backlogBytes: 0,
+					oldestMessageTimestamp: 0,
+				},
+			},
+		}));
 
 	// Enqueue job on queue
 	const request = new IncomingRequest("https://example.com/key", {

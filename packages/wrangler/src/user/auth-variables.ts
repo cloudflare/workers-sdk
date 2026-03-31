@@ -3,7 +3,7 @@ import {
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
-import { getAccessToken } from "./access";
+import { getAccessHeaders } from "./access";
 
 /**
  * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
@@ -103,10 +103,35 @@ export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
 });
 
 /**
- * Set the `WRANGLER_CF_AUTHORIZATION_TOKEN` to the CF_Authorization token found at https://dash.staging.cloudflare.com/bypass-limits
- * if you want to access the staging environment, triggered by `WRANGLER_API_ENVIRONMENT=staging`.
+ * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID of a Cloudflare Access Service Token.
+ * Used together with `CLOUDFLARE_ACCESS_CLIENT_SECRET` to authenticate with
+ * Access-protected domains in non-interactive environments (e.g. CI).
+ *
+ * @see https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/
  */
-export const getCloudflareAccessToken = async () => {
+export const getAccessClientIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCESS_CLIENT_ID",
+});
+
+/**
+ * `CLOUDFLARE_ACCESS_CLIENT_SECRET` is the Client Secret of a Cloudflare Access Service Token.
+ * Used together with `CLOUDFLARE_ACCESS_CLIENT_ID` to authenticate with
+ * Access-protected domains in non-interactive environments (e.g. CI).
+ *
+ * @see https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/
+ */
+export const getAccessClientSecretFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCESS_CLIENT_SECRET",
+});
+
+/**
+ * Get headers needed to authenticate with the Cloudflare auth domain (e.g. staging).
+ *
+ * Checks `WRANGLER_CF_AUTHORIZATION_TOKEN` first, then falls back to `getAccessHeaders`.
+ */
+export const getCloudflareAccessHeaders = async (): Promise<
+	Record<string, string>
+> => {
 	const env = getEnvironmentVariableFactory({
 		variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 	})();
@@ -114,8 +139,8 @@ export const getCloudflareAccessToken = async () => {
 	// If the environment variable is defined, go ahead and use it.
 	if (env !== undefined) {
 		logger.debug("Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment", env);
-		return env;
+		return { Cookie: `CF_Authorization=${env}` };
 	}
 
-	return getAccessToken(getAuthDomainFromEnv());
+	return getAccessHeaders(getAuthDomainFromEnv());
 };

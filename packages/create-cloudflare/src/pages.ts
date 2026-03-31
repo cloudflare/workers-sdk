@@ -1,5 +1,6 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { quoteShellArgs, runCommand } from "helpers/command";
+import { quoteShellArgs } from "@cloudflare/cli/command";
+import { runWranglerCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { getProductionBranch } from "./git";
@@ -53,7 +54,7 @@ export const createProject = async (ctx: C3Context) => {
 				},
 			},
 			async () =>
-				runCommand(cmd, {
+				runWranglerCommand(cmd, {
 					// Make this command more verbose in test mode to aid
 					// troubleshooting API errors
 					silent: process.env.VITEST == undefined,
@@ -82,7 +83,7 @@ export const createProject = async (ctx: C3Context) => {
 		];
 
 		await retry({ times: VERIFY_PROJECT_RETRIES }, async () =>
-			runCommand(verifyProject, {
+			runWranglerCommand(verifyProject, {
 				silent: process.env.VITEST == undefined,
 				cwd: ctx.project.path,
 				env: { CLOUDFLARE_ACCOUNT_ID },

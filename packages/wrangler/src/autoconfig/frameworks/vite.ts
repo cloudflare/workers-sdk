@@ -1,11 +1,14 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages } from "../c3-vendor/packages";
+import { installPackages } from "@cloudflare/cli/packages";
+import { Framework } from "./framework-class";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
 	transformViteConfig,
 } from "./utils/vite-config";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class Vite extends Framework {
 	isConfigured(projectPath: string): boolean {
@@ -19,10 +22,12 @@ export class Vite extends Framework {
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
+			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
-				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
+				doneText: `${brandColor(`installed`)} ${dim(
+					"@cloudflare/vite-plugin"
+				)}`,
 				isWorkspaceRoot,
 			});
 

@@ -12,7 +12,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Message } from "@cloudflare/workers-utils";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
@@ -326,9 +326,34 @@ export async function fetchR2Objects(
 	} else if (response.status === 404) {
 		return null;
 	} else {
-		throw new Error(
-			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
-		);
+		// Read response body to get detailed error message
+		const notes: Message[] = [];
+		let errorCode: number | undefined;
+		try {
+			const bodyText = await response.text();
+			// Attempt to parse as a standard Cloudflare API JSON envelope to
+			// extract the structured error code (e.g. for data catalog conflicts).
+			try {
+				const json = JSON.parse(bodyText) as {
+					errors?: Array<{ code?: number; message?: string }>;
+				};
+				errorCode = json.errors?.[0]?.code;
+			} catch {
+				// Not JSON — fall through and use raw text as the note
+			}
+			notes.push({ text: bodyText });
+		} catch {
+			// If we can't read the body, continue without it
+		}
+		const apiError = new APIError({
+			text: `Failed to fetch ${resource} - ${response.status}: ${response.statusText};`,
+			status: response.status,
+			notes,
+		});
+		if (errorCode !== undefined) {
+			apiError.code = errorCode;
+		}
+		throw apiError;
 	}
 }
 

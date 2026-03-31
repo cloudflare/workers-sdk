@@ -1,6 +1,6 @@
 import type { PackageManager } from "../package-manager";
 import type { Optional } from "../utils/types";
-import type { Framework } from "./frameworks/index";
+import type { Framework } from "./frameworks/framework-class";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 type AutoConfigDetailsBase = {

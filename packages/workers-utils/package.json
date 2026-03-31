@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.13.0",
+	"version": "0.14.0",
 	"private": true,
 	"description": "Utility package for common Worker operations",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
@@ -22,6 +22,10 @@
 			"browser": "./dist/browser.mjs",
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
+		},
+		"./prometheus-metrics": {
+			"import": "./dist/prometheus-metrics.mjs",
+			"types": "./dist/prometheus-metrics.d.mts"
 		},
 		"./test-helpers": {
 			"import": "./dist/test-helpers/index.mjs",

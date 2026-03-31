@@ -1,5 +1,4 @@
-declare namespace Cloudflare {
-	interface Env {
-		MY_WORKER: import("@cloudflare/workers-types/experimental").Fetcher;
-	}
+declare module "cloudflare:workers" {
+	// ProvidedEnv controls the type of `import("cloudflare:workers").env`
+	interface ProvidedEnv extends Env {}
 }

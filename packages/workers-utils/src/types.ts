@@ -8,6 +8,8 @@ import type {
 } from "./config/environment";
 import type {
 	CfAIBinding,
+	CfAISearch,
+	CfAISearchNamespace,
 	CfAnalyticsEngineDataset,
 	CfBrowserBinding,
 	CfD1Database,
@@ -66,6 +68,8 @@ export type WorkerMetadataBinding =
 	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
+	| { type: "ai_search_namespace"; name: string; namespace: string }
+	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
 	| {
@@ -276,7 +280,7 @@ export type Trigger =
 	| ({ type: "route" } & ZoneNameRoute)
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
-	| ({ type: "queue-consumer" } & QueueConsumer);
+	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">);
 
 type BindingOmit<T> = Omit<T, "binding">;
 type NameOmit<T> = Omit<T, "name">;
@@ -309,6 +313,8 @@ export type Binding =
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
 	| ({ type: "d1" } & BindingOmit<CfD1Database>)
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
+	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
+	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
 	| { type: "fetcher"; fetcher: ServiceFetch }

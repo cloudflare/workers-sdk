@@ -239,7 +239,7 @@ import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
-	getCloudflareAccessToken,
+	getCloudflareAccessHeaders,
 	getCloudflareAccountIdFromEnv,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
@@ -1401,8 +1401,9 @@ async function fetchAuthToken(body: URLSearchParams) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);
-		// We are trying to access the staging API so we need an "access token".
-		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
+		// We are trying to access a domain behind Access so we need auth headers.
+		const accessHeaders = await getCloudflareAccessHeaders();
+		Object.assign(headers, accessHeaders);
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
 	try {

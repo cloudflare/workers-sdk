@@ -196,19 +196,14 @@ export function runBuild(
 		// trigger "builds" when any change
 		if (noBundle) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			// Check whether we need to watch a Python cf-requirements.txt file.
-			const watchPythonRequirements =
-				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.projectRoot, "cf-requirements.txt")
-					: undefined;
-
-			if (watchPythonRequirements) {
-				watching.push(watchPythonRequirements);
-			}
-
 			const watcher = watch(watching, {
 				persistent: true,
-				ignored: [".git", "node_modules"],
+				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
+				// contains miniflare state/cache files written by workerd at
+				// runtime — watching them causes an infinite reload loop).
+				// chokidar v4 normalises paths to forward slashes before
+				// matching, so a regex on path segments works cross-platform.
+				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
 			}).on("change", async (_event) => {
 				await updateBundle();
 			});

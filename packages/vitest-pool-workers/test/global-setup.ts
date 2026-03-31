@@ -42,6 +42,7 @@ async function createTestProject() {
 		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers temp-"))
 	);
 	const packageJsonPath = path.join(projectPath, "package.json");
+	const vitestPeerDep = await getVitestPeerDep();
 	const packageJson = {
 		name: "vitest-pool-workers-e2e-tests",
 		private: true,
@@ -49,7 +50,8 @@ async function createTestProject() {
 		devDependencies: {
 			// Ensure we use the local version of vitest-pool-workers
 			"@cloudflare/vitest-pool-workers": version,
-			vitest: await getVitestPeerDep(),
+			"@vitest/coverage-istanbul": vitestPeerDep,
+			vitest: vitestPeerDep,
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));

@@ -49,6 +49,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[[services]]
@@ -106,6 +107,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[[services]]
@@ -181,6 +183,7 @@ describe("update wrangler config", () => {
 				"observability": {
 					"enabled": true
 				},
+				"upload_source_maps": true,
 				"compatibility_flags": [
 					"nodejs_compat"
 				]
@@ -250,6 +253,7 @@ describe("update wrangler config", () => {
 				"observability": {
 					"enabled": true
 				},
+				"upload_source_maps": true,
 				"compatibility_flags": [
 					"nodejs_compat"
 				]
@@ -296,6 +300,7 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
@@ -348,6 +353,7 @@ describe("update wrangler config", () => {
 			main = "src/index.ts"
 			name = "test"
 			compatibility_date = "2024-01-17"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
@@ -402,6 +408,7 @@ describe("update wrangler config", () => {
 			# https://developers.cloudflare.com/workers/wrangler/configuration/
 			name = "test"
 			compatibility_date = "2001-10-12"
+			upload_source_maps = true
 			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
@@ -477,6 +484,7 @@ describe("update wrangler config", () => {
 				"observability": {
 					"enabled": true
 				},
+				"upload_source_maps": true,
 				"compatibility_flags": [
 					"nodejs_compat"
 				]
@@ -673,9 +681,10 @@ describe("update wrangler config", () => {
 
 		const newToml = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newToml).not.toContain("nodejs_compat");
+		expect(newToml).not.toContain("upload_source_maps");
 	});
 
-	test("does not add nodejs_compat for Python projects (json)", async ({
+	test("does not add nodejs_compat or upload_source_maps for Python projects (json)", async ({
 		expect,
 	}) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
@@ -695,5 +704,6 @@ describe("update wrangler config", () => {
 
 		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
 		expect(newConfig).not.toContain("nodejs_compat");
+		expect(newConfig).not.toContain("upload_source_maps");
 	});
 });

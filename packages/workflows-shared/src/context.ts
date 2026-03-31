@@ -175,6 +175,7 @@ export class Context extends RpcTarget {
 		const errorKey = `${cacheKey}-error`;
 		const stepNameWithCounter = `${name}-${count}`;
 		const stepStateKey = `${cacheKey}-metadata`;
+		const retryDelayDisableKey = `${MODIFIER_KEYS.DISABLE_RETRY_DELAY}${valueKey}`;
 
 		const maybeMap = await this.#state.storage.get([
 			valueKey,
@@ -283,8 +284,18 @@ export class Context extends RpcTarget {
 				);
 				// complete sleep if it didn't finish for some reason
 				if (retryEntryPQ !== undefined) {
+					const disableAllRetryDelays = await this.#state.storage.get(
+						MODIFIER_KEYS.DISABLE_ALL_RETRY_DELAYS
+					);
+					const disableThisRetryDelay =
+						await this.#state.storage.get(retryDelayDisableKey);
+					const disableRetryDelay =
+						disableAllRetryDelays || disableThisRetryDelay;
+
 					await this.#engine.timeoutHandler.release(this.#engine);
-					await scheduler.wait(retryEntryPQ.targetTimestamp - Date.now());
+					await scheduler.wait(
+						disableRetryDelay ? 0 : retryEntryPQ.targetTimestamp - Date.now()
+					);
 					await this.#engine.timeoutHandler.acquire(this.#engine);
 					// @ts-expect-error priorityQueue is initiated in init
 					this.#engine.priorityQueue.remove({
@@ -507,12 +518,20 @@ export class Context extends RpcTarget {
 				if (stepState.attemptedCount <= config.retries.limit) {
 					// TODO (WOR-71): Think through if every Error should transition
 					const durationMs = calcRetryDuration(config, stepState);
+					const disableAllRetryDelays = await this.#state.storage.get(
+						MODIFIER_KEYS.DISABLE_ALL_RETRY_DELAYS
+					);
+					const disableThisRetryDelay =
+						await this.#state.storage.get(retryDelayDisableKey);
+					const disableRetryDelay =
+						disableAllRetryDelays || disableThisRetryDelay;
+					const effectiveDuration = disableRetryDelay ? 0 : durationMs;
 
 					const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 					// @ts-expect-error priorityQueue is initiated in init
 					await this.#engine.priorityQueue.add({
 						hash: priorityQueueHash,
-						targetTimestamp: Date.now() + durationMs,
+						targetTimestamp: Date.now() + effectiveDuration,
 						type: "retry",
 					});
 					await this.#engine.timeoutHandler.release(this.#engine);
@@ -522,7 +541,7 @@ export class Context extends RpcTarget {
 						const retryPauseSignal = this.#engine.pauseController.signal;
 						let pausedDuringRetry = false;
 						await Promise.race([
-							scheduler.wait(durationMs),
+							scheduler.wait(effectiveDuration),
 							new Promise<void>((resolve) => {
 								if (retryPauseSignal.aborted) {
 									resolve();
@@ -861,7 +880,7 @@ export class Context extends RpcTarget {
 				}
 			}
 			const callbacks = this.#engine.waiters.get(options.type) ?? [];
-			callbacks.push(resolve);
+			callbacks.push([cacheKey, resolve]);
 
 			this.#engine.waiters.set(options.type, callbacks);
 		});
@@ -886,6 +905,14 @@ export class Context extends RpcTarget {
 				: timeoutPromise(ms(options.timeout), true),
 			pausePromise,
 		]).catch(async (error) => {
+			const callbacks = this.#engine.waiters.get(options.type);
+			if (callbacks) {
+				const idx = callbacks.findIndex(([key]) => key === cacheKey);
+				if (idx !== -1) {
+					callbacks.splice(idx, 1);
+				}
+			}
+
 			this.#engine.writeLog(
 				InstanceEvent.WAIT_TIMED_OUT,
 				cacheKey,

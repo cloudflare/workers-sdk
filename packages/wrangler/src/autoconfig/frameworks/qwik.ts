@@ -1,13 +1,16 @@
 import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
+import { quoteShellArgs, runCommand } from "@cloudflare/cli/command";
 import { spinner } from "@cloudflare/cli/interactive";
+import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
 import * as typescriptParser from "recast/parsers/typescript";
-import { transformFile } from "../c3-vendor/codemod";
-import { quoteShellArgs, runCommand } from "../c3-vendor/command";
 import { usesTypescript } from "../uses-typescript";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 import type { Program } from "esprima";
 
 export class Qwik extends Framework {

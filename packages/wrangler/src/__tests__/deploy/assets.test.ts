@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -53,7 +54,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -244,6 +245,32 @@ describe("deploy", () => {
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
+		});
+
+		it("should error if path specified by flag --assets is a file, not a directory", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("deploy --assets abc")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "--assets" command line argument doesn't point to a directory:
+				<cwd>/abc]
+			`);
+		});
+
+		it("should error if path specified by config assets.directory is a file, not a directory", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				assets: { directory: "abc" },
+			});
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "assets.directory" field in your configuration file doesn't point to a directory:
+				<cwd>/abc]
+			`);
 		});
 
 		it("should error if an ASSET binding is provided without a user Worker", async ({
@@ -757,6 +784,30 @@ describe("deploy", () => {
 				}
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should error on --dry-run if it is going to upload a _worker.js file as an asset", async ({
+			expect,
+		}) => {
+			const assets = [
+				{ filePath: "_worker.js", content: "// some secret server-side code." },
+			];
+			writeAssets(assets, "some/path/assets");
+			writeWranglerConfig(
+				{
+					assets: { directory: "assets" },
+				},
+				"some/path/wrangler.toml"
+			);
+			writeWorkerSource({ basePath: "some/path" });
+			await expect(
+				runWrangler("deploy --dry-run --config some/path/wrangler.toml")
+			).rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Uploading a Pages _worker.js file as an asset.
+				This could expose your private server-side code to the public Internet. Is this intended?
+				If you do not want to upload this file, either remove it or add an ".assetsignore" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+				If you do want to upload this file, you can add an empty ".assetsignore" file, to the root of your asset directory, to hide this error.]
+			`);
 		});
 
 		it("should upload _redirects and _headers", async ({ expect }) => {

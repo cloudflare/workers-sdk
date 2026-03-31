@@ -362,15 +362,23 @@ async function promptVersionsToDeploy(
 	versionCache: VersionCache,
 	yesFlag: boolean
 ): Promise<VersionId[]> {
+	// If the user has already specified all versions they want to deploy and
+	// has passed --yes (so there's no interactive prompt), skip fetching the
+	// full deployable-versions list and only fetch the specific versions needed.
+	const skipDeployableVersionsFetch =
+		yesFlag && defaultSelectedVersionIds.length > 0;
+
 	await spinnerWhile({
-		startMessage: "Fetching deployable versions",
+		startMessage: "Fetching versions",
 		async promise() {
-			await fetchDeployableVersions(
-				complianceConfig,
-				accountId,
-				workerName,
-				versionCache
-			);
+			if (!skipDeployableVersionsFetch) {
+				await fetchDeployableVersions(
+					complianceConfig,
+					accountId,
+					workerName,
+					versionCache
+				);
+			}
 			await fetchVersions(
 				complianceConfig,
 				accountId,

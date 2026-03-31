@@ -63,11 +63,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+			await waitForLong(
+				async () => {
+					const response = await fetch(deployedUrl);
+					expect(await response.text()).toEqual("Hello World!");
+				},
+				{ timeout: 30_000 }
 			);
-			await expect(response.text()).resolves.toEqual("Hello World!");
 		});
 
 		it("lists 1 deployment", async ({ expect }) => {
@@ -98,11 +100,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 			const deployedUrl = getDeployedUrl(output);
 
-			const response = await retry(
-				(resp) => !resp.ok,
-				async () => await fetch(deployedUrl)
+			await waitForLong(
+				async () => {
+					const response = await fetch(deployedUrl);
+					expect(await response.text()).toEqual("Updated Worker!");
+				},
+				{ timeout: 30_000 }
 			);
-			await expect(response.text()).resolves.toEqual("Updated Worker!");
 		});
 
 		it("lists 2 deployments", async ({ expect }) => {

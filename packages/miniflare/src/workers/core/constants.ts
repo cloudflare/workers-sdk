@@ -1,3 +1,24 @@
+/**
+ * Reserved `/cdn-cgi/` paths for internal Miniflare endpoints.
+ * These paths are reserved by Cloudflare's network and won't conflict with user routes.
+ */
+export const CorePaths = {
+	/** Magic proxy used by getPlatformProxy */
+	PLATFORM_PROXY: "/cdn-cgi/platform-proxy",
+	/** Trigger scheduled event handlers */
+	SCHEDULED: "/cdn-cgi/handler/scheduled",
+	/** Trigger email event handlers */
+	EMAIL: "/cdn-cgi/handler/email",
+	/** Handler path prefix for validation */
+	HANDLER_PREFIX: "/cdn-cgi/handler/",
+	/** Live reload WebSocket endpoint */
+	LIVE_RELOAD: "/cdn-cgi/mf/reload",
+	/** Local explorer UI and API */
+	EXPLORER: "/cdn-cgi/explorer",
+	/** Legacy way to trigger scheduled event handlers */
+	LEGACY_SCHEDULED: "/cdn-cgi/mf/scheduled",
+} as const;
+
 export const CoreHeaders = {
 	CUSTOM_FETCH_SERVICE: "MF-Custom-Fetch-Service",
 	CUSTOM_NODE_SERVICE: "MF-Custom-Node-Service",
@@ -25,6 +46,7 @@ export const CoreHeaders = {
 	OP_SYNC: "MF-Op-Sync",
 	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
 	OP_RESULT_TYPE: "MF-Op-Result-Type",
+	OP_ORIGINAL_URL: "MF-Op-Original-URL",
 } as const;
 
 export const CoreBindings = {

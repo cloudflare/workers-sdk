@@ -1,13 +1,17 @@
+import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { installPackages } from "@cloudflare/cli/packages";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import { dedent } from "../../utils/dedent";
-import { installPackages } from "../c3-vendor/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
 import type { PackageManager } from "../../package-manager";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class Angular extends Framework {
 	async configure({
@@ -17,35 +21,68 @@ export class Angular extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		if (!dryRun) {
-			await updateAngularJson(workerName);
-			await overrideServerFile();
-			await installAdditionalDependencies(packageManager, isWorkspaceRoot);
-		}
-		return {
-			wranglerConfig: {
-				main: "./dist/server/server.mjs",
-				assets: {
-					binding: "ASSETS",
-					directory: `${outputDir}browser`,
+		const angularJson = parseJSONC(
+			await readFile(resolve("angular.json"), "utf8")
+		) as AngularJson;
+
+		if (hasSsr(angularJson, workerName)) {
+			this.configurationDescription = "Configuring project for Angular";
+			if (!dryRun) {
+				await updateAngularJson(workerName, angularJson);
+				await overrideServerFile();
+				await installAdditionalDependencies(packageManager, isWorkspaceRoot);
+			}
+			return {
+				wranglerConfig: {
+					main: "./dist/server/server.mjs",
+					assets: {
+						binding: "ASSETS",
+						directory: `${outputDir}browser`,
+					},
 				},
-			},
-		};
+			};
+		} else {
+			this.configurationDescription =
+				"Configuring Angular SPA project (assets only)";
+			return {
+				wranglerConfig: {
+					assets: {
+						directory: outputDir,
+					},
+				},
+			};
+		}
 	}
 }
 
-async function updateAngularJson(projectName: string) {
+/**
+ * Checks whether the given Angular project has SSR configured.
+ * SSR is considered enabled when `architect.build.options.ssr` exists and is truthy.
+ */
+function hasSsr(angularJson: AngularJson, projectName: string): boolean {
+	const ssr = angularJson.projects[projectName]?.architect?.build?.options?.ssr;
+	return !!ssr;
+}
+
+async function updateAngularJson(
+	projectName: string,
+	angularJson: AngularJson
+) {
 	const s = spinner();
 	s.start(`Updating angular.json config`);
-	const angularJson = parseJSONC(
-		await readFile(resolve("angular.json"), "utf8")
-	) as AngularJson;
 
 	// Update builder
 	const architectSection = angularJson.projects[projectName].architect;
 	architectSection.build.options.outputPath = "dist";
 	architectSection.build.options.outputMode = "server";
-	architectSection.build.options.ssr.experimentalPlatform = "neutral";
+	// ssr is guaranteed to be truthy here (checked by hasSsr before calling this).
+	// `ssr: true` is a valid Angular shorthand for SSR with defaults — normalise it
+	// to an object before setting properties on it.
+	assert(architectSection.build.options.ssr);
+	if (typeof architectSection.build.options.ssr === "boolean") {
+		architectSection.build.options.ssr = {};
+	}
+	architectSection.build.options.ssr["experimentalPlatform"] = "neutral";
 
 	await writeFile(
 		resolve("angular.json"),
@@ -85,7 +122,7 @@ async function installAdditionalDependencies(
 	packageManager: PackageManager,
 	isWorkspaceRoot: boolean
 ) {
-	await installPackages(packageManager, ["xhr2"], {
+	await installPackages(packageManager.type, ["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
 		doneText: `${brandColor("installed")}`,
@@ -102,7 +139,7 @@ type AngularJson = {
 					options: {
 						outputPath: string;
 						outputMode: string;
-						ssr: Record<string, unknown>;
+						ssr?: Record<string, unknown> | boolean | null;
 						assets: string[];
 					};
 				};

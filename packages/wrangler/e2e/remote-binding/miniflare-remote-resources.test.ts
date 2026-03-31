@@ -421,6 +421,67 @@ const testCases: TestCase[] = [
 		],
 	},
 	{
+		name: "AI Search Namespace",
+		scriptPath: "ai-search-namespace.js",
+		setup: async (helper) => {
+			const bucketName = await helper.r2(false);
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_NS: {
+							type: "ai_search_namespace",
+							namespace: "default",
+						},
+						R2_BUCKET_NAME: {
+							type: "plain_text",
+							value: bucketName,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchNamespaces: {
+						AI_SEARCH_NS: {
+							namespace: "default",
+							remoteProxyConnectionString: connection,
+						},
+					},
+					bindings: { R2_BUCKET_NAME: bucketName },
+				}),
+			};
+		},
+		expectFetchToMatch: [
+			expect.stringContaining(`"created":true`),
+			expect.stringContaining(`"deleted":true`),
+		],
+	},
+	{
+		name: "AI Search Instance",
+		scriptPath: "ai-search-instance.js",
+		setup: async (helper) => {
+			const { instanceId, bucketName: _bucketName } =
+				await helper.aiSearchInstance();
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_INST: {
+							type: "ai_search",
+							instance_name: instanceId,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchInstances: {
+						AI_SEARCH_INST: {
+							instance_name: instanceId,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
+		},
+		expectFetchToMatch: [expect.stringContaining(`"id"`)],
+	},
+	{
 		name: "Pipelines",
 		scriptPath: "pipelines.js",
 		setup: () => ({

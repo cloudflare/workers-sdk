@@ -1206,4 +1206,544 @@ describe("wrangler workflows", () => {
 			`);
 		});
 	});
+
+	// =========================================================================
+	// Local commands (--local) — hitting /cdn-cgi/explorer/api/workflows/...
+	// =========================================================================
+
+	describe("local", () => {
+		const LOCAL_PORT = 8787;
+		const LOCAL_BASE = `http://localhost:${LOCAL_PORT}/cdn-cgi/explorer/api`;
+
+		describe("workflows list --local", () => {
+			it("should list workflows from local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(`${LOCAL_BASE}/workflows`, () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									script_name: "my-worker",
+								},
+							],
+							result_info: { count: 1 },
+						});
+					})
+				);
+
+				await runWrangler("workflows list --local");
+				expect(std.info).toMatchInlineSnapshot(
+					`"Showing 1 workflow from local dev session:"`
+				);
+			});
+
+			it("should warn when no local workflows exist", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(`${LOCAL_BASE}/workflows`, () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+							result_info: { count: 0 },
+						});
+					})
+				);
+
+				await runWrangler("workflows list --local");
+				expect(std.warn).toContain(
+					"There are no Workflows in the local dev session"
+				);
+			});
+		});
+
+		describe("workflows describe --local", () => {
+			it("should describe a workflow from local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(`${LOCAL_BASE}/workflows/:workflowName`, ({ params }) => {
+						expect(params.workflowName).toEqual("my-workflow");
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								script_name: "my-worker",
+								instances: {
+									complete: 2,
+									errored: 1,
+									paused: 0,
+									queued: 0,
+									running: 0,
+									terminated: 0,
+									waiting: 0,
+									waitingForPause: 0,
+								},
+							},
+						});
+					})
+				);
+
+				await runWrangler("workflows describe my-workflow --local");
+				// logRaw writes to process.stdout directly, not captured by std.out
+				// Verify the command completes successfully without error
+				expect(std.err).toBe("");
+			});
+		});
+
+		describe("workflows trigger --local", () => {
+			it("should trigger a workflow in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						`${LOCAL_BASE}/workflows/:workflowName/instances`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body.params).toEqual({ foo: "bar" });
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { id: "local-instance-123" },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					`workflows trigger my-workflow '{"foo":"bar"}' --local`
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🚀 Workflow instance "local-instance-123" has been triggered successfully"`
+				);
+			});
+
+			it("should trigger without params in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(`${LOCAL_BASE}/workflows/:workflowName/instances`, () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { id: "local-instance-456" },
+						});
+					})
+				);
+
+				await runWrangler("workflows trigger my-workflow --local");
+				expect(std.info).toMatchInlineSnapshot(
+					`"🚀 Workflow instance "local-instance-456" has been triggered successfully"`
+				);
+			});
+		});
+
+		describe("workflows delete --local", () => {
+			it("should delete a workflow in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.delete(`${LOCAL_BASE}/workflows/:workflowName`, ({ params }) => {
+						expect(params.workflowName).toEqual("my-workflow");
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { status: "ok", success: true },
+						});
+					})
+				);
+
+				await runWrangler("workflows delete my-workflow --local");
+				expect(std.out).toContain(
+					'Workflow "my-workflow" instances removed successfully from local dev session.'
+				);
+			});
+		});
+
+		describe("workflows instances list --local", () => {
+			it("should list instances from local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(
+						`${LOCAL_BASE}/workflows/:workflowName/instances`,
+						({ params }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [
+									{
+										id: "instance-1",
+										status: "running",
+										created_on: mockCreateDate.toISOString(),
+									},
+									{
+										id: "instance-2",
+										status: "complete",
+										created_on: mockCreateDate.toISOString(),
+									},
+								],
+								result_info: {
+									page: 1,
+									per_page: 25,
+									total_count: 2,
+									total_pages: 1,
+								},
+							});
+						}
+					)
+				);
+
+				await runWrangler("workflows instances list my-workflow --local");
+				expect(std.info).toMatchInlineSnapshot(
+					`"Showing 2 instances from page 1:"`
+				);
+			});
+
+			it("should warn when no local instances exist", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(`${LOCAL_BASE}/workflows/:workflowName/instances`, () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+							result_info: {
+								page: 1,
+								per_page: 25,
+								total_count: 0,
+								total_pages: 0,
+							},
+						});
+					})
+				);
+
+				await runWrangler("workflows instances list my-workflow --local");
+				expect(std.warn).toContain(
+					'There are no instances in workflow "my-workflow"'
+				);
+			});
+		});
+
+		describe("workflows instances describe --local", () => {
+			it("should describe an instance from local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId`,
+						({ params }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									status: "complete",
+									params: { input: "data" },
+									queued: mockQueuedDate.toISOString(),
+									start: mockStartDate.toISOString(),
+									end: mockEndDate.toISOString(),
+									output: "done",
+									error: null,
+									steps: [
+										{
+											name: "step1",
+											start: mockStartDate.toISOString(),
+											end: mockEndDate.toISOString(),
+											success: true,
+											type: "step",
+											output: "result",
+											config: {
+												retries: {
+													limit: 3,
+													delay: 1000,
+													backoff: "constant",
+												},
+												timeout: 30000,
+											},
+											attempts: [
+												{
+													start: mockStartDate.toISOString(),
+													end: mockEndDate.toISOString(),
+													success: true,
+													error: null,
+												},
+											],
+										},
+									],
+									step_count: 1,
+									versionId: "version-abc",
+									success: true,
+									trigger: { source: "api" },
+								},
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances describe my-workflow instance-123 --local"
+				);
+				// Step details go through logger.log → std.out
+				expect(std.out).toContain("step1");
+				expect(std.out).toContain("Step");
+			});
+		});
+
+		describe("workflows instances pause --local", () => {
+			it("should pause an instance in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body.action).toEqual("pause");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances pause my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"⏸️ The instance "instance-123" from my-workflow was paused successfully"`
+				);
+			});
+		});
+
+		describe("workflows instances resume --local", () => {
+			it("should resume an instance in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body.action).toEqual("resume");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances resume my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🔄 The instance "instance-123" from my-workflow was resumed successfully"`
+				);
+			});
+		});
+
+		describe("workflows instances terminate --local", () => {
+			it("should terminate an instance in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body.action).toEqual("terminate");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances terminate my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🥷 The instance "instance-123" from my-workflow was terminated successfully"`
+				);
+			});
+		});
+
+		describe("workflows instances restart --local", () => {
+			it("should restart an instance in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body.action).toEqual("restart");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances restart my-workflow instance-123 --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"🥷 The instance "instance-123" from my-workflow was restarted successfully"`
+				);
+			});
+		});
+
+		describe("workflows instances send-event --local", () => {
+			it("should send an event to an instance in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/events/:eventType`,
+						async ({ params, request }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							expect(params.eventType).toEqual("my-event");
+							const body = (await request.json()) as Record<string, unknown>;
+							expect(body).toEqual({ key: "value" });
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					`workflows instances send-event my-workflow instance-123 --type my-event --payload '{"key":"value"}' --local`
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"📤 The event with type "my-event" and payload "{"key":"value"}" was sent to the instance "instance-123" from my-workflow"`
+				);
+			});
+
+			it("should send an event without payload in local dev session", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.post(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/events/:eventType`,
+						({ params }) => {
+							expect(params.workflowName).toEqual("my-workflow");
+							expect(params.instanceId).toEqual("instance-123");
+							expect(params.eventType).toEqual("my-event");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances send-event my-workflow instance-123 --type my-event --local"
+				);
+				expect(std.info).toMatchInlineSnapshot(
+					`"📤 The event with type "my-event" was sent to the instance "instance-123" from my-workflow"`
+				);
+			});
+		});
+
+		describe("latest instance resolution --local", () => {
+			it("should resolve 'latest' to the most recent instance", async () => {
+				writeWranglerConfig();
+
+				msw.use(
+					http.get(`${LOCAL_BASE}/workflows/:workflowName/instances`, () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									id: "older-instance",
+									status: "complete",
+									created_on: "2024-01-01T00:00:00Z",
+								},
+								{
+									id: "newest-instance",
+									status: "running",
+									created_on: "2024-06-01T00:00:00Z",
+								},
+							],
+							result_info: {
+								page: 1,
+								per_page: 25,
+								total_count: 2,
+								total_pages: 1,
+							},
+						});
+					}),
+					http.patch(
+						`${LOCAL_BASE}/workflows/:workflowName/instances/:instanceId/status`,
+						({ params }) => {
+							expect(params.instanceId).toEqual("newest-instance");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { success: true },
+							});
+						}
+					)
+				);
+
+				await runWrangler(
+					"workflows instances pause my-workflow latest --local"
+				);
+				expect(std.info).toContain("newest-instance");
+			});
+		});
+	});
 });

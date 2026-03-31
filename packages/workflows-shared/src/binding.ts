@@ -40,12 +40,22 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		const stubId = this.env.ENGINE.idFromName(id);
 		const stub = this.env.ENGINE.get(stubId);
 
+		const now = new Date().toISOString();
 		const initPromise = stub
 			.init(
 				0, // accountId: number,
 				{} as DatabaseWorkflow, // workflow: DatabaseWorkflow,
 				{} as DatabaseVersion, // version: DatabaseVersion,
-				{ id } as DatabaseInstance, // instance: DatabaseInstance,
+				{
+					id,
+					created_on: now,
+					modified_on: now,
+					workflow_id: "",
+					version_id: "",
+					status: 0, // InstanceStatus.Queued
+					started_on: now,
+					ended_on: null,
+				} satisfies DatabaseInstance,
 				{
 					timestamp: new Date(),
 					payload: params as Readonly<typeof params>,

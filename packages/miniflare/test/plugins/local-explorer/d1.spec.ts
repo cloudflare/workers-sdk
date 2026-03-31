@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
+import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	zD1ApiResponseCommonFailure,
 	zD1ListDatabasesResponse,
@@ -9,7 +9,7 @@ import {
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
-const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
+const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 describe("D1 API", () => {
 	let mf: Miniflare;

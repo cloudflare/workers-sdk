@@ -97,10 +97,19 @@ type VariableNames =
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
 
+	// ## Cloudflare Access Service Token (for CI/non-interactive environments)
+
+	/** Cloudflare Access Service Token Client ID. Used to authenticate with Access-protected domains in non-interactive environments (e.g. CI). */
+	| "CLOUDFLARE_ACCESS_CLIENT_ID"
+	/** Cloudflare Access Service Token Client Secret. Used with CLOUDFLARE_ACCESS_CLIENT_ID. */
+	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
+
 	// ## Experimental Feature Flags
 
 	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Open the browser in headful (visible) mode when using the Browser Rendering API in local dev (default: false). */
+	| "X_BROWSER_HEADFUL"
 
 	// ## CI-specific Variables (Internal Use)
 

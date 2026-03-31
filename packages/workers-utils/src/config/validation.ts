@@ -79,6 +79,8 @@ export type ConfigBindingFieldName =
 	| "queues"
 	| "d1_databases"
 	| "vectorize"
+	| "ai_search_namespaces"
+	| "ai_search"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -116,6 +118,8 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	queues: "Queue",
 	d1_databases: "D1 Database",
 	vectorize: "Vectorize Index",
+	ai_search_namespaces: "AI Search Namespace",
+	ai_search: "AI Search Instance",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -168,6 +172,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	r2_bucket: "R2 Bucket",
 	d1: "D1 Database",
 	vectorize: "Vectorize Index",
+	ai_search_namespace: "AI Search Namespace",
+	ai_search: "AI Search Instance",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -1695,6 +1701,26 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateVectorizeBinding),
 			[]
 		),
+		ai_search_namespaces: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai_search_namespaces",
+			validateBindingArray(envName, validateAISearchNamespaceBinding),
+			[]
+		),
+		ai_search: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai_search",
+			validateBindingArray(envName, validateAISearchBinding),
+			[]
+		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2920,6 +2946,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"text_blob",
 			"browser",
 			"ai",
+			"ai_search_namespace",
+			"ai_search",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -3920,6 +3948,77 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateAISearchNamespaceBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ai_search_namespaces" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ai_search" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "instance_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "instance_name" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"instance_name",
+		"remote",
+	]);
+
+	return isValid;
+};
+
 const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -4423,6 +4522,16 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 				value
 			)}.`
 		);
+	}
+
+	// Validate that consumer type, if specified, is "worker".
+	// Non-worker consumer types (e.g., "http_pull") cannot be configured via
+	// wrangler config. Use `wrangler queues consumer http add` instead.
+	if ("type" in value && value.type !== undefined && value.type !== "worker") {
+		diagnostics.errors.push(
+			`"${field}.type" has an invalid value "${value.type}". Only "worker" consumers can be configured in your Wrangler configuration.`
+		);
+		isValid = false;
 	}
 
 	const options: {
