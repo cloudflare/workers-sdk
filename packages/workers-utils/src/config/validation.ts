@@ -2971,6 +2971,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"flagship",
 			"stream",
 			"media",
 		];
