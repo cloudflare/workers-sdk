@@ -472,10 +472,69 @@ const testCases: TestCase[] = [
 		],
 	},
 	{
+		name: "VPC Network (tunnel_id)",
+		scriptPath: "vpc-network.js",
+		setup: async (helper) => {
+			// Create a real Cloudflare tunnel for testing
+			const tunnelId = await helper.tunnel();
+
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						VPC_NETWORK: {
+							type: "vpc_network",
+							tunnel_id: tunnelId,
+						},
+					},
+				},
+				miniflareConfig: (connection) =>
+					({
+						vpcNetworks: {
+							VPC_NETWORK: {
+								tunnel_id: tunnelId,
+								remoteProxyConnectionString: connection,
+							},
+						},
+					}) as unknown as Partial<WorkerOptions>,
+			};
+		},
+		expectFetchToMatch: [
+			// The tunnel exists but has no running cloudflared connector, so the binding
+			// throws an error — proving the VPC network binding was wired correctly
+			expect.stringMatching(/HandshakeTimeoutError/),
+		],
+	},
+	{
+		name: "VPC Network (network_id: cf1:network)",
+		scriptPath: "vpc-network.js",
+		setup: () => ({
+			remoteProxySessionConfig: {
+				bindings: {
+					VPC_NETWORK: {
+						type: "vpc_network",
+						network_id: "cf1:network",
+					},
+				} as unknown as StartDevWorkerInput["bindings"],
+			},
+			miniflareConfig: (connection) =>
+				({
+					vpcNetworks: {
+						VPC_NETWORK: {
+							network_id: "cf1:network",
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}) as unknown as Partial<WorkerOptions>,
+		}),
+		expectFetchToMatch: [
+			// Nothing is listening at the target, so the binding throws an error —
+			// proving the VPC network binding was wired correctly
+			expect.stringMatching(/HandshakeTimeoutError/),
+		],
+	},
+	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
-		// TODO: Enable post VPC announcement
-		skip: true,
 		setup: async (helper) => {
 			const serviceName = generateResourceName();
 
@@ -520,9 +579,9 @@ const testCases: TestCase[] = [
 			};
 		},
 		expectFetchToMatch: [
-			// Since we're using a real tunnel but no actual network connectivity, Iris will report back an error
-			// but this is considered an effective test for wrangler and vpc service bindings
-			expect.stringMatching(/CONNECT failed: 503 Service Unavailable/),
+			// The tunnel exists but has no running cloudflared connector, so the binding
+			// throws an error — proving the VPC service binding was wired correctly
+			expect.stringMatching(/HandshakeTimeoutError/),
 		],
 	},
 ];

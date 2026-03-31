@@ -1853,6 +1853,21 @@ function collectCoreBindings(
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -2767,6 +2782,25 @@ function collectCoreBindingsPerEnvironment(
 			bindings.push({
 				bindingCategory: "vpc_services",
 				name: vpcService.binding,
+				type: "Fetcher",
+			});
+		}
+
+		for (const [index, vpcNetwork] of (env.vpc_networks ?? []).entries()) {
+			if (!vpcNetwork.binding) {
+				throwMissingBindingError({
+					binding: vpcNetwork,
+					bindingType: "vpc_networks",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "vpc_networks",
+				name: vpcNetwork.binding,
 				type: "Fetcher",
 			});
 		}
