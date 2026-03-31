@@ -60,10 +60,10 @@ describe("agent-memory help", () => {
 			Manage Agent Memory namespaces [open beta]
 
 			COMMANDS
-			  wrangler agent-memory namespace create <namespace>     Create a new Agent Memory namespace [open beta]
-			  wrangler agent-memory namespace list                   List all Agent Memory namespaces associated with your account [open beta]
-			  wrangler agent-memory namespace get <namespace_id>     Get details for a given Agent Memory namespace [open beta]
-			  wrangler agent-memory namespace delete <namespace_id>  Delete a given Agent Memory namespace [open beta]
+			  wrangler agent-memory namespace create <namespace>       Create a new Agent Memory namespace [open beta]
+			  wrangler agent-memory namespace list                     List all Agent Memory namespaces associated with your account [open beta]
+			  wrangler agent-memory namespace get <namespace_name>     Get details for a given Agent Memory namespace [open beta]
+			  wrangler agent-memory namespace delete <namespace_name>  Delete a given Agent Memory namespace [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -188,7 +188,7 @@ describe("agent-memory namespace commands", () => {
 	it("should get a namespace in a table", async ({ expect }) => {
 		msw.use(
 			http.get(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.id}`,
+				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(TEST_NAMESPACE, true));
 				},
@@ -196,7 +196,7 @@ describe("agent-memory namespace commands", () => {
 			)
 		);
 
-		await runWrangler(`agent-memory namespace get ${TEST_NAMESPACE.id}`);
+		await runWrangler(`agent-memory namespace get ${TEST_NAMESPACE.name}`);
 
 		expect(std.out).toContain(TEST_NAMESPACE.id);
 		expect(std.out).toContain(TEST_NAMESPACE.name);
@@ -206,7 +206,7 @@ describe("agent-memory namespace commands", () => {
 	it("should get a namespace as JSON with --json", async ({ expect }) => {
 		msw.use(
 			http.get(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.id}`,
+				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(TEST_NAMESPACE, true));
 				},
@@ -214,7 +214,9 @@ describe("agent-memory namespace commands", () => {
 			)
 		);
 
-		await runWrangler(`agent-memory namespace get ${TEST_NAMESPACE.id} --json`);
+		await runWrangler(
+			`agent-memory namespace get ${TEST_NAMESPACE.name} --json`
+		);
 
 		const parsed = JSON.parse(std.out);
 		expect(parsed).toEqual(TEST_NAMESPACE);
@@ -226,13 +228,13 @@ describe("agent-memory namespace commands", () => {
 	it("should delete a namespace after confirmation", async ({ expect }) => {
 		setIsTTY(true);
 		mockConfirm({
-			text: `OK to delete the namespace '${TEST_NAMESPACE.id}'?`,
+			text: `OK to delete the namespace '${TEST_NAMESPACE.name}'?`,
 			result: true,
 		});
 
 		msw.use(
 			http.delete(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.id}`,
+				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(null, true));
 				},
@@ -240,7 +242,7 @@ describe("agent-memory namespace commands", () => {
 			)
 		);
 
-		await runWrangler(`agent-memory namespace delete ${TEST_NAMESPACE.id}`);
+		await runWrangler(`agent-memory namespace delete ${TEST_NAMESPACE.name}`);
 
 		expect(std.out).toContain(`✅ Deleted Agent Memory namespace`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -251,11 +253,11 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		setIsTTY(true);
 		mockConfirm({
-			text: `OK to delete the namespace '${TEST_NAMESPACE.id}'?`,
+			text: `OK to delete the namespace '${TEST_NAMESPACE.name}'?`,
 			result: false,
 		});
 
-		await runWrangler(`agent-memory namespace delete ${TEST_NAMESPACE.id}`);
+		await runWrangler(`agent-memory namespace delete ${TEST_NAMESPACE.name}`);
 
 		expect(std.out).toContain("Deletion cancelled.");
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -266,7 +268,7 @@ describe("agent-memory namespace commands", () => {
 	}) => {
 		msw.use(
 			http.delete(
-				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.id}`,
+				`*/accounts/:accountId/agentmemory/namespaces/${TEST_NAMESPACE.name}`,
 				() => {
 					return HttpResponse.json(createFetchResult(null, true));
 				},
@@ -275,7 +277,7 @@ describe("agent-memory namespace commands", () => {
 		);
 
 		await runWrangler(
-			`agent-memory namespace delete ${TEST_NAMESPACE.id} --force`
+			`agent-memory namespace delete ${TEST_NAMESPACE.name} --force`
 		);
 
 		expect(std.out).toContain(`✅ Deleted Agent Memory namespace`);

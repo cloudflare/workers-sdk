@@ -13,7 +13,7 @@ export const agentMemoryNamespaceCreateCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description:
-				"The name for the new namespace (max 512 characters, no control characters)",
+				"The name for the new namespace (max 32 characters, alphanumeric with embedded hyphens)",
 		},
 	},
 	positionalArgs: ["namespace"],

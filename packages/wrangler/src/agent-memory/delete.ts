@@ -10,10 +10,10 @@ export const agentMemoryNamespaceDeleteCommand = createCommand({
 		owner: "Product: Agent Memory",
 	},
 	args: {
-		namespace_id: {
+		namespace_name: {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the namespace to delete",
+			description: "The name of the namespace to delete",
 		},
 		force: {
 			type: "boolean",
@@ -22,11 +22,11 @@ export const agentMemoryNamespaceDeleteCommand = createCommand({
 			description: "Skip confirmation",
 		},
 	},
-	positionalArgs: ["namespace_id"],
-	async handler({ namespace_id, force }, { config }) {
+	positionalArgs: ["namespace_name"],
+	async handler({ namespace_name, force }, { config }) {
 		if (!force) {
 			const confirmedDeletion = await confirm(
-				`OK to delete the namespace '${namespace_id}'?`
+				`OK to delete the namespace '${namespace_name}'?`
 			);
 			if (!confirmedDeletion) {
 				logger.log("Deletion cancelled.");
@@ -34,7 +34,7 @@ export const agentMemoryNamespaceDeleteCommand = createCommand({
 			}
 		}
 
-		await deleteNamespace(config, namespace_id);
-		logger.log(`✅ Deleted Agent Memory namespace ${namespace_id}`);
+		await deleteNamespace(config, namespace_name);
+		logger.log(`✅ Deleted Agent Memory namespace ${namespace_name}`);
 	},
 });
