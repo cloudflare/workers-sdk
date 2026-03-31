@@ -18,7 +18,7 @@ export const emailRoutingDnsUnlockCommand = createCommand({
 		const settings = await unlockEmailRoutingDns(config, zoneId);
 
 		logger.log(
-			`MX records unlocked for ${settings.name} (status: ${settings.status})`
+			`MX records unlocked for ${settings.name} (enabled: ${settings.enabled})`
 		);
 	},
 });
