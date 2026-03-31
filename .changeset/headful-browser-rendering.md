@@ -5,7 +5,9 @@
 "@cloudflare/workers-utils": minor
 ---
 
-Add headful browser rendering support for local development
+Add experimental headful browser rendering support for local development
+
+> **Experimental:** This feature may be removed or changed without notice.
 
 When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
 
