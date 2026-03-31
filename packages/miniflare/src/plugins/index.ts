@@ -21,6 +21,7 @@ import {
 } from "./dispatch-namespace";
 import { DURABLE_OBJECTS_PLUGIN, DURABLE_OBJECTS_PLUGIN_NAME } from "./do";
 import { EMAIL_PLUGIN, EMAIL_PLUGIN_NAME } from "./email";
+import { FLAGSHIP_PLUGIN, FLAGSHIP_PLUGIN_NAME } from "./flagship";
 import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
@@ -71,6 +72,7 @@ export const PLUGINS = {
 	[VPC_SERVICES_PLUGIN_NAME]: VPC_SERVICES_PLUGIN,
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
+	[FLAGSHIP_PLUGIN_NAME]: FLAGSHIP_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
@@ -137,6 +139,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof VPC_SERVICES_PLUGIN.options> &
 	z.input<typeof MTLS_PLUGIN.options> &
 	z.input<typeof HELLO_WORLD_PLUGIN.options> &
+	z.input<typeof FLAGSHIP_PLUGIN.options> &
 	z.input<typeof WORKER_LOADER_PLUGIN.options> &
 	z.input<typeof MEDIA_PLUGIN.options> &
 	z.input<typeof VERSION_METADATA_PLUGIN.options>;
@@ -217,6 +220,7 @@ export * from "./vectorize";
 export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
+export * from "./flagship";
 export * from "./worker-loader";
 export * from "./media";
 export * from "./version-metadata";
