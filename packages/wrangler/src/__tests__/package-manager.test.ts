@@ -1,5 +1,4 @@
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager, getPackageManagerName } from "../package-manager";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -102,7 +101,7 @@ describe("getPackageManager()", () => {
 		mockPnpm(false);
 		mockBun(false);
 
-		it("should throw an error", async () => {
+		it("should throw an error", async ({ expect }) => {
 			await expect(() =>
 				getPackageManager()
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -118,7 +117,9 @@ describe("getPackageManager()", () => {
 			mockPnpm(pnpm);
 			mockBun(bun);
 
-			it(`should return the ${expectedPackageManager} package manager`, async () => {
+			it(`should return the ${expectedPackageManager} package manager`, async ({
+				expect,
+			}) => {
 				const actualPackageManager = await getPackageManager();
 				expect(getPackageManagerName(actualPackageManager)).toEqual(
 					expectedPackageManager
