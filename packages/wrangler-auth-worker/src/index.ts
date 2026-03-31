@@ -51,7 +51,8 @@ export default {
 			await stub.fetch(new Request(doUrl));
 
 			// Redirect the browser to the appropriate page
-			const redirectUrl = error ? CONSENT_DENIED_URL : CONSENT_GRANTED_URL;
+			const redirectUrl =
+				code && !error ? CONSENT_GRANTED_URL : CONSENT_DENIED_URL;
 			return Response.redirect(redirectUrl, 307);
 		}
 
