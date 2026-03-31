@@ -104,12 +104,12 @@ function SidebarItemGroup({
 										<li key={item.id}>
 											<Link
 												className={cn(
-													"group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium no-underline transition-colors",
-													item.isActive
-														? "bg-primary/10 text-primary hover:bg-primary/15"
-														: "text-text hover:bg-surface-tertiary"
+													"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-text no-underline transition-colors hover:bg-surface-tertiary",
+													{
+														"bg-primary/10 font-medium text-primary":
+															item.isActive,
+													}
 												)}
-												onClick={() => setPopoverOpen(false)}
 												params={item.link.params}
 												search={item.link.search}
 												to={item.link.to}
@@ -322,7 +322,7 @@ export function Sidebar({
 						label: db.name as string,
 						link: {
 							params: { databaseId: db.uuid },
-							search: { table: undefined },
+							search: { table: undefined, ...workerSearch },
 							to: "/d1/$databaseId",
 						},
 					}))}
@@ -345,6 +345,7 @@ export function Sidebar({
 							label: className,
 							link: {
 								params: { className },
+								search: workerSearch,
 								to: "/do/$className",
 							},
 						};
@@ -364,6 +365,7 @@ export function Sidebar({
 						label: ns.title,
 						link: {
 							params: { namespaceId: ns.id },
+							search: workerSearch,
 							to: "/kv/$namespaceId",
 						},
 					}))}
@@ -386,6 +388,7 @@ export function Sidebar({
 							label: bucketName,
 							link: {
 								params: { bucketName },
+								search: workerSearch,
 								to: "/r2/$bucketName",
 							},
 						};
