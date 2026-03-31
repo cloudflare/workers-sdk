@@ -166,11 +166,11 @@ const ErrorCard = memo(function ErrorCard({
 }) {
 	return (
 		<LayerCard>
-			<LayerCard.Secondary className="bg-bg-tertiary !px-4 !py-2.5">
+			<LayerCard.Secondary className="bg-bg-tertiary px-4! py-2.5!">
 				<Text bold>{error.name ?? "Error"}</Text>
 			</LayerCard.Secondary>
-			<LayerCard.Primary className="relative !p-0">
-				<pre className="max-h-64 overflow-y-auto px-4 py-3 font-mono text-sm break-words whitespace-pre-wrap text-text-secondary">
+			<LayerCard.Primary className="relative p-0!">
+				<pre className="max-h-64 overflow-y-auto px-4 py-3 font-mono text-sm wrap-break-word whitespace-pre-wrap text-text-secondary">
 					{error.message ?? "Unknown error"}
 				</pre>
 				<div className="absolute top-1.5 right-1.5">
@@ -488,7 +488,7 @@ function InstanceDetailView() {
 
 				{/* Delete confirmation dialog */}
 				<Dialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-					<Dialog size="lg" className="w-[32rem]">
+					<Dialog size="lg" className="w-lg">
 						<div className="border-b border-border px-6 py-4">
 							{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 							<Dialog.Title className="text-lg font-semibold text-text">
@@ -556,7 +556,7 @@ function InstanceDetailView() {
 						}
 					}}
 				>
-					<Dialog size="lg" className="w-[32rem]">
+					<Dialog size="lg" className="w-lg">
 						<div className="border-b border-border px-6 py-4">
 							{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 							<Dialog.Title className="text-lg font-semibold text-text">

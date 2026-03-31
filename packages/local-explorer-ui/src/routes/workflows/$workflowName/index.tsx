@@ -407,7 +407,7 @@ const InstanceRow = memo(function InstanceRow({
 					}
 				}}
 			>
-				<Dialog size="lg" className="w-[32rem]">
+				<Dialog size="lg" className="w-lg">
 					<div className="border-b border-border px-6 py-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Title className="text-lg font-semibold text-text">
@@ -529,7 +529,7 @@ function SettingsTab({
 			</div>
 
 			<Dialog.Root open={confirmOpen} onOpenChange={handleOpenChange}>
-				<Dialog size="lg" className="w-[32rem]">
+				<Dialog size="lg" className="w-lg">
 					<div className="border-b border-border px-6 py-4">
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
 						<Dialog.Title className="text-lg font-semibold text-text">
