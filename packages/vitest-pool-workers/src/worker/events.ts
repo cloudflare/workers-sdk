@@ -247,6 +247,7 @@ class QueueController<Body = unknown> /* MessageBatch */ {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L198
 	readonly queue!: string;
 	readonly messages!: QueueMessage<Body>[];
+	readonly metadata!: MessageBatchMetadata;
 	[kRetryAll] = false;
 	[kAckAll] = false;
 
@@ -263,6 +264,9 @@ class QueueController<Body = unknown> /* MessageBatch */ {
 		const messages = messagesOption.map(
 			(message) => new QueueMessage(kConstructFlag, this, message)
 		);
+		const metadata: MessageBatchMetadata = {
+			metrics: { backlogCount: 0, backlogBytes: 0, oldestMessageTimestamp: 0 },
+		};
 
 		// Match `JSG_READONLY_INSTANCE_PROPERTY` behaviour
 		Object.defineProperties(this, {
@@ -274,6 +278,11 @@ class QueueController<Body = unknown> /* MessageBatch */ {
 			messages: {
 				get() {
 					return messages;
+				},
+			},
+			metadata: {
+				get() {
+					return metadata;
 				},
 			},
 		});

@@ -2,8 +2,7 @@ import path from "node:path";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
-// eslint-disable-next-line no-restricted-imports
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -29,7 +28,7 @@ describe("getEntry()", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("--script index.ts", async () => {
+	it("--script index.ts", async ({ expect }) => {
 		await seed({
 			"index.ts": dedent /* javascript */ `
 							export default {
@@ -51,7 +50,7 @@ describe("getEntry()", () => {
 		});
 	});
 
-	it("--script src/index.ts", async () => {
+	it("--script src/index.ts", async ({ expect }) => {
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
 							export default {
@@ -73,7 +72,7 @@ describe("getEntry()", () => {
 		});
 	});
 
-	it("main = index.ts", async () => {
+	it("main = index.ts", async ({ expect }) => {
 		await seed({
 			"index.ts": dedent /* javascript */ `
 							export default {
@@ -95,7 +94,7 @@ describe("getEntry()", () => {
 		});
 	});
 
-	it("main = src/index.ts", async () => {
+	it("main = src/index.ts", async ({ expect }) => {
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
 							export default {
@@ -117,7 +116,7 @@ describe("getEntry()", () => {
 		});
 	});
 
-	it("main = src/index.ts w/ configPath", async () => {
+	it("main = src/index.ts w/ configPath", async ({ expect }) => {
 		await seed({
 			"other-worker/src/index.ts": dedent /* javascript */ `
 							export default {

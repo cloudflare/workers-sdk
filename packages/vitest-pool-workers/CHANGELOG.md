@@ -1,5 +1,31 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.14.0
+
+### Minor Changes
+
+- [#12858](https://github.com/cloudflare/workers-sdk/pull/12858) [`f05f2da`](https://github.com/cloudflare/workers-sdk/commit/f05f2dac299acd8377954c5816a21c849cb48775) Thanks [@repository](https://github.com/repository)! - Add `disableRetryDelays()` to `WorkflowInstanceModifier` to skip retry backoff delays in tests
+
+  When testing Workflows with retry configurations, the backoff delays between retry attempts of a failing `step.do()` caused real wall-clock waiting (e.g., 35 seconds for 3 retries with 5-second exponential backoff), even when step results were fully mocked. The new `disableRetryDelays()` method eliminates these delays while preserving retry behavior — all attempts still execute, just without waiting between them.
+
+### Patch Changes
+
+- [#13091](https://github.com/cloudflare/workers-sdk/pull/13091) [`6d58f0f`](https://github.com/cloudflare/workers-sdk/commit/6d58f0fc557402821e7602a1174e305a67df3c12) Thanks [@penalosa](https://github.com/penalosa)! - Use today's date for the RTTI compat date query instead of a hardcoded `"2023-12-01"`, so newly added Node.js builtin modules are recognized by the module fallback service.
+
+- [#13070](https://github.com/cloudflare/workers-sdk/pull/13070) [`cdb9c88`](https://github.com/cloudflare/workers-sdk/commit/cdb9c88d11fe7aac0c13ed46c6fd37a8037b7be6) Thanks [@penalosa](https://github.com/penalosa)! - Suppress `CODE_MOVED for unknown code block` log spam from workerd
+
+  These are internal workerd diagnostic messages not relevant to application developers. Miniflare's structured log handler already filters them, but `vitest-pool-workers` uses a custom `handleRuntimeStdio` that bypasses that pipeline. This adds the pattern to the pool's own ignore list.
+
+- [#13069](https://github.com/cloudflare/workers-sdk/pull/13069) [`6d0e329`](https://github.com/cloudflare/workers-sdk/commit/6d0e329cc26b6ac70b30f413168169bc7cc9fff4) Thanks [@penalosa](https://github.com/penalosa)! - fix: suppress `outputGateBroken` stderr noise when testing Workflows
+
+- [#13075](https://github.com/cloudflare/workers-sdk/pull/13075) [`b8df076`](https://github.com/cloudflare/workers-sdk/commit/b8df076a26d73e814b87e7e85bdb850f6e1a1d8c) Thanks [@penalosa](https://github.com/penalosa)! - Support `@voidzero-dev/vite-plus-test` as an alternative to `vitest`
+
+  Users running tests via [Vite+](https://github.com/voidzero-dev/vite-plus) (`@voidzero-dev/vite-plus-test`) with the [recommended pnpm overrides](https://github.com/voidzero-dev/vite-plus/blob/main/packages/test/BUNDLING.md) no longer hit spurious version warnings or `Disallowed operation called within global scope` errors.
+
+- Updated dependencies [[`ffbc268`](https://github.com/cloudflare/workers-sdk/commit/ffbc268520b2c63cbabbdd1c52ff6d8ee64f4ee9), [`9eff028`](https://github.com/cloudflare/workers-sdk/commit/9eff0285cb2e5d94b9d0788dceb855119e596707), [`ed20a9b`](https://github.com/cloudflare/workers-sdk/commit/ed20a9bb090b87496328006a02bdc331cf9f7b97), [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e), [`746858a`](https://github.com/cloudflare/workers-sdk/commit/746858a349c6f322e8a222876671b8ceaadd5bc4), [`9aad27f`](https://github.com/cloudflare/workers-sdk/commit/9aad27f9da34f5723b936b8dcf5c9699c9e1d74c), [`1fc5518`](https://github.com/cloudflare/workers-sdk/commit/1fc5518526bc214b193b6818cef7365fe52a2b42), [`b539dc7`](https://github.com/cloudflare/workers-sdk/commit/b539dc79d8aa727018b5b58d43aa62b3e414b636), [`9282493`](https://github.com/cloudflare/workers-sdk/commit/9282493b11ba07bcadb981c2cfc255e8eb5b9b15), [`a532eea`](https://github.com/cloudflare/workers-sdk/commit/a532eeabfd445e80ce597612da15e3e020ef03c6), [`cd0e971`](https://github.com/cloudflare/workers-sdk/commit/cd0e971c603ef8e9fccfc7861aa71d4f116fc96b), [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe), [`2565b1d`](https://github.com/cloudflare/workers-sdk/commit/2565b1d194bb8e9533d58f629ac3f3c2220c472e)]:
+  - wrangler@4.79.0
+  - miniflare@4.20260329.0
+
 ## 0.13.5
 
 ### Patch Changes

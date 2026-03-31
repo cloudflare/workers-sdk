@@ -8,10 +8,12 @@ import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { logger } from "../../logger";
-import { getInstalledPackageVersion } from "./utils/packages";
+import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 const b = recast.types.builders;
 
@@ -124,12 +126,7 @@ function transformReactRouterConfig(
 	});
 }
 
-function configPropertyName(projectPath: string) {
-	const reactRouterVersion = getInstalledPackageVersion(
-		"react-router",
-		projectPath
-	);
-
+function configPropertyName(reactRouterVersion: string) {
 	if (!reactRouterVersion) {
 		return "v8_viteEnvironmentApi";
 	}
@@ -149,7 +146,7 @@ export class ReactRouter extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const viteEnvironmentKey = configPropertyName(projectPath);
+		const viteEnvironmentKey = configPropertyName(this.frameworkVersion);
 		if (!dryRun) {
 			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
 				dev: true,

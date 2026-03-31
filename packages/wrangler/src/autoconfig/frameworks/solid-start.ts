@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
@@ -6,9 +5,11 @@ import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { usesTypescript } from "../uses-typescript";
-import { getInstalledPackageVersion } from "./utils/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class SolidStart extends Framework {
 	async configure({
@@ -16,7 +17,7 @@ export class SolidStart extends Framework {
 		dryRun,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			const solidStartVersion = getSolidStartVersion(projectPath);
+			const solidStartVersion = this.frameworkVersion;
 
 			if (semiver(solidStartVersion, "2.0.0-alpha") < 0) {
 				updateAppConfigFile(projectPath);
@@ -125,24 +126,4 @@ function updateAppConfigFile(projectPath: string): void {
 			return false;
 		},
 	});
-}
-
-/**
- * Gets the installed version of the "@solidjs/start" package
- *
- * @param projectPath The path of the project
- */
-function getSolidStartVersion(projectPath: string): string {
-	const packageName = "@solidjs/start";
-	const solidStartVersion = getInstalledPackageVersion(
-		packageName,
-		projectPath
-	);
-
-	assert(
-		solidStartVersion,
-		`Unable to discern the version of the \`${packageName}\` package`
-	);
-
-	return solidStartVersion;
 }
