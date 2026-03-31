@@ -278,7 +278,7 @@ export function Sidebar({
 			<a
 				className={cn(
 					"mt-2 box-border flex min-h-16 items-center justify-start gap-2.5 overflow-hidden py-3",
-					collapsed ? "px-4" : "px-6"
+					collapsed ? "px-3" : "px-6"
 				)}
 				href="/cdn-cgi/explorer/"
 			>
