@@ -1,3 +1,4 @@
+import { cn, Popover } from "@cloudflare/kumo";
 import { Select } from "@cloudflare/kumo/primitives/select";
 import {
 	CaretUpDownIcon,
@@ -35,17 +36,92 @@ export function filterVisibleWorkers(
 }
 
 interface WorkerSelectorProps {
+	collapsed?: boolean;
 	workers: LocalExplorerWorker[];
 	selectedWorker: string;
 	onWorkerChange: (workerName: string) => void;
 }
 
 export function WorkerSelector({
+	collapsed = false,
 	workers,
 	selectedWorker,
 	onWorkerChange,
 }: WorkerSelectorProps): JSX.Element {
 	const [open, setOpen] = useState(false);
+
+	// Find the current worker that is hosting this explorer (isSelf = true)
+	const selfWorker = workers.find((w) => w.isSelf);
+
+	// When collapsed, show an icon-only trigger with a popover list (matching sidebar groups)
+	if (collapsed) {
+		return (
+			<div className="flex items-center px-3">
+				<Popover open={open} onOpenChange={setOpen}>
+					<Popover.Trigger
+						aria-label={`Worker: ${selectedWorker}`}
+						className="group flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-tertiary hover:text-text"
+						delay={100}
+						openOnHover={true}
+						title={`Worker: ${selectedWorker}`}
+					>
+						<TerminalIcon className="h-5 w-5" />
+					</Popover.Trigger>
+
+					<Popover.Content
+						align="start"
+						className="min-w-48 p-0 [&_svg[class*='arrow']]:hidden [&>svg]:hidden"
+						side="right"
+						sideOffset={8}
+					>
+						<div className="border-b border-border px-3 py-2">
+							<span className="text-xs font-medium text-text-secondary">
+								Workers
+							</span>
+						</div>
+
+						<ul className="list-none space-y-0.5 p-1.5">
+							{workers.map((worker) => {
+								const isSelected = selectedWorker === worker.name;
+								const Icon = isSelected ? CheckIcon : TerminalIcon;
+
+								return (
+									<li key={worker.name}>
+										<button
+											className={cn(
+												"group flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
+												isSelected
+													? "bg-primary/10 text-primary hover:bg-primary/15"
+													: "text-text hover:bg-surface-tertiary"
+											)}
+											onClick={() => {
+												onWorkerChange(worker.name);
+												setOpen(false);
+											}}
+											type="button"
+										>
+											<Icon
+												className={cn(
+													"h-3.5 w-3.5 shrink-0",
+													isSelected ? "" : "text-text-secondary"
+												)}
+											/>
+											{worker.name}
+											{worker.isSelf && selfWorker && (
+												<span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+													current
+												</span>
+											)}
+										</button>
+									</li>
+								);
+							})}
+						</ul>
+					</Popover.Content>
+				</Popover>
+			</div>
+		);
+	}
 
 	const handleValueChange = (value: string | null): void => {
 		if (value === null) {
@@ -53,9 +129,6 @@ export function WorkerSelector({
 		}
 		onWorkerChange(value);
 	};
-
-	// Find the current worker that is hosting this explorer (isSelf = true)
-	const selfWorker = workers.find((w) => w.isSelf);
 
 	return (
 		<div className="px-4 py-2">

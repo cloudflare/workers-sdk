@@ -276,29 +276,35 @@ export function Sidebar({
 		>
 			{/* Header with logo */}
 			<a
-				className="mt-2 box-border flex min-h-16 items-center gap-2.5 overflow-hidden p-3"
+				className={cn(
+					"mt-2 box-border flex min-h-16 items-center justify-start gap-2.5 overflow-hidden py-3",
+					collapsed ? "px-4" : "px-6"
+				)}
 				href="/cdn-cgi/explorer/"
 			>
 				<CloudflareLogo variant="glyph" className="h-8 w-8 shrink-0" />
-				<div
-					className={cn(
-						"flex flex-col gap-px overflow-hidden transition-[opacity,width] duration-200 ease-out",
-						collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-					)}
-				>
-					<span className="text-sm leading-tight font-semibold whitespace-nowrap text-text">
-						Local Explorer
-					</span>
-					<span className="text-[10px] font-medium tracking-wide whitespace-nowrap text-text-secondary uppercase">
-						Cloudflare DevTools
-					</span>
-				</div>
+				{!collapsed ? (
+					<div
+						className={cn(
+							"flex flex-col gap-px overflow-hidden transition-[opacity,width] duration-200 ease-out",
+							collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+						)}
+					>
+						<span className="text-sm leading-tight font-semibold whitespace-nowrap text-text">
+							Local Explorer
+						</span>
+						<span className="text-[10px] font-medium tracking-wide whitespace-nowrap text-text-secondary uppercase">
+							Cloudflare DevTools
+						</span>
+					</div>
+				) : null}
 			</a>
 
 			{/* Navigation groups */}
-			<nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto py-2">
+			<nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto">
 				{showWorkerSelector && (
 					<WorkerSelector
+						collapsed={collapsed}
 						workers={workers}
 						selectedWorker={selectedWorker}
 						onWorkerChange={onWorkerChange}
