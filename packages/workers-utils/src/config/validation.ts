@@ -5242,21 +5242,22 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		if (previews.limits) {
-			validateOptionalProperty(
-				diagnostics,
-				`${field}.limits`,
-				"cpu_ms",
-				previews.limits.cpu_ms,
-				"number"
-			);
-
-			validateOptionalProperty(
-				diagnostics,
-				`${field}.limits`,
-				"subrequests",
-				previews.limits.subrequests,
-				"number"
-			);
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"cpu_ms",
+					previews.limits.cpu_ms,
+					"number"
+				) && isValid;
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					`${field}.limits`,
+					"subrequests",
+					previews.limits.subrequests,
+					"number"
+				) && isValid;
 		}
 
 		return isValid;
