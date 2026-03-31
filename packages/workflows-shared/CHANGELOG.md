@@ -1,5 +1,21 @@
 # @cloudflare/workflows-shared
 
+## 0.7.2
+
+### Patch Changes
+
+- [#13086](https://github.com/cloudflare/workers-sdk/pull/13086) [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows support to the local explorer UI.
+
+  The local explorer (`/cdn-cgi/explorer/`) now includes a full Workflows dashboard for viewing and managing workflow instances during local development.
+
+  UI features:
+
+  - Workflow instance list with status badges, creation time, action buttons, and pagination
+  - Status summary bar with instance counts per status
+  - Status filter dropdown and search
+  - Instance detail page with step history, params/output cards, error display, and expandable step details
+  - Create instance dialog with optional ID and JSON params
+
 ## 0.7.1
 
 ### Patch Changes
