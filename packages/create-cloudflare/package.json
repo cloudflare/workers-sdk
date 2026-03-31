@@ -72,7 +72,7 @@
 		"indent-string": "^5.0.0",
 		"jsonc-parser": "catalog:default",
 		"magic-string": "^0.30.5",
-		"open": "^8.4.0",
+		"open": "catalog:default",
 		"recast": "^0.23.11",
 		"semver": "^7.7.1",
 		"smol-toml": "catalog:default",
