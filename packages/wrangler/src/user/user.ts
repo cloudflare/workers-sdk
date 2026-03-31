@@ -1190,7 +1190,8 @@ async function refreshToken(): Promise<boolean> {
 			scopes,
 		});
 		return true;
-	} catch {
+	} catch (err) {
+		logger.debug("Failed to refresh token:", err);
 		return false;
 	}
 }

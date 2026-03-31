@@ -21,4 +21,10 @@ export function maybeThrowFriendlyError(error: FetchError) {
 			"Check your email for a verification link, or login to https://dash.cloudflare.com and request a new one."
 		);
 	}
+	if (error.code === 10000) {
+		throw buildDetailedError(
+			"Authentication failed. Your API token or OAuth token may be expired or invalid.",
+			"Please run 'wrangler login' to re-authenticate, or check that your CLOUDFLARE_API_TOKEN is valid."
+		);
+	}
 }

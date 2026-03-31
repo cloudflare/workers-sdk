@@ -220,6 +220,34 @@ describe("throwFetchError", () => {
 			],
 		});
 	});
+
+	it("should throw a friendly error for authentication failures (code 10000)", async ({
+		expect,
+	}) => {
+		msw.use(
+			http.get("*/user", () => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{
+							code: 10000,
+							message: "Authentication error",
+						},
+					])
+				);
+			}),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
+			})
+		);
+		await expect(runWrangler("whoami")).rejects.toMatchObject({
+			text: "Authentication failed. Your API token or OAuth token may be expired or invalid.",
+			notes: [
+				{
+					text: "Please run 'wrangler login' to re-authenticate, or check that your CLOUDFLARE_API_TOKEN is valid.",
+				},
+			],
+		});
+	});
 });
 
 describe("extractAccountTag", () => {
