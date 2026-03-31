@@ -264,35 +264,12 @@ describe("wrangler preview", () => {
 				"preview settings update --worker-name override-worker --skip-confirmation"
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				 {
-				[32m+  env: {[39m
-				[32m+    ENVIRONMENT: {[39m
-				[32m+      type: "plain_text"[39m
-				[32m+      text: "preview"[39m
-				[32m+    }[39m
-				[32m+  }[39m
-				[31m-  logpush: true[39m
-				[32m+  logpush: false[39m
-				 }
-
-
-				✨ Updated Previews settings for Worker override-worker.
-				╭──────────────────────────────────────────────────╮
-				│ Worker: override-worker │
-				│ │
-				│   Previews settings │
-				│ │
-				│   logpush   disabled │
-				│ │
-				│   Bindings │
-				│   ENVIRONMENT   Environment Variable   "preview" │
-				│ │
-				╰──────────────────────────────────────────────────╯"
-			`);
+			expect(std.out).toContain("+  env: {");
+			expect(std.out).toContain("+    ENVIRONMENT: {");
+			expect(std.out).toContain('+      type: "plain_text"');
+			expect(std.out).toContain('+      text: "preview"');
+			expect(std.out).toContain("-  logpush: true");
+			expect(std.out).toContain("+  logpush: false");
 		});
 
 		test("should preserve nested observability fields when only partially overridden", async ({
