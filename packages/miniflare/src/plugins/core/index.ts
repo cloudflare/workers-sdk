@@ -473,7 +473,7 @@ function maybeGetCustomServiceService(
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
 function validateCompatibilityDate(compatibilityDate: string) {
-	if (numericCompare(compatibilityDate, getTodaysCompatDate()) > 0) {
+	if (compatibilityDate > getTodaysCompatDate()) {
 		// If this compatibility date is in the future, throw
 		throw new MiniflareCoreError(
 			"ERR_FUTURE_COMPATIBILITY_DATE",
