@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -23,7 +22,7 @@ describe("containers info", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers info --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -44,7 +43,7 @@ describe("containers info", () => {
 		`);
 	});
 
-	it("should show the correct authentication error", async () => {
+	it("should show the correct authentication error", async ({ expect }) => {
 		const spy = vi.spyOn(user, "getScopes");
 		spy.mockReset();
 		spy.mockImplementationOnce(() => []);
@@ -57,7 +56,9 @@ describe("containers info", () => {
 		);
 	});
 
-	it("should show a single container when given an ID (json)", async () => {
+	it("should show a single container when given an ID (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -108,7 +109,7 @@ describe("containers info", () => {
 		`);
 	});
 
-	it("should error when not given an ID", async () => {
+	it("should error when not given an ID", async ({ expect }) => {
 		await expect(
 			runWrangler("containers info")
 		).rejects.toThrowErrorMatchingInlineSnapshot(

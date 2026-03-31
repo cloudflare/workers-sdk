@@ -1,8 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, describe, expect, it, test, vi } from "vitest";
+import { afterEach, describe, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
@@ -20,7 +19,9 @@ describe("versions secret bulk", () => {
 		clearDialogs();
 	});
 
-	test("should fail secret bulk w/ no pipe or JSON input", async () => {
+	test("should fail secret bulk w/ no pipe or JSON input", async ({
+		expect,
+	}) => {
 		vi.spyOn(readline, "createInterface").mockImplementation(
 			() => null as unknown as Interface
 		);
@@ -41,7 +42,7 @@ describe("versions secret bulk", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 
-	test("uploading secrets from json file", async () => {
+	test("uploading secrets from json file", async ({ expect }) => {
 		await writeFile(
 			"secrets.json",
 			JSON.stringify({
@@ -84,7 +85,7 @@ describe("versions secret bulk", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("uploading secrets from env file", async () => {
+	test("uploading secrets from env file", async ({ expect }) => {
 		await writeFile(
 			".env",
 			"SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3"
@@ -108,7 +109,7 @@ describe("versions secret bulk", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("no wrangler configuration warnings shown", async () => {
+	test("no wrangler configuration warnings shown", async ({ expect }) => {
 		await writeFile("secrets.json", JSON.stringify({ SECRET_1: "secret-1" }));
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
 		mockSetupApiCalls();
@@ -118,7 +119,7 @@ describe("versions secret bulk", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("uploading secrets from stdin", async () => {
+	test("uploading secrets from stdin", async ({ expect }) => {
 		vi.spyOn(readline, "createInterface").mockImplementation(
 			() =>
 				// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -161,7 +162,7 @@ describe("versions secret bulk", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("should error on invalid json file", async () => {
+	test("should error on invalid json file", async ({ expect }) => {
 		await writeFile("secrets.json", "not valid json :(", { encoding: "utf8" });
 
 		await expect(
@@ -171,7 +172,7 @@ describe("versions secret bulk", () => {
 		);
 	});
 
-	test("should error on invalid json stdin", async () => {
+	test("should error on invalid json stdin", async ({ expect }) => {
 		vi.spyOn(readline, "createInterface").mockImplementation(
 			() =>
 				// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -209,7 +210,7 @@ describe("versions secret bulk", () => {
 		`);
 	});
 
-	test("unsafe metadata is provided", async () => {
+	test("unsafe metadata is provided", async ({ expect }) => {
 		writeWranglerConfig({
 			name: "script-name",
 			unsafe: { metadata: { build_options: { stable_id: "foo/bar" } } },
@@ -258,7 +259,9 @@ describe("versions secret bulk", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("unsafe metadata not included if not in wrangler.toml", async () => {
+	test("unsafe metadata not included if not in wrangler.toml", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({
 			name: "script-name",
 		});
@@ -307,7 +310,9 @@ describe("versions secret bulk", () => {
 	});
 
 	describe("multi-env warning", () => {
-		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async ({
+			expect,
+		}) => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -333,7 +338,9 @@ describe("versions secret bulk", () => {
 			`);
 		});
 
-		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
+			expect,
+		}) => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -350,7 +357,9 @@ describe("versions secret bulk", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
+			expect,
+		}) => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
