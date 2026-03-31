@@ -4,6 +4,7 @@ import {
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { parseConfigPlacement } from "../utils/placement";
 import type { Binding, EnvBindings, PreviewDefaults } from "./api";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
@@ -353,12 +354,14 @@ export function assemblePreviewDefaults(config: Config): PreviewDefaults {
 		};
 	}
 
-	if (config.placement?.mode) {
-		previewDefaults.placement = { mode: config.placement.mode };
+	if (config.placement) {
+		previewDefaults.placement = parseConfigPlacement(config);
 	}
 
 	if (previews?.tail_consumers) {
-		previewDefaults.tail_consumers = previews.tail_consumers;
+		previewDefaults.tail_consumers = previews.tail_consumers.map((tc) => ({
+			name: tc.service,
+		}));
 	}
 
 	return previewDefaults;

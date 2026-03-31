@@ -29,6 +29,7 @@ import {
 	visibleLength,
 } from "../utils/box";
 import { getRules } from "../utils/getRules";
+import { parseConfigPlacement } from "../utils/placement";
 import {
 	createPreview,
 	createPreviewDeployment,
@@ -368,8 +369,8 @@ async function assemblePreviewDeploymentSettings(
 	} else if (config.limits !== undefined) {
 		request.limits = config.limits;
 	}
-	if (config.placement?.mode) {
-		request.placement = { mode: config.placement.mode };
+	if (config.placement) {
+		request.placement = parseConfigPlacement(config);
 	}
 
 	const env = extractConfigBindings(config);

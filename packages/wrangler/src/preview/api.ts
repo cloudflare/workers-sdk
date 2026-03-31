@@ -2,9 +2,9 @@ import { fetchResult } from "../cfetch";
 import type {
 	CfWorkerInit,
 	Config,
-	PreviewsConfig,
-	TailConsumer,
-	UserLimits,
+	CfPlacement,
+	CfUserLimits,
+	Observability,
 } from "@cloudflare/workers-utils";
 
 export interface Binding {
@@ -57,10 +57,7 @@ export interface PreviewResource {
 	urls?: string[];
 	worker_name: string;
 	tags?: string[];
-	observability?: {
-		enabled?: boolean;
-		head_sampling_rate?: number;
-	};
+	observability?: Observability;
 	logpush?: boolean;
 	tail_consumers?: Array<{ name: string }>;
 	created_on: string;
@@ -75,8 +72,8 @@ export interface DeploymentResource {
 	urls?: string[];
 	compatibility_date?: string;
 	compatibility_flags?: string[];
-	limits?: UserLimits;
-	placement?: { mode: string };
+	limits?: CfUserLimits;
+	placement?: CfPlacement;
 	env?: EnvBindings;
 	created_on: string;
 }
@@ -103,19 +100,16 @@ export type CreatePreviewDeploymentRequestParams = {
 		"workers/tag"?: string;
 	};
 	migrations?: CfWorkerInit["migrations"];
-	limits?: Config["limits"];
-	placement?: { mode: string };
+	limits?: CfUserLimits;
+	placement?: CfPlacement;
 	env?: EnvBindings;
 };
 
 export type CreatePreviewRequestParams = {
 	name: string;
-	observability?: {
-		enabled?: boolean;
-		head_sampling_rate?: number;
-	};
+	observability?: Observability;
 	logpush?: boolean;
-	tail_consumers?: TailConsumer[];
+	tail_consumers?: Array<{ name: string }>;
 };
 
 export type UpdatePreviewRequestParams = Omit<
@@ -128,14 +122,11 @@ export type PreviewRequestOptions = {
 };
 
 export type PreviewDefaults = {
-	observability?: {
-		enabled?: boolean;
-		head_sampling_rate?: number;
-	};
+	observability?: Observability;
 	logpush?: boolean;
-	limits?: UserLimits;
-	placement?: { mode: string };
-	tail_consumers?: PreviewsConfig["tail_consumers"];
+	limits?: CfUserLimits;
+	placement?: CfPlacement;
+	tail_consumers?: Array<{ name: string }>;
 	env?: EnvBindings;
 };
 
