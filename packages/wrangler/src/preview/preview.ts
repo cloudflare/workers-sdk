@@ -736,12 +736,12 @@ export async function handlePreviewCommand(
 
 	const previewIdentifier = previewName;
 	const ignoreDefaults = args.ignoreDefaults;
-	const fallbackTag = !args.tag && shouldUseCIMetadataFallback()
-		? getHeadCommitRef()
-		: undefined;
-	const fallbackMessage = !args.message && shouldUseCIMetadataFallback()
-		? getHeadCommitMessage()
-		: undefined;
+	const fallbackTag =
+		!args.tag && shouldUseCIMetadataFallback() ? getHeadCommitRef() : undefined;
+	const fallbackMessage =
+		!args.message && shouldUseCIMetadataFallback()
+			? getHeadCommitMessage()
+			: undefined;
 	const accountId = await requireAuth(config);
 
 	let existingPreview: PreviewResource | null = null;

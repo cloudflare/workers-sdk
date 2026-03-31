@@ -8589,7 +8589,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should accept previews.stream as a named simple binding", ({ expect }) => {
+			it("should accept previews.stream as a named simple binding", ({
+				expect,
+			}) => {
 				const rawConfig = {
 					previews: {
 						stream: {
@@ -8608,7 +8610,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should accept previews.limits with only subrequests", ({ expect }) => {
+			it("should accept previews.limits with only subrequests", ({
+				expect,
+			}) => {
 				const rawConfig = {
 					previews: {
 						limits: {

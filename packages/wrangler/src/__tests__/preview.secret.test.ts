@@ -41,7 +41,7 @@ describe("wrangler preview", () => {
 							preview_defaults?: {
 								env?: Record<string, { type: string; text?: string }>;
 							};
-				  }
+					  }
 					| undefined;
 				msw.use(
 					http.patch(

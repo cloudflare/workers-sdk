@@ -12,9 +12,8 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { Config, PreviewsConfig } from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process", async () => {
-	const actual = await vi.importActual<typeof childProcess>(
-		"node:child_process"
-	);
+	const actual =
+		await vi.importActual<typeof childProcess>("node:child_process");
 	return {
 		...actual,
 		execSync: vi.fn(actual.execSync),
@@ -1303,7 +1302,8 @@ describe("wrangler preview", () => {
 				http.post(
 					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
 					async ({ request }) => {
-						deploymentRequestBody = (await request.json()) as typeof deploymentRequestBody;
+						deploymentRequestBody =
+							(await request.json()) as typeof deploymentRequestBody;
 						return HttpResponse.json(
 							{
 								success: true,
@@ -1554,13 +1554,13 @@ describe("wrangler preview", () => {
 
 			await runWrangler("preview --env staging --name test-preview");
 
-				expect(createPreviewRequestBody?.observability).toEqual({
-					enabled: false,
-				});
-				expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
-				expect(deploymentRequestBody?.limits).toEqual({ subrequests: 50 });
-				expect(deploymentRequestBody?.env).toMatchObject({
-					STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
+			expect(createPreviewRequestBody?.observability).toEqual({
+				enabled: false,
+			});
+			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
+			expect(deploymentRequestBody?.limits).toEqual({ subrequests: 50 });
+			expect(deploymentRequestBody?.env).toMatchObject({
+				STAGE_PREVIEW: { type: "plain_text", text: "stage-value" },
 				STAGE_QUEUE: { type: "queue", queue_name: "jobs" },
 			});
 			expect(deploymentRequestBody?.env).not.toHaveProperty(
