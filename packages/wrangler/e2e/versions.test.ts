@@ -581,7 +581,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 			);
 
-			validateAssetUploadLogs(upload, ["/asset.txt"]);
+			validateAssetUploadLogs(expect, upload, ["/asset.txt"]);
 		});
 
 		it("should upload version of Worker with assets only", async ({
@@ -609,7 +609,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 			);
 
-			validateAssetUploadLogs(upload, ["/asset.txt"]);
+			validateAssetUploadLogs(expect, upload, ["/asset.txt"]);
 
 			const versionsView = await helper.run(
 				`wrangler versions view ${matchVersionId(upload.stdout)}`

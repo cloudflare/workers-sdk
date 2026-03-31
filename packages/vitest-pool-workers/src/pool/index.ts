@@ -34,8 +34,12 @@ import type {
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
-import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
-import type { Readable } from "node:stream";
+import type {
+	MiniflareOptions,
+	SharedOptions,
+	WorkerOptions,
+	WorkerdStructuredLog,
+} from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
 
 export function structuredSerializableStringify(value: unknown): string {
@@ -75,6 +79,7 @@ const POOL_WORKER_PATH = path.join(DIST_PATH, "worker/index.mjs");
 const symbolizerWarning =
 	"warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.";
 const ignoreMessages = [
+	symbolizerWarning,
 	// Not user actionable
 	// TODO(someday): this is normal operation and really shouldn't error
 	"disconnected: operation canceled",
@@ -83,26 +88,27 @@ const ignoreMessages = [
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
 ];
-function trimSymbolizerWarning(chunk: string): string {
-	return chunk.includes(symbolizerWarning)
-		? chunk.substring(chunk.indexOf("\n") + 1)
-		: chunk;
-}
-function handleRuntimeStdio(stdout: Readable, stderr: Readable): void {
-	stdout.on("data", (chunk: Buffer) => {
-		process.stdout.write(chunk);
-	});
-	stderr.on("data", (chunk: Buffer) => {
-		const str = trimSymbolizerWarning(chunk.toString());
-		if (ignoreMessages.some((message) => str.includes(message))) {
-			return;
-		}
-		process.stderr.write(str);
-	});
+function handleStructuredLogs({ level, message }: WorkerdStructuredLog): void {
+	if (ignoreMessages.some((ignore) => message.includes(ignore))) {
+		return;
+	}
+
+	switch (level) {
+		case "error":
+		case "warn":
+			process.stderr.write(`${message}\n`);
+			break;
+		default:
+			process.stdout.write(`${message}\n`);
+			break;
+	}
 }
 
 export function getRunnerName(project: TestProject, testFile?: string) {
-	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(/[^a-z0-9-]/gi, "_")}`;
+	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(
+		/[^a-z0-9-]/gi,
+		"_"
+	)}`;
 	if (testFile === undefined) {
 		return name;
 	}
@@ -307,7 +313,11 @@ async function buildProjectWorkerOptions(
 		// No compatibility date was provided, so infer the latest supported date
 		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;
 		log.info(
-			`No compatibility date was provided for project ${getRelativeProjectPath(project)}, defaulting to latest supported date ${runnerWorker.compatibilityDate}.`
+			`No compatibility date was provided for project ${getRelativeProjectPath(
+				project
+			)}, defaulting to latest supported date ${
+				runnerWorker.compatibilityDate
+			}.`
 		);
 	}
 
@@ -536,13 +546,19 @@ async function buildProjectWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In project ${getRelativeProjectPath(project)}, \`miniflare.workers[${i}].name\` must be non-empty`
+					`In project ${getRelativeProjectPath(
+						project
+					)}, \`miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
 			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In project ${getRelativeProjectPath(project)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In project ${getRelativeProjectPath(
+						project
+					)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${
+						worker.name
+					}`
 				);
 			}
 
@@ -558,7 +574,7 @@ async function buildProjectWorkerOptions(
 const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
 	verbose: true,
-	handleRuntimeStdio,
+	handleStructuredLogs,
 	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
@@ -647,7 +663,11 @@ export async function getProjectMiniflare(
 	);
 	log.info(
 		`Starting runtime for ${getRelativeProjectPath(project)}` +
-			`${mfOptions.inspectorPort !== undefined ? ` with inspector on port ${mfOptions.inspectorPort}` : ""}` +
+			`${
+				mfOptions.inspectorPort !== undefined
+					? ` with inspector on port ${mfOptions.inspectorPort}`
+					: ""
+			}` +
 			`...`
 	);
 	const mf = new Miniflare(mfOptions);
