@@ -80,6 +80,7 @@ export interface FilterConfig {
 export interface ExtensionsConfig {
 	paths?: Record<string, Record<string, OpenAPIOperation>>;
 	schemas?: Record<string, OpenAPISchema>;
+	addSchemaProperties?: Record<string, Record<string, OpenAPISchema>>;
 }
 export interface EndpointConfig {
 	path: string;
@@ -221,6 +222,19 @@ function filterOpenAPISpec(
 		if (config.extensions.schemas) {
 			filteredSpec.components.schemas ??= {};
 			Object.assign(filteredSpec.components.schemas, config.extensions.schemas);
+		}
+		// Add properties to existing schemas
+		if (config.extensions.addSchemaProperties) {
+			filteredSpec.components.schemas ??= {};
+			for (const [schemaName, properties] of Object.entries(
+				config.extensions.addSchemaProperties
+			)) {
+				const schema = filteredSpec.components.schemas[schemaName];
+				if (schema) {
+					schema.properties ??= {};
+					Object.assign(schema.properties, properties);
+				}
+			}
 		}
 	}
 

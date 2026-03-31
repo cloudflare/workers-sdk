@@ -1241,7 +1241,6 @@
 			"get": {
 				"description": "List all workers in the local dev registry.",
 				"operationId": "local-explorer-list-workers",
-				"parameters": [],
 				"responses": {
 					"200": {
 						"content": {
@@ -2032,6 +2031,11 @@
 						"example": "fe7803fc55b964e09d94666545aab688d360c6bda69ba349ced1e5f28d2fc2c8",
 						"readOnly": true,
 						"type": "string"
+					},
+					"name": {
+						"type": "string",
+						"description": "Name of the Durable Object instance, if created via idFromName().",
+						"readOnly": true
 					}
 				},
 				"type": "object"

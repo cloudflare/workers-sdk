@@ -209,6 +209,16 @@ const config = {
 
 	// Local-only extensions (not in upstream Cloudflare API)
 	extensions: {
+		addSchemaProperties: {
+			workers_object: {
+				name: {
+					type: "string",
+					description:
+						"Name of the Durable Object instance, if created via idFromName().",
+					readOnly: true,
+				},
+			},
+		},
 		paths: {
 			// R2 object operations (not in public API, uses S3 API in production)
 			// Response shapes match stratus dashboard API

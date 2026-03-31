@@ -58,6 +58,7 @@ export const zWorkersCursor = z.string();
 export const zWorkersObject = z.object({
 	hasStoredData: z.boolean().readonly().optional(),
 	id: z.string().readonly().optional(),
+	name: z.string().readonly().optional(),
 });
 
 /**
