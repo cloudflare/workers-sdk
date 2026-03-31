@@ -109,7 +109,6 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 }
 
 const encoder = new TextEncoder();
-const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
 export function createFetchMock() {
 	return new MockAgent();
