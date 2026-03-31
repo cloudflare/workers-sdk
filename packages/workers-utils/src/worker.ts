@@ -430,7 +430,6 @@ export interface CfWorkerInit {
 	 */
 	sourceMaps: CfWorkerSourceMap[] | undefined;
 
-
 	containers: { class_name: string }[] | undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;

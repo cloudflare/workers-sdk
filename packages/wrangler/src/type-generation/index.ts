@@ -1819,10 +1819,10 @@ function collectCoreBindings(
 			);
 		}
 
-		for (const [index, fs] of (env.flagship ?? []).entries()) {
-			if (!fs.binding) {
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
 				throwMissingBindingError({
-					binding: fs,
+					binding: flagshipBinding,
 					bindingType: "flagship",
 					configPath: args.config,
 					envName,
@@ -1831,7 +1831,7 @@ function collectCoreBindings(
 				});
 			}
 
-			addBinding(fs.binding, "Flags", "flagship", envName);
+			addBinding(flagshipBinding.binding, "Flags", "flagship", envName);
 		}
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
@@ -2745,10 +2745,10 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
-		for (const [index, fs] of (env.flagship ?? []).entries()) {
-			if (!fs.binding) {
+		for (const [index, flagshipBinding] of (env.flagship ?? []).entries()) {
+			if (!flagshipBinding.binding) {
 				throwMissingBindingError({
-					binding: fs,
+					binding: flagshipBinding,
 					bindingType: "flagship",
 					configPath: args.config,
 					envName,
@@ -2759,7 +2759,7 @@ function collectCoreBindingsPerEnvironment(
 
 			bindings.push({
 				bindingCategory: "flagship",
-				name: fs.binding,
+				name: flagshipBinding.binding,
 				type: "Flags",
 			});
 		}
