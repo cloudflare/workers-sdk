@@ -138,6 +138,47 @@ describe("wrangler-auth-worker", () => {
 			expect(resp.status).toBe(400);
 		});
 
+		it("should redirect to consent-denied page when callback has neither code nor error", async ({
+			expect,
+		}) => {
+			const state = "test-cb-malformed-" + Date.now();
+
+			// Connect WebSocket
+			const wsResp = await exports.default.fetch(
+				`https://auth.devprod.cloudflare.dev/session/${state}`,
+				{ headers: { Upgrade: "websocket" } }
+			);
+			expect(wsResp.status).toBe(101);
+			expect(wsResp.webSocket).toBeDefined();
+			const ws = wsResp.webSocket;
+			ws?.accept();
+
+			// Collect messages
+			const messages: string[] = [];
+			ws?.addEventListener("message", (event: MessageEvent) => {
+				messages.push(typeof event.data === "string" ? event.data : "");
+			});
+
+			// Trigger callback with neither code nor error (malformed redirect)
+			const callbackResp = await exports.default.fetch(
+				`https://auth.devprod.cloudflare.dev/callback?state=${state}`,
+				{ redirect: "manual" }
+			);
+
+			// Should redirect to consent-DENIED page (not granted)
+			expect(callbackResp.status).toBe(307);
+			expect(callbackResp.headers.get("Location")).toBe(
+				"https://welcome.developers.workers.dev/wrangler-oauth-consent-denied"
+			);
+
+			// Wait a tick for the message to be delivered
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// DO should have sent missing_code error over WebSocket
+			expect(messages.length).toBe(1);
+			expect(JSON.parse(messages[0])).toEqual({ error: "missing_code" });
+		});
+
 		it("should still redirect even when no WebSocket is connected", async ({
 			expect,
 		}) => {
