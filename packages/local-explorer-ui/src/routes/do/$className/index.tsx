@@ -155,6 +155,7 @@ function NamespaceView() {
 							<Table>
 								<Table.Header>
 									<Table.Row>
+										<Table.Head>Name</Table.Head>
 										<Table.Head>Object ID</Table.Head>
 										<Table.Head />
 									</Table.Row>
@@ -163,6 +164,9 @@ function NamespaceView() {
 									{objects.map((obj) => (
 										<Table.Row key={obj.id}>
 											<Table.Cell className="font-mono text-xs">
+												{obj.name ?? "—"}
+											</Table.Cell>
+											<Table.Cell className="font-mono text-xs text-text-secondary">
 												{obj.id}
 											</Table.Cell>
 											<Table.Cell className="text-right">
