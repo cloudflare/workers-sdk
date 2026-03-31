@@ -1,7 +1,7 @@
 import { Button } from "@cloudflare/kumo";
 import { Link, type ErrorComponentProps } from "@tanstack/react-router";
 
-export function RouteError(_props: ErrorComponentProps): JSX.Element {
+export function ResourceNotFound(_props: ErrorComponentProps): JSX.Element {
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center text-text-secondary">
 			<h2 className="text-3xl font-bold text-text">Resource not found</h2>
