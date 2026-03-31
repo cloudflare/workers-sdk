@@ -135,6 +135,7 @@ export function printBindings(
 		"unsafe_hello_world",
 		bindings
 	);
+	const flagship = extractBindingsOfType("flagship", bindings);
 	const media = extractBindingsOfType("media", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 
@@ -436,6 +437,19 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("unsafe_hello_world"),
 					value: enable_timer ? `Timer enabled` : `Timer disabled`,
 					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (flagship.length > 0) {
+		output.push(
+			...flagship.map(({ binding, app_id }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("flagship"),
+					value: app_id,
+					mode: getMode({ isSimulatedLocally: false }),
 				};
 			})
 		);

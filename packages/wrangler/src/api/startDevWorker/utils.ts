@@ -355,6 +355,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "flagship": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "flagship", ...x };
+				}
+				break;
+			}
 			case "ratelimits": {
 				for (const { name, ...x } of info) {
 					output[name] = { type: "ratelimit", ...x };
