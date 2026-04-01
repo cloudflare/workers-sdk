@@ -60,7 +60,14 @@ async function createTestProject() {
 	const workspaceYamlPath = path.join(projectPath, "pnpm-workspace.yaml");
 	await fs.writeFile(
 		workspaceYamlPath,
-		["allowBuilds:", "  esbuild: true", "  workerd: true", ""].join("\n")
+		[
+			"# Packages are installed from a mock registry where publish age is 0.",
+			"minimumReleaseAge: 0",
+			"allowBuilds:",
+			"  esbuild: true",
+			"  workerd: true",
+			"",
+		].join("\n")
 	);
 	return projectPath;
 }
