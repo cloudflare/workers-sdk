@@ -20,7 +20,22 @@ export type ZoneNameRoute = {
 	zone_name: string;
 	custom_domain?: boolean;
 };
-export type CustomDomainRoute = { pattern: string; custom_domain: boolean };
+export type CustomDomainRoute = {
+	pattern: string;
+	custom_domain: boolean;
+	/**
+	 * Whether this custom domain serves production traffic.
+	 *
+	 * @default true
+	 */
+	production_enabled?: boolean;
+	/**
+	 * Whether this custom domain serves preview traffic.
+	 *
+	 * @default false
+	 */
+	previews_enabled?: boolean;
+};
 export type Route =
 	| SimpleRoute
 	| ZoneIdRoute

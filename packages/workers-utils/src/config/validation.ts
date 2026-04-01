@@ -980,8 +980,6 @@ function isValidRouteValue(item: unknown): boolean {
 			return false;
 		}
 
-		const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
-
 		const hasZoneId =
 			hasProperty(item, "zone_id") && typeof item.zone_id === "string";
 		const hasZoneName =
@@ -989,13 +987,34 @@ function isValidRouteValue(item: unknown): boolean {
 		const hasCustomDomainFlag =
 			hasProperty(item, "custom_domain") &&
 			typeof item.custom_domain === "boolean";
+		const hasProductionEnabled =
+			hasProperty(item, "production_enabled") &&
+			typeof item.production_enabled === "boolean";
+		const hasPreviewsEnabled =
+			hasProperty(item, "previews_enabled") &&
+			typeof item.previews_enabled === "boolean";
 
-		if (otherKeys === 2 && hasCustomDomainFlag && (hasZoneId || hasZoneName)) {
-			return true;
-		} else if (
-			otherKeys === 1 &&
-			(hasZoneId || hasZoneName || hasCustomDomainFlag)
-		) {
+		const recognizedKeys = [
+			hasZoneId,
+			hasZoneName,
+			hasCustomDomainFlag,
+			hasProductionEnabled,
+			hasPreviewsEnabled,
+		].filter(Boolean).length;
+		const otherKeys = Object.keys(item).length - 1; // minus one to subtract "pattern"
+
+		// All keys must be recognized
+		if (recognizedKeys !== otherKeys) {
+			return false;
+		}
+
+		// production_enabled and previews_enabled are only valid on custom domain routes
+		if ((hasProductionEnabled || hasPreviewsEnabled) && !hasCustomDomainFlag) {
+			return false;
+		}
+
+		// Must have at least one of: zone_id, zone_name, or custom_domain
+		if (hasZoneId || hasZoneName || hasCustomDomainFlag) {
 			return true;
 		}
 	}
@@ -1046,7 +1065,7 @@ function mutateEmptyStringRouteValue(
 const isRoute: ValidatorFn = (diagnostics, field, value) => {
 	if (value !== undefined && !isValidRouteValue(value)) {
 		diagnostics.errors.push(
-			`Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name }, but got ${JSON.stringify(
+			`Expected "${field}" to be either a string, or an object with shape { pattern, custom_domain, zone_id | zone_name, production_enabled, previews_enabled }, but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -1076,7 +1095,7 @@ const isRouteArray: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (invalidRoutes.length > 0) {
 		diagnostics.errors.push(
-			`Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name }, but these weren't valid: ${JSON.stringify(
+			`Expected "${field}" to be an array of either strings or objects with the shape { pattern, custom_domain, zone_id | zone_name, production_enabled, previews_enabled }, but these weren't valid: ${JSON.stringify(
 				invalidRoutes,
 				null,
 				2
