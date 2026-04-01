@@ -242,6 +242,12 @@ export interface CfAISearch {
 	remote?: boolean;
 }
 
+export interface CfAgentMemory {
+	binding: string;
+	namespace: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
+}
+
 export interface CfSecretsStoreSecrets {
 	binding: string;
 	store_id: string;
