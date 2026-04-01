@@ -78,6 +78,7 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
+	kv_namespace?: string;
 	remote?: boolean;
 	raw?: boolean;
 }
@@ -268,7 +269,8 @@ export interface CfRateLimit {
 
 export interface CfHyperdrive {
 	binding: string;
-	id: string;
+	id?: string;
+	hyperdrive_name?: string;
 	localConnectionString?: string;
 }
 
@@ -314,7 +316,8 @@ export interface CfDispatchNamespace {
 
 export interface CfMTlsCertificate {
 	binding: string;
-	certificate_id: string;
+	certificate_id?: string;
+	certificate_name?: string;
 	remote?: boolean;
 }
 

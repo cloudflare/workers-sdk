@@ -3617,7 +3617,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// KV bindings must have a binding and id.
+	// KV bindings must have a binding and either id or title.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
@@ -3632,6 +3632,22 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "kv_namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "kv_namespace" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasProperty(value, "id") && hasProperty(value, "kv_namespace")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either "id" or "kv_namespace", but not both. Got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -3652,6 +3668,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
+		"kv_namespace",
 		"preview_id",
 		"remote",
 	]);
@@ -4051,7 +4068,7 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// Hyperdrive bindings must have a binding and a project.
+	// Hyperdrive bindings must have a binding and either id or hyperdrive_name.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
@@ -4060,9 +4077,35 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRequiredProperty(value, "id", "string")) {
+	const hasId = hasProperty(value, "id");
+	const hasConfigName = hasProperty(value, "hyperdrive_name");
+	if (!hasId && !hasConfigName) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a "id" field but got ${JSON.stringify(
+			`"${field}" bindings must have either an "id" or "hyperdrive_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasId && hasConfigName) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either "id" or "hyperdrive_name", but not both. Got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasId && !isOptionalProperty(value, "id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasConfigName && !isOptionalProperty(value, "hyperdrive_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "hyperdrive_name" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4072,6 +4115,7 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
+		"hyperdrive_name",
 		"localConnectionString",
 	]);
 
@@ -4511,12 +4555,42 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+	const hasCertId = hasProperty(value, "certificate_id");
+	const hasCertName = hasProperty(value, "certificate_name");
+	if (!hasCertId && !hasCertName) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "certificate_id" or "certificate_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (hasCertId && hasCertName) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either "certificate_id" or "certificate_name", but not both. Got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 	if (
-		!isRequiredProperty(value, "certificate_id", "string") ||
-		(value as { certificate_id: string }).certificate_id.length === 0
+		hasCertId &&
+		(!isOptionalProperty(value, "certificate_id", "string") ||
+			(value as { certificate_id: string }).certificate_id.length === 0)
 	) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "certificate_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		hasCertName &&
+		!isOptionalProperty(value, "certificate_name", "string")
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "certificate_name" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -4526,6 +4600,7 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
+		"certificate_name",
 		"remote",
 	]);
 

@@ -222,11 +222,11 @@ export function printBindings(
 
 	if (kv_namespaces.length > 0) {
 		output.push(
-			...kv_namespaces.map(({ binding, id, remote }) => {
+			...kv_namespaces.map(({ binding, id, kv_namespace, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("kv_namespace"),
-					value: id,
+					value: kv_namespace ?? id,
 					mode: getMode({
 						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
@@ -354,11 +354,11 @@ export function printBindings(
 
 	if (hyperdrive.length > 0) {
 		output.push(
-			...hyperdrive.map(({ binding, id }) => {
+			...hyperdrive.map(({ binding, id, hyperdrive_name }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("hyperdrive"),
-					value: id,
+					value: hyperdrive_name ?? id,
 					mode: getMode({ isSimulatedLocally: true }),
 				};
 			})
@@ -729,11 +729,11 @@ export function printBindings(
 
 	if (mtls_certificates.length > 0) {
 		output.push(
-			...mtls_certificates.map(({ binding, certificate_id, remote }) => {
+			...mtls_certificates.map(({ binding, certificate_id, certificate_name, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("mtls_certificate"),
-					value: certificate_id,
+					value: certificate_name ?? certificate_id,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,

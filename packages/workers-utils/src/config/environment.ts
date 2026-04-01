@@ -812,8 +812,10 @@ export interface EnvironmentNonInheritable {
 	kv_namespaces: {
 		/** The binding name used to refer to the KV Namespace */
 		binding: string;
-		/** The ID of the KV namespace */
+		/** The ID of the KV namespace. Mutually exclusive with `kv_namespace`. */
 		id?: string;
+		/** The name of the KV namespace. Wrangler will look up the id automatically. Mutually exclusive with `id`. */
+		kv_namespace?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
 		/** Whether the KV namespace should be remote or not in local development */
@@ -1028,8 +1030,10 @@ export interface EnvironmentNonInheritable {
 	hyperdrive: {
 		/** The binding name used to refer to the project in the Worker. */
 		binding: string;
-		/** The id of the database. */
-		id: string;
+		/** The id of the Hyperdrive config. Mutually exclusive with `hyperdrive_name`. */
+		id?: string;
+		/** The name of the Hyperdrive config. Wrangler will look up the id automatically. Mutually exclusive with `id`. */
+		hyperdrive_name?: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
 	}[];
@@ -1244,8 +1248,10 @@ export interface EnvironmentNonInheritable {
 	mtls_certificates: {
 		/** The binding name used to refer to the certificate in the Worker */
 		binding: string;
-		/** The uuid of the uploaded mTLS certificate */
-		certificate_id: string;
+		/** The uuid of the uploaded mTLS certificate. Mutually exclusive with `certificate_name`. */
+		certificate_id?: string;
+		/** The name of the uploaded mTLS certificate. Wrangler will look up the certificate_id automatically. Mutually exclusive with `certificate_id`. */
+		certificate_name?: string;
 		/** Whether the mtls fetcher should be remote or not in local development */
 		remote?: boolean;
 	}[];
