@@ -359,7 +359,7 @@ export function printBindings(
 			...agent_memory.map(({ binding, namespace }) => ({
 				name: binding,
 				type: getBindingTypeFriendlyName("agent_memory"),
-				value: namespace ? String(namespace) : undefined,
+				value: namespace ?? undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);

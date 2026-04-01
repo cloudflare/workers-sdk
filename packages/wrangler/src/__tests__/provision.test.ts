@@ -1319,6 +1319,86 @@ describe("resource provisioning", () => {
 		});
 	});
 
+	describe("provisions agent_memory bindings", () => {
+		beforeEach(() => {
+			writeWranglerConfig({
+				main: "index.js",
+				agent_memory: [{ binding: "MEMORY", namespace: "my-agent-namespace" }],
+			});
+		});
+
+		it("should inherit agent_memory binding if found in the deployed settings", async ({
+			expect,
+		}) => {
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "agent_memory",
+							name: "MEMORY",
+							namespace: "my-agent-namespace",
+						},
+					],
+				},
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MEMORY",
+						type: "inherit",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("env.MEMORY (inherited)");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should connect to existing agent_memory namespace if it already exists", async ({
+			expect,
+		}) => {
+			mockGetSettings();
+			mockGetAgentMemoryNamespace(expect, "my-agent-namespace", false);
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MEMORY",
+						type: "agent_memory",
+						namespace: "my-agent-namespace",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("env.MEMORY");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create agent_memory namespace if it does not exist", async ({
+			expect,
+		}) => {
+			mockGetSettings();
+			mockGetAgentMemoryNamespace(expect, "my-agent-namespace", true);
+			mockCreateAgentMemoryNamespace(expect, {
+				assertName: "my-agent-namespace",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "MEMORY",
+						type: "agent_memory",
+						namespace: "my-agent-namespace",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+			expect(std.out).toContain("env.MEMORY");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
 	it("should error if used with a service environment", async ({ expect }) => {
 		writeWorkerSource();
 		writeWranglerConfig({
@@ -1428,6 +1508,60 @@ function mockGetD1Database(
 					);
 				}
 				return HttpResponse.json(createFetchResult(databaseInfo));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockGetAgentMemoryNamespace(
+	expect: ExpectStatic,
+	namespaceName: string,
+	missing: boolean = false
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/agentmemory/namespaces/:namespaceName",
+			async ({ params }) => {
+				expect(params.namespaceName).toEqual(namespaceName);
+				if (missing) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10006, message: "namespace not found" },
+						]),
+						{ status: 404 }
+					);
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						id: "agent-memory-namespace-id",
+						name: namespaceName,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockCreateAgentMemoryNamespace(
+	expect: ExpectStatic,
+	options: { assertName?: string } = {}
+) {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/agentmemory/namespaces",
+			async ({ request }) => {
+				if (options.assertName) {
+					const requestBody = await request.json();
+					expect(requestBody).toEqual({ name: options.assertName });
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						id: "new-agent-memory-namespace-id",
+						name: options.assertName ?? "test-namespace",
+					})
+				);
 			},
 			{ once: true }
 		)
