@@ -347,6 +347,26 @@ export const getLocalExplorerEnabledFromEnv =
 	});
 
 /**
+ * `X_BROWSER_HEADFUL` opens the browser in headful (visible) mode when using the
+ * Browser Rendering API in local development.
+ *
+ * Set to "true" to enable:
+ *
+ * ```sh
+ * X_BROWSER_HEADFUL=true vite dev
+ * ```
+ *
+ * Note: when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank
+ * page and the one created by `browser.newPage()`. This is expected due to how Playwright handles
+ * browser contexts via CDP.
+ */
+export const getBrowserRenderingHeadfulFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_BROWSER_HEADFUL",
+		defaultValue: false,
+	});
+
+/**
  * `CLOUDFLARE_CF_FETCH_ENABLED` controls whether Miniflare fetches the `cf.json` file
  * containing request.cf properties from workers.cloudflare.com.
  *

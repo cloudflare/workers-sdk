@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
+	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -993,6 +994,9 @@ export async function buildMiniflareOptions(
 		config,
 		remoteProxyConnectionString
 	);
+	if (bindingOptions.browserRendering && getBrowserRenderingHeadfulFromEnv()) {
+		bindingOptions.browserRendering.headful = true;
+	}
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);
