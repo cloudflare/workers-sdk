@@ -569,10 +569,6 @@ export type DoRawQueryResult = {
 
 export type LocalExplorerWorker = {
 	/**
-	 * Hostname the worker is running on
-	 */
-	host: string;
-	/**
 	 * Whether this worker is the one hosting the explorer
 	 */
 	isSelf: boolean;
@@ -580,14 +576,6 @@ export type LocalExplorerWorker = {
 	 * Worker name from the dev registry
 	 */
 	name: string;
-	/**
-	 * Port the worker is running on
-	 */
-	port: number;
-	/**
-	 * Protocol (http or https)
-	 */
-	protocol: string;
 };
 
 export type WorkflowsWorkflowDetails = {

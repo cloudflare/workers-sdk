@@ -402,11 +402,8 @@ export const zDoRawQueryResult = z.object({
 });
 
 export const zLocalExplorerWorker = z.object({
-	host: z.string(),
 	isSelf: z.boolean(),
 	name: z.string(),
-	port: z.number().int(),
-	protocol: z.string(),
 });
 
 export const zWorkflowsWorkflowDetails = z.object({

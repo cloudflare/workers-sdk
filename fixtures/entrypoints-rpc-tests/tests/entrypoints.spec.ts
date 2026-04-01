@@ -530,8 +530,6 @@ describe("entrypoints", () => {
 		dev,
 		expect,
 	}) => {
-		// RPC isn't supported in this case yet :(
-
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -577,10 +575,10 @@ describe("entrypoints", () => {
 
 					const { pathname } = new URL(request.url);
 					if (pathname === "/rpc") {
-						const errors = [];
-						try { await stub.property; } catch (e) { errors.push(e); }
-						try { await stub.method(); } catch (e) { errors.push(e); }
-						return Response.json(errors.map(String));
+						const results = [];
+						results.push(await stub.property)
+						results.push(await stub.method())
+						return Response.json(results.map(String));
 					}
 
 					return stub.fetch("https://placeholder:9999/", {
@@ -599,9 +597,16 @@ describe("entrypoints", () => {
 			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
 		});
 
-		const rpcResponse = await fetch(new URL("/rpc", url));
-		const errors = await rpcResponse.json();
-		expect(errors).toMatchInlineSnapshot(`[]`);
+		await waitFor(async () => {
+			const rpcResponse = await fetch(new URL("/rpc", url));
+			const errors = await rpcResponse.json();
+			expect(errors).toMatchInlineSnapshot(`
+				[
+				  "property:ping",
+				  "method:ping",
+				]
+			`);
+		});
 	});
 
 	test("should support binding to Durable Object in same worker", async ({

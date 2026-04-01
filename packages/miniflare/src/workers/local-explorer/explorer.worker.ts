@@ -336,21 +336,12 @@ app.get("/api/workers", async (c) => {
 		const response = await loopback.fetch("http://localhost/core/dev-registry");
 		const registry = await response.json<WorkerRegistry>();
 
-		const workers: LocalExplorerWorker[] = Object.entries(registry).map(
-			([name, def]) => {
-				// loopbackAddress is "host:port" format; protocol is always http in local dev
-				const colonIdx = def.loopbackAddress.lastIndexOf(":");
-				const host = def.loopbackAddress.slice(0, colonIdx);
-				const port = parseInt(def.loopbackAddress.slice(colonIdx + 1), 10);
-				return {
-					host,
-					isSelf: selfSet.has(name),
-					name,
-					port,
-					protocol: "http",
-				};
-			}
-		);
+		const workers: LocalExplorerWorker[] = Object.keys(registry).map((name) => {
+			return {
+				isSelf: selfSet.has(name),
+				name,
+			};
+		});
 
 		return c.json(wrapResponse(workers));
 	} catch (err) {

@@ -2145,8 +2145,8 @@ export class Miniflare {
 				),
 			].join("\n");
 
-			services.set(SERVICE_DEV_REGISTRY_PROXY, {
-				name: SERVICE_DEV_REGISTRY_PROXY,
+			services.set(getUserServiceName(SERVICE_DEV_REGISTRY_PROXY), {
+				name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY),
 				worker: {
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["service_binding_extra_handlers"],
@@ -2185,7 +2185,7 @@ export class Miniflare {
 			sockets.push({
 				name: SOCKET_DEV_REGISTRY,
 				address: "127.0.0.1:0",
-				service: { name: SERVICE_DEV_REGISTRY_PROXY },
+				service: { name: getUserServiceName(SERVICE_DEV_REGISTRY_PROXY) },
 				http: {},
 			});
 		}

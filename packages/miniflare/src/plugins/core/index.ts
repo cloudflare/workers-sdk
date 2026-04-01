@@ -171,13 +171,17 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
-		/** Override the workerd service name used as the default entrypoint in the
-		 * dev registry. When set, the dev registry will route requests for this
-		 * worker's default entrypoint to the specified worker name (wrapped with
-		 * getUserServiceName) instead of the worker's own service or assets proxy.
+		/**
+		 * When sending a request over the dev registry to a Worker's default entrypoint,
+		 * Miniflare _actually_ serves the request from the associated Assets proxy, so
+		 * that Assets can be served in front of the user-worker when configured.
 		 *
-		 * Used by the vite plugin to route through the vite proxy worker, which
-		 * handles both HMR and asset serving in vite dev mode. */
+		 * However, @cloudflare/vite-plugin bypasses Miniflare's native Assets handling
+		 * and does everything itself. We still want service bindings to a Vite app to
+		 * serve Assets in front of the worker when appropriate though, and so we let
+		 * the caller override the default entrypoint and provide their own Assets handling
+		 * user worker.
+		 */
 		unsafeOverrideDefaultEntrypoint: z.string().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
@@ -460,7 +464,6 @@ function maybeGetCustomServiceService(
 		};
 	} else if (
 		typeof service === "object" &&
-		"remoteProxyConnectionString" in service &&
 		service.remoteProxyConnectionString !== undefined
 	) {
 		assert(

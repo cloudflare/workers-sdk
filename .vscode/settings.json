@@ -91,5 +91,8 @@
 			"mode": "auto"
 		}
 	],
-	"editor.formatOnSave": true
+	"editor.formatOnSave": true,
+	"[typescript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode"
+	}
 }

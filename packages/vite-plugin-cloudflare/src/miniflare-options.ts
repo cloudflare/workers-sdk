@@ -384,8 +384,7 @@ export async function getDevMiniflareOptions(
 									],
 									unsafeUseModuleFallbackService: true,
 									unsafeInspectorProxy: inputInspectorPort !== false,
-									// Route dev registry requests through the vite proxy worker,
-									// which handles both HMR module resolution and asset serving.
+									// Route dev registry requests through the vite Assets proxy worker,
 									...(environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName && {
 										unsafeOverrideDefaultEntrypoint: VITE_PROXY_WORKER_NAME,

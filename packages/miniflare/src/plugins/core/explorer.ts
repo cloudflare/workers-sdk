@@ -180,7 +180,7 @@ export function constructExplorerBindingMap(
 	// but not external ones, which we don't want anyway.
 	for (const [serviceName, classMap] of durableObjectClassNames) {
 		// Skip the dev registry proxy service (hosts external DO proxies)
-		if (serviceName === SERVICE_DEV_REGISTRY_PROXY) {
+		if (serviceName === getUserServiceName(SERVICE_DEV_REGISTRY_PROXY)) {
 			continue;
 		}
 		const scriptName = serviceName.replace(/^core:user:/, "");

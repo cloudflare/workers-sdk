@@ -4,4 +4,4 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Use workerd debug port RPC for cross-process service bindings, Durable Objects, and tail workers in multi-worker dev. This enables DO RPC across dev sessions and improves multi-worker dev stability.
+Use `workerd`'s debug port to power cross-process service bindings, Durable Objects, and tail workers via the dev registry. This enables Durable Object RPC via the dev registry, and is an overall stability improvement.

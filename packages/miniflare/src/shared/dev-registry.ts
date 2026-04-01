@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
 	existsSync,
 	mkdirSync,
@@ -69,14 +70,9 @@ export class DevRegistry {
 		this.unregisterWorkers();
 
 		// Only this step is async and could be awaited
-		return (
-			this.watcher
-				?.close()
-				.then(() => {})
-				.finally(() => {
-					this.watcher = undefined;
-				}) ?? Promise.resolve()
-		);
+		return this.watcher?.close().finally(() => {
+			this.watcher = undefined;
+		});
 	}
 
 	private unregisterWorkers() {
@@ -112,9 +108,6 @@ export class DevRegistry {
 		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
-	/** Returns the current registry state by reading from the filesystem.
-	 * This avoids stale-cache races where chokidar events haven't fired yet
-	 * (e.g. during setOptions → #assembleAndUpdateConfig). */
 	public getRegistry(): WorkerRegistry {
 		if (!this.registryPath) {
 			return {};
@@ -179,7 +172,8 @@ export class DevRegistry {
 			return;
 		}
 
-		const registry = getWorkerRegistry(this.registryPath!);
+		assert(this.registryPath);
+		const registry = getWorkerRegistry(this.registryPath);
 		const json = JSON.stringify(registry);
 		if (json === this.previousJSON) {
 			return;
