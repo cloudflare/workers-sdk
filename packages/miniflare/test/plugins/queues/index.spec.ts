@@ -2,7 +2,6 @@ import {
 	DeferredPromise,
 	LogLevel,
 	Miniflare,
-	MiniflareCoreError,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	Response,
@@ -10,11 +9,12 @@ import {
 import { test } from "vitest";
 import { z } from "zod";
 import {
-	LogEntry,
 	MiniflareDurableObjectControlStub,
 	TestLog,
 	useDispose,
 } from "../../test-shared";
+import type { LogEntry } from "../../test-shared";
+import type { MiniflareCoreError } from "miniflare";
 
 const StringArraySchema = z.string().array();
 const MessageArraySchema = z

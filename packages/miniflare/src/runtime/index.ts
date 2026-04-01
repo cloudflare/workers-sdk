@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import childProcess, { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { Abortable, once } from "node:events";
+import { once } from "node:events";
 import path from "node:path";
 import rl from "node:readline";
 import { Readable, Transform } from "node:stream";
@@ -12,11 +12,10 @@ import workerdPath, {
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
-import { Awaitable } from "../workers";
-import {
-	handleStructuredLogsFromStream,
-	StructuredLogsHandler,
-} from "./structured-logs";
+import { handleStructuredLogsFromStream } from "./structured-logs";
+import type { Awaitable } from "../workers";
+import type { StructuredLogsHandler } from "./structured-logs";
+import type { Abortable } from "node:events";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({

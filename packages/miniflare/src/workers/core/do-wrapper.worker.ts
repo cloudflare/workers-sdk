@@ -1,9 +1,9 @@
-import { DurableObject } from "cloudflare:workers";
 import { INTROSPECT_SQLITE_METHOD } from "../../plugins/core/constants";
 import type {
 	DoRawQueryResult,
 	DoSqlWithParams,
 } from "../local-explorer/generated/types.gen";
+import type { DurableObject } from "cloudflare:workers";
 
 interface DurableObjectConstructor<T = Cloudflare.Env> {
 	new (

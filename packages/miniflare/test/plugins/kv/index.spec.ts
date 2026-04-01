@@ -3,30 +3,24 @@ import { Blob } from "node:buffer";
 import fs from "node:fs/promises";
 import path from "node:path";
 import consumers from "node:stream/consumers";
-import {
-	KV_PLUGIN_NAME,
-	MAX_BULK_GET_KEYS,
-	Miniflare,
-	MiniflareOptions,
-	ReplaceWorkersTypes,
-} from "miniflare";
+import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
 	createJunkStream,
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
-	MiniflareTestContext,
 	namespace,
-	Namespaced,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
+import type { MiniflareTestContext, Namespaced } from "../../test-shared";
 import type {
 	KVNamespace,
 	KVNamespaceListOptions,
 	KVNamespaceListResult,
 } from "@cloudflare/workers-types/experimental";
+import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
 function secondsToMillis(seconds: number): number {
 	return seconds * 1000;

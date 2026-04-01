@@ -16,12 +16,11 @@ import {
 	createHTTPReducers,
 	createHTTPRevivers,
 	parseWithReadableStreams,
-	PlatformImpl,
-	ReducersRevivers,
 	stringifyWithStreams,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "./devalue";
+import type { PlatformImpl, ReducersRevivers } from "./devalue";
 
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();

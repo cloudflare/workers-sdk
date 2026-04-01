@@ -1,5 +1,6 @@
 import path from "node:path";
-import { miniflareTest, MiniflareTestContext } from "../../test-shared";
+import { miniflareTest } from "../../test-shared";
+import type { MiniflareTestContext } from "../../test-shared";
 import type { D1Database } from "@cloudflare/workers-types/experimental";
 import type { Miniflare, MiniflareOptions } from "miniflare";
 

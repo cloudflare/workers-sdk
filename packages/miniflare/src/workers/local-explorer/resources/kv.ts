@@ -1,18 +1,18 @@
-import z from "zod";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import {
+import type { AppContext } from "../common";
+import type { Env } from "../explorer.worker";
+import type { WorkersKvNamespace } from "../generated";
+import type {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "../generated/zod.gen";
-import type { AppContext } from "../common";
-import type { Env } from "../explorer.worker";
-import type { WorkersKvNamespace } from "../generated";
+import type z from "zod";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)

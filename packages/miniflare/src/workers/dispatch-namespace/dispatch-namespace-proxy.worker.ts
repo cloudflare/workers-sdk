@@ -1,9 +1,9 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import {
 	makeRemoteProxyStub,
-	RemoteBindingEnv,
 	throwRemoteRequired,
 } from "../shared/remote-bindings-utils";
+import type { RemoteBindingEnv } from "../shared/remote-bindings-utils";
 
 /** Proxy client for dispatch namespace bindings. */
 export default class DispatchNamespaceProxy extends WorkerEntrypoint<RemoteBindingEnv> {

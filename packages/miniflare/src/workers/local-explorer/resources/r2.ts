@@ -1,22 +1,22 @@
-import z from "zod";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import {
-	zR2BucketDeleteObjectsData,
-	zR2BucketGetObjectData,
-	zR2BucketListObjectsData,
-	zR2BucketPutObjectData,
-} from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
 	R2Bucket as R2BucketType,
 	R2ListBucketsResponse,
 } from "../generated";
+import type {
+	zR2BucketDeleteObjectsData,
+	zR2BucketGetObjectData,
+	zR2BucketListObjectsData,
+	zR2BucketPutObjectData,
+} from "../generated/zod.gen";
+import type z from "zod";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)

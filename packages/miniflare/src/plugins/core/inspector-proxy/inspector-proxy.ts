@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import WebSocket from "ws";
-import { Log } from "../../../shared";
 import { isDevToolsEvent } from "./devtools";
+import type { Log } from "../../../shared";
 import type {
 	DevToolsCommandRequests,
 	DevToolsEvent,

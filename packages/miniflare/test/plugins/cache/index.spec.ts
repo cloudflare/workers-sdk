@@ -3,24 +3,26 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import {
 	CACHE_PLUGIN_NAME,
-	HeadersInit,
 	LogLevel,
 	Miniflare,
-	MiniflareOptions,
-	ReplaceWorkersTypes,
 	Request,
-	RequestInit,
 	Response,
 } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
-	MiniflareTestContext,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
+import type { MiniflareTestContext } from "../../test-shared";
 import type { CacheStorage } from "@cloudflare/workers-types/experimental";
+import type {
+	HeadersInit,
+	MiniflareOptions,
+	ReplaceWorkersTypes,
+	RequestInit,
+} from "miniflare";
 
 interface Context extends MiniflareTestContext {
 	caches: ReplaceWorkersTypes<CacheStorage>;

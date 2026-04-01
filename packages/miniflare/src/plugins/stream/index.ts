@@ -8,12 +8,11 @@ import {
 	getPersistPath,
 	getUserBindingServiceName,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 } from "../shared";
 import type { Service } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const StreamSchema = z.object({
 	binding: z.string(),

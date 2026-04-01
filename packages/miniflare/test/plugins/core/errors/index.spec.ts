@@ -2,12 +2,12 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
 import { test } from "vitest";
 import NodeWebSocket from "ws";
 import { useDispose, useTmp } from "../../../test-shared";
+import type Protocol from "devtools-protocol";
 import type { RawSourceMap } from "source-map";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../../fixtures/source-maps");

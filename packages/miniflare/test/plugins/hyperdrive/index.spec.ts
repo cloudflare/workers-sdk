@@ -1,7 +1,8 @@
-import { Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
+import type { MiniflareOptions } from "miniflare";
 
 test("fields match expected", async ({ expect }) => {
 	const connectionString = `postgresql://user:password@localhost:5432/database`;

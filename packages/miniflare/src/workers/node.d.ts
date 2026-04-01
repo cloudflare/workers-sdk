@@ -141,7 +141,7 @@ declare module "node:buffer" {
 }
 
 declare module "node:crypto" {
-	import { Buffer } from "node:buffer";
+	import type { Buffer } from "node:buffer";
 
 	class Hash {
 		update(data: string | ArrayBufferView): Hash;
