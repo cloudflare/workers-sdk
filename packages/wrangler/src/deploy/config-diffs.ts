@@ -24,6 +24,7 @@ const reorderableBindings = {
 	vectorize: true,
 	ai_search_namespaces: true,
 	ai_search: true,
+	agent_memory: true,
 	hyperdrive: true,
 	workflows: true,
 	dispatch_namespaces: true,

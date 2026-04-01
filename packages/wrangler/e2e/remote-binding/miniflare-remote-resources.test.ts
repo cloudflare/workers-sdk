@@ -483,6 +483,34 @@ const testCases: TestCase[] = [
 		getExpectFetchToMatch: (expect) => [expect.stringContaining(`"id"`)],
 	},
 	{
+		name: "Agent Memory",
+		scriptPath: "agent-memory.js",
+		setup: async (helper) => {
+			const namespace = generateResourceName("agent-memory");
+			await helper.run(`wrangler agent-memory namespace create ${namespace}`);
+
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						MEMORY: {
+							type: "agent_memory",
+							namespace,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					agentMemory: {
+						MEMORY: {
+							namespace,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
+		},
+		getExpectFetchToMatch: (expect) => [expect.stringContaining(`"context"`)],
+	},
+	{
 		name: "Pipelines",
 		scriptPath: "pipelines.js",
 		setup: () => ({

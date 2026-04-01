@@ -114,6 +114,19 @@ describe("printBindings — AI Search bindings", () => {
 		expect(output).toContain("(inherited)");
 		expect(output).not.toContain("Symbol(inherit_binding)");
 	});
+
+	it("shows Agent Memory bindings", ({ expect }) => {
+		const output = callPrintBindings({
+			MEMORY: {
+				type: "agent_memory",
+				namespace: "my-agent",
+			},
+		});
+
+		expect(output).toContain("MEMORY");
+		expect(output).toContain("Agent Memory");
+		expect(output).toContain("my-agent");
+	});
 });
 
 describe("printBindings -- Artifacts bindings", () => {

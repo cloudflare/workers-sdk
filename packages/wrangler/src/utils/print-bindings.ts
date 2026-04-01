@@ -88,6 +88,7 @@ export function printBindings(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
+	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
@@ -348,6 +349,17 @@ export function printBindings(
 				name: binding,
 				type: getBindingTypeFriendlyName("ai_search"),
 				value: instance_name ? String(instance_name) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
+	if (agent_memory.length > 0) {
+		output.push(
+			...agent_memory.map(({ binding, namespace }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("agent_memory"),
+				value: namespace ? String(namespace) : undefined,
 				mode: getMode({ isSimulatedLocally: false }),
 			}))
 		);
