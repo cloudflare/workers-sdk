@@ -2,10 +2,9 @@ import assert from "node:assert";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
 import { useDispose } from "./miniflare";
 import { useTmp } from "./storage";
+import type { ExpectStatic } from "vitest";
 
 export const FIXTURES_PATH = path.resolve(
 	require.resolve("miniflare"),
@@ -30,6 +29,7 @@ export const EXPORTED_FIXTURES = path.resolve(
 );
 
 export async function runWorkerTest(
+	expect: ExpectStatic,
 	testName: string,
 	...fixturePath: string[]
 ): Promise<void> {
