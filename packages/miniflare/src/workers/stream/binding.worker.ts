@@ -84,10 +84,11 @@ class StreamScopedCaptionsImpl
 		this.#videoId = videoId;
 	}
 
-	async upload(_language: string, _file: File): Promise<StreamCaption> {
-		throw new BadRequestError(
-			"caption upload via File is not supported in local mode"
-		);
+	async upload(
+		_language: string,
+		_input: ReadableStream
+	): Promise<StreamCaption> {
+		throw new BadRequestError("caption upload is not supported in local mode");
 	}
 
 	async generate(language: string): Promise<StreamCaption> {
@@ -206,14 +207,9 @@ class StreamWatermarksImpl extends RpcTarget implements StreamWatermarks {
 	}
 
 	async generate(
-		fileOrUrl: File | string | ReadableStream<Uint8Array>,
+		streamOrUrl: ReadableStream | string,
 		params: StreamWatermarkCreateParams
 	): Promise<StreamWatermark> {
-		if (fileOrUrl instanceof File) {
-			throw new BadRequestError(
-				"watermark generation via File is not supported in local mode"
-			);
-		}
 		if (
 			params.opacity !== undefined &&
 			(params.opacity < 0 || params.opacity > 1)
@@ -230,12 +226,12 @@ class StreamWatermarksImpl extends RpcTarget implements StreamWatermarks {
 			throw new BadRequestError("scale must be between 0.0 and 1.0");
 		}
 		const stub = getStub(this.#env);
-		if (typeof fileOrUrl === "string") {
-			const row = await stub.createWatermarkFromUrl(fileOrUrl, params);
+		if (typeof streamOrUrl === "string") {
+			const row = await stub.createWatermarkFromUrl(streamOrUrl, params);
 			return rowToStreamWatermark(row);
 		}
 		// ReadableStream — pre-fetched data passed directly
-		const buffer = await new Response(fileOrUrl).arrayBuffer();
+		const buffer = await new Response(streamOrUrl).arrayBuffer();
 		const row = await stub.createWatermarkFromBody(buffer, null, params);
 		return rowToStreamWatermark(row);
 	}
