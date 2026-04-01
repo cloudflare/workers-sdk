@@ -3,7 +3,7 @@ import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -479,7 +479,7 @@ export const deployCommand = createCommand({
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
-				? formatCompatibilityDate(new Date())
+				? getTodaysCompatDate()
 				: args.compatibilityDate,
 			compatibilityFlags: args.compatibilityFlags,
 			vars: cliVars,
@@ -588,7 +588,7 @@ export async function handleMaybeAssetsDeployment(
 
 	// Set compatibility date if not provided
 	if (!args.compatibilityDate) {
-		const compatibilityDate = formatCompatibilityDate(new Date());
+		const compatibilityDate = getTodaysCompatDate();
 		args.compatibilityDate = compatibilityDate;
 		logger.log(
 			`${chalk.bold("No compatibility date found")} Defaulting to today:`,
