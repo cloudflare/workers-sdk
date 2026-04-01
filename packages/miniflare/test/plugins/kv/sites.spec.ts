@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-import { beforeAll, ExpectStatic, test } from "vitest";
+import { beforeAll, type ExpectStatic, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures/sites");

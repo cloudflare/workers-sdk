@@ -12,7 +12,7 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 } from "miniflare";
-import { beforeEach, ExpectStatic, onTestFinished, test } from "vitest";
+import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
