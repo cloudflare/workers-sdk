@@ -84,7 +84,7 @@ export function StudioExportModal({
 				</Dialog.Description>
 
 				<div className="mt-4 flex flex-col gap-4">
-					<div className="rounded-lg border border-border text-base shadow-xs">
+					<div className="rounded-lg border border-kumo-fill text-base shadow-xs">
 						<StudioExportOptionEditor value={option} onChange={setOption} />
 					</div>
 

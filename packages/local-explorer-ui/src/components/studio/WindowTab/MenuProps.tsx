@@ -9,7 +9,7 @@ export function StudioWindowTabMenu({
 }: StudioWindowTabMenuProps): JSX.Element {
 	return (
 		<button
-			className="sticky right-0 flex h-10 cursor-pointer items-center gap-2 border-b border-border px-4 py-3 text-xs font-semibold tracking-wide text-muted hover:bg-border disabled:cursor-not-allowed"
+			className="sticky right-0 flex h-10 cursor-pointer items-center gap-2 border-b border-kumo-fill px-4 py-3 text-xs font-semibold tracking-wide text-kumo-subtle hover:bg-kumo-fill disabled:cursor-not-allowed"
 			onClick={onClick}
 			type="button"
 		>

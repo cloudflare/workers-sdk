@@ -39,8 +39,8 @@ export function StudioWindowTab({
 	);
 
 	return (
-		<div className="flex h-full w-full flex-col">
-			<div className="relative flex shrink-0 grow-0 overflow-x-auto bg-surface-secondary">
+		<div className="flex h-full w-full flex-col bg-kumo-elevated">
+			<div className="relative flex shrink-0 grow-0 overflow-x-auto bg-kumo-elevated">
 				{tabs.map((tab, tabIndex) => {
 					// Handles tab closure. If the closed tab is the currently active one,
 					// automatically select the nearest remaining tab to preserve continuity.
@@ -94,7 +94,7 @@ export function StudioWindowTab({
 
 				{onNewClicked && <StudioWindowTabMenu onClick={onNewClicked} />}
 
-				<div className="h-10 grow border-b border-border" />
+				<div className="h-10 grow border-b border-kumo-fill" />
 			</div>
 
 			<div className="relative grow">

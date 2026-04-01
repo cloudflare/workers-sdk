@@ -170,7 +170,7 @@ export function StudioResultTable({
 						{hasColumnInfo && (
 							<>
 								<DropdownMenu.Separator />
-								<span className="px-3 py-1.5 text-xs font-medium text-muted">
+								<span className="px-3 py-1.5 text-xs font-medium text-kumo-subtle">
 									Constraints and Indexes
 								</span>
 							</>
@@ -304,7 +304,7 @@ function HeaderDropdownMenu({
 				render={(props) => (
 					<div
 						{...props}
-						className="flex h-9 w-full cursor-pointer items-center gap-1 bg-surface px-2 py-1 font-mono"
+						className="flex h-9 w-full cursor-pointer items-center gap-1 bg-kumo-base px-2 py-1 font-mono"
 						onContextMenu={(e): void => {
 							e.preventDefault();
 							e.stopPropagation();
@@ -345,7 +345,7 @@ function DropdownMenuColumnInfo({
 			{icon}
 			<div className="flex flex-col gap-0.5">
 				<div className="font-medium">{title}</div>
-				<div className="text-sm text-muted">{description}</div>
+				<div className="text-sm text-kumo-subtle">{description}</div>
 			</div>
 		</DropdownMenu.Item>
 	);

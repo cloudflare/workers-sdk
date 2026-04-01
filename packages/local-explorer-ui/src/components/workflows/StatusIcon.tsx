@@ -9,34 +9,38 @@ import {
 } from "@phosphor-icons/react";
 
 export function StatusIcon({ status }: { status: string }): JSX.Element {
-	switch (status) {
-		case "complete":
-			return (
-				<Tooltip content="Complete">
-					<CheckCircleIcon size={20} weight="fill" className="text-[#2b7bfb]" />
-				</Tooltip>
-			);
-		case "errored":
-			return (
-				<Tooltip content="Errored">
-					<WarningCircleIcon
-						size={20}
-						weight="fill"
-						className="text-[#fb2b36]"
-					/>
-				</Tooltip>
-			);
+		switch (status) {
+			case "complete":
+				return (
+					<Tooltip content="Complete">
+						<CheckCircleIcon
+							size={20}
+							weight="fill"
+							className="text-kumo-link"
+						/>
+					</Tooltip>
+				);
+			case "errored":
+				return (
+					<Tooltip content="Errored">
+						<WarningCircleIcon
+							size={20}
+							weight="fill"
+							className="text-kumo-danger"
+						/>
+					</Tooltip>
+				);
 		case "terminated":
 			return (
 				<Tooltip content="Terminated">
-					<StopIcon size={20} weight="fill" className="text-text-secondary" />
+					<StopIcon size={20} weight="fill" className="text-kumo-subtle" />
 				</Tooltip>
 			);
 		case "paused":
 		case "waitingForPause":
 			return (
 				<Tooltip content="Paused">
-					<PauseIcon size={20} weight="fill" className="text-text-secondary" />
+					<PauseIcon size={20} weight="fill" className="text-kumo-subtle" />
 				</Tooltip>
 			);
 		case "running":
@@ -51,7 +55,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 					<SpinnerIcon
 						size={20}
 						weight="bold"
-						className="text-text-secondary"
+						className="text-kumo-subtle"
 					/>
 				</Tooltip>
 			);
@@ -61,7 +65,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 					<CircleNotchIcon
 						size={20}
 						weight="bold"
-						className="text-text-secondary"
+						className="text-kumo-subtle"
 					/>
 				</Tooltip>
 			);

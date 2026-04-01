@@ -91,7 +91,7 @@ export const StudioTableDisplayCell = forwardRef<
 	const isAlignRight = align === "right";
 
 	const textBaseStyle = cn(
-		"flex grow text-muted",
+		"flex grow text-kumo-subtle",
 		isAlignRight ? "justify-end" : ""
 	);
 
@@ -115,9 +115,9 @@ export const StudioTableDisplayCell = forwardRef<
 			const firstLine = hasLineBreak ? value.slice(0, newlineIndex) : value;
 
 			return (
-				<span className={cn("flex-1 truncate", "text-text")}>
+				<span className={cn("flex-1 truncate", "text-kumo-default")}>
 					{firstLine}
-					{hasLineBreak && <span className="ml-1 font-sans text-muted">⏎</span>}
+					{hasLineBreak && <span className="ml-1 font-sans text-kumo-subtle">⏎</span>}
 				</span>
 			);
 		}
