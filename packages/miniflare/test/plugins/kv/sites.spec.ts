@@ -3,8 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-// eslint-disable-next-line no-restricted-imports
-import { beforeAll, expect, test } from "vitest";
+import { beforeAll, type ExpectStatic, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures/sites");
@@ -43,10 +42,13 @@ const routeContents = {
 	"/b/b.txt": "b",
 };
 
-async function testGet(opts: {
-	options: { siteInclude?: string[]; siteExclude?: string[] };
-	expectedRoutes: Set<Route>;
-}) {
+async function testGet(
+	expect: ExpectStatic,
+	opts: {
+		options: { siteInclude?: string[]; siteExclude?: string[] };
+		expectedRoutes: Set<Route>;
+	}
+) {
 	const tmp = await useTmp();
 	for (const [route, contents] of Object.entries(routeContents)) {
 		const routePath = path.join(tmp, route === "/" ? "index.html" : route);
@@ -71,19 +73,19 @@ async function testGet(opts: {
 }
 
 test("gets all assets with no filter", async ({ expect }) => {
-	await testGet({
+	await testGet(expect, {
 		options: {},
 		expectedRoutes: new Set<Route>(["/", "/a.txt", "/b/b.txt"]),
 	});
 });
 test("gets included assets with include filter", async ({ expect }) => {
-	await testGet({
+	await testGet(expect, {
 		options: { siteInclude: ["b"] },
 		expectedRoutes: new Set<Route>(["/b/b.txt"]),
 	});
 });
 test("gets all but excluded assets with include filter", async ({ expect }) => {
-	await testGet({
+	await testGet(expect, {
 		options: { siteExclude: ["b"] },
 		expectedRoutes: new Set<Route>(["/", "/a.txt"]),
 	});
@@ -91,14 +93,14 @@ test("gets all but excluded assets with include filter", async ({ expect }) => {
 test("gets included assets with include and exclude filters", async ({
 	expect,
 }) => {
-	await testGet({
+	await testGet(expect, {
 		options: { siteInclude: ["*.txt"], siteExclude: ["b"] },
 		expectedRoutes: new Set<Route>(["/a.txt", "/b/b.txt"]),
 	});
 });
 
 // Tests for checking different types of globs are matched correctly
-async function testMatch(include: string) {
+async function testMatch(expect: ExpectStatic, include: string) {
 	const tmp = await useTmp();
 	const dir = path.join(tmp, "a", "b", "c");
 	await fs.mkdir(dir, { recursive: true });
@@ -115,19 +117,19 @@ async function testMatch(include: string) {
 }
 
 test("matches file name pattern", async ({ expect }) => {
-	await testMatch("test.txt");
+	await testMatch(expect, "test.txt");
 });
 test("matches exact pattern", async ({ expect }) => {
-	await testMatch("a/b/c/test.txt");
+	await testMatch(expect, "a/b/c/test.txt");
 });
 test("matches extension patterns", async ({ expect }) => {
-	await testMatch("*.txt");
+	await testMatch(expect, "*.txt");
 });
 test("matches globstar patterns", async ({ expect }) => {
-	await testMatch("**/*.txt");
+	await testMatch(expect, "**/*.txt");
 });
 test("matches wildcard directory patterns", async ({ expect }) => {
-	await testMatch("a/*/c/*.txt");
+	await testMatch(expect, "a/*/c/*.txt");
 });
 
 test("doesn't cache assets", async ({ expect }) => {
