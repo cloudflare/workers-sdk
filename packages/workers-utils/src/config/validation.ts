@@ -1008,6 +1008,11 @@ function isValidRouteValue(item: unknown): boolean {
 			return false;
 		}
 
+		// zone_id and zone_name are mutually exclusive
+		if (hasZoneId && hasZoneName) {
+			return false;
+		}
+
 		// production_enabled and previews_enabled are only valid on custom domain routes
 		if ((hasProductionEnabled || hasPreviewsEnabled) && !hasCustomDomainFlag) {
 			return false;
