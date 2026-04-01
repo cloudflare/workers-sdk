@@ -1,16 +1,6 @@
 import path from "node:path";
 import dedent from "ts-dedent";
-/* eslint-disable no-restricted-imports */
-import {
-	afterEach,
-	assert,
-	beforeEach,
-	describe,
-	expect,
-	test,
-	vi,
-} from "vitest";
-/* eslint-enable no-restricted-imports */
+import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	importWrangler,
@@ -18,7 +8,7 @@ import {
 } from "./helpers/e2e-wrangler-test";
 import { waitForLong } from "./helpers/wait-for";
 import type { Worker } from "../src/api/startDevWorker";
-import type { MockInstance } from "vitest";
+import type { ExpectStatic, MockInstance } from "vitest";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
 
@@ -92,7 +82,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertValidWorkerAiResponse();
+			await assertValidWorkerAiResponse(expect);
 
 			expect(validAuth).toHaveBeenCalledOnce();
 
@@ -113,7 +103,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertInvalidWorkerAiResponse();
+			await assertInvalidWorkerAiResponse(expect);
 
 			expect(incorrectAuth).toHaveBeenCalledOnce();
 		});
@@ -147,7 +137,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertInvalidWorkerAiResponse();
+			await assertInvalidWorkerAiResponse(expect);
 
 			expect(incorrectAuth).toHaveBeenCalledOnce();
 
@@ -170,12 +160,12 @@ describe("startWorker - auth options", { sequential: true }, () => {
 				},
 			});
 
-			await assertValidWorkerAiResponse();
+			await assertValidWorkerAiResponse(expect);
 
 			expect(validAuth).toHaveBeenCalledOnce();
 		});
 
-		async function assertValidWorkerAiResponse() {
+		async function assertValidWorkerAiResponse(expect: ExpectStatic) {
 			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
@@ -192,7 +182,7 @@ describe("startWorker - auth options", { sequential: true }, () => {
 			);
 		}
 
-		async function assertInvalidWorkerAiResponse() {
+		async function assertInvalidWorkerAiResponse(expect: ExpectStatic) {
 			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 

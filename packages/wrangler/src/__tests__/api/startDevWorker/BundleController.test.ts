@@ -2,8 +2,7 @@ import path from "node:path";
 import { normalizeString, seed } from "@cloudflare/workers-utils/test-helpers";
 import * as esbuild from "esbuild";
 import dedent from "ts-dedent";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
@@ -70,7 +69,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	afterEach(() => controller.teardown());
 
 	describe("happy path bundle + watch", () => {
-		test("single ts source file", async () => {
+		test("single ts source file", async ({ expect }) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
 				export default {
@@ -130,7 +129,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				`);
 		});
 
-		test("multiple ts source files", async () => {
+		test("multiple ts source files", async ({ expect }) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
 				import name from "./other"
@@ -183,7 +182,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				`);
 		});
 
-		test("custom build", async () => {
+		test("custom build", async ({ expect }) => {
 			await seed({
 				"custom_build_dir/index.ts": dedent /* javascript */ `
 				export default {
@@ -257,7 +256,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 		});
 	});
 
-	test("module aliasing", async () => {
+	test("module aliasing", async ({ expect }) => {
 		await seed({
 			"src/index.ts": dedent /* javascript */ `
 				import name from "foo"
@@ -307,9 +306,12 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	});
 
 	describe("switching", () => {
-		test("esbuild -> custom builds", { timeout: 500000 }, async () => {
-			await seed({
-				"src/index.ts": dedent /* javascript */ `
+		test(
+			"esbuild -> custom builds",
+			{ timeout: 500000 },
+			async ({ expect }) => {
+				await seed({
+					"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -317,19 +319,19 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					}
 				} satisfies ExportedHandler
 			`,
-			});
-			const config = configDefaults({
-				entrypoint: path.resolve("src/index.ts"),
-				projectRoot: path.resolve("src"),
-			});
+				});
+				const config = configDefaults({
+					entrypoint: path.resolve("src/index.ts"),
+					projectRoot: path.resolve("src"),
+				});
 
-			const ev = bus.waitFor("bundleComplete", undefined, 500000);
-			controller.onConfigUpdate({
-				type: "configUpdate",
-				config: configDefaults(config),
-			});
-			expect(findSourceFile((await ev).bundle.entrypointSource, "index.ts"))
-				.toMatchInlineSnapshot(`
+				const ev = bus.waitFor("bundleComplete", undefined, 500000);
+				controller.onConfigUpdate({
+					type: "configUpdate",
+					config: configDefaults(config),
+				});
+				expect(findSourceFile((await ev).bundle.entrypointSource, "index.ts"))
+					.toMatchInlineSnapshot(`
 					"// index.ts
 					var index_exports = {};
 					__export(index_exports, {
@@ -343,9 +345,9 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					"
 				`);
 
-			// Now switch to custom builds and see that it rebundles
-			await seed({
-				"custom_build_dir/index.ts": dedent /* javascript */ `
+				// Now switch to custom builds and see that it rebundles
+				await seed({
+					"custom_build_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -353,26 +355,27 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 						}
 					} satisfies ExportedHandler
 				`,
-			});
-			const configCustom = configDefaults({
-				entrypoint: path.resolve("out.ts"),
-				projectRoot: path.resolve("."),
-				build: {
-					custom: {
-						command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
-						watch: "custom_build_dir",
+				});
+				const configCustom = configDefaults({
+					entrypoint: path.resolve("out.ts"),
+					projectRoot: path.resolve("."),
+					build: {
+						custom: {
+							command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
+							watch: "custom_build_dir",
+						},
+						moduleRoot: path.resolve("."),
 					},
-					moduleRoot: path.resolve("."),
-				},
-			});
+				});
 
-			const evCustom = bus.waitFor("bundleComplete", undefined, 500000);
-			controller.onConfigUpdate({
-				type: "configUpdate",
-				config: configCustom,
-			});
-			expect(findSourceFile((await evCustom).bundle.entrypointSource, "out.ts"))
-				.toMatchInlineSnapshot(`
+				const evCustom = bus.waitFor("bundleComplete", undefined, 500000);
+				controller.onConfigUpdate({
+					type: "configUpdate",
+					config: configCustom,
+				});
+				expect(
+					findSourceFile((await evCustom).bundle.entrypointSource, "out.ts")
+				).toMatchInlineSnapshot(`
 					"// out.ts
 					var out_exports = {};
 					__export(out_exports, {
@@ -386,16 +389,16 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					"
 				`);
 
-			await vi.waitFor(
-				async () => {
-					// Make sure we are now watching and processing the custom builds after switching to them
-					const updatedSource = bus.waitFor(
-						"bundleComplete",
-						undefined,
-						500000
-					);
-					await seed({
-						"custom_build_dir/index.ts": dedent /* javascript */ `
+				await vi.waitFor(
+					async () => {
+						// Make sure we are now watching and processing the custom builds after switching to them
+						const updatedSource = bus.waitFor(
+							"bundleComplete",
+							undefined,
+							500000
+						);
+						await seed({
+							"custom_build_dir/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -403,13 +406,13 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 							}
 						}
 					`,
-					});
-					expect(
-						findSourceFile(
-							(await updatedSource).bundle.entrypointSource,
-							"out.ts"
-						)
-					).toMatchInlineSnapshot(`
+						});
+						expect(
+							findSourceFile(
+								(await updatedSource).bundle.entrypointSource,
+								"out.ts"
+							)
+						).toMatchInlineSnapshot(`
 						"// out.ts
 						var out_exports = {};
 						__export(out_exports, {
@@ -422,12 +425,13 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 						};
 						"
 					`);
-				},
-				{ timeout: 5_000, interval: 500 }
-			);
-		});
+					},
+					{ timeout: 5_000, interval: 500 }
+				);
+			}
+		);
 
-		test("custom builds -> esbuild", async () => {
+		test("custom builds -> esbuild", async ({ expect }) => {
 			await seed({
 				"custom_build_dir/index.ts": dedent /* javascript */ `
 					export default {
@@ -537,7 +541,9 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	});
 
 	describe("bundling error messages", () => {
-		test("should recommend alias when a non-Node module cannot be resolved", async () => {
+		test("should recommend alias when a non-Node module cannot be resolved", async ({
+			expect,
+		}) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
 					import foo from 'some-nonexistent-module';
@@ -576,7 +582,9 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 			`);
 		});
 
-		test("should NOT recommend alias for Node built-in modules", async () => {
+		test("should NOT recommend alias for Node built-in modules", async ({
+			expect,
+		}) => {
 			await seed({
 				"src/index.ts": dedent /* javascript */ `
 					import fs from 'fs';

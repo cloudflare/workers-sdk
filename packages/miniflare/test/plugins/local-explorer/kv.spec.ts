@@ -43,7 +43,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceListNamespacesResponse
+				zWorkersKvNamespaceListNamespacesResponse,
+				expect
 			);
 			expect(data.result).toEqual(
 				expect.arrayContaining([
@@ -113,7 +114,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceListANamespaceSKeysResponse
+				zWorkersKvNamespaceListANamespaceSKeysResponse,
+				expect
 			);
 			expect(data.result).toEqual(
 				expect.arrayContaining([
@@ -250,7 +252,9 @@ describe("KV API", () => {
 			await kv.put(specialKey, "special-value");
 
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(specialKey)}`
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(
+					specialKey
+				)}`
 			);
 
 			expect(response.status).toBe(200);
@@ -270,7 +274,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse
+				zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
+				expect
 			);
 			expect(data.success).toBe(true);
 
@@ -327,7 +332,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceDeleteKeyValuePairResponse
+				zWorkersKvNamespaceDeleteKeyValuePairResponse,
+				expect
 			);
 			expect(data.success).toBe(true);
 
@@ -369,7 +375,9 @@ describe("KV API", () => {
 			await kv.put(specialKey, "value");
 
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(specialKey)}`,
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/values/${encodeURIComponent(
+					specialKey
+				)}`,
 				{
 					method: "DELETE",
 				}
@@ -408,7 +416,8 @@ describe("KV API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zWorkersKvNamespaceGetMultipleKeyValuePairsResponse
+				zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
+				expect
 			);
 			expect(data.success).toBe(true);
 			expect(data.result).toMatchObject({

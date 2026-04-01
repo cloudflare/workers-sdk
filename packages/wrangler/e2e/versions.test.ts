@@ -104,39 +104,39 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			├ Fetching latest deployment
-			│
-			├ Your current deployment has 1 version(s):
-			│
-			│ (100%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			├ Fetching deployable versions
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  e2e-upload
-			│              Message:  Upload via e2e test
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message
-			│ Deployment message Deploy via e2e test
-			│
-			├ Deploying 1 version(s)
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 1 version(s):
+				│
+				│ (100%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Fetching versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  e2e-upload
+				│              Message:  Upload via e2e test
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message
+				│ Deployment message Deploy via e2e test
+				│
+				├ Deploying 1 version(s)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
 		it("should list 1 deployment", async ({ expect }) => {
@@ -228,39 +228,39 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			const deploymentsList = await helper.run(`wrangler deployments list`);
 
 			expect(normalize(deploy.stdout)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			├ Fetching latest deployment
-			│
-			├ Your current deployment has 1 version(s):
-			│
-			│ (100%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  e2e-upload
-			│       Message:  Upload via e2e test
-			│
-			├ Fetching deployable versions
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  e2e-upload-AGAIN
-			│              Message:  Upload AGAIN via e2e test
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message
-			│ Deployment message Deploy AGAIN via e2e test
-			│
-			├ Deploying 1 version(s)
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 1 version(s):
+				│
+				│ (100%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  e2e-upload
+				│       Message:  Upload via e2e test
+				│
+				├ Fetching versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  e2e-upload-AGAIN
+				│              Message:  Upload AGAIN via e2e test
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message
+				│ Deployment message Deploy AGAIN via e2e test
+				│
+				├ Deploying 1 version(s)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 
 			// list 2 deployments (+ old deployment)
 			expect(normalize(deploymentsList.stdout)).toMatchInlineSnapshot(`
@@ -581,7 +581,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 			);
 
-			validateAssetUploadLogs(upload, ["/asset.txt"]);
+			validateAssetUploadLogs(expect, upload, ["/asset.txt"]);
 		});
 
 		it("should upload version of Worker with assets only", async ({
@@ -609,7 +609,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				`wrangler versions upload --message "Upload via e2e test" --tag "e2e-upload-assets"`
 			);
 
-			validateAssetUploadLogs(upload, ["/asset.txt"]);
+			validateAssetUploadLogs(expect, upload, ["/asset.txt"]);
 
 			const versionsView = await helper.run(
 				`wrangler versions view ${matchVersionId(upload.stdout)}`

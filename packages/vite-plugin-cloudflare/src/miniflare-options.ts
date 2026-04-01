@@ -7,7 +7,10 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
-import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
+import {
+	getBrowserRenderingHeadfulFromEnv,
+	getLocalExplorerEnabledFromEnv,
+} from "@cloudflare/workers-utils";
 import {
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
@@ -313,6 +316,13 @@ export async function getDevMiniflareOptions(
 								);
 
 							const { externalWorkers, workerOptions } = miniflareWorkerOptions;
+
+							if (
+								workerOptions.browserRendering &&
+								getBrowserRenderingHeadfulFromEnv()
+							) {
+								workerOptions.browserRendering.headful = true;
+							}
 
 							const wrappers = [
 								`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,

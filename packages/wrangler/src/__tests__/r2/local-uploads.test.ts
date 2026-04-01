@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -18,7 +17,9 @@ describe("r2 bucket local-uploads", () => {
 	mockApiToken();
 
 	describe("help", () => {
-		it("should show help when the local-uploads command is passed", async () => {
+		it("should show help when the local-uploads command is passed", async ({
+			expect,
+		}) => {
 			await runWrangler("r2 bucket local-uploads");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -43,7 +44,9 @@ describe("r2 bucket local-uploads", () => {
 	});
 
 	describe("get", () => {
-		it("should display enabled status when local uploads is enabled", async () => {
+		it("should display enabled status when local uploads is enabled", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
@@ -67,7 +70,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should display disabled status when local uploads is disabled", async () => {
+		it("should display disabled status when local uploads is disabled", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.get(
 					"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
@@ -91,7 +96,7 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should error if bucket name is not provided", async () => {
+		it("should error if bucket name is not provided", async ({ expect }) => {
 			await expect(() =>
 				runWrangler("r2 bucket local-uploads get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -103,7 +108,7 @@ describe("r2 bucket local-uploads", () => {
 	describe("enable", () => {
 		const { setIsTTY } = useMockIsTTY();
 
-		it("should enable local uploads with confirmation", async () => {
+		it("should enable local uploads with confirmation", async ({ expect }) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to enable local uploads for bucket 'my-bucket'? Object data will be written to the nearest region first, then asynchronously replicated to the bucket's primary region.`,
@@ -136,7 +141,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should enable local uploads with --force flag without confirmation", async () => {
+		it("should enable local uploads with --force flag without confirmation", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.put(
 					"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
@@ -163,7 +170,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should enable local uploads with -y flag without confirmation", async () => {
+		it("should enable local uploads with -y flag without confirmation", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.put(
 					"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
@@ -190,7 +199,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should cancel enable when confirmation is declined", async () => {
+		it("should cancel enable when confirmation is declined", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to enable local uploads for bucket 'my-bucket'? Object data will be written to the nearest region first, then asynchronously replicated to the bucket's primary region.`,
@@ -207,7 +218,7 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should error if bucket name is not provided", async () => {
+		it("should error if bucket name is not provided", async ({ expect }) => {
 			await expect(() =>
 				runWrangler("r2 bucket local-uploads enable")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -219,7 +230,7 @@ describe("r2 bucket local-uploads", () => {
 	describe("disable", () => {
 		const { setIsTTY } = useMockIsTTY();
 
-		it("should disable local uploads with confirmation", async () => {
+		it("should disable local uploads with confirmation", async ({ expect }) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to disable local uploads for bucket 'my-bucket'? Object data will be written directly to the bucket's primary region.`,
@@ -252,7 +263,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should disable local uploads with --force flag without confirmation", async () => {
+		it("should disable local uploads with --force flag without confirmation", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.put(
 					"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
@@ -279,7 +292,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should disable local uploads with -y flag without confirmation", async () => {
+		it("should disable local uploads with -y flag without confirmation", async ({
+			expect,
+		}) => {
 			msw.use(
 				http.put(
 					"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
@@ -306,7 +321,9 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should cancel disable when confirmation is declined", async () => {
+		it("should cancel disable when confirmation is declined", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: `Are you sure you want to disable local uploads for bucket 'my-bucket'? Object data will be written directly to the bucket's primary region.`,
@@ -323,7 +340,7 @@ describe("r2 bucket local-uploads", () => {
 			`);
 		});
 
-		it("should error if bucket name is not provided", async () => {
+		it("should error if bucket name is not provided", async ({ expect }) => {
 			await expect(() =>
 				runWrangler("r2 bucket local-uploads disable")
 			).rejects.toThrowErrorMatchingInlineSnapshot(

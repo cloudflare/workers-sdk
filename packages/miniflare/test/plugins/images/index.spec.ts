@@ -20,7 +20,8 @@ function createMiniflare(): Miniflare {
 	});
 }
 
-describe("Images hosted CRUD", () => {
+// Tests temporarily skipped pending workerd API change (https://github.com/cloudflare/workerd/pull/6288)
+describe.skip("Images hosted CRUD", () => {
 	test("upload and retrieve metadata", async ({ expect }) => {
 		const mf = createMiniflare();
 		useDispose(mf);

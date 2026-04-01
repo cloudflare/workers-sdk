@@ -7,8 +7,7 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-// eslint-disable-next-line no-restricted-imports
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, it } from "vitest";
 import WebSocket from "ws";
 import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
@@ -138,7 +137,7 @@ describe("LocalRuntimeController", () => {
 	const teardown = useTeardown();
 
 	describe("Core", () => {
-		it("should start Miniflare with module worker", async () => {
+		it("should start Miniflare with module worker", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -293,7 +292,7 @@ describe("LocalRuntimeController", () => {
 			`);
 			}
 		});
-		it("should start Miniflare with service worker", async () => {
+		it("should start Miniflare with service worker", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -389,7 +388,7 @@ describe("LocalRuntimeController", () => {
 			`);
 			}
 		});
-		it("should update the running Miniflare instance", async () => {
+		it("should update the running Miniflare instance", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -441,7 +440,9 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual({ binding: 5, bundle: 5 });
 		});
-		it("should start Miniflare with configured compatibility settings", async () => {
+		it("should start Miniflare with configured compatibility settings", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -506,7 +507,9 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("object");
 		});
-		it("should start inspector on random port and allow debugging", async () => {
+		it("should start inspector on random port and allow debugging", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -576,7 +579,7 @@ describe("LocalRuntimeController", () => {
 	});
 
 	describe("Bindings", () => {
-		it("should expose basic bindings", async () => {
+		it("should expose basic bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -624,7 +627,9 @@ describe("LocalRuntimeController", () => {
 				DATA: { $type: "ArrayBuffer", value: [1, 2, 3] },
 			});
 		});
-		it("should expose WebAssembly module bindings in service workers", async () => {
+		it("should expose WebAssembly module bindings in service workers", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -660,7 +665,7 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("3");
 		});
-		it("should persist cached data", async () => {
+		it("should persist cached data", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -732,7 +737,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("miss");
 		});
-		it("should not persist data when persist is false", async () => {
+		it("should not persist data when persist is false", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -800,7 +805,7 @@ describe("LocalRuntimeController", () => {
 			// Data should be gone since persistence was disabled
 			expect(await res.text()).toBe("miss");
 		});
-		it("should expose KV namespace bindings", async () => {
+		it("should expose KV namespace bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -864,7 +869,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
-		it("should support Secrets Store bindings", async () => {
+		it("should support Secrets Store bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -910,7 +915,7 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe(secretValue);
 		});
-		it("should support Hello World bindings", async () => {
+		it("should support Hello World bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -973,7 +978,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res4.text()).toBe("Not found");
 			expect(res4.status).toBe(404);
 		});
-		it("should support Workers Sites bindings", async () => {
+		it("should support Workers Sites bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1045,7 +1050,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(new URL("/secrets.txt", url));
 			expect(res.status).toBe(404);
 		});
-		it("should expose R2 bucket bindings", async () => {
+		it("should expose R2 bucket bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1110,7 +1115,7 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
-		it("should expose D1 database bindings", async () => {
+		it("should expose D1 database bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1180,7 +1185,9 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual([]);
 		});
-		it("should expose queue producer bindings and consume queue messages", async () => {
+		it("should expose queue producer bindings and consume queue messages", async ({
+			expect,
+		}) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1234,7 +1241,7 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(204);
 			expect(await reportPromise).toEqual(["message"]);
 		});
-		it("should expose hyperdrive bindings - default", async () => {
+		it("should expose hyperdrive bindings - default", async ({ expect }) => {
 			// Start TCP echo server
 			const server = net.createServer((socket) => {
 				socket.on("data", createPostgresEchoHandler(socket));
@@ -1290,7 +1297,9 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
 		});
-		it("should expose hyperdrive bindings - sslmode 'prefer'", async () => {
+		it("should expose hyperdrive bindings - sslmode 'prefer'", async ({
+			expect,
+		}) => {
 			// Start TCP echo server
 			const server = net.createServer((socket) => {
 				socket.on("data", createPostgresEchoHandler(socket));
@@ -1345,7 +1354,9 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
 		});
-		it("should expose hyperdrive bindings - sslmode 'require' fails", async () => {
+		it("should expose hyperdrive bindings - sslmode 'require' fails", async ({
+			expect,
+		}) => {
 			// Start TCP echo server
 			const server = net.createServer((socket) => {
 				socket.on("data", createPostgresEchoHandler(socket));
@@ -1407,7 +1418,7 @@ describe("LocalRuntimeController", () => {
 				"Error: Server does not support SSL, but client requires SSL"
 			);
 		});
-		it("should support Pipeline bindings", async () => {
+		it("should support Pipeline bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
@@ -1448,7 +1459,7 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(url);
 			await expect(res.text()).resolves.toBe("Data sent to env.PIPELINE");
 		});
-		it("should support Images bindings", async () => {
+		it("should support Images bindings", async ({ expect }) => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());

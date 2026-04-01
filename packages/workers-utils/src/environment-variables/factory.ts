@@ -108,6 +108,8 @@ type VariableNames =
 
 	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Open the browser in headful (visible) mode when using the Browser Rendering API in local dev (default: false). */
+	| "X_BROWSER_HEADFUL"
 
 	// ## CI-specific Variables (Internal Use)
 

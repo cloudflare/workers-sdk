@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -23,7 +22,7 @@ describe("cloudchamber list", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber list --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -51,7 +50,7 @@ describe("cloudchamber list", () => {
 		`);
 	});
 
-	it("should list deployments (json)", async () => {
+	it("should list deployments (json)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(

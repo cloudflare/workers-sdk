@@ -41,6 +41,25 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Build prompt with triggering comment
+        id: prompt
+        run: |
+          {
+            DELIMITER=$(openssl rand -hex 16)
+            echo "value<<$DELIMITER"
+            echo "You were invoked by @${{ github.event.comment.user.login }} on ${{ github.event.comment.html_url }}"
+            echo ""
+            echo "Their comment:"
+            echo '```'
+            echo "$COMMENT_BODY"
+            echo '```'
+            echo ""
+            echo "This is your task. Read it carefully and act on it."
+            echo "$DELIMITER"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+
       - name: Run Bonk
         uses: ask-bonk/ask-bonk/github@c39e982defd0114385df54e72012a3fc4333c4d4
         env:
@@ -52,3 +71,4 @@ jobs:
           mentions: "/bonk,@ask-bonk"
           permissions: write
           agent: bonk
+          prompt: ${{ steps.prompt.outputs.value }}

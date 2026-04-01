@@ -40,6 +40,7 @@ import {
 	Response,
 } from "./http";
 import {
+	BROWSER_RENDERING_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -1473,6 +1474,9 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
+				const headful = this.#workerOpts.some(
+					(w) => w[BROWSER_RENDERING_PLUGIN_NAME].browserRendering?.headful
+				);
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
 						// Puppeteer v22.13.1 supported chrome version:
@@ -1484,6 +1488,7 @@ export class Miniflare {
 						browserVersion: "126.0.6478.182",
 						log: this.#log,
 						tmpPath: this.#tmpPath,
+						headful,
 					});
 				browserProcess.nodeProcess.on("exit", () => {
 					this.#browserProcesses.delete(sessionId);
@@ -1495,6 +1500,19 @@ export class Miniflare {
 				assert(sessionId !== null, "Missing sessionId query parameter");
 				const process = this.#browserProcesses.get(sessionId);
 				response = new Response(null, { status: process ? 200 : 410 });
+			} else if (url.pathname === "/browser/close") {
+				const sessionId = url.searchParams.get("sessionId");
+				assert(sessionId !== null, "Missing sessionId query parameter");
+				const browserProcess = this.#browserProcesses.get(sessionId);
+				if (!browserProcess) {
+					response = new Response("Session not found", { status: 404 });
+				} else {
+					this.#browserProcesses.delete(sessionId);
+					await browserProcess.close().catch(() => {
+						// oh well, process might already be dead
+					});
+					response = new Response(null, { status: 200 });
+				}
 			} else if (url.pathname === "/browser/sessionIds") {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));

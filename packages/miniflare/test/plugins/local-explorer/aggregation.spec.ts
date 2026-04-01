@@ -675,6 +675,11 @@ describe("Same ID across multiple instances with same persistence directories", 
 			},
 		});
 
+		// Wait for instanceA to be ready before starting instanceB to avoid
+		// SQLite "database is locked" errors when both instances race to open
+		// the same persistence file simultaneously.
+		await instanceA.ready;
+
 		instanceB = new Miniflare({
 			name: "worker-b",
 			inspectorPort: 0,
@@ -689,7 +694,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 			},
 		});
 
-		await instanceA.ready;
 		await instanceB.ready;
 
 		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);

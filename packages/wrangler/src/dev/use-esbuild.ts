@@ -198,7 +198,12 @@ export function runBuild(
 			const watching = [path.resolve(entry.moduleRoot)];
 			const watcher = watch(watching, {
 				persistent: true,
-				ignored: [".git", "node_modules"],
+				// Ignore VCS dirs, dependencies, and the .wrangler dir (which
+				// contains miniflare state/cache files written by workerd at
+				// runtime — watching them causes an infinite reload loop).
+				// chokidar v4 normalises paths to forward slashes before
+				// matching, so a regex on path segments works cross-platform.
+				ignored: /[/\\](\.git|node_modules|\.wrangler)([/\\]|$)/,
 			}).on("change", async (_event) => {
 				await updateBundle();
 			});
