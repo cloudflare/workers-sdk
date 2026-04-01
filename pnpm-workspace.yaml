@@ -26,21 +26,6 @@ gitChecks: false
 # See: https://pnpm.io/supply-chain-security
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Don't install packages published less than 7 days ago.
-# Most compromised packages are detected and removed within hours; a 7-day
-# window provides a large safety margin.
-minimumReleaseAge: 10080 # 7 days in minutes
-
-# Cloudflare-owned packages are excluded because we publish and consume them
-# in the same CI pipeline. These are workspace packages so the exclude has no
-# effect during normal pnpm install — it only matters for pnpm dlx in tests.
-minimumReleaseAgeExclude:
-  - "@cloudflare/*"
-  - "create-cloudflare"
-  - "miniflare"
-  - "wrangler"
-  - "workerd"
-
 # Prevent transitive dependencies from pulling code from git repos or tarball
 # URLs. Only direct dependencies may use exotic sources.
 blockExoticSubdeps: true
