@@ -67,7 +67,6 @@
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
-		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
@@ -111,6 +110,7 @@
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
 		"am-i-vibing": "^0.1.0",
+		"blake3-jit": "1.0.0",
 		"capnweb": "catalog:default",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",

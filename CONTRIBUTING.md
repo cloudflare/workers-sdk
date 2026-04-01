@@ -434,9 +434,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Native binary - cannot be bundled
 	"workerd",
 
-	// WASM module that blows up when bundled
-	"blake3-wasm",
-
 	// Must be resolved at runtime when bundling user's worker code
 	"esbuild",
 ];

@@ -3920,9 +3920,6 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
-      blake3-wasm:
-        specifier: 2.1.5
-        version: 2.1.5
       esbuild:
         specifier: catalog:default
         version: 0.27.3
@@ -4051,6 +4048,9 @@ importers:
       am-i-vibing:
         specifier: ^0.1.0
         version: 0.1.0
+      blake3-jit:
+        specifier: 1.0.0
+        version: 1.0.0
       capnweb:
         specifier: catalog:default
         version: 0.5.0
@@ -9308,6 +9308,9 @@ packages:
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
+
+  blake3-jit@1.0.0:
+    resolution: {integrity: sha512-0Ulza5lYejLqATjvLKlNlsEbDGclbN4bbPzAImemeApmnihTf9ERQOQg018hpKw2xbrweT/1WEZ0OEeFkvjhuQ==}
 
   blake3-wasm@2.1.5:
     resolution: {integrity: sha512-F1+K8EbfOZE49dtoPtmxUQrpXaBIl3ICvasLh+nJta0xkz+9kF/7uet9fLnwKqhDrmj6g+6K3Tw9yQPUg2ka5g==}
@@ -20094,6 +20097,8 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.0
     optional: true
+
+  blake3-jit@1.0.0: {}
 
   blake3-wasm@2.1.5: {}
 
