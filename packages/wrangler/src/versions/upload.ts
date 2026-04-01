@@ -869,6 +869,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					err.code === 10021 /* validation error */ &&
 					err.notes.length > 0
 				) {
+					if (
+						/binding .+ of type worker_loader is invalid/.test(
+							err.notes[0].text
+						)
+					) {
+						throw new UserError(
+							"Your Worker uses a dynamic worker loader binding, which is only available on the Workers Paid plan. To use dynamic worker loaders, upgrade your plan at https://dash.cloudflare.com/?to=/:account/workers/plans",
+							{ telemetryMessage: true }
+						);
+					}
+
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.

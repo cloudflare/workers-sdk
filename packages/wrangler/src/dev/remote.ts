@@ -268,6 +268,18 @@ function handleUserFriendlyError(error: unknown, accountId?: string) {
 					return true;
 				}
 
+				if (
+					/binding .+ of type worker_loader is invalid/.test(
+						error.notes[0].text
+					)
+				) {
+					logger.error(
+						"Your Worker uses a dynamic worker loader binding, which is only available on the Workers Paid plan. To use dynamic worker loaders, upgrade your plan at https://dash.cloudflare.com/?to=/:account/workers/plans"
+					);
+
+					return true;
+				}
+
 				return false;
 			}
 
