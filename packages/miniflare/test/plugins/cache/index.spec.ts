@@ -12,8 +12,7 @@ import {
 	RequestInit,
 	Response,
 } from "miniflare";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, expect, onTestFinished, test } from "vitest";
+import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
@@ -271,7 +270,10 @@ test("put overrides existing responses", async ({ expect }) => {
 });
 
 // Note this helper must be used with serial tests to avoid races.
-async function testExpire(opts: { headers: HeadersInit; expectedTtl: number }) {
+async function testExpire(
+	expect: ExpectStatic,
+	opts: { headers: HeadersInit; expectedTtl: number }
+) {
 	const cache = ctx.caches.default;
 	const defaultObject = ctx.defaultObject;
 
@@ -290,7 +292,7 @@ async function testExpire(opts: { headers: HeadersInit; expectedTtl: number }) {
 	expect(res).toBeUndefined();
 }
 test("expires after Expires", async ({ expect }) => {
-	await testExpire({
+	await testExpire(expect, {
 		headers: {
 			Expires: new Date(1_000_000 + 2_000).toUTCString(),
 		},
@@ -298,22 +300,25 @@ test("expires after Expires", async ({ expect }) => {
 	});
 });
 test("expires after Cache-Control's max-age", async ({ expect }) => {
-	await testExpire({
+	await testExpire(expect, {
 		headers: { "Cache-Control": "max-age=1" },
 		expectedTtl: 1000,
 	});
 });
 test("expires after Cache-Control's s-maxage", async ({ expect }) => {
-	await testExpire({
+	await testExpire(expect, {
 		headers: { "Cache-Control": "s-maxage=1, max-age=10" },
 		expectedTtl: 1000,
 	});
 });
 
-async function testIsCached(opts: {
-	headers: Record<string, string>;
-	cached: boolean;
-}) {
+async function testIsCached(
+	expect: ExpectStatic,
+	opts: {
+		headers: Record<string, string>;
+		cached: boolean;
+	}
+) {
 	const cache = ctx.caches.default;
 
 	// Use different key for each invocation of this helper
@@ -332,25 +337,25 @@ async function testIsCached(opts: {
 	expect(res?.status).toBe(opts.cached ? 200 : undefined);
 }
 test("put does not cache with private Cache-Control", async ({ expect }) => {
-	await testIsCached({
+	await testIsCached(expect, {
 		headers: { "Cache-Control": "private" },
 		cached: false,
 	});
 });
 test("put does not cache with no-store Cache-Control", async ({ expect }) => {
-	await testIsCached({
+	await testIsCached(expect, {
 		headers: { "Cache-Control": "no-store" },
 		cached: false,
 	});
 });
 test("put does not cache with no-cache Cache-Control", async ({ expect }) => {
-	await testIsCached({
+	await testIsCached(expect, {
 		headers: { "Cache-Control": "no-cache" },
 		cached: false,
 	});
 });
 test("put does not cache with Set-Cookie", async ({ expect }) => {
-	await testIsCached({
+	await testIsCached(expect, {
 		headers: { "Set-Cookie": "key=value" },
 		cached: false,
 	});
@@ -358,7 +363,7 @@ test("put does not cache with Set-Cookie", async ({ expect }) => {
 test("put caches with Set-Cookie if Cache-Control private=set-cookie", async ({
 	expect,
 }) => {
-	await testIsCached({
+	await testIsCached(expect, {
 		headers: {
 			"Cache-Control": "private=set-cookie",
 			"Set-Cookie": "key=value",
