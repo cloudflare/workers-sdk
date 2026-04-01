@@ -11,9 +11,9 @@ import {
 } from "../../shared/src/run-wrangler-long-lived";
 
 const timeoutAgent = new Agent({
-	connectTimeout: 500,
-	bodyTimeout: 500,
-	headersTimeout: 500,
+	connectTimeout: 2_000,
+	bodyTimeout: 2_000,
+	headersTimeout: 2_000,
 });
 setGlobalDispatcher(timeoutAgent);
 
@@ -34,10 +34,13 @@ export async function seed(root: string, files: Record<string, string>) {
 	}
 }
 
-function waitFor<T>(callback: Parameters<typeof vi.waitFor<T>>[0]) {
+function waitFor<T>(
+	callback: Parameters<typeof vi.waitFor<T>>[0],
+	timeout = 5_000
+) {
 	// The default timeout of `vi.waitFor()` is only 1s, which is a little
 	// short for some of these tests, especially on Windows.
-	return vi.waitFor(callback, { timeout: 5_000, interval: 250 });
+	return vi.waitFor(callback, { timeout, interval: 250 });
 }
 
 const test = baseTest.extend<{
@@ -835,7 +838,7 @@ describe("entrypoints", () => {
 			const response = await fetch(url);
 			const text = await response.text();
 			expect(text).toBe("secure");
-		});
+		}, 10_000);
 	});
 
 	test("should support binding to version of wrangler without entrypoints support over HTTPS", async ({
@@ -887,7 +890,7 @@ describe("entrypoints", () => {
 		await waitFor(async () => {
 			let response = await fetch(url);
 			expect(await response.text()).toBe("Hello from bound!");
-		});
+		}, 10_000);
 	});
 
 	test("should throw if performing RPC with session that hasn't started", async ({

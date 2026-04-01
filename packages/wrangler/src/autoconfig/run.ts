@@ -2,6 +2,10 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+	maybeAppendWranglerToGitIgnoreLikeFile,
+	maybeAppendWranglerToGitIgnore,
+} from "@cloudflare/cli/gitignore";
 import { installWrangler } from "@cloudflare/cli/packages";
 import {
 	FatalError,
@@ -13,17 +17,20 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
-import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
-import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
 } from "./details";
+import {
+	isFrameworkSupported,
+	isKnownFramework,
+	type PackageJsonScriptsOverrides,
+} from "./frameworks";
+import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
 import { getAutoConfigId } from "./telemetry-utils";
 import { usesTypescript } from "./uses-typescript";
-import type { PackageJsonScriptsOverrides } from "./frameworks";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
@@ -75,12 +82,17 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
-		if (!autoConfigDetails.framework.autoConfigSupported) {
-			throw new FatalError(
-				autoConfigDetails.framework.id === "cloudflare-pages"
-					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
-					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		if (isKnownFramework(autoConfigDetails.framework.id)) {
+			const frameworkIsSupported = isFrameworkSupported(
+				autoConfigDetails.framework.id
 			);
+			if (!frameworkIsSupported) {
+				throw new FatalError(
+					autoConfigDetails.framework.id === "cloudflare-pages"
+						? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
+						: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+				);
+			}
 		}
 
 		assert(
@@ -104,6 +116,16 @@ export async function runAutoConfig(
 		const { packageManager } = autoConfigDetails;
 
 		const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
+
+		const frameworkPackageInfo = getFrameworkPackageInfo(
+			autoConfigDetails.framework.id
+		);
+		if (frameworkPackageInfo) {
+			autoConfigDetails.framework.validateFrameworkVersion(
+				autoConfigDetails.projectPath,
+				frameworkPackageInfo
+			);
+		}
 
 		const dryRunConfigurationResults =
 			await autoConfigDetails.framework.configure({
@@ -219,11 +241,13 @@ export async function runAutoConfig(
 			);
 		}
 
-		addWranglerToGitIgnore(autoConfigDetails.projectPath);
+		maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
 		// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
 		if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
-			addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
+			maybeAppendWranglerToGitIgnoreLikeFile(
+				`${autoConfigDetails.projectPath}/.assetsignore`
+			);
 		}
 
 		const buildCommand =

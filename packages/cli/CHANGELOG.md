@@ -1,5 +1,13 @@
 # @cloudflare/cli
 
+## 1.3.0
+
+### Minor Changes
+
+- [#13068](https://github.com/cloudflare/workers-sdk/pull/13068) [`e631a94`](https://github.com/cloudflare/workers-sdk/commit/e631a946466ded834763497d094da9e93d3d3721) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `runCommand` and `quoteShellArgs`, `installPackages` and `installWrangler` utilities to `@cloudflare/cli/command`
+
+  These utilities are now available from `@cloudflare/cli` as dedicated sub-path exports: `runCommand` and `quoteShellArgs` via `@cloudflare/cli/command`, and `installPackages` and `installWrangler` via `@cloudflare/cli/packages`. This makes them reusable across packages in the SDK without duplication.
+
 ## 1.2.1
 
 ### Patch Changes

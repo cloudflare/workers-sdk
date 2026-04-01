@@ -1,5 +1,15 @@
 # workers-playground
 
+## 0.4.3
+
+### Patch Changes
+
+- [#13105](https://github.com/cloudflare/workers-sdk/pull/13105) [`ff41b07`](https://github.com/cloudflare/workers-sdk/commit/ff41b070947de43c1ab6b2e4ff65a960d3d7c974) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: resolve TypeError: createRenderer is not a function when built with Vite 8
+
+  Vite 8 switched its bundler from Rollup to rolldown. The `@cloudflare/style-provider` package ships a hybrid ESM+CJS build (its `es/` directory uses `require()` internally), which rolldown mishandles by generating an anonymous, unreachable module initializer — leaving `createRenderer` as `undefined` at runtime.
+
+  Fixed by aliasing `@cloudflare/style-provider` to its CJS entry (`lib/index.js`) in `vite.config.ts`. Rolldown handles plain CJS correctly via its interop layer.
+
 ## 0.4.2
 
 ### Patch Changes

@@ -1,5 +1,72 @@
 # wrangler
 
+## 4.79.0
+
+### Minor Changes
+
+- [#12868](https://github.com/cloudflare/workers-sdk/pull/12868) [`ffbc268`](https://github.com/cloudflare/workers-sdk/commit/ffbc268520b2c63cbabbdd1c52ff6d8ee64f4ee9) Thanks [@danielgek](https://github.com/danielgek)! - Add `wrangler ai-search` command namespace for managing Cloudflare AI Search instances
+
+  Introduces a CLI surface for the Cloudflare AI Search API (open beta), including:
+
+  - Instance management: `ai-search list`, `create`, `get`, `update`, `delete`
+  - Semantic search: `ai-search search` with repeatable `--filter key=value` flags
+  - Instance stats: `ai-search stats`
+
+  The `create` command uses an interactive wizard to guide configuration. All commands require authentication via `wrangler login`.
+
+- [#13097](https://github.com/cloudflare/workers-sdk/pull/13097) [`cd0e971`](https://github.com/cloudflare/workers-sdk/commit/cd0e971c603ef8e9fccfc7861aa71d4f116fc96b) Thanks [@pombosilva](https://github.com/pombosilva)! - Add `--local` flag to Workflows commands for interacting with local dev
+
+  All Workflows CLI commands now support a `--local` flag that targets a running `wrangler dev` session instead of the Cloudflare production API. This uses the `/cdn-cgi/explorer/api/workflows` endpoints served by the local dev server.
+
+  ```
+  wrangler workflows list --local
+  wrangler workflows trigger my-workflow '{"key":"value"}' --local
+  wrangler workflows instances describe my-workflow latest --local
+  wrangler workflows instances pause my-workflow <id> --local --port 9000
+  ```
+
+  By default, commands continue to hit remote (production). Pass `--local` to opt in, and optionally `--port` to specify a custom dev server port (defaults to 8787).
+
+### Patch Changes
+
+- [#13050](https://github.com/cloudflare/workers-sdk/pull/13050) [`ed20a9b`](https://github.com/cloudflare/workers-sdk/commit/ed20a9bb090b87496328006a02bdc331cf9f7b97) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add minimum and maximum version checks for frameworks during auto-configuration
+
+  When Wrangler automatically configures a project, it now validates the installed version of the detected framework before proceeding:
+
+  - If the version is below the minimum known-good version, the command exits with an error asking the user to upgrade the framework.
+  - If the version is above the maximum known major version, a warning is emitted to let the user know the framework version has not been officially tested with this feature, and the command continues.
+
+- [#13111](https://github.com/cloudflare/workers-sdk/pull/13111) [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260317.1 | 1.20260329.1 |
+
+- [#13079](https://github.com/cloudflare/workers-sdk/pull/13079) [`746858a`](https://github.com/cloudflare/workers-sdk/commit/746858a349c6f322e8a222876671b8ceaadd5bc4) Thanks [@penalosa](https://github.com/penalosa)! - Fix `getPlatformProxy` and `unstable_getMiniflareWorkerOptions` crashing when `assets` is configured without a `directory`
+
+  `getPlatformProxy` and `unstable_getMiniflareWorkerOptions` now skip asset setup when the config has an `assets` block but no `directory` — instead of throwing "missing required `directory` property". This happens when an external tool like `@cloudflare/vite-plugin` handles asset serving independently.
+
+- [#13112](https://github.com/cloudflare/workers-sdk/pull/13112) [`9aad27f`](https://github.com/cloudflare/workers-sdk/commit/9aad27f9da34f5723b936b8dcf5c9699c9e1d74c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix autoconfig failing on `waku` projects that use `hono`
+
+  Waku has a tight integration with Hono, causing both to be detected simultaneously and triggering a "multiple frameworks found" error. Hono is now filtered out when Waku is also detected.
+
+- [#13113](https://github.com/cloudflare/workers-sdk/pull/13113) [`1fc5518`](https://github.com/cloudflare/workers-sdk/commit/1fc5518526bc214b193b6818cef7365fe52a2b42) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Skip lock file warning for static projects during autoconfig
+
+  Previously, running autoconfig on a static project (one with no framework detected) would emit a misleading warning about a missing lock file, suggesting the project might be in a workspace. Since static projects don't require a lock file, this warning is now suppressed for them.
+
+- [#13072](https://github.com/cloudflare/workers-sdk/pull/13072) [`b539dc7`](https://github.com/cloudflare/workers-sdk/commit/b539dc79d8aa727018b5b58d43aa62b3e414b636) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Skip unnecessary `GET /versions?deployable=true` API call in `wrangler versions deploy` when all version IDs are explicitly provided and `--yes` is passed
+
+  When deploying a specific version non-interactively (e.g. `wrangler versions deploy <id> --yes`), Wrangler previously always fetched the full list of deployable versions to populate the interactive selection prompt — even though the prompt is skipped entirely when `--yes` is used and all versions are already specified. The deployable-versions list is now only fetched when actually needed (i.e. when no version IDs are provided, or when running interactively).
+
+- [#13115](https://github.com/cloudflare/workers-sdk/pull/13115) [`2565b1d`](https://github.com/cloudflare/workers-sdk/commit/2565b1d194bb8e9533d58f629ac3f3c2220c472e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve error message when the assets directory path points to a file instead of a directory
+
+  Previously, if the path provided as the assets directory (via `--assets` flag or `assets.directory` config) pointed to an existing file rather than a directory, Wrangler would throw an unhelpful `ENOTDIR` system error when trying to read the `_redirects` file inside it. Now Wrangler detects this condition earlier and throws a clear user error.
+
+- Updated dependencies [[`9eff028`](https://github.com/cloudflare/workers-sdk/commit/9eff0285cb2e5d94b9d0788dceb855119e596707), [`f214760`](https://github.com/cloudflare/workers-sdk/commit/f2147605e1081ebdec29e76c4b04e3af503d282e), [`9282493`](https://github.com/cloudflare/workers-sdk/commit/9282493b11ba07bcadb981c2cfc255e8eb5b9b15), [`a532eea`](https://github.com/cloudflare/workers-sdk/commit/a532eeabfd445e80ce597612da15e3e020ef03c6), [`d4c6158`](https://github.com/cloudflare/workers-sdk/commit/d4c61587094a2a2ceee35acfb3619c95e0a993fe)]:
+  - miniflare@4.20260329.0
+
 ## 4.78.0
 
 ### Minor Changes

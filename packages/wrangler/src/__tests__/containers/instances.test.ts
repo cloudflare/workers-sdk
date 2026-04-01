@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -95,7 +94,7 @@ describe("containers instances", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers instances --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -120,7 +119,7 @@ describe("containers instances", () => {
 		`);
 	});
 
-	it("should show the correct authentication error", async () => {
+	it("should show the correct authentication error", async ({ expect }) => {
 		const spy = vi.spyOn(user, "getScopes");
 		spy.mockReset();
 		spy.mockImplementationOnce(() => []);
@@ -133,7 +132,7 @@ describe("containers instances", () => {
 		);
 	});
 
-	it("should render a table (non-TTY)", async () => {
+	it("should render a table (non-TTY)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -165,7 +164,7 @@ describe("containers instances", () => {
 		`);
 	});
 
-	it("should render DO instance table (non-TTY)", async () => {
+	it("should render DO instance table (non-TTY)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -195,7 +194,7 @@ describe("containers instances", () => {
 		`);
 	});
 
-	it("should reject --per-page 0", async () => {
+	it("should reject --per-page 0", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -203,7 +202,7 @@ describe("containers instances", () => {
 		).rejects.toThrowError(/--per-page must be at least 1/);
 	});
 
-	it("should reject --per-page with negative value", async () => {
+	it("should reject --per-page with negative value", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -211,7 +210,7 @@ describe("containers instances", () => {
 		).rejects.toThrowError(/--per-page must be at least 1/);
 	});
 
-	it("should error on invalid ID format", async () => {
+	it("should error on invalid ID format", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -221,7 +220,7 @@ describe("containers instances", () => {
 		);
 	});
 
-	it("should error on missing ID", async () => {
+	it("should error on missing ID", async ({ expect }) => {
 		await expect(
 			runWrangler("containers instances")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -234,7 +233,7 @@ describe("containers instances", () => {
 		`);
 	});
 
-	it("should handle empty instance list", async () => {
+	it("should handle empty instance list", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -256,7 +255,9 @@ describe("containers instances", () => {
 		expect(std.out).toContain("No instances found");
 	});
 
-	it("should fetch all results in a single unpaginated request (non-TTY)", async () => {
+	it("should fetch all results in a single unpaginated request (non-TTY)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		let requestCount = 0;
@@ -288,7 +289,9 @@ describe("containers instances", () => {
 	});
 
 	describe("--json", () => {
-		it("should output flat JSON matching table columns for non-DO apps", async () => {
+		it("should output flat JSON matching table columns for non-DO apps", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(
@@ -326,7 +329,7 @@ describe("containers instances", () => {
 			});
 		});
 
-		it("should include name field for DO-backed apps", async () => {
+		it("should include name field for DO-backed apps", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(
@@ -367,7 +370,7 @@ describe("containers instances", () => {
 			});
 		});
 
-		it("should output empty array for no instances", async () => {
+		it("should output empty array for no instances", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(
@@ -390,7 +393,9 @@ describe("containers instances", () => {
 			expect(output).toEqual([]);
 		});
 
-		it("should fetch all results in a single unpaginated request", async () => {
+		it("should fetch all results in a single unpaginated request", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			let requestCount = 0;

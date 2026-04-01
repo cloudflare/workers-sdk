@@ -11,7 +11,7 @@
 		"test:ci:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
 		"test:ci:serve": "vitest run -c vitest.config.e2e.ts",
 		"pretest:serve": "pnpm playwright:install",
-		"test:serve": "pnpm test:ci:serve --poolOptions.forks.singleFork=false"
+		"test:serve": "pnpm test:ci:serve"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

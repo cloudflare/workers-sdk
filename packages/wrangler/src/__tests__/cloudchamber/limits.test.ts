@@ -2,8 +2,7 @@ import {
 	dockerImageInspect,
 	InstanceType,
 } from "@cloudflare/containers-shared";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	ensureContainerLimits,
 	ensureImageFitsLimits,
@@ -40,7 +39,9 @@ describe("ensureContainerLimits", () => {
 	});
 
 	describe("instance type", async () => {
-		it("should throw error if vcpu is greater than limit", async () => {
+		it("should throw error if vcpu is greater than limit", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				ensureContainerLimits({
 					pathToDocker: "path/to/docker",
@@ -60,7 +61,9 @@ describe("ensureContainerLimits", () => {
 			);
 		});
 
-		it("should throw error if memory is greater than limit", async () => {
+		it("should throw error if memory is greater than limit", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				ensureContainerLimits({
 					pathToDocker: "path/to/docker",
@@ -80,7 +83,9 @@ describe("ensureContainerLimits", () => {
 			);
 		});
 
-		it("should throw error if disk is greater than limit", async () => {
+		it("should throw error if disk is greater than limit", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				ensureContainerLimits({
 					pathToDocker: "path/to/docker",
@@ -100,7 +105,9 @@ describe("ensureContainerLimits", () => {
 			);
 		});
 
-		it("should succeed when instance type fits in limits", async () => {
+		it("should succeed when instance type fits in limits", async ({
+			expect,
+		}) => {
 			const result = await ensureContainerLimits({
 				pathToDocker: "path/to/docker",
 				imageTag: "docker.io/test-app:tag",
@@ -116,7 +123,9 @@ describe("ensureContainerLimits", () => {
 	});
 
 	describe("custom limits", async () => {
-		it("should throw error if vcpu is greater than limit", async () => {
+		it("should throw error if vcpu is greater than limit", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				ensureContainerLimits({
 					pathToDocker: "path/to/docker",
@@ -135,7 +144,9 @@ describe("ensureContainerLimits", () => {
 			);
 		});
 
-		it("should throw error if memory is greater than limit", async () => {
+		it("should throw error if memory is greater than limit", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				ensureContainerLimits({
 					pathToDocker: "path/to/docker",
@@ -154,7 +165,9 @@ describe("ensureContainerLimits", () => {
 			);
 		});
 
-		it("should throw error if disk is greater than limit", async () => {
+		it("should throw error if disk is greater than limit", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				ensureContainerLimits({
 					pathToDocker: "path/to/docker",
@@ -173,7 +186,9 @@ describe("ensureContainerLimits", () => {
 			);
 		});
 
-		it("should succeed when configuration fits in limits", async () => {
+		it("should succeed when configuration fits in limits", async ({
+			expect,
+		}) => {
 			const result = await ensureContainerLimits({
 				pathToDocker: "path/to/docker",
 				imageTag: "docker.io/test-app:tag",
@@ -199,7 +214,9 @@ describe("ensureImageFitsLimits", () => {
 		vi.clearAllMocks();
 	});
 
-	it("should throw error if image size exceeds allowed size", async () => {
+	it("should throw error if image size exceeds allowed size", async ({
+		expect,
+	}) => {
 		// required size = 907387881 * 1.1 + 128 * 16 * MiB = 3146MB
 		vi.mocked(dockerImageInspect).mockResolvedValue("907387881 128");
 
@@ -222,7 +239,7 @@ describe("ensureImageFitsLimits", () => {
 		);
 	});
 
-	it("should not throw when disk size is within limits", async () => {
+	it("should not throw when disk size is within limits", async ({ expect }) => {
 		// required size = 53387881 * 1.1 + 2 * 16 * MiB = 93MB
 		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
 

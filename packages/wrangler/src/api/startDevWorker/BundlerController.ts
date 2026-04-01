@@ -173,7 +173,6 @@ export class BundlerController extends Controller {
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
-			logger.error("Custom build failed:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -335,9 +334,6 @@ export class BundlerController extends Controller {
 		try {
 			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");
 		} catch (e) {
-			logger.error(
-				"Failed to create temporary directory to store built files."
-			);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to create temporary directory to store built files.",
@@ -348,7 +344,6 @@ export class BundlerController extends Controller {
 		}
 
 		void this.#startCustomBuild(event.config).catch((err) => {
-			logger.error("Failed to run custom build:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to run custom build",
@@ -358,7 +353,6 @@ export class BundlerController extends Controller {
 			});
 		});
 		void this.#startBundle(event.config).catch((err) => {
-			logger.error("Failed to start bundler:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to start bundler",
@@ -368,7 +362,6 @@ export class BundlerController extends Controller {
 			});
 		});
 		void this.#ensureWatchingAssets(event.config).catch((err) => {
-			logger.error("Failed to watch assets:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Failed to watch assets",

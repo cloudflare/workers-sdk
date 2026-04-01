@@ -2,7 +2,11 @@ import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { ParseError, UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
-import { logger, runWithLogLevel } from "../../logger";
+import {
+	isBuildFailure,
+	isBuildFailureFromCause,
+} from "../../deployment-bundle/build-failures";
+import { logBuildFailure, logger, runWithLogLevel } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
@@ -155,6 +159,16 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 			event.cause instanceof ParseError
 		) {
 			logger.error(event.cause);
+		}
+		// Build errors are recoverable by fixing the code and saving
+		else if (event.source === "BundlerController") {
+			if (isBuildFailure(event.cause)) {
+				logBuildFailure(event.cause.errors, event.cause.warnings);
+			} else if (isBuildFailureFromCause(event.cause)) {
+				logBuildFailure(event.cause.cause.errors, event.cause.cause.warnings);
+			} else {
+				logger.error(event.cause.message);
+			}
 		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {

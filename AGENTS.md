@@ -121,6 +121,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - E2E tests require real Cloudflare account credentials
 - Use `vitest-pool-workers` for testing actual Workers runtime behavior
 - Shared vitest config (`vitest.shared.ts`): 50s timeouts, `retry: 2`, `restoreMocks: true`
+- Vitest 4 pool config: use `maxWorkers: 1` instead of the removed `poolOptions.forks.singleFork: true` when tests must run sequentially
 
 **Git Workflow:**
 

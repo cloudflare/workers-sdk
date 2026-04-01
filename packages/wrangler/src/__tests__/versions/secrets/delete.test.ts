@@ -1,7 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, describe, expect, it, test } from "vitest";
+import { afterEach, describe, it, test } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../../helpers/mock-dialogs";
@@ -20,7 +19,7 @@ describe("versions secret delete", () => {
 		clearDialogs();
 	});
 
-	test("can delete a new secret (interactive)", async () => {
+	test("can delete a new secret (interactive)", async ({ expect }) => {
 		setIsTTY(true);
 
 		mockConfirm({
@@ -53,7 +52,7 @@ describe("versions secret delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can delete a secret (non-interactive)", async () => {
+	test("can delete a secret (non-interactive)", async ({ expect }) => {
 		setIsTTY(false);
 
 		mockSetupApiCalls();
@@ -83,7 +82,9 @@ describe("versions secret delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("can delete a secret reading Worker name from wrangler.toml", async () => {
+	test("can delete a secret reading Worker name from wrangler.toml", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "script-name" });
 		setIsTTY(false);
 
@@ -114,7 +115,7 @@ describe("versions secret delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("no wrangler configuration warnings shown", async () => {
+	test("no wrangler configuration warnings shown", async ({ expect }) => {
 		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
 		setIsTTY(false);
 
@@ -129,7 +130,9 @@ describe("versions secret delete", () => {
 	});
 
 	describe("multi-env warning", () => {
-		it("should warn if the wrangler config contains environments but none was specified in the command", async () => {
+		it("should warn if the wrangler config contains environments but none was specified in the command", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerConfig({
@@ -153,7 +156,9 @@ describe("versions secret delete", () => {
 			`);
 		});
 
-		it("should not warn if the wrangler config contains environments and one was specified in the command", async () => {
+		it("should not warn if the wrangler config contains environments and one was specified in the command", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerConfig({
@@ -170,7 +175,9 @@ describe("versions secret delete", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async () => {
+		it("should not warn if the wrangler config doesn't contain environments and none was specified in the command", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerConfig();
