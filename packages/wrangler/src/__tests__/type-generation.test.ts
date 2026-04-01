@@ -1043,6 +1043,8 @@ describe("generate types", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
+			- Found Worker 'service_name' at 'b/index.ts' (b/wrangler.jsonc)
+			- Found Worker 'service_name_2' at 'c/index.ts' (c/wrangler.jsonc)
 			Generating project types...
 
 			declare namespace Cloudflare {
