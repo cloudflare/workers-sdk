@@ -461,6 +461,12 @@ const bindingsConfigMock: Omit<
 			instance_name: "cloudflare-blog",
 		},
 	],
+	agent_memory: [
+		{
+			binding: "AGENT_MEMORY_BINDING",
+			namespace: "my-agent",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },

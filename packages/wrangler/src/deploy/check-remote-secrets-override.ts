@@ -114,6 +114,7 @@ function extractBindingNames(config: Config): string[] {
 			case "vectorize":
 			case "ai_search_namespaces":
 			case "ai_search":
+			case "agent_memory":
 			case "services":
 			case "mtls_certificates":
 			case "dispatch_namespaces":

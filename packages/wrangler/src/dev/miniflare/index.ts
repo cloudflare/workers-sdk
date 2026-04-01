@@ -403,6 +403,7 @@ type WorkerOptionsBindings = Pick<
 	| "ai"
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
+	| "agentMemory"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -523,6 +524,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
+	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -629,6 +631,10 @@ export function buildMiniflareBindingOptions(
 
 	for (const inst of aiSearchInstanceBindings) {
 		warnOrError("ai_search", inst.remote, "always-remote");
+	}
+
+	for (const memory of agentMemoryBindings) {
+		warnOrError("agent_memory", memory.remote, "always-remote");
 	}
 
 	for (const media of mediaBindings) {
@@ -744,6 +750,16 @@ export function buildMiniflareBindingOptions(
 				inst.binding,
 				{
 					instance_name: inst.instance_name,
+					remoteProxyConnectionString,
+				},
+			])
+		),
+
+		agentMemory: Object.fromEntries(
+			agentMemoryBindings.map((memory) => [
+				memory.binding,
+				{
+					namespace: memory.namespace as string,
 					remoteProxyConnectionString,
 				},
 			])

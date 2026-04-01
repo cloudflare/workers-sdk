@@ -131,6 +131,7 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const ai_search = extractBindingsOfType("ai_search", bindings);
+	const agent_memory = extractBindingsOfType("agent_memory", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -359,6 +360,28 @@ export function createWorkerUploadForm(
 			type: "ai_search",
 			instance_name,
 		});
+	});
+
+	agent_memory.forEach(({ binding, namespace }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`);
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "agent_memory",
+				namespace,
+			});
+		}
 	});
 
 	hyperdrive.forEach(({ binding, id }) => {
