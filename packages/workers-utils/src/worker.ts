@@ -284,7 +284,8 @@ export interface CfService {
 
 export interface CfVpcService {
 	binding: string;
-	service_id: string;
+	service_id?: string;
+	service_name?: string;
 	remote?: boolean;
 }
 

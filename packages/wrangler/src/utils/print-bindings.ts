@@ -367,11 +367,11 @@ export function printBindings(
 
 	if (vpc_services.length > 0) {
 		output.push(
-			...vpc_services.map(({ binding, service_id, remote }) => {
+			...vpc_services.map(({ binding, service_id, service_name, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("vpc_service"),
-					value: service_id,
+					value: service_name ?? service_id,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,
