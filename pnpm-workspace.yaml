@@ -35,9 +35,6 @@ minimumReleaseAge: 10080 # 7 days in minutes
 # in the same CI pipeline.
 minimumReleaseAgeExclude:
   - "@cloudflare/*"
-  - "create-cloudflare"
-  - "miniflare"
-  - "wrangler"
   - "workerd"
 
 # Prevent transitive dependencies from pulling code from git repos or tarball
