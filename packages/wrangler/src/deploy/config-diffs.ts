@@ -35,6 +35,7 @@ const reorderableBindings = {
 	unsafe_hello_world: true,
 	worker_loaders: true,
 	vpc_services: true,
+	vpc_networks: true,
 
 	// Wrapper objects containing binding arrays
 	durable_objects: true,
@@ -168,6 +169,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.vpc_services?.length) {
 		normalizedConfig.vpc_services = normalizedConfig.vpc_services.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.vpc_networks?.length) {
+		normalizedConfig.vpc_networks = normalizedConfig.vpc_networks.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}
