@@ -3,6 +3,7 @@ import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	formatConfigSnippet,
 	getDisableConfigWatching,
 	getDockerPath,
 	getLocalWorkerdCompatibilityDate,
@@ -484,7 +485,7 @@ function getDevCompatibilityDate(
 	if (config?.configPath && compatibilityDate === undefined) {
 		logger.warn(
 			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${workerdDate}.\n` +
-				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${workerdDate}", or\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: ${formatConfigSnippet({ compatibility_date: workerdDate }, config.configPath, false).trim()}, or\n` +
 				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${workerdDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
