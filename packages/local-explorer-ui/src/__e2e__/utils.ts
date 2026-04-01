@@ -292,9 +292,6 @@ export async function typeInQueryEditor(sql: string): Promise<void> {
 	const selectAllKey = isMac ? "Meta+a" : "Control+a";
 	await page.keyboard.press(selectAllKey);
 
-	// Type the new SQL using fill() which is faster and more reliable
-	// Note: `CodeMirror`'s contenteditable doesn't support fill(), so we use keyboard.type
-	// But we can speed it up by removing the artificial delay
 	await page.keyboard.type(sql);
 }
 
