@@ -1,3 +1,4 @@
+import { APIError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { getEmailRoutingCatchAll, getEmailRoutingRule } from "../client";
@@ -40,7 +41,34 @@ export const emailRoutingRulesGetCommand = createCommand({
 			return;
 		}
 
-		const rule = await getEmailRoutingRule(config, zoneId, args.ruleId);
+		let rule;
+		try {
+			rule = await getEmailRoutingRule(config, zoneId, args.ruleId);
+		} catch (e) {
+			// The catch-all rule appears in the rules list but can only be
+			// fetched via the dedicated catch-all endpoint. If the regular
+			// endpoint returns "Invalid rule operation" (code 2020), try the
+			// catch-all endpoint before giving up.
+			if (!(e instanceof APIError && e.code === 2020)) {
+				throw e;
+			}
+
+			const catchAllRule = await getEmailRoutingCatchAll(config, zoneId);
+			if (catchAllRule.tag === args.ruleId) {
+				logger.log(`Catch-all rule:`);
+				logger.log(`  Enabled: ${catchAllRule.enabled}`);
+				logger.log(`  Actions:`);
+				for (const a of catchAllRule.actions) {
+					if (a.value && a.value.length > 0) {
+						logger.log(`    - ${a.type}: ${a.value.join(", ")}`);
+					} else {
+						logger.log(`    - ${a.type}`);
+					}
+				}
+				return;
+			}
+			throw e;
+		}
 
 		logger.log(`Rule: ${rule.id}`);
 		logger.log(`  Name:     ${rule.name || "(none)"}`);

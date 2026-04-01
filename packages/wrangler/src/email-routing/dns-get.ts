@@ -22,14 +22,15 @@ export const emailRoutingDnsGetCommand = createCommand({
 			return;
 		}
 
-		logger.table(
-			records.map((r) => ({
-				type: r.type,
-				name: r.name,
-				content: r.content,
-				priority: r.priority !== undefined ? String(r.priority) : "",
-				ttl: String(r.ttl),
-			}))
-		);
+		for (const r of records) {
+			logger.log(`${r.type} record:`);
+			logger.log(`  Name:     ${r.name}`);
+			logger.log(`  Content:  ${r.content}`);
+			if (r.priority !== undefined) {
+				logger.log(`  Priority: ${r.priority}`);
+			}
+			logger.log(`  TTL:      ${r.ttl}`);
+			logger.log("");
+		}
 	},
 });
