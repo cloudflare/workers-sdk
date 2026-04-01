@@ -771,6 +771,7 @@ describe("generate types", () => {
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flags;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
@@ -884,6 +885,7 @@ describe("generate types", () => {
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flags;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
@@ -1038,8 +1040,6 @@ describe("generate types", () => {
 			"
 			 ⛅️ wrangler x.x.x
 			──────────────────
-			- Found Worker 'service_name' at 'b/index.ts' (b/wrangler.jsonc)
-			- Found Worker 'service_name_2' at 'c/index.ts' (c/wrangler.jsonc)
 			Generating project types...
 
 			declare namespace Cloudflare {
@@ -1060,6 +1060,7 @@ describe("generate types", () => {
 					TEST_QUEUE_BINDING: Queue;
 					SECRET: SecretsStoreSecret;
 					HELLO_WORLD: HelloWorldBinding;
+					FLAGS: Flags;
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
