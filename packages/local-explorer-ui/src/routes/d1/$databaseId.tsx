@@ -169,9 +169,7 @@ function DatabaseView(): JSX.Element {
 						{databaseName && databaseName !== params.databaseId ? (
 							<>
 								{databaseName}
-								<span className="text-kumo-subtle">
-									({params.databaseId})
-								</span>
+								<span className="text-kumo-subtle">({params.databaseId})</span>
 							</>
 						) : (
 							params.databaseId

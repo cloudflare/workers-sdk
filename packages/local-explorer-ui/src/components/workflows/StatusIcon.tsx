@@ -9,27 +9,23 @@ import {
 } from "@phosphor-icons/react";
 
 export function StatusIcon({ status }: { status: string }): JSX.Element {
-		switch (status) {
-			case "complete":
-				return (
-					<Tooltip content="Complete">
-						<CheckCircleIcon
-							size={20}
-							weight="fill"
-							className="text-kumo-link"
-						/>
-					</Tooltip>
-				);
-			case "errored":
-				return (
-					<Tooltip content="Errored">
-						<WarningCircleIcon
-							size={20}
-							weight="fill"
-							className="text-kumo-danger"
-						/>
-					</Tooltip>
-				);
+	switch (status) {
+		case "complete":
+			return (
+				<Tooltip content="Complete">
+					<CheckCircleIcon size={20} weight="fill" className="text-kumo-link" />
+				</Tooltip>
+			);
+		case "errored":
+			return (
+				<Tooltip content="Errored">
+					<WarningCircleIcon
+						size={20}
+						weight="fill"
+						className="text-kumo-danger"
+					/>
+				</Tooltip>
+			);
 		case "terminated":
 			return (
 				<Tooltip content="Terminated">
@@ -52,11 +48,7 @@ export function StatusIcon({ status }: { status: string }): JSX.Element {
 		case "waiting":
 			return (
 				<Tooltip content="Waiting">
-					<SpinnerIcon
-						size={20}
-						weight="bold"
-						className="text-kumo-subtle"
-					/>
+					<SpinnerIcon size={20} weight="bold" className="text-kumo-subtle" />
 				</Tooltip>
 			);
 		default:

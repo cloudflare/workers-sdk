@@ -102,7 +102,7 @@ export function CreateWorkflowInstanceDialog({
 				{/* Body */}
 				<div className="px-6 py-6">
 					{error && (
-						<div className="mb-5 rounded-lg border border-danger/20 bg-danger/8 p-3 text-sm text-kumo-danger">
+						<div className="border-danger/20 bg-danger/8 mb-5 rounded-lg border p-3 text-sm text-kumo-danger">
 							{error}
 						</div>
 					)}
@@ -111,12 +111,10 @@ export function CreateWorkflowInstanceDialog({
 					<div className="mb-5">
 						<label className="mb-2 block text-sm font-medium text-kumo-default">
 							Instance ID{" "}
-							<span className="font-normal text-kumo-subtle">
-								(optional)
-							</span>
+							<span className="font-normal text-kumo-subtle">(optional)</span>
 						</label>
 						<input
-							className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus-visible:ring-2 focus-visible:ring-kumo-ring focus:outline-none"
+							className="w-full rounded-lg border border-kumo-fill bg-kumo-base px-3 py-2.5 text-sm text-kumo-default placeholder:text-kumo-subtle focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 							onChange={(e) => setInstanceId(e.target.value)}
 							placeholder="Auto-generated UUID if empty"
 							type="text"
@@ -130,7 +128,7 @@ export function CreateWorkflowInstanceDialog({
 							Params
 						</label>
 						<textarea
-							className={`w-full resize-y rounded-lg border bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus-visible:ring-2 focus-visible:ring-kumo-ring focus:outline-none ${
+							className={`w-full resize-y rounded-lg border bg-kumo-base px-3 py-2.5 font-mono text-sm text-kumo-default placeholder:text-kumo-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring ${
 								paramsError
 									? "border-kumo-danger focus:border-kumo-danger"
 									: "border-kumo-fill focus:border-kumo-brand"

@@ -74,7 +74,9 @@ export function StudioConstraintListEditor({
 									>
 										{constriantIndex + 1}
 									</td>
-									<td className="border border-kumo-fill p-2">{constraintType}</td>
+									<td className="border border-kumo-fill p-2">
+										{constraintType}
+									</td>
 									<td className="border border-kumo-fill p-2">
 										{constraint.foreignKey && (
 											<div className="flex gap-2">

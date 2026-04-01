@@ -56,7 +56,9 @@ function ObjectDetailsCard({ object }: ObjectDetailsCardProps): JSX.Element {
 
 	return (
 		<div className="rounded-lg border border-kumo-fill bg-kumo-base p-6">
-			<h3 className="mb-4 text-base font-semibold text-kumo-default">Object Details</h3>
+			<h3 className="mb-4 text-base font-semibold text-kumo-default">
+				Object Details
+			</h3>
 			<dl className="grid grid-cols-3 gap-x-8 gap-y-2 text-sm">
 				<div>
 					<dt className="text-kumo-subtle">Date Created</dt>
@@ -194,7 +196,7 @@ function ObjectDetailView(): JSX.Element {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-kumo-danger">
+					<div className="border-danger/20 bg-danger/8 mb-4 rounded-md border p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}

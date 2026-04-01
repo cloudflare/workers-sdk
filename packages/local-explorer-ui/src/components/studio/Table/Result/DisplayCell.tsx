@@ -117,7 +117,9 @@ export const StudioTableDisplayCell = forwardRef<
 			return (
 				<span className={cn("flex-1 truncate", "text-kumo-default")}>
 					{firstLine}
-					{hasLineBreak && <span className="ml-1 font-sans text-kumo-subtle">⏎</span>}
+					{hasLineBreak && (
+						<span className="ml-1 font-sans text-kumo-subtle">⏎</span>
+					)}
 				</span>
 			);
 		}

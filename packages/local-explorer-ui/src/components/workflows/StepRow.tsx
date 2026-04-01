@@ -56,7 +56,8 @@ function StepStatusIcon({
 const TYPE_BADGE_STYLES: Record<string, string> = {
 	step: "bg-kumo-tint text-kumo-subtle",
 	sleep: "bg-kumo-overlay text-kumo-subtle",
-	waitForEvent: "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
+	waitForEvent:
+		"bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
 };
 
 export function StepRow({ step }: { step: StepData }): JSX.Element {
@@ -180,7 +181,9 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 			{step.attempts && step.attempts.length > 0 && (
 				<div>
 					<hr className="mb-4 border-dashed border-kumo-fill" />
-					<h5 className="mb-2 text-sm font-medium text-kumo-default">Attempts</h5>
+					<h5 className="mb-2 text-sm font-medium text-kumo-default">
+						Attempts
+					</h5>
 					<div>
 						{[...step.attempts].reverse().map((attempt, i, reversed) => {
 							const attemptNum = reversed.length - i;
