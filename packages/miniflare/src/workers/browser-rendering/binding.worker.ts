@@ -223,7 +223,7 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 	};
 
 	@GET("/v1/devtools/browser/:sessionId")
-	connect: RouteHandler = async (req) => {
+	connect: RouteHandler = async (_req) => {
 		assert(
 			this.sessionInfo !== undefined,
 			"sessionInfo must be set before connecting"

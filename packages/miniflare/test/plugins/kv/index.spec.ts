@@ -442,7 +442,7 @@ test("delete: deletes existing keys", async ({ expect }) => {
 	await kv.delete("key");
 	expect(await kv.get("key")).toBe(null);
 });
-test("delete: does nothing for non-existent keys", async ({ expect }) => {
+test("delete: does nothing for non-existent keys", async () => {
 	const { kv } = ctx;
 	await kv.delete("key");
 });
