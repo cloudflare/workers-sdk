@@ -85,6 +85,16 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 					service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 				},
 			],
+			vpc_networks: [
+				{
+					binding: "MY_VPC_NETWORK",
+					tunnel_id: "0399295b-b3ac-7760-8246-bca40877b3e1",
+				},
+				{
+					binding: "MY_MESH_NETWORK",
+					network_id: "some-network-id",
+				},
+			],
 		});
 		expect(result).toEqual({
 			AI: {
@@ -142,6 +152,14 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 			MY_VPC_SERVICE: {
 				service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 				type: "vpc_service",
+			},
+			MY_VPC_NETWORK: {
+				tunnel_id: "0399295b-b3ac-7760-8246-bca40877b3e1",
+				type: "vpc_network",
+			},
+			MY_MESH_NETWORK: {
+				network_id: "some-network-id",
+				type: "vpc_network",
 			},
 		});
 	});
