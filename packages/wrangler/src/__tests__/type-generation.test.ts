@@ -416,6 +416,12 @@ const bindingsConfigMock: Omit<
 			enable_timer: true,
 		},
 	],
+	flagship: [
+		{
+			binding: "FLAGS",
+			app_id: "app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+		},
+	],
 	services: [
 		{ binding: "SERVICE_BINDING", service: "service_name" },
 		{
