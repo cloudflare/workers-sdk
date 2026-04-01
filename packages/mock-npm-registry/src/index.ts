@@ -56,7 +56,6 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		dedent`
 			registry=http://localhost:${registryPort}
 			//localhost:${registryPort}/:_authToken=xxxx-xxxx-xxxx-xxxx
-			minimum-release-age=0
 	`
 	);
 
