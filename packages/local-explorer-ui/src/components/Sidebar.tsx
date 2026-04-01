@@ -64,11 +64,12 @@ function SidebarItemGroup({
 								<li key={item.id}>
 									<Link
 										className={cn(
-										"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-kumo-default no-underline transition-colors hover:bg-kumo-brand/10",
-										{
-											"bg-kumo-brand/10 font-medium text-blue-600 dark:text-blue-400": item.isActive,
-										}
-									)}
+											"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-kumo-default no-underline transition-colors hover:bg-kumo-brand/10",
+											{
+												"bg-kumo-brand/10 font-medium text-blue-600 hover:bg-kumo-brand/20 dark:text-blue-400":
+													item.isActive,
+											}
+										)}
 										params={item.link.params}
 										search={item.link.search}
 										to={item.link.to}
