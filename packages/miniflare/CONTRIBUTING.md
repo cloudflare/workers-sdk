@@ -328,6 +328,16 @@ for more details. Bindings implemented as Durable Objects extend
 SQLite database, and a `blobs` property for accessing a `BlobStore` as described
 by the links above.
 
+## How does the dev registry work?
+
+Refer to [`src/shared/DEV_REGISTRY.md`](./src/shared/DEV_REGISTRY.md) for the
+full architecture. In short: when multiple `wrangler dev` sessions run
+simultaneously, they advertise their workerd debug port address via JSON files in
+`~/.wrangler/registry/`. A synthetic proxy worker inside workerd uses the
+`workerdDebugPort` binding to connect to remote workers' debug ports via native
+Cap'n Proto RPC, enabling cross-process service bindings, Durable Object access,
+RPC, and tail forwarding without any HTTP proxying.
+
 ## How does Miniflare's magic proxy work?
 
 Refer to the `High Level Implementation Overview` in

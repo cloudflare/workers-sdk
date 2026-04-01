@@ -2417,6 +2417,8 @@ export class Miniflare {
 			this.#devRegistryDispatcher = new Pool(
 				new URL(`http://127.0.0.1:${devRegistryPort}`)
 			);
+		} else {
+			this.#devRegistryDispatcher = undefined;
 		}
 		if (this.#proxyClient === undefined) {
 			this.#proxyClient = new ProxyClient(
