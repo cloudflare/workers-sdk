@@ -1,8 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { readFileSync } from "node:fs";
 import { createCommand } from "../../core/create-command";
-import { logger } from "../../logger";
 import { sendRawEmail } from "../client";
+import { logSendResult } from "./utils";
 
 export const emailSendingSendRawCommand = createCommand({
 	metadata: {
@@ -63,23 +63,6 @@ export const emailSendingSendRawCommand = createCommand({
 			mime_message: mimeMessage,
 		});
 
-		if (result.delivered.length > 0) {
-			logger.log(`✅ Delivered to: ${result.delivered.join(", ")}`);
-		}
-		if (result.queued.length > 0) {
-			logger.log(`📬 Queued for: ${result.queued.join(", ")}`);
-		}
-		if (result.permanent_bounces.length > 0) {
-			logger.warn(
-				`Permanently bounced: ${result.permanent_bounces.join(", ")}`
-			);
-		}
-		if (
-			result.delivered.length === 0 &&
-			result.queued.length === 0 &&
-			result.permanent_bounces.length === 0
-		) {
-			logger.log("✅ Email sent successfully.");
-		}
+		logSendResult(result);
 	},
 });

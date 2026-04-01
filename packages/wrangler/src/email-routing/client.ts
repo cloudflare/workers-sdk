@@ -1,7 +1,6 @@
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type {
-	CloudflareZone,
 	EmailRoutingAddress,
 	EmailRoutingCatchAllRule,
 	EmailRoutingDnsRecord,
@@ -13,18 +12,6 @@ import type {
 } from "./index";
 import type { Config } from "@cloudflare/workers-utils";
 
-// --- Zones ---
-
-export async function listZones(config: Config): Promise<CloudflareZone[]> {
-	const accountId = await requireAuth(config);
-	return await fetchPagedListResult<CloudflareZone>(
-		config,
-		`/zones`,
-		{},
-		new URLSearchParams({ "account.id": accountId })
-	);
-}
-
 export async function listEmailRoutingZones(
 	config: Config
 ): Promise<EmailRoutingSettings[]> {
@@ -35,7 +22,6 @@ export async function listEmailRoutingZones(
 	);
 }
 
-// --- Settings ---
 
 export async function getEmailRoutingSettings(
 	config: Config,
@@ -48,7 +34,6 @@ export async function getEmailRoutingSettings(
 	);
 }
 
-// --- DNS (enable/disable/get/unlock) ---
 
 export async function enableEmailRouting(
 	config: Config,
@@ -109,7 +94,6 @@ export async function unlockEmailRoutingDns(
 	);
 }
 
-// --- Rules ---
 
 export async function listEmailRoutingRules(
 	config: Config,
@@ -198,7 +182,6 @@ export async function deleteEmailRoutingRule(
 	);
 }
 
-// --- Catch-All ---
 
 export async function getEmailRoutingCatchAll(
 	config: Config,
@@ -233,7 +216,6 @@ export async function updateEmailRoutingCatchAll(
 	);
 }
 
-// --- Addresses ---
 
 export async function listEmailRoutingAddresses(
 	config: Config
@@ -288,7 +270,6 @@ export async function deleteEmailRoutingAddress(
 	);
 }
 
-// --- Email Sending: Subdomains ---
 
 export async function listEmailSendingSubdomains(
 	config: Config,
@@ -345,7 +326,6 @@ export async function deleteEmailSendingSubdomain(
 	);
 }
 
-// --- Email Sending: DNS ---
 
 export async function getEmailSendingSubdomainDns(
 	config: Config,
@@ -359,7 +339,6 @@ export async function getEmailSendingSubdomainDns(
 	);
 }
 
-// --- Email Sending: Send ---
 
 export async function sendEmail(
 	config: Config,

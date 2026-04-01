@@ -4,10 +4,6 @@ import { requireAuth } from "../user";
 import { retryOnAPIFailure } from "../utils/retry";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
-/**
- * Resolve a zone ID from either --zone (domain name) or --zone-id (direct ID).
- * At least one must be provided.
- */
 export async function resolveZoneId(
 	config: Config,
 	args: { zone?: string; zoneId?: string }
@@ -26,12 +22,6 @@ export async function resolveZoneId(
 	);
 }
 
-/**
- * Look up a zone ID by domain name, using the same approach as zones.ts getZoneIdFromHost.
- * Uses fetchListResult (cursor-based) rather than fetchPagedListResult (page-based) to match
- * the existing pattern in zones.ts. This is safe because the `name` query parameter filters
- * to an exact domain match, so the result is always 0 or 1 items — pagination is never needed.
- */
 async function getZoneIdByDomain(
 	complianceConfig: ComplianceConfig,
 	domain: string,

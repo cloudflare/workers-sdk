@@ -132,10 +132,6 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			return;
 		}
 
-		if (!args.matchType || !args.matchField || !args.matchValue) {
-			throw new UserError("Missing matcher arguments for regular rule update");
-		}
-
 		const rule = await updateEmailRoutingRule(config, zoneId, args.ruleId, {
 			actions: [{ type: args.actionType, value: args.actionValue }],
 			matchers: [

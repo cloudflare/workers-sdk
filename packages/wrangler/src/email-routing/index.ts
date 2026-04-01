@@ -64,7 +64,6 @@ export const emailSendingDnsNamespace = createNamespace({
 	},
 });
 
-// --- Shared arg definitions ---
 
 export const zoneArgs = {
 	zone: {
@@ -79,7 +78,6 @@ export const zoneArgs = {
 	},
 } as const;
 
-// --- Types ---
 
 export interface EmailRoutingSettings {
 	id: string;
@@ -123,20 +121,11 @@ export interface EmailRoutingMatcher {
 
 export interface EmailRoutingCatchAllRule {
 	id: string;
-	actions: EmailRoutingCatchAllAction[];
+	actions: EmailRoutingAction[];
 	enabled: boolean;
-	matchers: EmailRoutingCatchAllMatcher[];
+	matchers: { type: string }[];
 	name: string;
 	tag: string;
-}
-
-export interface EmailRoutingCatchAllAction {
-	type: string;
-	value?: string[];
-}
-
-export interface EmailRoutingCatchAllMatcher {
-	type: string;
 }
 
 export interface EmailRoutingAddress {
@@ -147,18 +136,6 @@ export interface EmailRoutingAddress {
 	tag: string;
 	verified: string;
 }
-
-export interface CloudflareZone {
-	id: string;
-	name: string;
-	status: string;
-	account: {
-		id: string;
-		name: string;
-	};
-}
-
-// --- Email Sending types ---
 
 export interface EmailSendingSubdomain {
 	email_sending_enabled: boolean;

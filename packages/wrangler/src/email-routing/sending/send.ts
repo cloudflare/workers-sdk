@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
+import { logSendResult } from "./utils";
 import { sendEmail } from "../client";
 
 export const emailSendingSendCommand = createCommand({
@@ -105,24 +106,7 @@ export const emailSendingSendCommand = createCommand({
 			attachments: attachments.length > 0 ? attachments : undefined,
 		});
 
-		if (result.delivered.length > 0) {
-			logger.log(`✅ Delivered to: ${result.delivered.join(", ")}`);
-		}
-		if (result.queued.length > 0) {
-			logger.log(`📬 Queued for: ${result.queued.join(", ")}`);
-		}
-		if (result.permanent_bounces.length > 0) {
-			logger.warn(
-				`Permanently bounced: ${result.permanent_bounces.join(", ")}`
-			);
-		}
-		if (
-			result.delivered.length === 0 &&
-			result.queued.length === 0 &&
-			result.permanent_bounces.length === 0
-		) {
-			logger.log("✅ Email sent successfully.");
-		}
+		logSendResult(result);
 	},
 });
 
