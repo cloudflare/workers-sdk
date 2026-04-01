@@ -9,6 +9,10 @@ on:
       commit-sha:
         description: "The specific commit SHA from the PR branch to run CI on"
         required: true
+      run-remote-tests:
+        description: "Whether the draft PR should include the run-remote-tests label"
+        type: boolean
+        default: false
       reviewed:
         description: "Confirm that the PR has been reviewed for use/leakage of secrets"
         type: boolean
@@ -16,11 +20,11 @@ on:
 
 permissions:
   contents: read # no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
-  pull-requests: write # Required for creating the draft PR on behalf of the user
+  pull-requests: write # Required for creating or updating the draft PR on behalf of the user
 
 jobs:
   create-draft-pr:
-    name: Create Draft PR
+    name: Create or Update Draft PR
     if: ${{ inputs.reviewed == true }}
     runs-on: ubuntu-slim
     steps:
@@ -60,17 +64,43 @@ jobs:
           git config user.name "github-actions[bot]"
           git push origin HEAD --force
 
-      - name: "Create Draft PR"
+      - name: "Create or Update Draft PR"
         run: |
-          gh pr create \
+          existing_pr=$(gh pr list \
             --head "run-ci-on-behalf-of-$PR_NUM" \
-            --draft \
-            --label "e2e" \
-            --title "$TITLE" \
-            --body "$BODY"
+            --state open \
+            --json number \
+            --jq 'first(.[].number) // ""')
+
+          if [ -n "$existing_pr" ]; then
+            edit_args=("$existing_pr" --title "$TITLE" --body "$BODY" --add-label "e2e")
+
+            if [ "$RUN_REMOTE_TESTS" = "true" ]; then
+              edit_args+=(--add-label "run-remote-tests")
+            else
+              edit_args+=(--remove-label "run-remote-tests")
+            fi
+
+            gh pr edit "${edit_args[@]}"
+          else
+            create_args=(
+              --head "run-ci-on-behalf-of-$PR_NUM"
+              --draft
+              --label "e2e"
+              --title "$TITLE"
+              --body "$BODY"
+            )
+
+            if [ "$RUN_REMOTE_TESTS" = "true" ]; then
+              create_args+=(--label "run-remote-tests")
+            fi
+
+            gh pr create "${create_args[@]}"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUM: ${{ inputs.pr-number }}
+          RUN_REMOTE_TESTS: ${{ inputs.run-remote-tests }}
           TITLE: "Run CI on behalf of #${{ inputs.pr-number }} @${{ inputs.commit-sha }}"
           BODY: "This PR runs CI on behalf of #${{ inputs.pr-number }} at commit ${{ inputs.commit-sha }}. It can be closed after the CI run is complete."
 
