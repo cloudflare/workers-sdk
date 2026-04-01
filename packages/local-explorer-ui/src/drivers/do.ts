@@ -147,7 +147,6 @@ export class LocalDODriver extends StudioSQLiteDriver {
 		const excludeList = new Set([
 			"_cf_KV",
 			"_cf_METADATA",
-			// _cf_ is protected by auth in workerd
 			"__miniflare_do_name",
 		]);
 

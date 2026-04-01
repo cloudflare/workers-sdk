@@ -243,11 +243,13 @@ describe("Durable Objects API", () => {
 						id: "807932f392ad89b04b8e6c5cf6676d0a751df6e86d928dc3b1ce6152c9d99313",
 						name: "object2",
 					},
-					// can't check the newUniqueId case directly since that changes
+					{
+						hasStoredData: true,
+						id: expect.stringMatching(/^[a-f0-9]{64}$/),
+						name: undefined,
+					},
 				];
 				expect(data.result).toEqual(expect.arrayContaining(expected));
-				// we expect one object to have been created without a name (via newUniqueID)
-				expect(data.result.filter((obj) => obj.name)).toHaveLength(3);
 			});
 
 			test("supports cursor pagination", async ({ expect }) => {

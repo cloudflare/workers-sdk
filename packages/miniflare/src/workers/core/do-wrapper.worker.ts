@@ -26,9 +26,7 @@ export function createDurableObjectWrapper(
 			super(ctx, env);
 
 			// Persist DO name to storage if available.
-			// This allows the name to be retrieved later even when accessed via idFromString().
-			// Wrapped in blockConcurrencyWhile to ensure the write completes before
-			// any RPC methods (like GET_DO_NAME_METHOD) can read.
+			// This allows the name to be retrieved later even when accessed via its ID.
 			if (ctx.id.name !== undefined) {
 				void ctx.blockConcurrencyWhile(async () => {
 					const sql: SqlStorage | undefined = ctx.storage.sql;
