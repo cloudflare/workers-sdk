@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { MissingConfigError } from "@cloudflare/workers-utils";
+import { MissingConfigError, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
 import { WebSocket } from "ws";
@@ -413,6 +413,12 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
+		this.emitReloadStartEvent({
+			type: "reloadStart",
+			config: this.#latestConfig,
+			bundle: this.#latestBundle,
+		});
+
 		try {
 			assert(this.#latestConfig.dev.auth);
 			const auth = await unwrapHook(this.#latestConfig.dev.auth);
@@ -432,7 +438,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			);
 
 			if (!refreshed) {
-				throw new Error("Failed to refresh preview token");
+				throw new UserError("Failed to refresh preview token");
 			}
 
 			logger.log(chalk.green("✔ Preview token refreshed successfully"));
