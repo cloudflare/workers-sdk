@@ -9,10 +9,6 @@ on:
       commit-sha:
         description: "The specific commit SHA from the PR branch to run CI on"
         required: true
-      run-remote-tests:
-        description: "Whether the draft PR should include the run-remote-tests label"
-        type: boolean
-        default: false
       reviewed:
         description: "Confirm that the PR has been reviewed for use/leakage of secrets"
         type: boolean
@@ -73,34 +69,23 @@ jobs:
             --jq 'first(.[].number) // ""')
 
           if [ -n "$existing_pr" ]; then
-            edit_args=("$existing_pr" --title "$TITLE" --body "$BODY" --add-label "e2e")
-
-            if [ "$RUN_REMOTE_TESTS" = "true" ]; then
-              edit_args+=(--add-label "run-remote-tests")
-            else
-              edit_args+=(--remove-label "run-remote-tests")
-            fi
-
-            gh pr edit "${edit_args[@]}"
+            gh pr edit "$existing_pr" \
+              --title "$TITLE" \
+              --body "$BODY" \
+              --add-label "e2e" \
+              --add-label "run-remote-tests"
           else
-            create_args=(
-              --head "run-ci-on-behalf-of-$PR_NUM"
-              --draft
-              --label "e2e"
-              --title "$TITLE"
+            gh pr create \
+              --head "run-ci-on-behalf-of-$PR_NUM" \
+              --draft \
+              --label "e2e" \
+              --label "run-remote-tests" \
+              --title "$TITLE" \
               --body "$BODY"
-            )
-
-            if [ "$RUN_REMOTE_TESTS" = "true" ]; then
-              create_args+=(--label "run-remote-tests")
-            fi
-
-            gh pr create "${create_args[@]}"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUM: ${{ inputs.pr-number }}
-          RUN_REMOTE_TESTS: ${{ inputs.run-remote-tests }}
           TITLE: "Run CI on behalf of #${{ inputs.pr-number }} @${{ inputs.commit-sha }}"
           BODY: "This PR runs CI on behalf of #${{ inputs.pr-number }} at commit ${{ inputs.commit-sha }}. It can be closed after the CI run is complete."
 
