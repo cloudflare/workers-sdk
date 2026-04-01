@@ -12,8 +12,7 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 } from "miniflare";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, expect, onTestFinished, test } from "vitest";
+import { beforeEach, ExpectStatic, onTestFinished, test } from "vitest";
 import {
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
@@ -98,10 +97,13 @@ beforeEach(async () => {
 	await ctx.object.enableFakeTimers(1_000_000);
 });
 
-async function testValidatesKey(opts: {
-	method: string;
-	f: (r2: ReplaceWorkersTypes<R2Bucket>, key?: any) => Promise<unknown>;
-}) {
+async function testValidatesKey(
+	expect: ExpectStatic,
+	opts: {
+		method: string;
+		f: (r2: ReplaceWorkersTypes<R2Bucket>, key?: any) => Promise<unknown>;
+	}
+) {
 	const { r2, ns } = ctx;
 	await expect(opts.f(r2, "x".repeat(1025 - ns.length))).rejects.toThrow(
 		new Error(`${opts.method}: The specified object name is not valid. (10020)`)
@@ -156,7 +158,10 @@ test("head: returns metadata for existing keys", async ({ expect }) => {
 	expect(headers.get("X-Key")).toBe("value");
 });
 test("head: validates key", async ({ expect }) => {
-	await testValidatesKey({ method: "head", f: (r2, key) => r2.head(key) });
+	await testValidatesKey(expect, {
+		method: "head",
+		f: (r2, key) => r2.head(key),
+	});
 });
 
 test("get: returns null for non-existent keys", async ({ expect }) => {
@@ -207,7 +212,10 @@ test("get: returns metadata and body for existing keys", async ({ expect }) => {
 	expect(headers.get("X-Key")).toBe("value");
 });
 test("get: validates key", async ({ expect }) => {
-	await testValidatesKey({ method: "get", f: (r2, key) => r2.get(key) });
+	await testValidatesKey(expect, {
+		method: "get",
+		f: (r2, key) => r2.get(key),
+	});
 });
 test("get: range using object", async ({ expect }) => {
 	const { r2 } = ctx;
@@ -402,7 +410,7 @@ test("put: overrides existing keys", async ({ expect }) => {
 	expect(await object.getBlob(objectRow.blob_id)).toBe(null);
 });
 test("put: validates key", async ({ expect }) => {
-	await testValidatesKey({
+	await testValidatesKey(expect, {
 		method: "put",
 		f: (r2, key) => r2.put(key, "v"),
 	});
@@ -611,23 +619,26 @@ test("delete: deletes existing keys", async ({ expect }) => {
 	expect(await r2.head("key3")).toBe(null);
 });
 test("delete: validates key", async ({ expect }) => {
-	await testValidatesKey({
+	await testValidatesKey(expect, {
 		method: "delete",
 		f: (r2, key) => r2.delete(key),
 	});
 });
 test("delete: validates keys", async ({ expect }) => {
-	await testValidatesKey({
+	await testValidatesKey(expect, {
 		method: "delete",
 		f: (r2, key) => r2.delete(["valid key", key]),
 	});
 });
 
-async function testList(opts: {
-	keys: string[];
-	options?: R2ListOptions;
-	pages: string[][];
-}) {
+async function testList(
+	expect: ExpectStatic,
+	opts: {
+		keys: string[];
+		options?: R2ListOptions;
+		pages: string[][];
+	}
+) {
 	const { r2, ns } = ctx;
 
 	// Seed bucket
@@ -665,20 +676,20 @@ async function testList(opts: {
 	}
 }
 test("list: lists keys in sorted order", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key3", "key1", "key2", ", ", "!"],
 		pages: [["!", ", ", "key1", "key2", "key3"]],
 	});
 });
 test("list: lists keys matching prefix", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["section1key1", "section1key2", "section2key1"],
 		options: { prefix: "section1" },
 		pages: [["section1key1", "section1key2"]],
 	});
 });
 test("list: returns an empty list with no keys", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		keys: [],
 		pages: [[]],
 	});
@@ -686,7 +697,7 @@ test("list: returns an empty list with no keys", async ({ expect }) => {
 test("list: returns an empty list with no matching keys", async ({
 	expect,
 }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key1", "key2", "key3"],
 		options: { prefix: "none" },
 		pages: [[]],
@@ -695,21 +706,21 @@ test("list: returns an empty list with no matching keys", async ({
 test("list: returns an empty list with an invalid cursor", async ({
 	expect,
 }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key1", "key2", "key3"],
 		options: { cursor: "bad" },
 		pages: [[]],
 	});
 });
 test("list: paginates keys", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key1", "key2", "key3"],
 		options: { limit: 2 },
 		pages: [["key1", "key2"], ["key3"]],
 	});
 });
 test("list: paginates keys matching prefix", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["section1key1", "section1key2", "section1key3", "section2key1"],
 		options: { prefix: "section1", limit: 2 },
 		pages: [["section1key1", "section1key2"], ["section1key3"]],
@@ -718,7 +729,7 @@ test("list: paginates keys matching prefix", async ({ expect }) => {
 test("list: lists keys starting from startAfter exclusive", async ({
 	expect,
 }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key2" },
 		pages: [["key3", "key4"]],
@@ -727,7 +738,7 @@ test("list: lists keys starting from startAfter exclusive", async ({
 test("list: lists keys with startAfter and limit (where startAfter matches key)", async ({
 	expect,
 }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key1", limit: 2 },
 		pages: [["key2", "key3"], ["key4"]],
@@ -736,7 +747,7 @@ test("list: lists keys with startAfter and limit (where startAfter matches key)"
 test("list: lists keys with startAfter and limit (where startAfter doesn't match key)", async ({
 	expect,
 }) => {
-	await testList({
+	await testList(expect, {
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key", limit: 2 },
 		pages: [

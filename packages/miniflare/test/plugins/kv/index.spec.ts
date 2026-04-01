@@ -10,8 +10,7 @@ import {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 } from "miniflare";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, ExpectStatic, test } from "vitest";
 import {
 	createJunkStream,
 	FIXTURES_PATH,
@@ -84,10 +83,13 @@ beforeEach(async () => {
 	await ctx.object.enableFakeTimers(secondsToMillis(TIME_NOW));
 });
 
-async function testValidatesKey(opts: {
-	method: string;
-	f: (kv: ReplaceWorkersTypes<KVNamespace>, key?: any) => Promise<void>;
-}) {
+async function testValidatesKey(
+	expect: ExpectStatic,
+	opts: {
+		method: string;
+		f: (kv: ReplaceWorkersTypes<KVNamespace>, key?: any) => Promise<void>;
+	}
+) {
 	const { kv } = ctx;
 	kv.ns = "";
 	await expect(opts.f(kv, "")).rejects.toThrow(
@@ -107,7 +109,7 @@ async function testValidatesKey(opts: {
 }
 
 test("get: validates key", async ({ expect }) => {
-	await testValidatesKey({
+	await testValidatesKey(expect, {
 		method: "get",
 		f: async (kv, key) => {
 			await kv.get(key);
@@ -289,7 +291,7 @@ test("get: validates but ignores cache ttl", async ({ expect }) => {
 });
 
 test("put: validates key", async ({ expect }) => {
-	await testValidatesKey({
+	await testValidatesKey(expect, {
 		method: "put",
 		f: async (kv, key) => {
 			await kv.put(key, "value");
@@ -388,7 +390,9 @@ test("put: validates expiration", async ({ expect }) => {
 		kv.put("key", "value", { expiration: TIME_NOW + 30 })
 	).rejects.toThrow(
 		new Error(
-			`KV PUT failed: 400 Invalid expiration of ${TIME_NOW + 30}. Expiration times must be at least 60 seconds in the future.`
+			`KV PUT failed: 400 Invalid expiration of ${
+				TIME_NOW + 30
+			}. Expiration times must be at least 60 seconds in the future.`
 		)
 	);
 });
@@ -416,13 +420,15 @@ test("put: validates metadata size", async ({ expect }) => {
 		})
 	).rejects.toThrow(
 		new Error(
-			`KV PUT failed: 413 Metadata length of ${maxMetadataSize + 1} exceeds limit of ${maxMetadataSize}.`
+			`KV PUT failed: 413 Metadata length of ${
+				maxMetadataSize + 1
+			} exceeds limit of ${maxMetadataSize}.`
 		)
 	);
 });
 
 test("delete: validates key", async ({ expect }) => {
-	await testValidatesKey({
+	await testValidatesKey(expect, {
 		method: "delete",
 		f: async (kv, key) => {
 			await kv.delete(key);
@@ -441,14 +447,17 @@ test("delete: does nothing for non-existent keys", async ({ expect }) => {
 	await kv.delete("key");
 });
 
-async function testList(opts: {
-	values: Record<
-		string,
-		{ value: string; expiration?: number; metadata?: unknown }
-	>;
-	options?: KVNamespaceListOptions;
-	pages: KVNamespaceListResult<unknown>["keys"][];
-}) {
+async function testList(
+	expect: ExpectStatic,
+	opts: {
+		values: Record<
+			string,
+			{ value: string; expiration?: number; metadata?: unknown }
+		>;
+		options?: KVNamespaceListOptions;
+		pages: KVNamespaceListResult<unknown>["keys"][];
+	}
+) {
 	const { kv, ns } = ctx;
 	for (const [key, value] of Object.entries(opts.values)) {
 		await kv.put(key, value.value, {
@@ -484,7 +493,7 @@ async function testList(opts: {
 }
 
 test("list: lists keys in sorted order", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key3: { value: "value3" },
 			key1: { value: "value1" },
@@ -494,7 +503,7 @@ test("list: lists keys in sorted order", async ({ expect }) => {
 	});
 });
 test("list: lists keys matching prefix", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			section1key1: { value: "value11" },
 			section1key2: { value: "value12" },
@@ -505,7 +514,7 @@ test("list: lists keys matching prefix", async ({ expect }) => {
 	});
 });
 test("list: prefix is case-sensitive", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key1: { value: "lower1" },
 			key2: { value: "lower2 " },
@@ -517,7 +526,7 @@ test("list: prefix is case-sensitive", async ({ expect }) => {
 	});
 });
 test("list: prefix permits special characters", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			["key\\_%1"]: { value: "value1" },
 			["key\\a"]: { value: "bad1" },
@@ -530,7 +539,7 @@ test("list: prefix permits special characters", async ({ expect }) => {
 	});
 });
 test("list: lists keys with expiration", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key1: { value: "value1", expiration: TIME_FUTURE },
 			key2: { value: "value2", expiration: TIME_FUTURE + 100 },
@@ -546,7 +555,7 @@ test("list: lists keys with expiration", async ({ expect }) => {
 	});
 });
 test("list: lists keys with metadata", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key1: { value: "value1", metadata: { testing: 1 } },
 			key2: { value: "value2", metadata: { testing: 2 } },
@@ -562,7 +571,7 @@ test("list: lists keys with metadata", async ({ expect }) => {
 	});
 });
 test("list: lists keys with expiration and metadata", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key1: {
 				value: "value1",
@@ -602,7 +611,7 @@ test("list: lists keys with expiration and metadata", async ({ expect }) => {
 	});
 });
 test("list: returns an empty list with no keys", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {},
 		pages: [[]],
 	});
@@ -610,7 +619,7 @@ test("list: returns an empty list with no keys", async ({ expect }) => {
 test("list: returns an empty list with no matching keys", async ({
 	expect,
 }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key1: { value: "value1" },
 			key2: { value: "value2" },
@@ -621,7 +630,7 @@ test("list: returns an empty list with no matching keys", async ({
 	});
 });
 test("list: paginates keys", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			key1: { value: "value1" },
 			key2: { value: "value2" },
@@ -632,7 +641,7 @@ test("list: paginates keys", async ({ expect }) => {
 	});
 });
 test("list: paginates keys matching prefix", async ({ expect }) => {
-	await testList({
+	await testList(expect, {
 		values: {
 			section1key1: { value: "value11" },
 			section1key2: { value: "value12" },
