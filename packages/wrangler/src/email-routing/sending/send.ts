@@ -157,7 +157,14 @@ function parseAttachments(
 		return [];
 	}
 	return attachmentPaths.map((filePath) => {
-		const content = readFileSync(filePath);
+		let content: Buffer;
+		try {
+			content = readFileSync(filePath);
+		} catch (e) {
+			throw new UserError(
+				`Failed to read attachment file '${filePath}': ${e instanceof Error ? e.message : e}`
+			);
+		}
 		const filename = path.basename(filePath);
 
 		return {

@@ -46,7 +46,13 @@ export const emailSendingSendRawCommand = createCommand({
 		let mimeMessage: string;
 
 		if (args.mimeFile) {
-			mimeMessage = readFileSync(args.mimeFile, "utf-8");
+			try {
+				mimeMessage = readFileSync(args.mimeFile, "utf-8");
+			} catch (e) {
+				throw new UserError(
+					`Failed to read MIME file '${args.mimeFile}': ${e instanceof Error ? e.message : e}`
+				);
+			}
 		} else {
 			mimeMessage = args.mime ?? "";
 		}
