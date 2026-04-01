@@ -1,5 +1,7 @@
 import { beforeEach, describe, test } from "vitest";
 import {
+	captureDownload,
+	cleanupDownload,
 	clickButton,
 	isTextVisible,
 	navigateToR2Bucket,
@@ -551,5 +553,108 @@ describe("R2 Bucket", () => {
 		});
 	});
 
-	// TODO: Add file download verification
+	describe("downloading objects", () => {
+		test("downloads file from object detail page", async ({ expect }) => {
+			await navigateToR2Object("my-bucket", "readme.txt");
+			await waitForText("Object Details");
+
+			const { content, downloadPath, suggestedFilename } =
+				await captureDownload(
+					async () =>
+						await page.getByRole("button", { name: "Download" }).click(),
+					"readme.txt"
+				);
+
+			expect(suggestedFilename).toBe("readme.txt");
+			expect(content).toBe(
+				"Welcome to the R2 bucket! This is a sample readme file."
+			);
+
+			await cleanupDownload(downloadPath);
+		});
+
+		test("downloads nested file with correct filename", async ({ expect }) => {
+			await navigateToR2Object("my-bucket", "documents/report.txt");
+			await waitForText("Object Details");
+
+			const { content, downloadPath, suggestedFilename } =
+				await captureDownload(
+					async () =>
+						await page.getByRole("button", { name: "Download" }).click(),
+					"report.txt"
+				);
+
+			// Should extract filename from path (report.txt, not documents/report.txt)
+			expect(suggestedFilename).toBe("report.txt");
+			expect(content).toContain("Annual Report 2024");
+
+			await cleanupDownload(downloadPath);
+		});
+
+		test("downloads JSON file with correct content", async ({ expect }) => {
+			await navigateToR2Object("my-bucket", "config.json");
+			await waitForText("Object Details");
+
+			const { content, downloadPath, suggestedFilename } =
+				await captureDownload(
+					async () =>
+						await page.getByRole("button", { name: "Download" }).click(),
+					"config.json"
+				);
+
+			expect(suggestedFilename).toBe("config.json");
+
+			// Verify JSON parses correctly and has expected structure
+			const parsed = JSON.parse(content);
+			expect(parsed.version).toBe("1.0.0");
+			expect(parsed.environment).toBe("development");
+
+			await cleanupDownload(downloadPath);
+		});
+
+		test("downloads binary file (SVG) with correct content", async ({
+			expect,
+		}) => {
+			await navigateToR2Object("my-bucket", "images/logo.svg");
+			await waitForText("Object Details");
+
+			const { content, downloadPath, suggestedFilename } =
+				await captureDownload(
+					async () =>
+						await page.getByRole("button", { name: "Download" }).click(),
+					"logo.svg"
+				);
+
+			expect(suggestedFilename).toBe("logo.svg");
+			expect(content).toContain("<svg");
+			expect(content).toContain("</svg>");
+			expect(content).toContain('xmlns="http://www.w3.org/2000/svg"');
+
+			await cleanupDownload(downloadPath);
+		});
+
+		test("downloads file from table row action menu", async ({ expect }) => {
+			await navigateToR2Bucket("my-bucket");
+			await waitForTableRows(1);
+
+			// Open the action menu on a file row
+			const readmeRow = page.locator("tr").filter({ hasText: "readme.txt" });
+			await readmeRow.getByRole("button", { name: "Actions" }).click();
+
+			// Click download in the menu
+			const { content, downloadPath, suggestedFilename } =
+				await captureDownload(
+					async () =>
+						await page.getByRole("menuitem", { name: "Download" }).click(),
+					"readme.txt"
+				);
+
+			expect(suggestedFilename).toBe("readme.txt");
+			expect(content).toBe(
+				"Welcome to the R2 bucket! This is a sample readme file."
+			);
+
+			await cleanupDownload(downloadPath);
+		});
+	});
 });

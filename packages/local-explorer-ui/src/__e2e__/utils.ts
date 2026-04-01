@@ -1,3 +1,6 @@
+import { readFile, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { page, viteUrl, workerUrl } from "./setup";
 
 export { page, viteUrl };
@@ -348,4 +351,61 @@ export async function refreshTables(): Promise<void> {
 	const refreshButton = page.getByRole("button", { name: "Refresh tables" });
 	await refreshButton.click();
 	await page.waitForTimeout(500);
+}
+
+interface DownloadResult {
+	content: string;
+	downloadPath: string;
+	suggestedFilename: string;
+}
+
+/**
+ * Click a download button and capture the downloaded file.
+ * Returns the path, content, and suggested filename for verification.
+ *
+ * @param triggerDownload - Async function that triggers the download (e.g., clicks the download button)
+ * @param filename - The expected filename for the downloaded file
+ *
+ * @returns DownloadResult with path, content, and suggested filename
+ *
+ * @example
+ * const { content, suggestedFilename } = await captureDownload(
+ *   async () => await page.getByRole("button", { name: "Download" }).click(),
+ *   "readme.txt"
+ * );
+ * expect(suggestedFilename).toBe("readme.txt");
+ * expect(content).toBe("Expected file content");
+ * await cleanupDownload(downloadPath);
+ */
+export async function captureDownload(
+	triggerDownload: () => Promise<void>,
+	filename: string
+): Promise<DownloadResult> {
+	const downloadPromise = page.waitForEvent("download");
+
+	await triggerDownload();
+
+	const download = await downloadPromise;
+
+	const downloadPath = join(tmpdir(), `e2e-download-${Date.now()}-${filename}`);
+	await download.saveAs(downloadPath);
+
+	const content = await readFile(downloadPath, "utf-8");
+
+	return {
+		content,
+		downloadPath,
+		suggestedFilename: download.suggestedFilename(),
+	};
+}
+
+/**
+ * Clean up a downloaded file after verification.
+ */
+export async function cleanupDownload(downloadPath: string): Promise<void> {
+	try {
+		await unlink(downloadPath);
+	} catch {
+		// Ignore errors if file doesn't exist
+	}
 }
