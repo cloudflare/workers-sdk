@@ -48,7 +48,7 @@ describe("Durable Objects", () => {
 
 			const openStudioLinks = page.locator('a:has-text("Open Studio")');
 			const count = await openStudioLinks.count();
-			expect(count).toBeGreaterThanOrEqual(0);
+			expect(count).toBeGreaterThanOrEqual(1);
 		});
 	});
 

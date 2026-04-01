@@ -34,16 +34,6 @@ export async function setup({ provide }: TestProject): Promise<void> {
 	const workerUrl = `http://${ip}:${port}`;
 	console.log(`Worker fixture is ready at ${workerUrl}`);
 
-	// Seed the test data
-	console.log("Seeding test data...");
-	await Promise.all([
-		fetch(`${workerUrl}/kv/seed`),
-		fetch(`${workerUrl}/r2/seed`),
-		fetch(`${workerUrl}/d1`),
-		fetch(`${workerUrl}/do?id=test-object`),
-	]);
-	console.log("Test data seeded");
-
 	// Start the Vite dev server programmatically
 	console.log("Starting Vite dev server...");
 	viteServer = await createServer({

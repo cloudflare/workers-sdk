@@ -49,7 +49,7 @@ describe("KV Namespace", () => {
 
 			const configRows = page.locator("tr").filter({ hasText: "config:" });
 			const count = await configRows.count();
-			expect(count).toBeGreaterThan(0);
+			expect(count).toEqual(5);
 		});
 
 		test("shows no results message when prefix matches nothing", async () => {
