@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { allFrameworksInfos, staticFramework } from "./all-frameworks";
+import { NoOpFramework } from "./no-op";
 import type { Framework } from "./framework-class";
 
 export type { Framework, PackageJsonScriptsOverrides } from "./framework-class";
@@ -20,17 +21,22 @@ export function isKnownFramework(frameworkId: string): boolean {
 }
 
 /**
- * Gets the class for a framework based on its id
+ * Gets an class instance for a framework based on its id
  *
  * @param frameworkId The target framework's id
  * @returns The class for the framework, defaulting to the static framework is the id is not recognized
  */
-export function getFrameworkClass(frameworkId: FrameworkInfo["id"]): Framework {
+export function getFrameworkClassInstance(
+	frameworkId: FrameworkInfo["id"]
+): Framework {
 	const targetedFramework = allFrameworksInfos.find(
 		(framework) => framework.id === frameworkId
 	);
 	const framework = targetedFramework ?? staticFramework;
-	return new framework.class({ id: framework.id, name: framework.name });
+	const targetClass =
+		framework.supported === false ? NoOpFramework : framework.class;
+
+	return new targetClass({ id: framework.id, name: framework.name });
 }
 
 /**
@@ -55,11 +61,11 @@ export function isFrameworkSupported(
 export type FrameworkInfo = {
 	id: string;
 	name: string;
-	class: typeof Framework;
 } & (
 	| { supported: false }
 	| {
 			supported: true;
+			class: typeof Framework;
 			frameworkPackageInfo: AutoConfigFrameworkPackageInfo;
 	  }
 );
