@@ -26,6 +26,15 @@ gitChecks: false
 # See: https://pnpm.io/supply-chain-security
 # ──────────────────────────────────────────────────────────────────────────────
 
+minimumReleaseAge: 10080 # 7 days
+
+minimumReleaseAgeExclude:
+  - "@cloudflare/*"
+  - "create-cloudflare"
+  - "miniflare"
+  - "wrangler"
+  - "workerd"
+
 # Prevent transitive dependencies from pulling code from git repos or tarball
 # URLs. Only direct dependencies may use exotic sources.
 blockExoticSubdeps: true

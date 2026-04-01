@@ -46,3 +46,31 @@ runs:
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
+
+    - name: "[DEBUG] pnpm config leak investigation"
+      shell: bash
+      run: |
+        echo "=== pnpm version ==="
+        pnpm --version
+        echo ""
+        echo "=== which pnpx ==="
+        which pnpx
+        echo ""
+        echo "=== pnpm config from workspace CWD ==="
+        pnpm config list --json | grep -E 'minimum|release|exclude' || echo "(none)"
+        echo ""
+        echo "=== pnpm config from /tmp CWD ==="
+        cd /tmp && pnpm config list --json | grep -E 'minimum|release|exclude' || echo "(none)"
+        cd -
+        echo ""
+        echo "=== global config dir contents ==="
+        ls -la ~/.config/pnpm/ 2>/dev/null || echo "(no ~/.config/pnpm)"
+        cat ~/.config/pnpm/config.yaml 2>/dev/null || echo "(no config.yaml)"
+        cat ~/.config/pnpm/rc 2>/dev/null || echo "(no rc)"
+        echo ""
+        echo "=== PNPM env vars ==="
+        env | grep -iE 'pnpm|npm_config' | sort || echo "(none)"
+        echo ""
+        echo "=== pnpm dlx test from /tmp ==="
+        cd /tmp && pnpm dlx is-odd@3.0.1 --help 2>&1 | head -5 || echo "dlx failed"
+        cd -
