@@ -10,6 +10,7 @@ import dedent from "ts-dedent";
 import { logger } from "../../logger";
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -148,12 +149,9 @@ export class ReactRouter extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const viteEnvironmentKey = configPropertyName(this.frameworkVersion);
 		if (!dryRun) {
-			await installPackages(packageManager.type, ["@cloudflare/vite-plugin"], {
-				dev: true,
-				startText: "Installing the Cloudflare Vite plugin",
-				doneText: `${brandColor(`installed`)} ${dim(
-					"@cloudflare/vite-plugin"
-				)}`,
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
+				projectPath,
 				isWorkspaceRoot,
 			});
 
