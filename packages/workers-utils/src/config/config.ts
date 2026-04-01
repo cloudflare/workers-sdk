@@ -336,6 +336,7 @@ export const defaultWranglerConfig: Config = {
 	vectorize: [],
 	ai_search_namespaces: [],
 	ai_search: [],
+	agent_memory: [],
 	hyperdrive: [],
 	workflows: [],
 	secrets_store_secrets: [],

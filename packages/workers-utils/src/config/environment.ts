@@ -1052,6 +1052,24 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Agent Memory namespace bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	agent_memory: {
+		/** The binding name used to refer to the Agent Memory namespace in the Worker. */
+		binding: string;
+		/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
+		namespace: string;
+		/** Whether the Agent Memory binding should be remote in local development */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies Hyperdrive configs that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
