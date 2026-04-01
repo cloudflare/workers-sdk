@@ -14,14 +14,22 @@ import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
+import { createConfig } from "../hyperdrive/client";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
+import {
+	detectDatabaseConnectionString,
+	getDatabaseTypeLabel,
+} from "./detect-db-connection-string";
 import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -160,6 +168,84 @@ export const secretPutCommand = createCommand({
 				: await readFromStdin()
 		);
 
+		// Detect PostgreSQL/MySQL connection strings and offer Hyperdrive creation
+		// before uploading the secret, so the flow feels cohesive.
+		let hyperdriveBindingName: string | undefined;
+		if (!isNonInteractiveOrCI()) {
+			const dbInfo = detectDatabaseConnectionString(secretValue);
+			if (dbInfo) {
+				const dbType = getDatabaseTypeLabel(dbInfo.scheme);
+				logger.log("");
+				const shouldCreateHyperdrive = await confirm(
+					`This is a ${dbType} connection string. Would you like to create a Hyperdrive configuration for this database? (recommended)\n` +
+						`This will speed up access to your database, is available on your current Worker plan, and can be used within your existing driver or ORM.`,
+					{ defaultValue: true, fallbackValue: false }
+				);
+
+				if (shouldCreateHyperdrive) {
+					try {
+						const configName = dbInfo.database || args.key;
+						logger.log(
+							`🌀 Creating Hyperdrive configuration for database "${configName}"...`
+						);
+
+						const hyperdriveConfig = await createConfig(config, {
+							name: configName,
+							origin: {
+								scheme: dbInfo.scheme,
+								host: dbInfo.host,
+								port: dbInfo.port,
+								database: dbInfo.database,
+								user: dbInfo.user,
+								password: dbInfo.password,
+							},
+							// Disable caching by default to avoid stale-data surprises for
+							// users who are not yet familiar with Hyperdrive's caching behavior.
+							caching: { disabled: true },
+						});
+
+						logger.log(
+							`✅ Created Hyperdrive configuration: ${hyperdriveConfig.id}`
+						);
+
+						// Auto-write to config without extra prompts — the user
+						// already confirmed they want Hyperdrive.
+						await createdResourceConfig(
+							"hyperdrive",
+							(name) => ({
+								binding: getValidBindingName(
+									name ?? "HYPERDRIVE",
+									"HYPERDRIVE"
+								),
+								id: hyperdriveConfig.id,
+							}),
+							config.configPath,
+							args.env,
+							{
+								binding: "HYPERDRIVE",
+								useRemote: false,
+							}
+						);
+
+						hyperdriveBindingName = "HYPERDRIVE";
+					} catch (e) {
+						const detail =
+							e instanceof APIError && e.notes.length > 0
+								? e.notes.map((n) => n.text).join("; ")
+								: e instanceof Error
+									? e.message
+									: String(e);
+						logger.warn(
+							`Failed to create Hyperdrive configuration: ${detail}`
+						);
+						logger.log(
+							`You can create one manually with: wrangler hyperdrive create <name> --connection-string=<your-connection-string>`
+						);
+					}
+				}
+			}
+		}
+
 		logger.log(
 			`🌀 Creating the secret for the Worker "${scriptName}" ${
 				isServiceEnv ? `(${args.env})` : ""
@@ -230,6 +316,19 @@ export const secretPutCommand = createCommand({
 		}
 
 		logger.log(`✨ Success! Uploaded secret ${args.key}`);
+
+		if (hyperdriveBindingName) {
+			logger.log("");
+			logger.log(
+				`❗ Action Required: Change all references in your code from env.${args.key} to env.${hyperdriveBindingName}.connectionString`
+			);
+			logger.log(
+				`🧐 Action Recommended: Configure a localConnectionString within the Hyperdrive section of your ${configFileName(config.configPath)} for local development.`
+			);
+			logger.log(
+				`   Read more: https://developers.cloudflare.com/hyperdrive/configuration/local-development/`
+			);
+		}
 	},
 });
 
