@@ -1956,6 +1956,28 @@ function collectCoreBindings(
 			addBinding(aiSearch.binding, "AiSearchInstance", "ai_search", envName);
 		}
 
+		for (const [index, agentMemory] of (
+			env.agent_memory ?? []
+		).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				agentMemory.binding,
+				"AgentMemory",
+				"agent_memory",
+				envName
+			);
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -3094,6 +3116,27 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "ai_search",
 				name: aiSearch.binding,
 				type: "AiSearchInstance",
+			});
+		}
+
+		for (const [index, agentMemory] of (
+			env.agent_memory ?? []
+		).entries()) {
+			if (!agentMemory.binding) {
+				throwMissingBindingError({
+					binding: agentMemory,
+					bindingType: "agent_memory",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "agent_memory",
+				name: agentMemory.binding,
+				type: "AgentMemory",
 			});
 		}
 
