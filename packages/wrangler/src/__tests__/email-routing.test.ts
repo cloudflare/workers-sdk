@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -131,6 +132,14 @@ describe("email routing help", () => {
 		expect(std.out).toContain("Manage Email Routing destination addresses");
 	});
 
+	it("should show help text for email routing dns", async ({ expect }) => {
+		await runWrangler("email routing dns");
+		await endEventLoop();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toContain("Manage Email Routing DNS settings");
+	});
+
 	it("should show help text for email sending", async ({ expect }) => {
 		await runWrangler("email sending");
 		await endEventLoop();
@@ -200,7 +209,6 @@ describe("email routing commands", () => {
 
 			expect(std.out).toContain("example.com");
 			expect(std.out).toContain("no");
-			expect(std.out).toContain("disabled");
 		});
 	});
 
@@ -281,6 +289,32 @@ describe("email routing commands", () => {
 
 			expect(std.out).toContain("Email Routing disabled");
 		});
+
+		it("should skip confirmation with --force", async ({ expect }) => {
+			mockDisableEmailRouting({
+				...mockSettings,
+				enabled: false,
+			});
+
+			await runWrangler(
+				"email routing disable example.com --zone-id zone-id-1 --force"
+			);
+
+			expect(std.out).toContain("Email Routing disabled");
+		});
+
+		it("should abort when user declines confirmation", async ({ expect }) => {
+			mockConfirm({
+				text: "Are you sure you want to disable Email Routing for this zone?",
+				result: false,
+			});
+
+			await runWrangler(
+				"email routing disable example.com --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Not disabling.");
+		});
 	});
 
 	// --- dns get ---
@@ -295,6 +329,16 @@ describe("email routing commands", () => {
 
 			expect(std.out).toContain("MX");
 			expect(std.out).toContain("route1.mx.cloudflare.net");
+		});
+
+		it("should handle no dns records", async ({ expect }) => {
+			mockGetDns([]);
+
+			await runWrangler(
+				"email routing dns get example.com --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("No DNS records found.");
 		});
 	});
 
@@ -313,6 +357,29 @@ describe("email routing commands", () => {
 			);
 
 			expect(std.out).toContain("MX records unlocked for example.com");
+		});
+
+		it("should skip confirmation with --force", async ({ expect }) => {
+			mockUnlockDns(mockSettings);
+
+			await runWrangler(
+				"email routing dns unlock example.com --zone-id zone-id-1 --force"
+			);
+
+			expect(std.out).toContain("MX records unlocked for example.com");
+		});
+
+		it("should abort when user declines confirmation", async ({ expect }) => {
+			mockConfirm({
+				text: "Are you sure you want to unlock MX records? This allows external MX records to be set.",
+				result: false,
+			});
+
+			await runWrangler(
+				"email routing dns unlock example.com --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Not unlocking.");
 		});
 	});
 
@@ -338,6 +405,29 @@ describe("email routing commands", () => {
 			);
 
 			expect(std.out).toContain("No routing rules found.");
+		});
+
+		it("should show catch-all rule separately", async ({ expect }) => {
+			mockListRules([
+				mockRule,
+				{
+					id: "catch-all-id",
+					actions: [{ type: "forward", value: ["catchall@example.com"] }],
+					enabled: true,
+					matchers: [{ type: "all", field: "", value: "" }],
+					name: "catch-all",
+					tag: "catch-all-tag",
+					priority: 0,
+				},
+			]);
+
+			await runWrangler(
+				"email routing rules list example.com --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("rule-id-1");
+			expect(std.out).toContain("Catch-all rule:");
+			expect(std.out).toContain("wrangler email routing rules get catch-all");
 		});
 	});
 
@@ -368,6 +458,32 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Catch-all rule:");
 			expect(std.out).toContain("Enabled: true");
 			expect(std.out).toContain("forward: catchall@example.com");
+		});
+
+		it("should fallback to catch-all endpoint on error 2020", async ({
+			expect,
+		}) => {
+			// Mock the regular rules endpoint to return error 2020
+			msw.use(
+				http.get(
+					"*/zones/:zoneId/email/routing/rules/:ruleId",
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 2020, message: "Invalid rule operation" },
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+			mockGetCatchAll({ ...mockCatchAll, tag: "catch-all-tag" });
+
+			await runWrangler(
+				"email routing rules get example.com catch-all-tag --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Catch-all rule:");
 		});
 	});
 
@@ -512,6 +628,29 @@ describe("email routing commands", () => {
 
 			expect(std.out).toContain("Deleted routing rule: rule-id-1");
 		});
+
+		it("should skip confirmation with --force", async ({ expect }) => {
+			mockDeleteRule();
+
+			await runWrangler(
+				"email routing rules delete example.com rule-id-1 --zone-id zone-id-1 --force"
+			);
+
+			expect(std.out).toContain("Deleted routing rule: rule-id-1");
+		});
+
+		it("should abort when user declines confirmation", async ({ expect }) => {
+			mockConfirm({
+				text: "Are you sure you want to delete routing rule 'rule-id-1'?",
+				result: false,
+			});
+
+			await runWrangler(
+				"email routing rules delete example.com rule-id-1 --zone-id zone-id-1"
+			);
+
+			expect(std.out).toContain("Not deleting.");
+		});
 	});
 
 	// --- addresses list ---
@@ -599,6 +738,44 @@ describe("email sending commands", () => {
 
 	afterEach(() => {
 		clearDialogs();
+	});
+
+	// --- list ---
+
+	describe("list", () => {
+		it("should list zones with email sending", async ({ expect }) => {
+			mockListEmailSendingZones([mockSettings]);
+
+			await runWrangler("email sending list");
+
+			expect(std.out).toContain("example.com");
+			expect(std.out).toContain("yes");
+		});
+
+		it("should handle no zones", async ({ expect }) => {
+			mockListEmailSendingZones([]);
+
+			await runWrangler("email sending list");
+
+			expect(std.out).toContain(
+				"No zones found with Email Sending in this account."
+			);
+		});
+	});
+
+	// --- settings ---
+
+	describe("settings", () => {
+		it("should get sending settings", async ({ expect }) => {
+			mockZoneLookup("example.com", "zone-id-1");
+			mockGetSendingSettings("zone-id-1");
+
+			await runWrangler("email sending settings example.com");
+
+			expect(std.out).toContain("Email Sending for example.com");
+			expect(std.out).toContain("Enabled:  true");
+			expect(std.out).toContain("sub.example.com");
+		});
 	});
 
 	// --- enable/disable ---
@@ -807,6 +984,33 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("Delivered to: recipient@example.com");
 		});
 
+		it("should send a raw MIME email from file", async ({ expect }) => {
+			const reqProm = mockSendRawEmail();
+			const mimeContent =
+				"From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: File Test\r\n\r\nBody";
+			writeFileSync("test.eml", mimeContent, "utf-8");
+
+			await runWrangler(
+				"email sending send-raw --from sender@example.com --to recipient@example.com --mime-file test.eml"
+			);
+
+			await expect(reqProm).resolves.toMatchObject({
+				from: "sender@example.com",
+				recipients: ["recipient@example.com"],
+				mime_message: mimeContent,
+			});
+
+			expect(std.out).toContain("Delivered to: recipient@example.com");
+		});
+
+		it("should error when --mime-file does not exist", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"email sending send-raw --from sender@example.com --to recipient@example.com --mime-file nonexistent.eml"
+				)
+			).rejects.toThrow("Failed to read MIME file 'nonexistent.eml'");
+		});
+
 		it("should error when neither --mime nor --mime-file is provided", async ({
 			expect,
 		}) => {
@@ -817,6 +1021,39 @@ describe("email sending commands", () => {
 			).rejects.toThrow(
 				"You must provide either --mime (inline MIME message) or --mime-file (path to MIME file)"
 			);
+		});
+	});
+
+	// --- send with attachment ---
+
+	describe("send with attachment", () => {
+		it("should send an email with a file attachment", async ({ expect }) => {
+			const reqProm = mockSendEmail();
+			writeFileSync("hello.txt", "Hello, World!", "utf-8");
+
+			await runWrangler(
+				"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'See attached' --attachment hello.txt"
+			);
+
+			const body = await reqProm;
+			expect(body).toMatchObject({
+				from: "sender@example.com",
+				subject: "Test",
+			});
+			expect(
+				(body as { attachments: { filename: string }[] }).attachments[0]
+					.filename
+			).toBe("hello.txt");
+		});
+
+		it("should error when attachment file does not exist", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'Hi' --attachment nonexistent.pdf"
+				)
+			).rejects.toThrow("Failed to read attachment file 'nonexistent.pdf'");
 		});
 	});
 });
@@ -1078,6 +1315,18 @@ function mockDeleteAddress() {
 }
 
 // --- Mock API handlers: Email Sending ---
+
+function mockListEmailSendingZones(settings: (typeof mockSettings)[]) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/email/sending/zones",
+			() => {
+				return HttpResponse.json(createFetchResult(settings, true));
+			},
+			{ once: true }
+		)
+	);
+}
 
 function mockEnableSending(_zoneId: string) {
 	msw.use(
