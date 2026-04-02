@@ -674,7 +674,7 @@ export const CORE_PLUGIN: Plugin<
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
-		log,
+		log: _log,
 		options,
 		sharedOptions,
 		workerBindings,
