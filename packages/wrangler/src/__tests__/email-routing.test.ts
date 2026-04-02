@@ -347,7 +347,7 @@ describe("email routing commands", () => {
 	describe("dns unlock", () => {
 		it("should unlock dns records", async ({ expect }) => {
 			mockConfirm({
-				text: "Are you sure you want to unlock MX records? This allows external MX records to be set.",
+				text: "Are you sure you want to unlock DNS records for 'example.com'? This can allow external records to override Email Routing, which may cause deliverability issues or stop emails from being delivered through Cloudflare.",
 				result: true,
 			});
 			mockUnlockDns(mockSettings);
@@ -371,7 +371,7 @@ describe("email routing commands", () => {
 
 		it("should abort when user declines confirmation", async ({ expect }) => {
 			mockConfirm({
-				text: "Are you sure you want to unlock MX records? This allows external MX records to be set.",
+				text: "Are you sure you want to unlock DNS records for 'example.com'? This can allow external records to override Email Routing, which may cause deliverability issues or stop emails from being delivered through Cloudflare.",
 				result: false,
 			});
 
