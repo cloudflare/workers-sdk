@@ -2105,6 +2105,9 @@ importers:
       acorn:
         specifier: 8.14.0
         version: 8.14.0
+      acorn-import-phases:
+        specifier: ^1.0.4
+        version: 1.0.4(acorn@8.14.0)
       acorn-walk:
         specifier: 8.3.2
         version: 8.3.2
@@ -9051,6 +9054,12 @@ packages:
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
     engines: {node: '>= 0.6'}
+
+  acorn-import-phases@1.0.4:
+    resolution: {integrity: sha512-wKmbr/DDiIXzEOiWrTTUcDm24kQ2vGfZQvM2fwg2vXqR5uW6aapr7ObPtj1th32b9u90/Pf4AItvdTh42fBmVQ==}
+    engines: {node: '>=10.13.0'}
+    peerDependencies:
+      acorn: ^8.14.0
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -19905,6 +19914,10 @@ snapshots:
     dependencies:
       mime-types: 3.0.1
       negotiator: 1.0.0
+
+  acorn-import-phases@1.0.4(acorn@8.14.0):
+    dependencies:
+      acorn: 8.14.0
 
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:

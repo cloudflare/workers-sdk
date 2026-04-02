@@ -77,6 +77,7 @@
 		"@types/which": "^2.0.1",
 		"@types/ws": "^8.5.7",
 		"acorn": "8.14.0",
+		"acorn-import-phases": "^1.0.4",
 		"acorn-walk": "8.3.2",
 		"capnp-es": "catalog:default",
 		"capnweb": "catalog:default",
