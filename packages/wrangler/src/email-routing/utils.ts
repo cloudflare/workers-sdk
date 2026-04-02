@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchListResult } from "../cfetch";
+import { fetchListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import { retryOnAPIFailure } from "../utils/retry";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
@@ -59,15 +59,16 @@ export async function resolveDomain(
 	domain: string,
 	zoneId?: string
 ): Promise<ResolvedDomain> {
-	// If zone ID is provided directly, skip the zone lookup
+	// If zone ID is provided directly, fetch the zone name to determine subdomain status
 	if (zoneId) {
-		// We don't know the zone name without a lookup, so approximate from the domain
-		const labels = domain.split(".");
-		const zoneName = labels.slice(-2).join(".");
+		await requireAuth(config);
+		const zone = await retryOnAPIFailure(() =>
+			fetchResult<{ id: string; name: string }>(config, `/zones/${zoneId}`)
+		);
 		return {
 			zoneId,
-			zoneName,
-			isSubdomain: domain !== zoneName,
+			zoneName: zone.name,
+			isSubdomain: domain !== zone.name,
 			domain,
 		};
 	}
