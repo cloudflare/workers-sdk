@@ -2,8 +2,8 @@
 "@cloudflare/local-explorer-ui": patch
 ---
 
-Fix local explorer invalid route messages.
+Improves local explorer invalid route error handling.
 
-When trying to access a route, like `/foo`, that doesn't exist we show a custom 404 error message with a redirect button.
+Visiting a route either as a 404 or 500 error now has dedicated components to handle as such, rather than the generic TanStack error UI.
 
-Similarly we do the same for when trying to access a binding resource that doesn't exist. Now showing a "Resource not found" error with a redirect button.
+Additionally, it also fixes route loaders to correctly throw a 404 error if a resource is not found, rather than showing a generic error.
