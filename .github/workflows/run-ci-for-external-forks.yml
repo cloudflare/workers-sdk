@@ -72,8 +72,6 @@ jobs:
             gh pr edit "$existing_pr" \
               --title "$TITLE" \
               --body "$BODY" \
-              --add-label "e2e" \
-              --add-label "run-remote-tests"
           else
             gh pr create \
               --head "run-ci-on-behalf-of-$PR_NUM" \
