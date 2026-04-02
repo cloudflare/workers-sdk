@@ -4,7 +4,6 @@
 import { Hono } from "hono/tiny";
 import mime from "mime";
 import { CoreBindings, CorePaths } from "../core";
-import openApiSpec from "./openapi.local.json";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import {
@@ -19,6 +18,7 @@ import {
 	zWorkersKvNamespaceListNamespacesData,
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
+import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {

@@ -1184,72 +1184,73 @@ const config = {
 					tags: ["Workflows"],
 				},
 			},
-			"/workflows/{workflow_name}/instances/{instance_id}/events/{event_type}": {
-				post: {
-					description: "Sends an event to a workflow instance.",
-					operationId: "workflows-send-instance-event",
-					parameters: [
-						{
-							in: "path",
-							name: "workflow_name",
-							required: true,
-							schema: {
-								$ref: "#/components/schemas/workflows_workflow-name",
-							},
-						},
-						{
-							in: "path",
-							name: "instance_id",
-							required: true,
-							schema: {
-								$ref: "#/components/schemas/workflows_instance-id",
-							},
-						},
-						{
-							in: "path",
-							name: "event_type",
-							required: true,
-							schema: {
-								type: "string",
-								description: "The event type to send.",
-							},
-						},
-					],
-					requestBody: {
-						content: {
-							"application/json": {
+			"/workflows/{workflow_name}/instances/{instance_id}/events/{event_type}":
+				{
+					post: {
+						description: "Sends an event to a workflow instance.",
+						operationId: "workflows-send-instance-event",
+						parameters: [
+							{
+								in: "path",
+								name: "workflow_name",
+								required: true,
 								schema: {
-									description: "Optional JSON payload for the event.",
+									$ref: "#/components/schemas/workflows_workflow-name",
 								},
 							},
-						},
-					},
-					responses: {
-						"200": {
+							{
+								in: "path",
+								name: "instance_id",
+								required: true,
+								schema: {
+									$ref: "#/components/schemas/workflows_instance-id",
+								},
+							},
+							{
+								in: "path",
+								name: "event_type",
+								required: true,
+								schema: {
+									type: "string",
+									description: "The event type to send.",
+								},
+							},
+						],
+						requestBody: {
 							content: {
 								"application/json": {
 									schema: {
-										$ref: "#/components/schemas/workers_api-response-common",
+										description: "Optional JSON payload for the event.",
 									},
 								},
 							},
-							description: "Send Event response.",
 						},
-						"4XX": {
-							content: {
-								"application/json": {
-									schema: {
-										$ref: "#/components/schemas/workers_api-response-common-failure",
+						responses: {
+							"200": {
+								content: {
+									"application/json": {
+										schema: {
+											$ref: "#/components/schemas/workers_api-response-common",
+										},
 									},
 								},
+								description: "Send Event response.",
 							},
-							description: "Send Event response failure.",
+							"4XX": {
+								content: {
+									"application/json": {
+										schema: {
+											$ref: "#/components/schemas/workers_api-response-common-failure",
+										},
+									},
+								},
+								description: "Send Event response failure.",
+							},
 						},
+						summary: "Send Event to Workflow Instance",
+						tags: ["Workflows"],
 					},
-					summary: "Send Event to Workflow Instance",
-					tags: ["Workflows"],
 				},
-			},
 		},
 		schemas: {
 			// R2 schemas - matches stratus dashboard API shapes
@@ -1546,8 +1547,7 @@ const config = {
 					},
 					created_on: {
 						type: "string",
-						description:
-							"ISO 8601 timestamp of when the instance was created.",
+						description: "ISO 8601 timestamp of when the instance was created.",
 					},
 				},
 				required: ["id"],
