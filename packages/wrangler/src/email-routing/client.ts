@@ -8,6 +8,7 @@ import type {
 	EmailRoutingSettings,
 	EmailSendingDnsRecord,
 	EmailSendingSendResponse,
+	EmailSendingSettings,
 } from "./index";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -20,7 +21,6 @@ export async function listEmailRoutingZones(
 		`/accounts/${accountId}/email/routing/zones`
 	);
 }
-
 
 export async function listEmailSendingZones(
 	config: Config
@@ -42,7 +42,6 @@ export async function getEmailRoutingSettings(
 		`/zones/${zoneId}/email/routing`
 	);
 }
-
 
 export async function enableEmailRouting(
 	config: Config,
@@ -102,7 +101,6 @@ export async function unlockEmailRoutingDns(
 		}
 	);
 }
-
 
 export async function listEmailRoutingRules(
 	config: Config,
@@ -191,7 +189,6 @@ export async function deleteEmailRoutingRule(
 	);
 }
 
-
 export async function getEmailRoutingCatchAll(
 	config: Config,
 	zoneId: string
@@ -224,7 +221,6 @@ export async function updateEmailRoutingCatchAll(
 		}
 	);
 }
-
 
 export async function listEmailRoutingAddresses(
 	config: Config
@@ -279,13 +275,12 @@ export async function deleteEmailRoutingAddress(
 	);
 }
 
-
 export async function getEmailSendingSettings(
 	config: Config,
 	zoneId: string
-): Promise<EmailRoutingSettings> {
+): Promise<EmailSendingSettings> {
 	await requireAuth(config);
-	return await fetchResult<EmailRoutingSettings>(
+	return await fetchResult<EmailSendingSettings>(
 		config,
 		`/zones/${zoneId}/email/sending`
 	);
@@ -336,7 +331,6 @@ export async function getEmailSendingSubdomainDns(
 		`/zones/${zoneId}/email/sending/subdomains/${subdomainId}/dns`
 	);
 }
-
 
 export async function sendEmail(
 	config: Config,

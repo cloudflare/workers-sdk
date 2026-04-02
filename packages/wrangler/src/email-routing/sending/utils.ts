@@ -3,10 +3,10 @@ import type { EmailSendingSendResponse } from "../index";
 
 export function logSendResult(result: EmailSendingSendResponse): void {
 	if (result.delivered.length > 0) {
-		logger.log(`✅ Delivered to: ${result.delivered.join(", ")}`);
+		logger.log(`Delivered to: ${result.delivered.join(", ")}`);
 	}
 	if (result.queued.length > 0) {
-		logger.log(`📬 Queued for: ${result.queued.join(", ")}`);
+		logger.log(`Queued for: ${result.queued.join(", ")}`);
 	}
 	if (result.permanent_bounces.length > 0) {
 		logger.warn(
@@ -18,6 +18,6 @@ export function logSendResult(result: EmailSendingSendResponse): void {
 		result.queued.length === 0 &&
 		result.permanent_bounces.length === 0
 	) {
-		logger.log("✅ Email sent successfully.");
+		logger.log("Email sent successfully.");
 	}
 }

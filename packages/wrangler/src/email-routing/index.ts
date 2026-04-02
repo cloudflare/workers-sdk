@@ -69,7 +69,6 @@ export const zoneArgs = {
 	},
 } as const;
 
-
 export interface EmailRoutingSettings {
 	id: string;
 	enabled: boolean;
@@ -126,6 +125,17 @@ export interface EmailRoutingAddress {
 	modified: string;
 	tag: string;
 	verified: string;
+}
+
+export interface EmailSendingSubdomain {
+	tag: string;
+	name: string;
+	enabled: boolean;
+	status?: string;
+}
+
+export interface EmailSendingSettings extends EmailRoutingSettings {
+	subdomains?: EmailSendingSubdomain[];
 }
 
 export interface EmailSendingDnsRecord {

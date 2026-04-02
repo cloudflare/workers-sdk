@@ -24,8 +24,10 @@ export const emailRoutingRulesListCommand = createCommand({
 			(r) => !r.matchers.some((m) => m.type === "all")
 		);
 
-		if (regularRules.length === 0) {
+		if (regularRules.length === 0 && !catchAll) {
 			logger.log("No routing rules found.");
+		} else if (regularRules.length === 0) {
+			logger.log("No custom routing rules found.");
 		} else {
 			logger.table(
 				regularRules.map((r) => ({

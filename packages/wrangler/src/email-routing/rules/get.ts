@@ -54,7 +54,7 @@ export const emailRoutingRulesGetCommand = createCommand({
 			}
 
 			const catchAllRule = await getEmailRoutingCatchAll(config, zoneId);
-			if (catchAllRule.tag === args.ruleId) {
+			if (catchAllRule.tag === args.ruleId || catchAllRule.id === args.ruleId) {
 				logger.log(`Catch-all rule:`);
 				logger.log(`  Enabled: ${catchAllRule.enabled}`);
 				logger.log(`  Actions:`);

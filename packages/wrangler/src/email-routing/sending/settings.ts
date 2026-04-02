@@ -27,10 +27,8 @@ export const emailSendingSettingsCommand = createCommand({
 		logger.log(`  Created:  ${settings.created}`);
 		logger.log(`  Modified: ${settings.modified}`);
 
-		const subdomains = (settings as Record<string, unknown>).subdomains as
-			| Array<{ name: string; enabled: boolean; status?: string }>
-			| undefined;
-		if (subdomains && subdomains.length > 0) {
+		const subdomains = settings.subdomains;
+		if (Array.isArray(subdomains) && subdomains.length > 0) {
 			logger.log(`  Subdomains:`);
 			for (const s of subdomains) {
 				logger.log(

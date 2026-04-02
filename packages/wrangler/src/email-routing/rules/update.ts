@@ -117,6 +117,7 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 				],
 				matchers: [{ type: "all" }],
 				enabled: args.enabled,
+				name: args.name,
 			});
 
 			logger.log(`Updated catch-all rule:`);

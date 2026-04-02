@@ -26,12 +26,8 @@ export const emailSendingDisableCommand = createCommand({
 		const name = isSubdomain ? domain : undefined;
 		const settings = await disableEmailSending(config, zoneId, name);
 
-		if (settings) {
-			logger.log(
-				`Email Sending disabled for ${settings.name} (status: ${settings.status})`
-			);
-		} else {
-			logger.log(`Email Sending disabled for ${domain}`);
-		}
+		logger.log(
+			`Email Sending disabled for ${settings.name} (status: ${settings.status})`
+		);
 	},
 });

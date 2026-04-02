@@ -3,20 +3,13 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // --- Mock data ---
-
-const mockZone = {
-	id: "zone-id-1",
-	name: "example.com",
-	status: "active",
-	account: { id: "some-account-id", name: "Test Account" },
-};
 
 const mockSettings = {
 	id: "75610dab9e69410a82cf7e400a09ecec",
@@ -248,7 +241,7 @@ describe("email routing commands", () => {
 
 	describe("settings", () => {
 		it("should get settings with --zone-id", async ({ expect }) => {
-			mockGetSettings("zone-id-1", mockSettings);
+			mockGetSettings(mockSettings);
 
 			await runWrangler("email routing settings --zone-id zone-id-1");
 
@@ -259,7 +252,7 @@ describe("email routing commands", () => {
 
 		it("should get settings with --zone (domain resolution)", async ({ expect }) => {
 			mockZoneLookup("example.com", "zone-id-1");
-			mockGetSettings("zone-id-1", mockSettings);
+			mockGetSettings(mockSettings);
 
 			await runWrangler("email routing settings --zone example.com");
 
@@ -271,7 +264,7 @@ describe("email routing commands", () => {
 
 	describe("enable", () => {
 		it("should enable email routing", async ({ expect }) => {
-			mockEnableEmailRouting("zone-id-1", mockSettings);
+			mockEnableEmailRouting(mockSettings);
 
 			await runWrangler("email routing enable --zone-id zone-id-1");
 
@@ -283,7 +276,11 @@ describe("email routing commands", () => {
 
 	describe("disable", () => {
 		it("should disable email routing", async ({ expect }) => {
-			mockDisableEmailRouting("zone-id-1", {
+			mockConfirm({
+				text: "Are you sure you want to disable Email Routing for this zone?",
+				result: true,
+			});
+			mockDisableEmailRouting({
 				...mockSettings,
 				enabled: false,
 			});
@@ -298,7 +295,7 @@ describe("email routing commands", () => {
 
 	describe("dns get", () => {
 		it("should show dns records", async ({ expect }) => {
-			mockGetDns("zone-id-1", mockDnsRecords);
+			mockGetDns(mockDnsRecords);
 
 			await runWrangler("email routing dns get --zone-id zone-id-1");
 
@@ -311,7 +308,11 @@ describe("email routing commands", () => {
 
 	describe("dns unlock", () => {
 		it("should unlock dns records", async ({ expect }) => {
-			mockUnlockDns("zone-id-1", mockSettings);
+			mockConfirm({
+				text: "Are you sure you want to unlock MX records? This allows external MX records to be set.",
+				result: true,
+			});
+			mockUnlockDns(mockSettings);
 
 			await runWrangler("email routing dns unlock --zone-id zone-id-1");
 
@@ -323,7 +324,7 @@ describe("email routing commands", () => {
 
 	describe("rules list", () => {
 		it("should list routing rules", async ({ expect }) => {
-			mockListRules("zone-id-1", [mockRule]);
+			mockListRules([mockRule]);
 
 			await runWrangler("email routing rules list --zone-id zone-id-1");
 
@@ -332,7 +333,7 @@ describe("email routing commands", () => {
 		});
 
 		it("should handle no rules", async ({ expect }) => {
-			mockListRules("zone-id-1", []);
+			mockListRules([]);
 
 			await runWrangler("email routing rules list --zone-id zone-id-1");
 
@@ -344,7 +345,7 @@ describe("email routing commands", () => {
 
 	describe("rules get", () => {
 		it("should get a specific rule", async ({ expect }) => {
-			mockGetRule("zone-id-1", "rule-id-1", mockRule);
+			mockGetRule(mockRule);
 
 			await runWrangler(
 				"email routing rules get rule-id-1 --zone-id zone-id-1"
@@ -356,7 +357,7 @@ describe("email routing commands", () => {
 		});
 
 		it("should get the catch-all rule when rule-id is 'catch-all'", async ({ expect }) => {
-			mockGetCatchAll("zone-id-1", mockCatchAll);
+			mockGetCatchAll(mockCatchAll);
 
 			await runWrangler(
 				"email routing rules get catch-all --zone-id zone-id-1"
@@ -372,7 +373,7 @@ describe("email routing commands", () => {
 
 	describe("rules create", () => {
 		it("should create a forwarding rule", async ({ expect }) => {
-			const reqProm = mockCreateRule("zone-id-1");
+			const reqProm = mockCreateRule();
 
 			await runWrangler(
 				"email routing rules create --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward --action-value dest@example.com --name 'My Rule'"
@@ -388,7 +389,7 @@ describe("email routing commands", () => {
 		});
 
 		it("should create a drop rule without --action-value", async ({ expect }) => {
-			const reqProm = mockCreateRule("zone-id-1");
+			const reqProm = mockCreateRule();
 
 			await runWrangler(
 				"email routing rules create --zone-id zone-id-1 --match-type literal --match-field to --match-value spam@example.com --action-type drop"
@@ -417,7 +418,7 @@ describe("email routing commands", () => {
 
 	describe("rules update", () => {
 		it("should update a routing rule", async ({ expect }) => {
-			const reqProm = mockUpdateRule("zone-id-1", "rule-id-1");
+			const reqProm = mockUpdateRule();
 
 			await runWrangler(
 				"email routing rules update rule-id-1 --zone-id zone-id-1 --match-type literal --match-field to --match-value updated@example.com --action-type forward --action-value newdest@example.com"
@@ -434,7 +435,7 @@ describe("email routing commands", () => {
 		});
 
 		it("should update the catch-all rule to drop", async ({ expect }) => {
-			const reqProm = mockUpdateCatchAll("zone-id-1");
+			const reqProm = mockUpdateCatchAll();
 
 			await runWrangler(
 				"email routing rules update catch-all --zone-id zone-id-1 --action-type drop --enabled true"
@@ -450,7 +451,7 @@ describe("email routing commands", () => {
 		});
 
 		it("should update the catch-all rule to forward", async ({ expect }) => {
-			const reqProm = mockUpdateCatchAll("zone-id-1");
+			const reqProm = mockUpdateCatchAll();
 
 			await runWrangler(
 				"email routing rules update catch-all --zone-id zone-id-1 --action-type forward --action-value catchall@example.com"
@@ -489,7 +490,11 @@ describe("email routing commands", () => {
 
 	describe("rules delete", () => {
 		it("should delete a routing rule", async ({ expect }) => {
-			mockDeleteRule("zone-id-1", "rule-id-1");
+			mockConfirm({
+				text: "Are you sure you want to delete routing rule 'rule-id-1'?",
+				result: true,
+			});
+			mockDeleteRule();
 
 			await runWrangler(
 				"email routing rules delete rule-id-1 --zone-id zone-id-1"
@@ -524,7 +529,7 @@ describe("email routing commands", () => {
 
 	describe("addresses get", () => {
 		it("should get a destination address", async ({ expect }) => {
-			mockGetAddress("addr-id-1", mockAddress);
+			mockGetAddress(mockAddress);
 
 			await runWrangler("email routing addresses get addr-id-1");
 
@@ -552,7 +557,11 @@ describe("email routing commands", () => {
 
 	describe("addresses delete", () => {
 		it("should delete a destination address", async ({ expect }) => {
-			mockDeleteAddress("addr-id-1");
+			mockConfirm({
+				text: "Are you sure you want to delete destination address 'addr-id-1'?",
+				result: true,
+			});
+			mockDeleteAddress();
 
 			await runWrangler("email routing addresses delete addr-id-1");
 
@@ -796,25 +805,6 @@ function mockListEmailRoutingZones(settings: (typeof mockSettings)[]) {
 	);
 }
 
-function mockListZones(
-	zones: Array<{
-		id: string;
-		name: string;
-		status: string;
-		account: { id: string; name: string };
-	}>
-) {
-	msw.use(
-		http.get(
-			"*/zones",
-			() => {
-				return HttpResponse.json(createFetchResult(zones, true));
-			},
-			{ once: true }
-		)
-	);
-}
-
 function mockZoneLookup(domain: string, zoneId: string) {
 	// Extract the zone name (last two labels) to handle subdomain lookups
 	// resolveDomain walks up labels, so "sub.example.com" tries "sub.example.com" then "example.com"
@@ -837,7 +827,7 @@ function mockZoneLookup(domain: string, zoneId: string) {
 	);
 }
 
-function mockGetSettings(_zoneId: string, settings: typeof mockSettings) {
+function mockGetSettings(settings: typeof mockSettings) {
 	msw.use(
 		http.get(
 			"*/zones/:zoneId/email/routing",
@@ -849,10 +839,7 @@ function mockGetSettings(_zoneId: string, settings: typeof mockSettings) {
 	);
 }
 
-function mockEnableEmailRouting(
-	_zoneId: string,
-	settings: typeof mockSettings
-) {
+function mockEnableEmailRouting(settings: typeof mockSettings) {
 	msw.use(
 		http.post(
 			"*/zones/:zoneId/email/routing/enable",
@@ -864,10 +851,7 @@ function mockEnableEmailRouting(
 	);
 }
 
-function mockDisableEmailRouting(
-	_zoneId: string,
-	settings: typeof mockSettings
-) {
+function mockDisableEmailRouting(settings: typeof mockSettings) {
 	msw.use(
 		http.post(
 			"*/zones/:zoneId/email/routing/disable",
@@ -879,7 +863,7 @@ function mockDisableEmailRouting(
 	);
 }
 
-function mockGetDns(_zoneId: string, records: typeof mockDnsRecords) {
+function mockGetDns(records: typeof mockDnsRecords) {
 	msw.use(
 		http.get(
 			"*/zones/:zoneId/email/routing/dns",
@@ -891,7 +875,7 @@ function mockGetDns(_zoneId: string, records: typeof mockDnsRecords) {
 	);
 }
 
-function mockUnlockDns(_zoneId: string, settings: typeof mockSettings) {
+function mockUnlockDns(settings: typeof mockSettings) {
 	msw.use(
 		http.post(
 			"*/zones/:zoneId/email/routing/unlock",
@@ -903,7 +887,7 @@ function mockUnlockDns(_zoneId: string, settings: typeof mockSettings) {
 	);
 }
 
-function mockListRules(_zoneId: string, rules: (typeof mockRule)[]) {
+function mockListRules(rules: (typeof mockRule)[]) {
 	msw.use(
 		http.get(
 			"*/zones/:zoneId/email/routing/rules",
@@ -915,7 +899,7 @@ function mockListRules(_zoneId: string, rules: (typeof mockRule)[]) {
 	);
 }
 
-function mockGetRule(_zoneId: string, _ruleId: string, rule: typeof mockRule) {
+function mockGetRule(rule: typeof mockRule) {
 	msw.use(
 		http.get(
 			"*/zones/:zoneId/email/routing/rules/:ruleId",
@@ -927,7 +911,7 @@ function mockGetRule(_zoneId: string, _ruleId: string, rule: typeof mockRule) {
 	);
 }
 
-function mockCreateRule(_zoneId: string): Promise<unknown> {
+function mockCreateRule(): Promise<unknown> {
 	return new Promise((resolve) => {
 		msw.use(
 			http.post(
@@ -946,7 +930,7 @@ function mockCreateRule(_zoneId: string): Promise<unknown> {
 	});
 }
 
-function mockUpdateRule(_zoneId: string, _ruleId: string): Promise<unknown> {
+function mockUpdateRule(): Promise<unknown> {
 	return new Promise((resolve) => {
 		msw.use(
 			http.put(
@@ -965,7 +949,7 @@ function mockUpdateRule(_zoneId: string, _ruleId: string): Promise<unknown> {
 	});
 }
 
-function mockDeleteRule(_zoneId: string, _ruleId: string) {
+function mockDeleteRule() {
 	msw.use(
 		http.delete(
 			"*/zones/:zoneId/email/routing/rules/:ruleId",
@@ -977,7 +961,7 @@ function mockDeleteRule(_zoneId: string, _ruleId: string) {
 	);
 }
 
-function mockGetCatchAll(_zoneId: string, catchAll: typeof mockCatchAll) {
+function mockGetCatchAll(catchAll: typeof mockCatchAll) {
 	msw.use(
 		http.get(
 			"*/zones/:zoneId/email/routing/rules/catch_all",
@@ -989,7 +973,7 @@ function mockGetCatchAll(_zoneId: string, catchAll: typeof mockCatchAll) {
 	);
 }
 
-function mockUpdateCatchAll(_zoneId: string): Promise<unknown> {
+function mockUpdateCatchAll(): Promise<unknown> {
 	return new Promise((resolve) => {
 		msw.use(
 			http.put(
@@ -1020,7 +1004,7 @@ function mockListAddresses(addresses: (typeof mockAddress)[]) {
 	);
 }
 
-function mockGetAddress(_addressId: string, address: typeof mockAddress) {
+function mockGetAddress(address: typeof mockAddress) {
 	msw.use(
 		http.get(
 			"*/accounts/:accountId/email/routing/addresses/:addressId",
@@ -1057,7 +1041,7 @@ function mockCreateAddress() {
 	);
 }
 
-function mockDeleteAddress(_addressId: string) {
+function mockDeleteAddress() {
 	msw.use(
 		http.delete(
 			"*/accounts/:accountId/email/routing/addresses/:addressId",
