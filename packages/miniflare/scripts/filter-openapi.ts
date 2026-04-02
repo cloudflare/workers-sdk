@@ -32,7 +32,7 @@ const DEFAULT_OUTPUT_PATH = join(
 const LOCAL_EXPLORER_INFO = {
 	title: "Local Explorer API",
 	description:
-		"Local subset of Cloudflare API for exploring resources during local development.",
+		"A local subset of Cloudflare API for inspecting and modifying resource state during local development. Supports D1, R2, KV, Durable Objects and Workflows.",
 	version: "0.0.1",
 };
 
