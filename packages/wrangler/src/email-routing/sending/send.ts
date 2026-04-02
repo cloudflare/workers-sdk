@@ -1,8 +1,7 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
-import { logger } from "../../logger";
 import { sendEmail } from "../client";
 import { logSendResult } from "./utils";
 
@@ -124,7 +123,14 @@ function parseHeaders(
 				`Invalid header format: '${h}'. Expected 'Key:Value'.`
 			);
 		}
-		headers.set(h.slice(0, colonIndex).trim(), h.slice(colonIndex + 1).trim());
+		const key = h.slice(0, colonIndex).trim();
+		const value = h.slice(colonIndex + 1).trim();
+		if (!key) {
+			throw new UserError(
+				`Invalid header format: '${h}'. Header name cannot be empty.`
+			);
+		}
+		headers.set(key, value);
 	}
 	return headers;
 }

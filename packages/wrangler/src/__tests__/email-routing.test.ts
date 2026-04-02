@@ -732,6 +732,22 @@ describe("email sending commands", () => {
 			});
 		});
 
+		it("should error on malformed header with empty name", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'Hi' --header ':value'"
+				)
+			).rejects.toThrow("Header name cannot be empty");
+		});
+
+		it("should error on header without colon separator", async ({ expect }) => {
+			await expect(
+				runWrangler(
+					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'Hi' --header 'NoColon'"
+				)
+			).rejects.toThrow("Expected 'Key:Value'");
+		});
+
 		it("should error when neither --text nor --html is provided", async ({ expect }) => {
 			await expect(
 				runWrangler(
