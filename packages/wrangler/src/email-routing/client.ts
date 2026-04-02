@@ -271,6 +271,49 @@ export async function deleteEmailRoutingAddress(
 }
 
 
+export async function getEmailSendingSettings(
+	config: Config,
+	zoneId: string
+): Promise<EmailRoutingSettings> {
+	await requireAuth(config);
+	return await fetchResult<EmailRoutingSettings>(
+		config,
+		`/zones/${zoneId}/email/sending`
+	);
+}
+
+export async function enableEmailSending(
+	config: Config,
+	zoneId: string
+): Promise<EmailRoutingSettings> {
+	await requireAuth(config);
+	return await fetchResult<EmailRoutingSettings>(
+		config,
+		`/zones/${zoneId}/email/sending/enable`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({}),
+		}
+	);
+}
+
+export async function disableEmailSending(
+	config: Config,
+	zoneId: string
+): Promise<EmailRoutingSettings> {
+	await requireAuth(config);
+	return await fetchResult<EmailRoutingSettings>(
+		config,
+		`/zones/${zoneId}/email/sending/disable`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({}),
+		}
+	);
+}
+
 export async function listEmailSendingSubdomains(
 	config: Config,
 	zoneId: string

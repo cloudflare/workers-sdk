@@ -122,9 +122,12 @@ import { emailRoutingRulesGetCommand } from "./email-routing/rules/get";
 import { emailRoutingRulesListCommand } from "./email-routing/rules/list";
 import { emailRoutingRulesUpdateCommand } from "./email-routing/rules/update";
 import { emailRoutingSettingsCommand } from "./email-routing/settings";
+import { emailSendingDisableCommand } from "./email-routing/sending/disable";
 import { emailSendingDnsGetCommand } from "./email-routing/sending/dns-get";
+import { emailSendingEnableCommand } from "./email-routing/sending/enable";
 import { emailSendingSendCommand } from "./email-routing/sending/send";
 import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
+import { emailSendingSettingsCommand } from "./email-routing/sending/settings";
 import { emailSendingSubdomainsCreateCommand } from "./email-routing/sending/subdomains/create";
 import { emailSendingSubdomainsDeleteCommand } from "./email-routing/sending/subdomains/delete";
 import { emailSendingSubdomainsGetCommand } from "./email-routing/sending/subdomains/get";
@@ -1949,6 +1952,18 @@ export function createCLIParser(argv: string[]) {
 			definition: emailRoutingAddressesDeleteCommand,
 		},
 		{ command: "wrangler email sending", definition: emailSendingNamespace },
+		{
+			command: "wrangler email sending settings",
+			definition: emailSendingSettingsCommand,
+		},
+		{
+			command: "wrangler email sending enable",
+			definition: emailSendingEnableCommand,
+		},
+		{
+			command: "wrangler email sending disable",
+			definition: emailSendingDisableCommand,
+		},
 		{
 			command: "wrangler email sending send",
 			definition: emailSendingSendCommand,
