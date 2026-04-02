@@ -36,6 +36,7 @@ import type {
 	CfWorkflow,
 	Config,
 	ContainerEngine,
+	ServiceFetch,
 } from "@cloudflare/workers-utils";
 import type {
 	DOContainerOptions,
@@ -91,6 +92,7 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
+	outboundService: ServiceFetch;
 	tails: Config["tail_consumers"] | undefined;
 	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	testScheduled: boolean;
@@ -1033,6 +1035,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				outboundService: config.outboundService,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",

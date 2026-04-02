@@ -136,6 +136,7 @@ export async function convertToConfigBundle(
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		testScheduled: !!event.config.dev.testScheduled,
+		outboundService: event.config.dev.outboundService,
 		tails: event.config.tailConsumers,
 		streamingTails: event.config.streamingTailConsumers,
 		containerDOClassNames: new Set(
@@ -166,7 +167,6 @@ export class LocalRuntimeController extends RuntimeController {
 	// updates were submitted, the second may apply before the first. Therefore,
 	// wrap updates in a mutex, so they're always applied in invocation order.
 	#mutex = new Mutex();
-	#mf?: Miniflare;
 
 	#remoteProxySessionData: {
 		session: RemoteProxySession;
@@ -296,13 +296,13 @@ export class LocalRuntimeController extends RuntimeController {
 				}
 			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
-			if (this.#mf === undefined) {
+			if (this.mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
-				this.#mf = new Miniflare(options);
+				this.mf = new Miniflare(options);
 			} else {
 				logger.log(chalk.dim("⎔ Reloading local server..."));
 
-				await this.#mf.setOptions(options);
+				await this.mf.setOptions(options);
 
 				logger.log(chalk.dim("⎔ Local server updated and ready"));
 			}
@@ -310,14 +310,14 @@ export class LocalRuntimeController extends RuntimeController {
 			// calls to complete before resolving. To ensure we get the `url` and
 			// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 			// so only one update can happen at a time.
-			const userWorkerUrl = await this.#mf.ready;
+			const userWorkerUrl = await this.mf.ready;
 			// TODO: Miniflare should itself return undefined on
 			//       `getInspectorURL` when no inspector is in use
 			//       (currently the function just hangs)
 			const userWorkerInspectorUrl =
 				options.inspectorPort === undefined
 					? undefined
-					: await this.#mf.getInspectorURL();
+					: await this.mf.getInspectorURL();
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (id !== this.#currentBundleId) {
@@ -414,12 +414,12 @@ export class LocalRuntimeController extends RuntimeController {
 		process.off("exit", this.cleanupContainers);
 		this.cleanupContainers();
 
-		if (this.#mf) {
+		if (this.mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
-		await this.#mf?.dispose();
-		this.#mf = undefined;
+		await this.mf?.dispose();
+		this.mf = undefined;
 
 		if (this.#remoteProxySessionData) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));

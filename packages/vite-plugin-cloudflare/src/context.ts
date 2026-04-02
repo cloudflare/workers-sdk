@@ -77,6 +77,9 @@ export class PluginContext {
 
 		const miniflareInspectorUrl =
 			await this.#sharedContext.miniflare.getInspectorURL();
+		if (!miniflareInspectorUrl) {
+			return null;
+		}
 
 		return Number.parseInt(miniflareInspectorUrl.port);
 	}

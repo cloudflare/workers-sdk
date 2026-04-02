@@ -133,6 +133,7 @@ async function resolveDevConfig(
 	return {
 		auth,
 		remote: input.dev?.remote,
+		outboundService: input.dev?.outboundService,
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,
 			port:

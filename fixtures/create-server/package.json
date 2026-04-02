@@ -1,0 +1,26 @@
+{
+	"name": "@fixture/create-server",
+	"private": true,
+	"description": "Integration tests with createServer API",
+	"type": "module",
+	"scripts": {
+		"check:type": "tsc",
+		"test:ci": "vite build && vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@fixture/shared": "workspace:*",
+		"@types/node": "catalog:default",
+		"msw": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
