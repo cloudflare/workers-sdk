@@ -78,12 +78,7 @@ export function cloudflareTest(
 			// it instruments source code at build time without needing V8 access.
 			// See: https://github.com/cloudflare/workers-sdk/issues/5266
 			const coverage = config.test.coverage;
-			if (
-				coverage &&
-				typeof coverage === "object" &&
-				!Array.isArray(coverage) &&
-				coverage.enabled
-			) {
+			if (coverage && coverage.enabled) {
 				const provider = "provider" in coverage ? coverage.provider : undefined;
 				if (provider === "v8" || provider === undefined) {
 					const lines = [
@@ -92,7 +87,7 @@ export function cloudflareTest(
 						"",
 						"Use Istanbul instead — it works by instrumenting source code and runs on any JavaScript runtime:",
 						"",
-						"  1. Install: pnpm add -D @vitest/coverage-istanbul",
+						"  1. Install: npm i -D @vitest/coverage-istanbul",
 						'  2. Set `test.coverage.provider` to "istanbul" in your Vitest config',
 						"",
 						"See https://vitest.dev/guide/coverage#istanbul-provider for more details.",
