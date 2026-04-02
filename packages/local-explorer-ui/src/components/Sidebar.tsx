@@ -150,7 +150,7 @@ function SidebarItemGroup({
 			</Collapsible.Trigger>
 
 			<Collapsible.Panel className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-300 ease-in-out data-ending-style:grid-rows-[0fr] data-ending-style:opacity-0 data-starting-style:grid-rows-[0fr] data-starting-style:opacity-0">
-				<div className="overflow-hidden">
+				<div className="min-h-0 overflow-hidden">
 					<ul className="mt-0.5 list-none space-y-0.5 px-2">
 						{error ? (
 							<li className="ml-8.5 px-2.5 py-2 text-sm text-danger">
@@ -487,8 +487,11 @@ function WorkerSidebarGroup({
 				/>
 			</Collapsible.Trigger>
 
-			<Collapsible.Panel className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-300 ease-in-out data-ending-style:grid-rows-[0fr] data-ending-style:opacity-0 data-starting-style:grid-rows-[0fr] data-starting-style:opacity-0">
-				<div className="overflow-hidden">
+			<Collapsible.Panel
+				className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-300 ease-in-out data-ending-style:grid-rows-[0fr] data-ending-style:opacity-0 data-starting-style:grid-rows-[0fr] data-starting-style:opacity-0"
+				keepMounted
+			>
+				<div className="min-h-0 overflow-hidden">
 					<div className="pl-2">
 						<ul className="list-none space-y-0.5 pr-2">
 							{resourceGroups.map((group, index) => {
