@@ -15,7 +15,12 @@ Email Routing commands:
 
 Email Sending commands:
 
+- `wrangler email sending list` - list zones with email sending
+- `wrangler email sending settings <domain>` - get email sending settings for a zone
+- `wrangler email sending enable <domain>` - enable email sending for a zone or subdomain
+- `wrangler email sending disable <domain>` - disable email sending for a zone or subdomain
+- `wrangler email sending dns get <domain>` - get DNS records for a sending domain
 - `wrangler email sending send` - send an email using the builder API
 - `wrangler email sending send-raw` - send a raw MIME email message
-- `wrangler email sending subdomains list/get/create/delete` - manage sending subdomains
-- `wrangler email sending dns get` - get DNS records for a sending subdomain
+
+Also adds `email_routing:write` and `email_sending:write` OAuth scopes to `wrangler login`.
