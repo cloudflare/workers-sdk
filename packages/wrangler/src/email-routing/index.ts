@@ -48,14 +48,6 @@ export const emailSendingNamespace = createNamespace({
 	},
 });
 
-export const emailSendingSubdomainsNamespace = createNamespace({
-	metadata: {
-		description: "Manage Email Sending subdomains",
-		status: "open beta",
-		owner: "Product: Email Service",
-	},
-});
-
 export const emailSendingDnsNamespace = createNamespace({
 	metadata: {
 		description: "Manage Email Sending DNS records",
@@ -63,7 +55,6 @@ export const emailSendingDnsNamespace = createNamespace({
 		owner: "Product: Email Service",
 	},
 });
-
 
 export const zoneArgs = {
 	zone: {
@@ -135,17 +126,6 @@ export interface EmailRoutingAddress {
 	modified: string;
 	tag: string;
 	verified: string;
-}
-
-export interface EmailSendingSubdomain {
-	email_sending_enabled: boolean;
-	name: string;
-	tag: string;
-	created?: string;
-	email_sending_dkim_selector?: string;
-	email_sending_return_path_domain?: string;
-	enabled?: boolean;
-	modified?: string;
 }
 
 export interface EmailSendingDnsRecord {

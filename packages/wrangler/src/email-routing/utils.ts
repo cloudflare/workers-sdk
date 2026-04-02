@@ -48,3 +48,46 @@ async function getZoneIdByDomain(
 
 	return zoneId;
 }
+
+export interface ResolvedDomain {
+	zoneId: string;
+	zoneName: string;
+	isSubdomain: boolean;
+	domain: string;
+}
+
+export async function resolveDomain(
+	config: Config,
+	domain: string
+): Promise<ResolvedDomain> {
+	const accountId = await requireAuth(config);
+
+	// Walk up the domain labels: try "sub.example.com", then "example.com"
+	const labels = domain.split(".");
+	for (let i = 0; i <= labels.length - 2; i++) {
+		const candidate = labels.slice(i).join(".");
+		const zones = await retryOnAPIFailure(() =>
+			fetchListResult<{ id: string; name: string }>(
+				config,
+				`/zones`,
+				{},
+				new URLSearchParams({
+					name: candidate,
+					"account.id": accountId,
+				})
+			)
+		);
+		if (zones[0]) {
+			return {
+				zoneId: zones[0].id,
+				zoneName: zones[0].name,
+				isSubdomain: domain !== zones[0].name,
+				domain,
+			};
+		}
+	}
+
+	throw new UserError(
+		`Could not find a zone for \`${domain}\`. Make sure the domain or its parent zone exists in your account.`
+	);
+}

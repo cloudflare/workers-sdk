@@ -1,34 +1,48 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { getEmailSendingSubdomainDns } from "../client";
-import { zoneArgs } from "../index";
-import { resolveZoneId } from "../utils";
+import { getEmailSendingSettings, getEmailSendingSubdomainDns } from "../client";
+import { resolveDomain } from "../utils";
 
 export const emailSendingDnsGetCommand = createCommand({
 	metadata: {
-		description: "Get DNS records for an Email Sending subdomain",
+		description: "Get DNS records for an Email Sending domain",
 		status: "open beta",
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
-		"subdomain-id": {
+		domain: {
 			type: "string",
 			demandOption: true,
-			description: "The sending subdomain identifier (tag)",
+			description:
+				"Domain to get DNS records for (e.g. example.com or notifications.example.com)",
 		},
 	},
-	positionalArgs: ["subdomain-id"],
+	positionalArgs: ["domain"],
 	async handler(args, { config }) {
-		const zoneId = await resolveZoneId(config, args);
+		const { zoneId } = await resolveDomain(config, args.domain);
+
+		// Find the subdomain tag by matching the domain name in settings
+		const settings = await getEmailSendingSettings(config, zoneId);
+		const subdomains = (settings as Record<string, unknown>).subdomains as
+			| Array<{ tag: string; name: string }>
+			| undefined;
+
+		const match = subdomains?.find((s) => s.name === args.domain);
+		if (!match) {
+			throw new UserError(
+				`No sending domain found for \`${args.domain}\`. Run \`wrangler email sending settings ${args.domain}\` to see configured domains.`
+			);
+		}
+
 		const records = await getEmailSendingSubdomainDns(
 			config,
 			zoneId,
-			args.subdomainId
+			match.tag
 		);
 
 		if (records.length === 0) {
-			logger.log("No DNS records found for this sending subdomain.");
+			logger.log("No DNS records found for this sending domain.");
 			return;
 		}
 

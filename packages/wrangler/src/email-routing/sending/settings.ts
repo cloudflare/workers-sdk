@@ -1,8 +1,7 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { getEmailSendingSettings } from "../client";
-import { zoneArgs } from "../index";
-import { resolveZoneId } from "../utils";
+import { resolveDomain } from "../utils";
 
 export const emailSendingSettingsCommand = createCommand({
 	metadata: {
@@ -11,10 +10,15 @@ export const emailSendingSettingsCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		domain: {
+			type: "string",
+			demandOption: true,
+			description: "Domain to get sending settings for (e.g. example.com)",
+		},
 	},
+	positionalArgs: ["domain"],
 	async handler(args, { config }) {
-		const zoneId = await resolveZoneId(config, args);
+		const { zoneId } = await resolveDomain(config, args.domain);
 		const settings = await getEmailSendingSettings(config, zoneId);
 
 		logger.log(`Email Sending for ${settings.name}:`);
@@ -22,5 +26,17 @@ export const emailSendingSettingsCommand = createCommand({
 		logger.log(`  Status:   ${settings.status}`);
 		logger.log(`  Created:  ${settings.created}`);
 		logger.log(`  Modified: ${settings.modified}`);
+
+		const subdomains = (settings as Record<string, unknown>).subdomains as
+			| Array<{ name: string; enabled: boolean; status?: string }>
+			| undefined;
+		if (subdomains && subdomains.length > 0) {
+			logger.log(`  Subdomains:`);
+			for (const s of subdomains) {
+				logger.log(
+					`    - ${s.name} (enabled: ${s.enabled}, status: ${s.status ?? "unknown"})`
+				);
+			}
+		}
 	},
 });

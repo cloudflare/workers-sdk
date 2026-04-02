@@ -113,7 +113,6 @@ import {
 	emailRoutingRulesNamespace,
 	emailSendingDnsNamespace,
 	emailSendingNamespace,
-	emailSendingSubdomainsNamespace,
 } from "./email-routing/index";
 import { emailRoutingListCommand } from "./email-routing/list";
 import { emailRoutingRulesCreateCommand } from "./email-routing/rules/create";
@@ -129,10 +128,7 @@ import { emailSendingListCommand } from "./email-routing/sending/list";
 import { emailSendingSendCommand } from "./email-routing/sending/send";
 import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
 import { emailSendingSettingsCommand } from "./email-routing/sending/settings";
-import { emailSendingSubdomainsCreateCommand } from "./email-routing/sending/subdomains/create";
-import { emailSendingSubdomainsDeleteCommand } from "./email-routing/sending/subdomains/delete";
-import { emailSendingSubdomainsGetCommand } from "./email-routing/sending/subdomains/get";
-import { emailSendingSubdomainsListCommand } from "./email-routing/sending/subdomains/list";
+
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -1976,26 +1972,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler email sending send-raw",
 			definition: emailSendingSendRawCommand,
-		},
-		{
-			command: "wrangler email sending subdomains",
-			definition: emailSendingSubdomainsNamespace,
-		},
-		{
-			command: "wrangler email sending subdomains list",
-			definition: emailSendingSubdomainsListCommand,
-		},
-		{
-			command: "wrangler email sending subdomains get",
-			definition: emailSendingSubdomainsGetCommand,
-		},
-		{
-			command: "wrangler email sending subdomains create",
-			definition: emailSendingSubdomainsCreateCommand,
-		},
-		{
-			command: "wrangler email sending subdomains delete",
-			definition: emailSendingSubdomainsDeleteCommand,
 		},
 		{
 			command: "wrangler email sending dns",
