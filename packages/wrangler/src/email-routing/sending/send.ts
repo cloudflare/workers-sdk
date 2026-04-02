@@ -1,6 +1,6 @@
-import { UserError } from "@cloudflare/workers-utils";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { sendEmail } from "../client";
 import { logSendResult } from "./utils";
@@ -67,15 +67,12 @@ export const emailSendingSendCommand = createCommand({
 		attachment: {
 			type: "string",
 			array: true,
-			description:
-				"File path to attach. Can be specified multiple times.",
+			description: "File path to attach. Can be specified multiple times.",
 		},
 	},
 	validateArgs: (args) => {
 		if (!args.text && !args.html) {
-			throw new UserError(
-				"At least one of --text or --html must be provided"
-			);
+			throw new UserError("At least one of --text or --html must be provided");
 		}
 	},
 	async handler(args, { config }) {
@@ -109,9 +106,7 @@ export const emailSendingSendCommand = createCommand({
 	},
 });
 
-function parseHeaders(
-	headerArgs: string[] | undefined
-): Map<string, string> {
+function parseHeaders(headerArgs: string[] | undefined): Map<string, string> {
 	const headers = new Map<string, string>();
 	if (!headerArgs) {
 		return headers;
@@ -135,9 +130,7 @@ function parseHeaders(
 	return headers;
 }
 
-function parseAttachments(
-	attachmentPaths: string[] | undefined
-): Array<{
+function parseAttachments(attachmentPaths: string[] | undefined): Array<{
 	content: string;
 	filename: string;
 	type: string;

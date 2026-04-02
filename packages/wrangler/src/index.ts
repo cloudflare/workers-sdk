@@ -120,7 +120,6 @@ import { emailRoutingRulesDeleteCommand } from "./email-routing/rules/delete";
 import { emailRoutingRulesGetCommand } from "./email-routing/rules/get";
 import { emailRoutingRulesListCommand } from "./email-routing/rules/list";
 import { emailRoutingRulesUpdateCommand } from "./email-routing/rules/update";
-import { emailRoutingSettingsCommand } from "./email-routing/settings";
 import { emailSendingDisableCommand } from "./email-routing/sending/disable";
 import { emailSendingDnsGetCommand } from "./email-routing/sending/dns-get";
 import { emailSendingEnableCommand } from "./email-routing/sending/enable";
@@ -128,7 +127,7 @@ import { emailSendingListCommand } from "./email-routing/sending/list";
 import { emailSendingSendCommand } from "./email-routing/sending/send";
 import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
 import { emailSendingSettingsCommand } from "./email-routing/sending/settings";
-
+import { emailRoutingSettingsCommand } from "./email-routing/settings";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,

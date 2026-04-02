@@ -121,7 +121,9 @@ describe("email routing help", () => {
 		expect(std.out).toContain("Manage Email Routing rules");
 	});
 
-	it("should show help text for email routing addresses", async ({ expect }) => {
+	it("should show help text for email routing addresses", async ({
+		expect,
+	}) => {
 		await runWrangler("email routing addresses");
 		await endEventLoop();
 
@@ -229,7 +231,9 @@ describe("email routing commands", () => {
 		it("should get settings with --zone-id", async ({ expect }) => {
 			mockGetSettings(mockSettings);
 
-			await runWrangler("email routing settings example.com --zone-id zone-id-1");
+			await runWrangler(
+				"email routing settings example.com --zone-id zone-id-1"
+			);
 
 			expect(std.out).toContain("Email Routing for example.com");
 			expect(std.out).toContain("Enabled:  true");
@@ -271,7 +275,9 @@ describe("email routing commands", () => {
 				enabled: false,
 			});
 
-			await runWrangler("email routing disable example.com --zone-id zone-id-1");
+			await runWrangler(
+				"email routing disable example.com --zone-id zone-id-1"
+			);
 
 			expect(std.out).toContain("Email Routing disabled");
 		});
@@ -283,7 +289,9 @@ describe("email routing commands", () => {
 		it("should show dns records", async ({ expect }) => {
 			mockGetDns(mockDnsRecords);
 
-			await runWrangler("email routing dns get example.com --zone-id zone-id-1");
+			await runWrangler(
+				"email routing dns get example.com --zone-id zone-id-1"
+			);
 
 			expect(std.out).toContain("MX");
 			expect(std.out).toContain("route1.mx.cloudflare.net");
@@ -300,7 +308,9 @@ describe("email routing commands", () => {
 			});
 			mockUnlockDns(mockSettings);
 
-			await runWrangler("email routing dns unlock example.com --zone-id zone-id-1");
+			await runWrangler(
+				"email routing dns unlock example.com --zone-id zone-id-1"
+			);
 
 			expect(std.out).toContain("MX records unlocked for example.com");
 		});
@@ -312,7 +322,9 @@ describe("email routing commands", () => {
 		it("should list routing rules", async ({ expect }) => {
 			mockListRules([mockRule]);
 
-			await runWrangler("email routing rules list example.com --zone-id zone-id-1");
+			await runWrangler(
+				"email routing rules list example.com --zone-id zone-id-1"
+			);
 
 			expect(std.out).toContain("rule-id-1");
 			expect(std.out).toContain("My Rule");
@@ -321,7 +333,9 @@ describe("email routing commands", () => {
 		it("should handle no rules", async ({ expect }) => {
 			mockListRules([]);
 
-			await runWrangler("email routing rules list example.com --zone-id zone-id-1");
+			await runWrangler(
+				"email routing rules list example.com --zone-id zone-id-1"
+			);
 
 			expect(std.out).toContain("No routing rules found.");
 		});
@@ -342,7 +356,9 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Enabled:  true");
 		});
 
-		it("should get the catch-all rule when rule-id is 'catch-all'", async ({ expect }) => {
+		it("should get the catch-all rule when rule-id is 'catch-all'", async ({
+			expect,
+		}) => {
 			mockGetCatchAll(mockCatchAll);
 
 			await runWrangler(
@@ -374,7 +390,9 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Created routing rule:");
 		});
 
-		it("should create a drop rule without --action-value", async ({ expect }) => {
+		it("should create a drop rule without --action-value", async ({
+			expect,
+		}) => {
 			const reqProm = mockCreateRule();
 
 			await runWrangler(
@@ -389,7 +407,9 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Created routing rule:");
 		});
 
-		it("should error when forward is used without --action-value", async ({ expect }) => {
+		it("should error when forward is used without --action-value", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"email routing rules create example.com --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward"
@@ -451,7 +471,9 @@ describe("email routing commands", () => {
 			expect(std.out).toContain("Updated catch-all rule:");
 		});
 
-		it("should error when catch-all forward is used without --action-value", async ({ expect }) => {
+		it("should error when catch-all forward is used without --action-value", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"email routing rules update example.com catch-all --zone-id zone-id-1 --action-type forward"
@@ -461,7 +483,9 @@ describe("email routing commands", () => {
 			);
 		});
 
-		it("should error when regular rule update is missing --match-type", async ({ expect }) => {
+		it("should error when regular rule update is missing --match-type", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"email routing rules update example.com rule-id-1 --zone-id zone-id-1 --action-type forward --action-value dest@example.com"
@@ -635,11 +659,7 @@ describe("email sending commands", () => {
 		it("should handle no dns records", async ({ expect }) => {
 			mockZoneLookup("sub.example.com", "zone-id-1");
 			mockGetSendingSettings("zone-id-1");
-			mockGetSendingDns(
-				"zone-id-1",
-				"aabbccdd11223344aabbccdd11223344",
-				[]
-			);
+			mockGetSendingDns("zone-id-1", "aabbccdd11223344aabbccdd11223344", []);
 
 			await runWrangler("email sending dns get sub.example.com");
 
@@ -722,7 +742,9 @@ describe("email sending commands", () => {
 			});
 		});
 
-		it("should error on malformed header with empty name", async ({ expect }) => {
+		it("should error on malformed header with empty name", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test' --text 'Hi' --header ':value'"
@@ -738,14 +760,14 @@ describe("email sending commands", () => {
 			).rejects.toThrow("Expected 'Key:Value'");
 		});
 
-		it("should error when neither --text nor --html is provided", async ({ expect }) => {
+		it("should error when neither --text nor --html is provided", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"email sending send --from sender@example.com --to recipient@example.com --subject 'Test'"
 				)
-			).rejects.toThrow(
-				"At least one of --text or --html must be provided"
-			);
+			).rejects.toThrow("At least one of --text or --html must be provided");
 		});
 
 		it("should display queued and bounced recipients", async ({ expect }) => {
@@ -785,7 +807,9 @@ describe("email sending commands", () => {
 			expect(std.out).toContain("Delivered to: recipient@example.com");
 		});
 
-		it("should error when neither --mime nor --mime-file is provided", async ({ expect }) => {
+		it("should error when neither --mime nor --mime-file is provided", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"email sending send-raw --from sender@example.com --to recipient@example.com"
@@ -817,19 +841,16 @@ function mockZoneLookup(domain: string, zoneId: string) {
 	const labels = domain.split(".");
 	const zoneName = labels.slice(-2).join(".");
 	msw.use(
-		http.get(
-			"*/zones",
-			({ request }) => {
-				const url = new URL(request.url);
-				const name = url.searchParams.get("name");
-				if (name === zoneName) {
-					return HttpResponse.json(
-						createFetchResult([{ id: zoneId, name: zoneName }], true)
-					);
-				}
-				return HttpResponse.json(createFetchResult([], true));
+		http.get("*/zones", ({ request }) => {
+			const url = new URL(request.url);
+			const name = url.searchParams.get("name");
+			if (name === zoneName) {
+				return HttpResponse.json(
+					createFetchResult([{ id: zoneId, name: zoneName }], true)
+				);
 			}
-		)
+			return HttpResponse.json(createFetchResult([], true));
+		})
 	);
 }
 
@@ -923,8 +944,7 @@ function mockCreateRule(): Promise<unknown> {
 			http.post(
 				"*/zones/:zoneId/email/routing/rules",
 				async ({ request }) => {
-					const reqBody =
-						(await request.json()) as Record<string, unknown>;
+					const reqBody = (await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ id: "new-rule-id", ...reqBody }, true)
@@ -942,8 +962,7 @@ function mockUpdateRule(): Promise<unknown> {
 			http.put(
 				"*/zones/:zoneId/email/routing/rules/:ruleId",
 				async ({ request }) => {
-					const reqBody =
-						(await request.json()) as Record<string, unknown>;
+					const reqBody = (await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ id: "rule-id-1", ...reqBody }, true)
@@ -985,8 +1004,7 @@ function mockUpdateCatchAll(): Promise<unknown> {
 			http.put(
 				"*/zones/:zoneId/email/routing/rules/catch_all",
 				async ({ request }) => {
-					const reqBody =
-						(await request.json()) as Record<string, unknown>;
+					const reqBody = (await request.json()) as Record<string, unknown>;
 					resolve(reqBody);
 					return HttpResponse.json(
 						createFetchResult({ id: "catch-all-id", ...reqBody }, true)
@@ -1069,10 +1087,7 @@ function mockEnableSending(_zoneId: string) {
 				const body = (await request.json()) as Record<string, unknown>;
 				const name = (body.name as string) || "example.com";
 				return HttpResponse.json(
-					createFetchResult(
-						{ ...mockSettings, name, status: "ready" },
-						true
-					)
+					createFetchResult({ ...mockSettings, name, status: "ready" }, true)
 				);
 			},
 			{ once: true }
@@ -1143,9 +1158,7 @@ function mockSendEmail(): Promise<unknown> {
 				async ({ request }) => {
 					const reqBody = await request.json();
 					resolve(reqBody);
-					return HttpResponse.json(
-						createFetchResult(mockSendResult, true)
-					);
+					return HttpResponse.json(createFetchResult(mockSendResult, true));
 				},
 				{ once: true }
 			)
@@ -1177,9 +1190,7 @@ function mockSendRawEmail(): Promise<unknown> {
 				async ({ request }) => {
 					const reqBody = await request.json();
 					resolve(reqBody);
-					return HttpResponse.json(
-						createFetchResult(mockSendResult, true)
-					);
+					return HttpResponse.json(createFetchResult(mockSendResult, true));
 				},
 				{ once: true }
 			)

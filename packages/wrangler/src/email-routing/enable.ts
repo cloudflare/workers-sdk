@@ -1,8 +1,8 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { enableEmailRouting } from "./client";
-import { domainArgs } from "./index";
 import { resolveZoneId } from "./utils";
+import { domainArgs } from "./index";
 
 export const emailRoutingEnableCommand = createCommand({
 	metadata: {

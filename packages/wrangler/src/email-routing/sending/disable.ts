@@ -19,8 +19,7 @@ export const emailSendingDisableCommand = createCommand({
 		},
 		"zone-id": {
 			type: "string",
-			description:
-				"Zone ID (optional, skips zone lookup if provided)",
+			description: "Zone ID (optional, skips zone lookup if provided)",
 		},
 		force: {
 			type: "boolean",

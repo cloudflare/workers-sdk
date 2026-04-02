@@ -17,9 +17,7 @@ export async function resolveZoneId(
 		return await getZoneIdByDomain(config, args.domain, accountId);
 	}
 
-	throw new UserError(
-		"You must provide a domain or --zone-id."
-	);
+	throw new UserError("You must provide a domain or --zone-id.");
 }
 
 async function getZoneIdByDomain(

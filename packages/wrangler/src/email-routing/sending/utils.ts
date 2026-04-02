@@ -9,9 +9,7 @@ export function logSendResult(result: EmailSendingSendResponse): void {
 		logger.log(`Queued for: ${result.queued.join(", ")}`);
 	}
 	if (result.permanent_bounces.length > 0) {
-		logger.warn(
-			`Permanently bounced: ${result.permanent_bounces.join(", ")}`
-		);
+		logger.warn(`Permanently bounced: ${result.permanent_bounces.join(", ")}`);
 	}
 	if (
 		result.delivered.length === 0 &&

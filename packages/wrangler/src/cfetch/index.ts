@@ -226,7 +226,7 @@ function throwFetchError(
 	const notes = [
 		...errors.map((err) => ({ text: renderError(err) })),
 		...(response.messages?.map((msg) => ({
-			text: typeof msg === "string" ? msg : msg.message ?? String(msg),
+			text: typeof msg === "string" ? msg : (msg.message ?? String(msg)),
 		})) ?? []),
 	];
 	if (notes.length === 0) {

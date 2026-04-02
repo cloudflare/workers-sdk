@@ -24,8 +24,7 @@ export const emailSendingDnsGetCommand = createCommand({
 		},
 		"zone-id": {
 			type: "string",
-			description:
-				"Zone ID (optional, skips zone lookup if provided)",
+			description: "Zone ID (optional, skips zone lookup if provided)",
 		},
 	},
 	positionalArgs: ["domain"],
@@ -44,19 +43,13 @@ export const emailSendingDnsGetCommand = createCommand({
 		} else {
 			// Subdomain — find the tag from settings and use the subdomain DNS endpoint
 			const settings = await getEmailSendingSettings(config, zoneId);
-			const match = settings.subdomains?.find(
-				(s) => s.name === args.domain
-			);
+			const match = settings.subdomains?.find((s) => s.name === args.domain);
 			if (!match) {
 				throw new UserError(
 					`No sending subdomain found for \`${args.domain}\`. Run \`wrangler email sending settings ${args.domain}\` to see configured domains.`
 				);
 			}
-			records = await getEmailSendingSubdomainDns(
-				config,
-				zoneId,
-				match.tag
-			);
+			records = await getEmailSendingSubdomainDns(config, zoneId, match.tag);
 		}
 
 		if (records.length === 0) {

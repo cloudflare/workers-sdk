@@ -32,14 +32,10 @@ export const emailRoutingRulesListCommand = createCommand({
 		} else {
 			for (const r of regularRules) {
 				const matchers = r.matchers
-					.map((m) =>
-						m.field && m.value ? `${m.field}:${m.value}` : m.type
-					)
+					.map((m) => (m.field && m.value ? `${m.field}:${m.value}` : m.type))
 					.join(", ");
 				const actions = r.actions
-					.map((a) =>
-						a.value ? `${a.type}:${a.value.join(",")}` : a.type
-					)
+					.map((a) => (a.value ? `${a.type}:${a.value.join(",")}` : a.type))
 					.join(", ");
 
 				logger.log(`Rule: ${r.id}`);
