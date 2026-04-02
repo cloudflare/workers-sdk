@@ -3,19 +3,19 @@ import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
 import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";
 import { z } from "zod";
-import {
-	Service,
-	Worker,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
 import { CacheBindings, SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	PersistenceSchema,
-	Plugin,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import type {
+	Service,
+	Worker,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
+import type { Plugin } from "../shared";
 
 export const CacheOptionsSchema = z.object({
 	cache: z.boolean().optional(),

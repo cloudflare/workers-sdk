@@ -5,26 +5,28 @@ import {
 	DeferredPromise,
 	DELETE,
 	GET,
-	InclusiveRange,
 	KeyValueStorage,
 	LogLevel,
 	MiniflareDurableObject,
-	MiniflareDurableObjectCf,
-	MultipartReadableStream,
 	parseRanges,
 	PURGE,
 	PUT,
-	RouteHandler,
-	Timers,
 } from "miniflare:shared";
 import { isSitesRequest } from "../kv";
-import { CacheObjectCf } from "./constants";
 import {
 	CacheMiss,
 	PurgeFailure,
 	RangeNotSatisfiable,
 	StorageFailure,
 } from "./errors.worker";
+import type { CacheObjectCf } from "./constants";
+import type {
+	InclusiveRange,
+	MiniflareDurableObjectCf,
+	MultipartReadableStream,
+	RouteHandler,
+	Timers,
+} from "miniflare:shared";
 
 interface CacheMetadata {
 	headers: string[][];

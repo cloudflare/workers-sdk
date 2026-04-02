@@ -1,19 +1,16 @@
 import assert from "node:assert";
 import SCRIPT_DO_WRAPPER from "worker:core/do-wrapper";
 import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
-import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { OUTBOUND_DO_PROXY_SERVICE_NAME } from "../../shared/external-service";
 import { CoreBindings } from "../../workers";
-import {
-	DurableObjectClassNames,
-	WorkflowOption,
-	WORKER_BINDING_SERVICE_LOOPBACK,
-} from "../shared";
+import { WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
 import {
 	getUserServiceName,
 	LOCAL_EXPLORER_DISK,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
+import type { Service, Worker_Binding, Worker_Module } from "../../runtime";
+import type { DurableObjectClassNames, WorkflowOption } from "../shared";
 import type { BindingIdMap, WorkflowBindingInfo } from "./types";
 
 export interface ExplorerServicesOptions {

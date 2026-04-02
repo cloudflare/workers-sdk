@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { Worker_Binding } from "../../runtime";
-import { Plugin, ProxyNodeBinding } from "../shared";
+import { ProxyNodeBinding } from "../shared";
+import type { Worker_Binding } from "../../runtime";
+import type { Plugin } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 

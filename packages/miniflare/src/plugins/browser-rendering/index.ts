@@ -15,16 +15,15 @@ import { dim } from "kleur/colors";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
-import { Log } from "../../shared";
 import { getGlobalWranglerCachePath } from "../../shared/wrangler";
 import {
 	getUserBindingServiceName,
-	Plugin,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import type { Log } from "../../shared";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),

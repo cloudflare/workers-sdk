@@ -1,14 +1,9 @@
-import { z } from "zod";
 import {
 	aggregateListResults,
 	fetchFromPeer,
 	getPeerUrlsIfAggregating,
 } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
-import {
-	zD1ListDatabasesData,
-	zD1RawDatabaseQueryData,
-} from "../generated/zod.gen";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
@@ -16,6 +11,11 @@ import type {
 	D1RawResultResponse,
 	D1SingleQuery,
 } from "../generated";
+import type {
+	zD1ListDatabasesData,
+	zD1RawDatabaseQueryData,
+} from "../generated/zod.gen";
+import type { z } from "zod";
 
 // ============================================================================
 // Error Codes (matching Cloudflare API)

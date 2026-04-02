@@ -2,16 +2,15 @@ import fs from "node:fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
 import { z } from "zod";
-import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	getUserBindingServiceName,
 	PersistenceSchema,
-	Plugin,
 	ProxyNodeBinding,
-	RemoteProxyConnectionString,
 } from "../shared";
+import type { Service } from "../../runtime";
+import type { Plugin, RemoteProxyConnectionString } from "../shared";
 
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z

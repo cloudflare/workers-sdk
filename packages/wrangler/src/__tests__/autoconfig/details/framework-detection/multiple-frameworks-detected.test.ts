@@ -147,5 +147,20 @@ describe("detectFramework() / multiple frameworks detected", () => {
 
 			expect(result.detectedFramework?.framework.id).toBe("astro");
 		});
+
+		it("does not throw when Hono and another known framework are detected (Hono is filtered out)", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({
+					dependencies: { "@tanstack/react-start": "1.132.0", hono: "4" },
+				}),
+				"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			});
+
+			const result = await detectFramework(process.cwd());
+
+			expect(result.detectedFramework?.framework.id).toBe("tanstack-start");
+		});
 	});
 });

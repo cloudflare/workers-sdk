@@ -114,7 +114,7 @@ describe("listTmpE2EProjects()", () => {
 
 describe("deleteProject()", () => {
 	// eslint-disable-next-line jest/expect-expect
-	it("makes a REST request to delete the given project", async ({ expect }) => {
+	it("makes a REST request to delete the given project", async () => {
 		const MOCK_PROJECT = "mock-pages-project";
 		agent
 			.get("https://api.cloudflare.com")
@@ -196,7 +196,7 @@ describe("listTmpKVNamespaces()", () => {
 
 describe("deleteKVNamespace()", () => {
 	// eslint-disable-next-line jest/expect-expect
-	it("makes a REST request to delete the given project", async ({ expect }) => {
+	it("makes a REST request to delete the given project", async () => {
 		const MOCK_KV = "tmp_e2e_kv";
 		agent
 			.get("https://api.cloudflare.com")
@@ -290,7 +290,7 @@ describe("listTmpDatabases()", () => {
 
 describe("deleteDatabase()", () => {
 	// eslint-disable-next-line jest/expect-expect
-	it("makes a REST request to delete the given project", async ({ expect }) => {
+	it("makes a REST request to delete the given project", async () => {
 		const MOCK_DB = "tmp-e2e-db";
 		agent
 			.get("https://api.cloudflare.com")
@@ -348,7 +348,7 @@ describe("listTmpE2EWorkers()", () => {
 
 describe("deleteWorker()", () => {
 	// eslint-disable-next-line jest/expect-expect
-	it("makes a REST request to delete the given project", async ({ expect }) => {
+	it("makes a REST request to delete the given project", async () => {
 		const MOCK_WORKER = "mock-worker";
 		agent
 			.get("https://api.cloudflare.com")
@@ -407,9 +407,7 @@ describe("listTmpR2Buckets()", () => {
 
 describe("deleteR2Bucket()", () => {
 	// eslint-disable-next-line jest/expect-expect
-	it("makes a REST request to delete the given R2 bucket", async ({
-		expect,
-	}) => {
+	it("makes a REST request to delete the given R2 bucket", async () => {
 		const MOCK_BUCKET = "tmp-e2e-abc123-next--workers-opennext-cache";
 		agent
 			.get("https://api.cloudflare.com")

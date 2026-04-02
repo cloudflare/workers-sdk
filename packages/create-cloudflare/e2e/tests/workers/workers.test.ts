@@ -45,6 +45,7 @@ describe
 				async ({ expect, project, logStream }) => {
 					try {
 						const deployedUrl = await runC3ForWorkerTest(
+							expect,
 							testConfig,
 							project.path,
 							logStream
@@ -83,7 +84,12 @@ describe
 							if (deployedUrl) {
 								await verifyDeployment(deployedUrl, verifyDeploy);
 							} else {
-								await verifyLocalDev(testConfig, project.path, logStream);
+								await verifyLocalDev(
+									expect,
+									testConfig,
+									project.path,
+									logStream
+								);
 							}
 						}
 

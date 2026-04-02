@@ -1,20 +1,16 @@
 import assert from "node:assert";
-import http from "node:http";
-import { z } from "zod";
-import {
-	getUserServiceName,
-	kCurrentWorker,
-	ServiceDesignatorSchema,
-} from "../plugins/core";
-import { RemoteProxyConnectionString } from "../plugins/shared";
-import {
+import { getUserServiceName, kCurrentWorker } from "../plugins/core";
+import { HttpOptions_Style, kVoid } from "../runtime";
+import { CoreHeaders } from "../workers";
+import type { ServiceDesignatorSchema } from "../plugins/core";
+import type { RemoteProxyConnectionString } from "../plugins/shared";
+import type {
 	HttpOptions,
-	HttpOptions_Style,
-	kVoid,
 	Service,
 	Worker_DurableObjectNamespace,
 } from "../runtime";
-import { CoreHeaders } from "../workers";
+import type http from "node:http";
+import type { z } from "zod";
 
 export function normaliseServiceDesignator(
 	service: z.infer<typeof ServiceDesignatorSchema>
