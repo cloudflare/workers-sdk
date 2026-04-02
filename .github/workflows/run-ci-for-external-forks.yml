@@ -69,7 +69,7 @@ jobs:
             --jq 'first(.[].number) // ""')
 
           if [ -n "$existing_pr" ]; then
-            gh pr edit "$existing_pr" 
+            gh pr edit "$existing_pr" \
               --add-label "e2e" \
               --add-label "run-remote-tests" \
               --title "$TITLE" \
