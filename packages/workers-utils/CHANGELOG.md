@@ -1,5 +1,47 @@
 # @cloudflare/workers-utils
 
+## 0.15.0
+
+### Minor Changes
+
+- [#13011](https://github.com/cloudflare/workers-sdk/pull/13011) [`b9b7e9d`](https://github.com/cloudflare/workers-sdk/commit/b9b7e9d9feec8491f53d144a4fd239cfb66fcd41) Thanks [@ruifigueira](https://github.com/ruifigueira)! - Add experimental headful browser rendering support for local development
+
+  > **Experimental:** This feature may be removed or changed without notice.
+
+  When developing locally with the Browser Rendering API, you can enable headful (visible) mode via the `X_BROWSER_HEADFUL` environment variable to see the browser while debugging:
+
+  ```sh
+  X_BROWSER_HEADFUL=true wrangler dev
+  X_BROWSER_HEADFUL=true vite dev
+  ```
+
+  **Note:** when using `@cloudflare/playwright`, two Chrome windows may appear — the initial blank page and the one created by `browser.newPage()`. This is expected behavior due to how Playwright handles browser contexts via CDP.
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove `formatCompatibilityDate` from the package's public exports
+
+  This utility has been removed from the public API. Callers should use `getTodaysCompatDate()` from `@cloudflare/workers-utils` instead.
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove `getLocalWorkerdCompatibilityDate` from the package
+
+  This utility has been removed because its implementation besides being unreliable is no longer needed. Callers should now use today's date as the compatibility date directly, e.g. via `getTodaysCompatDate()` from `@cloudflare/workers-utils`.
+
+- [#12992](https://github.com/cloudflare/workers-sdk/pull/12992) [`48d83ca`](https://github.com/cloudflare/workers-sdk/commit/48d83ca334e5f668e2d0faaa7a9401e4e1f68a87) Thanks [@RiscadoA](https://github.com/RiscadoA)! - Add `vpc_networks` binding support for routing Worker traffic through a Cloudflare Tunnel or network.
+
+  ```jsonc
+  {
+    "vpc_networks": [
+      // Route through a specific Cloudflare Tunnel
+      { "binding": "MY_FIRST_VPC", "tunnel_id": "<tunnel-id>" },
+      // Route through the Cloudflare One mesh network
+      { "binding": "MY_SECOND_VPC", "network_id": "cf1:network" }
+    ]
+  }
+  ```
+
+- [#13051](https://github.com/cloudflare/workers-sdk/pull/13051) [`d5bffde`](https://github.com/cloudflare/workers-sdk/commit/d5bffdef00618f1d441837a725779d35b176911e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `getTodaysCompatDate()` utility function
+
+  Returns today's date as a `YYYY-MM-DD` string.
+
 ## 0.14.0
 
 ### Minor Changes
