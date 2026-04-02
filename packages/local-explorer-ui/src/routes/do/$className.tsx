@@ -1,5 +1,6 @@
 import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { durableObjectsNamespaceListNamespaces } from "../../api";
+import { NotFound } from "../../components/NotFound";
 import { ResourceError } from "../../components/ResourceError";
 
 export const Route = createFileRoute("/do/$className")({
@@ -25,4 +26,5 @@ export const Route = createFileRoute("/do/$className")({
 			namespaceId: namespace.id,
 		};
 	},
+	notFoundComponent: NotFound,
 });
