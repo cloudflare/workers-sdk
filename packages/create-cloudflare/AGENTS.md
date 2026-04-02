@@ -2,19 +2,20 @@
 
 ## OVERVIEW
 
-Project scaffolding CLI for Cloudflare Workers. Single entry: `src/cli.ts` serves as CLI, library export, and bin target.
+Project scaffolding CLI for Cloudflare Workers. Main source entry: `src/cli.ts`. Bin entry: `bin/c3.js` (Node.js version gate shim).
 
 ## STRUCTURE
 
-- `src/cli.ts` — Main entry. Exports `main(argv)` for programmatic use, has shebang for direct execution
+- `bin/c3.js` — Bin shim that checks Node.js version before requiring `dist/cli.js`
+- `src/cli.ts` — Main entry. Exports `main(argv)` for programmatic use
 - `templates/` — Scaffolding templates (excluded from linting and most formatting)
 - `scripts/build.ts` — esbuild-based build → `dist/cli.js`
 
 ## BUILD
 
 - esbuild bundles `src/cli.ts` as CJS → `dist/cli.js`
-- `package.json` `main`, `exports["."]`, and `bin` all point at `dist/cli.js`
-- No separate bin shim — the built output IS the bin
+- `package.json` `main` and `exports["."]` point at `dist/cli.js`; `bin` points at `bin/c3.js`
+- `bin/c3.js` is a plain CommonJS shim that gates on Node.js version (read from `package.json` `engines.node`) before requiring `dist/cli.js`
 
 ## CONVENTIONS
 
