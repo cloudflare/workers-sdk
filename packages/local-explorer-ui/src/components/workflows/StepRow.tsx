@@ -27,7 +27,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-red-600 dark:bg-red-500">
+			<div className="flex size-5 items-center justify-center rounded bg-kumo-danger">
 				<span className="text-xs font-bold text-white">!</span>
 			</div>
 		);
@@ -41,7 +41,7 @@ function StepStatusIcon({
 			);
 		}
 		return (
-			<div className="flex size-5 items-center justify-center rounded bg-emerald-600 dark:bg-emerald-500">
+			<div className="bg-kumo-success flex size-5 items-center justify-center rounded">
 				<CheckIcon size={12} weight="bold" className="text-white" />
 			</div>
 		);
@@ -56,8 +56,7 @@ function StepStatusIcon({
 const TYPE_BADGE_STYLES: Record<string, string> = {
 	step: "bg-kumo-tint text-kumo-subtle",
 	sleep: "bg-kumo-overlay text-kumo-subtle",
-	waitForEvent:
-		"bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300",
+	waitForEvent: "bg-kumo-brand/10 text-kumo-brand",
 };
 
 export function StepRow({ step }: { step: StepData }): JSX.Element {
@@ -234,7 +233,7 @@ function StepDoDetails({ step }: { step: StepData }): JSX.Element {
 										</div>
 									</div>
 									{!isLast && delayMs !== null && delayMs > 0 && (
-										<div className="flex items-center py-1 pl-[28px]">
+										<div className="flex items-center py-1 pl-7">
 											<div className="flex h-10 w-5 items-center justify-center">
 												<div className="h-full border-l border-dashed border-kumo-fill" />
 											</div>

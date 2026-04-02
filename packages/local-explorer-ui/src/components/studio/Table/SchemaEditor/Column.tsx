@@ -175,7 +175,7 @@ export function StudioColumnSchemaEditor({
 		<tr
 			className={
 				highlightSchemaChanges && column.new && !column.old
-					? "bg-green-100 dark:bg-green-800"
+					? "bg-kumo-success/20"
 					: ""
 			}
 			key={column.key}

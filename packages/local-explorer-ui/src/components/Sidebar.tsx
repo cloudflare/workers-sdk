@@ -66,7 +66,7 @@ function SidebarItemGroup({
 										className={cn(
 											"block cursor-pointer rounded-l-md px-2 py-2.5 text-sm text-kumo-default no-underline transition-colors hover:bg-kumo-brand/10",
 											{
-												"bg-kumo-brand/10 font-medium text-blue-600 hover:bg-kumo-brand/20 dark:text-blue-400":
+												"bg-kumo-brand/10 font-medium text-kumo-link hover:bg-kumo-brand/20":
 													item.isActive,
 											}
 										)}

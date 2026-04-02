@@ -133,7 +133,7 @@ function NamespaceView() {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="border-danger/20 bg-danger/8 mb-4 rounded-md border p-4 text-kumo-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}

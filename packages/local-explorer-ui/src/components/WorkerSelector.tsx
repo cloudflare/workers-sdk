@@ -91,7 +91,7 @@ export function WorkerSelector({
 
 									return (
 										<Select.Item
-											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-kumo-default transition-colors outline-none select-none data-highlighted:bg-kumo-elevated dark:data-highlighted:bg-kumo-elevated"
+											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-kumo-default transition-colors outline-none select-none data-highlighted:bg-kumo-elevated"
 											key={worker.name}
 											value={worker.name}
 										>

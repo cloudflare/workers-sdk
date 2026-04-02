@@ -4,15 +4,15 @@ import type { WorkflowsInstance } from "../../api";
 type WorkflowStatus = NonNullable<WorkflowsInstance["status"]>;
 
 const statusStyles: Record<WorkflowStatus, string> = {
-	complete: "bg-emerald-600 text-white dark:bg-emerald-500",
-	errored: "bg-red-600 text-white dark:bg-red-500",
-	terminated: "bg-red-600 text-white dark:bg-red-500",
-	waiting: "bg-violet-600 text-white dark:bg-violet-500",
-	paused: "bg-violet-600 text-white dark:bg-violet-500",
+	complete: "bg-kumo-success text-white",
+	errored: "bg-kumo-danger text-white",
+	terminated: "bg-kumo-danger text-white",
+	waiting: "bg-kumo-brand text-white",
+	paused: "bg-kumo-brand text-white",
 	running: "bg-kumo-brand text-white",
 	waitingForPause: "bg-kumo-brand text-white",
-	queued: "bg-neutral-400 text-white dark:bg-neutral-500",
-	unknown: "bg-neutral-400 text-white dark:bg-neutral-500",
+	queued: "bg-kumo-subtle text-white",
+	unknown: "bg-kumo-subtle text-white",
 };
 
 const statusLabels: Record<WorkflowStatus, string> = {

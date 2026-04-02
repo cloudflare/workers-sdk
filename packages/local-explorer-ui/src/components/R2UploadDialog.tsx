@@ -190,7 +190,7 @@ export function R2UploadDialog({
 				</Dialog.Title>
 
 				{error && (
-					<div className="border-danger/20 bg-danger/8 mb-4 rounded-md border p-3 text-sm text-kumo-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
 						{error}
 					</div>
 				)}

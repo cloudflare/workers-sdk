@@ -150,20 +150,17 @@ const ACTION_CONFIG_LIST: Record<
 > = {
 	pause: {
 		icon: PauseIcon,
-		style:
-			"border-kumo-fill bg-kumo-base text-kumo-subtle dark:text-kumo-default hover:bg-kumo-fill",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
 		weight: "fill",
 	},
 	resume: {
 		icon: PlayIcon,
-		style:
-			"border-kumo-fill bg-kumo-base text-kumo-subtle dark:text-kumo-default hover:bg-kumo-fill",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
 		weight: "fill",
 	},
 	restart: {
 		icon: ArrowClockwiseIcon,
-		style:
-			"border-kumo-fill bg-kumo-base text-kumo-subtle dark:text-kumo-default hover:bg-kumo-fill",
+		style: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill",
 		weight: "regular",
 	},
 	terminate: {
@@ -335,7 +332,7 @@ const InstanceRow = memo(function InstanceRow({
 							status !== "errored" &&
 							status !== "terminated" && (
 								<button
-									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-subtle transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40 dark:text-kumo-default"
+									className="ml-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={handleSendEventClick}
 									title="Send Event"
@@ -344,7 +341,7 @@ const InstanceRow = memo(function InstanceRow({
 								</button>
 							)}
 						<button
-							className="hover:bg-danger/10 inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+							className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
 							disabled={actionInProgress !== null}
 							onClick={handleDeleteClick}
 							title="Delete"
@@ -517,7 +514,7 @@ function SettingsTab({
 						data.
 					</p>
 					<button
-						className="hover:bg-danger/10 inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-kumo-base p-3 text-sm font-medium text-kumo-danger transition-colors"
+						className="inline-flex shrink-0 cursor-pointer items-center rounded-lg bg-kumo-base p-3 text-sm font-medium text-kumo-danger transition-colors hover:bg-kumo-danger/10"
 						onClick={() => handleOpenChange(true)}
 					>
 						Delete
@@ -536,7 +533,7 @@ function SettingsTab({
 
 					<div className="px-6 py-5">
 						{error && (
-							<div className="border-danger/20 bg-danger/8 mb-4 rounded-lg border p-3 text-sm text-kumo-danger">
+							<div className="mb-4 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
 								{error}
 							</div>
 						)}
@@ -816,7 +813,7 @@ function WorkflowInstancesView() {
 					</div>
 
 					{error && (
-						<div className="border-danger/20 bg-danger/8 mb-4 rounded-md border p-4 text-kumo-danger">
+						<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 							{error}
 						</div>
 					)}

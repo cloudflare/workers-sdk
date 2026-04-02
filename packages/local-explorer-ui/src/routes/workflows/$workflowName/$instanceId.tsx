@@ -436,7 +436,7 @@ function InstanceDetailView() {
 											key={action}
 											className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
 												isTerminate
-													? "hover:bg-danger/10 border-kumo-fill bg-kumo-base text-kumo-danger"
+													? "border-kumo-fill bg-kumo-base text-kumo-danger hover:bg-kumo-danger/10"
 													: "border-kumo-fill bg-kumo-base text-kumo-default hover:bg-kumo-fill"
 											}`}
 											disabled={actionInProgress !== null}
@@ -457,7 +457,7 @@ function InstanceDetailView() {
 									status !== "errored" &&
 									status !== "terminated" && (
 										<button
-											className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-subtle transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40 dark:text-kumo-default"
+											className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-default transition-colors hover:bg-kumo-fill disabled:cursor-not-allowed disabled:opacity-40"
 											disabled={actionInProgress !== null}
 											onClick={() => setSendEventOpen(true)}
 											title="Send Event"
@@ -466,7 +466,7 @@ function InstanceDetailView() {
 										</button>
 									)}
 								<button
-									className="hover:bg-danger/10 inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+									className="inline-flex size-9 cursor-pointer items-center justify-center rounded-lg border border-kumo-fill bg-kumo-base text-kumo-danger transition-colors hover:bg-kumo-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
 									disabled={actionInProgress !== null}
 									onClick={() => setDeleteDialogOpen(true)}
 									title="Delete"
@@ -645,7 +645,7 @@ function InstanceDetailView() {
 				{/* Content */}
 				<div className="space-y-8 px-32 py-6">
 					{error && (
-						<div className="border-danger/20 bg-danger/8 rounded-lg border p-4 text-sm text-kumo-danger">
+						<div className="rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-sm text-kumo-danger">
 							{error}
 						</div>
 					)}

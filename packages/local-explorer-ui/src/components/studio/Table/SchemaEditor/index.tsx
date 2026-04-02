@@ -145,7 +145,7 @@ export function StudioTableSchemaEditor({
 				<div className="flex gap-2 border-b border-kumo-elevated p-4 py-2 shadow-xs">
 					<input
 						autoFocus
-						className="h-9 w-62.5 rounded-lg border border-kumo-elevated bg-transparent px-3 text-base"
+						className="h-9 w-62.5 rounded-lg border border-kumo-fill bg-transparent px-3 text-base"
 						onChange={(e) => handleNameChange(e.target.value)}
 						placeholder="Table name"
 						value={value.name.new ?? ""}

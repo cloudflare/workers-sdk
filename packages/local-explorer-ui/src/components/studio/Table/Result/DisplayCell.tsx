@@ -69,7 +69,7 @@ function BlobCellValue({ value, vector }: BlobCellValueProps): JSX.Element {
 
 	return (
 		<div className="flex w-full">
-			<span className="flex-1 truncate text-orange-600 dark:text-orange-400">
+			<span className="flex-1 truncate text-kumo-warning">
 				{prettifyBytes(bytes.subarray(0, 64))}
 			</span>
 			<div className="ml-2 flex-col items-center justify-center">
@@ -129,7 +129,7 @@ export const StudioTableDisplayCell = forwardRef<
 				<span
 					className={cn(
 						"flex-1 truncate",
-						"block grow text-right text-blue-700 dark:text-blue-300"
+						"block grow text-right text-kumo-link"
 					)}
 				>
 					{value}

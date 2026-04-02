@@ -89,7 +89,7 @@ export function StudioExportModal({
 					</div>
 
 					{error && (
-						<div className="rounded-md bg-red-50 p-3 text-red-700 dark:bg-red-900 dark:text-white">
+						<div className="rounded-md bg-kumo-danger/10 p-3 text-kumo-danger">
 							{error}
 						</div>
 					)}

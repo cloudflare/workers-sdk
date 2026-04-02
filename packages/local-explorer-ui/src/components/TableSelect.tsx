@@ -69,7 +69,7 @@ export function TableSelect({
 					<Select.Popup className="max-h-72 min-w-36 overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base shadow-[0_4px_12px_rgba(0,0,0,0.15)] transition-[opacity,transform] duration-150 data-ending-style:-translate-y-1 data-ending-style:opacity-0 data-starting-style:-translate-y-1 data-starting-style:opacity-0">
 						<div className="p-1">
 							<button
-								className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-kumo-default transition-colors outline-none select-none hover:bg-kumo-elevated dark:hover:bg-kumo-tint"
+								className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-kumo-default transition-colors outline-none select-none hover:bg-kumo-elevated"
 								onClick={handleCreateTable}
 								type="button"
 							>
@@ -90,7 +90,7 @@ export function TableSelect({
 
 									return (
 										<Select.Item
-											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-kumo-default transition-colors outline-none select-none data-highlighted:bg-kumo-elevated dark:data-highlighted:bg-kumo-elevated"
+											className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-kumo-default transition-colors outline-none select-none data-highlighted:bg-kumo-elevated"
 											key={table.value}
 											value={table.value}
 										>

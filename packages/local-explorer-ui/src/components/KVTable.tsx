@@ -41,7 +41,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 					<Button
 						variant="ghost"
 						shape="square"
-						className="!h-7 !w-7"
+						className="h-7! w-7!"
 						aria-label="Actions"
 					>
 						<DotsThreeIcon size={16} weight="bold" />
@@ -185,14 +185,14 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</div>
 									) : (
 										<div className="group/cell flex items-center gap-1.5">
-											<code className="font-medium text-blue-600 dark:text-blue-400">
+											<code className="font-medium text-kumo-link">
 												{entry.key.name}
 											</code>
 											<CopyButton text={entry.key.name} />
 										</div>
 									)}
 								</Table.Cell>
-								<Table.Cell className="group/cell max-w-[400px] font-mono text-[13px]">
+								<Table.Cell className="group/cell max-w-100 font-mono text-[13px]">
 									{isEditing && editData ? (
 										<div className="flex flex-col gap-2">
 											<label
@@ -203,7 +203,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											</label>
 											<textarea
 												id={`edit-value-${entry.key.name}`}
-												className="[field-sizing:content] max-h-[200px] min-h-8 w-full resize-none overflow-y-auto rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle"
+												className="field-sizing-content max-h-50 min-h-8 w-full resize-none overflow-y-auto rounded border border-kumo-brand bg-kumo-base px-2 py-1.5 font-mono text-[13px] text-kumo-default focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:bg-kumo-elevated disabled:text-kumo-subtle"
 												value={editData.value}
 												onChange={(e) =>
 													setEditData({ ...editData, value: e.target.value })

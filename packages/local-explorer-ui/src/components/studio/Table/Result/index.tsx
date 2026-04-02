@@ -182,7 +182,7 @@ export function StudioResultTable({
 								icon={
 									<KeyIcon
 										weight="duotone"
-										className="size-5 text-green-600 dark:text-green-400"
+										className="size-5 text-kumo-success"
 									/>
 								}
 								title={"Primary Key"}
@@ -196,9 +196,8 @@ export function StudioResultTable({
 									<KeyIcon
 										weight="duotone"
 										className={cn("size-5", {
-											"text-blue-600 dark:text-blue-400": idx.type === "KEY",
-											"text-orange-600 dark:text-orange-400":
-												idx.type === "UNIQUE",
+											"text-kumo-link": idx.type === "KEY",
+											"text-kumo-warning": idx.type === "UNIQUE",
 										})}
 									/>
 								}
@@ -213,7 +212,7 @@ export function StudioResultTable({
 								icon={
 									<FlowArrowIcon
 										weight="duotone"
-										className="size-5 text-blue-600 dark:text-blue-400"
+										className="size-5 text-kumo-link"
 									/>
 								}
 								title={"Reference To"}
@@ -225,9 +224,7 @@ export function StudioResultTable({
 								description={
 									header.metadata.columnSchema.constraint.generatedExpression
 								}
-								icon={
-									<SigmaIcon className="size-5 text-purple-600 dark:text-purple-400" />
-								}
+								icon={<SigmaIcon className="size-5 text-kumo-brand" />}
 								title={"Generated Expression"}
 							/>
 						)}

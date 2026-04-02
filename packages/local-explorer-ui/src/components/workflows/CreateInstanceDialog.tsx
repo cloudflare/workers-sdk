@@ -102,7 +102,7 @@ export function CreateWorkflowInstanceDialog({
 				{/* Body */}
 				<div className="px-6 py-6">
 					{error && (
-						<div className="border-danger/20 bg-danger/8 mb-5 rounded-lg border p-3 text-sm text-kumo-danger">
+						<div className="mb-5 rounded-lg border border-kumo-danger/20 bg-kumo-danger/8 p-3 text-sm text-kumo-danger">
 							{error}
 						</div>
 					)}
