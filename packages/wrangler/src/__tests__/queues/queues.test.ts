@@ -719,6 +719,7 @@ describe("wrangler", () => {
 					COMMANDS
 					  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
 					  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Worker Consumer
+					  wrangler queues consumer list <queue-name>                  List consumers for a queue
 					  wrangler queues consumer http                               Configure Queue HTTP Pull Consumers
 					  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
@@ -1565,6 +1566,7 @@ describe("wrangler", () => {
 					COMMANDS
 					  wrangler queues consumer http add <queue-name>     Add a Queue HTTP Pull Consumer
 					  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
+					  wrangler queues consumer http list <queue-name>    List HTTP pull consumers for a queue
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]
@@ -1813,6 +1815,375 @@ describe("wrangler", () => {
 						Removed consumer from queue testQueue."
 					`);
 				});
+			});
+		});
+
+		describe("consumer list", () => {
+			const workerConsumer = {
+				consumer_id: "1001",
+				type: "worker",
+				script: "my-worker",
+				dead_letter_queue: "my-dlq",
+				settings: {
+					batch_size: 10,
+					max_retries: 3,
+					max_wait_time_ms: 5000,
+					max_concurrency: 2,
+					retry_delay: 30,
+				},
+			};
+
+			const httpConsumer = {
+				consumer_id: "1002",
+				type: "http_pull",
+				dead_letter_queue: "my-dlq",
+				settings: {
+					batch_size: 5,
+					max_retries: 2,
+					visibility_timeout_ms: 10000,
+					retry_delay: 15,
+				},
+			};
+
+			it("should show the correct help text", async () => {
+				await runWrangler("queues consumer list --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues consumer list <queue-name>
+
+					List consumers for a queue
+
+					POSITIONALS
+					  queue-name  Name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
+				`);
+			});
+
+			it("should list both worker and http consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [workerConsumer, httpConsumer],
+					consumers_total_count: 2,
+				});
+
+				await runWrangler("queues consumer list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Worker consumers:
+					┌─┬─┬─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ script │ dead_letter_queue │ batch_size │ max_retries │ max_wait_time_ms │ max_concurrency │ retry_delay │
+					├─┼─┼─┼─┼─┼─┼─┼─┤
+					│ 1001 │ my-worker │ my-dlq │ 10 │ 3 │ 5000 │ 2 │ 30 │
+					└─┴─┴─┴─┴─┴─┴─┴─┘
+					HTTP pull consumers:
+					┌─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ dead_letter_queue │ batch_size │ max_retries │ visibility_timeout_ms │ retry_delay │
+					├─┼─┼─┼─┼─┼─┤
+					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
+					└─┴─┴─┴─┴─┴─┘"
+				`);
+			});
+
+			it("should list only worker consumers when queue has no http consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [workerConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Worker consumers:
+					┌─┬─┬─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ script │ dead_letter_queue │ batch_size │ max_retries │ max_wait_time_ms │ max_concurrency │ retry_delay │
+					├─┼─┼─┼─┼─┼─┼─┼─┤
+					│ 1001 │ my-worker │ my-dlq │ 10 │ 3 │ 5000 │ 2 │ 30 │
+					└─┴─┴─┴─┴─┴─┴─┴─┘"
+				`);
+			});
+
+			it("should list only http consumers when queue has no worker consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [httpConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					HTTP pull consumers:
+					┌─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ dead_letter_queue │ batch_size │ max_retries │ visibility_timeout_ms │ retry_delay │
+					├─┼─┼─┼─┼─┼─┤
+					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
+					└─┴─┴─┴─┴─┴─┘"
+			`);
+			});
+
+			it("should show empty message when queue has no consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [],
+					consumers_total_count: 0,
+				});
+
+				await runWrangler("queues consumer list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					No consumers found for queue "testQueue"."
+				`);
+			});
+
+			it("should show error when queue does not exist", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, null);
+
+				await expect(
+					runWrangler("queues consumer list testQueue")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
+				);
+			});
+		});
+
+		describe("consumer worker list", () => {
+			const workerConsumer = {
+				consumer_id: "1001",
+				type: "worker",
+				script: "my-worker",
+				dead_letter_queue: "my-dlq",
+				settings: {
+					batch_size: 10,
+					max_retries: 3,
+					max_wait_time_ms: 5000,
+					max_concurrency: 2,
+					retry_delay: 30,
+				},
+			};
+
+			it("should show the correct help text", async () => {
+				await runWrangler("queues consumer worker list --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues consumer worker list <queue-name>
+
+					List worker consumers for a queue
+
+					POSITIONALS
+					  queue-name  Name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
+				`);
+			});
+
+			it("should list worker consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [workerConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer worker list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					┌─┬─┬─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ script │ dead_letter_queue │ batch_size │ max_retries │ max_wait_time_ms │ max_concurrency │ retry_delay │
+					├─┼─┼─┼─┼─┼─┼─┼─┤
+					│ 1001 │ my-worker │ my-dlq │ 10 │ 3 │ 5000 │ 2 │ 30 │
+					└─┴─┴─┴─┴─┴─┴─┴─┘"
+				`);
+			});
+
+			it("should show empty message when queue has no worker consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [
+						{
+							consumer_id: "1002",
+							type: "http_pull",
+							settings: {},
+						},
+					],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer worker list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					No worker consumers found for queue "testQueue"."
+				`);
+			});
+
+			it("should show error when queue does not exist", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, null);
+
+				await expect(
+					runWrangler("queues consumer worker list testQueue")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
+				);
+			});
+		});
+
+		describe("consumer http list", () => {
+			const httpConsumer = {
+				consumer_id: "1002",
+				type: "http_pull",
+				dead_letter_queue: "my-dlq",
+				settings: {
+					batch_size: 5,
+					max_retries: 2,
+					visibility_timeout_ms: 10000,
+					retry_delay: 15,
+				},
+			};
+
+			it("should show the correct help text", async () => {
+				await runWrangler("queues consumer http list --help");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues consumer http list <queue-name>
+
+					List HTTP pull consumers for a queue
+
+					POSITIONALS
+					  queue-name  Name of the queue  [string] [required]
+
+					GLOBAL FLAGS
+					  -c, --config    Path to Wrangler configuration file  [string]
+					      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+					  -h, --help      Show help  [boolean]
+					  -v, --version   Show version number  [boolean]"
+				`);
+			});
+
+			it("should list http consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [httpConsumer],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer http list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					┌─┬─┬─┬─┬─┬─┐
+					│ consumer_id │ dead_letter_queue │ batch_size │ max_retries │ visibility_timeout_ms │ retry_delay │
+					├─┼─┼─┼─┼─┼─┤
+					│ 1002 │ my-dlq │ 5 │ 2 │ 10000 │ 15 │
+					└─┴─┴─┴─┴─┴─┘"
+			`);
+			});
+
+			it("should show empty message when queue has no http consumers", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, {
+					queue_id: expectedQueueId,
+					queue_name: expectedQueueName,
+					created_on: "",
+					modified_on: "",
+					producers: [],
+					producers_total_count: 0,
+					consumers: [
+						{
+							consumer_id: "1001",
+							type: "worker",
+							script: "my-worker",
+							settings: {},
+						},
+					],
+					consumers_total_count: 1,
+				});
+
+				await runWrangler("queues consumer http list testQueue");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					No HTTP pull consumers found for queue "testQueue"."
+				`);
+			});
+
+			it("should show error when queue does not exist", async () => {
+				mockGetQueueByNameRequest(expectedQueueName, null);
+
+				await expect(
+					runWrangler("queues consumer http list testQueue")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
+				);
 			});
 		});
 
