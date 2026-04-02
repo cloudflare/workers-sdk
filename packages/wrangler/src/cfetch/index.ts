@@ -14,7 +14,7 @@ export interface FetchResult<ResponseType = unknown> {
 	success: boolean;
 	result: ResponseType;
 	errors: FetchError[];
-	messages?: string[];
+	messages?: (string | { code?: number; message: string })[];
 	result_info?: unknown;
 }
 
@@ -216,21 +216,38 @@ function throwFetchError(
 	if (typeof vitest !== "undefined" && !("errors" in response)) {
 		throw response;
 	}
-	for (const error of response.errors) {
+	const errors = response.errors ?? [];
+	for (const error of errors) {
 		maybeThrowFriendlyError(error);
+	}
+
+	// Some API endpoints return non-standard error envelopes (e.g. {code, error}
+	// instead of {errors: [...]}). Surface those as notes when errors is empty.
+	const notes = [
+		...errors.map((err) => ({ text: renderError(err) })),
+		...(response.messages?.map((msg) => ({
+			text: typeof msg === "string" ? msg : (msg.message ?? String(msg)),
+		})) ?? []),
+	];
+	if (notes.length === 0) {
+		const raw = response as unknown as Record<string, unknown>;
+		const fallbackMessage =
+			typeof raw.error === "string"
+				? `${raw.error}${raw.code ? ` [code: ${raw.code}]` : ""}`
+				: undefined;
+		if (fallbackMessage) {
+			notes.push({ text: fallbackMessage });
+		}
 	}
 
 	const error = new APIError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,
-		notes: [
-			...response.errors.map((err) => ({ text: renderError(err) })),
-			...(response.messages?.map((text) => ({ text })) ?? []),
-		],
+		notes,
 		status,
 	});
 	// add the first error code directly to this error
 	// so consumers can use it for specific behaviour
-	const code = response.errors[0]?.code;
+	const code = errors[0]?.code;
 	if (code) {
 		error.code = code;
 	}
