@@ -440,7 +440,6 @@ const bindingsConfigMock: Omit<
 	],
 	send_email: [{ name: "SEND_EMAIL_BINDING" }],
 	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
-	// AI Search and AI Search Namespace type generation is being done in a separate effort in ticket RAG-1028
 	ai_search_namespaces: [
 		{ binding: "AI_SEARCH_NS_BINDING", namespace: "production" },
 	],
@@ -768,6 +767,8 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -881,6 +882,8 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1057,6 +1060,8 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
