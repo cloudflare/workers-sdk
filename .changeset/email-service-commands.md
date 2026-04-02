@@ -7,10 +7,10 @@ feat: add `wrangler email routing` and `wrangler email sending` commands
 Email Routing commands:
 
 - `wrangler email routing list` - list zones with email routing status
-- `wrangler email routing settings` - get email routing settings for a zone
-- `wrangler email routing enable/disable` - enable or disable email routing
-- `wrangler email routing dns get/unlock` - manage DNS records
-- `wrangler email routing rules list/get/create/update/delete` - manage routing rules (use `catch-all` as the rule ID for the catch-all rule)
+- `wrangler email routing settings <domain>` - get email routing settings for a zone
+- `wrangler email routing enable/disable <domain>` - enable or disable email routing
+- `wrangler email routing dns get/unlock <domain>` - manage DNS records
+- `wrangler email routing rules list/get/create/update/delete <domain>` - manage routing rules (use `catch-all` as the rule ID for the catch-all rule)
 - `wrangler email routing addresses list/get/create/delete` - manage destination addresses
 
 Email Sending commands:
