@@ -1,14 +1,23 @@
 import { Button } from "@cloudflare/kumo";
+import { WarningIcon } from "@phosphor-icons/react";
 import { Link, type ErrorComponentProps } from "@tanstack/react-router";
+import type { WorkersApiResponseCommonFailure } from "../api";
 
-export function ResourceNotFound(_props: ErrorComponentProps): JSX.Element {
+const DEFAULT_ERROR_DESCRIPTION =
+	"An unknown error occured. Please report this issue to Cloudflare.";
+
+export function ResourceNotFound({
+	error,
+}: ErrorComponentProps<WorkersApiResponseCommonFailure>): JSX.Element {
+	const details = error.errors?.[0]?.message ?? DEFAULT_ERROR_DESCRIPTION;
+
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center space-y-4 p-12 text-center text-text-secondary">
-			<h2 className="text-3xl font-bold text-text">Resource not found</h2>
+			<WarningIcon size={48} />
 
-			<p className="text-sm font-light text-text-secondary">
-				This binding doesn&apos;t exist in your current dev session.
-			</p>
+			<h2 className="text-3xl font-bold text-text">Something went wrong</h2>
+
+			<p className="text-sm font-light text-text-secondary">{details}</p>
 
 			<Link to="/">
 				<Button variant="secondary">Go home</Button>
