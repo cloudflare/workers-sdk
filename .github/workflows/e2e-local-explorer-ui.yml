@@ -1,0 +1,68 @@
+name: Local Explorer UI E2E
+
+on:
+  merge_group:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # We run `playwright install` manually instead
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+jobs:
+  test:
+    name: Local Explorer UI E2E
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: changes
+        with:
+          filters: |
+            relevant:
+              - 'packages/local-explorer-ui/**'
+              - 'packages/miniflare/src/workers/local-explorer/**'
+              - 'fixtures/worker-with-resources/**'
+              - 'fixtures/shared/**'
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+
+      - name: Install Playwright
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm --filter @cloudflare/local-explorer-ui playwright:install
+
+      - name: Build wrangler
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm turbo build --filter wrangler
+
+      - name: Run Local Explorer UI E2E tests
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm test:e2e -F @cloudflare/local-explorer-ui --log-order=stream
+        timeout-minutes: 10
+        env:
+          CI_OS: Linux
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs
+          path: .turbo/runs

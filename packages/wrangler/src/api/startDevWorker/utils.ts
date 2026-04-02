@@ -373,6 +373,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "vpc_networks": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "vpc_network", ...x };
+				}
+				break;
+			}
 			case "media": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "media", ...x };

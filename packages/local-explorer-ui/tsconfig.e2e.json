@@ -1,0 +1,15 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/base.json"],
+	"compilerOptions": {
+		"composite": true,
+		"lib": ["ES2022", "DOM"],
+		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
+		"types": ["vitest/globals", "node"]
+	},
+	"include": [
+		"src/__e2e__",
+		"src/__e2e__/global-setup.ts",
+		"src/__e2e__/setup.ts",
+		"../../fixtures/shared/src/run-wrangler-long-lived.ts"
+	]
+}
