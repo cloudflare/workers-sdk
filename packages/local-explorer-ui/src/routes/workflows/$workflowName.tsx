@@ -1,9 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { ResourceNotFound } from "../../components/ResourceNotFound";
+import { ResourceError } from "../../components/ResourceError";
 
 export const Route = createFileRoute("/workflows/$workflowName")({
 	component: () => <Outlet />,
-	errorComponent: ResourceNotFound,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		return {
 			workflowName: params.workflowName,

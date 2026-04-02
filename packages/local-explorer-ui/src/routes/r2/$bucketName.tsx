@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { ResourceNotFound } from "../../components/ResourceNotFound";
+import { ResourceError } from "../../components/ResourceError";
 
 export const Route = createFileRoute("/r2/$bucketName")({
 	component: () => <Outlet />,
-	errorComponent: ResourceNotFound,
+	errorComponent: ResourceError,
 });

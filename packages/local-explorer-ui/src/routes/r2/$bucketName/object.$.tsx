@@ -12,13 +12,13 @@ import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CopyButton } from "../../../components/CopyButton";
 import { NotFound } from "../../../components/NotFound";
-import { ResourceNotFound } from "../../../components/ResourceNotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
 
 export const Route = createFileRoute("/r2/$bucketName/object/$")({
 	component: ObjectDetailView,
-	errorComponent: ResourceNotFound,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const objectKey = params._splat;
 		if (!objectKey) {

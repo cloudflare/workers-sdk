@@ -1,10 +1,10 @@
 import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { durableObjectsNamespaceListNamespaces } from "../../api";
-import { ResourceNotFound } from "../../components/ResourceNotFound";
+import { ResourceError } from "../../components/ResourceError";
 
 export const Route = createFileRoute("/do/$className")({
 	component: () => <Outlet />,
-	errorComponent: ResourceNotFound,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];

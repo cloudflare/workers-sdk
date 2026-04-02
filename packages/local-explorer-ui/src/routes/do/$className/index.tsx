@@ -8,12 +8,12 @@ import {
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { NotFound } from "../../../components/NotFound";
-import { ResourceNotFound } from "../../../components/ResourceNotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import type { WorkersObject } from "../../../api";
 
 export const Route = createFileRoute("/do/$className/")({
 	component: NamespaceView,
-	errorComponent: ResourceNotFound,
+	errorComponent: ResourceError,
 	loader: async ({ params }) => {
 		const response = await durableObjectsNamespaceListNamespaces();
 		const namespaces = response.data?.result ?? [];

@@ -6,7 +6,7 @@ import type { WorkersApiResponseCommonFailure } from "../api";
 const DEFAULT_ERROR_DESCRIPTION =
 	"An unknown error occured. Please report this issue to Cloudflare.";
 
-export function ResourceNotFound({
+export function ResourceError({
 	error,
 }: ErrorComponentProps<Error | WorkersApiResponseCommonFailure>): JSX.Element {
 	const details =

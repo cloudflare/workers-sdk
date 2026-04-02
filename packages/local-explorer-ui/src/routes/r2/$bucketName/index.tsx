@@ -30,7 +30,7 @@ import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { NotFound } from "../../../components/NotFound";
 import { R2ObjectTable } from "../../../components/R2ObjectTable";
 import { R2UploadDialog } from "../../../components/R2UploadDialog";
-import { ResourceNotFound } from "../../../components/ResourceNotFound";
+import { ResourceError } from "../../../components/ResourceError";
 import { withMinimumDelay } from "../../../utils/async";
 import type { R2Object } from "../../../api";
 
@@ -41,7 +41,7 @@ export interface R2BucketSearch {
 
 export const Route = createFileRoute("/r2/$bucketName/")({
 	component: BucketView,
-	errorComponent: ResourceNotFound,
+	errorComponent: ResourceError,
 	loaderDeps: ({ search }) => ({
 		prefix: search.prefix,
 		delimiter: search.delimiter,
