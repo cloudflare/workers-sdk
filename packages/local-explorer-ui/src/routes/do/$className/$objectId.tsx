@@ -185,7 +185,7 @@ function ObjectView(): JSX.Element {
 					>
 						{params.className}
 						{namespaceId !== params.className && (
-							<span className="text-text-secondary">({namespaceId})</span>
+							<span className="text-kumo-subtle">({namespaceId})</span>
 						)}
 					</Link>,
 					<span

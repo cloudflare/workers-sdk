@@ -75,7 +75,7 @@ function ActionMenu({
 				)}
 
 				<DropdownMenu.Item
-					className="flex items-center gap-2 text-danger"
+					className="flex items-center gap-2 text-kumo-danger"
 					onClick={onDelete}
 				>
 					<TrashIcon />
@@ -134,7 +134,7 @@ function BulkActionMenu({
 					</>
 				)}
 				<DropdownMenu.Item
-					className="flex items-center gap-2 text-danger"
+					className="flex items-center gap-2 text-kumo-danger"
 					onClick={onDelete}
 				>
 					<TrashIcon />
@@ -230,7 +230,7 @@ export function R2ObjectTable({
 
 	if (items.length === 0) {
 		return (
-			<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+			<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-kumo-subtle">
 				<h2 className="text-2xl font-medium">
 					{currentPrefix
 						? "No objects in this directory"
@@ -244,7 +244,7 @@ export function R2ObjectTable({
 	}
 
 	return (
-		<div className="overflow-hidden rounded-lg border border-border">
+		<div className="overflow-hidden rounded-lg border border-kumo-fill">
 			<Table>
 				<Table.Header>
 					<Table.Row>
@@ -290,21 +290,18 @@ export function R2ObjectTable({
 									</Table.Cell>
 									<Table.Cell>
 										<button
-											className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-text hover:text-primary"
+											className="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0 text-left text-kumo-default hover:text-kumo-link"
 											onClick={() => onNavigateToPrefix(item.prefix)}
 										>
-											<FolderIcon
-												size={16}
-												className="text-orange-600 dark:text-orange-400"
-											/>
+											<FolderIcon size={16} className="text-kumo-brand-hover" />
 											<span className="font-medium">{displayName}</span>
 										</button>
 									</Table.Cell>
-									<Table.Cell className="text-text-secondary">
+									<Table.Cell className="text-kumo-subtle">
 										Directory
 									</Table.Cell>
-									<Table.Cell className="text-text-secondary">-</Table.Cell>
-									<Table.Cell className="text-text-secondary">-</Table.Cell>
+									<Table.Cell className="text-kumo-subtle">-</Table.Cell>
+									<Table.Cell className="text-kumo-subtle">-</Table.Cell>
 									<Table.Cell className="text-right whitespace-nowrap">
 										<ActionMenu
 											isDirectory
@@ -334,19 +331,19 @@ export function R2ObjectTable({
 									<Link
 										to="/r2/$bucketName/object/$"
 										params={{ bucketName, _splat: key }}
-										className="flex items-center gap-2 text-text no-underline hover:text-primary"
+										className="flex items-center gap-2 text-kumo-default no-underline hover:text-kumo-link"
 									>
-										<FileIcon size={16} className="text-muted" />
+										<FileIcon size={16} className="text-kumo-subtle" />
 										<span className="font-medium">{displayName}</span>
 									</Link>
 								</Table.Cell>
-								<Table.Cell className="font-mono text-xs text-text-secondary">
+								<Table.Cell className="font-mono text-xs text-kumo-subtle">
 									{contentType}
 								</Table.Cell>
-								<Table.Cell className="text-text-secondary">
+								<Table.Cell className="text-kumo-subtle">
 									{formatSize(obj.size)}
 								</Table.Cell>
-								<Table.Cell className="text-text-secondary">
+								<Table.Cell className="text-kumo-subtle">
 									{formatDate(obj.last_modified)}
 								</Table.Cell>
 								<Table.Cell className="text-right whitespace-nowrap">

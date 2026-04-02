@@ -32,11 +32,11 @@ export function StudioConstraintListEditor({
 			<table className="w-full border-collapse">
 				<thead>
 					<tr>
-						<th className="h-10 w-12 border border-border p-2">#</th>
-						<th className="h-10 w-32 border border-border p-2 text-left">
+						<th className="h-10 w-12 border border-kumo-fill p-2">#</th>
+						<th className="h-10 w-32 border border-kumo-fill p-2 text-left">
 							Type
 						</th>
-						<th className="border border-border p-2 text-left"></th>
+						<th className="border border-kumo-fill p-2 text-left"></th>
 					</tr>
 				</thead>
 
@@ -69,19 +69,21 @@ export function StudioConstraintListEditor({
 							return (
 								<tr key={constriantIndex}>
 									<td
-										className="border border-border p-2 text-center"
+										className="border border-kumo-fill p-2 text-center"
 										style={{ height: 40 }}
 									>
 										{constriantIndex + 1}
 									</td>
-									<td className="border border-border p-2">{constraintType}</td>
-									<td className="border border-border p-2">
+									<td className="border border-kumo-fill p-2">
+										{constraintType}
+									</td>
+									<td className="border border-kumo-fill p-2">
 										{constraint.foreignKey && (
 											<div className="flex gap-2">
 												{(constraint.foreignKey.columns ?? []).map(
 													(column, columnIndex) => (
 														<div
-															className="inline-block items-center gap-2 rounded border border-border bg-accent p-1 px-2 font-mono select-none"
+															className="inline-block items-center gap-2 rounded border border-kumo-fill bg-kumo-overlay p-1 px-2 font-mono select-none"
 															key={columnIndex}
 														>
 															{column} <ArrowRightIcon />{" "}
@@ -183,7 +185,7 @@ function SortableColumnItem({ id }: SortableColumnItemProps): JSX.Element {
 
 	return (
 		<div
-			className="inline-block cursor-pointer rounded border border-border bg-accent p-1 px-2 font-mono select-none hover:border-active-line"
+			className="inline-block cursor-pointer rounded border border-kumo-fill bg-kumo-overlay p-1 px-2 font-mono select-none hover:border-kumo-brand"
 			ref={setNodeRef}
 			style={{
 				transform: CSS.Transform.toString(transform),

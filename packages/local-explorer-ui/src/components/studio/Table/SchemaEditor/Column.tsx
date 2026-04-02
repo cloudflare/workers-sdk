@@ -175,18 +175,18 @@ export function StudioColumnSchemaEditor({
 		<tr
 			className={
 				highlightSchemaChanges && column.new && !column.old
-					? "bg-green-100 dark:bg-green-800"
+					? "bg-kumo-success/20"
 					: ""
 			}
 			key={column.key}
 		>
-			<td className="h-10 border border-border p-2 text-center">
+			<td className="h-10 border border-kumo-fill p-2 text-center">
 				{columnIndex + 1}
 			</td>
 
 			<td
 				className={cn(
-					"border border-border p-2 text-center",
+					"border border-kumo-fill p-2 text-center",
 					!readOnlyExistingColumns && "cursor-pointer"
 				)}
 				onClick={!readOnlyExistingColumns ? onPrimaryKeyClicked : undefined}
@@ -200,13 +200,13 @@ export function StudioColumnSchemaEditor({
 				)}
 			</td>
 
-			<td className="border border-border p-2 font-mono">
+			<td className="border border-kumo-fill p-2 font-mono">
 				{editableColumn.name}
 			</td>
 
-			<td className="border border-border p-2">{editableColumn.type}</td>
+			<td className="border border-kumo-fill p-2">{editableColumn.type}</td>
 
-			<td className="border border-border p-2 text-center">
+			<td className="border border-kumo-fill p-2 text-center">
 				<Checkbox
 					aria-label="Is nullable"
 					checked={!editableColumn.constraint?.notNull}
@@ -217,18 +217,18 @@ export function StudioColumnSchemaEditor({
 				/>
 			</td>
 
-			<td className="border border-border p-2 font-mono">
+			<td className="border border-kumo-fill p-2 font-mono">
 				{JSON.stringify(editableColumn.constraint?.defaultValue)}
 			</td>
 
-			<td className="border border-border p-2">
+			<td className="border border-kumo-fill p-2">
 				<ColumnConstraintDescription
 					column={editableColumn}
 					constraints={value.constraints}
 				/>
 			</td>
 
-			<td className="border border-border p-2 text-center">
+			<td className="border border-kumo-fill p-2 text-center">
 				<DropdownMenu>
 					<DropdownMenu.Trigger
 						render={
@@ -345,8 +345,8 @@ function ColumnConstraintBadge({
 	name,
 }: ColumnConstraintBadgeProps): JSX.Element {
 	return (
-		<div className="inline-flex items-center gap-1 overflow-hidden rounded border border-border">
-			<div className="flex items-center border-r border-border bg-accent p-1">
+		<div className="inline-flex items-center gap-1 overflow-hidden rounded border border-kumo-fill">
+			<div className="flex items-center border-r border-kumo-fill bg-kumo-overlay p-1">
 				{IconComponent && <IconComponent className="mr-1" />} {name}
 			</div>
 
@@ -433,7 +433,7 @@ export function StudioColumnEditorModal({
 						</Label>
 						<input
 							autoFocus
-							className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+							className="w-full rounded-md border border-kumo-fill bg-transparent px-3 py-2 text-sm"
 							onChange={(e): void => {
 								setValue(
 									produce(value, (draft) => {
@@ -449,7 +449,7 @@ export function StudioColumnEditorModal({
 					<div className="w-full">
 						<Label>Data type</Label>
 						<select
-							className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+							className="w-full rounded-md border border-kumo-fill bg-transparent px-3 py-2 text-sm"
 							onChange={(e): void => {
 								const newType = e.target.value;
 								if (!newType) {

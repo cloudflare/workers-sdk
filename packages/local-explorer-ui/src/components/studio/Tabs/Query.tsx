@@ -238,10 +238,10 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 		<SplitPane
 			defaultSize={201}
 			minSize={150}
-			resizerClassName="!bg-resizer border-transparent"
+			resizerClassName="!bg-kumo-fill border-transparent"
 			split="horizontal"
 		>
-			<div className="flex w-full flex-col bg-surface">
+			<div className="flex w-full flex-col bg-kumo-elevated">
 				<div className="grow overflow-hidden">
 					<StudioSQLEditor
 						autoCompleteSchema={autoCompelteSchema}
@@ -256,12 +256,12 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 					/>
 				</div>
 				<div className="flex shrink-0 items-center gap-2 px-4 pt-0 pb-2">
-					<div className="grow text-xs text-muted">
+					<div className="grow text-xs text-kumo-subtle">
 						Ln {lineNumber} Col {columnNumber}
 					</div>
 
 					<Button
-						className="h-8 text-xs transition hover:bg-border"
+						className="h-8 text-xs transition hover:bg-kumo-fill"
 						onClick={handleFormat}
 						variant="ghost"
 					>
@@ -270,7 +270,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 
 					<div className="flex overflow-hidden">
 						<Button
-							className="h-8 rounded-r-none pr-2! text-xs transition hover:bg-border"
+							className="h-8 rounded-r-none pr-2! text-xs transition hover:bg-kumo-fill"
 							icon={<PlayIcon weight="fill" />}
 							loading={loading}
 							onClick={onRunCurrentClicked}
@@ -283,7 +283,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 							<DropdownMenu.Trigger
 								render={
 									<Button
-										className="ml-0 h-8 rounded-l-none rounded-r-md px-2 text-xs transition hover:bg-border"
+										className="ml-0 h-8 rounded-l-none rounded-r-md px-2 text-xs transition hover:bg-kumo-fill"
 										disabled={loading}
 										variant="primary"
 									>
@@ -320,7 +320,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 				</div>
 			</div>
 
-			<div className="h-full w-full bg-surface">
+			<div className="h-full w-full bg-kumo-elevated">
 				{queryTabs && queryTabs.length > 0 && (
 					<StudioWindowTab
 						key="main-window-tab"
