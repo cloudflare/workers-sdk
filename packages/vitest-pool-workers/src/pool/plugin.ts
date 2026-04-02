@@ -71,6 +71,30 @@ export function cloudflareTest(
 			config.test ??= {};
 			config.test.server ??= {};
 			config.test.server.deps ??= {};
+
+			// V8 coverage requires `node:inspector` to collect coverage data from
+			// V8's profiler. workerd provides `node:inspector` as a non-functional
+			// stub, so V8 coverage silently fails or crashes. Istanbul works because
+			// it instruments source code at build time without needing V8 access.
+			// See: https://github.com/cloudflare/workers-sdk/issues/5266
+			const coverage = config.test.coverage;
+			if (coverage && coverage.enabled) {
+				const provider = "provider" in coverage ? coverage.provider : undefined;
+				if (provider === "v8" || provider === undefined) {
+					const lines = [
+						'Coverage provider "v8" is not supported by `@cloudflare/vitest-pool-workers`.',
+						"V8 native coverage requires `node:inspector` which is not functional in the Workers runtime.",
+						"",
+						"Use Istanbul instead — it works by instrumenting source code and runs on any JavaScript runtime:",
+						"",
+						"  1. Install: npm i -D @vitest/coverage-istanbul",
+						'  2. Set `test.coverage.provider` to "istanbul" in your Vitest config',
+						"",
+						"See https://vitest.dev/guide/coverage#istanbul-provider for more details.",
+					];
+					throw new Error(lines.join("\n"));
+				}
+			}
 			// See https://vitest.dev/config/server.html#inline
 			// Without this Vitest delegates to native import() for external deps in node_modules
 			config.test.server.deps.inline = true;
