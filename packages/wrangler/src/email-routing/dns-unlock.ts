@@ -26,7 +26,7 @@ export const emailRoutingDnsUnlockCommand = createCommand({
 
 		if (!args.force) {
 			const confirmed = await confirm(
-				"Are you sure you want to unlock MX records? This allows external MX records to be set.",
+				`Are you sure you want to unlock DNS records for '${args.domain ?? zoneId}'? This can allow external records to override Email Routing, which may cause deliverability issues or stop emails from being delivered through Cloudflare.`,
 				{ fallbackValue: false }
 			);
 			if (!confirmed) {
