@@ -152,7 +152,7 @@ export type CustomDomain = {
 	hostname: string;
 	service: string;
 	environment: string;
-	production_enabled: boolean;
+	enabled: boolean;
 	previews_enabled: boolean;
 };
 type UpdatedCustomDomain = CustomDomain & { modified: boolean };
@@ -253,15 +253,12 @@ export function renderRoute(route: Route): string {
 
 		if (isCustomDomain) {
 			const flags: string[] = [];
-			if ("previews_enabled" in route && route.previews_enabled !== undefined) {
-				flags.push(route.previews_enabled ? "previews: on" : "previews: off");
+			if ("enabled" in route && route.enabled !== undefined) {
+				flags.push(route.enabled ? "enabled" : "disabled");
 			}
-			if (
-				"production_enabled" in route &&
-				route.production_enabled !== undefined
-			) {
+			if ("previews_enabled" in route && route.previews_enabled !== undefined) {
 				flags.push(
-					route.production_enabled ? "production: on" : "production: off"
+					route.previews_enabled ? "previews: enabled" : "previews: disabled"
 				);
 			}
 			if (flags.length > 0) {
@@ -306,10 +303,7 @@ export async function publishCustomDomains(
 			hostname: domainRoute.pattern,
 			zone_id: "zone_id" in domainRoute ? domainRoute.zone_id : undefined,
 			zone_name: "zone_name" in domainRoute ? domainRoute.zone_name : undefined,
-			production_enabled:
-				"production_enabled" in domainRoute
-					? domainRoute.production_enabled
-					: undefined,
+			enabled: "enabled" in domainRoute ? domainRoute.enabled : undefined,
 			previews_enabled:
 				"previews_enabled" in domainRoute
 					? domainRoute.previews_enabled

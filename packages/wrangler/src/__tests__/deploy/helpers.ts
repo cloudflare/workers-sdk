@@ -215,7 +215,7 @@ export function mockCustomDomainsChangesetRequest({
 							environment: params.envName,
 							zone_name: "",
 							zone_id: "",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: false,
 						};
 					}),
@@ -251,7 +251,7 @@ export function mockPublishCustomDomainsRequest({
 	domains: Array<
 		{
 			hostname: string;
-			production_enabled?: boolean;
+			enabled?: boolean;
 			previews_enabled?: boolean;
 		} & ({ zone_id?: string } | { zone_name?: string })
 	>;

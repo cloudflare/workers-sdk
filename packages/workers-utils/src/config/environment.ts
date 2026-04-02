@@ -23,17 +23,7 @@ export type ZoneNameRoute = {
 export type CustomDomainRoute = {
 	pattern: string;
 	custom_domain: boolean;
-	/**
-	 * Whether this custom domain serves production traffic.
-	 *
-	 * @default true
-	 */
-	production_enabled?: boolean;
-	/**
-	 * Whether this custom domain serves preview traffic.
-	 *
-	 * @default false
-	 */
+	enabled?: boolean;
 	previews_enabled?: boolean;
 };
 export type Route =

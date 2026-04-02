@@ -17,7 +17,7 @@ type CustomDomainsRes = {
 	service: string;
 	environment: string;
 	cert_id: string;
-	production_enabled: boolean;
+	enabled: boolean;
 	previews_enabled: boolean;
 }[];
 

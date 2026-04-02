@@ -658,7 +658,7 @@ describe("deploy", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should pass production_enabled and previews_enabled to the custom domains API", async ({
+			it("should pass enabled and previews_enabled to the custom domains API", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -666,7 +666,7 @@ describe("deploy", () => {
 						{
 							pattern: "api.example.com",
 							custom_domain: true,
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: true,
 						},
 					],
@@ -686,14 +686,14 @@ describe("deploy", () => {
 					domains: [
 						{
 							hostname: "api.example.com",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: true,
 						},
 					],
 				});
 				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
-				expect(std.out).toContain("[previews: on, production: on]");
+				expect(std.out).toContain("[enabled, previews: enabled]");
 			});
 
 			it("should confirm override if custom domain deploy would override an existing domain", async ({
@@ -719,7 +719,7 @@ describe("deploy", () => {
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: false,
 						},
 					],
@@ -731,7 +731,7 @@ describe("deploy", () => {
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
-					production_enabled: true,
+					enabled: true,
 					previews_enabled: false,
 				});
 				mockPublishCustomDomainsRequest({
@@ -775,7 +775,7 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: false,
 						},
 					],
@@ -821,7 +821,7 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: false,
 						},
 					],
@@ -833,7 +833,7 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: false,
 						},
 					],
@@ -845,7 +845,7 @@ Update them to point to this script instead?`,
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
-					production_enabled: true,
+					enabled: true,
 					previews_enabled: false,
 				});
 				mockPublishCustomDomainsRequest({
@@ -928,7 +928,7 @@ Update them to point to this script instead?`,
 							hostname: "api.example.com",
 							service: "test-name",
 							environment: "",
-							production_enabled: true,
+							enabled: true,
 							previews_enabled: false,
 						},
 					],
@@ -940,7 +940,7 @@ Update them to point to this script instead?`,
 					hostname: "api.example.com",
 					service: "other-script",
 					environment: "",
-					production_enabled: true,
+					enabled: true,
 					previews_enabled: false,
 				});
 				mockConfirm({
