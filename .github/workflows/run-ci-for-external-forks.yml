@@ -71,7 +71,7 @@ jobs:
           if [ -n "$existing_pr" ]; then
             gh pr edit "$existing_pr" \
               --title "$TITLE" \
-              --body "$BODY" \
+              --body "$BODY"
           else
             gh pr create \
               --head "run-ci-on-behalf-of-$PR_NUM" \
