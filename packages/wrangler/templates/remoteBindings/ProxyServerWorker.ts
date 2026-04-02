@@ -108,7 +108,7 @@ export default {
 	async fetch(request, env) {
 		try {
 			if (isJSRPCBinding(request)) {
-				return newWorkersRpcResponse(
+				return await newWorkersRpcResponse(
 					request,
 					getExposedJSRPCBinding(request, env)
 				);
@@ -125,7 +125,7 @@ export default {
 					}
 				}
 
-				return fetcher.fetch(
+				return await fetcher.fetch(
 					request.headers.get("MF-URL") ?? "http://example.com",
 					new Request(request, {
 						redirect: "manual",
