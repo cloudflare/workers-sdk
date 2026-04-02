@@ -64,14 +64,14 @@
 		"websockets",
 		"workerd",
 		"xxhash",
-		"zjcompt"
+		"zjcompt",
 	],
 	"cSpell.ignoreWords": [
 		"TESTTEXTBLOBNAME",
 		"TESTWASMNAME",
 		"extensionless",
 		"webcontainer",
-		"yxxx"
+		"yxxx",
 	],
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
@@ -80,16 +80,28 @@
 		"api-extractor.json": "jsonc",
 		"CODEOWNERS": "plaintext",
 		"*.template": "javascript",
-		"wrangler.json": "jsonc"
+		"wrangler.json": "jsonc",
 	},
 
 	"[ignore]": {
-		"editor.defaultFormatter": "foxundermoon.shell-format"
+		"editor.defaultFormatter": "foxundermoon.shell-format",
 	},
 	"eslint.workingDirectories": [
 		{
-			"mode": "auto"
-		}
+			"mode": "auto",
+		},
 	],
-	"editor.formatOnSave": true
+	"editor.formatOnSave": true,
+	"[javascript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "oxc.oxc-vscode",
+	},
 }
