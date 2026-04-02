@@ -30,6 +30,11 @@ export function pickRemoteBindings(
 				return true;
 			}
 
+			if (binding.type === "vpc_network") {
+				// VPC Network is always remote
+				return true;
+			}
+
 			return "remote" in binding && binding["remote"];
 		})
 	);

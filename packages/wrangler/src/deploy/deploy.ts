@@ -8,7 +8,7 @@ import {
 	APIError,
 	configFileName,
 	experimental_patchConfig,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
@@ -549,7 +549,7 @@ export default async function deploy(props: Props): Promise<{
 		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
 		throw new UserError(
 			`A compatibility_date is required when publishing. Add the following to your ${configFileName(config.configPath)} file:

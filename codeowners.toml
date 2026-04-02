@@ -15,10 +15,12 @@ disable_smart_dismissal = true
 suppress_unowned_warning = true
 
 [enforcement]
-# Enforcement is via a required GitHub status check ("Run Codeowners Plus").
-# The check fails when ownership rules are not satisfied, blocking merge.
-# No bot approval is used — the status check is the sole enforcement mechanism.
-fail_check = true
+# The bot (@workers-devprod) approves PRs when all ownership rules are satisfied,
+# unblocking the native GitHub CODEOWNERS requirement in branch protection.
+# The check still runs for visibility (PR comments, review requests) but does not
+# fail — enforcement is via the bot's CODEOWNERS approval only.
+approval = true
+fail_check = false
 
 [admin_bypass]
 # Allow repo admins to bypass codeowner requirements in emergencies

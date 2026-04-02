@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { supportedCompatibilityDate } from "miniflare";
 import { http, HttpResponse } from "msw";
 // eslint-disable-next-line no-restricted-imports
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -18,7 +18,7 @@ async function readNormalizedWranglerToml() {
 		.split("\n")
 		.slice(1)
 		.join("\n")
-		.replace(supportedCompatibilityDate, "LATEST-SUPPORTED");
+		.replace(getTodaysCompatDate(), "LATEST-SUPPORTED");
 }
 function makePagesProject(
 	previewOverride: Record<string, unknown> = {},

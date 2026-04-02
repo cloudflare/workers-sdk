@@ -142,6 +142,7 @@ export function createWorkerUploadForm(
 	);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
@@ -397,6 +398,14 @@ export function createWorkerUploadForm(
 			name: binding,
 			type: "vpc_service",
 			service_id,
+		});
+	});
+
+	vpc_networks.forEach(({ binding, tunnel_id, network_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "vpc_network",
+			...(tunnel_id !== undefined ? { tunnel_id } : { network_id }),
 		});
 	});
 
