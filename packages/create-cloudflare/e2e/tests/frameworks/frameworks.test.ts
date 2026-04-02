@@ -68,6 +68,7 @@ describe
 
 					try {
 						const deploymentUrl = await runC3ForFrameworkTest(
+							expect,
 							frameworkConfig.id,
 							project.path,
 							logStream,
@@ -96,6 +97,7 @@ describe
 
 						if (testConfig.testCommitMessage) {
 							await testGitCommitMessage(
+								expect,
 								project.name,
 								frameworkConfig.id,
 								project.path
@@ -104,6 +106,7 @@ describe
 
 						// Make a request to the deployed project and verify it was successful
 						await verifyDeployment(
+							expect,
 							testConfig,
 							frameworkConfig.id,
 							project.name,
@@ -139,6 +142,7 @@ describe
 						}
 
 						await verifyDevScript(
+							expect,
 							testConfig,
 							frameworkConfig,
 							project.path,
@@ -146,15 +150,22 @@ describe
 						);
 
 						await verifyPreviewScript(
+							expect,
 							testConfig,
 							frameworkConfig,
 							project.path,
 							logStream
 						);
 
-						await verifyTypes(testConfig, frameworkConfig, project.path);
+						await verifyTypes(
+							expect,
+							testConfig,
+							frameworkConfig,
+							project.path
+						);
 
 						await verifyCloudflareVitePluginConfigured(
+							expect,
 							testConfig,
 							project.path
 						);
