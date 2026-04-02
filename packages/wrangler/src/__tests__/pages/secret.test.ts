@@ -1,8 +1,7 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -14,6 +13,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
 import type { Interface } from "node:readline";
+import type { ExpectStatic } from "vitest";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
@@ -41,6 +41,7 @@ describe("wrangler pages secret", () => {
 
 	describe("put", () => {
 		function mockProjectRequests(
+			expect: ExpectStatic,
 			input: { name: string; text: string },
 			env: "production" | "preview" = "production"
 		) {
@@ -93,7 +94,7 @@ describe("wrangler pages secret", () => {
 				  `,
 				});
 
-				mockProjectRequests({ name: `secret-name`, text: `hunter2` });
+				mockProjectRequests(expect, { name: `secret-name`, text: `hunter2` });
 				await runWrangler(
 					"pages secret put secret-name --project some-project-name"
 				);
@@ -113,7 +114,7 @@ describe("wrangler pages secret", () => {
 					result: "the-secret",
 				});
 
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				await runWrangler(
 					"pages secret put the-key --project some-project-name"
 				);
@@ -135,7 +136,11 @@ describe("wrangler pages secret", () => {
 					result: "the-secret",
 				});
 
-				mockProjectRequests({ name: "the-key", text: "the-secret" }, "preview");
+				mockProjectRequests(
+					expect,
+					{ name: "the-key", text: "the-secret" },
+					"preview"
+				);
 				await runWrangler(
 					"pages secret put the-key --project some-project-name --env preview"
 				);
@@ -152,6 +157,7 @@ describe("wrangler pages secret", () => {
 
 			it("should error with invalid env", async ({ expect }) => {
 				mockProjectRequests(
+					expect,
 					{ name: "the-key", text: "the-secret" },
 					// @ts-expect-error This is intentionally invalid
 					"some-env"
@@ -183,7 +189,7 @@ describe("wrangler pages secret", () => {
 			it("should trim stdin secret value, from piped input", async ({
 				expect,
 			}) => {
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
 					`the`,
@@ -207,7 +213,7 @@ describe("wrangler pages secret", () => {
 			});
 
 			it("should create a secret, from piped input", async ({ expect }) => {
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send("the", "-", "secret");
 				await runWrangler(
@@ -226,7 +232,7 @@ describe("wrangler pages secret", () => {
 			});
 
 			it("should error if the piped input fails", async ({ expect }) => {
-				mockProjectRequests({ name: "the-key", text: "the-secret" });
+				mockProjectRequests(expect, { name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("pages secret put the-key --project some-project-name")
@@ -306,6 +312,7 @@ describe("wrangler pages secret", () => {
 			setIsTTY(true);
 		});
 		function mockDeleteRequest(
+			expect: ExpectStatic,
 			name: string,
 			env: "production" | "preview" = "production"
 		) {
@@ -347,7 +354,7 @@ describe("wrangler pages secret", () => {
 		}
 
 		it("should delete a secret", async ({ expect }) => {
-			mockDeleteRequest("the-key");
+			mockDeleteRequest(expect, "the-key");
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Pages project some-project-name (production)?",
 				result: true,
@@ -366,7 +373,7 @@ describe("wrangler pages secret", () => {
 		});
 
 		it("should delete a secret: preview", async ({ expect }) => {
-			mockDeleteRequest("the-key", "preview");
+			mockDeleteRequest(expect, "the-key", "preview");
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Pages project some-project-name (preview)?",
 				result: true,
@@ -492,6 +499,7 @@ describe("wrangler pages secret", () => {
 
 	describe("secret bulk", () => {
 		function mockProjectRequests(
+			expect: ExpectStatic,
 			vars: { name: string; text: string }[],
 			env: "production" | "preview" = "production"
 		) {
@@ -536,7 +544,7 @@ describe("wrangler pages secret", () => {
 		it("should fail secret bulk w/ no pipe or JSON input", async ({
 			expect,
 		}) => {
-			mockProjectRequests([]);
+			mockProjectRequests(expect, []);
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface
 			);
@@ -557,7 +565,7 @@ describe("wrangler pages secret", () => {
 					}) as unknown as Interface
 			);
 
-			mockProjectRequests([
+			mockProjectRequests(expect, [
 				{
 					name: "secret1",
 					text: "secret-value",
@@ -589,7 +597,7 @@ describe("wrangler pages secret", () => {
 				})
 			);
 
-			mockProjectRequests([
+			mockProjectRequests(expect, [
 				{
 					name: "secret-name-1",
 					text: "secret_text",
@@ -620,7 +628,7 @@ describe("wrangler pages secret", () => {
 				`SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3`
 			);
 
-			mockProjectRequests([
+			mockProjectRequests(expect, [
 				{
 					name: "SECRET_1",
 					text: "secret-1",
@@ -657,6 +665,7 @@ describe("wrangler pages secret", () => {
 			);
 
 			mockProjectRequests(
+				expect,
 				[
 					{
 						name: "secret-name-1",

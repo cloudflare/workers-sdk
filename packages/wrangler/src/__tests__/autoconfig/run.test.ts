@@ -7,8 +7,7 @@ import {
 	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as details from "../../autoconfig/details";
 import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
@@ -30,6 +29,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import type { Framework } from "../../autoconfig/frameworks";
+import type { ExpectStatic } from "vitest";
 import type { MockInstance } from "vitest";
 
 vi.mock("../../package-manager", () => ({
@@ -57,7 +57,7 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 	},
 }));
 
-async function runDeploy(withArgs: string = "") {
+async function runDeploy(expect: ExpectStatic, withArgs: string = "") {
 	// Expect "Bailing early in tests" to be thrown
 	await expect(runWrangler(`deploy ${withArgs}`)).rejects.toThrowError();
 }
@@ -88,24 +88,28 @@ describe("autoconfig (deploy)", () => {
 		clearOutputFilePath();
 	});
 
-	it("should not check for autoconfig when `deploy` is run with `--x-autoconfig=false`", async () => {
+	it("should not check for autoconfig when `deploy` is run with `--x-autoconfig=false`", async ({
+		expect,
+	}) => {
 		writeWorkerSource();
 		writeWranglerConfig({ main: "index.js" });
 		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
-		await runDeploy(`--x-autoconfig=false`);
+		await runDeploy(expect, `--x-autoconfig=false`);
 
 		expect(getDetailsSpy).not.toHaveBeenCalled();
 	});
 
-	it("should check for autoconfig with flag", async () => {
+	it("should check for autoconfig with flag", async ({ expect }) => {
 		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
 
-		await runDeploy("--x-autoconfig");
+		await runDeploy(expect, "--x-autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 	});
 
-	it("should run autoconfig if project is not configured", async () => {
+	it("should run autoconfig if project is not configured", async ({
+		expect,
+	}) => {
 		const getDetailsSpy = vi
 			.spyOn(details, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
@@ -120,13 +124,15 @@ describe("autoconfig (deploy)", () => {
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
-		await runDeploy("--x-autoconfig");
+		await runDeploy(expect, "--x-autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).toHaveBeenCalled();
 	});
 
-	it("should not run autoconfig if project is already configured", async () => {
+	it("should not run autoconfig if project is already configured", async ({
+		expect,
+	}) => {
 		const getDetailsSpy = vi
 			.spyOn(details, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
@@ -139,13 +145,15 @@ describe("autoconfig (deploy)", () => {
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
-		await runDeploy("--x-autoconfig");
+		await runDeploy(expect, "--x-autoconfig");
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).not.toHaveBeenCalled();
 	});
 
-	it("should warn and prompt when Pages project is detected", async () => {
+	it("should warn and prompt when Pages project is detected", async ({
+		expect,
+	}) => {
 		vi.spyOn(details, "getDetailsForAutoConfig").mockImplementationOnce(() =>
 			Promise.resolve({
 				configured: false,
@@ -189,7 +197,7 @@ describe("autoconfig (deploy)", () => {
 				.mockImplementation(async () => {});
 		});
 
-		it("happy path", async () => {
+		it("happy path", async ({ expect }) => {
 			await writeFile(
 				"package.json",
 				JSON.stringify({
@@ -325,7 +333,9 @@ describe("autoconfig (deploy)", () => {
 			expect(existsSync(".assetsignore")).toBeFalsy();
 		});
 
-		it("new gitignore should not have leading empty lines", async () => {
+		it("new gitignore should not have leading empty lines", async ({
+			expect,
+		}) => {
 			// Create a .git directory so gitignore will be created
 			await mkdir(".git");
 
@@ -358,7 +368,9 @@ describe("autoconfig (deploy)", () => {
 			`);
 		});
 
-		it("pre-existing gitignore with trailing newline gets one empty separator line", async () => {
+		it("pre-existing gitignore with trailing newline gets one empty separator line", async ({
+			expect,
+		}) => {
 			// Create gitignore with content ending in newline
 			await writeFile(".gitignore", "node_modules\n");
 			mockConfirm({
@@ -393,7 +405,9 @@ describe("autoconfig (deploy)", () => {
 			`);
 		});
 
-		it("allows users to edit the auto-detected settings", async () => {
+		it("allows users to edit the auto-detected settings", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: true,
@@ -480,7 +494,9 @@ describe("autoconfig (deploy)", () => {
 			`);
 		});
 
-		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
+		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: false,
@@ -510,7 +526,9 @@ describe("autoconfig (deploy)", () => {
 			`);
 		});
 
-		it("pre-existing assetsignore with trailing newline gets one empty separator line", async () => {
+		it("pre-existing assetsignore with trailing newline gets one empty separator line", async ({
+			expect,
+		}) => {
 			await writeFile(".assetsignore", "*.bak\n");
 			mockConfirm({
 				text: "Do you want to modify these settings?",
@@ -543,7 +561,9 @@ describe("autoconfig (deploy)", () => {
 			`);
 		});
 
-		it("errors if no output directory is specified in the autoconfig details", async () => {
+		it("errors if no output directory is specified in the autoconfig details", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: false,
@@ -563,7 +583,9 @@ describe("autoconfig (deploy)", () => {
 			);
 		});
 
-		it("errors with Pages-specific message when framework is cf-pages", async () => {
+		it("errors with Pages-specific message when framework is cf-pages", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: false,
@@ -588,7 +610,9 @@ describe("autoconfig (deploy)", () => {
 			);
 		});
 
-		it("errors with generic message when unsupported framework is not cf-pages", async () => {
+		it("errors with generic message when unsupported framework is not cf-pages", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: false,
@@ -614,7 +638,9 @@ describe("autoconfig (deploy)", () => {
 		});
 
 		describe("nodejs_compat compatibility flag", () => {
-			it("should add nodejs_compat when framework specifies no compatibility flags", async () => {
+			it("should add nodejs_compat when framework specifies no compatibility flags", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -650,7 +676,9 @@ describe("autoconfig (deploy)", () => {
 				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
 			});
 
-			it("should preserve other compatibility flags while adding nodejs_compat", async () => {
+			it("should preserve other compatibility flags while adding nodejs_compat", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -689,7 +717,9 @@ describe("autoconfig (deploy)", () => {
 				]);
 			});
 
-			it("should not duplicate nodejs_compat if already present", async () => {
+			it("should not duplicate nodejs_compat if already present", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -725,7 +755,7 @@ describe("autoconfig (deploy)", () => {
 				expect(wranglerConfig.compatibility_flags).toEqual(["nodejs_compat"]);
 			});
 
-			it("should replace nodejs_als with nodejs_compat", async () => {
+			it("should replace nodejs_als with nodejs_compat", async ({ expect }) => {
 				mockConfirm({
 					text: "Do you want to modify these settings?",
 					result: false,
@@ -764,7 +794,9 @@ describe("autoconfig (deploy)", () => {
 			});
 		});
 
-		it("validateFrameworkVersion is called before configure for a supported framework", async () => {
+		it("validateFrameworkVersion is called before configure for a supported framework", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: false,
