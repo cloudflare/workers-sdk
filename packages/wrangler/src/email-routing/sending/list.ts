@@ -21,7 +21,6 @@ export const emailSendingListCommand = createCommand({
 			zone: zone.name,
 			"zone id": zone.id,
 			enabled: zone.enabled ? "yes" : "no",
-			status: zone.status ?? "",
 		}));
 
 		logger.table(results);

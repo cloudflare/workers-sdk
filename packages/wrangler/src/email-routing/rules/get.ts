@@ -2,7 +2,7 @@ import { APIError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { getEmailRoutingCatchAll, getEmailRoutingRule } from "../client";
-import { zoneArgs } from "../index";
+import { domainArgs } from "../index";
 import { resolveZoneId } from "../utils";
 
 export const emailRoutingRulesGetCommand = createCommand({
@@ -13,7 +13,7 @@ export const emailRoutingRulesGetCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 		"rule-id": {
 			type: "string",
 			demandOption: true,
@@ -21,7 +21,7 @@ export const emailRoutingRulesGetCommand = createCommand({
 				"The ID of the routing rule, or 'catch-all' for the catch-all rule",
 		},
 	},
-	positionalArgs: ["rule-id"],
+	positionalArgs: ["domain", "rule-id"],
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
 

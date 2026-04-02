@@ -2,7 +2,7 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { deleteEmailRoutingRule } from "../client";
-import { zoneArgs } from "../index";
+import { domainArgs } from "../index";
 import { resolveZoneId } from "../utils";
 
 export const emailRoutingRulesDeleteCommand = createCommand({
@@ -12,7 +12,7 @@ export const emailRoutingRulesDeleteCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 		"rule-id": {
 			type: "string",
 			demandOption: true,
@@ -25,7 +25,7 @@ export const emailRoutingRulesDeleteCommand = createCommand({
 			default: false,
 		},
 	},
-	positionalArgs: ["rule-id"],
+	positionalArgs: ["domain", "rule-id"],
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
 

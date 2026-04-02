@@ -205,21 +205,7 @@ describe("email routing commands", () => {
 	// --- zone validation ---
 
 	describe("zone validation", () => {
-		it("should error when neither --zone nor --zone-id is provided", async ({ expect }) => {
-			await expect(runWrangler("email routing settings")).rejects.toThrow(
-				"You must provide either --zone (domain name) or --zone-id (zone ID)."
-			);
-		});
-
-		it("should error when both --zone and --zone-id are provided", async ({ expect }) => {
-			await expect(
-				runWrangler(
-					"email routing settings --zone example.com --zone-id zone-id-1"
-				)
-			).rejects.toThrow();
-		});
-
-		it("should error when --zone domain is not found", async ({ expect }) => {
+		it("should error when domain is not found", async ({ expect }) => {
 			// Return empty zones list for the domain lookup
 			msw.use(
 				http.get(
@@ -232,7 +218,7 @@ describe("email routing commands", () => {
 			);
 
 			await expect(
-				runWrangler("email routing settings --zone notfound.com")
+				runWrangler("email routing settings notfound.com")
 			).rejects.toThrow("Could not find zone for `notfound.com`");
 		});
 	});
@@ -243,18 +229,18 @@ describe("email routing commands", () => {
 		it("should get settings with --zone-id", async ({ expect }) => {
 			mockGetSettings(mockSettings);
 
-			await runWrangler("email routing settings --zone-id zone-id-1");
+			await runWrangler("email routing settings example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("Email Routing for example.com");
 			expect(std.out).toContain("Enabled:  true");
 			expect(std.out).toContain("Status:   ready");
 		});
 
-		it("should get settings with --zone (domain resolution)", async ({ expect }) => {
+		it("should get settings with domain resolution", async ({ expect }) => {
 			mockZoneLookup("example.com", "zone-id-1");
 			mockGetSettings(mockSettings);
 
-			await runWrangler("email routing settings --zone example.com");
+			await runWrangler("email routing settings example.com");
 
 			expect(std.out).toContain("Email Routing for example.com");
 		});
@@ -266,7 +252,7 @@ describe("email routing commands", () => {
 		it("should enable email routing", async ({ expect }) => {
 			mockEnableEmailRouting(mockSettings);
 
-			await runWrangler("email routing enable --zone-id zone-id-1");
+			await runWrangler("email routing enable example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("Email Routing enabled for example.com");
 		});
@@ -285,7 +271,7 @@ describe("email routing commands", () => {
 				enabled: false,
 			});
 
-			await runWrangler("email routing disable --zone-id zone-id-1");
+			await runWrangler("email routing disable example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("Email Routing disabled");
 		});
@@ -297,7 +283,7 @@ describe("email routing commands", () => {
 		it("should show dns records", async ({ expect }) => {
 			mockGetDns(mockDnsRecords);
 
-			await runWrangler("email routing dns get --zone-id zone-id-1");
+			await runWrangler("email routing dns get example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("MX");
 			expect(std.out).toContain("route1.mx.cloudflare.net");
@@ -314,7 +300,7 @@ describe("email routing commands", () => {
 			});
 			mockUnlockDns(mockSettings);
 
-			await runWrangler("email routing dns unlock --zone-id zone-id-1");
+			await runWrangler("email routing dns unlock example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("MX records unlocked for example.com");
 		});
@@ -326,7 +312,7 @@ describe("email routing commands", () => {
 		it("should list routing rules", async ({ expect }) => {
 			mockListRules([mockRule]);
 
-			await runWrangler("email routing rules list --zone-id zone-id-1");
+			await runWrangler("email routing rules list example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("rule-id-1");
 			expect(std.out).toContain("My Rule");
@@ -335,7 +321,7 @@ describe("email routing commands", () => {
 		it("should handle no rules", async ({ expect }) => {
 			mockListRules([]);
 
-			await runWrangler("email routing rules list --zone-id zone-id-1");
+			await runWrangler("email routing rules list example.com --zone-id zone-id-1");
 
 			expect(std.out).toContain("No routing rules found.");
 		});
@@ -348,7 +334,7 @@ describe("email routing commands", () => {
 			mockGetRule(mockRule);
 
 			await runWrangler(
-				"email routing rules get rule-id-1 --zone-id zone-id-1"
+				"email routing rules get example.com rule-id-1 --zone-id zone-id-1"
 			);
 
 			expect(std.out).toContain("Rule: rule-id-1");
@@ -360,7 +346,7 @@ describe("email routing commands", () => {
 			mockGetCatchAll(mockCatchAll);
 
 			await runWrangler(
-				"email routing rules get catch-all --zone-id zone-id-1"
+				"email routing rules get example.com catch-all --zone-id zone-id-1"
 			);
 
 			expect(std.out).toContain("Catch-all rule:");
@@ -376,7 +362,7 @@ describe("email routing commands", () => {
 			const reqProm = mockCreateRule();
 
 			await runWrangler(
-				"email routing rules create --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward --action-value dest@example.com --name 'My Rule'"
+				"email routing rules create example.com --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward --action-value dest@example.com --name 'My Rule'"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -392,7 +378,7 @@ describe("email routing commands", () => {
 			const reqProm = mockCreateRule();
 
 			await runWrangler(
-				"email routing rules create --zone-id zone-id-1 --match-type literal --match-field to --match-value spam@example.com --action-type drop"
+				"email routing rules create example.com --zone-id zone-id-1 --match-type literal --match-field to --match-value spam@example.com --action-type drop"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -406,7 +392,7 @@ describe("email routing commands", () => {
 		it("should error when forward is used without --action-value", async ({ expect }) => {
 			await expect(
 				runWrangler(
-					"email routing rules create --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward"
+					"email routing rules create example.com --zone-id zone-id-1 --match-type literal --match-field to --match-value user@example.com --action-type forward"
 				)
 			).rejects.toThrow(
 				"--action-value is required when --action-type is not 'drop'"
@@ -421,7 +407,7 @@ describe("email routing commands", () => {
 			const reqProm = mockUpdateRule();
 
 			await runWrangler(
-				"email routing rules update rule-id-1 --zone-id zone-id-1 --match-type literal --match-field to --match-value updated@example.com --action-type forward --action-value newdest@example.com"
+				"email routing rules update example.com rule-id-1 --zone-id zone-id-1 --match-type literal --match-field to --match-value updated@example.com --action-type forward --action-value newdest@example.com"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -438,7 +424,7 @@ describe("email routing commands", () => {
 			const reqProm = mockUpdateCatchAll();
 
 			await runWrangler(
-				"email routing rules update catch-all --zone-id zone-id-1 --action-type drop --enabled true"
+				"email routing rules update example.com catch-all --zone-id zone-id-1 --action-type drop --enabled true"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -454,7 +440,7 @@ describe("email routing commands", () => {
 			const reqProm = mockUpdateCatchAll();
 
 			await runWrangler(
-				"email routing rules update catch-all --zone-id zone-id-1 --action-type forward --action-value catchall@example.com"
+				"email routing rules update example.com catch-all --zone-id zone-id-1 --action-type forward --action-value catchall@example.com"
 			);
 
 			await expect(reqProm).resolves.toMatchObject({
@@ -468,7 +454,7 @@ describe("email routing commands", () => {
 		it("should error when catch-all forward is used without --action-value", async ({ expect }) => {
 			await expect(
 				runWrangler(
-					"email routing rules update catch-all --zone-id zone-id-1 --action-type forward"
+					"email routing rules update example.com catch-all --zone-id zone-id-1 --action-type forward"
 				)
 			).rejects.toThrow(
 				"--action-value is required when --action-type is 'forward'"
@@ -478,7 +464,7 @@ describe("email routing commands", () => {
 		it("should error when regular rule update is missing --match-type", async ({ expect }) => {
 			await expect(
 				runWrangler(
-					"email routing rules update rule-id-1 --zone-id zone-id-1 --action-type forward --action-value dest@example.com"
+					"email routing rules update example.com rule-id-1 --zone-id zone-id-1 --action-type forward --action-value dest@example.com"
 				)
 			).rejects.toThrow(
 				"--match-type is required when updating a regular rule"
@@ -497,7 +483,7 @@ describe("email routing commands", () => {
 			mockDeleteRule();
 
 			await runWrangler(
-				"email routing rules delete rule-id-1 --zone-id zone-id-1"
+				"email routing rules delete example.com rule-id-1 --zone-id zone-id-1"
 			);
 
 			expect(std.out).toContain("Deleted routing rule: rule-id-1");

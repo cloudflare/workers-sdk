@@ -1,7 +1,7 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { listEmailRoutingRules } from "../client";
-import { zoneArgs } from "../index";
+import { domainArgs } from "../index";
 import { resolveZoneId } from "../utils";
 
 export const emailRoutingRulesListCommand = createCommand({
@@ -11,8 +11,9 @@ export const emailRoutingRulesListCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 	},
+	positionalArgs: ["domain"],
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
 		const rules = await listEmailRoutingRules(config, zoneId);
@@ -29,24 +30,26 @@ export const emailRoutingRulesListCommand = createCommand({
 		} else if (regularRules.length === 0) {
 			logger.log("No custom routing rules found.");
 		} else {
-			logger.table(
-				regularRules.map((r) => ({
-					id: r.id,
-					name: r.name || "",
-					enabled: r.enabled ? "yes" : "no",
-					matchers: r.matchers
-						.map((m) =>
-							m.field && m.value ? `${m.field}:${m.value}` : m.type
-						)
-						.join(", "),
-					actions: r.actions
-						.map((a) =>
-							a.value ? `${a.type}:${a.value.join(",")}` : a.type
-						)
-						.join(", "),
-					priority: String(r.priority),
-				}))
-			);
+			for (const r of regularRules) {
+				const matchers = r.matchers
+					.map((m) =>
+						m.field && m.value ? `${m.field}:${m.value}` : m.type
+					)
+					.join(", ");
+				const actions = r.actions
+					.map((a) =>
+						a.value ? `${a.type}:${a.value.join(",")}` : a.type
+					)
+					.join(", ");
+
+				logger.log(`Rule: ${r.id}`);
+				logger.log(`  Name:     ${r.name || "(none)"}`);
+				logger.log(`  Enabled:  ${r.enabled}`);
+				logger.log(`  Matchers: ${matchers}`);
+				logger.log(`  Actions:  ${actions}`);
+				logger.log(`  Priority: ${r.priority}`);
+				logger.log("");
+			}
 		}
 
 		if (catchAll) {

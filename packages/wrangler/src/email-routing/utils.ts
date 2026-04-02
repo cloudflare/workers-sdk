@@ -6,19 +6,19 @@ import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export async function resolveZoneId(
 	config: Config,
-	args: { zone?: string; zoneId?: string }
+	args: { domain?: string; zoneId?: string }
 ): Promise<string> {
 	if (args.zoneId) {
 		return args.zoneId;
 	}
 
-	if (args.zone) {
+	if (args.domain) {
 		const accountId = await requireAuth(config);
-		return await getZoneIdByDomain(config, args.zone, accountId);
+		return await getZoneIdByDomain(config, args.domain, accountId);
 	}
 
 	throw new UserError(
-		"You must provide either --zone (domain name) or --zone-id (zone ID)."
+		"You must provide a domain or --zone-id."
 	);
 }
 

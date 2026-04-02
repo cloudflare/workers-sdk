@@ -1,7 +1,7 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getEmailRoutingDns } from "./client";
-import { zoneArgs } from "./index";
+import { domainArgs } from "./index";
 import { resolveZoneId } from "./utils";
 
 export const emailRoutingDnsGetCommand = createCommand({
@@ -11,8 +11,9 @@ export const emailRoutingDnsGetCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 	},
+	positionalArgs: ["domain"],
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
 		const records = await getEmailRoutingDns(config, zoneId);

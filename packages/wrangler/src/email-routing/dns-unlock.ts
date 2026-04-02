@@ -2,7 +2,7 @@ import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { unlockEmailRoutingDns } from "./client";
-import { zoneArgs } from "./index";
+import { domainArgs } from "./index";
 import { resolveZoneId } from "./utils";
 
 export const emailRoutingDnsUnlockCommand = createCommand({
@@ -12,7 +12,7 @@ export const emailRoutingDnsUnlockCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 		force: {
 			type: "boolean",
 			alias: "y",
@@ -20,6 +20,7 @@ export const emailRoutingDnsUnlockCommand = createCommand({
 			default: false,
 		},
 	},
+	positionalArgs: ["domain"],
 	async handler(args, { config }) {
 		const zoneId = await resolveZoneId(config, args);
 

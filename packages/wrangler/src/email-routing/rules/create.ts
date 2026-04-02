@@ -2,7 +2,7 @@ import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { createEmailRoutingRule } from "../client";
-import { zoneArgs } from "../index";
+import { domainArgs } from "../index";
 import { resolveZoneId } from "../utils";
 
 export const emailRoutingRulesCreateCommand = createCommand({
@@ -12,7 +12,7 @@ export const emailRoutingRulesCreateCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 		name: {
 			type: "string",
 			description: "Rule name",
@@ -54,6 +54,7 @@ export const emailRoutingRulesCreateCommand = createCommand({
 			description: "Rule priority",
 		},
 	},
+	positionalArgs: ["domain"],
 	validateArgs: (args) => {
 		if (
 			args.actionType !== "drop" &&

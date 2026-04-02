@@ -2,7 +2,7 @@ import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { updateEmailRoutingCatchAll, updateEmailRoutingRule } from "../client";
-import { zoneArgs } from "../index";
+import { domainArgs } from "../index";
 import { resolveZoneId } from "../utils";
 
 export const emailRoutingRulesUpdateCommand = createCommand({
@@ -13,7 +13,7 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 		owner: "Product: Email Service",
 	},
 	args: {
-		...zoneArgs,
+		...domainArgs,
 		"rule-id": {
 			type: "string",
 			demandOption: true,
@@ -60,7 +60,7 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 			description: "Rule priority (ignored for catch-all)",
 		},
 	},
-	positionalArgs: ["rule-id"],
+	positionalArgs: ["domain", "rule-id"],
 	validateArgs: (args) => {
 		if (args.ruleId === "catch-all") {
 			// Catch-all only supports forward and drop
@@ -131,6 +131,13 @@ export const emailRoutingRulesUpdateCommand = createCommand({
 				}
 			}
 			return;
+		}
+
+		// validateArgs guarantees these are present for regular rules
+		if (!args.matchType || !args.matchField || !args.matchValue) {
+			throw new UserError(
+				"--match-type, --match-field, and --match-value are required when updating a regular rule"
+			);
 		}
 
 		const rule = await updateEmailRoutingRule(config, zoneId, args.ruleId, {

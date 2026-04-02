@@ -56,16 +56,15 @@ export const emailSendingDnsNamespace = createNamespace({
 	},
 });
 
-export const zoneArgs = {
-	zone: {
+export const domainArgs = {
+	domain: {
 		type: "string",
-		description: "Domain name of the zone (e.g. example.com)",
-		conflicts: ["zone-id"],
+		demandOption: true,
+		description: "Domain name (e.g. example.com)",
 	},
 	"zone-id": {
 		type: "string",
-		description: "Zone ID",
-		conflicts: ["zone"],
+		description: "Zone ID (optional, skips zone lookup if provided)",
 	},
 } as const;
 
