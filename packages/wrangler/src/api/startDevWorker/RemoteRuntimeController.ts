@@ -64,8 +64,9 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
-			const { workerAccount, workerContext } =
-				await getWorkerAccountAndContext(props);
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				props
+			);
 
 			return await retryOnAPIFailure(
 				() =>
@@ -298,7 +299,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						assetDirectory: "",
 						excludePatterns: config.legacy?.site?.exclude ?? [],
 						includePatterns: config.legacy?.site?.include ?? [],
-					}
+				  }
 				: undefined,
 			format: bundle.entry.format,
 			bindings: config.bindings,
@@ -412,12 +413,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		this.emitReloadStartEvent({
-			type: "reloadStart",
-			config: this.#latestConfig,
-			bundle: this.#latestBundle,
-		});
-
 		try {
 			assert(this.#latestConfig.dev.auth);
 			const auth = await unwrapHook(this.#latestConfig.dev.auth);
@@ -464,7 +459,6 @@ export class RemoteRuntimeController extends RuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
-		// Cancel any pending proactive refresh — a new token will be issued as part of the bundle reload
 		clearTimeout(this.#refreshTimer);
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
@@ -483,7 +477,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
-	onPreviewTokenExpired(_ev: PreviewTokenExpiredEvent): void {
+	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
 		void this.#mutex.runWith(() => this.#refreshPreviewToken());
 	}

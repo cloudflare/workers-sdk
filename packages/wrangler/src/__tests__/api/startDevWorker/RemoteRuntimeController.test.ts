@@ -157,7 +157,7 @@ describe("RemoteRuntimeController", () => {
 	describe("proactive token refresh", () => {
 		afterEach(() => vi.useRealTimers());
 
-		it("should proactively refresh the token before expiry", async () => {
+		it("should proactively refresh the token before expiry", async ({ expect }) => {
 			vi.useFakeTimers();
 
 			const { controller, bus } = setup();
@@ -197,7 +197,7 @@ describe("RemoteRuntimeController", () => {
 			});
 		});
 
-		it("should cancel the proactive refresh timer on bundle start", async () => {
+		it("should cancel the proactive refresh timer on bundle start", async ({ expect }) => {
 			vi.useFakeTimers();
 
 			const { controller, bus } = setup();
@@ -222,7 +222,7 @@ describe("RemoteRuntimeController", () => {
 			expect(createWorkerPreview).not.toHaveBeenCalled();
 		});
 
-		it("should cancel the proactive refresh timer on teardown", async () => {
+		it("should cancel the proactive refresh timer on teardown", async ({ expect }) => {
 			vi.useFakeTimers();
 
 			const { controller, bus } = setup();
@@ -240,6 +240,7 @@ describe("RemoteRuntimeController", () => {
 			await vi.advanceTimersByTimeAsync(50 * 60 * 1000 + 1);
 			expect(createWorkerPreview).not.toHaveBeenCalled();
 		});
+
 	});
 
 	describe("preview token refresh", () => {
