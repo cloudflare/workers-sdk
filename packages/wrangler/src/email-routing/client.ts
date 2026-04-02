@@ -23,6 +23,16 @@ export async function listEmailRoutingZones(
 }
 
 
+export async function listEmailSendingZones(
+	config: Config
+): Promise<EmailRoutingSettings[]> {
+	const accountId = await requireAuth(config);
+	return await fetchPagedListResult<EmailRoutingSettings>(
+		config,
+		`/accounts/${accountId}/email/sending/zones`
+	);
+}
+
 export async function getEmailRoutingSettings(
 	config: Config,
 	zoneId: string

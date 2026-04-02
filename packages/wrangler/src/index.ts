@@ -125,6 +125,7 @@ import { emailRoutingSettingsCommand } from "./email-routing/settings";
 import { emailSendingDisableCommand } from "./email-routing/sending/disable";
 import { emailSendingDnsGetCommand } from "./email-routing/sending/dns-get";
 import { emailSendingEnableCommand } from "./email-routing/sending/enable";
+import { emailSendingListCommand } from "./email-routing/sending/list";
 import { emailSendingSendCommand } from "./email-routing/sending/send";
 import { emailSendingSendRawCommand } from "./email-routing/sending/send-raw";
 import { emailSendingSettingsCommand } from "./email-routing/sending/settings";
@@ -1952,6 +1953,10 @@ export function createCLIParser(argv: string[]) {
 			definition: emailRoutingAddressesDeleteCommand,
 		},
 		{ command: "wrangler email sending", definition: emailSendingNamespace },
+		{
+			command: "wrangler email sending list",
+			definition: emailSendingListCommand,
+		},
 		{
 			command: "wrangler email sending settings",
 			definition: emailSendingSettingsCommand,
