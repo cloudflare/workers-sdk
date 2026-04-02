@@ -87,14 +87,6 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			handlePreviewSessionCreationError(err, props.accountId);
 
-			this.emitErrorEvent({
-				type: "error",
-				reason: "Failed to create a preview token",
-				cause: castErrorCause(err),
-				source: "RemoteRuntimeController",
-				data: undefined,
-			});
-
 			throw err;
 		}
 	}
@@ -430,11 +422,9 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#currentBundleId
 			);
 
-			if (!refreshed) {
-				throw new UserError("Failed to refresh preview token");
+			if (refreshed) {
+				logger.log(chalk.green("✔ Preview token refreshed successfully"));
 			}
-
-			logger.log(chalk.green("✔ Preview token refreshed successfully"));
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
 				return;
