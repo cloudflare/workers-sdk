@@ -1,8 +1,13 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, test } from "vitest";
 
 const binPath = resolve(__dirname, "../../bin/c3.js");
+const pkgPath = resolve(__dirname, "../../package.json");
+const minNodeVersion = JSON.parse(
+	readFileSync(pkgPath, "utf-8")
+).engines.node.replace(">=", "");
 
 describe("check-node version gate", () => {
 	test("outputs a useful error message when Node.js version is too old", ({
@@ -30,7 +35,7 @@ describe("check-node version gate", () => {
 			const error = e as { status: number; stderr: string };
 			expect(error.status).toBe(1);
 			expect(error.stderr).toContain(
-				"create-cloudflare requires at least Node.js v20.0.0"
+				`create-cloudflare requires at least Node.js v${minNodeVersion}`
 			);
 			expect(error.stderr).toContain("You are using v18.0.0");
 			expect(error.stderr).toContain("https://volta.sh/");

@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
-const MIN_NODE_VERSION = "20.0.0";
+const MIN_NODE_VERSION = require("../package.json").engines.node.replace(
+	">=",
+	""
+);
 
 // semiver implementation via https://github.com/lukeed/semiver/blob/ae7eebe6053c96be63032b14fb0b68e2553fcac4/src/index.js
 
