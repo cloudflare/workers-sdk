@@ -7,6 +7,7 @@ import {
 import {
 	createFileRoute,
 	Link,
+	notFound,
 	useNavigate,
 	useRouter,
 } from "@tanstack/react-router";
@@ -14,6 +15,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { durableObjectsNamespaceListNamespaces } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
 import { ResourceNotFound } from "../../../components/ResourceNotFound";
 import { Studio } from "../../../components/studio";
 import { DropTableConfirmationModal } from "../../../components/studio/Modal/DropTableConfirmation";
@@ -37,7 +39,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		// Fetch tables using the resolved namespace ID
@@ -54,6 +56,7 @@ export const Route = createFileRoute("/do/$className/$objectId")({
 			tables,
 		};
 	},
+	notFoundComponent: NotFound,
 	validateSearch: (search) => ({
 		table: typeof search.table === "string" ? search.table : undefined,
 	}),

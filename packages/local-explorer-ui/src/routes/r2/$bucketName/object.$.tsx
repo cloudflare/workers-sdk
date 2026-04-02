@@ -1,11 +1,17 @@
 import { Button, Dialog } from "@cloudflare/kumo";
 import { DownloadIcon, TrashIcon } from "@phosphor-icons/react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { r2BucketDeleteObjects, r2BucketGetObject } from "../../../api";
 import R2Icon from "../../../assets/icons/r2.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
 import { CopyButton } from "../../../components/CopyButton";
+import { NotFound } from "../../../components/NotFound";
 import { ResourceNotFound } from "../../../components/ResourceNotFound";
 import { formatDate, formatSize } from "../../../utils/format";
 import type { R2HeadObjectResult } from "../../../api";
@@ -27,11 +33,19 @@ export const Route = createFileRoute("/r2/$bucketName/object/$")({
 			headers: {
 				"cf-metadata-only": "true",
 			},
+			throwOnError: false,
 		});
+		if (response.response?.status === 404) {
+			throw notFound();
+		}
+
+		if (response.error) {
+			throw new Error(`Failed to fetch object "${objectKey}"`);
+		}
 
 		const result = response.data?.result;
 		if (!result) {
-			throw new Error(`Object "${objectKey}" not found`);
+			throw notFound();
 		}
 
 		return {
@@ -39,6 +53,7 @@ export const Route = createFileRoute("/r2/$bucketName/object/$")({
 			objectKey,
 		};
 	},
+	notFoundComponent: NotFound,
 });
 
 interface ObjectDetailsCardProps {

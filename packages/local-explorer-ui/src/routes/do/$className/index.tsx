@@ -1,5 +1,5 @@
 import { Button, Link as KumoLink, Table } from "@cloudflare/kumo";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
 	durableObjectsNamespaceListNamespaces,
@@ -7,6 +7,7 @@ import {
 } from "../../../api";
 import DOIcon from "../../../assets/icons/durable-objects.svg?react";
 import { Breadcrumbs } from "../../../components/Breadcrumbs";
+import { NotFound } from "../../../components/NotFound";
 import { ResourceNotFound } from "../../../components/ResourceNotFound";
 import type { WorkersObject } from "../../../api";
 
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/do/$className/")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		const objectsResponse = await durableObjectsNamespaceListObjects({
@@ -45,6 +46,7 @@ export const Route = createFileRoute("/do/$className/")({
 			objects,
 		};
 	},
+	notFoundComponent: NotFound,
 });
 
 function NamespaceView() {

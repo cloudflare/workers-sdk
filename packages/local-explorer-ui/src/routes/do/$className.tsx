@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { durableObjectsNamespaceListNamespaces } from "../../api";
 import { ResourceNotFound } from "../../components/ResourceNotFound";
 
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/do/$className")({
 				ns.id === params.className
 		);
 		if (!namespace?.id) {
-			throw new Error(`Durable Object class "${params.className}" not found`);
+			throw notFound();
 		}
 
 		return {
