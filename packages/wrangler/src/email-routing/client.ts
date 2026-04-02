@@ -320,6 +320,17 @@ export async function disableEmailSending(
 	);
 }
 
+export async function getEmailSendingDns(
+	config: Config,
+	zoneId: string
+): Promise<EmailSendingDnsRecord[]> {
+	await requireAuth(config);
+	return await fetchResult<EmailSendingDnsRecord[]>(
+		config,
+		`/zones/${zoneId}/email/sending/dns`
+	);
+}
+
 export async function getEmailSendingSubdomainDns(
 	config: Config,
 	zoneId: string,

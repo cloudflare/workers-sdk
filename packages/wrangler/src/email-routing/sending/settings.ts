@@ -15,10 +15,15 @@ export const emailSendingSettingsCommand = createCommand({
 			demandOption: true,
 			description: "Domain to get sending settings for (e.g. example.com)",
 		},
+		"zone-id": {
+			type: "string",
+			description:
+				"Zone ID (optional, skips zone lookup if provided)",
+		},
 	},
 	positionalArgs: ["domain"],
 	async handler(args, { config }) {
-		const { zoneId } = await resolveDomain(config, args.domain);
+		const { zoneId } = await resolveDomain(config, args.domain, args.zoneId);
 		const settings = await getEmailSendingSettings(config, zoneId);
 
 		logger.log(`Email Sending for ${settings.name}:`);

@@ -16,12 +16,18 @@ export const emailSendingEnableCommand = createCommand({
 			description:
 				"Domain to enable sending for (e.g. example.com or notifications.example.com)",
 		},
+		"zone-id": {
+			type: "string",
+			description:
+				"Zone ID (optional, skips zone lookup if provided)",
+		},
 	},
 	positionalArgs: ["domain"],
 	async handler(args, { config }) {
 		const { zoneId, isSubdomain, domain } = await resolveDomain(
 			config,
-			args.domain
+			args.domain,
+			args.zoneId
 		);
 		const name = isSubdomain ? domain : undefined;
 		const settings = await enableEmailSending(config, zoneId, name);

@@ -615,6 +615,10 @@ describe("email sending commands", () => {
 
 	describe("disable", () => {
 		it("should disable sending for a zone", async ({ expect }) => {
+			mockConfirm({
+				text: "Are you sure you want to disable Email Sending for example.com?",
+				result: true,
+			});
 			mockZoneLookup("example.com", "zone-id-1");
 			mockDisableSending("zone-id-1");
 

@@ -58,8 +58,22 @@ export interface ResolvedDomain {
 
 export async function resolveDomain(
 	config: Config,
-	domain: string
+	domain: string,
+	zoneId?: string
 ): Promise<ResolvedDomain> {
+	// If zone ID is provided directly, skip the zone lookup
+	if (zoneId) {
+		// We don't know the zone name without a lookup, so approximate from the domain
+		const labels = domain.split(".");
+		const zoneName = labels.slice(-2).join(".");
+		return {
+			zoneId,
+			zoneName,
+			isSubdomain: domain !== zoneName,
+			domain,
+		};
+	}
+
 	const accountId = await requireAuth(config);
 
 	// Walk up the domain labels: try "sub.example.com", then "example.com"
