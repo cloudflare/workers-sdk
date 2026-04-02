@@ -64,9 +64,8 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
-			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
-				props
-			);
+			const { workerAccount, workerContext } =
+				await getWorkerAccountAndContext(props);
 
 			return await retryOnAPIFailure(
 				() =>
@@ -299,7 +298,7 @@ export class RemoteRuntimeController extends RuntimeController {
 						assetDirectory: "",
 						excludePatterns: config.legacy?.site?.exclude ?? [],
 						includePatterns: config.legacy?.site?.include ?? [],
-				  }
+					}
 				: undefined,
 			format: bundle.entry.format,
 			bindings: config.bindings,
