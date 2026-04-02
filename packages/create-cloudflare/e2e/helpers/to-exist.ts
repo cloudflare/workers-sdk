@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- We need to import `expect` from "vitest" so that we can extend it
 import { expect } from "vitest";
 
 declare module "vitest" {
