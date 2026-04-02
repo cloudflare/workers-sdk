@@ -83,6 +83,11 @@ export function printBindings(
 	const queues = extractBindingsOfType("queue", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
@@ -92,6 +97,7 @@ export function printBindings(
 	);
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
 		bindings
@@ -324,6 +330,28 @@ export function printBindings(
 		);
 	}
 
+	if (ai_search_namespaces.length > 0) {
+		output.push(
+			...ai_search_namespaces.map(({ binding, namespace }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("ai_search_namespace"),
+				value: namespace ? String(namespace) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
+	if (ai_search.length > 0) {
+		output.push(
+			...ai_search.map(({ binding, instance_name }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("ai_search"),
+				value: instance_name ? String(instance_name) : undefined,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
+		);
+	}
+
 	if (hyperdrive.length > 0) {
 		output.push(
 			...hyperdrive.map(({ binding, id }) => {
@@ -344,6 +372,22 @@ export function printBindings(
 					name: binding,
 					type: getBindingTypeFriendlyName("vpc_service"),
 					value: service_id,
+					mode: getMode({
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
+					}),
+				};
+			})
+		);
+	}
+
+	if (vpc_networks.length > 0) {
+		output.push(
+			...vpc_networks.map(({ binding, tunnel_id, network_id, remote }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("vpc_network"),
+					value: tunnel_id ?? network_id,
 					mode: getMode({
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,

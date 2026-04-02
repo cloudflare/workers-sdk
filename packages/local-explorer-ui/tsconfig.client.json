@@ -4,5 +4,6 @@
 		"composite": true,
 		"tsBuildInfoFile": "./node_modules/.tmp/tsconfig.client.tsbuildinfo"
 	},
-	"include": ["src"]
+	"include": ["src"],
+	"exclude": ["src/__e2e__"]
 }

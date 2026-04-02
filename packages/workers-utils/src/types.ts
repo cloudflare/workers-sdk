@@ -8,6 +8,8 @@ import type {
 } from "./config/environment";
 import type {
 	CfAIBinding,
+	CfAISearch,
+	CfAISearchNamespace,
 	CfAnalyticsEngineDataset,
 	CfBrowserBinding,
 	CfD1Database,
@@ -34,6 +36,7 @@ import type {
 	CfUnsafeBinding,
 	CfUserLimits,
 	CfVectorize,
+	CfVpcNetwork,
 	CfVpcService,
 	CfWorkerLoader,
 	CfWorkflow,
@@ -66,6 +69,8 @@ export type WorkerMetadataBinding =
 	| { type: "stream"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
+	| { type: "ai_search_namespace"; name: string; namespace: string }
+	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
 	| { type: "media"; name: string }
 	| {
@@ -161,6 +166,12 @@ export type WorkerMetadataBinding =
 			simple: { limit: number; period: 10 | 60 };
 	  }
 	| { type: "vpc_service"; name: string; service_id: string }
+	| {
+			type: "vpc_network";
+			name: string;
+			tunnel_id?: string;
+			network_id?: string;
+	  }
 	| {
 			type: "worker_loader";
 			name: string;
@@ -309,6 +320,8 @@ export type Binding =
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
 	| ({ type: "d1" } & BindingOmit<CfD1Database>)
 	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
+	| ({ type: "ai_search_namespace" } & BindingOmit<CfAISearchNamespace>)
+	| ({ type: "ai_search" } & BindingOmit<CfAISearch>)
 	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
 	| ({ type: "service" } & BindingOmit<CfService>)
 	| { type: "fetcher"; fetcher: ServiceFetch }
@@ -322,6 +335,7 @@ export type Binding =
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
+	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }

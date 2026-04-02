@@ -2,6 +2,7 @@ import { fetchCursorPage } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
+import { fetchLocalResult, localWorkflowArgs } from "../../local";
 import { emojifyInstanceStatus, validateStatus } from "../../utils";
 import type { Instance } from "../../types";
 
@@ -12,9 +13,9 @@ export const workflowsInstancesListCommand = createCommand({
 		owner: "Product: Workflows",
 		status: "stable",
 	},
-
 	positionalArgs: ["name"],
 	args: {
+		...localWorkflowArgs,
 		name: {
 			describe: "Name of the workflow",
 			type: "string",
@@ -43,62 +44,120 @@ export const workflowsInstancesListCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
+		if (args.local) {
+			const URLParams = new URLSearchParams();
 
-		const URLParams = new URLSearchParams();
+			if (args.status !== undefined) {
+				const validatedStatus = validateStatus(args.status);
+				URLParams.set("status", validatedStatus);
+			}
 
-		if (args.status !== undefined) {
-			const validatedStatus = validateStatus(args.status);
-			URLParams.set("status", validatedStatus);
-		}
+			if (args.perPage !== undefined) {
+				URLParams.set("per_page", args.perPage.toString());
+			}
 
-		if (args.perPage !== undefined) {
-			URLParams.set("per_page", args.perPage.toString());
-		}
+			URLParams.set("page", args.page.toString());
 
-		URLParams.set("page", args.page.toString());
+			const queryString = URLParams.toString();
+			const path = `/workflows/${encodeURIComponent(args.name)}/instances${queryString ? `?${queryString}` : ""}`;
 
-		// Note(osilva): perform pagination with cursor to list all instances (and not a best effort set,
-		// due to changes in the Workflows control plane)
-		const instances = await fetchCursorPage<Instance[]>(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}/instances`,
-			undefined,
-			URLParams
-		);
+			const instances = await fetchLocalResult<
+				Array<{ id: string; status?: string; created_on?: string }>
+			>(args.port, path);
 
-		if (instances.length === 0 && args.page === 1) {
-			logger.warn(
-				`There are no instances in workflow "${args.name}". You can trigger it with "wrangler workflows trigger ${args.name}"`
+			if (instances.length === 0 && args.page === 1) {
+				logger.warn(
+					`There are no instances in workflow "${args.name}". You can trigger it with "wrangler workflows trigger ${args.name} --local"`
+				);
+				return;
+			}
+
+			if (instances.length === 0 && args.page > 1) {
+				logger.warn(
+					`No instances found on page ${args.page}. Please try a smaller page number.`
+				);
+				return;
+			}
+
+			logger.info(
+				`Showing ${instances.length} instance${instances.length > 1 ? "s" : ""} from page ${args.page}:`
 			);
-			return;
-		}
 
-		if (instances.length === 0 && args.page > 1) {
-			logger.warn(
-				`No instances found on page ${args.page}. Please try a smaller page number.`
-			);
-			return;
-		}
-
-		logger.info(
-			`Showing ${instances.length} instance${instances.length > 1 ? "s" : ""} from page ${args.page}:`
-		);
-
-		const prettierInstances = instances
-			.sort((a, b) =>
+			const sortedInstances = instances.sort((a, b) =>
 				args.reverse
-					? a.created_on.localeCompare(b.created_on)
-					: b.created_on.localeCompare(a.created_on)
-			)
-			.map((instance) => ({
+					? (a.created_on ?? "").localeCompare(b.created_on ?? "")
+					: (b.created_on ?? "").localeCompare(a.created_on ?? "")
+			);
+
+			const prettierInstances = sortedInstances.map((instance) => ({
 				"Instance ID": instance.id,
-				Version: instance.version_id,
-				Created: new Date(instance.created_on).toLocaleString(),
-				Modified: new Date(instance.modified_on).toLocaleString(),
-				Status: emojifyInstanceStatus(instance.status),
+				Created: instance.created_on
+					? new Date(instance.created_on).toLocaleString()
+					: "N/A",
+				Status: instance.status
+					? emojifyInstanceStatus(instance.status as Instance["status"])
+					: "N/A",
 			}));
 
-		logger.table(prettierInstances);
+			logger.table(prettierInstances);
+		} else {
+			const accountId = await requireAuth(config);
+
+			const URLParams = new URLSearchParams();
+
+			if (args.status !== undefined) {
+				const validatedStatus = validateStatus(args.status);
+				URLParams.set("status", validatedStatus);
+			}
+
+			if (args.perPage !== undefined) {
+				URLParams.set("per_page", args.perPage.toString());
+			}
+
+			URLParams.set("page", args.page.toString());
+
+			// Note(osilva): perform pagination with cursor to list all instances (and not a best effort set,
+			// due to changes in the Workflows control plane)
+			const instances = await fetchCursorPage<Instance[]>(
+				config,
+				`/accounts/${accountId}/workflows/${args.name}/instances`,
+				undefined,
+				URLParams
+			);
+
+			if (instances.length === 0 && args.page === 1) {
+				logger.warn(
+					`There are no instances in workflow "${args.name}". You can trigger it with "wrangler workflows trigger ${args.name}"`
+				);
+				return;
+			}
+
+			if (instances.length === 0 && args.page > 1) {
+				logger.warn(
+					`No instances found on page ${args.page}. Please try a smaller page number.`
+				);
+				return;
+			}
+
+			logger.info(
+				`Showing ${instances.length} instance${instances.length > 1 ? "s" : ""} from page ${args.page}:`
+			);
+
+			const prettierInstances = instances
+				.sort((a, b) =>
+					args.reverse
+						? a.created_on.localeCompare(b.created_on)
+						: b.created_on.localeCompare(a.created_on)
+				)
+				.map((instance) => ({
+					"Instance ID": instance.id,
+					Version: instance.version_id,
+					Created: new Date(instance.created_on).toLocaleString(),
+					Modified: new Date(instance.modified_on).toLocaleString(),
+					Status: emojifyInstanceStatus(instance.status),
+				}));
+
+			logger.table(prettierInstances);
+		}
 	},
 });

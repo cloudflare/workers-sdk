@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../r2/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -19,7 +18,9 @@ describe("r2", () => {
 	runInTempDir();
 
 	describe("bulk", () => {
-		it("should show help when the bulk command is passed", async () => {
+		it("should show help when the bulk command is passed", async ({
+			expect,
+		}) => {
 			await runWrangler("r2 bulk");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -40,7 +41,7 @@ describe("r2", () => {
 			mockAccountId();
 			mockApiToken();
 
-			it("should bulk upload R2 objects to bucket", async () => {
+			it("should bulk upload R2 objects to bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				fs.writeFileSync("nebula-img.png", "cosmos");
 				fs.writeFileSync(
@@ -68,7 +69,9 @@ describe("r2", () => {
 				`);
 			});
 
-			it("should bulk upload R2 with storage class to bucket", async () => {
+			it("should bulk upload R2 with storage class to bucket", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				fs.writeFileSync("nebula-img.png", "cosmos");
 				fs.writeFileSync(
@@ -95,7 +98,9 @@ describe("r2", () => {
 				`);
 			});
 
-			it("should fail to bulk upload R2 objects if the list doesn't exist", async () => {
+			it("should fail to bulk upload R2 objects if the list doesn't exist", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler(
 						`r2 bulk put bulk-bucket --filename no-list.json --remote`
@@ -105,7 +110,9 @@ describe("r2", () => {
 				);
 			});
 
-			it("should fail to bulk upload R2 objects if the list format is invalid", async () => {
+			it("should fail to bulk upload R2 objects if the list format is invalid", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("bad-list.json", "[ invalid json }");
 				await expect(
 					runWrangler(
@@ -116,7 +123,9 @@ describe("r2", () => {
 				);
 			});
 
-			it("should fail to bulk upload R2 objects if the list contain invalid entries", async () => {
+			it("should fail to bulk upload R2 objects if the list contain invalid entries", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"bad-list.json",
 					JSON.stringify([{ key: 123, file: [] }])
@@ -130,7 +139,9 @@ describe("r2", () => {
 				);
 			});
 
-			it("should fail to bulk upload R2 objects if the list contain a non existent file", async () => {
+			it("should fail to bulk upload R2 objects if the list contain a non existent file", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"bad-list.json",
 					JSON.stringify([{ key: "key", file: "not/a/file" }])
@@ -148,7 +159,7 @@ describe("r2", () => {
 				"should fail to bulk upload R2 objects if too large",
 				// Writing a large file could timeout on CI
 				{ timeout: 30_000 },
-				async () => {
+				async ({ expect }) => {
 					const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE_BYTES + 1024 * 1024;
 					await createBigFile("big-img.png", TOO_BIG_FILE_SIZE);
 					fs.writeFileSync(
@@ -165,7 +176,9 @@ describe("r2", () => {
 				}
 			);
 
-			it("should fail to bulk upload R2 objects if the name is invalid", async () => {
+			it("should fail to bulk upload R2 objects if the name is invalid", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				fs.writeFileSync("nebula-img.png", "cosmos");
 				fs.writeFileSync(
@@ -183,7 +196,9 @@ describe("r2", () => {
 				);
 			});
 
-			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
+			it("should pass all fetch option flags into requestInit & check request inputs", async ({
+				expect,
+			}) => {
 				msw.use(
 					http.put(
 						"*/accounts/:accountId/r2/buckets/bulk-bucket/objects/:objectName",
@@ -247,7 +262,9 @@ describe("r2", () => {
 				`);
 			});
 
-			it("should allow --env and --expires to be used together without conflict", async () => {
+			it("should allow --env and --expires to be used together without conflict", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				fs.writeFileSync("nebula-img.png", "cosmos");
 				fs.writeFileSync(

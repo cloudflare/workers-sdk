@@ -101,6 +101,9 @@ async function runInStub<O extends DurableObject, R>(
 
 	const response = await stub.fetch("http://x", {
 		cf: { [CF_KEY_ACTION]: id },
+		// Prevent the runtime from following redirects returned by the callback,
+		// which would re-enter `maybeHandleRunRequest` with a consumed action ID.
+		redirect: "manual",
 	});
 
 	// `result` may be `undefined`

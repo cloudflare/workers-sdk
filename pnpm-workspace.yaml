@@ -15,6 +15,72 @@ packages:
 # Node update         | Every 2 years | Bump node dependency in workers-sdk
 # Quick Editor update | Every quarter | Update VSCode dependency and patches
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Settings (migrated from .npmrc in pnpm 10)
+# ──────────────────────────────────────────────────────────────────────────────
+
+gitChecks: false
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Supply chain security
+# See: https://pnpm.io/supply-chain-security
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Prevent transitive dependencies from pulling code from git repos or tarball
+# URLs. Only direct dependencies may use exotic sources.
+blockExoticSubdeps: true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Build scripts
+# pnpm 10 blocks lifecycle scripts by default. Only the packages listed here
+# are allowed to run install/postinstall scripts.
+# ──────────────────────────────────────────────────────────────────────────────
+
+allowBuilds:
+  esbuild: true
+  workerd: true
+  sharp: true
+  playwright-chromium: true
+  prisma: true
+  # Explicitly silence warnings for packages whose postinstall scripts are not
+  # required for correct operation.
+  protobufjs: false # version-scheme diagnostic warning only
+  msw: false # copies mockServiceWorker.js to msw.workerDirectory — unused in this repo
+  core-js: false # telemetry
+  core-js-pure: false # telemetry
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Dependency resolution (migrated from package.json "pnpm" field in pnpm 10)
+# ──────────────────────────────────────────────────────────────────────────────
+
+overrides:
+  "@types/react-dom@18>@types/react": "^18"
+  "@types/react-tabs>@types/react": "^18"
+  "@types/react-transition-group>@types/react": "^18"
+  "@cloudflare/elements>@types/react": "^18"
+  "@types/node": "$@types/node"
+  "@types/node>undici-types": "catalog:default"
+
+peerDependencyRules:
+  allowedVersions:
+    react: "18"
+    react-dom: "18"
+    "@types/react": "18"
+    "@types/react-dom": "18"
+
+patchedDependencies:
+  "@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch"
+  "toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch"
+  "postal-mime": "patches/postal-mime.patch"
+  "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
+  "@netlify/build-info": "patches/@netlify__build-info.patch"
+  "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
+  "undici@7.24.4": "patches/undici@7.24.4.patch"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Catalog
+# ──────────────────────────────────────────────────────────────────────────────
+
 catalog:
   "@hey-api/openapi-ts": "^0.94.0"
   "@types/node": "^22.10.1"
@@ -32,11 +98,11 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260317.1"
-  workerd: "1.20260317.1"
+  "@cloudflare/workers-types": "^4.20260401.1"
+  workerd: "1.20260401.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
-  msw: "2.12.4"
+  msw: 2.12.4
   "tree-kill": "^1.2.2"
   "capnp-es": "^0.0.14"
   "capnweb": "^0.5.0"

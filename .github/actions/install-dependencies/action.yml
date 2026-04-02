@@ -18,8 +18,6 @@ runs:
   steps:
     - name: Install pnpm
       uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
-      with:
-        version: 9.12.0
 
     - name: Install Node.js ${{ inputs.node-version }}
       uses: actions/setup-node@v4

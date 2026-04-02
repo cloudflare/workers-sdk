@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
-// eslint-disable-next-line no-restricted-imports
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -40,7 +39,7 @@ describe("containers list", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("containers list --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -62,7 +61,7 @@ describe("containers list", () => {
 		`);
 	});
 
-	it("should reject --per-page 0", async () => {
+	it("should reject --per-page 0", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -70,7 +69,7 @@ describe("containers list", () => {
 		).rejects.toThrowError(/--per-page must be at least 1/);
 	});
 
-	it("should reject --per-page with negative value", async () => {
+	it("should reject --per-page with negative value", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		await expect(
@@ -78,7 +77,7 @@ describe("containers list", () => {
 		).rejects.toThrowError(/--per-page must be at least 1/);
 	});
 
-	it("should show the correct authentication error", async () => {
+	it("should show the correct authentication error", async ({ expect }) => {
 		const spy = vi.spyOn(user, "getScopes");
 		spy.mockReset();
 		spy.mockImplementationOnce(() => []);
@@ -91,7 +90,7 @@ describe("containers list", () => {
 		);
 	});
 
-	it("should throw UserError on 400 API response", async () => {
+	it("should throw UserError on 400 API response", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -117,7 +116,7 @@ describe("containers list", () => {
 		);
 	});
 
-	it("should throw on 500 API response", async () => {
+	it("should throw on 500 API response", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -142,7 +141,7 @@ describe("containers list", () => {
 		);
 	});
 
-	it("should render a table (non-TTY)", async () => {
+	it("should render a table (non-TTY)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -171,7 +170,7 @@ describe("containers list", () => {
 		`);
 	});
 
-	it("should handle empty results (non-TTY)", async () => {
+	it("should handle empty results (non-TTY)", async ({ expect }) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -188,7 +187,9 @@ describe("containers list", () => {
 		expect(std.out).toContain("No containers found.");
 	});
 
-	it("should fetch all results in a single unpaginated request (non-TTY)", async () => {
+	it("should fetch all results in a single unpaginated request (non-TTY)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		let requestCount = 0;
@@ -224,7 +225,9 @@ describe("containers list", () => {
 	});
 
 	describe("state derivation", () => {
-		it("should derive 'active' when active > 0 and no failures", async () => {
+		it("should derive 'active' when active > 0 and no failures", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			const app: DashApplication = {
@@ -251,7 +254,9 @@ describe("containers list", () => {
 			expect(output[0].state).toBe("active");
 		});
 
-		it("should derive 'degraded' when failed > 0 (even with active)", async () => {
+		it("should derive 'degraded' when failed > 0 (even with active)", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			const app: DashApplication = {
@@ -278,7 +283,7 @@ describe("containers list", () => {
 			expect(output[0].state).toBe("degraded");
 		});
 
-		it("should derive 'provisioning' when starting > 0", async () => {
+		it("should derive 'provisioning' when starting > 0", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			const app: DashApplication = {
@@ -305,7 +310,9 @@ describe("containers list", () => {
 			expect(output[0].state).toBe("provisioning");
 		});
 
-		it("should derive 'provisioning' when scheduling > 0", async () => {
+		it("should derive 'provisioning' when scheduling > 0", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			const app: DashApplication = {
@@ -332,7 +339,9 @@ describe("containers list", () => {
 			expect(output[0].state).toBe("provisioning");
 		});
 
-		it("should derive 'ready' when all counters are zero", async () => {
+		it("should derive 'ready' when all counters are zero", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			const app: DashApplication = {
@@ -361,7 +370,7 @@ describe("containers list", () => {
 	});
 
 	describe("--json", () => {
-		it("should output JSON matching expected schema", async () => {
+		it("should output JSON matching expected schema", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(
@@ -390,7 +399,7 @@ describe("containers list", () => {
 			}
 		});
 
-		it("should output empty array for no containers", async () => {
+		it("should output empty array for no containers", async ({ expect }) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(
@@ -405,7 +414,9 @@ describe("containers list", () => {
 			expect(output).toEqual([]);
 		});
 
-		it("should fetch all results in a single unpaginated request", async () => {
+		it("should fetch all results in a single unpaginated request", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			let requestCount = 0;
@@ -428,7 +439,9 @@ describe("containers list", () => {
 			expect(output).toHaveLength(4);
 		});
 
-		it("should throw JsonFriendlyFatalError on unexpected API error", async () => {
+		it("should throw JsonFriendlyFatalError on unexpected API error", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(
@@ -453,7 +466,9 @@ describe("containers list", () => {
 			);
 		});
 
-		it("should let UserError propagate through on 400 API response", async () => {
+		it("should let UserError propagate through on 400 API response", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			setWranglerConfig({});
 			msw.use(

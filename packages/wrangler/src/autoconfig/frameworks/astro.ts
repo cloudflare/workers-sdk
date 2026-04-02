@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import {
 	existsSync,
 	readFileSync as fsReadFileSync,
@@ -7,18 +6,19 @@ import {
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "@cloudflare/cli/command";
+import { installPackages } from "@cloudflare/cli/packages";
+import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { logger } from "../../logger";
-import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { runCommand } from "../c3-vendor/command";
-import { installPackages } from "../c3-vendor/packages";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { getInstalledPackageVersion } from "./utils/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
 import type { PackageManager } from "../../package-manager";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class Astro extends Framework {
 	async configure({
@@ -28,8 +28,7 @@ export class Astro extends Framework {
 		projectPath,
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const astroVersion = getAstroVersion(projectPath);
-		validateMinimumAstroVersion(astroVersion);
+		const astroVersion = this.frameworkVersion;
 
 		const { npx } = packageManager;
 		if (!dryRun) {
@@ -81,38 +80,6 @@ export class Astro extends Framework {
 
 	configurationDescription =
 		'Configuring project for Astro with "astro add cloudflare"';
-}
-
-/**
- * Gets the installed version of the "astro" package
- * @param projectPath The path of the project
- */
-function getAstroVersion(projectPath: string): string {
-	const packageName = "astro";
-	const astroVersion = getInstalledPackageVersion(packageName, projectPath);
-
-	assert(
-		astroVersion,
-		`Unable to discern the version of the \`${packageName}\` package`
-	);
-
-	return astroVersion;
-}
-
-/**
- * Checks whether the version of the Astro package is less than the minimum one we support, if not an error is thrown.
- *
- * TODO: We should standardize and define a better approach for this type of check and apply it to all the frameworks we support.
- *
- * @param astroVersion The version of the astro package used in the project
- */
-function validateMinimumAstroVersion(astroVersion: string) {
-	const minumumAstroVersion = "4.0.0";
-	if (astroVersion && semiver(astroVersion, minumumAstroVersion) < 0) {
-		throw new AutoConfigFrameworkConfigurationError(
-			`The version of Astro used in the project (${JSON.stringify(astroVersion)}) is not supported by the Wrangler automatic configuration. Please update the Astro version to at least ${JSON.stringify(minumumAstroVersion)} and try again.`
-		);
-	}
 }
 
 /**
@@ -281,7 +248,9 @@ function updateTsConfig(projectPath: string) {
 			// Adding an `include` field here would override the parent's includes, breaking type-checking.
 			// Instead, warn the user to add it manually.
 			logger.warn(
-				`Could not find an existing \`include\` field in tsconfig.json. You may need to manually add ${JSON.stringify(includeEntry)} to your tsconfig.json \`include\` array.`
+				`Could not find an existing \`include\` field in tsconfig.json. You may need to manually add ${JSON.stringify(
+					includeEntry
+				)} to your tsconfig.json \`include\` array.`
 			);
 			return;
 		}
@@ -319,7 +288,7 @@ async function configureAstroLegacy(
 	const astroCloudflarePackageVersion = astroMajorVersion === 5 ? 12 : 11;
 
 	await installPackages(
-		packageManager,
+		packageManager.type,
 		[`@astrojs/cloudflare@${astroCloudflarePackageVersion}`],
 		{
 			startText: `Installing @astrojs/cloudflare adapter (version ${astroCloudflarePackageVersion})`,

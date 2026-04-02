@@ -10,11 +10,13 @@ import {
 	logRaw,
 	startSection,
 } from "@cloudflare/cli";
+import { runCommand } from "@cloudflare/cli/command";
 import { CancelError } from "@cloudflare/cli/error";
+import { maybeAppendWranglerToGitIgnore } from "@cloudflare/cli/gitignore";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { cliDefinition, parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
-import { runCommand } from "helpers/command";
+import { runWranglerCommand } from "helpers/command";
 import {
 	detectPackageManager,
 	rectifyPmMismatch,
@@ -28,7 +30,6 @@ import { showHelp } from "./help";
 import { reporter, runTelemetryCommand } from "./metrics";
 import { createProject } from "./pages";
 import {
-	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	createContext,
 	updatePackageName,
@@ -165,7 +166,9 @@ const create = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	startSection(
-		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
+		`Configuring your application for Cloudflare${
+			ctx.args.experimental ? ` via \`wrangler setup\`` : ""
+		}`,
 		"Step 2 of 3"
 	);
 
@@ -176,7 +179,7 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();
 
-		await runCommand([
+		await runWranglerCommand([
 			npx,
 			"wrangler",
 			"setup",
@@ -194,7 +197,7 @@ const configure = async (ctx: C3Context) => {
 			await template.configure({ ...ctx });
 		}
 
-		addWranglerToGitIgnore(ctx);
+		maybeAppendWranglerToGitIgnore(ctx.project.path);
 
 		await updatePackageScripts(ctx);
 

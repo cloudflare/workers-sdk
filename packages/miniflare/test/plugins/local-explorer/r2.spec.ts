@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
+import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	zR2BucketDeleteObjectsResponse,
 	zR2BucketGetObjectResponse,
@@ -11,7 +11,7 @@ import {
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
-const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
+const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 describe("R2 API", () => {
 	let mf: Miniflare;
@@ -38,7 +38,11 @@ describe("R2 API", () => {
 		test("lists all available R2 buckets", async ({ expect }) => {
 			const response = await mf.dispatchFetch(`${BASE_URL}/r2/buckets`);
 
-			const data = await expectValidResponse(response, zR2ListBucketsResponse);
+			const data = await expectValidResponse(
+				response,
+				zR2ListBucketsResponse,
+				expect
+			);
 			expect(data.result?.buckets).toEqual(
 				expect.arrayContaining([
 					expect.objectContaining({ name: "test-bucket" }),
@@ -63,7 +67,8 @@ describe("R2 API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zR2BucketListObjectsResponse
+				zR2BucketListObjectsResponse,
+				expect
 			);
 			expect(data.result).toEqual(
 				expect.arrayContaining([
@@ -165,7 +170,8 @@ describe("R2 API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zR2BucketGetObjectResponse
+				zR2BucketGetObjectResponse,
+				expect
 			);
 			expect(data.result).toMatchObject({
 				key: "metadata-test.txt",
@@ -204,7 +210,9 @@ describe("R2 API", () => {
 			await r2.put(specialKey, "special content");
 
 			const response = await mf.dispatchFetch(
-				`${BASE_URL}/r2/buckets/test-bucket/objects/${encodeURIComponent(specialKey)}`
+				`${BASE_URL}/r2/buckets/test-bucket/objects/${encodeURIComponent(
+					specialKey
+				)}`
 			);
 
 			expect(response.status).toBe(200);
@@ -225,7 +233,8 @@ describe("R2 API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zR2BucketPutObjectResponse
+				zR2BucketPutObjectResponse,
+				expect
 			);
 			expect(data.result).toMatchObject({
 				key: "upload-test.txt",
@@ -319,7 +328,8 @@ describe("R2 API", () => {
 
 			const data = await expectValidResponse(
 				response,
-				zR2BucketDeleteObjectsResponse
+				zR2BucketDeleteObjectsResponse,
+				expect
 			);
 			expect(data.result).toEqual(
 				expect.arrayContaining([

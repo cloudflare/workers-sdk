@@ -1,3 +1,4 @@
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
@@ -23,9 +24,26 @@ import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
+import type { CompatDate } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
-export { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+// TODO: simplify this function in the next major release (DEVX-2533)
+/**
+ * @deprecated Use today's date instead (as `YYYY-MM-DD`)
+ *
+ * Gets the compatibility date to use with the local workerd version.
+ *
+ * Note: the function's signature is as is because it needs to be backward compatibly with
+ *       a previous iteration of this, it will be simplified in the next major version of this package.
+ *
+ * @param _options Unused argument (present only for backward compatibility)
+ * @returns Object containing the compatibility date (this is not the date directly for backward compatibility)
+ */
+export function getLocalWorkerdCompatibilityDate(_options?: {
+	projectPath?: string;
+}): { date: CompatDate; source: "workerd" | "fallback" } {
+	return { date: getTodaysCompatDate(), source: "workerd" };
+}
 
 export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "./workers-configs";

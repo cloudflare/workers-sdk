@@ -1,7 +1,7 @@
 import { updateStatus } from "@cloudflare/cli";
+import { runCommand } from "@cloudflare/cli/command";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import { processArgument } from "helpers/args";
-import { runCommand } from "helpers/command";
 import { beforeEach, describe, test, vi } from "vitest";
 import {
 	getProductionBranch,
@@ -14,7 +14,7 @@ import {
 } from "../git";
 import { createTestContext } from "./helpers";
 
-vi.mock("helpers/command");
+vi.mock("@cloudflare/cli/command");
 vi.mock("helpers/args");
 vi.mock("@cloudflare/cli/interactive");
 vi.mock("@cloudflare/cli");

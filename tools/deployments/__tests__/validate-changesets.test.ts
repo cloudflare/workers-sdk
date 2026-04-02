@@ -24,6 +24,7 @@ describe("findPackageNames()", () => {
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
+				"@cloudflare/codemod",
 				"@cloudflare/containers-shared",
 				"@cloudflare/devprod-status-bot",
 				"@cloudflare/edge-preview-authenticated-proxy",
@@ -168,6 +169,26 @@ describe("validateChangesets()", () => {
 		`);
 	});
 
+	it("should allow major bumps for private packages", ({ expect }) => {
+		const errors = validateChangesets(
+			new Map<string, PackageJSON>([
+				["package-b", { name: "package-b", private: true }],
+			]),
+			[
+				{
+					file: "major-private.md",
+					contents: dedent`
+					---
+					"package-b": major
+					---
+
+					breaking change for private pkg!`,
+				},
+			]
+		);
+		expect(errors).toMatchInlineSnapshot(`[]`);
+	});
+
 	it("should report errors for major bump changesets", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
@@ -207,7 +228,6 @@ describe("validateChangesets()", () => {
 		expect(errors).toMatchInlineSnapshot(`
 			[
 			  "Major version bumps are not allowed for package "package-c" in changeset at "major-three.md".",
-			  "Invalid type "major" for package "package-c" in changeset at "major-three.md".",
 			]
 		`);
 	});

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import {
+	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -391,6 +392,8 @@ type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
 	| "ai"
+	| "aiSearchNamespaces"
+	| "aiSearchInstances"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -415,6 +418,7 @@ type WorkerOptionsBindings = Pick<
 	| "browserRendering"
 	| "vectorize"
 	| "vpcServices"
+	| "vpcNetworks"
 	| "dispatchNamespaces"
 	| "mtlsCertificates"
 	| "helloWorld"
@@ -481,6 +485,7 @@ export function buildMiniflareBindingOptions(
 	const mtlsCertificates = extractBindingsOfType("mtls_certificate", bindings);
 	const vectorizeBindings = extractBindingsOfType("vectorize", bindings);
 	const vpcServices = extractBindingsOfType("vpc_service", bindings);
+	const vpcNetworks = extractBindingsOfType("vpc_network", bindings);
 	const secretsStoreSecrets = extractBindingsOfType(
 		"secrets_store_secret",
 		bindings
@@ -498,6 +503,11 @@ export function buildMiniflareBindingOptions(
 		...extractBindingsOfType("unsafe_ratelimit", bindings),
 	];
 	const aiBindings = extractBindingsOfType("ai", bindings);
+	const aiSearchNamespaceBindings = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -598,6 +608,14 @@ export function buildMiniflareBindingOptions(
 		warnOrError("ai", ai.remote, "always-remote");
 	}
 
+	for (const ns of aiSearchNamespaceBindings) {
+		warnOrError("ai_search_namespace", ns.remote, "always-remote");
+	}
+
+	for (const inst of aiSearchInstanceBindings) {
+		warnOrError("ai_search", inst.remote, "always-remote");
+	}
+
 	for (const media of mediaBindings) {
 		warnOrError("media", media.remote, "always-remote");
 	}
@@ -691,6 +709,26 @@ export function buildMiniflareBindingOptions(
 						remoteProxyConnectionString,
 					}
 				: undefined,
+
+		aiSearchNamespaces: Object.fromEntries(
+			aiSearchNamespaceBindings.map((ns) => [
+				ns.binding,
+				{
+					namespace: ns.namespace as string,
+					remoteProxyConnectionString,
+				},
+			])
+		),
+
+		aiSearchInstances: Object.fromEntries(
+			aiSearchInstanceBindings.map((inst) => [
+				inst.binding,
+				{
+					instance_name: inst.instance_name,
+					remoteProxyConnectionString,
+				},
+			])
+		),
 
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces.map((kv) =>
@@ -819,12 +857,19 @@ export function buildMiniflareBindingOptions(
 					vpc.binding,
 					{
 						service_id: vpc.service_id,
-						remoteProxyConnectionString:
-							vpc.remote && remoteProxyConnectionString
-								? remoteProxyConnectionString
-								: undefined,
+						remoteProxyConnectionString,
 					},
 				];
+			})
+		),
+		vpcNetworks: Object.fromEntries(
+			vpcNetworks.map((vpc) => {
+				warnOrError("vpc_network", vpc.remote, "always-remote");
+				const id =
+					vpc.tunnel_id !== undefined
+						? { tunnel_id: vpc.tunnel_id }
+						: { network_id: vpc.network_id as string };
+				return [vpc.binding, { ...id, remoteProxyConnectionString }];
 			})
 		),
 
@@ -947,6 +992,9 @@ export async function buildMiniflareOptions(
 		config,
 		remoteProxyConnectionString
 	);
+	if (bindingOptions.browserRendering && getBrowserRenderingHeadfulFromEnv()) {
+		bindingOptions.browserRendering.headful = true;
+	}
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);

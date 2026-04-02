@@ -1,9 +1,9 @@
-import semiver from "semiver";
-import { runCommand } from "../c3-vendor/command";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { getInstalledPackageVersion } from "./utils/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { runCommand } from "@cloudflare/cli/command";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class NextJs extends Framework {
 	async configure({
@@ -11,21 +11,6 @@ export class NextJs extends Framework {
 		projectPath,
 		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const firstNextVersionSupportedByOpenNext = "14.2.35";
-		const installedNextVersion = getInstalledPackageVersion(
-			"next",
-			projectPath
-		);
-
-		if (
-			installedNextVersion &&
-			semiver(installedNextVersion, firstNextVersionSupportedByOpenNext) < 0
-		) {
-			throw new AutoConfigFrameworkConfigurationError(
-				`The detected Next.js version (${installedNextVersion}) is too old, please update the \`next\` dependency to at least ${firstNextVersionSupportedByOpenNext} and try again.`
-			);
-		}
-
 		const { npx, dlx } = packageManager;
 
 		if (!dryRun) {

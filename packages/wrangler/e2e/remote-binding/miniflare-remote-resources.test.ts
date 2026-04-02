@@ -1,7 +1,6 @@
 import path from "node:path";
 import dedent from "ts-dedent";
-// eslint-disable-next-line no-restricted-imports
-import { afterAll, assert, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, assert, beforeAll, describe, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -47,7 +46,7 @@ interface TestCase {
 	/**
 	 * We do a fetch against the Worker defined by `scriptPath` and then check the response matches all these expectations.
 	 */
-	expectFetchToMatch: ExpectStatic[];
+	getExpectFetchToMatch: (expect: ExpectStatic) => ExpectStatic[];
 	/**
 	 * Setup the test case by creating any necessary resources and returning the configuration
 	 * for both the remote proxy session and Miniflare.
@@ -97,7 +96,7 @@ const testCases: TestCase[] = [
 				},
 			}),
 		}),
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			expect.stringMatching(/This is a response from Workers AI/),
 		],
 	},
@@ -119,7 +118,7 @@ const testCases: TestCase[] = [
 				},
 			}),
 		}),
-		expectFetchToMatch: [expect.stringMatching(/sessionId/)],
+		getExpectFetchToMatch: (expect) => [expect.stringMatching(/sessionId/)],
 		worksWithoutRemoteBindings: true,
 	},
 	{
@@ -180,7 +179,7 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			expect.stringMatching(
 				JSON.stringify({
 					default: "Hello from target worker",
@@ -217,7 +216,7 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			expect.stringMatching("The pre-existing value is: existing-value"),
 		],
 	},
@@ -254,7 +253,7 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			expect.stringMatching("The pre-existing value is: existing-value"),
 		],
 	},
@@ -291,7 +290,9 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [expect.stringMatching("existing-value")],
+		getExpectFetchToMatch: (expect) => [
+			expect.stringMatching("existing-value"),
+		],
 	},
 	{
 		name: "Vectorize",
@@ -321,7 +322,7 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			expect.stringContaining(
 				`[{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","namespace":null,"metadata":{"text":"Peter Piper picked a peck of pickled peppers"},"values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}]`
 			),
@@ -345,7 +346,7 @@ const testCases: TestCase[] = [
 				},
 			}),
 		}),
-		expectFetchToMatch: [expect.stringContaining(`image/avif`)],
+		getExpectFetchToMatch: (expect) => [expect.stringContaining(`image/avif`)],
 	},
 	{
 		name: "Media",
@@ -365,7 +366,7 @@ const testCases: TestCase[] = [
 				},
 			}),
 		}),
-		expectFetchToMatch: [expect.stringContaining(`image/jpeg`)],
+		getExpectFetchToMatch: (expect) => [expect.stringContaining(`image/jpeg`)],
 	},
 	{
 		name: "Dispatch Namespace",
@@ -411,7 +412,7 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			expect.stringMatching(
 				JSON.stringify({
 					worker: "Hello from customer worker",
@@ -419,6 +420,67 @@ const testCases: TestCase[] = [
 				})
 			),
 		],
+	},
+	{
+		name: "AI Search Namespace",
+		scriptPath: "ai-search-namespace.js",
+		setup: async (helper) => {
+			const bucketName = await helper.r2(false);
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_NS: {
+							type: "ai_search_namespace",
+							namespace: "default",
+						},
+						R2_BUCKET_NAME: {
+							type: "plain_text",
+							value: bucketName,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchNamespaces: {
+						AI_SEARCH_NS: {
+							namespace: "default",
+							remoteProxyConnectionString: connection,
+						},
+					},
+					bindings: { R2_BUCKET_NAME: bucketName },
+				}),
+			};
+		},
+		getExpectFetchToMatch: (expect) => [
+			expect.stringContaining(`"created":true`),
+			expect.stringContaining(`"deleted":true`),
+		],
+	},
+	{
+		name: "AI Search Instance",
+		scriptPath: "ai-search-instance.js",
+		setup: async (helper) => {
+			const { instanceId, bucketName: _bucketName } =
+				await helper.aiSearchInstance();
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						AI_SEARCH_INST: {
+							type: "ai_search",
+							instance_name: instanceId,
+						},
+					},
+				},
+				miniflareConfig: (connection) => ({
+					aiSearchInstances: {
+						AI_SEARCH_INST: {
+							instance_name: instanceId,
+							remoteProxyConnectionString: connection,
+						},
+					},
+				}),
+			};
+		},
+		getExpectFetchToMatch: (expect) => [expect.stringContaining(`"id"`)],
 	},
 	{
 		name: "Pipelines",
@@ -441,7 +503,9 @@ const testCases: TestCase[] = [
 				},
 			}),
 		}),
-		expectFetchToMatch: [expect.stringContaining(`Data sent to env.PIPELINE`)],
+		getExpectFetchToMatch: (expect) => [
+			expect.stringContaining(`Data sent to env.PIPELINE`),
+		],
 		worksWithoutRemoteBindings: true,
 	},
 	{
@@ -463,7 +527,7 @@ const testCases: TestCase[] = [
 				},
 			}),
 		}),
-		expectFetchToMatch: [
+		getExpectFetchToMatch: (expect) => [
 			// This error message comes from the production binding, and so indicates that the binding has been called
 			// successfully, which is all we care about. Full E2E testing of email sending would be _incredibly_ flaky
 			expect.stringContaining(
@@ -472,10 +536,50 @@ const testCases: TestCase[] = [
 		],
 	},
 	{
+		name: "VPC Network",
+		scriptPath: "vpc-network.js",
+		setup: async (helper) => {
+			// Create a real Cloudflare tunnel for testing
+			const tunnelId = await helper.tunnel();
+
+			return {
+				remoteProxySessionConfig: {
+					bindings: {
+						VPC_NETWORK_TUNNEL: {
+							type: "vpc_network",
+							tunnel_id: tunnelId,
+						},
+						VPC_NETWORK_MESH: {
+							type: "vpc_network",
+							network_id: "cf1:network",
+						},
+					} as unknown as StartDevWorkerInput["bindings"],
+				},
+				miniflareConfig: (connection) =>
+					({
+						vpcNetworks: {
+							VPC_NETWORK_TUNNEL: {
+								tunnel_id: tunnelId,
+								remoteProxyConnectionString: connection,
+							},
+							VPC_NETWORK_MESH: {
+								network_id: "cf1:network",
+								remoteProxyConnectionString: connection,
+							},
+						},
+					}) as unknown as Partial<WorkerOptions>,
+			};
+		},
+		getExpectFetchToMatch: (expect) => [
+			// Both bindings are handled by an internal service which returns a ProxyError
+			// when the connection fails. The response contains two errors (one per binding:
+			// tunnel_id and network_id) proving both VPC network bindings were wired correctly.
+			expect.stringMatching(/ProxyError.*ProxyError/),
+		],
+	},
+	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
-		// TODO: Enable post VPC announcement
-		skip: true,
 		setup: async (helper) => {
 			const serviceName = generateResourceName();
 
@@ -519,10 +623,10 @@ const testCases: TestCase[] = [
 				}),
 			};
 		},
-		expectFetchToMatch: [
-			// Since we're using a real tunnel but no actual network connectivity, Iris will report back an error
-			// but this is considered an effective test for wrangler and vpc service bindings
-			expect.stringMatching(/CONNECT failed: 503 Service Unavailable/),
+		getExpectFetchToMatch: (expect) => [
+			// The tunnel has no running cloudflared connector, so the internal service
+			// returns a ProxyError — proving the VPC service binding was wired correctly
+			expect.stringContaining("ProxyError"),
 		],
 	},
 ];
@@ -590,7 +694,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					headers: { "x-test-module": testCase.scriptPath },
 				});
 				const respText = await resp.text();
-				testCase.expectFetchToMatch.forEach((match) => {
+				testCase.getExpectFetchToMatch(expect).forEach((match) => {
 					expect(respText).toEqual(match);
 				});
 			});
@@ -657,7 +761,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 					}),
 				};
 			},
-			expectFetchToMatch: [
+			getExpectFetchToMatch: (expect) => [
 				// Note: in this test we are making sure that TLS negotiation does work by checking that we get an SSL certificate error
 				expect.stringMatching(/The SSL certificate error/),
 				expect.not.stringMatching(/No required SSL certificate was sent/),
@@ -690,7 +794,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			const mf = new Miniflare(miniflareConfig);
 			const resp = await mf.dispatchFetch("http://example.com/");
 			const respText = await resp.text();
-			mtlsTestCase.expectFetchToMatch.forEach((match) => {
+			mtlsTestCase.getExpectFetchToMatch(expect).forEach((match) => {
 				expect(respText).toEqual(match);
 			});
 		});
@@ -741,7 +845,7 @@ describe("Remote bindings (remote proxy session disabled)", () => {
 				headers: { "x-test-module": testCase.scriptPath },
 			});
 			const respText = await resp.text();
-			testCase.expectFetchToMatch.forEach((match) => {
+			testCase.getExpectFetchToMatch(expect).forEach((match) => {
 				expect(respText).toEqual(match);
 			});
 		});

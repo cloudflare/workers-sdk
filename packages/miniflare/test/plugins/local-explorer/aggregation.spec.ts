@@ -4,10 +4,10 @@ import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { getWorkerRegistry, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
+import { CorePaths } from "../../../src/workers/core/constants";
 import { disposeWithRetry } from "../../test-shared";
 
-const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
+const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 
 /**
  * Poll the dev registry until all expected workers are registered.
@@ -675,6 +675,11 @@ describe("Same ID across multiple instances with same persistence directories", 
 			},
 		});
 
+		// Wait for instanceA to be ready before starting instanceB to avoid
+		// SQLite "database is locked" errors when both instances race to open
+		// the same persistence file simultaneously.
+		await instanceA.ready;
+
 		instanceB = new Miniflare({
 			name: "worker-b",
 			inspectorPort: 0,
@@ -689,7 +694,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 			},
 		});
 
-		await instanceA.ready;
 		await instanceB.ready;
 
 		await waitForWorkersInRegistry(registryPath, ["worker-a", "worker-b"]);

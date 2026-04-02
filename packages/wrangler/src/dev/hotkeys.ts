@@ -1,5 +1,5 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { LOCAL_EXPLORER_BASE_PATH } from "miniflare";
+import { CorePaths } from "miniflare";
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
@@ -52,7 +52,7 @@ export default function registerDevHotKeys(
 				// label: "open local explorer",
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
-					const explorerUrl = new URL(LOCAL_EXPLORER_BASE_PATH, url);
+					const explorerUrl = new URL(CorePaths.EXPLORER, url);
 					await openInBrowser(explorerUrl.href);
 				},
 			},

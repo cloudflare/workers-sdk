@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -53,7 +54,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -244,6 +245,32 @@ describe("deploy", () => {
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
+		});
+
+		it("should error if path specified by flag --assets is a file, not a directory", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("deploy --assets abc")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "--assets" command line argument doesn't point to a directory:
+				<cwd>/abc]
+			`);
+		});
+
+		it("should error if path specified by config assets.directory is a file, not a directory", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				assets: { directory: "abc" },
+			});
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "assets.directory" field in your configuration file doesn't point to a directory:
+				<cwd>/abc]
+			`);
 		});
 
 		it("should error if an ASSET binding is provided without a user Worker", async ({

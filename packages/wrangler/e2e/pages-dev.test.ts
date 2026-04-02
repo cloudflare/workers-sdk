@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { formatCompatibilityDate } from "@cloudflare/workers-utils";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -31,7 +31,7 @@ describe.sequential("wrangler pages dev", () => {
 		);
 		const { url } = await worker.waitForReady();
 
-		const currentDate = formatCompatibilityDate(new Date());
+		const currentDate = getTodaysCompatDate();
 		const output = worker.currentOutput.replaceAll(
 			currentDate,
 			"<current-date>"

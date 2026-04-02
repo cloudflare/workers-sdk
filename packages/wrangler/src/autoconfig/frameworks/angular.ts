@@ -3,12 +3,15 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { installPackages } from "@cloudflare/cli/packages";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import { dedent } from "../../utils/dedent";
-import { installPackages } from "../c3-vendor/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
 import type { PackageManager } from "../../package-manager";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class Angular extends Framework {
 	async configure({
@@ -119,7 +122,7 @@ async function installAdditionalDependencies(
 	packageManager: PackageManager,
 	isWorkspaceRoot: boolean
 ) {
-	await installPackages(packageManager, ["xhr2"], {
+	await installPackages(packageManager.type, ["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
 		doneText: `${brandColor("installed")}`,

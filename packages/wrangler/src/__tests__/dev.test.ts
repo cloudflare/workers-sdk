@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
-	getLocalWorkerdCompatibilityDate,
+	getTodaysCompatDate,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -278,13 +278,11 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			// Use getLocalWorkerdCompatibilityDate() which applies the same safe date
-			// conversion as wrangler does (converting future dates to today's date)
-			const { date: currentDate } = getLocalWorkerdCompatibilityDate();
+			const currentDate = getTodaysCompatDate();
 
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
 
 					  ❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or
 					  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
@@ -2273,6 +2271,35 @@ describe.sequential("wrangler dev", () => {
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
+		});
+
+		it("should error with a clear error message if the path specified by '--assets' command line argument is a file, not a directory", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("dev --assets abc")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "--assets" command line argument doesn't point to a directory:
+				<cwd>/abc]
+			`);
+		});
+
+		it("should error with a clear error message if the path specified by '[assets]' configuration key is a file, not a directory", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				assets: {
+					directory: "abc",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync("abc", "");
+			await expect(runWrangler("dev")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The path specified by the "assets.directory" field in your configuration file doesn't point to a directory:
+				<cwd>/abc]
+			`);
 		});
 	});
 

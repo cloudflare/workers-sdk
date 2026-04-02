@@ -126,6 +126,11 @@ export function createWorkerUploadForm(
 	const r2_buckets = extractBindingsOfType("r2_bucket", bindings);
 	const d1_databases = extractBindingsOfType("d1", bindings);
 	const vectorize = extractBindingsOfType("vectorize", bindings);
+	const ai_search_namespaces = extractBindingsOfType(
+		"ai_search_namespace",
+		bindings
+	);
+	const ai_search = extractBindingsOfType("ai_search", bindings);
 	const hyperdrive = extractBindingsOfType("hyperdrive", bindings);
 	const secrets_store_secrets = extractBindingsOfType(
 		"secrets_store_secret",
@@ -137,6 +142,7 @@ export function createWorkerUploadForm(
 	);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
+	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
@@ -323,6 +329,36 @@ export function createWorkerUploadForm(
 		});
 	});
 
+	ai_search_namespaces.forEach(({ binding, namespace }) => {
+		if (options?.dryRun) {
+			namespace ??= INHERIT_SYMBOL;
+		}
+		if (namespace === undefined) {
+			throw new UserError(`${binding} bindings must have a "namespace" field`);
+		}
+
+		if (namespace === INHERIT_SYMBOL) {
+			metadataBindings.push({
+				name: binding,
+				type: "inherit",
+			});
+		} else {
+			metadataBindings.push({
+				name: binding,
+				type: "ai_search_namespace",
+				namespace,
+			});
+		}
+	});
+
+	ai_search.forEach(({ binding, instance_name }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "ai_search",
+			instance_name,
+		});
+	});
+
 	hyperdrive.forEach(({ binding, id }) => {
 		metadataBindings.push({
 			name: binding,
@@ -362,6 +398,14 @@ export function createWorkerUploadForm(
 			name: binding,
 			type: "vpc_service",
 			service_id,
+		});
+	});
+
+	vpc_networks.forEach(({ binding, tunnel_id, network_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "vpc_network",
+			...(tunnel_id !== undefined ? { tunnel_id } : { network_id }),
 		});
 	});
 

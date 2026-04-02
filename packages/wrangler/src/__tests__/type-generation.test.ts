@@ -440,6 +440,15 @@ const bindingsConfigMock: Omit<
 	],
 	send_email: [{ name: "SEND_EMAIL_BINDING" }],
 	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	ai_search_namespaces: [
+		{ binding: "AI_SEARCH_NS_BINDING", namespace: "production" },
+	],
+	ai_search: [
+		{
+			binding: "AI_SEARCH_BINDING",
+			instance_name: "cloudflare-blog",
+		},
+	],
 	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
@@ -520,6 +529,7 @@ const bindingsConfigMock: Omit<
 			service_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
 		},
 	],
+	vpc_networks: [],
 };
 
 describe("generate types", () => {
@@ -758,6 +768,8 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -871,6 +883,8 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1047,6 +1061,8 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
+					AI_SEARCH_NS_BINDING: AiSearchNamespace;
+					AI_SEARCH_BINDING: AiSearchInstance;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -3403,6 +3419,105 @@ describe("generate types", () => {
 				interface Env {
 					VPC_API: Fetcher;
 					VPC_DATABASE: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for VPC networks bindings", async ({ expect }) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_NET.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-networks",
+				main: "./index.ts",
+				vpc_networks: [
+					{
+						binding: "VPC_NET",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "VPC_NET_B",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env {
+					VPC_NET: Fetcher;
+					VPC_NET_B: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for VPC networks bindings with network_id", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return await env.VPC_MESH.fetch(request); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-vpc-networks-mesh",
+				main: "./index.ts",
+				vpc_networks: [
+					{
+						binding: "VPC_MESH",
+						network_id: "cf1:network",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env {
+					VPC_MESH: Fetcher;
 				}
 			}
 			interface Env extends Cloudflare.Env {}

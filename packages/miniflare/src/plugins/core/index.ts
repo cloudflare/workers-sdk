@@ -6,7 +6,7 @@ import { Readable } from "node:stream";
 import tls from "node:tls";
 import { TextEncoder } from "node:util";
 import { DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE } from "@cloudflare/containers-shared";
-import { bold } from "kleur/colors";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
@@ -17,7 +17,6 @@ import {
 	kVoid,
 	Service,
 	ServiceDesignator,
-	supportedCompatibilityDate,
 	Worker_Binding,
 	Worker_ContainerEngine,
 	Worker_DurableObjectNamespace,
@@ -79,6 +78,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
+import type { WorkflowOption } from "../shared";
 import type { BindingIdMap } from "./types";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -109,7 +109,6 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 }
 
 const encoder = new TextEncoder();
-const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
 export function createFetchMock() {
 	return new MockAgent();
@@ -472,37 +471,13 @@ function maybeGetCustomServiceService(
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
-function getCurrentCompatibilityDate() {
-	// Get current compatibility date in UTC timezone
-	const now = new Date().toISOString();
-	return now.substring(0, now.indexOf("T"));
-}
-
-function validateCompatibilityDate(log: Log, compatibilityDate: string) {
-	if (numericCompare(compatibilityDate, getCurrentCompatibilityDate()) > 0) {
+function validateCompatibilityDate(compatibilityDate: string) {
+	if (compatibilityDate > getTodaysCompatDate()) {
 		// If this compatibility date is in the future, throw
 		throw new MiniflareCoreError(
 			"ERR_FUTURE_COMPATIBILITY_DATE",
 			`Compatibility date "${compatibilityDate}" is in the future and unsupported`
 		);
-	} else if (
-		numericCompare(compatibilityDate, supportedCompatibilityDate) > 0
-	) {
-		// If this compatibility date is greater than the maximum supported
-		// compatibility date of the runtime, but not in the future, warn,
-		// and use the maximum supported date instead
-		log.warn(
-			[
-				"The latest compatibility date supported by the installed Cloudflare Workers Runtime is ",
-				bold(`"${supportedCompatibilityDate}"`),
-				",\nbut you've requested ",
-				bold(`"${compatibilityDate}"`),
-				". Falling back to ",
-				bold(`"${supportedCompatibilityDate}"`),
-				"...",
-			].join("")
-		);
-		return supportedCompatibilityDate;
 	}
 	return compatibilityDate;
 }
@@ -772,7 +747,6 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		const compatibilityDate = validateCompatibilityDate(
-			log,
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 		);
 
@@ -997,6 +971,8 @@ export interface GlobalServicesOptions {
 	proxyBindings: Worker_Binding[];
 	/** Pass Durable Object configuration for the explorer worker (has more info than proxyBindings)*/
 	durableObjectClassNames: DurableObjectClassNames;
+	/** Pass Workflow configuration for the explorer worker */
+	workflowOptions?: Map<string, WorkflowOption>;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -1006,6 +982,7 @@ export function getGlobalServices({
 	log,
 	proxyBindings,
 	durableObjectClassNames,
+	workflowOptions,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1140,7 +1117,8 @@ export function getGlobalServices({
 		}
 		const IDToBindingMap: BindingIdMap = constructExplorerBindingMap(
 			proxyBindings,
-			durableObjectClassNames
+			durableObjectClassNames,
+			workflowOptions
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 		services.push(

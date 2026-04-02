@@ -1,7 +1,6 @@
 import { stripVTControlCharacters } from "node:util";
-// eslint-disable-next-line no-restricted-imports
-import { expect } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./account-id";
+import type { ExpectStatic } from "vitest";
 
 export function normalizeOutput(
 	stdout: string,
@@ -227,6 +226,7 @@ function normalizeAccountId(stdout: string) {
  * @param includeDebug Whether to check for debug logs as well. Default is false.
  */
 export function validateAssetUploadLogs(
+	expect: ExpectStatic,
 	output: { stdout: string },
 	files: string[],
 	{ includeDebug = false } = {}

@@ -4,15 +4,16 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
+import { installPackages } from "@cloudflare/cli/packages";
+import { transformFile } from "@cloudflare/codemod";
 import * as recast from "recast";
-import semiver from "semiver";
 import dedent from "ts-dedent";
-import { transformFile } from "../c3-vendor/codemod";
-import { installPackages } from "../c3-vendor/packages";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { getInstalledPackageVersion } from "./utils/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 import type { types } from "recast";
 
 const b = recast.types.builders;
@@ -25,19 +26,19 @@ export class Waku extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		validateMinimumWakuVersion(projectPath);
-
 		if (!dryRun) {
-			await installPackages(
-				packageManager,
-				["hono", "@cloudflare/vite-plugin"],
-				{
-					dev: true,
-					startText: "Installing additional dependencies",
-					doneText: `${brandColor("installed")}`,
-					isWorkspaceRoot,
-				}
-			);
+			await installPackages(packageManager.type, ["hono"], {
+				dev: true,
+				startText: "Installing hono dependency",
+				doneText: `${brandColor("installed")}`,
+				isWorkspaceRoot,
+			});
+
+			await installCloudflareVitePlugin({
+				packageManager: packageManager.type,
+				projectPath,
+				isWorkspaceRoot,
+			});
 
 			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);
@@ -53,24 +54,6 @@ export class Waku extends Framework {
 				},
 			},
 		};
-	}
-}
-
-/**
- * Checks whether the version of the Waku package is less than the minimum one we support, in that case a warning is presented
- * to the user without blocking them.
- *
- * TODO: We should standardize and define a better approach for this type of check and apply it to all the frameworks we support.
- *
- * @param projectPath The path to the project
- */
-function validateMinimumWakuVersion(projectPath: string) {
-	const wakuVersion = getInstalledPackageVersion("waku", projectPath);
-	const minumumWakuVersion = "1.0.0-alpha.4";
-	if (wakuVersion && semiver(wakuVersion, minumumWakuVersion) < 0) {
-		throw new AutoConfigFrameworkConfigurationError(
-			`The version of Waku used in the project (${JSON.stringify(wakuVersion)}) is not supported by the Wrangler automatic configuration. Please update the Waku version to at least ${JSON.stringify(minumumWakuVersion)} and try again.`
-		);
 	}
 }
 

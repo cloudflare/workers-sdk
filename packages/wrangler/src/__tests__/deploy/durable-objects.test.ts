@@ -49,7 +49,7 @@ vi.mock("../../package-manager", async (importOriginal) => ({
 
 vi.mock("../../autoconfig/run");
 vi.mock("../../autoconfig/frameworks/utils/packages");
-vi.mock("../../autoconfig/c3-vendor/command");
+vi.mock("@cloudflare/cli/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -1205,6 +1205,136 @@ describe("deploy", () => {
 				Binding                                                      Resource
 				env.VPC_API (0199295b-b3ac-7760-8246-bca40877b3e9)           VPC Service
 				env.VPC_DATABASE (0299295b-b3ac-7760-8246-bca40877b3e0)      VPC Service
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
+	describe("vpc_networks", () => {
+		it("should upload VPC network bindings", async ({ expect }) => {
+			writeWranglerConfig({
+				vpc_networks: [
+					{
+						binding: "VPC_NETWORK",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "vpc_network",
+						name: "VPC_NETWORK",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                                     Resource
+				env.VPC_NETWORK (0199295b-b3ac-7760-8246-bca40877b3e9)      VPC Network
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should upload multiple VPC network bindings", async ({ expect }) => {
+			writeWranglerConfig({
+				vpc_networks: [
+					{
+						binding: "VPC_NET_A",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						binding: "VPC_NET_B",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "vpc_network",
+						name: "VPC_NET_A",
+						tunnel_id: "0199295b-b3ac-7760-8246-bca40877b3e9",
+					},
+					{
+						type: "vpc_network",
+						name: "VPC_NET_B",
+						tunnel_id: "0299295b-b3ac-7760-8246-bca40877b3e0",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                                   Resource
+				env.VPC_NET_A (0199295b-b3ac-7760-8246-bca40877b3e9)      VPC Network
+				env.VPC_NET_B (0299295b-b3ac-7760-8246-bca40877b3e0)      VPC Network
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should upload VPC network bindings with network_id", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				vpc_networks: [
+					{
+						binding: "VPC_NETWORK",
+						network_id: "cf1:network",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "vpc_network",
+						name: "VPC_NETWORK",
+						network_id: "cf1:network",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                            Resource
+				env.VPC_NETWORK (cf1:network)      VPC Network
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)

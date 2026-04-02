@@ -79,6 +79,8 @@ export type ConfigBindingFieldName =
 	| "queues"
 	| "d1_databases"
 	| "vectorize"
+	| "ai_search_namespaces"
+	| "ai_search"
 	| "hyperdrive"
 	| "r2_buckets"
 	| "logfwdr"
@@ -103,7 +105,8 @@ export type ConfigBindingFieldName =
 	| "assets"
 	| "unsafe_hello_world"
 	| "worker_loaders"
-	| "vpc_services";
+	| "vpc_services"
+	| "vpc_networks";
 
 /**
  * @deprecated new code should use getBindingTypeFriendlyName() instead
@@ -116,6 +119,8 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	queues: "Queue",
 	d1_databases: "D1 Database",
 	vectorize: "Vectorize Index",
+	ai_search_namespaces: "AI Search Namespace",
+	ai_search: "AI Search Instance",
 	hyperdrive: "Hyperdrive Config",
 	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
@@ -141,6 +146,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	unsafe_hello_world: "Hello World",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
+	vpc_networks: "VPC Network",
 } as const;
 
 /**
@@ -168,6 +174,8 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	r2_bucket: "R2 Bucket",
 	d1: "D1 Database",
 	vectorize: "Vectorize Index",
+	ai_search_namespace: "AI Search Namespace",
+	ai_search: "AI Search Instance",
 	hyperdrive: "Hyperdrive Config",
 	service: "Worker",
 	fetcher: "Service Binding",
@@ -181,6 +189,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
+	vpc_network: "VPC Network",
 	media: "Media",
 	assets: "Assets",
 	inherit: "Inherited",
@@ -1695,6 +1704,26 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateVectorizeBinding),
 			[]
 		),
+		ai_search_namespaces: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai_search_namespaces",
+			validateBindingArray(envName, validateAISearchNamespaceBinding),
+			[]
+		),
+		ai_search: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai_search",
+			validateBindingArray(envName, validateAISearchBinding),
+			[]
+		),
 		hyperdrive: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1883,6 +1912,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"vpc_services",
 			validateBindingArray(envName, validateVpcServiceBinding),
+			[]
+		),
+		vpc_networks: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"vpc_networks",
+			validateBindingArray(envName, validateVpcNetworkBinding),
 			[]
 		),
 		version_metadata: notInheritable(
@@ -2920,6 +2959,8 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"text_blob",
 			"browser",
 			"ai",
+			"ai_search_namespace",
+			"ai_search",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -2930,6 +2971,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"pipeline",
 			"worker_loader",
 			"vpc_service",
+			"vpc_network",
 			"stream",
 			"media",
 		];
@@ -3920,6 +3962,77 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateAISearchNamespaceBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ai_search_namespaces" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "namespace", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "namespace" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"namespace",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateAISearchBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"ai_search" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "instance_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "instance_name" field but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"instance_name",
+		"remote",
+	]);
+
+	return isValid;
+};
+
 const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -3988,6 +4101,65 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"service_id",
+		"remote",
+	]);
+
+	return isValid;
+};
+
+const validateVpcNetworkBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"vpc_networks" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// VPC network bindings must have a binding and exactly one of tunnel_id or network_id.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	const hasTunnelId = hasProperty(value, "tunnel_id");
+	const hasNetworkId = hasProperty(value, "network_id");
+	if (hasTunnelId && hasNetworkId) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "tunnel_id" or "network_id", but not both.`
+		);
+		isValid = false;
+	} else if (!hasTunnelId && !hasNetworkId) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have either a "tunnel_id" or "network_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasTunnelId && typeof value.tunnel_id !== "string") {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "tunnel_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	} else if (hasNetworkId && typeof value.network_id !== "string") {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "network_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"tunnel_id",
+		"network_id",
 		"remote",
 	]);
 

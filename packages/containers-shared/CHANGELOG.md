@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.13.1
+
+### Patch Changes
+
+- [#13049](https://github.com/cloudflare/workers-sdk/pull/13049) [`7a5be20`](https://github.com/cloudflare/workers-sdk/commit/7a5be2078800426a9ef1f8520ef72a99d9847c16) Thanks [@nikitassharma](https://github.com/nikitassharma)! - add library-push flag to containers registries credentials
+
+  This flag is not available for public use.
+
 ## 0.13.0
 
 ### Minor Changes

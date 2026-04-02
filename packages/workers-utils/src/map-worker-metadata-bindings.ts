@@ -260,6 +260,24 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
+					case "ai_search_namespace":
+						configObj.ai_search_namespaces = [
+							...(configObj.ai_search_namespaces ?? []),
+							{
+								binding: binding.name,
+								namespace: binding.namespace,
+							},
+						];
+						break;
+					case "ai_search":
+						configObj.ai_search = [
+							...(configObj.ai_search ?? []),
+							{
+								binding: binding.name,
+								instance_name: binding.instance_name,
+							},
+						];
+						break;
 					case "hyperdrive":
 						configObj.hyperdrive = [
 							...(configObj.hyperdrive ?? []),
@@ -348,6 +366,21 @@ export function mapWorkerMetadataBindings(
 									service_id: binding.service_id,
 								},
 							];
+						}
+						break;
+					case "vpc_network":
+						{
+							if (binding.tunnel_id !== undefined) {
+								configObj.vpc_networks = [
+									...(configObj.vpc_networks ?? []),
+									{ binding: binding.name, tunnel_id: binding.tunnel_id },
+								];
+							} else if (binding.network_id !== undefined) {
+								configObj.vpc_networks = [
+									...(configObj.vpc_networks ?? []),
+									{ binding: binding.name, network_id: binding.network_id },
+								];
+							}
 						}
 						break;
 					default: {

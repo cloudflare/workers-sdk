@@ -128,6 +128,6 @@ export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
 
 export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
 export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
-export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/index";
+export { Framework as experimental_AutoConfigFramework } from "./autoconfig/frameworks/framework-class";
 
 export { experimental_getWranglerCommands } from "./experimental-commands-api";

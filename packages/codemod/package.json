@@ -1,0 +1,55 @@
+{
+	"name": "@cloudflare/codemod",
+	"version": "1.1.0",
+	"private": true,
+	"description": "Internal codemod utilities",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/codemod"
+	},
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"check:type": "tsc -p ./tsconfig.json",
+		"deploy": "echo 'no deploy'",
+		"dev": "tsx watch src/dev.ts",
+		"dev:once": "tsx src/dev.ts",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/esprima": "^4.0.3",
+		"@types/node": "catalog:default",
+		"@vitest/ui": "catalog:default",
+		"concurrently": "^8.2.2",
+		"recast": "^0.23.11",
+		"tsup": "8.3.0",
+		"tsx": "^3.12.8",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"recast": "^0.23.11"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {}
+}

@@ -1,14 +1,15 @@
-import assert from "node:assert";
 import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
-import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+import { mergeObjectProperties, transformFile } from "@cloudflare/codemod";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
-import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { usesTypescript } from "../uses-typescript";
-import { getInstalledPackageVersion } from "./utils/packages";
-import { Framework } from ".";
-import type { ConfigurationOptions, ConfigurationResults } from ".";
+import { Framework } from "./framework-class";
+import type {
+	ConfigurationOptions,
+	ConfigurationResults,
+} from "./framework-class";
 
 export class SolidStart extends Framework {
 	async configure({
@@ -16,7 +17,7 @@ export class SolidStart extends Framework {
 		dryRun,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			const solidStartVersion = getSolidStartVersion(projectPath);
+			const solidStartVersion = this.frameworkVersion;
 
 			if (semiver(solidStartVersion, "2.0.0-alpha") < 0) {
 				updateAppConfigFile(projectPath);
@@ -88,9 +89,7 @@ function updateViteConfigFile(projectPath: string): void {
 function updateAppConfigFile(projectPath: string): void {
 	const filePath = `app.config.${usesTypescript(projectPath) ? "ts" : "js"}`;
 
-	const { date: compatDate } = getLocalWorkerdCompatibilityDate({
-		projectPath,
-	});
+	const compatDate = getTodaysCompatDate();
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
@@ -125,24 +124,4 @@ function updateAppConfigFile(projectPath: string): void {
 			return false;
 		},
 	});
-}
-
-/**
- * Gets the installed version of the "@solidjs/start" package
- *
- * @param projectPath The path of the project
- */
-function getSolidStartVersion(projectPath: string): string {
-	const packageName = "@solidjs/start";
-	const solidStartVersion = getInstalledPackageVersion(
-		packageName,
-		projectPath
-	);
-
-	assert(
-		solidStartVersion,
-		`Unable to discern the version of the \`${packageName}\` package`
-	);
-
-	return solidStartVersion;
 }
