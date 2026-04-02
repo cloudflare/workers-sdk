@@ -6,7 +6,7 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -380,7 +380,7 @@ export const versionsUploadCommand = createCommand({
 				useServiceEnvironments: useServiceEnvironments(config),
 				env: args.env,
 				compatibilityDate: args.latest
-					? formatCompatibilityDate(new Date())
+					? getTodaysCompatDate()
 					: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				vars: cliVars,
@@ -486,7 +486,7 @@ export default async function versionsUpload(props: Props): Promise<{
 		props.compatibilityFlags ?? config.compatibility_flags;
 
 	if (!compatibilityDate) {
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
 		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your ${configFileName(config.configPath)} file:
     \`\`\`

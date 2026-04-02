@@ -22,15 +22,15 @@ jobs:
         filter: ["cli", "workers", "frameworks"]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
-          - { name: pnpm, version: "9.12.0" }
+          - { name: pnpm, version: "10.33.0" }
           - { name: npm, version: "0.0.0" }
           # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
           # - { name: yarn, version: "1.0.0" }
         include:
           - os: { name: windows-latest, description: Windows }
-            pm: { name: pnpm, version: "9.12.0" }
+            pm: { name: pnpm, version: "10.33.0" }
           - os: { name: ubuntu-latest, description: Linux }
-            pm: { name: pnpm, version: "9.12.0" }
+            pm: { name: pnpm, version: "10.33.0" }
             experimental: true
     runs-on: ${{ matrix.os.name }}
     steps:
