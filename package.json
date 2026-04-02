@@ -54,39 +54,12 @@
 		"vitest": "catalog:default"
 	},
 	"engines": {
-		"node": ">=18.20.0",
-		"pnpm": "^9.12.0"
+		"node": ">=20.0.0",
+		"pnpm": "^10.33.0"
 	},
 	"volta": {
 		"node": "20.19.3",
-		"pnpm": "9.12.0"
+		"pnpm": "10.33.0"
 	},
-	"packageManager": "pnpm@9.12.0",
-	"pnpm": {
-		"peerDependencyRules": {
-			"allowedVersions": {
-				"react": "18",
-				"react-dom": "18",
-				"@types/react": "18",
-				"@types/react-dom": "18"
-			}
-		},
-		"overrides": {
-			"@types/react-dom@18>@types/react": "^18",
-			"@types/react-tabs>@types/react": "^18",
-			"@types/react-transition-group>@types/react": "^18",
-			"@cloudflare/elements>@types/react": "^18",
-			"@types/node": "$@types/node",
-			"@types/node>undici-types": "catalog:default"
-		},
-		"patchedDependencies": {
-			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
-			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
-			"postal-mime": "patches/postal-mime.patch",
-			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
-			"@netlify/build-info": "patches/@netlify__build-info.patch",
-			"buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch",
-			"undici@7.24.4": "patches/undici@7.24.4.patch"
-		}
-	}
+	"packageManager": "pnpm@10.33.0"
 }

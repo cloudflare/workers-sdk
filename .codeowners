@@ -24,9 +24,19 @@
 * @cloudflare/wrangler
 
 # ----------------------------------------------------------
+# Versioning & release files (wrangler-only, no AND rules)
+# ----------------------------------------------------------
+# Only wrangler team approval is needed for releases.
+# Product teams can request hold on release by reaching out.
+**/CHANGELOG.md @cloudflare/wrangler
+**/package.json @cloudflare/wrangler
+
+# ----------------------------------------------------------
 # D&C ownership (AND: requires wrangler + deploy-config)
 # ----------------------------------------------------------
-& packages/workers-shared/** @cloudflare/deploy-config
+# */** excludes root-level files (CHANGELOG.md, package.json)
+# so releases only need wrangler approval
+& packages/workers-shared/*/** @cloudflare/deploy-config
 
 # ----------------------------------------------------------
 # D1 ownership (AND: requires wrangler + d1)
@@ -40,7 +50,8 @@
 # ----------------------------------------------------------
 & packages/wrangler/src/cloudchamber/** @cloudflare/cloudchamber
 & packages/wrangler/src/containers/** @cloudflare/cloudchamber
-& packages/containers-shared/** @cloudflare/cloudchamber
+# */** excludes root-level files (CHANGELOG.md, package.json)
+& packages/containers-shared/*/** @cloudflare/cloudchamber
 
 # ----------------------------------------------------------
 # Workers KV ownership (AND: requires wrangler + workers-kv)
@@ -53,7 +64,8 @@
 # ----------------------------------------------------------
 # Workflows ownership (AND: requires wrangler + workflows)
 # ----------------------------------------------------------
-& packages/workflows-shared/** @cloudflare/workflows
+# */** excludes root-level files (CHANGELOG.md, package.json)
+& packages/workflows-shared/*/** @cloudflare/workflows
 
 # ----------------------------------------------------------
 # Adding a new product team

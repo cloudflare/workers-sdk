@@ -228,7 +228,10 @@ async function createModuleRunner(
 					return runInRunnerObject(env, () => originalDynamicImport(dep));
 				};
 
-				const code = `"use strict";async (${Object.keys(context).join(",")})=>{${transformed}}`;
+				// The trailing newline ensures a `//` comment on the last line of
+				// `transformed` (e.g. a sourceMappingURL comment preserved by
+				// vite-plus) cannot swallow the closing brace.
+				const code = `"use strict";async (${Object.keys(context).join(",")})=>{${transformed}\n}`;
 				const fn = env.__VITE_UNSAFE_EVAL__.eval(code, module.id);
 				await fn(...Object.values(context));
 				Object.seal(context[ssrModuleExportsKey]);

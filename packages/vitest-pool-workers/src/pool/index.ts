@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getTodaysCompatDate } from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
@@ -15,7 +16,6 @@ import {
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
-	supportedCompatibilityDate,
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { experimental_readRawConfig } from "wrangler";
@@ -310,14 +310,12 @@ async function buildProjectWorkerOptions(
 	);
 
 	if (runnerWorker.compatibilityDate === undefined) {
-		// No compatibility date was provided, so infer the latest supported date
-		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;
+		// No compatibility date was provided, so use today's date
+		runnerWorker.compatibilityDate = getTodaysCompatDate();
 		log.info(
 			`No compatibility date was provided for project ${getRelativeProjectPath(
 				project
-			)}, defaulting to latest supported date ${
-				runnerWorker.compatibilityDate
-			}.`
+			)}, defaulting to today's date ${runnerWorker.compatibilityDate}.`
 		);
 	}
 

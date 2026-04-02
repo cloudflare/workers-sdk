@@ -288,6 +288,13 @@ export interface CfVpcService {
 	remote?: boolean;
 }
 
+export interface CfVpcNetwork {
+	binding: string;
+	tunnel_id?: string;
+	network_id?: string;
+	remote?: boolean;
+}
+
 export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;

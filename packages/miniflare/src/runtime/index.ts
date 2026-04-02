@@ -290,7 +290,9 @@ export class Runtime {
 							ipcAddress: info.inspectorIpc || "",
 							pid: String(this.#process.pid),
 							scriptName: name,
-							inspectorURL: `ws://127.0.0.1:${ports?.get(kInspectorSocket)}/core:user:${name}`,
+							inspectorURL: `ws://127.0.0.1:${ports?.get(
+								kInspectorSocket
+							)}/core:user:${name}`,
 							waitForDebugger: true,
 							ownId: randomBytes(12).toString("hex"),
 							openerId: info.openerId,
@@ -363,4 +365,7 @@ function getSafeCompatibilityDate(): string {
 	return workerdCompatibilityDate;
 }
 
+/**
+ * @deprecated Use today's date as the compatibility date instead: `new Date().toISOString().slice(0, 10)`
+ */
 export const supportedCompatibilityDate = getSafeCompatibilityDate();
