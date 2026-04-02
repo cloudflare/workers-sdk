@@ -1,33 +1,38 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { bold, Colorize, green, grey, red, reset, yellow } from "kleur/colors";
+import { bold, green, grey, red, reset, yellow } from "kleur/colors";
 import {
 	HttpError,
 	LogLevel,
 	MiniflareDurableObject,
-	MiniflareDurableObjectCf,
-	MiniflareDurableObjectEnv,
 	POST,
-	RouteHandler,
 	SharedBindings,
-	TimerHandle,
 	viewToBuffer,
 } from "miniflare:shared";
 import { QueueBindings } from "./constants";
 import {
-	QueueConsumer,
 	QueueConsumersSchema,
-	QueueContentType,
 	QueueContentTypeSchema,
-	QueueIncomingMessage,
-	QueueMessageDelay,
 	QueueMessageDelaySchema,
-	QueueOutgoingMessage,
-	QueueProducer,
 	QueueProducersSchema,
 	QueuesBatchRequestSchema,
+} from "./schemas";
+import type {
+	QueueConsumer,
+	QueueContentType,
+	QueueIncomingMessage,
+	QueueMessageDelay,
+	QueueOutgoingMessage,
+	QueueProducer,
 	QueuesOutgoingBatchRequest,
 } from "./schemas";
+import type { Colorize } from "kleur/colors";
+import type {
+	MiniflareDurableObjectCf,
+	MiniflareDurableObjectEnv,
+	RouteHandler,
+	TimerHandle,
+} from "miniflare:shared";
 
 const MAX_MESSAGE_SIZE_BYTES = 128 * 1000;
 const MAX_MESSAGE_BATCH_COUNT = 100;

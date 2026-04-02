@@ -1,5 +1,5 @@
-import { ValueOf } from "miniflare:shared";
 import { Base64DataSchema, HexDataSchema, z } from "miniflare:zod";
+import type { ValueOf } from "miniflare:shared";
 
 export type ObjectRow = {
 	key: string;

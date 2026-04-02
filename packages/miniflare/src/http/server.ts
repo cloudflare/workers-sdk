@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
-import { z } from "zod";
-import { CORE_PLUGIN } from "../plugins";
-import { HttpOptions, Socket_Https } from "../runtime";
-import { Awaitable } from "../workers";
 import { CERT, KEY } from "./cert";
+import type { CORE_PLUGIN } from "../plugins";
+import type { HttpOptions, Socket_Https } from "../runtime";
+import type { Awaitable } from "../workers";
+import type { z } from "zod";
 
 export async function getEntrySocketHttpOptions(
 	coreOpts: z.infer<typeof CORE_PLUGIN.sharedOptions>

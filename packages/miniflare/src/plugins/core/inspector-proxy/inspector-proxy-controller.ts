@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
-import { createServer, IncomingMessage, Server } from "node:http";
+import { createServer } from "node:http";
 import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
-import { Log } from "../../../shared";
 import { InspectorProxy } from "./inspector-proxy";
+import type { Log } from "../../../shared";
+import type { IncomingMessage, Server } from "node:http";
 
 /**
  * An `InspectorProxyController` connects to the various runtime (/workerd) inspector servers and exposes through the user specified

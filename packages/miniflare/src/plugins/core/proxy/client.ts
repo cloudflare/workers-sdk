@@ -5,10 +5,9 @@ import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
 import { stringify } from "devalue";
 import { Headers } from "undici";
-import { DispatchFetch, Request, Response } from "../../../http";
+import { Request } from "../../../http";
 import { prefixStream, readPrefix } from "../../../shared";
 import {
-	Awaitable,
 	CoreHeaders,
 	CorePaths,
 	createHTTPReducers,
@@ -19,14 +18,19 @@ import {
 	parseWithReadableStreams,
 	ProxyAddresses,
 	ProxyOps,
-	ReducersRevivers,
-	StringifiedWithStream,
 	stringifyWithStreams,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../workers";
-import { DECODER, SynchronousFetcher, SynchronousResponse } from "./fetch-sync";
+import { DECODER, SynchronousFetcher } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
+import type { DispatchFetch, Response } from "../../../http";
+import type {
+	Awaitable,
+	ReducersRevivers,
+	StringifiedWithStream,
+} from "../../../workers";
+import type { SynchronousResponse } from "./fetch-sync";
 import type {
 	ImageDrawOptions,
 	ImageOutputOptions,
