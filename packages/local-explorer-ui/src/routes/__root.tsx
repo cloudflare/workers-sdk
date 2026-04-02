@@ -1,7 +1,6 @@
-import { Button, Toasty } from "@cloudflare/kumo";
+import { Toasty } from "@cloudflare/kumo";
 import {
 	createRootRoute,
-	Link,
 	Outlet,
 	useRouter,
 	useRouterState,
