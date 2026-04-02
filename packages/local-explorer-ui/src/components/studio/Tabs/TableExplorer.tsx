@@ -392,8 +392,8 @@ export function StudioTableExplorerTab({
 	);
 
 	return (
-		<div className="flex h-full w-full flex-col bg-surface">
-			<div className="flex shrink-0 items-center gap-2 border-b border-border p-2">
+		<div className="flex h-full w-full flex-col bg-kumo-elevated">
+			<div className="flex shrink-0 items-center gap-2 border-b border-kumo-fill p-2">
 				<Button aria-label="Refresh" onClick={onRefreshClicked} shape="square">
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
@@ -463,8 +463,8 @@ export function StudioTableExplorerTab({
 				{loading && (
 					<>
 						<div
-							className="absolute top-0 right-0 bottom-0 left-0 z-40 bg-black/30 backdrop-blur-md dark:bg-white/30"
-							style={{ opacity: 0.2 }}
+							className="absolute top-0 right-0 bottom-0 left-0 z-40 bg-kumo-overlay backdrop-blur-md"
+							style={{ opacity: 0.6 }}
 						/>
 						<div className="absolute top-0 right-0 bottom-0 left-0 z-40 flex items-center justify-center">
 							<SpinnerIcon className="animate-spin" size={48} />
@@ -472,14 +472,14 @@ export function StudioTableExplorerTab({
 					</>
 				)}
 			</div>
-			<div className="flex shrink-0 items-center gap-2 border-t border-border p-2">
+			<div className="flex shrink-0 items-center gap-2 border-t border-kumo-fill p-2">
 				<div className="grow">
 					{queryStats && <StudioQueryResultStats stats={queryStats} />}
 				</div>
 
 				<div>
 					<InputGroup size="base">
-						<div className="flex items-center justify-center border-r border-border px-2">
+						<div className="flex items-center justify-center border-r border-kumo-fill px-2">
 							<ListNumbersIcon size={14} />
 						</div>
 

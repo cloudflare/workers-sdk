@@ -19,12 +19,12 @@ export function CopyButton({
 
 	return (
 		<button
-			className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-border/60"
+			className="inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-kumo-subtle transition-colors hover:bg-kumo-fill"
 			onClick={handleCopy}
 			title={label}
 		>
 			{copied ? (
-				<CheckIcon size={14} className="text-[#00c950]" />
+				<CheckIcon size={14} className="text-kumo-success" />
 			) : (
 				<CopyIcon size={14} />
 			)}

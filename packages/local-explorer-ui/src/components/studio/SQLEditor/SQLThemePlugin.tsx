@@ -23,82 +23,71 @@ export const StudioSQLBaseTheme = EditorView.baseTheme({
 	},
 });
 
-/**
- * Unified CodeMirror theme that uses CSS custom properties from tailwind.css.
- * Automatically adapts to light/dark mode via prefers-color-scheme media queries
- * without needing any runtime dark mode detection.
- */
 export const StudioSQLTheme = EditorView.baseTheme({
-	/* Cursor — ensure the caret is visible against both light and dark backgrounds */
 	".cm-content": {
-		caretColor: "var(--color-text)",
+		caretColor: "var(--studio-editor-caret)",
 	},
 
-	/* Selection highlight */
 	"&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-		backgroundColor: "var(--color-selection) !important",
+		backgroundColor: "var(--studio-editor-selection) !important",
 	},
 
-	/* Active line */
 	".cm-activeLine": {
-		backgroundColor: "var(--color-active-line)",
+		backgroundColor: "var(--studio-editor-active-line)",
 	},
 	".cm-activeLineGutter": {
-		backgroundColor: "var(--color-active-line)",
+		backgroundColor: "var(--studio-editor-active-line)",
 	},
 
-	/* Syntax token colors */
 	".tok-keyword": {
-		color: "var(--color-syntax-keyword)",
+		color: "var(--studio-syntax-keyword)",
 	},
 	".tok-string": {
-		color: "var(--color-syntax-string)",
+		color: "var(--studio-syntax-string)",
 	},
 	".tok-number": {
-		color: "var(--color-syntax-number)",
+		color: "var(--studio-syntax-number)",
 	},
 	".tok-comment": {
-		color: "var(--color-syntax-comment)",
+		color: "var(--studio-syntax-comment)",
 	},
 	".tok-operator": {
-		color: "var(--color-syntax-operator)",
+		color: "var(--studio-syntax-operator)",
 	},
 
 	".cm-table-name": {
-		color: "var(--color-syntax-table)",
+		color: "var(--studio-syntax-table)",
 	},
 
-	/* Gutters */
 	".cm-gutters": {
-		backgroundColor: "var(--color-bg-secondary)",
-		color: "var(--color-muted)",
+		backgroundColor: "var(--studio-editor-gutter-bg)",
+		color: "var(--studio-editor-gutter-text)",
 		borderRight: "none",
 		width: "30px",
 	},
 
-	/* Autocomplete tooltip */
 	".cm-tooltip-autocomplete": {
-		backgroundColor: "var(--color-bg)",
-		color: "var(--color-text)",
-		border: "1px solid var(--color-border)",
+		backgroundColor: "var(--studio-editor-panel-bg)",
+		color: "var(--studio-editor-panel-text)",
+		border: "1px solid var(--studio-editor-panel-border)",
 		borderRadius: "6px",
 		boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
 	},
 
 	".cm-completionLabel": {
-		color: "var(--color-text)",
+		color: "var(--studio-editor-panel-text)",
 	},
 	".cm-completionIcon": {
-		color: "var(--color-muted)",
+		color: "var(--studio-editor-gutter-text)",
 	},
 	".cm-completionDetail": {
-		color: "var(--color-muted)",
+		color: "var(--studio-editor-gutter-text)",
 		fontStyle: "italic",
 		marginLeft: "auto",
 	},
 	".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-		backgroundColor: "var(--color-accent)",
+		backgroundColor: "var(--studio-editor-panel-hover)",
 		borderRadius: "3px",
-		color: "var(--color-text)",
+		color: "var(--studio-editor-panel-text)",
 	},
 });

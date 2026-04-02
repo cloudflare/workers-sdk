@@ -302,7 +302,7 @@ function BucketView(): JSX.Element {
 		: [];
 	const breadcrumbItems = [
 		<Link
-			className="text-text no-underline hover:text-primary"
+			className="text-kumo-default no-underline hover:text-kumo-link"
 			key="bucket"
 			params={{ bucketName: params.bucketName }}
 			search={{}}
@@ -315,7 +315,7 @@ function BucketView(): JSX.Element {
 
 			return (
 				<Link
-					className="text-text no-underline hover:text-primary"
+					className="text-kumo-default no-underline hover:text-kumo-link"
 					key={segmentPrefix}
 					params={{ bucketName: params.bucketName }}
 					search={{ prefix: segmentPrefix }}
@@ -428,7 +428,7 @@ function BucketView(): JSX.Element {
 						</Dialog.Title>
 
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							{deleteTargets.length === 1 ? (
 								<>
 									Are you sure you want to delete &ldquo;{deleteTargets[0]}
@@ -479,24 +479,24 @@ function BucketView(): JSX.Element {
 						</Dialog.Title>
 
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-4 text-text-secondary">
+						<Dialog.Description className="mb-4 text-kumo-subtle">
 							Enter a name for the new directory.
 						</Dialog.Description>
 
 						<div className="mb-4">
-							<label className="mb-1 block text-sm font-medium text-text">
+							<label className="mb-1 block text-sm font-medium text-kumo-default">
 								Directory name
 							</label>
 							<input
 								type="text"
-								className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text focus:border-primary focus:shadow-focus-primary focus:outline-none"
+								className="w-full rounded-md border border-kumo-fill bg-kumo-base px-3 py-2 text-sm text-kumo-default focus:border-kumo-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring"
 								value={newDirectoryName}
 								onChange={(e) => setNewDirectoryName(e.target.value)}
 								placeholder="my-directory"
 								autoFocus
 							/>
 							{search.prefix && (
-								<p className="mt-1 text-xs text-text-secondary">
+								<p className="mt-1 text-xs text-kumo-subtle">
 									Will be created at: {search.prefix}
 									{newDirectoryName || "..."}/
 								</p>

@@ -372,7 +372,7 @@ function NamespaceView() {
 						{namespaceTitle && namespaceTitle !== namespaceId ? (
 							<>
 								{namespaceTitle}
-								<span className="text-text-secondary">({namespaceId})</span>
+								<span className="text-kumo-subtle">({namespaceId})</span>
 							</>
 						) : (
 							namespaceId
@@ -383,7 +383,7 @@ function NamespaceView() {
 
 			<div className="px-6 py-6">
 				{error && (
-					<div className="mb-4 rounded-md border border-danger/20 bg-danger/8 p-4 text-danger">
+					<div className="mb-4 rounded-md border border-kumo-danger/20 bg-kumo-danger/8 p-4 text-kumo-danger">
 						{error}
 					</div>
 				)}
@@ -394,14 +394,14 @@ function NamespaceView() {
 					disabled={loading}
 				/>
 
-				<hr className="my-4 border-border" />
+				<hr className="my-4 border-kumo-fill" />
 
 				<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
 
 				{loading ? (
-					<div className="p-12 text-center text-text-secondary">Loading...</div>
+					<div className="p-12 text-center text-kumo-subtle">Loading...</div>
 				) : entries.length === 0 ? (
-					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-text-secondary">
+					<div className="flex flex-col items-center justify-center space-y-2 p-12 text-center text-kumo-subtle">
 						{prefix ? (
 							<p className="text-sm font-light">{`No keys found matching prefix "${prefix}".`}</p>
 						) : (
@@ -449,7 +449,7 @@ function NamespaceView() {
 							Delete key?
 						</Dialog.Title>
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							Are you sure you want to delete &ldquo;{deleteTarget}&rdquo;? This
 							cannot be undone.
 						</Dialog.Description>
@@ -483,7 +483,7 @@ function NamespaceView() {
 							Overwrite key?
 						</Dialog.Title>
 						{/* @ts-expect-error - Type mismatch due to pnpm monorepo @types/react version conflict */}
-						<Dialog.Description className="mb-2 text-text-secondary">
+						<Dialog.Description className="mb-2 text-kumo-subtle">
 							Key &ldquo;{overwriteConfirm?.key}&rdquo; already exists. Do you
 							want to overwrite its value?
 						</Dialog.Description>
