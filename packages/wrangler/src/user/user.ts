@@ -365,6 +365,7 @@ const DefaultScopes = {
 	"pages:write":
 		"See and change Cloudflare Pages projects, settings and deployments.",
 	"zone:read": "Grants read level access to account zone.",
+	"zone:write": "Grants write level access to account zone.",
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"ai:write": "See and change Workers AI catalog and assets",
 	"ai-search:write": "See and change AI Search data",
