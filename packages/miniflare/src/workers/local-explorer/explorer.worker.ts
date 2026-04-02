@@ -4,6 +4,7 @@
 import { Hono } from "hono/tiny";
 import mime from "mime";
 import { CoreBindings, CorePaths } from "../core";
+import openApiSpec from "./openapi.local.json";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import {
@@ -155,6 +156,12 @@ app.get("/*", async (c, next) => {
 
 	return c.notFound();
 });
+
+// ============================================================================
+// OpenAPI Spec Endpoint
+// ============================================================================
+
+app.get("/api", (c) => c.json(openApiSpec));
 
 // ============================================================================
 // KV Endpoints
