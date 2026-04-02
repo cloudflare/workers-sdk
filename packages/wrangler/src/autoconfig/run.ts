@@ -2,10 +2,14 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+	maybeAppendWranglerToGitIgnoreLikeFile,
+	maybeAppendWranglerToGitIgnore,
+} from "@cloudflare/cli/gitignore";
 import { installWrangler } from "@cloudflare/cli/packages";
 import {
 	FatalError,
-	getLocalWorkerdCompatibilityDate,
+	getTodaysCompatDate,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
@@ -13,8 +17,6 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
-import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
-import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
@@ -98,9 +100,7 @@ export async function runAutoConfig(
 			"The Output Directory is unexpectedly missing"
 		);
 
-		const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
-			projectPath: autoConfigDetails.projectPath,
-		});
+		const compatibilityDate = getTodaysCompatDate();
 
 		const wranglerConfig: RawConfig = {
 			$schema: "node_modules/wrangler/config-schema.json",
@@ -239,11 +239,13 @@ export async function runAutoConfig(
 			);
 		}
 
-		addWranglerToGitIgnore(autoConfigDetails.projectPath);
+		maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
 		// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
 		if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
-			addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
+			maybeAppendWranglerToGitIgnoreLikeFile(
+				`${autoConfigDetails.projectPath}/.assetsignore`
+			);
 		}
 
 		const buildCommand =

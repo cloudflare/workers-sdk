@@ -1,7 +1,7 @@
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
+	getTodaysCompatDate,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -82,7 +82,7 @@ export async function getEntry(
 			);
 		}
 
-		const compatibilityDateStr = formatCompatibilityDate(new Date());
+		const compatibilityDateStr = getTodaysCompatDate();
 
 		const updateConfigMessage = (snippet: RawConfig) => dedent`
 			${

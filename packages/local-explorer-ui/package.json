@@ -11,9 +11,13 @@
 		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
 		"dev:ui": "concurrently -n api,ui -c green,blue \"openapi-ts --watch\" \"vite\"",
 		"postinstall": "openapi-ts",
+		"playwright:install": "pnpm playwright install chromium",
 		"preview": "vite preview",
 		"test": "vitest",
 		"test:ci": "vitest run",
+		"pretest:e2e": "pnpm playwright:install",
+		"test:e2e": "vitest run --config vitest.config.e2e.ts",
+		"test:e2e:watch": "vitest --config vitest.config.e2e.ts",
 		"test:watch": "vitest"
 	},
 	"dependencies": {
@@ -50,6 +54,7 @@
 		"@types/react-dom": "^19.2.0",
 		"@vitejs/plugin-react": "^5.2.0",
 		"concurrently": "^9.0.0",
+		"playwright-chromium": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vite-plugin-svgr": "^4.3.0",

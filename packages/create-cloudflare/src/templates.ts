@@ -10,8 +10,6 @@ import degit from "degit";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
-	appendFile,
-	directoryExists,
 	hasTsConfig,
 	readFile,
 	readJSON,
@@ -937,7 +935,9 @@ export async function downloadRemoteTemplate(
 					pathSegments.splice(0, 2); // Remove 'tree' and branch name
 				}
 
-				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}${branch ? `#${branch}` : ""}`;
+				src = `github:${user}/${repo}${
+					pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""
+				}${branch ? `#${branch}` : ""}`;
 			}
 		}
 
@@ -1054,103 +1054,4 @@ export const getCopyFilesDestinationDir = (
 	}
 
 	return copyFiles.destinationDir(ctx);
-};
-
-export const addWranglerToGitIgnore = (ctx: C3Context) => {
-	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
-	const gitIgnorePreExisted = existsSync(gitIgnorePath);
-
-	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
-
-	if (!gitIgnorePreExisted && !gitDirExists) {
-		// if there is no .gitignore file and neither a .git directory
-		// then bail as the project is likely not targeting/using git
-		return;
-	}
-
-	if (!gitIgnorePreExisted) {
-		writeFile(gitIgnorePath, "");
-	}
-
-	const existingGitIgnoreContent = readFile(gitIgnorePath);
-	const wranglerGitIgnoreFilesToAdd: string[] = [];
-
-	const hasDotWrangler = existingGitIgnoreContent.match(
-		/^\/?\.wrangler(\/|\s|$)/m
-	);
-	if (!hasDotWrangler) {
-		wranglerGitIgnoreFilesToAdd.push(".wrangler");
-	}
-
-	const hasDotDevDotVars = existingGitIgnoreContent.match(
-		/^\/?\.dev\.vars\*(\s|$)/m
-	);
-	if (!hasDotDevDotVars) {
-		wranglerGitIgnoreFilesToAdd.push(".dev.vars*");
-	}
-
-	const hasDotDevVarsExample = existingGitIgnoreContent.match(
-		/^!\/?\.dev\.vars\.example(\s|$)/m
-	);
-	if (!hasDotDevVarsExample) {
-		wranglerGitIgnoreFilesToAdd.push("!.dev.vars.example");
-	}
-
-	/**
-	 * We check for the following type of occurrences:
-	 *
-	 * ```
-	 * .env
-	 * .env*
-	 * .env.<local|production|staging|...>
-	 * .env*.<local|production|staging|...>
-	 * ```
-	 *
-	 * Any of these may alone on a line or be followed by a space and a trailing comment:
-	 *
-	 * ```
-	 * .env.<local|production|staging> # some trailing comment
-	 * ```
-	 */
-	const hasDotEnv = existingGitIgnoreContent.match(
-		/^\/?\.env\*?(\..*?)?(\s|$)/m
-	);
-	if (!hasDotEnv) {
-		wranglerGitIgnoreFilesToAdd.push(".env*");
-	}
-
-	const hasDotEnvExample = existingGitIgnoreContent.match(
-		/^!\/?\.env\.example(\s|$)/m
-	);
-	if (!hasDotEnvExample) {
-		wranglerGitIgnoreFilesToAdd.push("!.env.example");
-	}
-
-	if (wranglerGitIgnoreFilesToAdd.length === 0) {
-		return;
-	}
-
-	const s = spinner();
-	s.start("Adding Wrangler files to the .gitignore file");
-
-	const linesToAppend = [
-		"",
-		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
-	];
-
-	if (!hasDotWrangler && wranglerGitIgnoreFilesToAdd.length > 1) {
-		linesToAppend.push("# wrangler files");
-	}
-
-	wranglerGitIgnoreFilesToAdd.forEach((line) => linesToAppend.push(line));
-
-	linesToAppend.push("");
-
-	appendFile(gitIgnorePath, linesToAppend.join("\n"));
-
-	s.stop(
-		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
-			".gitignore file"
-		)}`
-	);
 };
