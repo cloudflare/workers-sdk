@@ -1,10 +1,10 @@
-import { UserError } from "@cloudflare/workers-utils";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { logSendResult } from "./utils";
 import { sendEmail } from "../client";
+import { logSendResult } from "./utils";
 
 export const emailSendingSendCommand = createCommand({
 	metadata: {

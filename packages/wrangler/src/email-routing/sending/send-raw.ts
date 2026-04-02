@@ -1,5 +1,5 @@
-import { UserError } from "@cloudflare/workers-utils";
 import { readFileSync } from "node:fs";
+import { UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { sendRawEmail } from "../client";
 import { logSendResult } from "./utils";
